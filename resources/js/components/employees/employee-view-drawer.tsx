@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { KeyRound, ShieldCheck, SquarePen, UserMinus } from 'lucide-react';
+import { KeyRound, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -26,8 +26,10 @@ export function EmployeeViewDrawer({
     canEdit,
     canResetPassword,
     canResign,
+    canCancelResign,
     canSetCredentials,
     onResign,
+    onCancelResign,
     onResetPassword,
     onSetCredentials,
     onEdit,
@@ -37,8 +39,10 @@ export function EmployeeViewDrawer({
     canEdit: boolean;
     canResetPassword: boolean;
     canResign: boolean;
+    canCancelResign: boolean;
     canSetCredentials: boolean;
     onResign: (e: Employee) => void;
+    onCancelResign: (e: Employee) => void;
     onResetPassword: (e: Employee) => void;
     onSetCredentials: (e: Employee) => void;
     onEdit: (e: Employee) => void;
@@ -117,14 +121,14 @@ export function EmployeeViewDrawer({
                                     <Button variant="outline" className="flex-1" onClick={onClose}>
                                         {t('cancel')}
                                     </Button>
-                                    {canEdit && (
+                                    {canEdit && employee.status !== 'resigned' && (
                                         <Button variant="outline" className="flex-1" onClick={() => onEdit(employee)}>
                                             <SquarePen className="h-4 w-4" />
                                             {t('edit')}
                                         </Button>
                                     )}
                                 </div>
-                                {(canResetPassword || canResign) && (
+                                {(canResetPassword || canResign || canCancelResign) && (
                                     <div className="flex gap-2">
                                         {canResetPassword && employee.has_account && (
                                             <Button
@@ -144,6 +148,16 @@ export function EmployeeViewDrawer({
                                             >
                                                 <UserMinus className="h-4 w-4" />
                                                 {t('resign_employee')}
+                                            </Button>
+                                        )}
+                                        {canCancelResign && employee.status === 'resigned' && (
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                                                onClick={() => onCancelResign(employee)}
+                                            >
+                                                <UserCheck className="h-4 w-4" />
+                                                {t('cancel_resign')}
                                             </Button>
                                         )}
                                     </div>

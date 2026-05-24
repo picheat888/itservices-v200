@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\AppSetting;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\GroupRole;
 use App\Models\Location;
 use App\Models\Position;
 use Illuminate\Database\Seeder;
@@ -62,6 +64,9 @@ class OrgSeeder extends Seeder
             ['code' => 'EMP-1901', 'name' => 'Anchalee Rakkit', 'name_th' => 'อัญชลี รักกิจ', 'dept' => 'SAL', 'pos' => 'Sales Manager', 'email' => 'anchalee@inaba.co.th', 'phone' => '+66 87 220 5544', 'joined_at' => '2019-08-30'],
             ['code' => 'EMP-2003', 'name' => 'Theerapong Klangsap', 'name_th' => 'ธีรพงษ์ คลังทรัพย์', 'dept' => 'ENG', 'pos' => 'Maintenance Engineer', 'email' => 'theerapong@inaba.co.th', 'phone' => '+66 89 442 1187', 'joined_at' => '2020-01-12'],
             ['code' => 'EMP-2115', 'name' => 'Yuki Sato', 'name_th' => 'ยูกิ ซาโตะ', 'dept' => 'QA', 'pos' => 'QC Technician', 'email' => 'yuki@inaba.co.th', 'phone' => '+66 81 559 7723', 'joined_at' => '2023-03-04'],
+            // Resigned demo employees — used to exercise the cancel-resignation flow.
+            ['code' => 'EMP-2208', 'name' => 'Prasert Thongdee', 'name_th' => 'ประเสริฐ ทองดี', 'dept' => 'PRD', 'pos' => 'Line Operator', 'email' => 'prasert@inaba.co.th', 'phone' => '+66 81 447 9920', 'joined_at' => '2019-10-01', 'status' => 'resigned', 'resign_reason' => 'ย้ายไปทำงานต่างจังหวัด', 'last_day' => '2026-04-30'],
+            ['code' => 'EMP-2301', 'name' => 'Wanida Srisuk', 'name_th' => 'วนิดา ศรีสุข', 'dept' => 'SAL', 'pos' => 'Sales Manager', 'email' => 'wanida@inaba.co.th', 'phone' => '+66 86 552 1130', 'joined_at' => '2018-06-15', 'status' => 'resigned', 'resign_reason' => 'เกษียณอายุ', 'last_day' => '2026-03-31'],
         ];
 
         foreach ($employees as $e) {
@@ -76,9 +81,50 @@ class OrgSeeder extends Seeder
                     'phone' => $e['phone'],
                     'login_method' => 'email',
                     'joined_at' => $e['joined_at'],
-                    'status' => 'active',
+                    'status' => $e['status'] ?? 'active',
+                    'resign_reason' => $e['resign_reason'] ?? null,
+                    'last_day' => $e['last_day'] ?? null,
                 ],
             );
+        }
+
+        $this->seedGroupRoles();
+    }
+
+    /**
+     * Seeds the demo Role Groups, assigns active employees to the default
+     * "All Staff" group, and records that group as the system default used
+     * when a new employee's login account is later provisioned.
+     */
+    private function seedGroupRoles(): void
+    {
+        $groups = [
+            ['name' => 'All Staff', 'role' => 'user'],
+            ['name' => 'IT Team', 'role' => 'admin'],
+            ['name' => 'HR Team', 'role' => 'hr'],
+        ];
+        foreach ($groups as $g) {
+            GroupRole::updateOrCreate(['name' => $g['name']], ['role' => $g['role']]);
+        }
+
+        $allStaff = GroupRole::where('name', 'All Staff')->first();
+        $itTeam   = GroupRole::where('name', 'IT Team')->first();
+        $hrTeam   = GroupRole::where('name', 'HR Team')->first();
+
+        // Default group: every active employee belongs to "All Staff".
+        $activeIds = Employee::where('status', 'active')->pluck('id')->all();
+        $allStaff?->employees()->syncWithoutDetaching($activeIds);
+
+        // Department-aligned groups for the IT and HR teams.
+        $itIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'IT'))->pluck('id')->all();
+        $itTeam?->employees()->syncWithoutDetaching($itIds);
+
+        $hrIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'HR'))->pluck('id')->all();
+        $hrTeam?->employees()->syncWithoutDetaching($hrIds);
+
+        // Record the default group used to resolve role keys for new accounts.
+        if ($allStaff) {
+            AppSetting::put('default_employee_group_id', (string) $allStaff->id);
         }
     }
 }
