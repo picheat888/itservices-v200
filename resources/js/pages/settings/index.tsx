@@ -1,0 +1,639 @@
+import { Field } from '@/components/shared/field';
+import { SearchSelect } from '@/components/shared/search-select';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useLocationMutations, useLocations } from '@/hooks/use-org';
+import { useResetLogo, useSettings, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
+import { useT } from '@/lib/i18n';
+import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
+import { cn } from '@/lib/utils';
+import { settingsApi, type MailSettingsPayload, type SettingsPayload } from '@/services/settingsApi';
+import { useUiStore } from '@/stores/ui';
+import type { Density } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Box, Building2, Construction, Mail, MapPin, MonitorCog, Pencil, Plug, Plus, Send, Shield, Sparkles, Ticket, Trash2, Upload, Workflow, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import Swal from 'sweetalert2';
+
+type Section = 'display' | 'company' | 'branding' | 'locations' | 'email' | 'tickets' | 'assets' | 'workflow' | 'integrations' | 'security';
+
+const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
+
+const emptyForm: SettingsPayload = {
+    brand_name: '',
+    brand_sub: '',
+    company_name: '',
+    legal_name: '',
+    tax_id: '',
+    industry: '',
+    address: '',
+    country: 'Thailand',
+    currency: 'THB',
+    timezone: 'Asia/Bangkok',
+};
+
+const VALID_SECTIONS: Section[] = ['display', 'company', 'branding', 'locations', 'email', 'tickets', 'assets', 'workflow', 'integrations', 'security'];
+
+function sectionFromHash(): Section {
+    const s = window.location.hash.replace('#', '') as Section;
+    return VALID_SECTIONS.includes(s) ? s : 'company';
+}
+
+export default function SettingsPage() {
+    const t = useT();
+    const [section, setSection] = useState<Section>(sectionFromHash);
+    const { data } = useSettings();
+
+    const changeSection = (s: Section) => {
+        setSection(s);
+        window.location.hash = s;
+    };
+    const update = useUpdateSettings();
+    const [form, setForm] = useState<SettingsPayload>(emptyForm);
+
+    useEffect(() => {
+        if (data) {
+            setForm({
+                brand_name: data.brand_name,
+                brand_sub: data.brand_sub,
+                company_name: data.company_name,
+                legal_name: data.legal_name,
+                tax_id: data.tax_id,
+                industry: data.industry,
+                address: data.address,
+                country: data.country,
+                currency: data.currency,
+                timezone: data.timezone,
+            });
+        }
+    }, [data]);
+
+    const set = <K extends keyof SettingsPayload>(k: K, v: SettingsPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+    const nav: { id: Section; label: string; icon: typeof Building2; ready?: boolean }[] = [
+        { id: 'company', label: t('set_company'), icon: Building2, ready: true },
+        { id: 'branding', label: t('set_branding'), icon: Sparkles, ready: true },
+        { id: 'display', label: t('set_display'), icon: MonitorCog, ready: true },
+        { id: 'locations', label: t('set_locations'), icon: MapPin, ready: true },
+        { id: 'email', label: t('set_email'), icon: Mail, ready: true },
+        { id: 'tickets', label: t('set_tickets'), icon: Ticket },
+        { id: 'assets', label: t('set_assets'), icon: Box },
+        { id: 'workflow', label: t('set_workflow'), icon: Workflow },
+        { id: 'integrations', label: t('set_integrations'), icon: Plug },
+        { id: 'security', label: t('set_security'), icon: Shield },
+    ];
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold">{t('settings')}</h1>
+                <p className="text-sm text-muted-foreground">{t('settings_sub')}</p>
+            </div>
+
+            <Card className="grid grid-cols-1 overflow-hidden p-0 lg:grid-cols-[220px_1fr]">
+                <nav className="flex gap-1 overflow-x-auto border-b border-border p-3 lg:flex-col lg:border-b-0 lg:border-r">
+                    {nav.map((n) => {
+                        const Icon = n.icon;
+                        return (
+                            <button
+                                key={n.id}
+                                onClick={() => changeSection(n.id)}
+                                className={cn(
+                                    'flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors',
+                                    section === n.id ? 'bg-brand/10 font-semibold text-brand' : 'text-muted-foreground hover:bg-accent/50',
+                                )}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {n.label}
+                            </button>
+                        );
+                    })}
+                </nav>
+
+                <div className="p-6">
+                    {section === 'display' && <DisplayTab />}
+                    {section === 'company' && (
+                        <CompanyTab form={form} set={set} onSave={() => update.mutate(form)} saving={update.isPending} saved={update.isSuccess} />
+                    )}
+                    {section === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
+                    {section === 'locations' && <LocationsTab />}
+                    {section === 'email' && <EmailTab />}
+                    {!['display', 'company', 'branding', 'locations', 'email'].includes(section) && <ComingSoon />}
+                </div>
+            </Card>
+        </div>
+    );
+}
+
+function DisplayTab() {
+    const t = useT();
+    const storeAccent = useUiStore((s) => s.accent);
+    const storeDensity = useUiStore((s) => s.density);
+    const storeRadius = useUiStore((s) => s.radius);
+
+    // Local draft — only committed (and persisted) when Save is pressed.
+    const [accent, setAccent] = useState(storeAccent);
+    const [density, setDensity] = useState<Density>(storeDensity);
+    const [radius, setRadius] = useState(storeRadius);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        setAccent(storeAccent);
+        setDensity(storeDensity);
+        setRadius(storeRadius);
+    }, [storeAccent, storeDensity, storeRadius]);
+
+    const dirty = accent !== storeAccent || density !== storeDensity || radius !== storeRadius;
+    const touch = () => setSaved(false);
+
+    const save = () => {
+        const s = useUiStore.getState();
+        s.setAccent(accent);
+        s.setDensity(density);
+        s.setRadius(radius);
+        setSaved(true);
+    };
+
+    const densityOpts: { value: Density; label: string }[] = [
+        { value: 'compact', label: t('density_compact') },
+        { value: 'normal', label: t('density_normal') },
+        { value: 'cozy', label: t('density_cozy') },
+    ];
+
+    return (
+        <div className="max-w-xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_display')}</h2>
+                <p className="text-sm text-muted-foreground">{t('set_display_desc')}</p>
+            </div>
+            <div className="space-y-6">
+                <div className="space-y-2">
+                    <div className="text-sm font-medium">{t('set_theme_color')}</div>
+                    <div className="flex gap-2">
+                        {ACCENTS.map((c) => (
+                            <button
+                                key={c}
+                                onClick={() => {
+                                    setAccent(c);
+                                    touch();
+                                }}
+                                className={cn(
+                                    'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all',
+                                    accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
+                                )}
+                                style={{ background: c }}
+                                aria-label={c}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="text-sm font-medium">{t('tweaks_density')}</div>
+                    <div className="flex gap-1 rounded-lg bg-muted p-1">
+                        {densityOpts.map((o) => (
+                            <button
+                                key={o.value}
+                                onClick={() => {
+                                    setDensity(o.value);
+                                    touch();
+                                }}
+                                className={cn(
+                                    'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                                    density === o.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="text-sm font-medium">
+                        {t('tweaks_radius')} · {radius}px
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={20}
+                        value={radius}
+                        onChange={(e) => {
+                            setRadius(Number(e.target.value));
+                            touch();
+                        }}
+                        className="w-full accent-brand"
+                    />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
+                    <Button onClick={save} disabled={!dirty}>
+                        {t('save')}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function LocationsTab() {
+    const t = useT();
+    const { data: locations = [] } = useLocations();
+    const { create, update, remove } = useLocationMutations();
+    const [newName, setNewName] = useState('');
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+
+    const add = async () => {
+        if (!newName.trim()) return;
+        await create.mutateAsync(newName.trim());
+        setNewName('');
+    };
+    const saveEdit = async () => {
+        if (editId == null || !editName.trim()) return;
+        await update.mutateAsync({ id: editId, name: editName.trim() });
+        setEditId(null);
+    };
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_locations')}</h2>
+                <p className="text-sm text-muted-foreground">{t('set_locations_desc')}</p>
+            </div>
+
+            <div className="mb-4 flex gap-2">
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('add_location')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Button onClick={add} disabled={!newName.trim() || create.isPending}>
+                    <Plus className="h-4 w-4" />
+                    {t('add_location')}
+                </Button>
+            </div>
+
+            <div className="divide-y divide-border rounded-lg border border-border">
+                {locations.length === 0 && <div className="px-4 py-6 text-center text-sm text-muted-foreground">—</div>}
+                {locations.map((loc) => (
+                    <div key={loc.id} className="flex items-center gap-2 px-4 py-2.5">
+                        {editId === loc.id ? (
+                            <>
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Button size="sm" onClick={saveEdit} disabled={update.isPending}>
+                                    {t('save')}
+                                </Button>
+                                <button onClick={() => setEditId(null)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="flex-1 text-sm">{loc.name}</span>
+                                <button
+                                    onClick={() => {
+                                        setEditId(loc.id);
+                                        setEditName(loc.name);
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirm(`${t('confirm_delete')} ${loc.name}`)) remove.mutate(loc.id);
+                                    }}
+                                    className="flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function ComingSoon() {
+    const t = useT();
+    return (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Construction className="h-10 w-10 text-muted-foreground" />
+            <p className="mt-3 max-w-sm text-sm text-muted-foreground">{t('settings_coming_soon')}</p>
+        </div>
+    );
+}
+
+const MAIL_KEY = ['mail-settings'] as const;
+
+/** SMTP server settings (mail_settings) — host/port/credentials/from + test send. */
+function EmailTab() {
+    const t = useT();
+    const qc = useQueryClient();
+    const { data } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
+
+    const [form, setForm] = useState<MailSettingsPayload>({
+        host: '', port: 587, username: '', password: '', encryption: 'tls', from_address: '', from_name: '',
+    });
+    const [hasPassword, setHasPassword] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        if (!data) return;
+        setForm({
+            host: data.host ?? '',
+            port: data.port ?? 587,
+            username: data.username ?? '',
+            password: '',
+            encryption: data.encryption ?? 'tls',
+            from_address: data.from_address ?? '',
+            from_name: data.from_name ?? '',
+        });
+        setHasPassword(data.has_password);
+    }, [data]);
+
+    const update = useMutation({
+        mutationFn: (payload: MailSettingsPayload) => settingsApi.updateMail(payload),
+        onSuccess: (d) => {
+            qc.setQueryData(MAIL_KEY, d);
+            setSaved(true);
+        },
+    });
+
+    const test = useMutation({
+        mutationFn: () => settingsApi.testMail(),
+        onSuccess: async (res) => {
+            await Swal.fire({
+                icon: res.sent ? 'success' : 'error',
+                title: res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'),
+                confirmButtonColor: '#2563eb',
+                customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium' },
+            });
+        },
+        onError: async (e: unknown) => {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            await Swal.fire({ icon: 'error', title: msg ?? t('email_test_failed'), confirmButtonColor: '#2563eb' });
+        },
+    });
+
+    const set = <K extends keyof MailSettingsPayload>(k: K, v: MailSettingsPayload[K]) => {
+        setForm((f) => ({ ...f, [k]: v }));
+        setSaved(false);
+    };
+
+    return (
+        <div className="max-w-xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_email')}</h2>
+                <p className="text-sm text-muted-foreground">{t('set_email_desc')}</p>
+            </div>
+
+            <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+                    <Field label={t('set_email_host')}>
+                        <Input value={form.host ?? ''} onChange={(e) => set('host', e.target.value)} placeholder="smtp.example.com" className="font-mono" />
+                    </Field>
+                    <Field label={t('set_email_port')}>
+                        <Input type="number" value={form.port ?? ''} onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)} placeholder="587" className="font-mono" />
+                    </Field>
+                </div>
+
+                <Field label={t('set_email_username')}>
+                    <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} className="font-mono" autoComplete="off" />
+                </Field>
+
+                <Field label={t('set_email_password')} help={hasPassword ? t('set_email_password_hint') : undefined}>
+                    <Input type="password" value={form.password ?? ''} onChange={(e) => set('password', e.target.value)} placeholder={hasPassword ? '••••••••' : ''} autoComplete="new-password" />
+                </Field>
+
+                <Field label={t('set_email_encryption')}>
+                    <Select value={form.encryption ?? 'auto'} onValueChange={(v) => set('encryption', v === 'auto' ? null : (v as 'tls' | 'ssl'))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="auto">Auto</SelectItem>
+                            <SelectItem value="tls">TLS</SelectItem>
+                            <SelectItem value="ssl">SSL</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </Field>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label={t('set_email_from_address')}>
+                        <Input value={form.from_address ?? ''} onChange={(e) => set('from_address', e.target.value)} placeholder="noreply@example.com" className="font-mono" />
+                    </Field>
+                    <Field label={t('set_email_from_name')}>
+                        <Input value={form.from_name ?? ''} onChange={(e) => set('from_name', e.target.value)} placeholder="IT Service Desk" />
+                    </Field>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                    <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
+                        {update.isPending ? t('cred_saving') : t('save')}
+                    </Button>
+                    <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
+                        <Send className="h-4 w-4" />
+                        {t('email_test')}
+                    </Button>
+                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+interface SetFn {
+    <K extends keyof SettingsPayload>(k: K, v: SettingsPayload[K]): void;
+}
+
+function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
+    const t = useT();
+    return (
+        <div className="flex items-center justify-end gap-3 pt-2">
+            {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
+            <Button onClick={onSave} disabled={saving}>
+                {t('save')}
+            </Button>
+        </div>
+    );
+}
+
+function CompanyTab({ form, set, onSave, saving, saved }: { form: SettingsPayload; set: SetFn; onSave: () => void; saving: boolean; saved: boolean }) {
+    const t = useT();
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_company_title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('set_company_desc')}</p>
+            </div>
+            <div className="space-y-5">
+                <Field label={t('set_company_name')}>
+                    <Input value={form.company_name} onChange={(e) => set('company_name', e.target.value)} />
+                </Field>
+                <Field label={t('set_legal_name')}>
+                    <Input value={form.legal_name} onChange={(e) => set('legal_name', e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                    <Field label={t('set_tax_id')}>
+                        <Input className="font-mono" value={form.tax_id} onChange={(e) => set('tax_id', e.target.value)} />
+                    </Field>
+                    <Field label={t('set_industry')}>
+                        <Input value={form.industry} onChange={(e) => set('industry', e.target.value)} />
+                    </Field>
+                </div>
+                <Field label={t('set_address')}>
+                    <Input value={form.address} onChange={(e) => set('address', e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-3 gap-4">
+                    <Field label={t('set_country')}>
+                        <SearchSelect
+                            value={form.country}
+                            onChange={(v) => set('country', v)}
+                            options={countryOptions}
+                            placeholder="Select country…"
+                        />
+                    </Field>
+                    <Field label={t('set_currency')}>
+                        <SearchSelect
+                            value={form.currency}
+                            onChange={(v) => set('currency', v)}
+                            options={currencyOptions}
+                            placeholder="Select currency…"
+                        />
+                    </Field>
+                    <Field label={t('set_timezone')}>
+                        <SearchSelect
+                            value={form.timezone}
+                            onChange={(v) => set('timezone', v)}
+                            options={timezoneOptions}
+                            placeholder="Select timezone…"
+                        />
+                    </Field>
+                </div>
+                <SaveRow onSave={onSave} saving={saving} saved={saved} />
+            </div>
+        </div>
+    );
+}
+
+function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn; logoUrl: string | null }) {
+    const t = useT();
+    const update = useUpdateSettings();
+    const uploadLogo = useUploadLogo();
+    const resetLogo = useResetLogo();
+    const inputRef = useRef<HTMLInputElement>(null);
+    const [file, setFile] = useState<File | null>(null);
+    const [pendingReset, setPendingReset] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [saved, setSaved] = useState(false);
+
+    // When pendingReset is true, show no logo (as if already cleared).
+    // When a new file is picked after reset, cancel the pending reset.
+    const previewUrl = pendingReset ? null : file ? URL.createObjectURL(file) : logoUrl;
+    useEffect(() => () => { if (file) URL.revokeObjectURL(URL.createObjectURL(file)); }, [file]);
+
+    // Reset pending state whenever the server logo changes (e.g. after save).
+    useEffect(() => { setPendingReset(false); }, [logoUrl]);
+
+    const pick = (f?: File) => {
+        setError(null);
+        setSaved(false);
+        setPendingReset(false);
+        if (!f) return;
+        if (!['image/png', 'image/svg+xml'].includes(f.type)) {
+            setError(t('set_logo_bad_type'));
+            return;
+        }
+        if (f.size > 2 * 1024 * 1024) {
+            setError(t('set_logo_too_big'));
+            return;
+        }
+        setFile(f);
+    };
+
+    const save = async () => {
+        setSaved(false);
+        // Handle logo: reset takes priority, then upload, otherwise leave unchanged.
+        if (pendingReset) {
+            await resetLogo.mutateAsync();
+            setPendingReset(false);
+        } else if (file) {
+            await uploadLogo.mutateAsync(file);
+        }
+        await update.mutateAsync(form);
+        setFile(null);
+        setSaved(true);
+    };
+
+    const busy = update.isPending || uploadLogo.isPending || resetLogo.isPending;
+    // Show reset button only when there is something to reset (logo exists or file selected) and reset not already pending.
+    const showReset = (logoUrl || file) && !pendingReset;
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_branding')}</h2>
+                <p className="text-sm text-muted-foreground">{t('set_branding_desc')}</p>
+            </div>
+            <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                    <Field label={t('set_brand_name')}>
+                        <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder="Inaba IT" />
+                    </Field>
+                    <Field label={t('set_brand_sub')}>
+                        <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder="Service Desk" />
+                    </Field>
+                </div>
+
+                <Field label={t('set_logo')} error={error ?? undefined}>
+                    <div className="flex items-center gap-4">
+                        <div
+                            className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg font-bold text-white"
+                            style={{ background: previewUrl ? 'transparent' : 'var(--brand)' }}
+                        >
+                            {previewUrl ? (
+                                <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
+                            ) : (
+                                <span className="text-2xl">{(form.brand_name || 'IT').slice(0, 2).toUpperCase()}</span>
+                            )}
+                        </div>
+                        <div>
+                            <input ref={inputRef} type="file" accept="image/png,image/svg+xml" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={() => inputRef.current?.click()}>
+                                    <Upload className="h-4 w-4" />
+                                    {t('set_logo_upload')}
+                                </Button>
+                                {showReset && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-xs text-muted-foreground hover:text-destructive"
+                                        onClick={() => {
+                                            setFile(null);
+                                            setPendingReset(true);
+                                            setSaved(false);
+                                            if (inputRef.current) inputRef.current.value = '';
+                                        }}
+                                    >
+                                        {t('reset_default')}
+                                    </Button>
+                                )}
+                            </div>
+                            <p className="mt-2 text-xs text-muted-foreground">{t('set_logo_help')}</p>
+                        </div>
+                    </div>
+                </Field>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
+                    <Button onClick={save} disabled={busy || !form.brand_name.trim()}>
+                        {t('save')}
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
