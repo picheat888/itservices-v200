@@ -47,4 +47,12 @@ class NotificationController extends Controller
 
         return response()->json(['message' => 'success']);
     }
+
+    /** Dismisses (deletes) a single notification belonging to the current user. */
+    public function destroy(Request $request, string $id): JsonResponse
+    {
+        $request->user()->notifications()->where('id', $id)->firstOrFail()->delete();
+
+        return response()->json(['message' => 'success']);
+    }
 }

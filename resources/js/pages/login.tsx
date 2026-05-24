@@ -37,13 +37,8 @@ export default function LoginPage() {
         <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
             <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-sm">
                 <div className="mb-6 flex items-center gap-3">
-                    {logoUrl ? (
-                        <img src={logoUrl} alt={brandName} className="h-11 w-11 rounded-xl object-contain" />
-                    ) : (
-                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand text-lg font-bold text-brand-foreground">
-                            {brandName.slice(0, 2).toUpperCase()}
-                        </div>
-                    )}
+                    {/* Custom uploaded logo, else the bundled default (public/logo.svg). */}
+                    <img src={logoUrl || '/logo.svg'} alt={brandName} className="h-11 w-11 rounded-xl object-contain" />
                     <div>
                         <div className="text-base font-bold">{brandName}</div>
                         <div className="text-xs text-muted-foreground">{brandSub}</div>

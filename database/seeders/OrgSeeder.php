@@ -88,7 +88,30 @@ class OrgSeeder extends Seeder
             );
         }
 
+        $this->linkDemoAccounts();
         $this->seedGroupRoles();
+    }
+
+    /**
+     * Links the four demo login users to their matching employee records so the
+     * directory shows "Has account". These people exist as both User and Employee
+     * (Wichai=super, Kanya=it, Ratana=hr, Pimchanok=user); matching the employee's
+     * username to the login username makes EmployeeResource::has_account resolve true.
+     */
+    private function linkDemoAccounts(): void
+    {
+        $links = [
+            'EMP-1617' => 'super', // Wichai Suwannarat
+            'EMP-1718' => 'it',    // Kanya Phakdee
+            'EMP-1509' => 'hr',    // Ratana Klinprathum
+            'EMP-1305' => 'user',  // Pimchanok Wongwai
+        ];
+        foreach ($links as $code => $username) {
+            Employee::where('code', $code)->update([
+                'username'     => $username,
+                'login_method' => 'userpass',
+            ]);
+        }
     }
 
     /**
