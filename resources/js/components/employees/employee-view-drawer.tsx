@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { KeyRound, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
+import { KeyRound, ShieldAlert, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -76,10 +76,15 @@ export function EmployeeViewDrawer({
                                             <StatusBadge tone="green">{t('active')}</StatusBadge>
                                         )}
                                     </div>
-                                    {employee.has_account && (
+                                    {employee.has_account ? (
                                         <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                                             <ShieldCheck className="h-3.5 w-3.5 text-brand" />
                                             {lang === 'th' ? 'มีบัญชีใช้งาน' : 'Has login account'}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                                            <ShieldAlert className="h-3.5 w-3.5" />
+                                            {lang === 'th' ? 'ยังไม่มีบัญชีใช้งาน' : 'No login account'}
                                         </div>
                                     )}
                                 </div>

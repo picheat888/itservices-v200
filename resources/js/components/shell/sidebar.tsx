@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth, useLogout } from '@/hooks/use-auth';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
@@ -49,13 +49,8 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             )}
         >
             <div className="flex h-16 items-center gap-3 px-4">
-                {logoUrl ? (
-                    <img src={logoUrl} alt={brandName} className="h-9 w-9 shrink-0 rounded-lg object-contain" />
-                ) : (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand font-bold text-brand-foreground">
-                        {brandName.slice(0, 2).toUpperCase()}
-                    </div>
-                )}
+                {/* Custom uploaded logo, else the bundled default (public/logo.svg). */}
+                <img src={logoUrl || '/logo.svg'} alt={brandName} className="h-9 w-9 shrink-0 rounded-lg object-contain" />
                 {!iconsOnly && (
                     <div className="min-w-0">
                         <div className="truncate text-sm font-bold text-sidebar-foreground">{brandName}</div>
@@ -114,6 +109,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent"
                 >
                     <Avatar className="h-9 w-9 shrink-0">
+                        {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
                         <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
                             {initials(user?.name ?? 'IN')}
                         </AvatarFallback>

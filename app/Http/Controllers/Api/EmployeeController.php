@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
+use App\Models\AuditLog;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\EmployeeService;
@@ -12,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
@@ -43,7 +45,11 @@ class EmployeeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Employee::with(['department', 'position'])->orderBy('name');
+        // Resigned sink to the bottom; within active, no-account first; then by name.
+        $query = Employee::with(['department', 'position'])
+            ->orderByRaw("status = 'resigned'")
+            ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.email = employees.email OR users.username = employees.username)')
+            ->orderBy('name');
 
         if ($request->has('page')) {
             $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -59,6 +65,26 @@ class EmployeeController extends Controller
 
             if ($request->filled('department_id')) {
                 $query->where('department_id', (int) $request->query('department_id'));
+            }
+
+            // Status filter: active employees, resigned, or active-without-login-account.
+            $status = $request->query('status');
+            if ($status === 'active') {
+                $query->where('status', 'active');
+            } elseif ($status === 'resigned') {
+                $query->where('status', 'resigned');
+            } elseif ($status === 'no_account') {
+                $query->where('status', 'active')->whereNotExists(function ($q) {
+                    $q->from('users')
+                        ->whereColumn('users.email', 'employees.email')
+                        ->orWhereColumn('users.username', 'employees.username');
+                });
+            } elseif ($status === 'has_account') {
+                $query->where('status', 'active')->whereExists(function ($q) {
+                    $q->from('users')
+                        ->whereColumn('users.email', 'employees.email')
+                        ->orWhereColumn('users.username', 'employees.username');
+                });
             }
 
             $paginator = $query->paginate($perPage);
@@ -95,6 +121,98 @@ class EmployeeController extends Controller
             'new_hires' => $newHires,
             'recent'    => EmployeeResource::collection($recent),
         ]);
+    }
+
+    /**
+     * Streams a CSV template (UTF-8 BOM so Excel renders Thai) with the import
+     * column headers and one example row.
+     */
+    public function importTemplate(Request $request): StreamedResponse
+    {
+        abort_unless((bool) $request->user()?->canManageEmployees(), 403);
+
+        $headers = ['code', 'name', 'name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
+        $sample  = ['', 'John Doe', 'จอห์น โด', 'john.doe@inaba.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
+
+        return response()->streamDownload(function () use ($headers, $sample) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM
+            fputcsv($out, $headers);
+            fputcsv($out, $sample);
+            fclose($out);
+        }, 'employee-import-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Bulk-imports employees from an uploaded CSV. Validation is all-or-nothing:
+     * any bad row aborts the whole import and returns a 422 with per-row errors.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->canManageEmployees(), 403);
+
+        $request->validate(['file' => ['required', 'file', 'max:5120']]);
+        $file = $request->file('file');
+        if (! in_array(strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
+            return response()->json(['message' => 'รองรับเฉพาะไฟล์ .csv'], 422);
+        }
+
+        $rows = $this->readCsv($file->getRealPath());
+        if ($rows === null || count($rows) === 0) {
+            return response()->json(['message' => 'ไฟล์ว่างหรืออ่านไม่ได้'], 422);
+        }
+
+        $result = $this->service->importRows($rows);
+
+        if (count($result['errors']) > 0) {
+            return response()->json([
+                'message' => 'พบข้อผิดพลาด ยังไม่ได้นำเข้าข้อมูล กรุณาแก้ไขแล้วลองใหม่',
+                'errors'  => $result['errors'],
+            ], 422);
+        }
+
+        AuditLog::record('Imported employees', $result['imported'] . ' รายการ');
+
+        return response()->json(['message' => 'success', 'imported' => $result['imported']]);
+    }
+
+    /**
+     * Parses a CSV file into an array of associative rows keyed by the (lower-cased)
+     * header columns. Strips a UTF-8 BOM and skips fully-blank lines.
+     *
+     * @return array<int, array<string, string>>|null
+     */
+    private function readCsv(string $path): ?array
+    {
+        if (($h = fopen($path, 'r')) === false) {
+            return null;
+        }
+
+        $header = fgetcsv($h);
+        if ($header === false) {
+            fclose($h);
+
+            return null;
+        }
+        $header = array_map(fn ($c) => strtolower(trim((string) $c)), $header);
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // strip BOM
+        }
+
+        $rows = [];
+        while (($data = fgetcsv($h)) !== false) {
+            if (count(array_filter($data, fn ($v) => trim((string) $v) !== '')) === 0) {
+                continue; // skip blank line
+            }
+            $row = [];
+            foreach ($header as $idx => $col) {
+                $row[$col] = $data[$idx] ?? '';
+            }
+            $rows[] = $row;
+        }
+        fclose($h);
+
+        return $rows;
     }
 
     public function store(StoreEmployeeRequest $request): JsonResponse

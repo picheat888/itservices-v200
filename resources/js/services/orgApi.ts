@@ -56,8 +56,9 @@ function withoutPhoto(payload: EmployeePayload): Omit<EmployeePayload, 'photo'> 
 
 export const employeeApi = {
     list: () => http.get<ApiEnvelope<Employee[]>>('/employees').then((r) => r.data.data),
+    get: (id: number) => http.get<ApiEnvelope<Employee>>(`/employees/${id}`).then((r) => r.data.data),
     summary: () => http.get<EmployeeSummary>('/employees/summary').then((r) => r.data),
-    listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string }) =>
+    listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string; status?: string }) =>
         http.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),
     create: async (payload: EmployeePayload) => {
         await ensureCsrf();
@@ -88,6 +89,15 @@ export const employeeApi = {
     setCredentials: async (id: number, payload: { username: string; password: string; password_confirmation: string }) => {
         await ensureCsrf();
         const { data } = await http.post<ApiEnvelope<{ message: string }>>(`/employees/${id}/credentials`, payload);
+        return data;
+    },
+    downloadImportTemplate: () =>
+        http.get('/employees/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    import: async (file: File) => {
+        await ensureCsrf();
+        const fd = new FormData();
+        fd.append('file', file);
+        const { data } = await http.post<{ message: string; imported: number }>('/employees/import', fd);
         return data;
     },
 };

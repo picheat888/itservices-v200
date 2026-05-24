@@ -10,8 +10,16 @@ const LOC = ['locations'] as const;
 export const useEmployees = () => useQuery({ queryKey: EMP, queryFn: employeeApi.list });
 export const useEmployeeSummary = () => useQuery({ queryKey: ['employees-summary'], queryFn: employeeApi.summary });
 
+/** Fetches a single employee by id (used to open a record from a notification link). */
+export const useEmployee = (id: number | null) =>
+    useQuery({
+        queryKey: ['employee', id],
+        queryFn: () => employeeApi.get(id as number),
+        enabled: id != null,
+    });
+
 /** Paginated directory query — search and department filter are server-side. */
-export const useEmployeeDirectory = (params: { page: number; per_page: number; search: string; department_id: string }) =>
+export const useEmployeeDirectory = (params: { page: number; per_page: number; search: string; department_id: string; status: string }) =>
     useQuery({
         queryKey: ['employees-directory', params],
         queryFn: () =>
@@ -20,6 +28,7 @@ export const useEmployeeDirectory = (params: { page: number; per_page: number; s
                 per_page: params.per_page,
                 search: params.search || undefined,
                 department_id: params.department_id !== 'all' ? params.department_id : undefined,
+                status: params.status !== 'all' ? params.status : undefined,
             }),
         placeholderData: (prev) => prev,
     });
@@ -55,6 +64,10 @@ export function useEmployeeMutations() {
         }),
         cancelResign: useMutation({
             mutationFn: (id: number) => employeeApi.cancelResign(id),
+            onSuccess: invalidate,
+        }),
+        import: useMutation({
+            mutationFn: (file: File) => employeeApi.import(file),
             onSuccess: invalidate,
         }),
         resetPassword: useMutation({

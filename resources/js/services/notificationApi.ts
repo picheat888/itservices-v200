@@ -29,4 +29,7 @@ export const notificationApi = {
 
     markAllRead: (): Promise<void> =>
         http.put('/notifications/read-all').then(() => undefined),
+
+    dismiss: (id: string): Promise<void> =>
+        http.delete(`/notifications/${id}`).then(() => undefined),
 };

@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 <div className="mt-6 space-y-6 px-1">
                     <div className="flex items-center gap-4">
                         <Avatar className="h-16 w-16">
+                            {user.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
                             <AvatarFallback className="bg-brand/10 text-lg font-semibold text-brand">{initials(user.name)}</AvatarFallback>
                         </Avatar>
                         <div>

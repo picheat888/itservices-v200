@@ -24,6 +24,10 @@ class SettingsController extends Controller
         'country' => 'Thailand',
         'currency' => 'THB',
         'timezone' => 'Asia/Bangkok',
+        // Display theme — system-wide (shared by all users), not per-user.
+        'theme_accent' => '#2563eb',
+        'theme_density' => 'normal',
+        'theme_radius' => '10',
     ];
 
     public function show(): JsonResponse
@@ -35,23 +39,28 @@ class SettingsController extends Controller
     {
         abort_unless((bool) $request->user()?->isSuper(), 403);
 
+        // 'sometimes' lets each Settings tab send only its own fields (Company,
+        // Branding, or Display) — only the keys present get validated & saved.
         $data = $request->validate([
-            'brand_name' => ['required', 'string', 'max:60'],
-            'brand_sub' => ['nullable', 'string', 'max:60'],
-            'company_name' => ['required', 'string', 'max:150'],
-            'legal_name' => ['nullable', 'string', 'max:150'],
-            'tax_id' => ['nullable', 'string', 'max:50'],
-            'industry' => ['nullable', 'string', 'max:100'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'country' => ['nullable', 'string', 'max:100'],
-            'currency' => ['nullable', 'string', 'max:20'],
-            'timezone' => ['nullable', 'string', 'max:60'],
+            'brand_name' => ['sometimes', 'required', 'string', 'max:60'],
+            'brand_sub' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'company_name' => ['sometimes', 'required', 'string', 'max:150'],
+            'legal_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'tax_id' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'industry' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'timezone' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'theme_accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_density' => ['sometimes', 'in:compact,normal,cozy'],
+            'theme_radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
         ]);
 
         foreach ($data as $key => $value) {
-            AppSetting::put($key, $value ?? '');
+            AppSetting::put($key, $value === null ? '' : (string) $value);
         }
-        \App\Models\AuditLog::record('Updated settings', 'Company & branding');
+        \App\Models\AuditLog::record('Updated settings', implode(', ', array_keys($data)));
 
         return $this->show();
     }
@@ -165,6 +174,7 @@ class SettingsController extends Controller
             $values[$key] = AppSetting::get($key, $default);
         }
         $values['brand_name'] = $values['brand_name'] ?: config('app.name', 'IT Services');
+        $values['theme_radius'] = (int) $values['theme_radius'];
 
         $logoPath = AppSetting::get('logo_path');
         $values['logo_url'] = $logoPath ? Storage::disk('public')->url($logoPath) : null;

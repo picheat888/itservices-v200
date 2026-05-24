@@ -1,4 +1,5 @@
 import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
+import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
 import { DepartmentMembersDrawer } from '@/components/employees/department-members-drawer';
 import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
@@ -15,14 +16,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { useDepartmentMutations, useDepartments, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, usePositionMutations, usePositions } from '@/hooks/use-org';
+import { useDepartmentMutations, useDepartments, useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, usePositionMutations, usePositions } from '@/hooks/use-org';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
-import { useState } from 'react';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, Upload, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'directory' | 'positions' | 'departments';
 
@@ -50,6 +52,7 @@ export default function EmployeesPage() {
     const { data: positions = [] } = usePositions();
 
     const [addOpen, setAddOpen] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
     const [viewEmp, setViewEmp] = useState<Employee | null>(null);
     const [resignEmp, setResignEmp] = useState<Employee | null>(null);
@@ -64,6 +67,25 @@ export default function EmployeesPage() {
     const positionMut = usePositionMutations();
     const departmentMut = useDepartmentMutations();
     const employeeMut = useEmployeeMutations();
+
+    // Deep-link from a notification: /employees?highlight=<id> opens that
+    // employee's record on the Directory tab, then clears the param.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const highlightId = searchParams.get('highlight');
+    const { data: highlighted } = useEmployee(highlightId ? Number(highlightId) : null);
+
+    useEffect(() => {
+        if (highlightId) setTab('directory');
+    }, [highlightId]);
+
+    useEffect(() => {
+        if (highlighted) {
+            setViewEmp(highlighted);
+            searchParams.delete('highlight');
+            setSearchParams(searchParams, { replace: true });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [highlighted]);
 
     const tabs: { id: Tab; label: string; count?: number }[] = [
         { id: 'dashboard', label: t('sub_dashboard') },
@@ -114,10 +136,16 @@ export default function EmployeesPage() {
                     <p className="text-sm text-muted-foreground">{t('emp_subtitle')}</p>
                 </div>
                 {canManageEmployees && (
-                    <Button onClick={() => setAddOpen(true)}>
-                        <Plus className="h-4 w-4" />
-                        {t('add_employee')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setImportOpen(true)}>
+                            <Upload className="h-4 w-4" />
+                            {t('import_employee')}
+                        </Button>
+                        <Button onClick={() => setAddOpen(true)}>
+                            <Plus className="h-4 w-4" />
+                            {t('add_employee')}
+                        </Button>
+                    </div>
                 )}
             </div>
 
@@ -196,7 +224,7 @@ export default function EmployeesPage() {
                             </Button>
                         )}
                     </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {departments.map((d) => (
                             <Card key={d.id} className="p-4">
                                 <div className="flex items-start justify-between">
@@ -258,6 +286,7 @@ export default function EmployeesPage() {
                     setEditEmp(null);
                 }}
             />
+            <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             <EmployeeViewDrawer
                 employee={viewEmp}
                 onClose={() => setViewEmp(null)}
@@ -327,10 +356,11 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
     const lang = useUiStore((s) => s.lang);
     const [search, setSearch] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<10 | 20 | 50 | 100>(20);
 
-    const { data, isLoading } = useEmployeeDirectory({ page, per_page: pageSize, search, department_id: deptFilter });
+    const { data, isLoading } = useEmployeeDirectory({ page, per_page: pageSize, search, department_id: deptFilter, status: statusFilter });
     const rows = data?.data ?? [];
     const meta = data?.meta;
     const total = meta?.total ?? 0;
@@ -340,6 +370,7 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
 
     const handleSearch = (v: string) => { setSearch(v); setPage(1); };
     const handleDept = (v: string) => { setDeptFilter(v); setPage(1); };
+    const handleStatus = (v: string) => { setStatusFilter(v); setPage(1); };
     const handlePageSize = (v: 10 | 20 | 50 | 100) => { setPageSize(v); setPage(1); };
 
     const columns: Column<Employee>[] = [
@@ -450,12 +481,49 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">{t('all')}</SelectItem>
+                        <SelectItem value="all">{t('all_departments')}</SelectItem>
                         {departments.map((d) => (
                             <SelectItem key={d.id} value={String(d.id)}>
                                 {lang === 'th' ? d.name_th ?? d.name : d.name}
                             </SelectItem>
                         ))}
+                    </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={handleStatus}>
+                    <SelectTrigger className="w-48">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground" />
+                                {t('all_status')}
+                            </span>
+                        </SelectItem>
+                        <SelectItem value="active">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                                {t('active')}
+                            </span>
+                        </SelectItem>
+                        <SelectItem value="has_account">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                                {t('cred_has_account')}
+                            </span>
+                        </SelectItem>
+                        <SelectItem value="no_account">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                                {t('cred_no_account')}
+                            </span>
+                        </SelectItem>
+                        <SelectItem value="resigned">
+                            <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
+                                {t('resigned')}
+                            </span>
+                        </SelectItem>
                     </SelectContent>
                 </Select>
             </div>
