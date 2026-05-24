@@ -1,0 +1,56 @@
+<h2>เมื่อ IT กด Notification Bell — เห็นอะไร และทำอะไรได้?</h2>
+<p class="subtitle">ออกแบบ UX ของ notification item สำหรับ IT Technical</p>
+
+<div class="options">
+  <div class="option" data-choice="view-only" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>แสดงข้อมูล + Default Password</h3>
+      <p>Notification บอกข้อมูล Employee และ Password เริ่มต้น (= Employee Code) — IT แจ้ง Employee เองผ่านช่องทางอื่น</p>
+      <div style="margin-top:10px;background:white;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:12px;color:#374151;">
+        <div style="font-weight:700;margin-bottom:6px;">👤 New Employee Account Created</div>
+        <div style="color:#6b7280;margin-bottom:8px;">Added by: สมหญิง HR · 10 min ago</div>
+        <div style="background:#f9fafb;border-radius:6px;padding:8px;font-family:monospace;font-size:11px;">
+          Name: สมชาย ใจดี<br>
+          Email: somchai@company.com<br>
+          Default Password: <b>EMP-1042</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="link-profile" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Link ไปหน้า Employee Profile</h3>
+      <p>Notification มีปุ่ม "View Employee" — คลิกแล้วไปหน้า Employee โดยตรง ซึ่ง IT สามารถ Reset Password ได้จากหน้านั้น</p>
+      <div style="margin-top:10px;background:white;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:12px;color:#374151;">
+        <div style="font-weight:700;margin-bottom:4px;">👤 New Employee Account Created</div>
+        <div style="color:#6b7280;margin-bottom:8px;">สมชาย ใจดี · Added by HR · 10 min ago</div>
+        <div style="display:flex;gap:6px;">
+          <span style="background:#2563eb;color:white;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;">View Employee</span>
+          <span style="background:#f3f4f6;color:#374151;border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;">Dismiss</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="inline-action" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Inline — Reset Password จาก Notification เลย</h3>
+      <p>Notification ขยายได้ มี form ให้ตั้ง Password ใหม่ โดยไม่ต้องออกไปหน้าอื่น — เร็วที่สุดสำหรับ IT</p>
+      <div style="margin-top:10px;background:white;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:12px;color:#374151;">
+        <div style="font-weight:700;margin-bottom:4px;">👤 สมชาย ใจดี — Set Credentials</div>
+        <div style="margin-bottom:8px;">
+          <div style="color:#6b7280;font-size:11px;margin-bottom:4px;">New Password</div>
+          <div style="border:1px solid #d1d5db;border-radius:4px;padding:5px 8px;color:#9ca3af;font-size:11px;">Enter password...</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="background:#2563eb;color:white;border-radius:5px;padding:4px 10px;font-size:11px;">Save</span>
+          <span style="background:#f3f4f6;color:#374151;border-radius:5px;padding:4px 10px;font-size:11px;">Skip</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
