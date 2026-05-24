@@ -8,6 +8,7 @@ use App\Support\Permissions;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -122,5 +123,30 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
+    }
+
+    /**
+     * Resolves the profile photo from the linked Employee record (matched by
+     * email or username — the same link used by has_account). Returns null when
+     * there is no matching employee or no photo.
+     */
+    public function employeePhotoUrl(): ?string
+    {
+        if (! $this->email && ! $this->username) {
+            return null;
+        }
+
+        $path = Employee::query()
+            ->where(function ($q) {
+                if ($this->email) {
+                    $q->orWhere('email', $this->email);
+                }
+                if ($this->username) {
+                    $q->orWhere('username', $this->username);
+                }
+            })
+            ->value('photo_path');
+
+        return $path ? Storage::disk('public')->url($path) : null;
     }
 }

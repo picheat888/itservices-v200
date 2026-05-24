@@ -36,6 +36,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
+    Route::get('employees/import-template', [EmployeeController::class, 'importTemplate'])->name('api.employees.import-template');
+    Route::post('employees/import', [EmployeeController::class, 'import'])->name('api.employees.import');
     Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('api.employees.resign');
     Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');
     Route::post('employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name('api.employees.reset-password');
@@ -62,4 +64,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
     Route::put('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('api.notifications.read-all');
     Route::put('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('api.notifications.read');
+    Route::delete('notifications/{id}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
 });

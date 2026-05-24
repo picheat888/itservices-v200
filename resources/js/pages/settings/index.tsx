@@ -1,11 +1,13 @@
 import { Field } from '@/components/shared/field';
+import { SaveButton } from '@/components/shared/save-button';
 import { SearchSelect } from '@/components/shared/search-select';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { resolveBrand } from '@/lib/brand-color';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
-import { useResetLogo, useSettings, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
+import { useResetLogo, useSettings, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
@@ -20,6 +22,9 @@ import Swal from 'sweetalert2';
 type Section = 'display' | 'company' | 'branding' | 'locations' | 'email' | 'tickets' | 'assets' | 'workflow' | 'integrations' | 'security';
 
 const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
+
+// Bundled default web logo (public/logo.svg) — shown when no custom logo is set.
+const DEFAULT_LOGO = '/logo.svg';
 
 const emptyForm: SettingsPayload = {
     brand_name: '',
@@ -132,8 +137,10 @@ function DisplayTab() {
     const storeAccent = useUiStore((s) => s.accent);
     const storeDensity = useUiStore((s) => s.density);
     const storeRadius = useUiStore((s) => s.radius);
+    const dark = useUiStore((s) => s.dark);
+    const updateDisplay = useUpdateDisplay();
 
-    // Local draft — only committed (and persisted) when Save is pressed.
+    // Local draft — only committed (and persisted system-wide) when Save is pressed.
     const [accent, setAccent] = useState(storeAccent);
     const [density, setDensity] = useState<Density>(storeDensity);
     const [radius, setRadius] = useState(storeRadius);
@@ -149,11 +156,12 @@ function DisplayTab() {
     const touch = () => setSaved(false);
 
     const save = () => {
-        const s = useUiStore.getState();
-        s.setAccent(accent);
-        s.setDensity(density);
-        s.setRadius(radius);
-        setSaved(true);
+        // System-wide display theme: persist to app_settings; the mutation's
+        // onSuccess syncs the UI store so the change applies immediately.
+        updateDisplay.mutate(
+            { theme_accent: accent, theme_density: density, theme_radius: radius },
+            { onSuccess: () => setSaved(true) },
+        );
     };
 
     const densityOpts: { value: Density; label: string }[] = [
@@ -183,7 +191,7 @@ function DisplayTab() {
                                     'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all',
                                     accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
                                 )}
-                                style={{ background: c }}
+                                style={{ background: resolveBrand(c, dark) }}
                                 aria-label={c}
                             />
                         ))}
@@ -229,10 +237,9 @@ function DisplayTab() {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
-                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
-                    <Button onClick={save} disabled={!dirty}>
+                    <SaveButton onClick={save} loading={updateDisplay.isPending} success={saved} disabled={!dirty}>
                         {t('save')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </div>
         </div>
@@ -430,14 +437,13 @@ function EmailTab() {
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">
-                    <Button onClick={() => update.mutate(form)} disabled={update.isPending}>
-                        {update.isPending ? t('cred_saving') : t('save')}
-                    </Button>
+                    <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved}>
+                        {t('save')}
+                    </SaveButton>
                     <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
                         <Send className="h-4 w-4" />
                         {t('email_test')}
                     </Button>
-                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
                 </div>
             </div>
         </div>
@@ -452,10 +458,9 @@ function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolea
     const t = useT();
     return (
         <div className="flex items-center justify-end gap-3 pt-2">
-            {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
-            <Button onClick={onSave} disabled={saving}>
+            <SaveButton onClick={onSave} loading={saving} success={saved}>
                 {t('save')}
-            </Button>
+            </SaveButton>
         </div>
     );
 }
@@ -531,7 +536,8 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
 
     // When pendingReset is true, show no logo (as if already cleared).
     // When a new file is picked after reset, cancel the pending reset.
-    const previewUrl = pendingReset ? null : file ? URL.createObjectURL(file) : logoUrl;
+    // Reset previews the default logo; otherwise the picked file, the custom logo, or the default.
+    const previewUrl = pendingReset ? DEFAULT_LOGO : file ? URL.createObjectURL(file) : logoUrl || DEFAULT_LOGO;
     useEffect(() => () => { if (file) URL.revokeObjectURL(URL.createObjectURL(file)); }, [file]);
 
     // Reset pending state whenever the server logo changes (e.g. after save).
@@ -589,15 +595,8 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
 
                 <Field label={t('set_logo')} error={error ?? undefined}>
                     <div className="flex items-center gap-4">
-                        <div
-                            className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg font-bold text-white"
-                            style={{ background: previewUrl ? 'transparent' : 'var(--brand)' }}
-                        >
-                            {previewUrl ? (
-                                <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
-                            ) : (
-                                <span className="text-2xl">{(form.brand_name || 'IT').slice(0, 2).toUpperCase()}</span>
-                            )}
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/30">
+                            <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
                         </div>
                         <div>
                             <input ref={inputRef} type="file" accept="image/png,image/svg+xml" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
@@ -628,10 +627,9 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
                 </Field>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
-                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
-                    <Button onClick={save} disabled={busy || !form.brand_name.trim()}>
+                    <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim()}>
                         {t('save')}
-                    </Button>
+                    </SaveButton>
                 </div>
             </div>
         </div>

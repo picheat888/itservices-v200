@@ -13,12 +13,25 @@ export interface SettingsData {
     country: string;
     currency: string;
     timezone: string;
+    theme_accent: string;
+    theme_density: 'compact' | 'normal' | 'cozy';
+    theme_radius: number;
     default_employee_role: string;
     default_employee_role_label: string;
 }
 
-// Fields the PUT /settings endpoint accepts (logo + default role are managed elsewhere).
-export type SettingsPayload = Omit<SettingsData, 'logo_url' | 'default_employee_role' | 'default_employee_role_label'>;
+// Company/Branding payload — theme + logo + default role are handled separately.
+export type SettingsPayload = Omit<
+    SettingsData,
+    'logo_url' | 'default_employee_role' | 'default_employee_role_label' | 'theme_accent' | 'theme_density' | 'theme_radius'
+>;
+
+// Display (theme) payload — system-wide, saved via the same PUT /settings endpoint.
+export interface DisplayPayload {
+    theme_accent: string;
+    theme_density: 'compact' | 'normal' | 'cozy';
+    theme_radius: number;
+}
 
 export interface MailSettingsData {
     host: string | null;
@@ -44,6 +57,12 @@ export const settingsApi = {
     get: () => http.get<ApiEnvelope<SettingsData>>('/settings').then((r) => r.data.data),
 
     update: async (payload: SettingsPayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        return data.data;
+    },
+
+    updateDisplay: async (payload: DisplayPayload) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
         return data.data;

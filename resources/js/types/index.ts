@@ -22,6 +22,7 @@ export interface User {
     username: string | null;
     role: Role;
     role_label: string;
+    photo_url: string | null;
     permissions: string[];
     preferences: UserPreferences;
     email_verified_at: string | null;

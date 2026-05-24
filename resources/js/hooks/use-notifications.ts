@@ -27,3 +27,11 @@ export function useMarkAllRead() {
         onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
     });
 }
+
+export function useDismissNotification() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => notificationApi.dismiss(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    });
+}

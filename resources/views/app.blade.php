@@ -6,6 +6,9 @@
 
         <title>{{ config('app.name', 'Inaba IT') }}</title>
 
+        {{-- Default favicon; replaced at runtime by the uploaded logo (Settings → Branding) via JS. --}}
+        <link rel="icon" type="image/svg+xml" href="{{ asset('logo.svg') }}">
+
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
