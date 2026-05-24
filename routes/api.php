@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
     Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('api.employees.resign');
+    Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');
     Route::post('employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name('api.employees.reset-password');
     Route::post('employees/{employee}/credentials', [EmployeeController::class, 'credentials'])->name('api.employees.credentials');
     Route::apiResource('employees', EmployeeController::class);

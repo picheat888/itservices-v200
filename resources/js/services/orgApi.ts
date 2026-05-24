@@ -81,6 +81,8 @@ export const employeeApi = {
     remove: (id: number) => mutate<void>('delete', `/employees/${id}`),
     resign: (id: number, reason: string, lastDay: string | null) =>
         mutate<Employee>('post', `/employees/${id}/resign`, { reason, last_day: lastDay }),
+    cancelResign: (id: number) =>
+        mutate<Employee>('post', `/employees/${id}/cancel-resign`),
     resetPassword: (id: number) =>
         mutate<{ new_password: string }>('post', `/employees/${id}/reset-password`),
     setCredentials: async (id: number, payload: { username: string; password: string; password_confirmation: string }) => {
