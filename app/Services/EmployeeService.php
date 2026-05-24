@@ -90,6 +90,21 @@ class EmployeeService
         return $employee->load(['department', 'position']);
     }
 
+    /**
+     * Cancels a resignation by reverting the employee's status back to Active
+     * and clearing resign_reason and last_day fields.
+     */
+    public function cancelResign(Employee $employee): Employee
+    {
+        $employee->update([
+            'status'        => EmployeeStatus::Active,
+            'resign_reason' => null,
+            'last_day'      => null,
+        ]);
+
+        return $employee->load(['department', 'position']);
+    }
+
     /** Returns the role key from the employee's first GroupRole, or 'user'. */
     private function resolveGroupRole(Employee $employee): string
     {

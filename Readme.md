@@ -108,10 +108,13 @@
 
 ---
 
-## Phase-3 — Permission Module + Login (เสร็จแล้ว)
+## Phase-3 — Permission Management (#7) + Login & Employee Credentials (เสร็จสมบูรณ์)
 
-### Login
-- รับ **Email หรือ Username** ช่องเดียว + password (เพิ่ม `username` unique ใน `users`); `LoginRequest` ตรวจว่าเป็นอีเมลหรือ username แล้ว `Auth::attempt` ตามนั้น
+> รวมงานย่อย Phase-3.1 – 3.13 และส่วนที่สั่งปรับเพิ่มทั้งหมดไว้ในสรุปเดียว
+
+### 1. Login & Authentication
+- รับ **Email หรือ Username** ช่องเดียว + password (`username` unique ใน `users`); `LoginRequest` ตรวจว่าเป็นอีเมลหรือ username แล้ว `Auth::attempt` ตามนั้น
+- `users.email` เป็น **nullable** เพื่อรองรับบัญชีแบบ username-only
 - **Demo accounts** (password: `password`, ล็อกอินด้วย username หรืออีเมลก็ได้, คลิกเลือกได้ในหน้า login):
   | กลุ่ม | username | email |
   |------|----------|-------|
@@ -120,57 +123,50 @@
   | HR Officer | `hr` | hr@inaba.co.th |
   | Employee | `user` | user@inaba.co.th |
 
-### RBAC (Roles & Permissions)
-- **Catalog** สิทธิ์ 6 โมดูล × 5 การกระทำ = 30 keys (`App\Support\Permissions`); ตาราง `role_permissions` (role/permission/allowed)
+### 2. RBAC (Roles & Permissions)
+- **Catalog** สิทธิ์ 6 โมดูล = **34 keys** (`App\Support\Permissions`); ตาราง `role_permissions` (role/permission/allowed)
+  - Employee scope ครบ 9 keys: `view · add · edit · deactivate · edit_own · reset_password · resign · cancel_resign · set_credentials`
 - `User::permissions()` / `hasPermission()` — Super = สิทธิ์เต็มเสมอ (bypass); role อื่นอ่านจาก DB
-- หน้า **Permissions → Roles**: เลือก role → matrix toggle 6 การ์ดโมดูล + Save (persist, super ล็อก); ปรับแล้ว**คุมการเข้าถึงจริง** (nav/route อิง permission)
-- ค่าเริ่มต้นตาม 4 กลุ่ม: Super=ทั้งหมด · IT=22 · HR=7 (Employee เต็ม + ticket/request ตัวเอง) · Employee=3 (ticket/request ตัวเอง + แก้โปรไฟล์)
+- หน้า **Permissions → Roles**: เลือก role → matrix toggle ตามการ์ดโมดูล + Save (persist, super ล็อก); ปรับแล้ว**คุมการเข้าถึงจริง**
+- ค่าเริ่มต้น 4 กลุ่ม: Super=ทั้งหมด · IT=สิทธิ์ปฏิบัติการกว้าง (รวม reset_password/resign/cancel_resign/set_credentials) · HR=Employee เต็ม + ticket/request ตัวเอง · Employee=ticket/request ตัวเอง + แก้โปรไฟล์
 - **Nav/เข้าถึง** อิง permission แทน role hardcode (เช่น Employee เห็นแค่ Dashboard/Tickets/Requests)
+- `lib/permission-labels.ts` มี `LIVE` set แยกสิทธิ์ที่บังคับใช้จริง vs. ติดป้าย "(เร็ว ๆ นี้)"
 
-### Audit log
-- ตาราง `audit_logs` + `AuditLog::record()`; log การ login/logout + แก้สิทธิ์ (ขยายไปโมดูลอื่นได้); หน้า **Permissions → Audit log** แสดงตารางจริง (เวลา/ผู้ใช้/การกระทำ/เป้าหมาย)
-- **Groups** tab: Coming Soon
-
-**ไฟล์เพิ่ม**: `app/Support/Permissions.php` · `app/Models/{RolePermission,AuditLog}.php` · `app/Http/Controllers/Api/{RolePermission,AuditLog}Controller.php` · `resources/js/services/permissionApi.ts` · `hooks/use-permissions.ts` · `lib/permission-labels.ts` · `pages/permissions/index.tsx`
-
-**ตรวจสอบ**: `tsc`/`eslint`/`build` ✅ · API (curl): login by username, matrix get/update (persist+revert) ✅ · เบราว์เซอร์: matrix, audit log จริง, nav จำกัดสิทธิ์ของ Employee ✅
-
----
-
-## Phase-3.12 — Permission Role Template + Employee Credential Control (เสร็จแล้ว)
-
-### Permission Keys ใหม่ (Employee module)
-- เพิ่ม 3 keys ใน `App\Support\Permissions`: `employees.reset_password` · `employees.resign` · `employees.set_credentials`
-- รวมเป็น 33 permission keys; IT/Super ได้ทั้ง 3 key ค่าเริ่มต้น
-- Controller enforce permission จริง: `resetPassword` / `resign` / `credentials` ใน `EmployeeController`
-
-### Group Roles (Role Template)
+### 3. Group Roles (Role Template)
 - ตาราง `group_roles` + `group_role_employee` (pivot); `GroupRole` model + `GroupRoleController`
-- แท็บ **Permissions → Groups**: สร้าง/แก้/ลบ group, เลือก role template, กำหนดสมาชิก (พนักงาน), ตั้ง default group
-- **Auto-sync User.role**: เมื่อพนักงานเข้า/ออก group → `users.role` อัปเดตอัตโนมัติ (store/update/destroy)
-- Default group: พนักงานใหม่ถูกเพิ่มเข้า group นี้โดยอัตโนมัติเมื่อ Add Employee
+- แท็บ **Permissions → Groups**: สร้าง/แก้/ลบ group, เลือก role template, กำหนดสมาชิก, ตั้ง default group
+- **Auto-sync User.role**: เมื่อพนักงานเข้า/ออก group → `users.role` อัปเดตอัตโนมัติ
+- Default group: พนักงานใหม่ถูกเพิ่มเข้า group นี้อัตโนมัติเมื่อ Add Employee (`default_employee_group_id` ใน `app_settings`)
 
-### Two-path Credential Flow
-- **Path A (มีอีเมล)**: Add Employee → สร้าง User อัตโนมัติ (username=code, password=code) → แจ้ง IT ว่า "credentials ready"
-- **Path B (ไม่มีอีเมล)**: Add Employee → แจ้ง IT ว่า "ต้องตั้ง username/password เอง" → IT เปิด employee view drawer → กรอก credentials → POST `/api/employees/{id}/credentials`
-- View drawer แสดง badge "Has login account" และ CredentialsSection (form ตั้ง username/password) เฉพาะผู้มีสิทธิ์ `employees.set_credentials` + employee ยังไม่มีบัญชี
+### 4. Employee Credential Flow
+- ผู้มีสิทธิ์ `employees.set_credentials` เป็นผู้ตั้ง **Username/Password** ผ่าน **Dialog** (เปิดจากเมนู ⋯ ใน Employee list เมื่อ `has_account=false` หรือจาก view drawer) — *ไม่มี*การสร้าง User อัตโนมัติแล้ว
+- Employee list / view drawer แสดง badge **"มีบัญชีแล้ว / ยังไม่มีบัญชี"**
+- `EmployeeController` enforce permission จริง: `resetPassword` · `resign` · `cancelResign` · `credentials`
 
-### Notifications
+### 5. Resignation & Cancel Resignation
+- **บันทึกลาออก** (`employees.resign`): modal เตือน + Last working day + Reason → สถานะเป็น `Resigned`
+- **ยกเลิกการลาออก** (`employees.cancel_resign`): `EmployeeService::cancelResign()` คืนสถานะ `Active` + ล้าง `resign_reason`/`last_day`; controller ตรวจว่าสถานะ `resigned` ก่อน + audit "Cancelled resignation"; route `POST /api/employees/{employee}/cancel-resign`
+- **UI**: เมื่อพนักงานลาออก → **ซ่อนปุ่ม/เมนู Edit** และแสดงปุ่ม **"ยกเลิกการลาออก"** (เขียว, ใน view drawer + เมนู ⋯) เฉพาะผู้มีสิทธิ์ พร้อม confirm
+
+### 6. Notifications (in-app)
 - ตาราง `notifications` (Laravel standard); `NewEmployeeNotification` (database + mail, queued)
-- `NotificationController`: GET `/notifications` (30 รายการล่าสุด + unread count) · PUT `/notifications/{id}/read` · PUT `/notifications/read-all`
-- **Bell icon** บน topbar: แสดง unread count (poll ทุก 60 วินาที จาก API จริง)
-- **Notifications dropdown**: แสดงรายการจริง, คลิก → mark read + navigate ไปหน้า employees พร้อม highlight พนักงาน; ไอคอน amber = ต้องตั้ง credentials เอง, brand = พร้อมใช้
+- `NotificationController`: GET `/notifications` (30 ล่าสุด + unread count) · PUT `/notifications/{id}/read` · PUT `/notifications/read-all`
+- **Bell icon** บน topbar (unread count, poll 60 วิ) + **dropdown** รายการจริง, คลิก → mark read + navigate ไปหน้า employees พร้อม highlight (amber = ต้องตั้ง credentials, brand = พร้อมใช้)
 
-### Settings Bug Fixes (Pre-phase)
-- **Reset Logo deferred**: กด Reset → preview ว่าง แต่ API call จริงรอจนกด Save
-- **Re-upload หลัง Reset**: ล้าง `inputRef.current.value` หลัง Reset เพื่อให้เลือกไฟล์เดิมได้อีก
-- **Settings tab hash persistence**: URL hash `#branding` / `#company` / etc. คงค่าหลัง reload
+### 7. Audit Log
+- ตาราง `audit_logs` + `AuditLog::record()`; log login/logout, แก้สิทธิ์, สร้าง/แก้/ลบพนักงาน, resign/cancel-resign; หน้า **Permissions → Audit log** แสดงตารางจริง (เวลา/ผู้ใช้/การกระทำ/เป้าหมาย)
 
-**ไฟล์เพิ่ม/แก้**: `app/Support/Permissions.php` · `app/Models/{GroupRole,Employee}.php` · `app/Services/EmployeeService.php` · `app/Http/Controllers/Api/{GroupRole,Employee,Notification}Controller.php` · `app/Notifications/NewEmployeeNotification.php` · `resources/js/services/notificationApi.ts` · `hooks/use-notifications.ts` · `components/shell/notifications-dropdown.tsx` · `components/shell/topbar.tsx` · `components/employees/employee-view-drawer.tsx` · `pages/employees/index.tsx` · `pages/settings/index.tsx` · `lib/i18n.ts` (33 keys ใหม่)
+### 8. Settings Bug Fixes (ระหว่าง phase)
+- Reset Logo deferred (รอ Save ค่อย call API), re-upload ไฟล์เดิมได้หลัง Reset, Settings tab hash (`#branding`/`#company`/…) คงค่าหลัง reload
 
-**ตรวจสอบ**: `tsc --noEmit` ✅ · routes ✅ · migration ✅
+### 9. Demo Data (`OrgSeeder`)
+- พนักงานสถานะ **ลาออก 2 คน** (`EMP-2208`, `EMP-2301`) พร้อม reason/last_day เพื่อทดสอบ cancel-resign
+- `seedGroupRoles()`: 3 group (All Staff / IT Team / HR Team), ผูกพนักงาน active เข้า All Staff, ผูก IT/HR ตามแผนก, ตั้ง default group
+- ใช้ `updateOrCreate` + `syncWithoutDetaching` (idempotent) — `php artisan db:seed` ซ้ำได้โดยไม่ทับข้อมูลจริง
 
-> **ปรับภายหลัง (credential flow):** ยกเลิกการสร้าง User อัตโนมัติ + default password = รหัสพนักงาน — ตอนนี้ผู้มีสิทธิ์ `employees.set_credentials` เป็นผู้ตั้ง Username/Password ผ่าน **Dialog** (เปิดจากเมนู Action ใน Employee list เมื่อ `has_account=false` หรือจาก view drawer); Employee list แสดง badge "มีบัญชีแล้ว/ยังไม่มีบัญชี"; `users.email` เปลี่ยนเป็น nullable เพื่อรองรับบัญชีแบบ username-only
+**ไฟล์หลัก**: `app/Support/Permissions.php` · `app/Models/{RolePermission,AuditLog,GroupRole,Employee}.php` · `app/Services/EmployeeService.php` · `app/Http/Controllers/Api/{RolePermission,AuditLog,GroupRole,Employee,Notification}Controller.php` · `app/Notifications/NewEmployeeNotification.php` · `database/seeders/OrgSeeder.php` · `routes/api.php` · `resources/js/services/{permissionApi,notificationApi,orgApi}.ts` · `hooks/{use-permissions,use-notifications,use-org}.ts` · `lib/{permission-labels,i18n}.ts` · `components/shell/{notifications-dropdown,topbar}.tsx` · `components/employees/employee-view-drawer.tsx` · `pages/{permissions,employees,settings}/index.tsx`
+
+**ตรวจสอบ**: `tsc --noEmit` ✅ · `eslint` ✅ · `build` ✅ · `route:list` ✅ · migration ✅ · `db:seed` (idempotent) ✅ · API (curl): login by username, matrix get/update · เบราว์เซอร์: matrix, audit log จริง, nav จำกัดสิทธิ์, credential dialog, resign/cancel-resign ✅
 
 ---
 

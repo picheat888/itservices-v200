@@ -192,4 +192,19 @@ class EmployeeController extends Controller
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }
+
+    /**
+     * Cancels a resignation by reverting the employee's status back to Active.
+     * Requires the employees.cancel_resign permission.
+     */
+    public function cancelResign(Request $request, Employee $employee): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.cancel_resign'), 403);
+        abort_unless($employee->status->value === 'resigned', 422, 'Employee is not resigned.');
+
+        $employee = $this->service->cancelResign($employee);
+        \App\Models\AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})");
+
+        return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
+    }
 }

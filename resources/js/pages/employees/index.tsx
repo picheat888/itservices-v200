@@ -15,13 +15,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { useDepartmentMutations, useDepartments, useEmployeeDirectory, useEmployeeSummary, usePositionMutations, usePositions } from '@/hooks/use-org';
+import { useDepartmentMutations, useDepartments, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, usePositionMutations, usePositions } from '@/hooks/use-org';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserMinus, UserPlus, Users } from 'lucide-react';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
 import { useState } from 'react';
 
 type Tab = 'dashboard' | 'directory' | 'positions' | 'departments';
@@ -41,6 +41,7 @@ export default function EmployeesPage() {
     const canEdit = canManageEmployees || perms.includes('employees.edit');
     const canResetPassword = perms.includes('employees.reset_password') || role === 'super';
     const canResign = perms.includes('employees.resign') || role === 'super';
+    const canCancelResign = perms.includes('employees.cancel_resign') || role === 'super';
     const canSetCredentials = perms.includes('employees.set_credentials') || role === 'super';
 
     const [tab, setTab] = useState<Tab>('dashboard');
@@ -62,6 +63,7 @@ export default function EmployeesPage() {
 
     const positionMut = usePositionMutations();
     const departmentMut = useDepartmentMutations();
+    const employeeMut = useEmployeeMutations();
 
     const tabs: { id: Tab; label: string; count?: number }[] = [
         { id: 'dashboard', label: t('sub_dashboard') },
@@ -145,10 +147,14 @@ export default function EmployeesPage() {
                     canManageEmployees={canManageEmployees}
                     canResetPassword={canResetPassword}
                     canResign={canResign}
+                    canCancelResign={canCancelResign}
                     canSetCredentials={canSetCredentials}
                     onView={setViewEmp}
                     onEdit={setEditEmp}
                     onResign={setResignEmp}
+                    onCancelResign={(e) => {
+                        if (confirm(t('cancel_resign_confirm'))) employeeMut.cancelResign.mutate(e.id);
+                    }}
                     onResetPassword={setResetPwEmp}
                     onSetCredentials={setCredEmp}
                 />
@@ -258,8 +264,14 @@ export default function EmployeesPage() {
                 canEdit={canEdit}
                 canResetPassword={canResetPassword}
                 canResign={canResign}
+                canCancelResign={canCancelResign}
                 canSetCredentials={canSetCredentials}
                 onResign={(e) => setResignEmp(e)}
+                onCancelResign={(e) => {
+                    if (confirm(t('cancel_resign_confirm'))) {
+                        employeeMut.cancelResign.mutate(e.id, { onSuccess: () => setViewEmp(null) });
+                    }
+                }}
                 onResetPassword={(e) => setResetPwEmp(e)}
                 onSetCredentials={(e) => {
                     setViewEmp(null);
@@ -300,15 +312,17 @@ interface DirectoryTabProps {
     canManageEmployees: boolean;
     canResetPassword: boolean;
     canResign: boolean;
+    canCancelResign: boolean;
     canSetCredentials: boolean;
     onView: (e: Employee) => void;
     onEdit: (e: Employee) => void;
     onResign: (e: Employee) => void;
+    onCancelResign: (e: Employee) => void;
     onResetPassword: (e: Employee) => void;
     onSetCredentials: (e: Employee) => void;
 }
 
-function DirectoryTab({ departments, canManageEmployees, canResetPassword, canResign, canSetCredentials, onView, onEdit, onResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
+function DirectoryTab({ departments, canManageEmployees, canResetPassword, canResign, canCancelResign, canSetCredentials, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [search, setSearch] = useState('');
@@ -382,7 +396,7 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
                                 <Eye className="h-4 w-4" />
                                 {t('view')}
                             </DropdownMenuItem>
-                            {canManageEmployees && (
+                            {canManageEmployees && e.status !== 'resigned' && (
                                 <DropdownMenuItem onClick={() => onEdit(e)}>
                                     <SquarePen className="h-4 w-4" />
                                     {t('edit')}
@@ -404,6 +418,12 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
                                 <DropdownMenuItem onClick={() => onResign(e)} className="text-destructive focus:text-destructive">
                                     <UserMinus className="h-4 w-4" />
                                     {t('resign_employee')}
+                                </DropdownMenuItem>
+                            )}
+                            {canCancelResign && e.status === 'resigned' && (
+                                <DropdownMenuItem onClick={() => onCancelResign(e)} className="text-emerald-600 focus:text-emerald-600">
+                                    <UserCheck className="h-4 w-4" />
+                                    {t('cancel_resign')}
                                 </DropdownMenuItem>
                             )}
                         </DropdownMenuContent>
