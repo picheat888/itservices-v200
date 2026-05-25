@@ -60,13 +60,15 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             </div>
 
             <nav className="flex-1 space-y-5 overflow-y-auto px-2 py-3">
-                {groups.map((group) => (
+                {groups.map((group, idx) => (
                     <div key={group.label}>
-                        {!iconsOnly && (
-                            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                {t(group.label)}
-                            </div>
-                        )}
+                        {iconsOnly
+                            ? idx > 0 && <div className="mx-auto mb-3 h-px w-6 rounded-full bg-sidebar-border" />
+                            : (
+                                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                    {t(group.label)}
+                                </div>
+                            )}
                         <div className="space-y-0.5">
                             {group.items.map((item) => {
                                 const Icon = item.icon;

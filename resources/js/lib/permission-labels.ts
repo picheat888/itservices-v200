@@ -34,6 +34,7 @@ const ACTIONS: Record<string, L> = {
     'contracts.alerts': { en: 'Receive expiry alerts', th: 'รับการแจ้งเตือนหมดอายุ' },
     'employees.view': { en: 'View directory', th: 'ดูรายชื่อพนักงาน' },
     'employees.add': { en: 'Add employee', th: 'เพิ่มพนักงาน' },
+    'employees.import': { en: 'Import employees (CSV)', th: 'นำเข้าข้อมูลพนักงาน (CSV)' },
     'employees.edit': { en: 'Edit employee', th: 'แก้ไขข้อมูลพนักงาน' },
     'employees.edit_own': { en: 'Edit own profile', th: 'แก้ไขโปรไฟล์ของตนเอง' },
     'employees.reset_password': { en: 'Reset password', th: 'รีเซ็ตรหัสผ่าน' },
@@ -53,8 +54,13 @@ export const actionLabel = (module: string, action: string, lang: Lang) => ACTIO
 // Permission keys whose enforcement is actually live today. Everything else is
 // shown with a "(Coming soon)" tag in the matrix (toggle still persists).
 const LIVE = new Set<string>([
+    'contracts.view',
+    'contracts.create',
+    'contracts.edit',
+    'contracts.renew',
     'employees.view',
     'employees.add',
+    'employees.import',
     'employees.edit',
     'employees.edit_own',
     'employees.reset_password',

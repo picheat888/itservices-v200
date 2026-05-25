@@ -1,6 +1,7 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
+import { useContractSummary } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -9,8 +10,9 @@ import { Box, Construction, FileText, Inbox, type LucideIcon, Ticket } from 'luc
 interface Kpi {
     key: string;
     label: string;
-    value: string;
+    value: string | number;
     delta: string;
+    deltaClass?: string;
     icon: LucideIcon;
     tone: string;
 }
@@ -40,12 +42,13 @@ export default function DashboardPage() {
     const t = useT();
     const { user } = useAuth();
     const lang = useUiStore((s) => s.lang);
+    const { data: contracts } = useContractSummary();
 
     const kpis: Kpi[] = [
         { key: 'open', label: t('kpi_open_tickets'), value: '14', delta: lang === 'th' ? '↑ 12% จากสัปดาห์ก่อน' : '↑ 12% vs last week', icon: Ticket, tone: 'text-brand bg-brand/10' },
-        { key: 'req', label: t('kpi_pending_requests'), value: '5', delta: lang === 'th' ? 'รอคุณดำเนินการ 4' : '4 awaiting you', icon: Inbox, tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400' },
-        { key: 'assets', label: t('kpi_total_assets'), value: '128', delta: lang === 'th' ? '↑ เพิ่ม 2 สัปดาห์นี้' : '↑ 2 this week', icon: Box, tone: 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400' },
-        { key: 'contracts', label: t('kpi_expiring_contracts'), value: '3', delta: lang === 'th' ? 'ภายใน 60 วัน' : 'within 60 days', icon: FileText, tone: 'text-destructive bg-destructive/10' },
+        { key: 'req', label: t('kpi_pending_requests'), value: '5', delta: lang === 'th' ? 'รอคุณดำเนินการ 4' : '4 awaiting you', icon: Inbox, tone: 'text-brand bg-brand/10' },
+        { key: 'assets', label: t('kpi_total_assets'), value: '128', delta: lang === 'th' ? '↑ เพิ่ม 2 สัปดาห์นี้' : '↑ 2 this week', icon: Box, tone: 'text-brand bg-brand/10' },
+        { key: 'contracts', label: t('kpi_expiring_contracts'), value: contracts?.expiring ?? '—', delta: lang === 'th' ? 'อยู่ในช่วงแจ้งเตือน' : 'in reminder window', deltaClass: (contracts?.expiring ?? 0) > 0 ? 'text-destructive' : undefined, icon: FileText, tone: 'text-brand bg-brand/10' },
     ];
 
     return (
@@ -70,7 +73,7 @@ export default function DashboardPage() {
                                 </span>
                             </div>
                             <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
-                            <div className="mt-1 text-xs text-muted-foreground">{k.delta}</div>
+                            <div className={cn('mt-1 text-xs', k.deltaClass ?? 'text-muted-foreground')}>{k.delta}</div>
                         </Card>
                     );
                 })}

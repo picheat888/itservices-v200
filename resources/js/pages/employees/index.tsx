@@ -22,7 +22,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, Upload, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -40,6 +40,7 @@ export default function EmployeesPage() {
     const perms = user?.permissions ?? [];
     const canManageOrg = role === 'super';
     const canAdd = perms.includes('employees.add') || role === 'super';
+    const canImport = perms.includes('employees.import') || role === 'super';
     const canEdit = perms.includes('employees.edit') || role === 'super';
     const canResetPassword = perms.includes('employees.reset_password') || role === 'super';
     const canResign = perms.includes('employees.resign') || role === 'super';
@@ -135,16 +136,20 @@ export default function EmployeesPage() {
                     <h1 className="text-2xl font-bold">{t('employees')}</h1>
                     <p className="text-sm text-muted-foreground">{t('emp_subtitle')}</p>
                 </div>
-                {canAdd && (
+                {(canAdd || canImport) && (
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => setImportOpen(true)}>
-                            <Upload className="h-4 w-4" />
-                            {t('import_employee')}
-                        </Button>
-                        <Button onClick={() => setAddOpen(true)}>
-                            <Plus className="h-4 w-4" />
-                            {t('add_employee')}
-                        </Button>
+                        {canImport && (
+                            <Button variant="outline" onClick={() => setImportOpen(true)}>
+                                <Import className="h-4 w-4" />
+                                {t('import_employee')}
+                            </Button>
+                        )}
+                        {canAdd && (
+                            <Button onClick={() => setAddOpen(true)}>
+                                <Plus className="h-4 w-4" />
+                                {t('add_employee')}
+                            </Button>
+                        )}
                     </div>
                 )}
             </div>
@@ -588,9 +593,9 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
 
     const kpis = [
         { label: t('total_employees'), value: summary?.total ?? '—', icon: Users, tone: 'text-brand bg-brand/10' },
-        { label: t('departments_count'), value: departments.length, icon: Building2, tone: 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400' },
-        { label: t('active_positions'), value: positions.length, icon: Briefcase, tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400' },
-        { label: t('new_hires'), value: summary?.new_hires ?? '—', icon: UserPlus, tone: 'text-violet-600 bg-violet-500/10 dark:text-violet-400' },
+        { label: t('departments_count'), value: departments.length, icon: Building2, tone: 'text-brand bg-brand/10' },
+        { label: t('active_positions'), value: positions.length, icon: Briefcase, tone: 'text-brand bg-brand/10' },
+        { label: t('new_hires'), value: summary?.new_hires ?? '—', icon: UserPlus, tone: 'text-brand bg-brand/10' },
     ];
 
     return (
