@@ -83,6 +83,50 @@ export interface Employee {
     has_account: boolean;
 }
 
+export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
+export type ContractStatus = 'active' | 'expired' | 'cancelled';
+
+export interface Contract {
+    id: number;
+    code: string;
+    vendor: string;
+    name: string;
+    type: ContractType;
+    start: string;
+    end: string;
+    value: number;
+    value_display: string;
+    billing_cycle: BillingCycle;
+    auto_renew: boolean;
+    owner_id: number | null;
+    owner: string | null;
+    status: ContractStatus;
+    days_remaining: number;
+    in_reminder: boolean;
+    reminder_days: number | null;
+    notify_150: boolean;
+    notify_120: boolean;
+    notify_60: boolean;
+    notify_45: boolean;
+    notify_30: boolean;
+    notify_7: boolean;
+    notes: string | null;
+    linked_assets: never[];
+}
+
+export interface ContractSummary {
+    total: number;
+    active: number;
+    expiring: number;
+    expired: number;
+    cancelled: number;
+    annual_value: string;
+    top_vendors: { vendor: string; amount: number }[];
+    timeline: { id: number; code: string; name: string; vendor: string; end: string; days: number }[];
+    action_queue: { id: number; code: string; name: string; vendor: string; days: number }[];
+}
+
 export interface NavItem {
     id: string;
     label: string;

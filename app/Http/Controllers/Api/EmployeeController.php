@@ -55,7 +55,7 @@ class EmployeeController extends Controller
             $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
 
             if ($request->filled('search')) {
-                $q = '%' . $request->query('search') . '%';
+                $q = '%'.$request->query('search').'%';
                 $query->where(function ($w) use ($q) {
                     $w->where('name', 'like', $q)
                         ->orWhere('name_th', 'like', $q)
@@ -92,10 +92,10 @@ class EmployeeController extends Controller
             return response()->json([
                 'data' => EmployeeResource::collection($paginator->items()),
                 'meta' => [
-                    'total'        => $paginator->total(),
-                    'per_page'     => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'per_page' => $paginator->perPage(),
                     'current_page' => $paginator->currentPage(),
-                    'last_page'    => $paginator->lastPage(),
+                    'last_page' => $paginator->lastPage(),
                 ],
             ]);
         }
@@ -109,17 +109,17 @@ class EmployeeController extends Controller
      */
     public function summary(): JsonResponse
     {
-        $total    = Employee::count();
+        $total = Employee::count();
         $newHires = Employee::where('joined_at', '>=', '2023-01-01')->count();
-        $recent   = Employee::with(['department', 'position'])
+        $recent = Employee::with(['department', 'position'])
             ->orderByDesc('joined_at')
             ->limit(5)
             ->get();
 
         return response()->json([
-            'total'     => $total,
+            'total' => $total,
             'new_hires' => $newHires,
-            'recent'    => EmployeeResource::collection($recent),
+            'recent' => EmployeeResource::collection($recent),
         ]);
     }
 
@@ -129,10 +129,10 @@ class EmployeeController extends Controller
      */
     public function importTemplate(Request $request): StreamedResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
         $headers = ['code', 'name', 'name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
-        $sample  = ['', 'John Doe', 'จอห์น โด', 'john.doe@inaba.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
+        $sample = ['', 'John Doe', 'จอห์น โด', 'john.doe@inaba.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
@@ -149,7 +149,7 @@ class EmployeeController extends Controller
      */
     public function import(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
         $request->validate(['file' => ['required', 'file', 'max:5120']]);
         $file = $request->file('file');
@@ -167,11 +167,11 @@ class EmployeeController extends Controller
         if (count($result['errors']) > 0) {
             return response()->json([
                 'message' => 'พบข้อผิดพลาด ยังไม่ได้นำเข้าข้อมูล กรุณาแก้ไขแล้วลองใหม่',
-                'errors'  => $result['errors'],
+                'errors' => $result['errors'],
             ], 422);
         }
 
-        AuditLog::record('Imported employees', $result['imported'] . ' รายการ');
+        AuditLog::record('Imported employees', $result['imported'].' รายการ');
 
         return response()->json(['message' => 'success', 'imported' => $result['imported']]);
     }
@@ -218,7 +218,7 @@ class EmployeeController extends Controller
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
         $employee = $this->service->create($this->handlePhoto($request, $request->validated()), $request->user());
-        \App\Models\AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -231,7 +231,7 @@ class EmployeeController extends Controller
     public function update(StoreEmployeeRequest $request, Employee $employee): JsonResponse
     {
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
-        \App\Models\AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }
@@ -239,7 +239,7 @@ class EmployeeController extends Controller
     public function destroy(Request $request, Employee $employee): JsonResponse
     {
         abort_unless((bool) $request->user()?->canManageEmployees(), 403);
-        \App\Models\AuditLog::record('Deleted employee', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Deleted employee', "{$employee->name} ({$employee->code})");
         $employee->delete();
 
         return response()->json(['message' => 'success']);
@@ -262,7 +262,7 @@ class EmployeeController extends Controller
         $newPassword = $employee->code; // Reset to employee code
         $user->update(['password' => Hash::make($newPassword)]);
 
-        \App\Models\AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
 
         return response()->json(['message' => 'success', 'new_password' => $newPassword]);
     }
@@ -291,7 +291,7 @@ class EmployeeController extends Controller
 
         $this->service->createUserWithCredentials($employee, $data['username'], $data['password']);
 
-        \App\Models\AuditLog::record('Created user account', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Created user account', "{$employee->name} ({$employee->code})");
 
         return response()->json(['message' => 'success'], 201);
     }
@@ -306,7 +306,7 @@ class EmployeeController extends Controller
         ]);
 
         $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null, $request->user());
-        \App\Models\AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }
@@ -321,7 +321,7 @@ class EmployeeController extends Controller
         abort_unless($employee->status->value === 'resigned', 422, 'Employee is not resigned.');
 
         $employee = $this->service->cancelResign($employee);
-        \App\Models\AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Cancelled resignation', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }

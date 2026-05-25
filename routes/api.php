@@ -2,15 +2,16 @@
 
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\GroupRoleController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
-use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SettingsController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
     Route::apiResource('departments', DepartmentController::class)->except(['show']);
     Route::apiResource('locations', LocationController::class)->except(['show']);
+
+    // Contract & Rental module
+    Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
+    Route::post('contracts/{contract}/renew', [ContractController::class, 'renew'])->name('api.contracts.renew');
+    Route::post('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('api.contracts.cancel');
+    Route::apiResource('contracts', ContractController::class);
 
     // Permissions / RBAC + audit
     Route::get('permissions', [RolePermissionController::class, 'index'])->name('api.permissions.index');

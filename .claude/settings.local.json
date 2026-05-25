@@ -31,5 +31,9 @@
       "Bash(timeout 45 bash -c 'until curl -sf http://localhost:5173/@vite/client >/dev/null 2>&1; do sleep 1; done')",
       "Bash(node tmp-smoke16.mjs)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ],
+  "enableAllProjectMcpServers": true
 }
