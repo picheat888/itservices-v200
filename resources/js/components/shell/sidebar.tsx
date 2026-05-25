@@ -117,7 +117,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     {!iconsOnly && (
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{user?.name}</div>
-                            <div className="truncate text-xs text-muted-foreground">{t(`role_${role}` as const)}</div>
+                            <div className="truncate text-xs text-muted-foreground">{user?.group_name ?? t(`role_${role}` as const)}</div>
                         </div>
                     )}
                 </button>

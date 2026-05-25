@@ -18,7 +18,7 @@ class Permissions
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => ['view', 'register', 'transfer', 'retire', 'edit'],
             'contracts' => ['view', 'create', 'edit', 'renew', 'alerts'],
-            'employees' => ['view', 'add', 'edit', 'deactivate', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
+            'employees' => ['view', 'add', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_roles', 'manage_groups', 'edit_settings', 'configure_notifications', 'view_audit'],
         ];
     }
@@ -60,7 +60,7 @@ class Permissions
             ],
             // HR — full Employee function + own tickets/requests
             'hr' => [
-                'employees.view', 'employees.add', 'employees.edit', 'employees.deactivate', 'employees.edit_own',
+                'employees.view', 'employees.add', 'employees.edit', 'employees.edit_own',
                 'tickets.create', 'requests.submit',
             ],
             // Employee — own tickets/requests + own profile only

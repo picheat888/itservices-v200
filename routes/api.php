@@ -21,6 +21,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])->name('api.me');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
+    Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('settings', [SettingsController::class, 'update'])->name('api.settings.update');
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])->name('api.settings.logo.delete');

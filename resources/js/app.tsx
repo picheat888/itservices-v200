@@ -24,6 +24,7 @@ const modules: { path: string; titleKey: string }[] = [
     { path: 'requests', titleKey: 'requests' },
     { path: 'assets', titleKey: 'assets' },
     { path: 'contracts', titleKey: 'contracts' },
+    { path: 'stock', titleKey: 'stock' },
     { path: 'reports', titleKey: 'reports' },
 ];
 

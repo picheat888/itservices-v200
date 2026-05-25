@@ -42,3 +42,14 @@ export function useLogout() {
         onSuccess: () => qc.setQueryData(ME_KEY, null),
     });
 }
+
+export function useUpdateProfile() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (form: FormData) => authApi.updateProfile(form),
+        onSuccess: (user) => {
+            qc.setQueryData(ME_KEY, user);
+            qc.invalidateQueries({ queryKey: ['employees-directory'] });
+        },
+    });
+}

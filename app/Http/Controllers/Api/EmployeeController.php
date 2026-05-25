@@ -129,7 +129,7 @@ class EmployeeController extends Controller
      */
     public function importTemplate(Request $request): StreamedResponse
     {
-        abort_unless((bool) $request->user()?->canManageEmployees(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
 
         $headers = ['code', 'name', 'name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
         $sample  = ['', 'John Doe', 'จอห์น โด', 'john.doe@inaba.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
@@ -149,7 +149,7 @@ class EmployeeController extends Controller
      */
     public function import(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->canManageEmployees(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
 
         $request->validate(['file' => ['required', 'file', 'max:5120']]);
         $file = $request->file('file');
@@ -217,7 +217,7 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
-        $employee = $this->service->create($this->handlePhoto($request, $request->validated()));
+        $employee = $this->service->create($this->handlePhoto($request, $request->validated()), $request->user());
         \App\Models\AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -305,7 +305,7 @@ class EmployeeController extends Controller
             'last_day' => ['nullable', 'date'],
         ]);
 
-        $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null);
+        $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null, $request->user());
         \App\Models\AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();

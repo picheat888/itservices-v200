@@ -22,4 +22,10 @@ export const authApi = {
         const { data } = await http.get<ApiEnvelope<User>>('/me');
         return data.data;
     },
+
+    async updateProfile(form: FormData): Promise<User> {
+        await ensureCsrf();
+        const { data } = await http.post<ApiEnvelope<User>>('/profile', form);
+        return data.data;
+    },
 };
