@@ -10,6 +10,7 @@ import {
     Shield,
     Ticket,
     Users,
+    Warehouse,
 } from 'lucide-react';
 
 // Nav definition. `label` holds an i18n key resolved at render time.
@@ -26,6 +27,7 @@ export const navGroups: NavGroup[] = [
             { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, permission: 'requests.submit' },
             { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.view' },
             { id: 'contracts', label: 'contracts', to: '/contracts', icon: FileText, permission: 'contracts.view' },
+            { id: 'stock', label: 'stock', to: '/stock', icon: Warehouse, roles: ['super', 'admin'] },
         ],
     },
     {

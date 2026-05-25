@@ -24,6 +24,7 @@ export function EmployeeViewDrawer({
     employee,
     onClose,
     canEdit,
+    isSelf,
     canResetPassword,
     canResign,
     canCancelResign,
@@ -37,6 +38,7 @@ export function EmployeeViewDrawer({
     employee: Employee | null;
     onClose: () => void;
     canEdit: boolean;
+    isSelf: boolean;
     canResetPassword: boolean;
     canResign: boolean;
     canCancelResign: boolean;
@@ -127,7 +129,13 @@ export function EmployeeViewDrawer({
                                         {t('cancel')}
                                     </Button>
                                     {canEdit && employee.status !== 'resigned' && (
-                                        <Button variant="outline" className="flex-1" onClick={() => onEdit(employee)}>
+                                        <Button
+                                            variant="outline"
+                                            className="flex-1"
+                                            onClick={() => onEdit(employee)}
+                                            disabled={isSelf}
+                                            title={isSelf ? t('profile_edit_via') : undefined}
+                                        >
                                             <SquarePen className="h-4 w-4" />
                                             {t('edit')}
                                         </Button>

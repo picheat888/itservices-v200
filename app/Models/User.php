@@ -126,17 +126,16 @@ class User extends Authenticatable
     }
 
     /**
-     * Resolves the profile photo from the linked Employee record (matched by
-     * email or username — the same link used by has_account). Returns null when
-     * there is no matching employee or no photo.
+     * The Employee record this login account belongs to, matched by email or
+     * username (the same link used by has_account). Null for system-only accounts.
      */
-    public function employeePhotoUrl(): ?string
+    public function linkedEmployee(): ?Employee
     {
         if (! $this->email && ! $this->username) {
             return null;
         }
 
-        $path = Employee::query()
+        return Employee::query()
             ->where(function ($q) {
                 if ($this->email) {
                     $q->orWhere('email', $this->email);
@@ -145,8 +144,16 @@ class User extends Authenticatable
                     $q->orWhere('username', $this->username);
                 }
             })
-            ->value('photo_path');
+            ->first();
+    }
 
-        return $path ? Storage::disk('public')->url($path) : null;
+    /** Resolves the profile photo URL from the linked Employee record. */
+    public function employeePhotoUrl(): ?string
+    {
+        $employee = $this->linkedEmployee();
+
+        return $employee && $employee->photo_path
+            ? Storage::disk('public')->url($employee->photo_path)
+            : null;
     }
 }

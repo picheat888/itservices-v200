@@ -2,7 +2,7 @@ import { http } from './http';
 
 export interface NotificationData {
     type: string;
-    subtype: 'credentials_required';
+    subtype: 'credentials_required' | 'offboarding';
     employee_id: number;
     employee_name: string;
     employee_code: string;

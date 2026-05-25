@@ -7,9 +7,21 @@ use Illuminate\Validation\Rule;
 
 class StoreEmployeeRequest extends FormRequest
 {
+    /**
+     * Gate by the granular Employee permission: creating a record requires
+     * employees.add, updating an existing one requires employees.edit. The
+     * presence of an {employee} route binding distinguishes update from store.
+     */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->canManageEmployees();
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+
+        $permission = $this->route('employee') ? 'employees.edit' : 'employees.add';
+
+        return (bool) $user->hasPermission($permission);
     }
 
     /**
