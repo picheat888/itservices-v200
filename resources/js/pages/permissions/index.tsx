@@ -66,6 +66,14 @@ export default function PermissionsPage() {
     );
 }
 
+// Groups the permission modules under the same sections as the sidebar nav
+// (Workspace / Administration) so the matrix mirrors the app's mental model.
+// Dashboard (Overview) carries no permissions, so it isn't represented here.
+const PERM_SECTIONS: { label: string; modules: string[] }[] = [
+    { label: 'nav_workspace', modules: ['employees', 'tickets', 'requests', 'assets', 'contracts'] },
+    { label: 'nav_admin', modules: ['system'] },
+];
+
 function RolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -114,6 +122,15 @@ function RolesTab() {
             return next;
         });
     };
+
+    // Build the section list from the catalog, dropping empty sections and
+    // sweeping any unmapped module into a trailing "Other" section.
+    const sections = PERM_SECTIONS
+        .map((s) => ({ label: s.label, modules: s.modules.filter((m) => data.catalog[m]) }))
+        .filter((s) => s.modules.length > 0);
+    const knownModules = new Set(PERM_SECTIONS.flatMap((s) => s.modules));
+    const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
+    if (leftover.length > 0) sections.push({ label: 'perm_other', modules: leftover });
 
     return (
         <>
@@ -218,39 +235,51 @@ function RolesTab() {
                         )}
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {Object.entries(data.catalog).map(([module, actions]) => (
-                            <div key={module} className="rounded-lg border border-border p-3.5">
-                                <div className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{moduleLabel(module, lang)}</div>
-                                <div className="space-y-2">
-                                    {actions.map((action) => {
-                                        const key = `${module}.${action}`;
-                                        const on = role.is_super || draft.has(key);
-                                        const live = isLivePermission(key);
-                                        return (
-                                            <div key={key} className="flex items-center justify-between gap-2">
-                                                <span className={cn('text-sm', on && live ? 'text-foreground' : 'text-muted-foreground')}>
-                                                    {actionLabel(module, action, lang)}
-                                                    {!live && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggle(key)}
-                                                    disabled={role.is_super}
-                                                    className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-brand' : 'bg-muted')}
-                                                >
-                                                    <span
-                                                        className={cn(
-                                                            'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                                                            on ? 'left-[1.125rem]' : 'left-0.5',
-                                                        )}
-                                                    >
-                                                        {on && <Check className="h-2.5 w-2.5 text-brand" />}
-                                                    </span>
-                                                </button>
+                    <div className="space-y-6">
+                        {sections.map((section) => (
+                            <div key={section.label}>
+                                <div className="mb-3 border-b border-border pb-1.5 text-sm font-bold text-foreground">
+                                    {t(section.label)}
+                                </div>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    {section.modules.map((module) => (
+                                        <div key={module} className="rounded-lg border border-border p-3.5">
+                                            <div className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{moduleLabel(module, lang)}</div>
+                                            <div className="space-y-2">
+                                                {data.catalog[module].map((action) => {
+                                                    const key = `${module}.${action}`;
+                                                    const live = isLivePermission(key);
+                                                    // Coming-soon permissions are shown off and locked — the
+                                                    // feature isn't built yet, so the switch can't be turned on.
+                                                    const on = live && (role.is_super || draft.has(key));
+                                                    const locked = role.is_super || !live;
+                                                    return (
+                                                        <div key={key} className="flex items-center justify-between gap-2">
+                                                            <span className={cn('text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
+                                                                {actionLabel(module, action, lang)}
+                                                                {!live && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { if (!locked) toggle(key); }}
+                                                                disabled={locked}
+                                                                className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-brand' : 'bg-muted')}
+                                                            >
+                                                                <span
+                                                                    className={cn(
+                                                                        'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
+                                                                        on ? 'left-[1.125rem]' : 'left-0.5',
+                                                                    )}
+                                                                >
+                                                                    {on && <Check className="h-2.5 w-2.5 text-brand" />}
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
