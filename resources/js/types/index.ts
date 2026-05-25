@@ -22,7 +22,11 @@ export interface User {
     username: string | null;
     role: Role;
     role_label: string;
+    group_name: string | null;
+    employee_id: number | null;
     photo_url: string | null;
+    phone: string | null;
+    name_th: string | null;
     permissions: string[];
     preferences: UserPreferences;
     email_verified_at: string | null;

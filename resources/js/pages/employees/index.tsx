@@ -39,8 +39,8 @@ export default function EmployeesPage() {
     const role = (user?.role ?? 'user') as Role;
     const perms = user?.permissions ?? [];
     const canManageOrg = role === 'super';
-    const canManageEmployees = role === 'super' || role === 'hr';
-    const canEdit = canManageEmployees || perms.includes('employees.edit');
+    const canAdd = perms.includes('employees.add') || role === 'super';
+    const canEdit = perms.includes('employees.edit') || role === 'super';
     const canResetPassword = perms.includes('employees.reset_password') || role === 'super';
     const canResign = perms.includes('employees.resign') || role === 'super';
     const canCancelResign = perms.includes('employees.cancel_resign') || role === 'super';
@@ -135,7 +135,7 @@ export default function EmployeesPage() {
                     <h1 className="text-2xl font-bold">{t('employees')}</h1>
                     <p className="text-sm text-muted-foreground">{t('emp_subtitle')}</p>
                 </div>
-                {canManageEmployees && (
+                {canAdd && (
                     <div className="flex items-center gap-2">
                         <Button variant="outline" onClick={() => setImportOpen(true)}>
                             <Upload className="h-4 w-4" />
@@ -172,11 +172,12 @@ export default function EmployeesPage() {
             {tab === 'directory' && (
                 <DirectoryTab
                     departments={departments}
-                    canManageEmployees={canManageEmployees}
+                    canEdit={canEdit}
                     canResetPassword={canResetPassword}
                     canResign={canResign}
                     canCancelResign={canCancelResign}
                     canSetCredentials={canSetCredentials}
+                    ownEmployeeId={user?.employee_id ?? null}
                     onView={setViewEmp}
                     onEdit={setEditEmp}
                     onResign={setResignEmp}
@@ -291,6 +292,7 @@ export default function EmployeesPage() {
                 employee={viewEmp}
                 onClose={() => setViewEmp(null)}
                 canEdit={canEdit}
+                isSelf={!!viewEmp && viewEmp.id === user?.employee_id}
                 canResetPassword={canResetPassword}
                 canResign={canResign}
                 canCancelResign={canCancelResign}
@@ -338,11 +340,12 @@ const DIR_PAGE_SIZES = [20, 50, 100] as const;
 
 interface DirectoryTabProps {
     departments: Department[];
-    canManageEmployees: boolean;
+    canEdit: boolean;
     canResetPassword: boolean;
     canResign: boolean;
     canCancelResign: boolean;
     canSetCredentials: boolean;
+    ownEmployeeId: number | null;
     onView: (e: Employee) => void;
     onEdit: (e: Employee) => void;
     onResign: (e: Employee) => void;
@@ -351,7 +354,7 @@ interface DirectoryTabProps {
     onSetCredentials: (e: Employee) => void;
 }
 
-function DirectoryTab({ departments, canManageEmployees, canResetPassword, canResign, canCancelResign, canSetCredentials, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
+function DirectoryTab({ departments, canEdit, canResetPassword, canResign, canCancelResign, canSetCredentials, ownEmployeeId, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [search, setSearch] = useState('');
@@ -427,11 +430,18 @@ function DirectoryTab({ departments, canManageEmployees, canResetPassword, canRe
                                 <Eye className="h-4 w-4" />
                                 {t('view')}
                             </DropdownMenuItem>
-                            {canManageEmployees && e.status !== 'resigned' && (
-                                <DropdownMenuItem onClick={() => onEdit(e)}>
-                                    <SquarePen className="h-4 w-4" />
-                                    {t('edit')}
-                                </DropdownMenuItem>
+                            {canEdit && e.status !== 'resigned' && (
+                                e.id === ownEmployeeId ? (
+                                    <DropdownMenuItem disabled title={t('profile_edit_via')}>
+                                        <SquarePen className="h-4 w-4" />
+                                        {t('edit')}
+                                    </DropdownMenuItem>
+                                ) : (
+                                    <DropdownMenuItem onClick={() => onEdit(e)}>
+                                        <SquarePen className="h-4 w-4" />
+                                        {t('edit')}
+                                    </DropdownMenuItem>
+                                )
                             )}
                             {canSetCredentials && !e.has_account && e.status !== 'resigned' && (
                                 <DropdownMenuItem onClick={() => onSetCredentials(e)}>

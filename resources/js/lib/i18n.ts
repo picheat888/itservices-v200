@@ -25,6 +25,7 @@ const en: Dict = {
     requests: 'Requests',
     assets: 'Assets',
     contracts: 'Contracts',
+    stock: 'Stock',
     reports: 'Reports',
     permissions: 'Permissions',
     notifications: 'Email Templates',
@@ -164,8 +165,8 @@ const en: Dict = {
     coming_soon: 'Coming soon',
     assigned_assets: 'Assigned assets',
     no_assigned_assets: 'No assigned assets (Assets module pending)',
-    emp_first_name: 'First name',
-    emp_last_name: 'Last name',
+    emp_first_name: 'First name (English)',
+    emp_last_name: 'Last name (English)',
     emp_name_th: 'Name (Thai)',
     emp_email: 'Email',
     emp_phone: 'Phone',
@@ -347,6 +348,17 @@ const en: Dict = {
     // Notification items
     notif_unread: 'unread',
     notif_cred_required: 'Needs login account — set username & password',
+    notif_resigned: 'Resigned — revoke login account & reclaim assets',
+    profile_name: 'Name',
+    profile_change_photo: 'Change photo',
+    profile_photo_bad: 'Please choose an image file',
+    profile_photo_big: 'Image must be ≤ 2MB',
+    profile_name_required: 'Name is required',
+    profile_save_failed: 'Could not save profile',
+    profile_edit_via: 'Edit via your profile',
+    profile_details: 'Employee details',
+    profile_account: 'Account & access',
+    permission_level: 'Permission level',
 };
 
 const th: Dict = {
@@ -368,6 +380,7 @@ const th: Dict = {
     requests: 'คำขอ',
     assets: 'ทรัพย์สิน',
     contracts: 'สัญญา',
+    stock: 'คลังอะไหล่',
     reports: 'รายงาน',
     permissions: 'สิทธิ์การใช้งาน',
     notifications: 'เทมเพลตอีเมล',
@@ -502,8 +515,8 @@ const th: Dict = {
     coming_soon: 'เร็ว ๆ นี้',
     assigned_assets: 'อุปกรณ์ที่ได้รับมอบหมาย',
     no_assigned_assets: 'ยังไม่มีอุปกรณ์ (รอโมดูล Assets)',
-    emp_first_name: 'ชื่อ',
-    emp_last_name: 'นามสกุล',
+    emp_first_name: 'ชื่อ (อังกฤษ)',
+    emp_last_name: 'นามสกุล (อังกฤษ)',
     emp_name_th: 'ชื่อ (ภาษาไทย)',
     emp_email: 'อีเมล',
     emp_phone: 'เบอร์โทร',
@@ -685,6 +698,17 @@ const th: Dict = {
     // Notification items
     notif_unread: 'ยังไม่ได้อ่าน',
     notif_cred_required: 'ยังไม่มีบัญชี — กรุณาตั้ง Username/Password',
+    notif_resigned: 'ลาออก — โปรดเพิกถอนบัญชีและเรียกคืนทรัพย์สิน',
+    profile_name: 'ชื่อ',
+    profile_change_photo: 'เปลี่ยนรูป',
+    profile_photo_bad: 'กรุณาเลือกไฟล์รูปภาพ',
+    profile_photo_big: 'รูปต้องไม่เกิน 2MB',
+    profile_name_required: 'กรุณากรอกชื่อ',
+    profile_save_failed: 'บันทึกโปรไฟล์ไม่สำเร็จ',
+    profile_edit_via: 'แก้ที่โปรไฟล์ของคุณ',
+    profile_details: 'ข้อมูลพนักงาน',
+    profile_account: 'บัญชีและสิทธิ์',
+    permission_level: 'ระดับสิทธิ์',
 };
 
 const dictionaries: Record<Lang, Dict> = { en, th };

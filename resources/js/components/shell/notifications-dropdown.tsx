@@ -2,7 +2,7 @@ import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications }
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/services/notificationApi';
-import { UserPlus, X } from 'lucide-react';
+import { UserMinus, UserPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -123,12 +123,18 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                             !n.read && 'bg-brand/[0.04]',
                         )}
                     >
-                        <UserPlus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
+                        {n.data.subtype === 'offboarding' ? (
+                            <UserMinus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-red-500')} />
+                        ) : (
+                            <UserPlus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
+                        )}
                         <div className="min-w-0 flex-1">
                             <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>
                                 {n.data.employee_name} ({n.data.employee_code})
                             </div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">{t('notif_cred_required')}</div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                                {n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required')}
+                            </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
                             <span className="text-[11px] text-muted-foreground">{n.created_at}</span>

@@ -18,9 +18,9 @@ class DatabaseSeeder extends Seeder
     {
         $roles = [
             ['key' => 'super', 'name' => 'Administrator Template', 'color' => '#2563eb', 'is_system' => true],
-            ['key' => 'admin', 'name' => 'IT Technician', 'color' => '#0284c7', 'is_system' => false],
-            ['key' => 'hr', 'name' => 'HR Officer', 'color' => '#059669', 'is_system' => false],
-            ['key' => 'user', 'name' => 'Employee', 'color' => '#64748b', 'is_system' => false],
+            ['key' => 'admin', 'name' => 'IT Technician Template', 'color' => '#0284c7', 'is_system' => false],
+            ['key' => 'hr', 'name' => 'HR Template', 'color' => '#059669', 'is_system' => false],
+            ['key' => 'user', 'name' => 'Staff Template', 'color' => '#64748b', 'is_system' => false],
         ];
         foreach ($roles as $r) {
             Role::updateOrCreate(['key' => $r['key']], $r);

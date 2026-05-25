@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'gray';
 
 const tones: Record<Tone, string> = {
-    blue: 'bg-brand/10 text-brand',
+    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     red: 'bg-destructive/10 text-destructive',

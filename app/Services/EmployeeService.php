@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\GroupRole;
 use App\Models\Position;
 use App\Models\User;
+use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
 use App\Services\EmailNotificationService;
 use Illuminate\Support\Facades\DB;
@@ -24,8 +25,9 @@ class EmployeeService
      * later. We notify those users so they can provision the account.
      *
      * @param  array<string, mixed>  $data
+     * @param  User|null  $actor  the user performing the action (excluded from notifications)
      */
-    public function create(array $data): Employee
+    public function create(array $data, ?User $actor = null): Employee
     {
         $employee = Employee::create($data)->load(['department', 'position']);
 
@@ -37,7 +39,7 @@ class EmployeeService
             $group?->employees()->syncWithoutDetaching([$employee->id]);
         }
 
-        $this->notifyCredentialSetters($employee);
+        $this->notifyCredentialSetters($employee, $actor);
 
         return $employee;
     }
@@ -79,7 +81,7 @@ class EmployeeService
         return $employee->load(['department', 'position']);
     }
 
-    public function resign(Employee $employee, ?string $reason, ?string $lastDay): Employee
+    public function resign(Employee $employee, ?string $reason, ?string $lastDay, ?User $actor = null): Employee
     {
         $employee->update([
             'status'        => EmployeeStatus::Resigned,
@@ -89,6 +91,8 @@ class EmployeeService
 
         // NOTE: returning the employee's assigned assets is handled by the
         // Assets module (not yet built) — it will flag them as "Returning".
+
+        $this->notifyResignation($employee, $actor);
 
         return $employee->load(['department', 'position']);
     }
@@ -237,12 +241,23 @@ class EmployeeService
         return $group?->role ?? 'user';
     }
 
-    /** Notifies every user allowed to set credentials that an account is needed. */
-    private function notifyCredentialSetters(Employee $employee): void
+    /**
+     * Resolves the recipients for employee events: users holding the given
+     * permission, excluding the acting user (no point notifying yourself).
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function recipientsWithPermission(string $permission, ?User $actor): \Illuminate\Support\Collection
     {
-        $recipients = User::all()->filter(
-            fn (User $u) => $u->hasPermission('employees.set_credentials')
+        return User::all()->filter(
+            fn (User $u) => $u->hasPermission($permission) && $u->id !== $actor?->id
         );
+    }
+
+    /** Notifies every user allowed to set credentials (except the actor) that an account is needed. */
+    private function notifyCredentialSetters(Employee $employee, ?User $actor = null): void
+    {
+        $recipients = $this->recipientsWithPermission('employees.set_credentials', $actor);
 
         if ($recipients->isEmpty()) {
             return;
@@ -263,5 +278,18 @@ class EmployeeService
                 'employee.code'   => $employee->code,
             ]);
         }
+    }
+
+    /** Notifies IT (employees.set_credentials, except the actor) to offboard a resigned employee. */
+    private function notifyResignation(Employee $employee, ?User $actor = null): void
+    {
+        $recipients = $this->recipientsWithPermission('employees.set_credentials', $actor);
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        // In-app (database) bell only — no email template for offboarding yet.
+        Notification::send($recipients, new EmployeeResignedNotification($employee));
     }
 }
