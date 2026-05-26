@@ -2,7 +2,7 @@ import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications }
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { AppNotification } from '@/services/notificationApi';
-import { UserMinus, UserPlus, X } from 'lucide-react';
+import { CalendarClock, UserMinus, UserPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +13,7 @@ const NOTIF_TABS: { id: string; label: string; live: boolean }[] = [
     { id: 'tickets', label: 'tickets', live: false },
     { id: 'requests', label: 'requests', live: false },
     { id: 'assets', label: 'assets', live: false },
-    { id: 'contracts', label: 'contracts', live: false },
+    { id: 'contracts', label: 'contracts', live: true },
 ];
 
 /** Maps a notification's data.type to the owning module tab id. */
@@ -57,7 +57,11 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
     const handleClick = (n: AppNotification) => {
         if (!n.read) markRead.mutate(n.id);
-        navigate(`/employees?highlight=${n.data.employee_id}`);
+        if (moduleOf(n.data.type) === 'contracts') {
+            navigate('/contracts');
+        } else {
+            navigate(`/employees?highlight=${n.data.employee_id}`);
+        }
         onClose();
     };
 
@@ -123,17 +127,23 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                             !n.read && 'bg-brand/[0.04]',
                         )}
                     >
-                        {n.data.subtype === 'offboarding' ? (
+                        {n.data.type === 'contract_expiring' ? (
+                            <CalendarClock className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
+                        ) : n.data.subtype === 'offboarding' ? (
                             <UserMinus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-red-500')} />
                         ) : (
                             <UserPlus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
                         )}
                         <div className="min-w-0 flex-1">
                             <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>
-                                {n.data.employee_name} ({n.data.employee_code})
+                                {n.data.type === 'contract_expiring'
+                                    ? `${n.data.contract_vendor} (${n.data.contract_code})`
+                                    : `${n.data.employee_name} (${n.data.employee_code})`}
                             </div>
                             <div className="mt-0.5 text-xs text-muted-foreground">
-                                {n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required')}
+                                {n.data.type === 'contract_expiring'
+                                    ? t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining))
+                                    : n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required')}
                             </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">

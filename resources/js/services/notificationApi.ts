@@ -2,10 +2,17 @@ import { http } from './http';
 
 export interface NotificationData {
     type: string;
-    subtype: 'credentials_required' | 'offboarding';
-    employee_id: number;
-    employee_name: string;
-    employee_code: string;
+    subtype: 'credentials_required' | 'offboarding' | 'expiry';
+    // Employee notifications
+    employee_id?: number;
+    employee_name?: string;
+    employee_code?: string;
+    // Contract expiry notifications
+    contract_id?: number;
+    contract_code?: string;
+    contract_vendor?: string;
+    contract_name?: string;
+    days_remaining?: number;
 }
 
 export interface AppNotification {
