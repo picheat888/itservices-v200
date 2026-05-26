@@ -144,4 +144,20 @@ class ContractExpiryAlertTest extends TestCase
             ->expectsOutputToContain('1')
             ->assertExitCode(0);
     }
+
+    public function test_renewing_via_api_resets_the_alert_ledger(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $this->service()->run(); // logs threshold 30
+
+        $this->actingAs($user)
+            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
+            ->assertOk();
+
+        $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
+    }
 }
