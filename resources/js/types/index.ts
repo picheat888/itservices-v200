@@ -81,6 +81,7 @@ export interface Employee {
     resign_reason: string | null;
     last_day: string | null;
     has_account: boolean;
+    is_super_admin: boolean;
 }
 
 export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
