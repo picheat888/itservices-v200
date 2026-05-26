@@ -387,7 +387,7 @@ npm run build
 | 8 | Notifications System (in-app) | 🟡 Bell + dropdown + tabs ตามโมดูล + ปิดทีละรายการ + event พนักงานใหม่ (Phase-5) + contract expiry (Phase-7, แท็บ Contracts live) · trigger ticket/request/asset รอ |
 | 9 | Email Notifications | ✅ Phase-4 (template library + SMTP + queued send) |
 | 10 | Report / Export | ⏳ รอ |
-| 11 | Settings | 🟡 Display/Branding/Company/Locations/Email เสร็จ · ส่วนอื่นรอโมดูล |
+| 11 | Settings | 🟡 Display/Branding/Company/Locations/Email/**Security** เสร็จ · ส่วนอื่นรอโมดูล |
 
 ---
 

@@ -58,6 +58,7 @@ const LIVE = new Set<string>([
     'contracts.create',
     'contracts.edit',
     'contracts.renew',
+    'contracts.alerts',
     'employees.view',
     'employees.add',
     'employees.import',

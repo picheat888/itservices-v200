@@ -5,17 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { resolveBrand } from '@/lib/brand-color';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
 import { useResetLogo, useSettings, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
+import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
-import { settingsApi, type MailSettingsPayload, type SettingsPayload } from '@/services/settingsApi';
+import { settingsApi, type MailSettingsPayload, type SecuritySettings, type SettingsPayload } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import type { Density } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Box, Building2, Construction, Mail, MapPin, MonitorCog, Pencil, Plug, Plus, Send, Shield, Sparkles, Ticket, Trash2, Upload, Workflow, X } from 'lucide-react';
+import {
+    Box,
+    Building2,
+    Construction,
+    Mail,
+    MapPin,
+    MonitorCog,
+    Pencil,
+    Plug,
+    Plus,
+    Send,
+    Shield,
+    Sparkles,
+    Ticket,
+    Trash2,
+    Upload,
+    Workflow,
+    X,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -39,7 +57,18 @@ const emptyForm: SettingsPayload = {
     timezone: 'Asia/Bangkok',
 };
 
-const VALID_SECTIONS: Section[] = ['display', 'company', 'branding', 'locations', 'email', 'tickets', 'assets', 'workflow', 'integrations', 'security'];
+const VALID_SECTIONS: Section[] = [
+    'display',
+    'company',
+    'branding',
+    'locations',
+    'email',
+    'tickets',
+    'assets',
+    'workflow',
+    'integrations',
+    'security',
+];
 
 function sectionFromHash(): Section {
     const s = window.location.hash.replace('#', '') as Section;
@@ -94,11 +123,11 @@ export default function SettingsPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">{t('settings')}</h1>
-                <p className="text-sm text-muted-foreground">{t('settings_sub')}</p>
+                <p className="text-muted-foreground text-sm">{t('settings_sub')}</p>
             </div>
 
             <Card className="grid grid-cols-1 overflow-hidden p-0 lg:grid-cols-[220px_1fr]">
-                <nav className="flex gap-1 overflow-x-auto border-b border-border p-3 lg:flex-col lg:border-b-0 lg:border-r">
+                <nav className="border-border flex gap-1 overflow-x-auto border-b p-3 lg:flex-col lg:border-r lg:border-b-0">
                     {nav.map((n) => {
                         const Icon = n.icon;
                         return (
@@ -106,8 +135,8 @@ export default function SettingsPage() {
                                 key={n.id}
                                 onClick={() => changeSection(n.id)}
                                 className={cn(
-                                    'flex items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-left text-sm font-medium transition-colors',
-                                    section === n.id ? 'bg-brand/10 font-semibold text-brand' : 'text-muted-foreground hover:bg-accent/50',
+                                    'flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                                    section === n.id ? 'bg-brand/10 text-brand font-semibold' : 'text-muted-foreground hover:bg-accent/50',
                                 )}
                             >
                                 <Icon className="h-4 w-4" />
@@ -125,7 +154,8 @@ export default function SettingsPage() {
                     {section === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
                     {section === 'locations' && <LocationsTab />}
                     {section === 'email' && <EmailTab />}
-                    {!['display', 'company', 'branding', 'locations', 'email'].includes(section) && <ComingSoon />}
+                    {section === 'security' && <SecurityTab />}
+                    {!['display', 'company', 'branding', 'locations', 'email', 'security'].includes(section) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -158,10 +188,7 @@ function DisplayTab() {
     const save = () => {
         // System-wide display theme: persist to app_settings; the mutation's
         // onSuccess syncs the UI store so the change applies immediately.
-        updateDisplay.mutate(
-            { theme_accent: accent, theme_density: density, theme_radius: radius },
-            { onSuccess: () => setSaved(true) },
-        );
+        updateDisplay.mutate({ theme_accent: accent, theme_density: density, theme_radius: radius }, { onSuccess: () => setSaved(true) });
     };
 
     const densityOpts: { value: Density; label: string }[] = [
@@ -174,7 +201,7 @@ function DisplayTab() {
         <div className="max-w-xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_display')}</h2>
-                <p className="text-sm text-muted-foreground">{t('set_display_desc')}</p>
+                <p className="text-muted-foreground text-sm">{t('set_display_desc')}</p>
             </div>
             <div className="space-y-6">
                 <div className="space-y-2">
@@ -188,7 +215,7 @@ function DisplayTab() {
                                     touch();
                                 }}
                                 className={cn(
-                                    'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all',
+                                    'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
                                     accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
                                 )}
                                 style={{ background: resolveBrand(c, dark) }}
@@ -200,7 +227,7 @@ function DisplayTab() {
 
                 <div className="space-y-2">
                     <div className="text-sm font-medium">{t('tweaks_density')}</div>
-                    <div className="flex gap-1 rounded-lg bg-muted p-1">
+                    <div className="bg-muted flex gap-1 rounded-lg p-1">
                         {densityOpts.map((o) => (
                             <button
                                 key={o.value}
@@ -232,7 +259,7 @@ function DisplayTab() {
                             setRadius(Number(e.target.value));
                             touch();
                         }}
-                        className="w-full accent-brand"
+                        className="accent-brand w-full"
                     />
                 </div>
 
@@ -269,41 +296,55 @@ function LocationsTab() {
         <div className="max-w-2xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_locations')}</h2>
-                <p className="text-sm text-muted-foreground">{t('set_locations_desc')}</p>
+                <p className="text-muted-foreground text-sm">{t('set_locations_desc')}</p>
             </div>
 
             <div className="mb-4 flex gap-2">
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('add_location')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={t('add_location')}
+                    onKeyDown={(e) => e.key === 'Enter' && add()}
+                />
                 <Button onClick={add} disabled={!newName.trim() || create.isPending}>
                     <Plus className="h-4 w-4" />
                     {t('add_location')}
                 </Button>
             </div>
 
-            <div className="divide-y divide-border rounded-lg border border-border">
-                {locations.length === 0 && <div className="px-4 py-6 text-center text-sm text-muted-foreground">—</div>}
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {locations.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
                 {locations.map((loc) => (
                     <div key={loc.id} className="flex items-center gap-2 px-4 py-2.5">
                         {editId === loc.id ? (
                             <>
-                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Input
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    className="h-8"
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
+                                />
                                 <Button size="sm" onClick={saveEdit} disabled={update.isPending}>
                                     {t('save')}
                                 </Button>
-                                <button onClick={() => setEditId(null)} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
+                                <button
+                                    onClick={() => setEditId(null)}
+                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                >
                                     <X className="h-4 w-4" />
                                 </button>
                             </>
                         ) : (
                             <>
-                                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <MapPin className="text-muted-foreground h-4 w-4 shrink-0" />
                                 <span className="flex-1 text-sm">{loc.name}</span>
                                 <button
                                     onClick={() => {
                                         setEditId(loc.id);
                                         setEditName(loc.name);
                                     }}
-                                    className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                 >
                                     <Pencil className="h-4 w-4" />
                                 </button>
@@ -311,7 +352,7 @@ function LocationsTab() {
                                     onClick={() => {
                                         if (confirm(`${t('confirm_delete')} ${loc.name}`)) remove.mutate(loc.id);
                                     }}
-                                    className="flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                                    className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
@@ -328,8 +369,8 @@ function ComingSoon() {
     const t = useT();
     return (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Construction className="h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 max-w-sm text-sm text-muted-foreground">{t('settings_coming_soon')}</p>
+            <Construction className="text-muted-foreground h-10 w-10" />
+            <p className="text-muted-foreground mt-3 max-w-sm text-sm">{t('settings_coming_soon')}</p>
         </div>
     );
 }
@@ -343,7 +384,13 @@ function EmailTab() {
     const { data } = useQuery({ queryKey: MAIL_KEY, queryFn: settingsApi.getMail });
 
     const [form, setForm] = useState<MailSettingsPayload>({
-        host: '', port: 587, username: '', password: '', encryption: 'tls', from_address: '', from_name: '',
+        host: '',
+        port: 587,
+        username: '',
+        password: '',
+        encryption: 'tls',
+        from_address: '',
+        from_name: '',
     });
     const [hasPassword, setHasPassword] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -395,16 +442,27 @@ function EmailTab() {
         <div className="max-w-xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_email')}</h2>
-                <p className="text-sm text-muted-foreground">{t('set_email_desc')}</p>
+                <p className="text-muted-foreground text-sm">{t('set_email_desc')}</p>
             </div>
 
             <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
                     <Field label={t('set_email_host')}>
-                        <Input value={form.host ?? ''} onChange={(e) => set('host', e.target.value)} placeholder="smtp.example.com" className="font-mono" />
+                        <Input
+                            value={form.host ?? ''}
+                            onChange={(e) => set('host', e.target.value)}
+                            placeholder="smtp.example.com"
+                            className="font-mono"
+                        />
                     </Field>
                     <Field label={t('set_email_port')}>
-                        <Input type="number" value={form.port ?? ''} onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)} placeholder="587" className="font-mono" />
+                        <Input
+                            type="number"
+                            value={form.port ?? ''}
+                            onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)}
+                            placeholder="587"
+                            className="font-mono"
+                        />
                     </Field>
                 </div>
 
@@ -413,12 +471,20 @@ function EmailTab() {
                 </Field>
 
                 <Field label={t('set_email_password')} help={hasPassword ? t('set_email_password_hint') : undefined}>
-                    <Input type="password" value={form.password ?? ''} onChange={(e) => set('password', e.target.value)} placeholder={hasPassword ? '••••••••' : ''} autoComplete="new-password" />
+                    <Input
+                        type="password"
+                        value={form.password ?? ''}
+                        onChange={(e) => set('password', e.target.value)}
+                        placeholder={hasPassword ? '••••••••' : ''}
+                        autoComplete="new-password"
+                    />
                 </Field>
 
                 <Field label={t('set_email_encryption')}>
                     <Select value={form.encryption ?? 'auto'} onValueChange={(v) => set('encryption', v === 'auto' ? null : (v as 'tls' | 'ssl'))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="auto">Auto</SelectItem>
                             <SelectItem value="tls">TLS</SelectItem>
@@ -429,7 +495,12 @@ function EmailTab() {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label={t('set_email_from_address')}>
-                        <Input value={form.from_address ?? ''} onChange={(e) => set('from_address', e.target.value)} placeholder="noreply@example.com" className="font-mono" />
+                        <Input
+                            value={form.from_address ?? ''}
+                            onChange={(e) => set('from_address', e.target.value)}
+                            placeholder="noreply@example.com"
+                            className="font-mono"
+                        />
                     </Field>
                     <Field label={t('set_email_from_name')}>
                         <Input value={form.from_name ?? ''} onChange={(e) => set('from_name', e.target.value)} placeholder="IT Service Desk" />
@@ -450,6 +521,145 @@ function EmailTab() {
     );
 }
 
+const SECURITY_KEY = ['security-settings'] as const;
+
+/** Session inactivity timeout + password expiry policy (app_settings). */
+function SecurityTab() {
+    const t = useT();
+    const qc = useQueryClient();
+    const { data } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
+
+    const [form, setForm] = useState<SecuritySettings>({ session_timeout_minutes: 0, password_expiry_days: 0 });
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        if (data) setForm(data);
+    }, [data]);
+
+    const update = useMutation({
+        mutationFn: (payload: SecuritySettings) => settingsApi.updateSecurity(payload),
+        onSuccess: (d) => {
+            qc.setQueryData(SECURITY_KEY, d);
+            setSaved(true);
+        },
+    });
+
+    const setVal = (k: keyof SecuritySettings, v: number) => {
+        setForm((f) => ({ ...f, [k]: Math.max(0, v) }));
+        setSaved(false);
+    };
+
+    return (
+        <div className="max-w-xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_security')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_security_desc')}</p>
+            </div>
+
+            <div className="border-border border-t">
+                <SecurityPolicyRow
+                    label={t('set_session_timeout')}
+                    sub={t('set_session_timeout_help')}
+                    value={form.session_timeout_minutes}
+                    presets={[5, 10, 15, 30, 60, 120]}
+                    defaultValue={30}
+                    unit={t('unit_minutes')}
+                    onChange={(v) => setVal('session_timeout_minutes', v)}
+                />
+                <SecurityPolicyRow
+                    label={t('set_password_expiry')}
+                    sub={t('set_password_expiry_help')}
+                    value={form.password_expiry_days}
+                    presets={[30, 60, 90, 180, 365]}
+                    defaultValue={90}
+                    unit={t('unit_days')}
+                    onChange={(v) => setVal('password_expiry_days', v)}
+                />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-5">
+                <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved}>
+                    {t('save')}
+                </SaveButton>
+            </div>
+        </div>
+    );
+}
+
+/** Pill on/off switch matching the design's Toggle (36×20, accent when on). */
+function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={() => onChange(!checked)}
+            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-brand' : 'bg-input')}
+        >
+            <span
+                className={cn('absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform', checked && 'translate-x-4')}
+            />
+        </button>
+    );
+}
+
+/**
+ * Single policy row in the Security tab — label + description on the left,
+ * an on/off switch plus a preset-value dropdown on the right (only shown when
+ * the policy is enabled). A value of 0 means the rule is off; toggling on
+ * restores `defaultValue`.
+ */
+function SecurityPolicyRow({
+    label,
+    sub,
+    value,
+    presets,
+    defaultValue,
+    unit,
+    onChange,
+}: {
+    label: string;
+    sub: string;
+    value: number;
+    presets: number[];
+    defaultValue: number;
+    unit: string;
+    onChange: (v: number) => void;
+}) {
+    const t = useT();
+    const on = value > 0;
+    // Keep an out-of-list custom value selectable so existing data isn't lost.
+    const options = on && !presets.includes(value) ? [...presets, value].sort((a, b) => a - b) : presets;
+
+    return (
+        <div className="border-border flex items-center justify-between gap-4 border-b py-3.5">
+            <div className="min-w-0">
+                <div className="text-sm font-semibold">{label}</div>
+                <div className="text-muted-foreground mt-0.5 text-xs">{sub}</div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3">
+                {on ? (
+                    <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+                        <SelectTrigger className="h-9 w-32">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {options.map((n) => (
+                                <SelectItem key={n} value={String(n)}>
+                                    {n} {unit}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                ) : (
+                    <span className="text-muted-foreground text-xs">{t('policy_off')}</span>
+                )}
+                <Switch checked={on} onChange={(next) => onChange(next ? defaultValue : 0)} />
+            </div>
+        </div>
+    );
+}
+
 interface SetFn {
     <K extends keyof SettingsPayload>(k: K, v: SettingsPayload[K]): void;
 }
@@ -465,13 +675,25 @@ function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolea
     );
 }
 
-function CompanyTab({ form, set, onSave, saving, saved }: { form: SettingsPayload; set: SetFn; onSave: () => void; saving: boolean; saved: boolean }) {
+function CompanyTab({
+    form,
+    set,
+    onSave,
+    saving,
+    saved,
+}: {
+    form: SettingsPayload;
+    set: SetFn;
+    onSave: () => void;
+    saving: boolean;
+    saved: boolean;
+}) {
     const t = useT();
     return (
         <div className="max-w-2xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_company_title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('set_company_desc')}</p>
+                <p className="text-muted-foreground text-sm">{t('set_company_desc')}</p>
             </div>
             <div className="space-y-5">
                 <Field label={t('set_company_name')}>
@@ -538,10 +760,17 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
     // When a new file is picked after reset, cancel the pending reset.
     // Reset previews the default logo; otherwise the picked file, the custom logo, or the default.
     const previewUrl = pendingReset ? DEFAULT_LOGO : file ? URL.createObjectURL(file) : logoUrl || DEFAULT_LOGO;
-    useEffect(() => () => { if (file) URL.revokeObjectURL(URL.createObjectURL(file)); }, [file]);
+    useEffect(
+        () => () => {
+            if (file) URL.revokeObjectURL(URL.createObjectURL(file));
+        },
+        [file],
+    );
 
     // Reset pending state whenever the server logo changes (e.g. after save).
-    useEffect(() => { setPendingReset(false); }, [logoUrl]);
+    useEffect(() => {
+        setPendingReset(false);
+    }, [logoUrl]);
 
     const pick = (f?: File) => {
         setError(null);
@@ -581,7 +810,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
         <div className="max-w-2xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_branding')}</h2>
-                <p className="text-sm text-muted-foreground">{t('set_branding_desc')}</p>
+                <p className="text-muted-foreground text-sm">{t('set_branding_desc')}</p>
             </div>
             <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
@@ -595,11 +824,17 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
 
                 <Field label={t('set_logo')} error={error ?? undefined}>
                     <div className="flex items-center gap-4">
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted/30">
+                        <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
                             <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
                         </div>
                         <div>
-                            <input ref={inputRef} type="file" accept="image/png,image/svg+xml" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept="image/png,image/svg+xml"
+                                className="hidden"
+                                onChange={(e) => pick(e.target.files?.[0])}
+                            />
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" onClick={() => inputRef.current?.click()}>
                                     <Upload className="h-4 w-4" />
@@ -609,7 +844,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="text-xs text-muted-foreground hover:text-destructive"
+                                        className="text-muted-foreground hover:text-destructive text-xs"
                                         onClick={() => {
                                             setFile(null);
                                             setPendingReset(true);
@@ -621,7 +856,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
                                     </Button>
                                 )}
                             </div>
-                            <p className="mt-2 text-xs text-muted-foreground">{t('set_logo_help')}</p>
+                            <p className="text-muted-foreground mt-2 text-xs">{t('set_logo_help')}</p>
                         </div>
                     </div>
                 </Field>

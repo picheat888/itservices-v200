@@ -11,7 +11,7 @@ use App\Models\Position;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
-use App\Services\EmailNotificationService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -54,17 +54,18 @@ class EmployeeService
         $roleKey = $this->resolveGroupRole($employee);
 
         $user = User::create([
-            'name'     => $employee->name,
-            'email'    => $employee->email ?: null,
+            'name' => $employee->name,
+            'email' => $employee->email ?: null,
             'username' => $username,
             'password' => Hash::make($password),
-            'role'     => $roleKey,
+            'password_changed_at' => now(),
+            'role' => $roleKey,
         ]);
 
         // Mirror the username onto the employee so has_account resolves correctly
         // and the account stays linked for future reset-password lookups.
         $employee->update([
-            'username'     => $username,
+            'username' => $username,
             'login_method' => 'userpass',
         ]);
 
@@ -84,9 +85,9 @@ class EmployeeService
     public function resign(Employee $employee, ?string $reason, ?string $lastDay, ?User $actor = null): Employee
     {
         $employee->update([
-            'status'        => EmployeeStatus::Resigned,
+            'status' => EmployeeStatus::Resigned,
             'resign_reason' => $reason,
-            'last_day'      => $lastDay,
+            'last_day' => $lastDay,
         ]);
 
         // NOTE: returning the employee's assigned assets is handled by the
@@ -104,9 +105,9 @@ class EmployeeService
     public function cancelResign(Employee $employee): Employee
     {
         $employee->update([
-            'status'        => EmployeeStatus::Active,
+            'status' => EmployeeStatus::Active,
             'resign_reason' => null,
-            'last_day'      => null,
+            'last_day' => null,
         ]);
 
         return $employee->load(['department', 'position']);
@@ -126,25 +127,25 @@ class EmployeeService
     public function importRows(array $rows): array
     {
         $deptByCode = Department::pluck('id', 'code');
-        $posByCode  = Position::pluck('id', 'code');
-        $existingCodes  = Employee::pluck('code')->flip();
+        $posByCode = Position::pluck('id', 'code');
+        $existingCodes = Employee::pluck('code')->flip();
         $existingEmails = Employee::whereNotNull('email')->pluck('email')
             ->mapWithKeys(fn ($e) => [strtolower($e) => true]);
 
-        $errors    = [];
-        $prepared  = [];
+        $errors = [];
+        $prepared = [];
         $seenCodes = [];
         $seenEmails = [];
 
         foreach ($rows as $i => $row) {
-            $line     = $i + 2; // +1 for header, +1 for 1-based line numbers
-            $code     = trim($row['code'] ?? '');
-            $name     = trim($row['name'] ?? '');
-            $email    = trim($row['email'] ?? '');
+            $line = $i + 2; // +1 for header, +1 for 1-based line numbers
+            $code = trim($row['code'] ?? '');
+            $name = trim($row['name'] ?? '');
+            $email = trim($row['email'] ?? '');
             $deptCode = trim($row['department'] ?? '');
-            $posCode  = trim($row['position'] ?? '');
-            $joined   = trim($row['joined_at'] ?? '');
-            $rowErr   = [];
+            $posCode = trim($row['position'] ?? '');
+            $joined = trim($row['joined_at'] ?? '');
+            $rowErr = [];
 
             if ($name === '') {
                 $rowErr[] = 'name ว่าง';
@@ -199,20 +200,21 @@ class EmployeeService
 
             if ($rowErr) {
                 $errors[] = ['row' => $line, 'message' => implode(', ', $rowErr)];
+
                 continue;
             }
 
             $prepared[] = [
-                'code'          => $code !== '' ? $code : null,
-                'name'          => $name,
-                'name_th'       => trim($row['name_th'] ?? '') ?: null,
-                'email'         => $email !== '' ? $email : null,
-                'phone'         => trim($row['phone'] ?? '') ?: null,
+                'code' => $code !== '' ? $code : null,
+                'name' => $name,
+                'name_th' => trim($row['name_th'] ?? '') ?: null,
+                'email' => $email !== '' ? $email : null,
+                'phone' => trim($row['phone'] ?? '') ?: null,
                 'department_id' => $deptId,
-                'position_id'   => $posId,
-                'joined_at'     => $joined !== '' ? $joined : null,
-                'login_method'  => 'email',
-                'status'        => EmployeeStatus::Active,
+                'position_id' => $posId,
+                'joined_at' => $joined !== '' ? $joined : null,
+                'login_method' => 'email',
+                'status' => EmployeeStatus::Active,
             ];
         }
 
@@ -245,9 +247,9 @@ class EmployeeService
      * Resolves the recipients for employee events: users holding the given
      * permission, excluding the acting user (no point notifying yourself).
      *
-     * @return \Illuminate\Support\Collection<int, User>
+     * @return Collection<int, User>
      */
-    private function recipientsWithPermission(string $permission, ?User $actor): \Illuminate\Support\Collection
+    private function recipientsWithPermission(string $permission, ?User $actor): Collection
     {
         return User::all()->filter(
             fn (User $u) => $u->hasPermission($permission) && $u->id !== $actor?->id
@@ -274,8 +276,8 @@ class EmployeeService
             }
             $emailService->sendTemplate('employee.account_needed', $recipient->email, [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
-                'employee.name'   => $employee->name,
-                'employee.code'   => $employee->code,
+                'employee.name' => $employee->name,
+                'employee.code' => $employee->code,
             ]);
         }
     }

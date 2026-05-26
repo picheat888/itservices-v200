@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
 use App\Support\Permissions;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -13,7 +14,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
@@ -26,6 +27,7 @@ class User extends Authenticatable
         'email',
         'username',
         'password',
+        'password_changed_at',
         'role',
         'preferences',
     ];
@@ -67,6 +69,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'password_changed_at' => 'datetime',
             'password' => 'hashed',
             // role is a plain string key into the `roles` table (super/admin/hr/user or custom)
             'preferences' => 'array',
@@ -97,7 +100,7 @@ class User extends Authenticatable
 
     public function roleLabel(): string
     {
-        return \App\Models\Role::where('key', $this->role)->value('name')
+        return Role::where('key', $this->role)->value('name')
             ?? UserRole::tryFrom((string) $this->role)?->label()
             ?? (string) $this->role;
     }
@@ -113,7 +116,7 @@ class User extends Authenticatable
             return Permissions::all();
         }
 
-        return \App\Models\RolePermission::query()
+        return RolePermission::query()
             ->where('role', $this->role)
             ->where('allowed', true)
             ->pluck('permission')
@@ -123,6 +126,25 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
+    }
+
+    /**
+     * Whether this account's password has exceeded the configured expiry window.
+     * Returns false when the policy is disabled (password_expiry_days <= 0).
+     * A null password_changed_at is treated as expired while the policy is on,
+     * forcing a first-time change.
+     */
+    public function isPasswordExpired(): bool
+    {
+        $days = (int) AppSetting::get('password_expiry_days', '0');
+
+        if ($days <= 0) {
+            return false;
+        }
+
+        $changedAt = $this->password_changed_at;
+
+        return $changedAt === null || $changedAt->addDays($days)->isPast();
     }
 
     /**

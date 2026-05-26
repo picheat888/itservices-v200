@@ -267,7 +267,7 @@ class EmployeeController extends Controller
         }
 
         $newPassword = $employee->code; // Reset to employee code
-        $user->update(['password' => Hash::make($newPassword)]);
+        $user->update(['password' => Hash::make($newPassword), 'password_changed_at' => now()]);
 
         AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
 

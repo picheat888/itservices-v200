@@ -120,7 +120,7 @@ export default function ContractsPage() {
                 <StatCard
                     label={t('expiring_soon')}
                     value={summary?.expiring ?? '—'}
-                    hint={lang === 'th' ? 'ภายใน 60 วัน' : 'next 60 days'}
+                    hint={lang === 'th' ? 'ตามช่วงแจ้งเตือนสัญญา' : 'within reminder window'}
                     icon={Clock}
                 />
                 <StatCard
@@ -140,13 +140,13 @@ export default function ContractsPage() {
                         <div className="flex-1">
                             <div className="font-bold">
                                 {lang === 'th'
-                                    ? `มีสัญญา ${summary.expiring} ฉบับใกล้หมดอายุภายใน 60 วัน`
-                                    : `${summary.expiring} contract${summary.expiring !== 1 ? 's' : ''} expiring in the next 60 days`}
+                                    ? `มีสัญญา ${summary.expiring} ฉบับใกล้หมดอายุ`
+                                    : `${summary.expiring} contract${summary.expiring !== 1 ? 's' : ''} expiring soon`}
                             </div>
                             <div className="text-xs text-muted-foreground">
                                 {lang === 'th'
-                                    ? 'ระบบจะส่งอีเมลแจ้งเตือนที่ 60, 30 และ 7 วันก่อนหมดอายุ'
-                                    : 'Email notifications go out at 60, 30 and 7 days before expiration.'}
+                                    ? 'ระบบจะส่งอีเมลแจ้งเตือนตามที่กำหนดไว้ในแต่ละสัญญา ก่อนหมดอายุ'
+                                    : 'Email notifications will be sent according to the reminder window set on each contract.'}
                             </div>
                         </div>
                         <Button variant="outline" onClick={() => { setTab('expiring'); setPage(1); }}>
