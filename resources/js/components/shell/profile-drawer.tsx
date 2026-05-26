@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SaveButton } from '@/components/shared/save-button';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { PhotoCropDialog } from '@/components/employees/photo-crop-dialog';
 import { useAuth, useUpdateProfile } from '@/hooks/use-auth';
 import { useEmployee } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
@@ -53,6 +55,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const [lastNameTh, setLastNameTh] = useState('');
     const [phone, setPhone] = useState('');
     const [photo, setPhoto] = useState<File | null>(null);
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [saved, setSaved] = useState(false);
 
@@ -67,6 +70,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
             setLastNameTh(lnTh);
             setPhone(user.phone ?? '');
             setPhoto(null);
+            setCropSrc(null);
             setError('');
             setSaved(false);
             if (inputRef.current) inputRef.current.value = '';
@@ -85,15 +89,16 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
         setSaved(false);
         setError('');
         if (!f) return;
-        if (!f.type.startsWith('image/')) {
-            setError(t('profile_photo_bad'));
+        if (!['image/png', 'image/jpeg'].includes(f.type)) {
+            setError(t('emp_photo_err_type'));
             return;
         }
         if (f.size > 2 * 1024 * 1024) {
-            setError(t('profile_photo_big'));
+            setError(t('emp_photo_err_size'));
             return;
         }
-        setPhoto(f);
+        if (inputRef.current) inputRef.current.value = '';
+        setCropSrc(URL.createObjectURL(f));
     };
 
     const save = async () => {
@@ -122,6 +127,21 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side="right" className="flex w-[420px] flex-col sm:max-w-[420px]">
+                {cropSrc && (
+                    <PhotoCropDialog
+                        imageSrc={cropSrc}
+                        onConfirm={(cropped) => {
+                            setPhoto(cropped);
+                            URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                            setSaved(false);
+                        }}
+                        onCancel={() => {
+                            URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                        }}
+                    />
+                )}
                 <SheetHeader>
                     <SheetTitle>{t('profile')}</SheetTitle>
                 </SheetHeader>
@@ -142,7 +162,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                                     <Camera className="h-3.5 w-3.5" />
                                 </button>
                             )}
-                            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+                            <input ref={inputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
                         </div>
                         <div className="min-w-0">
                             <div className="truncate text-lg font-bold">{displayName}</div>
@@ -213,15 +233,10 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-                    {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">{t('settings_saved')}</span>}
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    {canEdit && (
-                        <Button onClick={save} disabled={update.isPending}>
-                            {update.isPending ? t('cred_saving') : t('save')}
-                        </Button>
-                    )}
+                    {canEdit && <SaveButton onClick={save} loading={update.isPending} success={saved} />}
                 </div>
             </SheetContent>
         </Sheet>
