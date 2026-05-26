@@ -132,4 +132,16 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->assertSame(1, $sent);
     }
+
+    public function test_command_runs_and_reports_count(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(30, [30]);
+
+        $this->artisan('contracts:send-expiry-alerts')
+            ->expectsOutputToContain('1')
+            ->assertExitCode(0);
+    }
 }
