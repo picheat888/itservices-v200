@@ -30,6 +30,7 @@ export interface User {
     permissions: string[];
     preferences: UserPreferences;
     email_verified_at: string | null;
+    password_expired: boolean;
 }
 
 export interface ApiEnvelope<T> {

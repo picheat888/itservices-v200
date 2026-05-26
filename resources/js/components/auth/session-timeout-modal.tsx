@@ -28,15 +28,14 @@ export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference * (1 - progress);
 
-    // Color transitions: green → amber → red
-    const arcColor = secondsLeft > 60 ? '#22c55e' : secondsLeft > 30 ? '#f59e0b' : '#ef4444';
+    // Color transitions follow the design tokens: ok → warn → danger.
+    const arcColor = secondsLeft > 60 ? '#059669' : secondsLeft > 30 ? '#d97706' : '#dc2626';
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="mx-4 w-full max-w-sm overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
-
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgb(15_23_42_/_0.5)] backdrop-blur-[2px]">
+            <div className="border-border bg-background mx-4 w-full max-w-sm overflow-hidden rounded-[14px] border shadow-2xl">
                 {/* Progress bar at top */}
-                <div className="h-1 w-full bg-muted">
+                <div className="bg-muted h-1 w-full">
                     <div
                         className="h-full transition-all duration-1000"
                         style={{
@@ -68,8 +67,8 @@ export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
                                 />
                             </svg>
                             <div className="z-10 flex flex-col items-center">
-                                <Clock className="mb-0.5 h-4 w-4 text-muted-foreground" />
-                                <span className="text-2xl font-bold tabular-nums leading-none" style={{ color: arcColor }}>
+                                <Clock className="text-muted-foreground mb-0.5 h-4 w-4" />
+                                <span className="text-2xl leading-none font-bold tabular-nums" style={{ color: arcColor }}>
                                     {timeDisplay}
                                 </span>
                             </div>
@@ -77,7 +76,7 @@ export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
                     </div>
 
                     <h2 className="mb-1 text-center text-base font-semibold">{t('session_expiring_title')}</h2>
-                    <p className="mb-5 text-center text-sm text-muted-foreground">
+                    <p className="text-muted-foreground mb-5 text-center text-sm">
                         {t('session_expiring_desc')}{' '}
                         <span className="font-medium" style={{ color: arcColor }}>
                             {timeDisplay}
@@ -89,7 +88,7 @@ export function SessionTimeoutModal({ secondsLeft, onStay, onLogout }: Props) {
                         <Button className="w-full" onClick={onStay}>
                             {t('session_stay')}
                         </Button>
-                        <Button variant="ghost" className="w-full text-muted-foreground" onClick={onLogout}>
+                        <Button variant="ghost" className="text-muted-foreground w-full" onClick={onLogout}>
                             {t('session_logout_now')}
                         </Button>
                     </div>

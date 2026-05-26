@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\AuditLog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
@@ -18,7 +20,15 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        \App\Models\AuditLog::record('Signed in');
+        // Backfill the password timestamp for legacy accounts so enabling the
+        // expiry policy later doesn't instantly lock everyone out — their clock
+        // starts from this sign-in instead of "never".
+        $user = $request->user();
+        if ($user->password_changed_at === null) {
+            $user->forceFill(['password_changed_at' => now()])->saveQuietly();
+        }
+
+        AuditLog::record('Signed in');
 
         return (new UserResource($request->user()))
             ->additional(['message' => 'success'])
@@ -27,7 +37,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
-        \App\Models\AuditLog::record('Signed out');
+        AuditLog::record('Signed out');
 
         Auth::guard('web')->logout();
 
@@ -73,18 +83,18 @@ class AuthController extends Controller
         abort_unless((bool) $user->hasPermission('employees.edit_own'), 403);
 
         $data = $request->validate([
-            'name'    => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'name_th' => ['nullable', 'string', 'max:255'],
-            'phone'   => ['nullable', 'string', 'max:50'],
-            'photo'   => ['nullable', 'image', 'max:2048'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'photo' => ['nullable', 'image', 'max:2048'],
         ]);
 
         $employee = $user->linkedEmployee();
         if ($employee) {
             $payload = [
-                'name'    => $data['name'],
+                'name' => $data['name'],
                 'name_th' => $data['name_th'] ?? null,
-                'phone'   => $data['phone'] ?? null,
+                'phone' => $data['phone'] ?? null,
             ];
             if ($request->hasFile('photo')) {
                 if ($employee->photo_path) {
@@ -97,7 +107,30 @@ class AuthController extends Controller
 
         // Keep the login account's display name in sync with the profile.
         $user->update(['name' => $data['name']]);
-        \App\Models\AuditLog::record('Updated own profile', $user->name);
+        AuditLog::record('Updated own profile', $user->name);
+
+        return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * Self-service password change. Verifies the current password, stores the
+     * new one, and stamps password_changed_at so the expiry policy resets.
+     * Used both voluntarily and by the forced change-password flow.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = $request->user();
+        $user->forceFill([
+            'password' => Hash::make($data['password']),
+            'password_changed_at' => now(),
+        ])->save();
+
+        AuditLog::record('Changed own password');
 
         return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();
     }

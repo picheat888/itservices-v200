@@ -13,19 +13,23 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthController::class, 'login'])->name('api.login');
 Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])->name('api.me');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
+    Route::put('password', [AuthController::class, 'changePassword'])->name('api.password.change');
     Route::put('settings', [SettingsController::class, 'update'])->name('api.settings.update');
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])->name('api.settings.logo.delete');
+    Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
+    Route::put('settings/security', [SettingsController::class, 'updateSecurity'])->name('api.settings.security.update');
     Route::get('settings/mail', [SettingsController::class, 'mailSettings'])->name('api.settings.mail');
     Route::put('settings/mail', [SettingsController::class, 'updateMailSettings'])->name('api.settings.mail.update');
     Route::post('settings/mail/test', [SettingsController::class, 'testMail'])->name('api.settings.mail.test');

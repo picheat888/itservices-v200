@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { PhotoCropDialog } from './photo-crop-dialog';
 import { useDepartments, useEmployeeMutations, usePositions } from '@/hooks/use-org';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
@@ -52,12 +53,16 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(empty);
     const [photo, setPhoto] = useState<File | null>(null);
+    const [cropSrc, setCropSrc] = useState<string | null>(null);
+    const [photoError, setPhotoError] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (!open) return;
         setStep(1);
         setPhoto(null);
+        setCropSrc(null);
+        setPhotoError(null);
         setErrors({});
         if (employee) {
             const [fn, ln] = splitName(employee.name);
@@ -91,7 +96,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         if (s === 1) {
             if (!form.firstName.trim()) e.firstName = t('emp_err_first');
             if (!form.lastName.trim()) e.lastName = t('emp_err_last');
-            if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = t('emp_err_email');
+            if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = t('emp_err_email');
         }
         if (s === 2) {
             if (!form.departmentId) e.departmentId = t('emp_err_dept');
@@ -113,8 +118,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             name_th: nameTh || null,
             department_id: form.departmentId ? Number(form.departmentId) : null,
             position_id: form.positionId ? Number(form.positionId) : null,
-            login_method: 'email' as const,
-            email: form.email,
+            email: form.email || null,
             username: null,
             phone: form.phone || null,
             joined_at: form.joinedAt || null,
@@ -126,10 +130,18 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     };
 
     const onPhoto = (file?: File) => {
+        setPhotoError(null);
         if (!file) return;
-        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return;
-        if (file.size > 2 * 1024 * 1024) return;
-        setPhoto(file);
+        if (!['image/png', 'image/jpeg'].includes(file.type)) {
+            setPhotoError(t('emp_photo_err_type'));
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            setPhotoError(t('emp_photo_err_size'));
+            return;
+        }
+        // Open crop dialog — user frames the 1:1 shot before committing.
+        setCropSrc(URL.createObjectURL(file));
     };
 
     const steps = [t('emp_personal_info'), t('emp_work_info'), t('emp_access')];
@@ -138,6 +150,20 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
+                {cropSrc && (
+                    <PhotoCropDialog
+                        imageSrc={cropSrc}
+                        onConfirm={(cropped) => {
+                            setPhoto(cropped);
+                            URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                        }}
+                        onCancel={() => {
+                            URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                        }}
+                    />
+                )}
                 <SheetHeader>
                     <SheetTitle>{isEdit ? t('edit_employee') : t('add_employee')}</SheetTitle>
                     <SheetDescription>
@@ -152,12 +178,33 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                         const done = n < step;
                         const active = n === step;
                         const Icon = STEP_ICONS[i];
+                        const canJump = n !== step;
+
+                        const handleJump = () => {
+                            if (!canJump) return;
+                            if (n < step) {
+                                // Going back — always allowed, no validation needed.
+                                setStep(n);
+                            } else {
+                                // Going forward — validate every step up to n-1 first.
+                                let valid = true;
+                                for (let s = step; s < n; s++) {
+                                    if (!validateStep(s)) { valid = false; break; }
+                                }
+                                if (valid) setStep(n);
+                            }
+                        };
+
                         return (
-                            <div
+                            <button
                                 key={label}
+                                type="button"
+                                onClick={handleJump}
                                 className={cn(
-                                    'flex-1 rounded-lg border p-2.5',
-                                    active ? 'border-brand bg-brand/5' : done ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border',
+                                    'flex-1 rounded-lg border p-2.5 text-left transition-colors',
+                                    active ? 'border-brand bg-brand/5' : done ? 'border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10' : 'border-border hover:bg-accent/50',
+                                    canJump && 'cursor-pointer',
+                                    !canJump && 'cursor-default',
                                 )}
                             >
                                 <div
@@ -170,13 +217,20 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                     <span className="font-mono text-[11px] font-bold">0{n}</span>
                                 </div>
                                 <div className={cn('mt-0.5 text-xs font-medium', active ? 'text-foreground' : 'text-muted-foreground')}>{label}</div>
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
 
                 {/* px-1 keeps the input focus ring from being clipped by the scroll container */}
-                <div className="flex-1 space-y-5 overflow-y-auto px-1 py-1">
+                <div
+                    className="flex-1 space-y-5 overflow-y-auto px-1 py-1"
+                    onKeyDown={(e) => {
+                        if (e.key !== 'Enter' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+                        e.preventDefault();
+                        step < 3 ? next() : submit();
+                    }}
+                >
                     {step === 1 && (
                         <>
                             <div className="flex items-center gap-4">
@@ -190,14 +244,17 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                     <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent">
                                         <Upload className="h-4 w-4" />
                                         {photo ? t('emp_photo_change') : t('emp_photo')}
-                                        <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
+                                        <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
                                     </label>
                                     {photo && (
                                         <button onClick={() => setPhoto(null)} className="ml-2 text-sm text-destructive hover:underline">
                                             {t('emp_photo_remove')}
                                         </button>
                                     )}
-                                    <p className="mt-2 text-xs text-muted-foreground">{t('emp_photo_help')}</p>
+                                    {photoError
+                                        ? <p className="mt-2 text-xs text-destructive">{photoError}</p>
+                                        : <p className="mt-2 text-xs text-muted-foreground">{t('emp_photo_help')}</p>
+                                    }
                                 </div>
                             </div>
 
@@ -217,7 +274,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                     <Input value={form.lastNameTh} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="สุขสวัสดิ์" />
                                 </Field>
                             </div>
-                            <Field label={t('emp_email')} required error={errors.email}>
+                            <Field label={t('emp_email')} error={errors.email}>
                                 <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
                             </Field>
                             <Field label={t('emp_phone')}>
