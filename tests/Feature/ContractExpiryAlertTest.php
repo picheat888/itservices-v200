@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract;
 use App\Models\ContractAlertLog;
 use App\Models\RolePermission;
@@ -57,6 +58,7 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->assertSame(1, $sent);
         Notification::assertSentTo($user, ContractExpiryNotification::class);
+        Bus::assertDispatched(SendTemplatedEmail::class);
         $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 30]);
     }
 

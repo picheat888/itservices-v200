@@ -82,7 +82,7 @@ class ContractExpiryAlertService
      *
      * @param  Collection<int, User>  $recipients
      */
-    private function dispatchAlert(Contract $contract, int $days, $recipients): void
+    private function dispatchAlert(Contract $contract, int $days, Collection $recipients): void
     {
         Notification::send($recipients, new ContractExpiryNotification($contract, $days));
 
