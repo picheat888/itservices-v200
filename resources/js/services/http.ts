@@ -13,6 +13,20 @@ export const http = axios.create({
     },
 });
 
+// Server-side inactivity timeout (CheckSessionTimeout middleware) returns
+// 401 with message "session_expired". Redirect to login so the user isn't
+// left staring at a silently-failing screen. Other 401s (e.g. the initial
+// unauthenticated /me probe) are left for callers to handle.
+http.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error?.response?.status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login?reason=session_expired';
+        }
+        return Promise.reject(error);
+    },
+);
+
 let csrfReady = false;
 
 // Sanctum requires the CSRF cookie to be set before any stateful request.

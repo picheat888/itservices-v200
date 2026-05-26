@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
+use App\Models\AuditLog;
 use App\Models\MailSetting;
+use App\Models\Role;
 use App\Services\EmailNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,7 +62,7 @@ class SettingsController extends Controller
         foreach ($data as $key => $value) {
             AppSetting::put($key, $value === null ? '' : (string) $value);
         }
-        \App\Models\AuditLog::record('Updated settings', implode(', ', array_keys($data)));
+        AuditLog::record('Updated settings', implode(', ', array_keys($data)));
 
         return $this->show();
     }
@@ -81,7 +83,7 @@ class SettingsController extends Controller
 
         $path = $request->file('logo')->store('branding', 'public');
         AppSetting::put('logo_path', $path);
-        \App\Models\AuditLog::record('Uploaded logo', 'Branding');
+        AuditLog::record('Uploaded logo', 'Branding');
 
         return $this->show();
     }
@@ -94,10 +96,49 @@ class SettingsController extends Controller
         if ($old = AppSetting::get('logo_path')) {
             Storage::disk('public')->delete($old);
             AppSetting::put('logo_path', null);
-            \App\Models\AuditLog::record('Removed logo', 'Branding');
+            AuditLog::record('Removed logo', 'Branding');
         }
 
         return $this->show();
+    }
+
+    /**
+     * Returns the security policy values. Readable by any authenticated user
+     * because the frontend session-timeout hook needs the timeout on every load.
+     */
+    public function security(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $this->securityPayload(), 'message' => 'success']);
+    }
+
+    /** Updates the security policy (session timeout + password expiry). Super only. */
+    public function updateSecurity(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->isSuper(), 403);
+
+        $data = $request->validate([
+            // 0 disables the respective policy.
+            'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
+            'password_expiry_days' => ['required', 'integer', 'min:0', 'max:3650'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            AppSetting::put($key, (string) $value);
+        }
+        AuditLog::record('Updated security settings', implode(', ', array_keys($data)));
+
+        return $this->security($request);
+    }
+
+    /**
+     * @return array{session_timeout_minutes: int, password_expiry_days: int}
+     */
+    private function securityPayload(): array
+    {
+        return [
+            'session_timeout_minutes' => (int) AppSetting::get('session_timeout_minutes', '0'),
+            'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
+        ];
     }
 
     /** Returns the SMTP settings with the password masked (never sent to the client). */
@@ -109,13 +150,13 @@ class SettingsController extends Controller
 
         return response()->json([
             'data' => [
-                'host'            => $s->host,
-                'port'            => $s->port,
-                'username'        => $s->username,
-                'has_password'    => ! empty($s->password),
-                'encryption'      => $s->encryption,
-                'from_address'    => $s->from_address,
-                'from_name'       => $s->from_name,
+                'host' => $s->host,
+                'port' => $s->port,
+                'username' => $s->username,
+                'has_password' => ! empty($s->password),
+                'encryption' => $s->encryption,
+                'from_address' => $s->from_address,
+                'from_name' => $s->from_name,
             ],
             'message' => 'success',
         ]);
@@ -127,13 +168,13 @@ class SettingsController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('system.edit_settings'), 403);
 
         $data = $request->validate([
-            'host'         => ['nullable', 'string', 'max:255'],
-            'port'         => ['nullable', 'integer', 'min:1', 'max:65535'],
-            'username'     => ['nullable', 'string', 'max:255'],
-            'password'     => ['nullable', 'string', 'max:255'],
-            'encryption'   => ['nullable', 'in:tls,ssl'],
+            'host' => ['nullable', 'string', 'max:255'],
+            'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'username' => ['nullable', 'string', 'max:255'],
+            'password' => ['nullable', 'string', 'max:255'],
+            'encryption' => ['nullable', 'in:tls,ssl'],
             'from_address' => ['nullable', 'email', 'max:255'],
-            'from_name'    => ['nullable', 'string', 'max:255'],
+            'from_name' => ['nullable', 'string', 'max:255'],
         ]);
 
         $s = MailSetting::current();
@@ -144,7 +185,7 @@ class SettingsController extends Controller
         }
 
         $s->update($data);
-        \App\Models\AuditLog::record('Updated mail settings', 'SMTP');
+        AuditLog::record('Updated mail settings', 'SMTP');
 
         return $this->mailSettings($request);
     }
@@ -181,7 +222,7 @@ class SettingsController extends Controller
 
         $defaultRole = AppSetting::get('default_employee_role', 'user');
         $values['default_employee_role'] = $defaultRole;
-        $values['default_employee_role_label'] = \App\Models\Role::where('key', $defaultRole)->value('name') ?? $defaultRole;
+        $values['default_employee_role_label'] = Role::where('key', $defaultRole)->value('name') ?? $defaultRole;
 
         return $values;
     }

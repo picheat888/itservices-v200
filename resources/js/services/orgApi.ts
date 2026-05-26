@@ -31,7 +31,9 @@ export interface EmployeePayload {
     name_th?: string | null;
     department_id?: number | null;
     position_id?: number | null;
-    login_method: 'email' | 'userpass';
+    // Optional: a login account (and its method) is provisioned separately via
+    // the set-credentials flow, not at employee creation.
+    login_method?: 'email' | 'userpass';
     email?: string | null;
     username?: string | null;
     phone?: string | null;

@@ -2,11 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-/** @mixin \App\Models\User */
+/** @mixin User */
 class UserResource extends JsonResource
 {
     /**
@@ -36,6 +38,8 @@ class UserResource extends JsonResource
             'permissions' => $this->permissions(),
             'preferences' => $this->resolvedPreferences(),
             'email_verified_at' => $this->email_verified_at,
+            // Drives the forced change-password modal when the expiry policy is on.
+            'password_expired' => $this->isPasswordExpired(),
         ];
     }
 
@@ -44,7 +48,7 @@ class UserResource extends JsonResource
      * level. Prefers the group whose role matches the user's current role;
      * otherwise returns the first group, or null when there is no linked group.
      */
-    private function resolveGroupName(?\App\Models\Employee $employee): ?string
+    private function resolveGroupName(?Employee $employee): ?string
     {
         if (! $employee) {
             return null;

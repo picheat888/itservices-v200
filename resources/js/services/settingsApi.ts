@@ -33,6 +33,12 @@ export interface DisplayPayload {
     theme_radius: number;
 }
 
+// Security policy — 0 disables the respective rule.
+export interface SecuritySettings {
+    session_timeout_minutes: number;
+    password_expiry_days: number;
+}
+
 export interface MailSettingsData {
     host: string | null;
     port: number | null;
@@ -79,6 +85,14 @@ export const settingsApi = {
     resetLogo: async () => {
         await ensureCsrf();
         const { data } = await http.delete<ApiEnvelope<SettingsData>>('/settings/logo');
+        return data.data;
+    },
+
+    getSecurity: () => http.get<ApiEnvelope<SecuritySettings>>('/settings/security').then((r) => r.data.data),
+
+    updateSecurity: async (payload: SecuritySettings) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SecuritySettings>>('/settings/security', payload);
         return data.data;
     },
 
