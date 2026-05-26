@@ -26,7 +26,7 @@ class GroupRoleController extends Controller
             return;
         }
 
-        $emails    = Employee::whereIn('id', $newEmployeeIds)->pluck('email')->filter();
+        $emails = Employee::whereIn('id', $newEmployeeIds)->pluck('email')->filter();
         $usernames = Employee::whereIn('id', $newEmployeeIds)->pluck('username')->filter();
         User::where(function ($q) use ($emails, $usernames) {
             $q->whereIn('email', $emails)->orWhereIn('username', $usernames);
@@ -63,20 +63,41 @@ class GroupRoleController extends Controller
     }
 
     /**
+     * Blocks non-super users from touching any group tied to the super
+     * (Administrator) role. This covers both demoting an admin (removing them
+     * from a super group resets their role) and escalating to admin (assigning
+     * a group the super role pushes that role onto its members).
+     *
+     * @param  string|null  $incomingRole  the role the request is trying to set, if any
+     */
+    private function guardSuperGroup(Request $request, ?string $existingRole, ?string $incomingRole = null): void
+    {
+        if ($request->user()?->isSuper()) {
+            return;
+        }
+
+        abort_if(
+            $existingRole === 'super' || $incomingRole === 'super',
+            403,
+            'Only an Administrator can manage the Administrator role group.'
+        );
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function present(GroupRole $g): array
     {
         return [
-            'id'               => $g->id,
-            'name'             => $g->name,
-            'role'             => $g->role,
-            'role_label'       => $g->role ? (Role::where('key', $g->role)->value('name') ?? $g->role) : null,
-            'employee_ids'     => $g->employees->pluck('id'),
-            'department_ids'   => $g->departments->pluck('id'),
-            'employees'        => $g->employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'code' => $e->code]),
-            'departments'      => $g->departments->map(fn ($d) => ['id' => $d->id, 'name' => $d->name]),
-            'member_count'     => $g->employees->count(),
+            'id' => $g->id,
+            'name' => $g->name,
+            'role' => $g->role,
+            'role_label' => $g->role ? (Role::where('key', $g->role)->value('name') ?? $g->role) : null,
+            'employee_ids' => $g->employees->pluck('id'),
+            'department_ids' => $g->departments->pluck('id'),
+            'employees' => $g->employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'code' => $e->code]),
+            'departments' => $g->departments->map(fn ($d) => ['id' => $d->id, 'name' => $d->name]),
+            'member_count' => $g->employees->count(),
             'department_count' => $g->departments->count(),
         ];
     }
@@ -91,7 +112,7 @@ class GroupRoleController extends Controller
             ->map(fn ($g) => $this->present($g));
 
         return response()->json([
-            'data'             => $groups,
+            'data' => $groups,
             'default_group_id' => (int) AppSetting::get('default_employee_group_id', 0) ?: null,
         ]);
     }
@@ -100,6 +121,7 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
         $data = $this->validateData($request);
+        $this->guardSuperGroup($request, null, $data['role'] ?? null);
 
         $group = GroupRole::create(['name' => $data['name'], 'role' => $data['role'] ?? null]);
         $group->employees()->sync($data['employee_ids'] ?? []);
@@ -115,6 +137,7 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
         $data = $this->validateData($request);
+        $this->guardSuperGroup($request, $groupRole->role, $data['role'] ?? null);
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
@@ -137,6 +160,7 @@ class GroupRoleController extends Controller
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
     {
         $this->gate($request);
+        $this->guardSuperGroup($request, $groupRole->role);
 
         // Unset default group if this one is being deleted
         if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
@@ -177,11 +201,11 @@ class GroupRoleController extends Controller
     private function validateData(Request $request): array
     {
         return $request->validate([
-            'name'           => ['required', 'string', 'max:100'],
-            'role'           => ['nullable', 'string', Rule::exists('roles', 'key')],
-            'employee_ids'   => ['array'],
+            'name' => ['required', 'string', 'max:100'],
+            'role' => ['nullable', 'string', Rule::exists('roles', 'key')],
+            'employee_ids' => ['array'],
             'employee_ids.*' => ['exists:employees,id'],
-            'department_ids'   => ['array'],
+            'department_ids' => ['array'],
             'department_ids.*' => ['exists:departments,id'],
         ]);
     }

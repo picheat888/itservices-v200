@@ -178,11 +178,11 @@ export default function EmployeesPage() {
                 <DirectoryTab
                     departments={departments}
                     canEdit={canEdit}
+                    isSuperViewer={role === 'super'}
                     canResetPassword={canResetPassword}
                     canResign={canResign}
                     canCancelResign={canCancelResign}
                     canSetCredentials={canSetCredentials}
-                    ownEmployeeId={user?.employee_id ?? null}
                     onView={setViewEmp}
                     onEdit={setEditEmp}
                     onResign={setResignEmp}
@@ -297,7 +297,7 @@ export default function EmployeesPage() {
                 employee={viewEmp}
                 onClose={() => setViewEmp(null)}
                 canEdit={canEdit}
-                isSelf={!!viewEmp && viewEmp.id === user?.employee_id}
+                isSuperViewer={role === 'super'}
                 canResetPassword={canResetPassword}
                 canResign={canResign}
                 canCancelResign={canCancelResign}
@@ -346,11 +346,11 @@ const DIR_PAGE_SIZES = [20, 50, 100] as const;
 interface DirectoryTabProps {
     departments: Department[];
     canEdit: boolean;
+    isSuperViewer: boolean;
     canResetPassword: boolean;
     canResign: boolean;
     canCancelResign: boolean;
     canSetCredentials: boolean;
-    ownEmployeeId: number | null;
     onView: (e: Employee) => void;
     onEdit: (e: Employee) => void;
     onResign: (e: Employee) => void;
@@ -359,7 +359,7 @@ interface DirectoryTabProps {
     onSetCredentials: (e: Employee) => void;
 }
 
-function DirectoryTab({ departments, canEdit, canResetPassword, canResign, canCancelResign, canSetCredentials, ownEmployeeId, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
+function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, canResign, canCancelResign, canSetCredentials, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [search, setSearch] = useState('');
@@ -436,8 +436,8 @@ function DirectoryTab({ departments, canEdit, canResetPassword, canResign, canCa
                                 {t('view')}
                             </DropdownMenuItem>
                             {canEdit && e.status !== 'resigned' && (
-                                e.id === ownEmployeeId ? (
-                                    <DropdownMenuItem disabled title={t('profile_edit_via')}>
+                                e.is_super_admin && !isSuperViewer ? (
+                                    <DropdownMenuItem disabled title={t('emp_admin_protected')}>
                                         <SquarePen className="h-4 w-4" />
                                         {t('edit')}
                                     </DropdownMenuItem>

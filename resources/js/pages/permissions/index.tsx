@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/hooks/use-auth';
 import {
     useAuditLogs,
     useGroupRoleMutations,
@@ -295,6 +296,8 @@ function RolesTab() {
 function GroupRolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { user } = useAuth();
+    const isSuper = user?.role === 'super';
     const { data, isLoading } = useGroupRoles();
     const { remove } = useGroupRoleMutations();
     const setDefaultGroup = useSetDefaultGroup();
@@ -347,6 +350,8 @@ function GroupRolesTab() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {groups.map((g) => {
                     const isDefault = g.id === defaultGroupId;
+                    // Only a super admin may edit or delete the Administrator role group.
+                    const adminLocked = g.role === 'super' && !isSuper;
                     return (
                         <Card key={g.id} className={cn('p-4', isDefault && 'ring-2 ring-brand/40')}>
                             <div className="flex items-start justify-between">
@@ -363,7 +368,9 @@ function GroupRolesTab() {
                                 <div className="flex gap-0.5">
                                     <button
                                         onClick={() => setModal({ open: true, group: g })}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+                                        disabled={adminLocked}
+                                        title={adminLocked ? t('gr_admin_protected') : undefined}
+                                        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
@@ -387,7 +394,9 @@ function GroupRolesTab() {
                                             });
                                             if (result.isConfirmed) remove.mutate(g.id);
                                         }}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                                        disabled={adminLocked}
+                                        title={adminLocked ? t('gr_admin_protected') : undefined}
+                                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                                     >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </button>

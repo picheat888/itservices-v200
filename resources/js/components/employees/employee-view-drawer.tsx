@@ -24,7 +24,7 @@ export function EmployeeViewDrawer({
     employee,
     onClose,
     canEdit,
-    isSelf,
+    isSuperViewer,
     canResetPassword,
     canResign,
     canCancelResign,
@@ -38,7 +38,7 @@ export function EmployeeViewDrawer({
     employee: Employee | null;
     onClose: () => void;
     canEdit: boolean;
-    isSelf: boolean;
+    isSuperViewer: boolean;
     canResetPassword: boolean;
     canResign: boolean;
     canCancelResign: boolean;
@@ -133,8 +133,8 @@ export function EmployeeViewDrawer({
                                             variant="outline"
                                             className="flex-1"
                                             onClick={() => onEdit(employee)}
-                                            disabled={isSelf}
-                                            title={isSelf ? t('profile_edit_via') : undefined}
+                                            disabled={employee.is_super_admin && !isSuperViewer}
+                                            title={employee.is_super_admin && !isSuperViewer ? t('emp_admin_protected') : undefined}
                                         >
                                             <SquarePen className="h-4 w-4" />
                                             {t('edit')}
