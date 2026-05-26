@@ -230,6 +230,13 @@ class EmployeeController extends Controller
 
     public function update(StoreEmployeeRequest $request, Employee $employee): JsonResponse
     {
+        // Only a super admin may edit an employee whose login account is a super admin.
+        abort_if(
+            $employee->isSuperAdmin() && ! $request->user()?->isSuper(),
+            403,
+            'Only an Administrator can edit an Administrator account.'
+        );
+
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
         AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})");
 

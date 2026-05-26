@@ -3,12 +3,13 @@
 namespace App\Http\Resources;
 
 use App\Enums\EmployeeStatus;
+use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
-/** @mixin \App\Models\Employee */
+/** @mixin Employee */
 class EmployeeResource extends JsonResource
 {
     /**
@@ -17,6 +18,16 @@ class EmployeeResource extends JsonResource
     public function toArray(Request $request): array
     {
         $status = $this->status instanceof EmployeeStatus ? $this->status : EmployeeStatus::tryFrom((string) $this->status);
+
+        // Resolve the linked login account once: drives both has_account and the
+        // is_super_admin flag (used to lock down editing Administrator records).
+        $linkedUser = User::where('email', $this->email)
+            ->orWhere(function ($q) {
+                if ($this->username) {
+                    $q->where('username', $this->username);
+                }
+            })
+            ->first();
 
         return [
             'id' => $this->id,
@@ -37,13 +48,8 @@ class EmployeeResource extends JsonResource
             'status' => $status?->value ?? EmployeeStatus::Active->value,
             'resign_reason' => $this->resign_reason,
             'last_day' => $this->last_day?->toDateString(),
-            'has_account' => User::where('email', $this->email)
-                ->orWhere(function ($q) {
-                    if ($this->username) {
-                        $q->where('username', $this->username);
-                    }
-                })
-                ->exists(),
+            'has_account' => (bool) $linkedUser,
+            'is_super_admin' => $linkedUser?->role === 'super',
         ];
     }
 }
