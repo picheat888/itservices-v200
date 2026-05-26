@@ -7,13 +7,17 @@ use App\Http\Requests\StoreContractRequest;
 use App\Http\Resources\ContractResource;
 use App\Models\AuditLog;
 use App\Models\Contract;
+use App\Services\ContractExpiryAlertService;
 use App\Services\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ContractController extends Controller
 {
-    public function __construct(private readonly ContractService $service) {}
+    public function __construct(
+        private readonly ContractService $service,
+        private readonly ContractExpiryAlertService $alertService,
+    ) {}
 
     /** Gates read access to the contracts.view permission (super bypasses). */
     private function gateView(Request $request): void
@@ -167,6 +171,7 @@ class ContractController extends Controller
 
         $months = (int) $request->input('months', 12);
         $contract = $this->service->renew($contract, $months > 0 ? $months : 12);
+        $this->alertService->resetForContract($contract);
         AuditLog::record('Renewed contract', "{$contract->name} ({$contract->code})");
 
         return (new ContractResource($contract->load('owner')))
