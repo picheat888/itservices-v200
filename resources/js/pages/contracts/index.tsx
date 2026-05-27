@@ -162,7 +162,7 @@ export default function ContractsPage() {
                 <StatCard
                     label={t('contract_annual_value')}
                     value={summary?.annual_value ?? '—'}
-                    hint={lang === 'th' ? 'รวมทุกผู้ขาย' : 'across all vendors'}
+                    hint={lang === 'th' ? 'ไม่รวมสัญญาที่ยกเลิก' : 'excluding cancelled'}
                     icon={TrendingUp}
                 />
             </div>
