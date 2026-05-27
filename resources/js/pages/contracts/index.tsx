@@ -89,6 +89,7 @@ export default function ContractsPage() {
 
     const [tab, setTab] = useState<Tab>('dashboard');
     const [search, setSearch] = useState('');
+    const ALL_TYPES = '__all__';
     const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
@@ -236,17 +237,17 @@ export default function ContractsPage() {
                         <div className="border-border flex flex-wrap items-center gap-2 border-b p-3">
                             <p className="text-muted-foreground mr-auto text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
                             <Select
-                                value={typeFilter}
+                                value={typeFilter || ALL_TYPES}
                                 onValueChange={(v) => {
-                                    setTypeFilter(v as ContractType | '');
+                                    setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
                                     setPage(1);
                                 }}
                             >
                                 <SelectTrigger className="h-9 w-44">
-                                    <SelectValue placeholder={t('contract_type')} />
+                                    <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">{lang === 'th' ? 'ทุกประเภท' : 'All types'}</SelectItem>
+                                    <SelectItem value={ALL_TYPES}>{lang === 'th' ? 'ทุกประเภท' : 'All types'}</SelectItem>
                                     <SelectItem value="software">{t('contract_type_software')}</SelectItem>
                                     <SelectItem value="hardware">{t('contract_type_hardware')}</SelectItem>
                                     <SelectItem value="service">{t('contract_type_service')}</SelectItem>
