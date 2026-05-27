@@ -88,6 +88,7 @@ export default function EmailTemplatesPage() {
     const { data, isLoading } = useEmailTemplates();
     const { update, test } = useEmailTemplateMutations();
     const [search, setSearch] = useState('');
+    const [module, setModule] = useState('');
     const [preview, setPreview] = useState<EmailTemplate | null>(null);
     const [edit, setEdit] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
@@ -95,11 +96,23 @@ export default function EmailTemplatesPage() {
     const templates = data?.data ?? [];
     const stats = data?.stats;
 
+    // Derive unique module prefixes from keys (e.g. "ticket" from "ticket.created")
+    const modules = useMemo(() => {
+        const counts: Record<string, number> = {};
+        templates.forEach((tp) => {
+            const mod = tp.key.split('.')[0];
+            counts[mod] = (counts[mod] ?? 0) + 1;
+        });
+        return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [templates]);
+
     const rows = useMemo(() => {
+        let list = templates;
+        if (module) list = list.filter((tp) => tp.key.startsWith(module + '.'));
         const q = search.trim().toLowerCase();
-        if (!q) return templates;
-        return templates.filter((tp) => tp.name.toLowerCase().includes(q) || tp.key.toLowerCase().includes(q));
-    }, [templates, search]);
+        if (q) list = list.filter((tp) => tp.name.toLowerCase().includes(q) || tp.key.toLowerCase().includes(q));
+        return list;
+    }, [templates, module, search]);
 
     const toggle = (tp: EmailTemplate) => update.mutate({ id: tp.id, payload: { enabled: !tp.enabled } });
 
@@ -154,6 +167,39 @@ export default function EmailTemplatesPage() {
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
                     </div>
+                </div>
+
+                {/* Module filter tabs */}
+                <div className="flex flex-wrap gap-1.5 border-b border-border px-4 py-2.5">
+                    <button
+                        type="button"
+                        onClick={() => setModule('')}
+                        className={cn(
+                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                            module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                        )}
+                    >
+                        {lang === 'th' ? 'ทั้งหมด' : 'All'}
+                        <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === '' ? 'bg-white/20' : 'bg-background')}>
+                            {templates.length}
+                        </span>
+                    </button>
+                    {modules.map(([mod, count]) => (
+                        <button
+                            key={mod}
+                            type="button"
+                            onClick={() => setModule(mod)}
+                            className={cn(
+                                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                            )}
+                        >
+                            {mod}
+                            <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === mod ? 'bg-white/20' : 'bg-background')}>
+                                {count}
+                            </span>
+                        </button>
+                    ))}
                 </div>
 
                 {isLoading ? (
