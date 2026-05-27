@@ -44,5 +44,6 @@ export function useContractMutations() {
         }),
         cancel: useMutation({ mutationFn: (id: number) => contractApi.cancel(id), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => contractApi.remove(id), onSuccess: invalidate }),
+        import: useMutation({ mutationFn: (file: File) => contractApi.import(file), onSuccess: invalidate }),
     };
 }
