@@ -4,7 +4,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useDocumentTitle } from '@/hooks/use-document-title';
 import { useSessionTimeout } from '@/hooks/use-session-timeout';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { settingsApi } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { NotificationsDropdown } from './notifications-dropdown';
@@ -17,7 +19,14 @@ export function AppShell() {
     useUserPreferences();
     const density = useUiStore((s) => s.density);
     const { user } = useAuth();
-    const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout();
+
+    // Shared with SecurityTab via the same query key — updates immediately when admin saves.
+    const { data: security } = useQuery({
+        queryKey: ['security-settings'],
+        queryFn: settingsApi.getSecurity,
+        staleTime: 5 * 60_000,
+    });
+    const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(security?.session_timeout_minutes ?? 0);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
 

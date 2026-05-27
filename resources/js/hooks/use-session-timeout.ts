@@ -1,5 +1,4 @@
 import { authApi } from '@/services/authApi';
-import { settingsApi } from '@/services/settingsApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -15,13 +14,15 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchst
 /**
  * Industry-standard inactivity-based session timeout.
  *
- * - Polls every 5 s; shows a 2-minute warning modal before forced logout.
+ * - Accepts timeoutMinutes from the caller (via React Query cache) so that
+ *   admin changes to the setting take effect immediately without a page reload.
+ * - Polls every 5 s; shows a warning modal before forced logout.
  * - Activity events (mouse / keyboard / scroll) keep resetting the clock
  *   as long as the warning modal is not yet open.
  * - extendSession() dismisses the modal and resets the clock.
  * - doLogout()     logs the user out immediately.
  */
-export function useSessionTimeout() {
+export function useSessionTimeout(timeoutMinutes: number) {
     const qc = useQueryClient();
 
     const [showWarning, setShowWarning] = useState(false);
@@ -60,16 +61,19 @@ export function useSessionTimeout() {
         clearCountdown();
     }, []);
 
-    // Load session_timeout_minutes once at mount.
+    // Sync timeoutMsRef whenever the setting changes (e.g. admin saves new value).
+    // Reset the activity clock so the timer always starts fresh on change.
     useEffect(() => {
-        settingsApi.getSecurity()
-            .then(({ session_timeout_minutes }) => {
-                timeoutMsRef.current = session_timeout_minutes > 0
-                    ? session_timeout_minutes * 60_000
-                    : 0;
-            })
-            .catch(() => { /* settings unreachable — leave disabled */ });
-    }, []);
+        timeoutMsRef.current = timeoutMinutes > 0 ? timeoutMinutes * 60_000 : 0;
+        lastActivityRef.current = Date.now();
+        // If a warning was showing for the old timeout, dismiss it.
+        if (warningActiveRef.current) {
+            warningActiveRef.current = false;
+            setShowWarning(false);
+            setSecondsLeft(WARN_BEFORE_SEC);
+            clearCountdown();
+        }
+    }, [timeoutMinutes]);
 
     // Activity listener: only resets the clock while warning is not showing.
     useEffect(() => {

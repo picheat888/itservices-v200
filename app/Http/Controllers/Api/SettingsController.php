@@ -195,6 +195,10 @@ class SettingsController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('system.edit_settings'), 403);
 
+        if (! MailSetting::current()->isConfigured()) {
+            return response()->json(['message' => 'SMTP is not configured. Please fill in Host and From Address first.', 'sent' => false], 422);
+        }
+
         $to = $request->user()->email;
         if (! $to) {
             return response()->json(['message' => 'Your account has no email address.'], 422);
