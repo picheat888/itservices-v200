@@ -30,7 +30,7 @@ import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'all' | 'expiring';
 
-function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof FileText }) {
+function StatCard({ label, value, hint, hintDanger, icon: Icon }: { label: string; value: string | number; hint?: string; hintDanger?: boolean; icon: typeof FileText }) {
     return (
         <Card className="p-5">
             <div className="flex items-start justify-between">
@@ -40,7 +40,7 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
                 </span>
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-            {hint && <div className="text-muted-foreground mt-1 text-xs">{hint}</div>}
+            {hint && <div className={cn('mt-1 text-xs', hintDanger ? 'text-red-500' : 'text-muted-foreground')}>{hint}</div>}
         </Card>
     );
 }
@@ -156,6 +156,7 @@ export default function ContractsPage() {
                     label={t('expiring_soon')}
                     value={summary?.expiring ?? '—'}
                     hint={lang === 'th' ? 'ตามช่วงแจ้งเตือนสัญญา' : 'within reminder window'}
+                    hintDanger
                     icon={Clock}
                 />
                 <StatCard
