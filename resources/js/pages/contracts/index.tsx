@@ -236,6 +236,18 @@ export default function ContractsPage() {
                     <>
                         <div className="border-border flex flex-wrap items-center gap-2 border-b p-3">
                             <p className="text-muted-foreground mr-auto text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
+                            <div className="relative w-full max-w-xs">
+                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                <Input
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    placeholder={`${t('contract_vendor')} / ${t('contract_name')}`}
+                                    className="h-9 pl-9"
+                                />
+                            </div>
                             <Select
                                 value={typeFilter || ALL_TYPES}
                                 onValueChange={(v) => {
@@ -255,18 +267,6 @@ export default function ContractsPage() {
                                     <SelectItem value="other">{t('contract_type_other')}</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <div className="relative w-full max-w-xs">
-                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                                <Input
-                                    value={search}
-                                    onChange={(e) => {
-                                        setSearch(e.target.value);
-                                        setPage(1);
-                                    }}
-                                    placeholder={`${t('contract_vendor')} / ${t('contract_name')}`}
-                                    className="h-9 pl-9"
-                                />
-                            </div>
                         </div>
 
                         {isLoading ? (
