@@ -22,7 +22,7 @@ class AssetModelController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'brand_id' => ['nullable', 'exists:brands,id'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $model = AssetModel::create($data);
@@ -38,7 +38,7 @@ class AssetModelController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'brand_id' => ['nullable', 'exists:brands,id'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $assetModel->update($data);
