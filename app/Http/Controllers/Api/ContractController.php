@@ -90,10 +90,10 @@ class ContractController extends Controller
         $live = $contracts->filter(fn ($c) => $c->cancelled_at === null);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
         $expired = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
-        $active = $live->filter(fn ($c) => $c->daysRemaining() > 0 && ! $c->isInReminder());
+        $active = $live->filter(fn ($c) => $c->daysRemaining() > 0);
         $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null);
 
-        $annual = $contracts->sum(fn ($c) => $c->annualValue());
+        $annual = $live->sum('value');
 
         $topVendors = $contracts
             ->groupBy('vendor')
