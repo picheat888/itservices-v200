@@ -424,23 +424,29 @@ function BrandsList() {
  * ModelsList — CRUD list for asset models, with optional brand association.
  * Uses useAssetModels + useAssetModelMutations + useBrands hooks.
  */
+// Radix UI Select does not accept "" as a valid item value (treats it as unselected).
+// Use a sentinel string so the "no brand" option is selectable, then convert to null before API calls.
+const NO_BRAND = '__none__';
+const toBrandId = (v: string) => (v === NO_BRAND || v === '' ? null : Number(v));
+const fromBrandId = (id?: number | null) => (id ? String(id) : NO_BRAND);
+
 function ModelsList() {
     const t = useT();
     const { data: models = [] } = useAssetModels();
     const { data: brands = [] } = useBrands();
     const { create, update, remove } = useAssetModelMutations();
     const [newName, setNewName] = useState('');
-    const [newBrandId, setNewBrandId] = useState<string>('');
+    const [newBrandId, setNewBrandId] = useState<string>(NO_BRAND);
     const [editId, setEditId] = useState<number | null>(null);
     const [editName, setEditName] = useState('');
-    const [editBrandId, setEditBrandId] = useState<string>('');
+    const [editBrandId, setEditBrandId] = useState<string>(NO_BRAND);
 
     const add = async () => {
         if (!newName.trim()) return;
         try {
-            await create.mutateAsync({ name: newName.trim(), brand_id: newBrandId ? Number(newBrandId) : null });
+            await create.mutateAsync({ name: newName.trim(), brand_id: toBrandId(newBrandId) });
             setNewName('');
-            setNewBrandId('');
+            setNewBrandId(NO_BRAND);
         } catch {
             Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
         }
@@ -449,7 +455,7 @@ function ModelsList() {
     const saveEdit = async () => {
         if (editId == null || !editName.trim()) return;
         try {
-            await update.mutateAsync({ id: editId, name: editName.trim(), brand_id: editBrandId ? Number(editBrandId) : null });
+            await update.mutateAsync({ id: editId, name: editName.trim(), brand_id: toBrandId(editBrandId) });
             setEditId(null);
         } catch {
             Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
@@ -465,7 +471,7 @@ function ModelsList() {
                         <SelectValue placeholder={t('md_brand')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="">—</SelectItem>
+                        <SelectItem value={NO_BRAND}>—</SelectItem>
                         {brands.map((b: Brand) => (
                             <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
                         ))}
@@ -488,7 +494,7 @@ function ModelsList() {
                                         <SelectValue placeholder={t('md_brand')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">—</SelectItem>
+                                        <SelectItem value={NO_BRAND}>—</SelectItem>
                                         {brands.map((b: Brand) => (
                                             <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
                                         ))}
@@ -507,7 +513,7 @@ function ModelsList() {
                                         <span className="bg-accent text-muted-foreground ml-2 rounded px-1.5 py-0.5 text-xs">{m.brand.name}</span>
                                     )}
                                 </div>
-                                <button onClick={() => { setEditId(m.id); setEditName(m.name); setEditBrandId(m.brand_id ? String(m.brand_id) : ''); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                <button onClick={() => { setEditId(m.id); setEditName(m.name); setEditBrandId(fromBrandId(m.brand_id)); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
                                     <Pencil className="h-4 w-4" />
                                 </button>
                                 <button onClick={() => { if (confirm(`${t('confirm_delete')} ${m.name}`)) remove.mutate(m.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
