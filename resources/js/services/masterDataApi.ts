@@ -1,4 +1,4 @@
-import type { ApiEnvelope, AssetModel, Brand, Category, Vendor, Warehouse } from '@/types';
+import type { ApiEnvelope, AssetModel, Brand, Category, CategoryType, Vendor, Warehouse } from '@/types';
 import { ensureCsrf, http } from './http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -25,9 +25,9 @@ export const assetModelApi = {
 
 export const categoryApi = {
     list: () => http.get<ApiEnvelope<Category[]>>('/categories').then((r) => r.data.data),
-    create: (payload: { name: string; type: string; description?: string }) =>
+    create: (payload: { name: string; type: CategoryType; description?: string }) =>
         mutate<Category>('post', '/categories', payload),
-    update: (id: number, payload: { name: string; type: string; description?: string }) =>
+    update: (id: number, payload: { name: string; type: CategoryType; description?: string }) =>
         mutate<Category>('put', `/categories/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/categories/${id}`),
 };

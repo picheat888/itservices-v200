@@ -1,5 +1,5 @@
 import { assetModelApi, brandApi, categoryApi, vendorApi, warehouseApi } from '@/services/masterDataApi';
-import type { AssetModel, Brand, Category, Vendor, Warehouse } from '@/types';
+import type { AssetModel, Brand, Category, CategoryType, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const BRANDS = ['brands'] as const;
@@ -50,11 +50,11 @@ export function useCategoryMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: CATS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; type: string; description?: string }) => categoryApi.create(p),
+            mutationFn: (p: { name: string; type: CategoryType; description?: string }) => categoryApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; type: string; description?: string }) =>
+            mutationFn: (v: { id: number; name: string; type: CategoryType; description?: string }) =>
                 categoryApi.update(v.id, { name: v.name, type: v.type, description: v.description }),
             onSuccess: inv,
         }),
