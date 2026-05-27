@@ -105,6 +105,15 @@ class MasterDataTest extends TestCase
         $this->assertDatabaseMissing('brands', ['id' => $brand->id]);
     }
 
+    public function test_brand_name_must_be_unique(): void
+    {
+        Brand::create(['name' => 'Dell']);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/brands', ['name' => 'Dell'])
+            ->assertUnprocessable();
+    }
+
     // ── Asset Models ─────────────────────────────────────────
 
     public function test_super_can_create_asset_model_with_brand(): void
