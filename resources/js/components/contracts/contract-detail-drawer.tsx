@@ -6,7 +6,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Contract } from '@/types';
-import { Ban, RefreshCw, SquarePen } from 'lucide-react';
+import { Ban, SquarePen } from 'lucide-react';
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
@@ -23,17 +23,15 @@ export function ContractDetailDrawer({
     onClose,
     onEdit,
     canEdit,
-    canRenew,
 }: {
     contract: Contract | null;
     onClose: () => void;
     onEdit: (c: Contract) => void;
     canEdit: boolean;
-    canRenew: boolean;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { renew, cancel } = useContractMutations();
+    const { cancel } = useContractMutations();
 
     if (!contract) return null;
 
@@ -141,16 +139,6 @@ export function ContractDetailDrawer({
                         <Button variant="outline" className="flex-1" onClick={() => onEdit(contract)}>
                             <SquarePen className="h-4 w-4" />
                             {t('edit')}
-                        </Button>
-                    )}
-                    {canRenew && !cancelled && (
-                        <Button
-                            className="flex-1"
-                            onClick={() => renew.mutate({ id: contract.id }, { onSuccess: onClose })}
-                            disabled={renew.isPending}
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            {t('contract_renew')}
                         </Button>
                     )}
                     {canEdit && !cancelled && (
