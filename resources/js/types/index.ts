@@ -144,3 +144,42 @@ export interface NavGroup {
     label: string;
     items: NavItem[];
 }
+
+// Master Data types
+export interface Brand {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+export interface AssetModel {
+    id: number;
+    name: string;
+    brand_id?: number | null;
+    brand?: Brand | null;
+    description?: string | null;
+}
+
+export type CategoryType = 'asset' | 'contract' | 'stock';
+
+export interface Category {
+    id: number;
+    name: string;
+    type: CategoryType;
+    description?: string | null;
+}
+
+export interface Vendor {
+    id: number;
+    name: string;
+    contact?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+}
+
+export interface Warehouse {
+    id: number;
+    name: string;
+    description?: string | null;
+}
