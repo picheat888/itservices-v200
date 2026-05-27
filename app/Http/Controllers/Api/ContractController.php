@@ -34,7 +34,9 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        $query = Contract::with('owner')->orderBy('end_date');
+        $query = Contract::with('owner')
+            ->orderByRaw('cancelled_at IS NOT NULL')
+            ->orderBy('end_date');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
