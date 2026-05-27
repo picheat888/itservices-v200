@@ -89,6 +89,7 @@ export default function ContractsPage() {
 
     const [tab, setTab] = useState<Tab>('dashboard');
     const [search, setSearch] = useState('');
+    const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -97,7 +98,7 @@ export default function ContractsPage() {
 
     const { data: summary } = useContractSummary();
     const listEnabledTab = tab === 'expiring' ? 'expiring' : 'all';
-    const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab });
+    const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab, type: typeFilter || undefined });
     const { data: selected } = useContract(selectedId);
 
     // Deep-link from a notification: /contracts?view=<id> opens that contract's
@@ -210,6 +211,7 @@ export default function ContractsPage() {
                             onClick={() => {
                                 setTab(tb.id);
                                 setPage(1);
+                                setTypeFilter('');
                             }}
                             className={cn(
                                 'relative px-4 py-3 text-sm font-medium transition-colors',
@@ -231,8 +233,27 @@ export default function ContractsPage() {
                     <DashboardTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
                 ) : (
                     <>
-                        <div className="border-border flex items-center justify-between gap-3 border-b p-3">
-                            <p className="text-muted-foreground text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
+                        <div className="border-border flex flex-wrap items-center gap-2 border-b p-3">
+                            <p className="text-muted-foreground mr-auto text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
+                            <Select
+                                value={typeFilter}
+                                onValueChange={(v) => {
+                                    setTypeFilter(v as ContractType | '');
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 w-44">
+                                    <SelectValue placeholder={t('contract_type')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="">{lang === 'th' ? 'ทุกประเภท' : 'All types'}</SelectItem>
+                                    <SelectItem value="software">{t('contract_type_software')}</SelectItem>
+                                    <SelectItem value="hardware">{t('contract_type_hardware')}</SelectItem>
+                                    <SelectItem value="service">{t('contract_type_service')}</SelectItem>
+                                    <SelectItem value="connectivity">{t('contract_type_connectivity')}</SelectItem>
+                                    <SelectItem value="other">{t('contract_type_other')}</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
@@ -242,7 +263,7 @@ export default function ContractsPage() {
                                         setPage(1);
                                     }}
                                     placeholder={`${t('contract_vendor')} / ${t('contract_name')}`}
-                                    className="pl-9"
+                                    className="h-9 pl-9"
                                 />
                             </div>
                         </div>

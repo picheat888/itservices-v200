@@ -40,7 +40,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 }
 
 export const contractApi = {
-    list: (params: { page: number; per_page: number; search?: string; tab?: string }) =>
+    list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string }) =>
         http.get<ContractPageResponse>('/contracts', { params }).then((r) => r.data),
     summary: () => http.get<ContractSummary>('/contracts/summary').then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<Contract>>(`/contracts/${id}`).then((r) => r.data.data),
