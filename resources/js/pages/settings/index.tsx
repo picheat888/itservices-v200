@@ -7,6 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
 import { useResetLogo, useSettings, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
+import {
+    useAssetModelMutations,
+    useAssetModels,
+    useBrandMutations,
+    useBrands,
+    useCategoryMutations,
+    useCategories,
+    useVendorMutations,
+    useVendors,
+    useWarehouseMutations,
+    useWarehouses,
+} from '@/hooks/use-master-data';
+import type { AssetModel, Brand, Category, CategoryType, Vendor, Warehouse } from '@/types';
 import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
@@ -17,6 +30,7 @@ import type { Density } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Box,
+    Boxes,
     Building2,
     Construction,
     Mail,
@@ -37,7 +51,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
-type Section = 'display' | 'company' | 'branding' | 'locations' | 'email' | 'tickets' | 'assets' | 'workflow' | 'integrations' | 'security';
+type Section = 'display' | 'company' | 'branding' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'integrations' | 'security';
 
 const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 
@@ -61,7 +75,7 @@ const VALID_SECTIONS: Section[] = [
     'display',
     'company',
     'branding',
-    'locations',
+    'master-data',
     'email',
     'tickets',
     'assets',
@@ -110,7 +124,7 @@ export default function SettingsPage() {
         { id: 'company', label: t('set_company'), icon: Building2, ready: true },
         { id: 'branding', label: t('set_branding'), icon: Sparkles, ready: true },
         { id: 'display', label: t('set_display'), icon: MonitorCog, ready: true },
-        { id: 'locations', label: t('set_locations'), icon: MapPin, ready: true },
+        { id: 'master-data', label: t('set_master_data'), icon: Boxes, ready: true },
         { id: 'email', label: t('set_email'), icon: Mail, ready: true },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket },
         { id: 'assets', label: t('set_assets'), icon: Box },
@@ -152,10 +166,10 @@ export default function SettingsPage() {
                         <CompanyTab form={form} set={set} onSave={() => update.mutate(form)} saving={update.isPending} saved={update.isSuccess} />
                     )}
                     {section === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
-                    {section === 'locations' && <LocationsTab />}
+                    {section === 'master-data' && <MasterDataTab />}
                     {section === 'email' && <EmailTab />}
                     {section === 'security' && <SecurityTab />}
-                    {!['display', 'company', 'branding', 'locations', 'email', 'security'].includes(section) && <ComingSoon />}
+                    {!['display', 'company', 'branding', 'master-data', 'email', 'security'].includes(section) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -273,7 +287,506 @@ function DisplayTab() {
     );
 }
 
-function LocationsTab() {
+// ─── Master Data Tab ─────────────────────────────────────────────────────────
+
+type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations';
+
+/**
+ * MasterDataTab — top-level container with sub-tab navigation.
+ * Renders one of: BrandsList, ModelsList, CategoriesList, VendorsList,
+ * WarehousesList, or LocationsList based on the selected tab.
+ */
+function MasterDataTab() {
+    const t = useT();
+    const [tab, setTab] = useState<MdTab>('brands');
+
+    const tabs: { id: MdTab; label: string }[] = [
+        { id: 'brands', label: t('md_brands') },
+        { id: 'models', label: t('md_models') },
+        { id: 'categories', label: t('md_categories') },
+        { id: 'vendors', label: t('md_vendors') },
+        { id: 'warehouses', label: t('md_warehouses') },
+        { id: 'locations', label: t('set_locations') },
+    ];
+
+    return (
+        <div>
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_master_data')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_master_data_desc')}</p>
+            </div>
+
+            <div className="mb-5 flex flex-wrap gap-1 border-b pb-3">
+                {tabs.map((tb) => (
+                    <button
+                        key={tb.id}
+                        onClick={() => setTab(tb.id)}
+                        className={cn(
+                            'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                            tab === tb.id ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent/50',
+                        )}
+                    >
+                        {tb.label}
+                    </button>
+                ))}
+            </div>
+
+            {tab === 'brands' && <BrandsList />}
+            {tab === 'models' && <ModelsList />}
+            {tab === 'categories' && <CategoriesList />}
+            {tab === 'vendors' && <VendorsList />}
+            {tab === 'warehouses' && <WarehousesList />}
+            {tab === 'locations' && <LocationsList />}
+        </div>
+    );
+}
+
+/**
+ * BrandsList — CRUD list for asset/stock brands.
+ * Uses useBrands + useBrandMutations hooks.
+ */
+function BrandsList() {
+    const t = useT();
+    const { data: brands = [] } = useBrands();
+    const { create, update, remove } = useBrandMutations();
+    const [newName, setNewName] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+
+    const add = async () => {
+        if (!newName.trim()) return;
+        await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
+        setNewName('');
+        setNewDesc('');
+    };
+
+    const saveEdit = async () => {
+        if (editId == null || !editName.trim()) return;
+        await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
+        setEditId(null);
+    };
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-4 flex gap-2">
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('md_brand_name')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder={t('md_description')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Button onClick={add} disabled={!newName.trim() || create.isPending}>
+                    <Plus className="h-4 w-4" />
+                    {t('md_add_brand')}
+                </Button>
+            </div>
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {brands.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
+                {brands.map((b: Brand) => (
+                    <div key={b.id} className="flex items-center gap-2 px-4 py-2.5">
+                        {editId === b.id ? (
+                            <>
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="h-8" placeholder={t('md_description')} />
+                                <Button size="sm" onClick={saveEdit} disabled={update.isPending}>{t('save')}</Button>
+                                <button onClick={() => setEditId(null)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium">{b.name}</span>
+                                    {b.description && <span className="text-muted-foreground ml-2 text-xs">{b.description}</span>}
+                                </div>
+                                <button onClick={() => { setEditId(b.id); setEditName(b.name); setEditDesc(b.description ?? ''); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => { if (confirm(`${t('confirm_delete')} ${b.name}`)) remove.mutate(b.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * ModelsList — CRUD list for asset models, with optional brand association.
+ * Uses useAssetModels + useAssetModelMutations + useBrands hooks.
+ */
+function ModelsList() {
+    const t = useT();
+    const { data: models = [] } = useAssetModels();
+    const { data: brands = [] } = useBrands();
+    const { create, update, remove } = useAssetModelMutations();
+    const [newName, setNewName] = useState('');
+    const [newBrandId, setNewBrandId] = useState<string>('');
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editBrandId, setEditBrandId] = useState<string>('');
+
+    const add = async () => {
+        if (!newName.trim()) return;
+        await create.mutateAsync({ name: newName.trim(), brand_id: newBrandId ? Number(newBrandId) : null });
+        setNewName('');
+        setNewBrandId('');
+    };
+
+    const saveEdit = async () => {
+        if (editId == null || !editName.trim()) return;
+        await update.mutateAsync({ id: editId, name: editName.trim(), brand_id: editBrandId ? Number(editBrandId) : null });
+        setEditId(null);
+    };
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-4 flex gap-2">
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('md_model_name')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Select value={newBrandId} onValueChange={setNewBrandId}>
+                    <SelectTrigger className="w-40">
+                        <SelectValue placeholder={t('md_brand')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {brands.map((b: Brand) => (
+                            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Button onClick={add} disabled={!newName.trim() || create.isPending}>
+                    <Plus className="h-4 w-4" />
+                    {t('md_add_model')}
+                </Button>
+            </div>
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {models.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
+                {models.map((m: AssetModel) => (
+                    <div key={m.id} className="flex items-center gap-2 px-4 py-2.5">
+                        {editId === m.id ? (
+                            <>
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Select value={editBrandId} onValueChange={setEditBrandId}>
+                                    <SelectTrigger className="h-8 w-36">
+                                        <SelectValue placeholder={t('md_brand')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {brands.map((b: Brand) => (
+                                            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button size="sm" onClick={saveEdit} disabled={update.isPending}>{t('save')}</Button>
+                                <button onClick={() => setEditId(null)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium">{m.name}</span>
+                                    {m.brand && (
+                                        <span className="bg-accent text-muted-foreground ml-2 rounded px-1.5 py-0.5 text-xs">{m.brand.name}</span>
+                                    )}
+                                </div>
+                                <button onClick={() => { setEditId(m.id); setEditName(m.name); setEditBrandId(m.brand_id ? String(m.brand_id) : ''); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => { if (confirm(`${t('confirm_delete')} ${m.name}`)) remove.mutate(m.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/** Color map for category type badges. */
+const CATEGORY_TYPE_COLORS: Record<CategoryType, string> = {
+    asset: 'bg-blue-100 text-blue-700',
+    contract: 'bg-purple-100 text-purple-700',
+    stock: 'bg-green-100 text-green-700',
+};
+
+/**
+ * CategoriesList — CRUD list for categories (asset / contract / stock).
+ * Uses useCategories + useCategoryMutations hooks.
+ */
+function CategoriesList() {
+    const t = useT();
+    const { data: categories = [] } = useCategories();
+    const { create, update, remove } = useCategoryMutations();
+    const [newName, setNewName] = useState('');
+    const [newType, setNewType] = useState<CategoryType>('asset');
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editType, setEditType] = useState<CategoryType>('asset');
+
+    const add = async () => {
+        if (!newName.trim()) return;
+        await create.mutateAsync({ name: newName.trim(), type: newType });
+        setNewName('');
+        setNewType('asset');
+    };
+
+    const saveEdit = async () => {
+        if (editId == null || !editName.trim()) return;
+        await update.mutateAsync({ id: editId, name: editName.trim(), type: editType });
+        setEditId(null);
+    };
+
+    const typeOptions: { value: CategoryType; label: string }[] = [
+        { value: 'asset', label: t('md_type_asset') },
+        { value: 'contract', label: t('md_type_contract') },
+        { value: 'stock', label: t('md_type_stock') },
+    ];
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-4 flex gap-2">
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('md_category_name')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Select value={newType} onValueChange={(v) => setNewType(v as CategoryType)}>
+                    <SelectTrigger className="w-36">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {typeOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button onClick={add} disabled={!newName.trim() || create.isPending}>
+                    <Plus className="h-4 w-4" />
+                    {t('md_add_category')}
+                </Button>
+            </div>
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {categories.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
+                {categories.map((c: Category) => (
+                    <div key={c.id} className="flex items-center gap-2 px-4 py-2.5">
+                        {editId === c.id ? (
+                            <>
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Select value={editType} onValueChange={(v) => setEditType(v as CategoryType)}>
+                                    <SelectTrigger className="h-8 w-36">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {typeOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Button size="sm" onClick={saveEdit} disabled={update.isPending}>{t('save')}</Button>
+                                <button onClick={() => setEditId(null)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex flex-1 items-center gap-2">
+                                    <span className="text-sm font-medium">{c.name}</span>
+                                    <span className={cn('rounded px-1.5 py-0.5 text-xs font-medium', CATEGORY_TYPE_COLORS[c.type])}>
+                                        {t(`md_type_${c.type}` as Parameters<typeof t>[0])}
+                                    </span>
+                                </div>
+                                <button onClick={() => { setEditId(c.id); setEditName(c.name); setEditType(c.type); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => { if (confirm(`${t('confirm_delete')} ${c.name}`)) remove.mutate(c.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * VendorsList — CRUD list for suppliers/vendors with contact details.
+ * Uses useVendors + useVendorMutations hooks.
+ */
+function VendorsList() {
+    const t = useT();
+    const { data: vendors = [] } = useVendors();
+    const { create, update, remove } = useVendorMutations();
+
+    const emptyForm = { name: '', contact: '', phone: '', email: '', address: '' };
+    const [newForm, setNewForm] = useState(emptyForm);
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editForm, setEditForm] = useState(emptyForm);
+
+    const setNew = (k: keyof typeof emptyForm, v: string) => setNewForm((f) => ({ ...f, [k]: v }));
+    const setEdit = (k: keyof typeof emptyForm, v: string) => setEditForm((f) => ({ ...f, [k]: v }));
+
+    const add = async () => {
+        if (!newForm.name.trim()) return;
+        await create.mutateAsync({
+            name: newForm.name.trim(),
+            contact: newForm.contact.trim() || undefined,
+            phone: newForm.phone.trim() || undefined,
+            email: newForm.email.trim() || undefined,
+            address: newForm.address.trim() || undefined,
+        });
+        setNewForm(emptyForm);
+    };
+
+    const saveEdit = async () => {
+        if (editId == null || !editForm.name.trim()) return;
+        await update.mutateAsync({
+            id: editId,
+            name: editForm.name.trim(),
+            contact: editForm.contact.trim() || undefined,
+            phone: editForm.phone.trim() || undefined,
+            email: editForm.email.trim() || undefined,
+            address: editForm.address.trim() || undefined,
+        });
+        setEditId(null);
+    };
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-4 space-y-2 rounded-lg border p-3">
+                <div className="flex gap-2">
+                    <Input value={newForm.name} onChange={(e) => setNew('name', e.target.value)} placeholder={t('md_vendor_name')} />
+                    <Input value={newForm.contact} onChange={(e) => setNew('contact', e.target.value)} placeholder={t('md_contact')} />
+                </div>
+                <div className="flex gap-2">
+                    <Input value={newForm.phone} onChange={(e) => setNew('phone', e.target.value)} placeholder={t('md_phone')} />
+                    <Input value={newForm.email} onChange={(e) => setNew('email', e.target.value)} placeholder={t('md_email')} type="email" />
+                </div>
+                <div className="flex gap-2">
+                    <Input value={newForm.address} onChange={(e) => setNew('address', e.target.value)} placeholder={t('md_address')} />
+                    <Button onClick={add} disabled={!newForm.name.trim() || create.isPending} className="shrink-0">
+                        <Plus className="h-4 w-4" />
+                        {t('md_add_vendor')}
+                    </Button>
+                </div>
+            </div>
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {vendors.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
+                {vendors.map((v: Vendor) => (
+                    <div key={v.id} className="px-4 py-2.5">
+                        {editId === v.id ? (
+                            <div className="space-y-2">
+                                <div className="flex gap-2">
+                                    <Input value={editForm.name} onChange={(e) => setEdit('name', e.target.value)} className="h-8" autoFocus placeholder={t('md_vendor_name')} />
+                                    <Input value={editForm.contact} onChange={(e) => setEdit('contact', e.target.value)} className="h-8" placeholder={t('md_contact')} />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input value={editForm.phone} onChange={(e) => setEdit('phone', e.target.value)} className="h-8" placeholder={t('md_phone')} />
+                                    <Input value={editForm.email} onChange={(e) => setEdit('email', e.target.value)} className="h-8" placeholder={t('md_email')} type="email" />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input value={editForm.address} onChange={(e) => setEdit('address', e.target.value)} className="h-8 flex-1" placeholder={t('md_address')} />
+                                    <Button size="sm" onClick={saveEdit} disabled={update.isPending}>{t('save')}</Button>
+                                    <button onClick={() => setEditId(null)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-start gap-2">
+                                <div className="flex-1">
+                                    <div className="text-sm font-medium">{v.name}</div>
+                                    <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 text-xs">
+                                        {v.contact && <span>{v.contact}</span>}
+                                        {v.phone && <span>{v.phone}</span>}
+                                        {v.email && <span>{v.email}</span>}
+                                        {v.address && <span>{v.address}</span>}
+                                    </div>
+                                </div>
+                                <button onClick={() => { setEditId(v.id); setEditForm({ name: v.name, contact: v.contact ?? '', phone: v.phone ?? '', email: v.email ?? '', address: v.address ?? '' }); }} className="hover:bg-accent flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => { if (confirm(`${t('confirm_delete')} ${v.name}`)) remove.mutate(v.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 shrink-0 items-center justify-center rounded-md">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * WarehousesList — CRUD list for stock warehouses.
+ * Uses useWarehouses + useWarehouseMutations hooks.
+ */
+function WarehousesList() {
+    const t = useT();
+    const { data: warehouses = [] } = useWarehouses();
+    const { create, update, remove } = useWarehouseMutations();
+    const [newName, setNewName] = useState('');
+    const [newDesc, setNewDesc] = useState('');
+    const [editId, setEditId] = useState<number | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editDesc, setEditDesc] = useState('');
+
+    const add = async () => {
+        if (!newName.trim()) return;
+        await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
+        setNewName('');
+        setNewDesc('');
+    };
+
+    const saveEdit = async () => {
+        if (editId == null || !editName.trim()) return;
+        await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
+        setEditId(null);
+    };
+
+    return (
+        <div className="max-w-2xl">
+            <div className="mb-4 flex gap-2">
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t('md_warehouse_name')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder={t('md_description')} onKeyDown={(e) => e.key === 'Enter' && add()} />
+                <Button onClick={add} disabled={!newName.trim() || create.isPending}>
+                    <Plus className="h-4 w-4" />
+                    {t('md_add_warehouse')}
+                </Button>
+            </div>
+            <div className="divide-border border-border divide-y rounded-lg border">
+                {warehouses.length === 0 && <div className="text-muted-foreground px-4 py-6 text-center text-sm">—</div>}
+                {warehouses.map((w: Warehouse) => (
+                    <div key={w.id} className="flex items-center gap-2 px-4 py-2.5">
+                        {editId === w.id ? (
+                            <>
+                                <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8" autoFocus onKeyDown={(e) => e.key === 'Enter' && saveEdit()} />
+                                <Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} className="h-8" placeholder={t('md_description')} />
+                                <Button size="sm" onClick={saveEdit} disabled={update.isPending}>{t('save')}</Button>
+                                <button onClick={() => setEditId(null)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <X className="h-4 w-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium">{w.name}</span>
+                                    {w.description && <span className="text-muted-foreground ml-2 text-xs">{w.description}</span>}
+                                </div>
+                                <button onClick={() => { setEditId(w.id); setEditName(w.name); setEditDesc(w.description ?? ''); }} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Pencil className="h-4 w-4" />
+                                </button>
+                                <button onClick={() => { if (confirm(`${t('confirm_delete')} ${w.name}`)) remove.mutate(w.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Locations List (sub-tab within Master Data) ──────────────────────────────
+
+function LocationsList() {
     const t = useT();
     const { data: locations = [] } = useLocations();
     const { create, update, remove } = useLocationMutations();
@@ -467,7 +980,7 @@ function EmailTab() {
                 </div>
 
                 <Field label={t('set_email_username')}>
-                    <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} className="font-mono" autoComplete="off" />
+                    <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} className="font-mono" autoComplete="off" placeholder="Username" />
                 </Field>
 
                 <Field label={t('set_email_password')} help={hasPassword ? t('set_email_password_hint') : undefined}>
