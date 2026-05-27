@@ -81,7 +81,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     return (
         <div
             ref={ref}
-            className="border-border bg-popover absolute top-14 right-4 z-50 w-[430px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-lg"
+            className="border-border bg-popover absolute top-14 right-4 z-50 w-[500px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-lg"
         >
             <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <div>
@@ -107,7 +107,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
             </div>
 
             {/* Per-module filter tabs */}
-            <div className="border-border flex gap-1 overflow-x-auto border-b px-2 py-2">
+            <div className="border-border flex flex-wrap gap-1 border-b px-2 py-2">
                 {NOTIF_TABS.map((tb) => {
                     const count = tabCount(tb.id);
                     const active = tab === tb.id;
