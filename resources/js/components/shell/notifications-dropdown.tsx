@@ -122,7 +122,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                         >
                             {t(tb.label)}
                             {count > 0 && (
-                                <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-red-600 dark:bg-red-900/30 dark:text-red-400">
                                     {count}
                                 </span>
                             )}
