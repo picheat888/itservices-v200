@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Contract;
+use App\Models\Vendor;
 use Illuminate\Support\Carbon;
 
 class ContractService
@@ -74,6 +75,7 @@ class ContractService
         $errors = [];
         $types = ['software', 'hardware', 'service', 'connectivity', 'other'];
         $cycles = ['monthly', 'quarterly', 'yearly'];
+        $validVendors = Vendor::pluck('name')->map(fn ($n) => strtolower($n))->all();
 
         foreach ($rows as $i => $row) {
             $n = $i + 2; // 1-based + header row
@@ -82,6 +84,10 @@ class ContractService
                     $errors[] = ['row' => $n, 'message' => "คอลัมน์ '{$col}' จำเป็นต้องกรอก"];
                     $valid = false;
                 }
+            }
+            if (! blank($row['vendor'] ?? null) && ! in_array(strtolower(trim($row['vendor'])), $validVendors, true)) {
+                $errors[] = ['row' => $n, 'message' => "vendor '{$row['vendor']}' ไม่พบในระบบ Master Data กรุณาเพิ่มก่อนนำเข้า"];
+                $valid = false;
             }
             if (! blank($row['type'] ?? null) && ! in_array($row['type'], $types, true)) {
                 $errors[] = ['row' => $n, 'message' => 'type ต้องเป็น: '.implode(', ', $types)];
