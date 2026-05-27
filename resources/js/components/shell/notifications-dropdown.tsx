@@ -55,6 +55,9 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     const activeTab = NOTIF_TABS.find((x) => x.id === tab) ?? NOTIF_TABS[0];
     const visibleItems = tab === 'all' ? items : items.filter((n) => moduleOf(n.data.type) === tab);
 
+    const tabCount = (id: string) =>
+        id === 'all' ? items.length : items.filter((n) => moduleOf(n.data.type) === id).length;
+
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest('[data-notif-btn]')) {
@@ -105,18 +108,27 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
             {/* Per-module filter tabs */}
             <div className="border-border flex gap-1 overflow-x-auto border-b px-2 py-2">
-                {NOTIF_TABS.map((tb) => (
-                    <button
-                        key={tb.id}
-                        onClick={() => setTab(tb.id)}
-                        className={cn(
-                            'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                            tab === tb.id ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent',
-                        )}
-                    >
-                        {t(tb.label)}
-                    </button>
-                ))}
+                {NOTIF_TABS.map((tb) => {
+                    const count = tabCount(tb.id);
+                    const active = tab === tb.id;
+                    return (
+                        <button
+                            key={tb.id}
+                            onClick={() => setTab(tb.id)}
+                            className={cn(
+                                'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                                active ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent',
+                            )}
+                        >
+                            {t(tb.label)}
+                            {count > 0 && (
+                                <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none', active ? 'bg-white/25 text-white' : 'bg-muted text-muted-foreground')}>
+                                    {count}
+                                </span>
+                            )}
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="max-h-[360px] overflow-y-auto">
