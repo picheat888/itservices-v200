@@ -17,8 +17,8 @@ const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string 
     { value: 'connectivity', icon: Wifi, labelKey: 'contract_type_connectivity' },
 ];
 
-const REMINDER_DAYS = [150, 120, 60, 45, 30, 7] as const;
-type ReminderKey = 'notify_150' | 'notify_120' | 'notify_60' | 'notify_45' | 'notify_30' | 'notify_7';
+const REMINDER_DAYS = [150, 120, 90, 60, 45, 30, 7] as const;
+type ReminderKey = 'notify_150' | 'notify_120' | 'notify_90' | 'notify_60' | 'notify_45' | 'notify_30' | 'notify_7';
 
 interface FormState {
     code: string;
@@ -32,6 +32,7 @@ interface FormState {
     auto_renew: boolean;
     notify_150: boolean;
     notify_120: boolean;
+    notify_90: boolean;
     notify_60: boolean;
     notify_45: boolean;
     notify_30: boolean;
@@ -51,6 +52,7 @@ const EMPTY: FormState = {
     auto_renew: false,
     notify_150: false,
     notify_120: false,
+    notify_90: false,
     notify_60: true,
     notify_45: false,
     notify_30: true,
@@ -91,6 +93,7 @@ export function ContractFormDrawer({
                 auto_renew: editing.auto_renew,
                 notify_150: editing.notify_150,
                 notify_120: editing.notify_120,
+                notify_90: editing.notify_90,
                 notify_60: editing.notify_60,
                 notify_45: editing.notify_45,
                 notify_30: editing.notify_30,
@@ -131,6 +134,7 @@ export function ContractFormDrawer({
             auto_renew: form.auto_renew,
             notify_150: form.notify_150,
             notify_120: form.notify_120,
+            notify_90: form.notify_90,
             notify_60: form.notify_60,
             notify_45: form.notify_45,
             notify_30: form.notify_30,

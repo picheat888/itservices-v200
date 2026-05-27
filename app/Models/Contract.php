@@ -12,7 +12,7 @@ class Contract extends Model
     protected $fillable = [
         'code', 'vendor', 'name', 'type', 'start_date', 'end_date',
         'value', 'billing_cycle', 'auto_renew', 'owner_id', 'cancelled_at',
-        'notify_150', 'notify_120', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
+        'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];
 
     protected function casts(): array
@@ -25,6 +25,7 @@ class Contract extends Model
             'cancelled_at' => 'datetime',
             'notify_150' => 'boolean',
             'notify_120' => 'boolean',
+            'notify_90' => 'boolean',
             'notify_60' => 'boolean',
             'notify_45' => 'boolean',
             'notify_30' => 'boolean',
@@ -51,7 +52,7 @@ class Contract extends Model
     }
 
     /** All supported reminder thresholds, in days before expiry (earliest first). */
-    public const REMINDER_DAYS = [150, 120, 60, 45, 30, 7];
+    public const REMINDER_DAYS = [150, 120, 90, 60, 45, 30, 7];
 
     /** Whole days from today until expiry — negative once expired. */
     public function daysRemaining(): int

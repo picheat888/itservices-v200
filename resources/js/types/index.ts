@@ -109,6 +109,7 @@ export interface Contract {
     reminder_days: number | null;
     notify_150: boolean;
     notify_120: boolean;
+    notify_90: boolean;
     notify_60: boolean;
     notify_45: boolean;
     notify_30: boolean;
