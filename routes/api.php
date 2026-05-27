@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\EmailTemplateController;
@@ -13,6 +16,8 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\VendorController;
+use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +58,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
     Route::apiResource('departments', DepartmentController::class)->except(['show']);
     Route::apiResource('locations', LocationController::class)->except(['show']);
+
+    // Master Data module
+    Route::apiResource('brands', BrandController::class)->except(['show']);
+    Route::apiResource('asset-models', AssetModelController::class)->except(['show']);
+    Route::apiResource('categories', CategoryController::class)->except(['show']);
+    Route::apiResource('vendors', VendorController::class)->except(['show']);
+    Route::apiResource('warehouses', WarehouseController::class)->except(['show']);
 
     // Contract & Rental module
     Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
