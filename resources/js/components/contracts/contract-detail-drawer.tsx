@@ -6,7 +6,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Contract } from '@/types';
-import { Ban, RefreshCw, RotateCcw, SquarePen } from 'lucide-react';
+import { Ban, RefreshCw, SquarePen } from 'lucide-react';
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
@@ -133,39 +133,37 @@ export function ContractDetailDrawer({
                     )}
                 </div>
 
-                <SheetFooter className="mt-4 flex-col gap-2">
-                    {canEdit && (
+                <SheetFooter className="mt-4 flex-row flex-wrap gap-2">
+                    <Button variant="outline" className="flex-1" onClick={onClose}>
+                        {t('close')}
+                    </Button>
+                    {canEdit && !cancelled && (
+                        <Button variant="outline" className="flex-1" onClick={() => onEdit(contract)}>
+                            <SquarePen className="h-4 w-4" />
+                            {t('edit')}
+                        </Button>
+                    )}
+                    {canRenew && !cancelled && (
                         <Button
-                            variant={cancelled ? 'outline' : 'destructive'}
-                            className="w-full"
+                            className="flex-1"
+                            onClick={() => renew.mutate({ id: contract.id }, { onSuccess: onClose })}
+                            disabled={renew.isPending}
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            {t('contract_renew')}
+                        </Button>
+                    )}
+                    {canEdit && !cancelled && (
+                        <Button
+                            variant="destructive"
+                            className="flex-1"
                             onClick={() => cancel.mutate(contract.id, { onSuccess: onClose })}
                             disabled={cancel.isPending}
                         >
-                            {cancelled ? <RotateCcw className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                            {cancelled ? t('contract_reactivate') : t('contract_cancel')}
+                            <Ban className="h-4 w-4" />
+                            {t('contract_cancel')}
                         </Button>
                     )}
-                    <div className="flex gap-2">
-                        <Button variant="outline" className="flex-1" onClick={onClose}>
-                            {t('close')}
-                        </Button>
-                        {canEdit && !cancelled && (
-                            <Button variant="outline" className="flex-1" onClick={() => onEdit(contract)}>
-                                <SquarePen className="h-4 w-4" />
-                                {t('edit')}
-                            </Button>
-                        )}
-                        {canRenew && !cancelled && (
-                            <Button
-                                className="flex-1"
-                                onClick={() => renew.mutate({ id: contract.id }, { onSuccess: onClose })}
-                                disabled={renew.isPending}
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                {t('contract_renew')}
-                            </Button>
-                        )}
-                    </div>
                 </SheetFooter>
             </SheetContent>
         </Sheet>
