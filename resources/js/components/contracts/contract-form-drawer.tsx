@@ -329,7 +329,7 @@ export function ContractFormDrawer({
                         {t('cancel')}
                     </Button>
                     <Button
-                        className={cn('flex-1 transition-colors', saveState === 'done' && 'bg-green-600 hover:bg-green-600 focus-visible:ring-green-600')}
+                        className="flex-1"
                         onClick={submit}
                         disabled={saving || saveState === 'done'}
                     >
