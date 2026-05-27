@@ -295,11 +295,9 @@ export function ContractFormDrawer({
                         </div>
                     </Field>
 
-                    {form.type === 'hardware' && (
-                        <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
-                            <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">{t('coming_soon')}</div>
-                        </Field>
-                    )}
+                    <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
+                        <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">{t('coming_soon')}</div>
+                    </Field>
 
                     <Field label={t('contract_attachments')} help={lang === 'th' ? 'PDF ไม่เกิน 25MB' : 'PDF up to 25MB'}>
                         <div className="flex flex-col items-center gap-1 rounded-md border border-dashed border-border px-3 py-5 text-center text-sm text-muted-foreground">
