@@ -17,7 +17,7 @@ class Permissions
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => ['view', 'register', 'transfer', 'retire', 'edit'],
-            'contracts' => ['view', 'create', 'edit', 'renew', 'alerts'],
+            'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts'],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_roles', 'manage_groups', 'edit_settings', 'configure_notifications', 'view_audit'],
         ];
@@ -53,7 +53,7 @@ class Permissions
                 'tickets.view_all', 'tickets.create', 'tickets.assign', 'tickets.resolve',
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
                 'assets.view', 'assets.register', 'assets.transfer', 'assets.retire', 'assets.edit',
-                'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.renew', 'contracts.alerts',
+                'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.renew', 'contracts.alerts',
                 'employees.view', 'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
                 'system.view_audit',

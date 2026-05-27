@@ -68,6 +68,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
 
     // Contract & Rental module
     Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
+    Route::get('contracts/import-template', [ContractController::class, 'importTemplate'])->name('api.contracts.import-template');
+    Route::post('contracts/import', [ContractController::class, 'import'])->name('api.contracts.import');
     Route::post('contracts/{contract}/renew', [ContractController::class, 'renew'])->name('api.contracts.renew');
     Route::post('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('api.contracts.cancel');
     Route::apiResource('contracts', ContractController::class);

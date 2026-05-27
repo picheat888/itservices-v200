@@ -11,6 +11,7 @@ use App\Services\ContractExpiryAlertService;
 use App\Services\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ContractController extends Controller
 {
@@ -204,6 +205,93 @@ class ContractController extends Controller
         $contract->delete();
 
         return response()->json(['message' => 'success']);
+    }
+
+    /**
+     * Streams a CSV template (UTF-8 BOM) with contract import headers + one sample row.
+     */
+    public function importTemplate(Request $request): StreamedResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('contracts.import'), 403);
+
+        $headers = ['code', 'vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle', 'auto_renew', 'notes'];
+        $sample = ['', 'Microsoft', 'Microsoft 365 — 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', '0', ''];
+
+        return response()->streamDownload(function () use ($headers, $sample) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM
+            fputcsv($out, $headers);
+            fputcsv($out, $sample);
+            fclose($out);
+        }, 'contract-import-template.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /**
+     * Bulk-imports contracts from an uploaded CSV. All-or-nothing: any bad row
+     * aborts the whole import and returns a 422 with per-row errors.
+     */
+    public function import(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('contracts.import'), 403);
+
+        $request->validate(['file' => ['required', 'file', 'max:5120']]);
+        $file = $request->file('file');
+        if (! in_array(strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
+            return response()->json(['message' => 'รองรับเฉพาะไฟล์ .csv'], 422);
+        }
+
+        $rows = $this->readCsv($file->getRealPath());
+        if ($rows === null || count($rows) === 0) {
+            return response()->json(['message' => 'ไฟล์ว่างหรืออ่านไม่ได้'], 422);
+        }
+
+        $result = $this->service->importRows($rows);
+
+        if (count($result['errors']) > 0) {
+            return response()->json([
+                'message' => 'พบข้อผิดพลาด ยังไม่ได้นำเข้าข้อมูล กรุณาแก้ไขแล้วลองใหม่',
+                'errors' => $result['errors'],
+            ], 422);
+        }
+
+        AuditLog::record('Imported contracts', $result['imported'].' รายการ');
+
+        return response()->json(['message' => 'success', 'imported' => $result['imported']]);
+    }
+
+    /**
+     * Parses a CSV file into an array of associative rows keyed by lower-cased
+     * headers. Strips UTF-8 BOM and skips fully-blank lines.
+     *
+     * @return array<int, array<string, string>>|null
+     */
+    private function readCsv(string $path): ?array
+    {
+        if (($h = fopen($path, 'r')) === false) {
+            return null;
+        }
+
+        $header = fgetcsv($h);
+        if ($header === false) {
+            fclose($h);
+
+            return null;
+        }
+        $header = array_map(fn ($c) => strtolower(trim((string) $c)), $header);
+        if (isset($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]);
+        }
+
+        $rows = [];
+        while (($data = fgetcsv($h)) !== false) {
+            if (count(array_filter($data, fn ($v) => trim((string) $v) !== '')) === 0) {
+                continue;
+            }
+            $rows[] = array_combine($header, array_pad(array_map('strval', $data), count($header), ''));
+        }
+        fclose($h);
+
+        return $rows;
     }
 
     /** Formats a baht amount as a compact "฿4.31M" / "฿820K" string. */

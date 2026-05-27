@@ -1,5 +1,6 @@
 import { ContractDetailDrawer } from '@/components/contracts/contract-detail-drawer';
 import { ContractFormDrawer } from '@/components/contracts/contract-form-drawer';
+import { ImportContractDialog } from '@/components/contracts/import-contract-dialog';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +20,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock,
-    Download,
     FileText,
+    Import,
     Plus,
     Search,
     TrendingUp,
@@ -85,6 +86,7 @@ export default function ContractsPage() {
     const isSuper = role === 'super';
     const canCreate = isSuper || perms.includes('contracts.create');
     const canEdit = isSuper || perms.includes('contracts.edit');
+    const canImport = isSuper || perms.includes('contracts.import');
 
     const [tab, setTab] = useState<Tab>('dashboard');
     const [search, setSearch] = useState('');
@@ -95,6 +97,7 @@ export default function ContractsPage() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Contract | null>(null);
+    const [importOpen, setImportOpen] = useState(false);
 
     const { data: summary } = useContractSummary();
     const listEnabledTab = tab === 'expiring' ? 'expiring' : 'all';
@@ -136,10 +139,12 @@ export default function ContractsPage() {
                     <p className="text-muted-foreground text-sm">{t('contracts_sub')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" disabled title={t('coming_soon')}>
-                        <Download className="h-4 w-4" />
-                        {t('export')}
-                    </Button>
+                    {canImport && (
+                        <Button variant="outline" onClick={() => setImportOpen(true)}>
+                            <Import className="h-4 w-4" />
+                            {t('import_contract')}
+                        </Button>
+                    )}
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
@@ -392,6 +397,7 @@ export default function ContractsPage() {
                 canEdit={canEdit}
             />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+            <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
     );
 }
