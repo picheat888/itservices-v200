@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useContractMutations } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Contract } from '@/types';
-import { Ban, Mail, RefreshCw, RotateCcw, SquarePen } from 'lucide-react';
+import { Ban, RefreshCw, RotateCcw, SquarePen } from 'lucide-react';
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
@@ -84,7 +85,7 @@ export function ContractDetailDrawer({
                         <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
                             {t('contract_notification_schedule')}
                         </div>
-                        <div className="space-y-2">
+                        <div className="flex flex-wrap gap-1.5">
                             {[
                                 { d: 150, on: contract.notify_150 },
                                 { d: 120, on: contract.notify_120 },
@@ -94,13 +95,17 @@ export function ContractDetailDrawer({
                                 { d: 30, on: contract.notify_30 },
                                 { d: 7, on: contract.notify_7 },
                             ].map((n) => (
-                                <div key={n.d} className="bg-muted/50 flex items-center gap-3 rounded-md px-3 py-2">
-                                    <Mail className="text-muted-foreground h-4 w-4" />
-                                    <div className="flex-1 text-sm">{lang === 'th' ? `แจ้งเตือนก่อน ${n.d} วัน` : `${n.d}-day reminder`}</div>
-                                    <StatusBadge tone={n.on ? 'blue' : 'gray'}>
-                                        {n.on ? (lang === 'th' ? 'กำหนดไว้' : 'Scheduled') : lang === 'th' ? 'ปิด' : 'Off'}
-                                    </StatusBadge>
-                                </div>
+                                <span
+                                    key={n.d}
+                                    className={cn(
+                                        'rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                                        n.on
+                                            ? 'border-brand/30 bg-brand/10 text-brand'
+                                            : 'border-border text-muted-foreground/40 line-through',
+                                    )}
+                                >
+                                    {n.d}{lang === 'th' ? ' วัน' : 'd'}
+                                </span>
                             ))}
                         </div>
                     </div>

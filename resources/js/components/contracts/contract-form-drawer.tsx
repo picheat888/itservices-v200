@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useContractMutations } from '@/hooks/use-contracts';
+import { useVendors } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { BillingCycle, Contract, ContractType } from '@/types';
+import type { BillingCycle, Contract, ContractType, Vendor } from '@/types';
 import { Calendar, Check, Cog, FileText, Laptop, Paperclip, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -73,6 +74,7 @@ export function ContractFormDrawer({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { create, update } = useContractMutations();
+    const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
 
@@ -193,7 +195,15 @@ export function ContractFormDrawer({
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('contract_vendor')} required error={err.vendor}>
-                            <Input value={form.vendor} onChange={(e) => upd('vendor', e.target.value)} placeholder="Microsoft Thailand" />
+                            <Input
+                                value={form.vendor}
+                                onChange={(e) => upd('vendor', e.target.value)}
+                                list="contract-vendor-list"
+                                placeholder={lang === 'th' ? 'เลือกหรือพิมพ์ชื่อผู้จำหน่าย' : 'Select or type vendor name'}
+                            />
+                            <datalist id="contract-vendor-list">
+                                {vendors.map((v: Vendor) => <option key={v.id} value={v.name} />)}
+                            </datalist>
                         </Field>
                         <Field label={t('contract_name')} required error={err.name}>
                             <Input
