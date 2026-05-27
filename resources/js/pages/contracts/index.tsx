@@ -291,14 +291,14 @@ export default function ContractsPage() {
                                                 </td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
                                                 <td className="px-4 py-2.5">
-                                                    <StatusBadge tone={c.status === 'expired' ? 'red' : 'green'}>
-                                                        {c.status === 'expired'
-                                                            ? lang === 'th'
-                                                                ? 'หมดอายุ'
-                                                                : 'Expired'
-                                                            : lang === 'th'
-                                                              ? 'ใช้งาน'
-                                                              : 'Active'}
+                                                    <StatusBadge
+                                                        tone={c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'red' : 'green'}
+                                                    >
+                                                        {c.status === 'cancelled'
+                                                            ? t('contract_cancelled')
+                                                            : c.status === 'expired'
+                                                              ? lang === 'th' ? 'หมดอายุ' : 'Expired'
+                                                              : lang === 'th' ? 'ใช้งาน' : 'Active'}
                                                     </StatusBadge>
                                                 </td>
                                             </tr>
