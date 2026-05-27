@@ -75,6 +75,7 @@ const PERM_SECTIONS: { label: string; modules: string[] }[] = [
     { label: 'nav_admin', modules: ['system'] },
 ];
 
+
 function RolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -242,6 +243,7 @@ function RolesTab() {
                                 <div className="mb-3 border-b border-border pb-1.5 text-sm font-bold text-foreground">
                                     {t(section.label)}
                                 </div>
+
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     {section.modules.map((module) => (
                                         <div key={module} className="rounded-lg border border-border p-3.5">
