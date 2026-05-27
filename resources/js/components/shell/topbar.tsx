@@ -80,7 +80,7 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
             >
                 <Bell className="h-[18px] w-[18px]" />
                 {unreadCount > 0 && (
-                    <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+                    <span className="absolute right-px top-px flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
