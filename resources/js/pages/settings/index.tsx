@@ -402,7 +402,7 @@ function EmailTab() {
             port: data.port ?? 587,
             username: data.username ?? '',
             password: '',
-            encryption: data.encryption ?? 'tls',
+            encryption: data.encryption ?? null,
             from_address: data.from_address ?? '',
             from_name: data.from_name ?? '',
         });
@@ -561,7 +561,7 @@ function SecurityTab() {
                     label={t('set_session_timeout')}
                     sub={t('set_session_timeout_help')}
                     value={form.session_timeout_minutes}
-                    presets={[5, 10, 15, 30, 60, 120]}
+                    presets={[1, 5, 10, 15, 30, 60, 120]}
                     defaultValue={30}
                     unit={t('unit_minutes')}
                     onChange={(v) => setVal('session_timeout_minutes', v)}
