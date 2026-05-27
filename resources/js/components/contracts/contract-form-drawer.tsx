@@ -1,4 +1,5 @@
 import { Field } from '@/components/shared/field';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -9,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { BillingCycle, Contract, ContractType, Vendor } from '@/types';
 import { Calendar, Check, Cog, FileText, Laptop, Loader2, Paperclip, Wifi } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string }[] = [
     { value: 'software', icon: FileText, labelKey: 'contract_type_software' },
@@ -76,6 +77,20 @@ export function ContractFormDrawer({
     const { create, update } = useContractMutations();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
+
+    const vendorOptions = useMemo(() => {
+        const opts = (vendors as Vendor[]).map((v) => ({
+            value: v.name,
+            label: v.name,
+            sub: v.contact ?? undefined,
+            search: `${v.name} ${v.contact ?? ''}`,
+        }));
+        // Keep existing vendor visible when editing a contract not yet in master data
+        if (form.vendor && !opts.some((o) => o.value === form.vendor)) {
+            opts.unshift({ value: form.vendor, label: form.vendor, sub: undefined, search: form.vendor });
+        }
+        return opts;
+    }, [vendors, form.vendor]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
@@ -205,15 +220,12 @@ export function ContractFormDrawer({
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('contract_vendor')} required error={err.vendor}>
-                            <Input
+                            <SearchableSelect
                                 value={form.vendor}
-                                onChange={(e) => upd('vendor', e.target.value)}
-                                list="contract-vendor-list"
-                                placeholder={lang === 'th' ? 'เลือกหรือพิมพ์ชื่อผู้จำหน่าย' : 'Select or type vendor name'}
+                                onChange={(v) => upd('vendor', v)}
+                                options={vendorOptions}
+                                placeholder={lang === 'th' ? 'เลือกผู้จำหน่าย' : 'Select vendor'}
                             />
-                            <datalist id="contract-vendor-list">
-                                {vendors.map((v: Vendor) => <option key={v.id} value={v.name} />)}
-                            </datalist>
                         </Field>
                         <Field label={t('contract_name')} required error={err.name}>
                             <Input
