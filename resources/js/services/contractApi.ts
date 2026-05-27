@@ -42,6 +42,15 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 export const contractApi = {
     list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string }) =>
         http.get<ContractPageResponse>('/contracts', { params }).then((r) => r.data),
+    downloadImportTemplate: () =>
+        http.get('/contracts/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    import: async (file: File): Promise<{ imported: number }> => {
+        await ensureCsrf();
+        const fd = new FormData();
+        fd.append('file', file);
+        const { data } = await http.post<{ imported: number }>('/contracts/import', fd);
+        return data;
+    },
     summary: () => http.get<ContractSummary>('/contracts/summary').then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<Contract>>(`/contracts/${id}`).then((r) => r.data.data),
     create: (payload: ContractPayload) => mutate<Contract>('post', '/contracts', payload),
