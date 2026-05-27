@@ -449,6 +449,7 @@ function ModelsList() {
                         <SelectValue placeholder={t('md_brand')} />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="">—</SelectItem>
                         {brands.map((b: Brand) => (
                             <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
                         ))}
@@ -471,6 +472,7 @@ function ModelsList() {
                                         <SelectValue placeholder={t('md_brand')} />
                                     </SelectTrigger>
                                     <SelectContent>
+                                        <SelectItem value="">—</SelectItem>
                                         {brands.map((b: Brand) => (
                                             <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
                                         ))}
@@ -807,11 +809,6 @@ function LocationsList() {
 
     return (
         <div className="max-w-2xl">
-            <div className="mb-5">
-                <h2 className="text-lg font-semibold">{t('set_locations')}</h2>
-                <p className="text-muted-foreground text-sm">{t('set_locations_desc')}</p>
-            </div>
-
             <div className="mb-4 flex gap-2">
                 <Input
                     value={newName}
