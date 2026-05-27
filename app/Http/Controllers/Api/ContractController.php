@@ -45,6 +45,10 @@ class ContractController extends Controller
             });
         }
 
+        if ($request->filled('type')) {
+            $query->where('type', $request->query('type'));
+        }
+
         if ($request->query('tab') === 'expiring') {
             // In reminder window = still active (not cancelled) AND some enabled threshold reached.
             $query->whereNull('cancelled_at')
