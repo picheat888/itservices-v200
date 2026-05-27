@@ -85,7 +85,6 @@ export default function ContractsPage() {
     const isSuper = role === 'super';
     const canCreate = isSuper || perms.includes('contracts.create');
     const canEdit = isSuper || perms.includes('contracts.edit');
-    const canRenew = isSuper || perms.includes('contracts.renew');
 
     const [tab, setTab] = useState<Tab>('dashboard');
     const [search, setSearch] = useState('');
@@ -390,7 +389,6 @@ export default function ContractsPage() {
                 onClose={() => setSelectedId(null)}
                 onEdit={openEdit}
                 canEdit={canEdit}
-                canRenew={canRenew}
             />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
         </div>
