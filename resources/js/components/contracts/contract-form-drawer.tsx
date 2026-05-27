@@ -8,7 +8,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { BillingCycle, Contract, ContractType, Vendor } from '@/types';
-import { Calendar, Check, Cog, FileText, Laptop, Paperclip, Wifi } from 'lucide-react';
+import { Calendar, Check, Cog, FileText, Laptop, Loader2, Paperclip, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string }[] = [
@@ -77,11 +77,13 @@ export function ContractFormDrawer({
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
+    const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
     // Hydrate the form when opening; editing populates from the contract.
     useEffect(() => {
         if (!open) return;
         setErr({});
+        setSaveState('idle');
         if (editing) {
             setForm({
                 code: editing.code,
@@ -144,10 +146,18 @@ export function ContractFormDrawer({
             notes: form.notes.trim() || null,
         };
 
+        const onSuccess = () => {
+            setSaveState('done');
+            setTimeout(() => {
+                setSaveState('idle');
+                onClose();
+            }, 700);
+        };
+
         if (editing) {
-            update.mutate({ id: editing.id, payload }, { onSuccess: onClose });
+            update.mutate({ id: editing.id, payload }, { onSuccess });
         } else {
-            create.mutate(payload, { onSuccess: onClose });
+            create.mutate(payload, { onSuccess });
         }
     };
 
@@ -318,9 +328,17 @@ export function ContractFormDrawer({
                     <Button variant="outline" className="flex-1" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" onClick={submit} disabled={saving}>
-                        <Check className="h-4 w-4" />
-                        {t('save')}
+                    <Button
+                        className={cn('flex-1 transition-colors', saveState === 'done' && 'bg-green-600 hover:bg-green-600 focus-visible:ring-green-600')}
+                        onClick={submit}
+                        disabled={saving || saveState === 'done'}
+                    >
+                        {saving ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Check className="h-4 w-4" />
+                        )}
+                        {saving ? (lang === 'th' ? 'กำลังบันทึก…' : 'Saving…') : saveState === 'done' ? (lang === 'th' ? 'บันทึกแล้ว' : 'Saved!') : t('save')}
                     </Button>
                 </SheetFooter>
             </SheetContent>
