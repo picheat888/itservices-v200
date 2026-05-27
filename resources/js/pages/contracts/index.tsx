@@ -1,7 +1,7 @@
 import { ContractDetailDrawer } from '@/components/contracts/contract-detail-drawer';
 import { ContractFormDrawer } from '@/components/contracts/contract-form-drawer';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { TableSkeleton } from '@/components/shared/skeletons';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,8 @@ import {
     Search,
     TrendingUp,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'all' | 'expiring';
 
@@ -33,13 +34,13 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
     return (
         <Card className="p-5">
             <div className="flex items-start justify-between">
-                <div className="text-sm text-muted-foreground">{label}</div>
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                <div className="text-muted-foreground text-sm">{label}</div>
+                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
                     <Icon className="h-[18px] w-[18px]" />
                 </span>
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-            {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+            {hint && <div className="text-muted-foreground mt-1 text-xs">{hint}</div>}
         </Card>
     );
 }
@@ -50,7 +51,12 @@ function DaysCell({ days, inReminder, status }: { days: number; inReminder: bool
     const lang = useUiStore((s) => s.lang);
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (days <= 0) return <StatusBadge tone="red">{lang === 'th' ? `หมดอายุไป ${-days} วัน` : `Expired ${-days}d ago`}</StatusBadge>;
-    if (inReminder) return <StatusBadge tone="amber">{days} {lang === 'th' ? 'วัน' : 'days'}</StatusBadge>;
+    if (inReminder)
+        return (
+            <StatusBadge tone="amber">
+                {days} {lang === 'th' ? 'วัน' : 'days'}
+            </StatusBadge>
+        );
     return <StatusBadge tone="blue">{days}d</StatusBadge>;
 }
 
@@ -78,6 +84,18 @@ export default function ContractsPage() {
     const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab });
     const { data: selected } = useContract(selectedId);
 
+    // Deep-link from a notification: /contracts?view=<id> opens that contract's
+    // detail dialog, then clears the param so it doesn't reopen on refresh.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewId = searchParams.get('view');
+    useEffect(() => {
+        if (!viewId) return;
+        setSelectedId(Number(viewId));
+        searchParams.delete('view');
+        setSearchParams(searchParams, { replace: true });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [viewId]);
+
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
 
@@ -98,7 +116,7 @@ export default function ContractsPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">{t('contracts_title')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('contracts_sub')}</p>
+                    <p className="text-muted-foreground text-sm">{t('contracts_sub')}</p>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" disabled title={t('coming_soon')}>
@@ -143,13 +161,19 @@ export default function ContractsPage() {
                                     ? `มีสัญญา ${summary.expiring} ฉบับใกล้หมดอายุ`
                                     : `${summary.expiring} contract${summary.expiring !== 1 ? 's' : ''} expiring soon`}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                                 {lang === 'th'
                                     ? 'ระบบจะส่งอีเมลแจ้งเตือนตามที่กำหนดไว้ในแต่ละสัญญา ก่อนหมดอายุ'
                                     : 'Email notifications will be sent according to the reminder window set on each contract.'}
                             </div>
                         </div>
-                        <Button variant="outline" onClick={() => { setTab('expiring'); setPage(1); }}>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setTab('expiring');
+                                setPage(1);
+                            }}
+                        >
                             {lang === 'th' ? 'ตรวจสอบ' : 'Review'} →
                         </Button>
                     </div>
@@ -157,15 +181,20 @@ export default function ContractsPage() {
             )}
 
             <Card className="overflow-hidden">
-                <div className="flex gap-1 border-b border-border px-2">
-                    {([
-                        { id: 'dashboard', label: t('sub_dashboard') },
-                        { id: 'all', label: t('all_contracts'), count: summary?.total },
-                        { id: 'expiring', label: t('expiring_soon'), count: summary?.expiring, warn: true },
-                    ] as { id: Tab; label: string; count?: number; warn?: boolean }[]).map((tb) => (
+                <div className="border-border flex gap-1 border-b px-2">
+                    {(
+                        [
+                            { id: 'dashboard', label: t('sub_dashboard') },
+                            { id: 'all', label: t('all_contracts'), count: summary?.total },
+                            { id: 'expiring', label: t('expiring_soon'), count: summary?.expiring, warn: true },
+                        ] as { id: Tab; label: string; count?: number; warn?: boolean }[]
+                    ).map((tb) => (
                         <button
                             key={tb.id}
-                            onClick={() => { setTab(tb.id); setPage(1); }}
+                            onClick={() => {
+                                setTab(tb.id);
+                                setPage(1);
+                            }}
                             className={cn(
                                 'relative px-4 py-3 text-sm font-medium transition-colors',
                                 tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
@@ -173,9 +202,11 @@ export default function ContractsPage() {
                         >
                             {tb.label}
                             {tb.count != null && (
-                                <span className={cn('ml-1.5 font-mono text-xs', tb.warn ? 'text-amber-600 dark:text-amber-400' : 'opacity-60')}>{tb.count}</span>
+                                <span className={cn('ml-1.5 font-mono text-xs', tb.warn ? 'text-amber-600 dark:text-amber-400' : 'opacity-60')}>
+                                    {tb.count}
+                                </span>
                             )}
-                            {tab === tb.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-brand" />}
+                            {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
                         </button>
                     ))}
                 </div>
@@ -184,25 +215,33 @@ export default function ContractsPage() {
                     <DashboardTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
                 ) : (
                     <>
-                        <div className="flex items-center justify-between gap-3 border-b border-border p-3">
-                            <p className="text-sm text-muted-foreground">
-                                {tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}
-                            </p>
+                        <div className="border-border flex items-center justify-between gap-3 border-b p-3">
+                            <p className="text-muted-foreground text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
                             <div className="relative w-full max-w-xs">
-                                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={`${t('contract_vendor')} / ${t('contract_name')}`} className="pl-9" />
+                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                <Input
+                                    value={search}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    placeholder={`${t('contract_vendor')} / ${t('contract_name')}`}
+                                    className="pl-9"
+                                />
                             </div>
                         </div>
 
                         {isLoading ? (
-                            <div className="p-4"><TableSkeleton rows={8} cols={8} /></div>
+                            <div className="p-4">
+                                <TableSkeleton rows={8} cols={8} />
+                            </div>
                         ) : rows.length === 0 ? (
-                            <div className="px-4 py-16 text-center text-sm text-muted-foreground">{t('contract_none')}</div>
+                            <div className="text-muted-foreground px-4 py-16 text-center text-sm">{t('contract_none')}</div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th className="px-4 py-2.5">{t('contract_code')}</th>
                                             <th className="px-4 py-2.5">{t('contract_vendor')}</th>
                                             <th className="px-4 py-2.5">{t('contract_name')}</th>
@@ -215,17 +254,29 @@ export default function ContractsPage() {
                                     </thead>
                                     <tbody>
                                         {rows.map((c) => (
-                                            <tr key={c.id} onClick={() => setSelectedId(c.id)} className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-accent/40">
-                                                <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{c.code}</td>
+                                            <tr
+                                                key={c.id}
+                                                onClick={() => setSelectedId(c.id)}
+                                                className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                                            >
+                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{c.code}</td>
                                                 <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
                                                 <td className="max-w-[280px] truncate px-4 py-2.5">{c.name}</td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.start}</td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.end}</td>
-                                                <td className="px-4 py-2.5"><DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} /></td>
+                                                <td className="px-4 py-2.5">
+                                                    <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />
+                                                </td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
                                                 <td className="px-4 py-2.5">
                                                     <StatusBadge tone={c.status === 'expired' ? 'red' : 'green'}>
-                                                        {c.status === 'expired' ? (lang === 'th' ? 'หมดอายุ' : 'Expired') : lang === 'th' ? 'ใช้งาน' : 'Active'}
+                                                        {c.status === 'expired'
+                                                            ? lang === 'th'
+                                                                ? 'หมดอายุ'
+                                                                : 'Expired'
+                                                            : lang === 'th'
+                                                              ? 'ใช้งาน'
+                                                              : 'Active'}
                                                     </StatusBadge>
                                                 </td>
                                             </tr>
@@ -236,16 +287,24 @@ export default function ContractsPage() {
                         )}
 
                         {meta && rows.length > 0 && (
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-sm text-muted-foreground">
+                            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                                    <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+                                    <Select
+                                        value={String(perPage)}
+                                        onValueChange={(v) => {
+                                            setPerPage(Number(v));
+                                            setPage(1);
+                                        }}
+                                    >
                                         <SelectTrigger className="h-8 w-[72px]">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {[20, 50, 100].map((n) => (
-                                                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                                                <SelectItem key={n} value={String(n)}>
+                                                    {n}
+                                                </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
@@ -260,17 +319,17 @@ export default function ContractsPage() {
                                         <button
                                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                                             disabled={page <= 1}
-                                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                                         >
                                             <ChevronLeft className="h-4 w-4" />
                                         </button>
-                                        <span className="px-1 font-medium text-foreground">
+                                        <span className="text-foreground px-1 font-medium">
                                             {meta.current_page} / {meta.last_page}
                                         </span>
                                         <button
                                             onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
                                             disabled={page >= meta.last_page}
-                                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                                         >
                                             <ChevronRight className="h-4 w-4" />
                                         </button>
@@ -306,7 +365,12 @@ function DashboardTab({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
-    if (!summary) return <div className="p-6"><TableSkeleton rows={4} cols={2} /></div>;
+    if (!summary)
+        return (
+            <div className="p-6">
+                <TableSkeleton rows={4} cols={2} />
+            </div>
+        );
 
     // Group upcoming contracts into the next 12 monthly buckets; expired ones are listed separately.
     const now = new Date();
@@ -337,20 +401,29 @@ function DashboardTab({
             {/* Expiry timeline — one column per month for the next 12 months */}
             <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contract_timeline')}</span>
-                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand" />{lang === 'th' ? 'กำลังจะถึง' : 'Upcoming'}</span>
-                        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" />{lang === 'th' ? '≤30 วัน' : '≤30 days'}</span>
-                        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" />{lang === 'th' ? 'เลยกำหนด' : 'Overdue'}</span>
+                    <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('contract_timeline')}</span>
+                    <div className="text-muted-foreground flex items-center gap-3 text-[11px]">
+                        <span className="flex items-center gap-1.5">
+                            <span className="bg-brand h-2 w-2 rounded-full" />
+                            {lang === 'th' ? 'กำลังจะถึง' : 'Upcoming'}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            {lang === 'th' ? '≤30 วัน' : '≤30 days'}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="bg-destructive h-2 w-2 rounded-full" />
+                            {lang === 'th' ? 'เลยกำหนด' : 'Overdue'}
+                        </span>
                     </div>
                 </div>
 
                 {summary.timeline.length === 0 ? (
-                    <div className="rounded-md bg-muted/50 px-3 py-6 text-center text-sm text-muted-foreground">
+                    <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-6 text-center text-sm">
                         {lang === 'th' ? 'ไม่มีสัญญาที่จะหมดอายุใน 12 เดือนข้างหน้า' : 'No expirations in the next 12 months.'}
                     </div>
                 ) : (
-                    <div className="rounded-md border border-border">
+                    <div className="border-border rounded-md border">
                         <div className="grid grid-cols-12 items-end gap-px px-2 pt-3">
                             {months.map((m) => (
                                 <div key={m.key} className="flex flex-col items-center justify-end gap-1" style={{ minHeight: `${peak * 16 + 8}px` }}>
@@ -360,7 +433,7 @@ function DashboardTab({
                                             title={`${c.code} · ${c.name} — ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`}
                                             onClick={() => onSelect(c.id)}
                                             className={cn(
-                                                'h-3 w-3 rounded-full ring-2 ring-background transition-transform hover:scale-125',
+                                                'ring-background h-3 w-3 rounded-full ring-2 transition-transform hover:scale-125',
                                                 c.days <= 30 ? 'bg-amber-500' : 'bg-brand',
                                             )}
                                         />
@@ -368,13 +441,14 @@ function DashboardTab({
                                 </div>
                             ))}
                         </div>
-                        <div className="mt-1 grid grid-cols-12 gap-px border-t border-border px-2 py-1.5">
+                        <div className="border-border mt-1 grid grid-cols-12 gap-px border-t px-2 py-1.5">
                             {months.map((m) => (
                                 <div key={m.key} className="text-center leading-tight">
-                                    <div className="text-[11px] font-medium text-foreground">
-                                        {m.label}{m.showYear ? ` '${String(m.year).slice(2)}` : ''}
+                                    <div className="text-foreground text-[11px] font-medium">
+                                        {m.label}
+                                        {m.showYear ? ` '${String(m.year).slice(2)}` : ''}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground">{m.items.length || ''}</div>
+                                    <div className="text-muted-foreground text-[10px]">{m.items.length || ''}</div>
                                 </div>
                             ))}
                         </div>
@@ -383,14 +457,17 @@ function DashboardTab({
 
                 {overdue.length > 0 && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-medium uppercase tracking-wide text-destructive">{lang === 'th' ? 'เลยกำหนด' : 'Overdue'}</span>
+                        <span className="text-destructive text-[11px] font-medium tracking-wide uppercase">
+                            {lang === 'th' ? 'เลยกำหนด' : 'Overdue'}
+                        </span>
                         {overdue.map((c) => (
                             <button
                                 key={c.id}
                                 onClick={() => onSelect(c.id)}
-                                className="rounded-full border border-destructive/40 bg-destructive/10 px-2.5 py-0.5 text-xs text-destructive transition-colors hover:bg-destructive/20"
+                                className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-full border px-2.5 py-0.5 text-xs transition-colors"
                             >
-                                {c.code} · {-c.days}{lang === 'th' ? ' วัน' : 'd'}
+                                {c.code} · {-c.days}
+                                {lang === 'th' ? ' วัน' : 'd'}
                             </button>
                         ))}
                     </div>
@@ -400,16 +477,16 @@ function DashboardTab({
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* Top vendors by spend */}
                 <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contract_top_vendors')}</div>
+                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_top_vendors')}</div>
                     <div className="space-y-2.5">
                         {summary.top_vendors.map((r) => (
                             <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
-                                    <span className="font-mono text-xs text-muted-foreground">฿{Math.round(r.amount / 1000)}K</span>
+                                    <span className="text-muted-foreground font-mono text-xs">฿{Math.round(r.amount / 1000)}K</span>
                                 </div>
-                                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                                    <span className="block h-full rounded-full bg-brand" style={{ width: `${(r.amount / maxVendor) * 100}%` }} />
+                                <div className="bg-muted h-2 overflow-hidden rounded-full">
+                                    <span className="bg-brand block h-full rounded-full" style={{ width: `${(r.amount / maxVendor) * 100}%` }} />
                                 </div>
                             </div>
                         ))}
@@ -418,25 +495,25 @@ function DashboardTab({
 
                 {/* Action queue */}
                 <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('contract_action_queue')}</div>
+                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_action_queue')}</div>
                     <div className="space-y-2">
                         {summary.action_queue.length === 0 && (
-                            <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">—</div>
+                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">—</div>
                         )}
                         {summary.action_queue.map((c) => (
                             <button
                                 key={c.id}
                                 onClick={() => onSelect(c.id)}
-                                className="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2.5 text-left hover:bg-accent/40"
+                                className="border-border hover:bg-accent/40 flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left"
                             >
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
                                     {c.days}d
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{c.name}</div>
-                                    <div className="text-xs text-muted-foreground">{c.vendor}</div>
+                                    <div className="text-muted-foreground text-xs">{c.vendor}</div>
                                 </div>
-                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                <ArrowRight className="text-muted-foreground h-4 w-4" />
                             </button>
                         ))}
                     </div>

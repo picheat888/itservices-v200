@@ -101,6 +101,9 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->assertSame(0, $sent);
         Notification::assertNothingSent();
+        // The threshold must NOT be burned when nobody is configured to receive
+        // it — otherwise enabling the permission later would never deliver it.
+        $this->assertSame(0, ContractAlertLog::count());
     }
 
     public function test_cancelled_and_expired_contracts_are_skipped(): void
@@ -159,5 +162,19 @@ class ContractExpiryAlertTest extends TestCase
             ->assertOk();
 
         $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
+    }
+
+    public function test_alerts_on_the_90_day_threshold(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(90, [90]);
+
+        $sent = $this->service()->run();
+
+        $this->assertSame(1, $sent);
+        Notification::assertSentTo($user, ContractExpiryNotification::class);
+        $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 90]);
     }
 }

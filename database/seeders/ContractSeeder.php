@@ -75,6 +75,7 @@ class ContractSeeder extends Seeder
                 'owner_id' => $hasOwner ? $ownerId : null,
                 'notify_150' => in_array(150, $reminders, true),
                 'notify_120' => in_array(120, $reminders, true),
+                'notify_90' => in_array(90, $reminders, true),
                 'notify_60' => in_array(60, $reminders, true),
                 'notify_45' => in_array(45, $reminders, true),
                 'notify_30' => in_array(30, $reminders, true),

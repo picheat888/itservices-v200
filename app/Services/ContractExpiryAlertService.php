@@ -51,10 +51,15 @@ class ContractExpiryAlertService
                 continue;
             }
 
-            if ($recipients->isNotEmpty()) {
-                $this->dispatchAlert($contract, $days, $recipients);
-                $sent++;
+            // Don't burn the thresholds when there's nobody to notify yet —
+            // otherwise enabling contracts.alerts later would never deliver the
+            // pending alert because the threshold is already marked as sent.
+            if ($recipients->isEmpty()) {
+                continue;
             }
+
+            $this->dispatchAlert($contract, $days, $recipients);
+            $sent++;
 
             // Record every newly-crossed threshold (including larger ones we skipped
             // by alerting at the most urgent) so they never fire as stale alerts later.

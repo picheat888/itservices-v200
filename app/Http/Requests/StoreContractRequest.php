@@ -40,6 +40,7 @@ class StoreContractRequest extends FormRequest
             'owner_id' => ['nullable', 'integer', 'exists:employees,id'],
             'notify_150' => ['sometimes', 'boolean'],
             'notify_120' => ['sometimes', 'boolean'],
+            'notify_90' => ['sometimes', 'boolean'],
             'notify_60' => ['sometimes', 'boolean'],
             'notify_45' => ['sometimes', 'boolean'],
             'notify_30' => ['sometimes', 'boolean'],

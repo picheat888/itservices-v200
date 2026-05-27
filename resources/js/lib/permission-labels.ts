@@ -31,7 +31,7 @@ const ACTIONS: Record<string, L> = {
     'contracts.create': { en: 'Create contracts', th: 'สร้างสัญญา' },
     'contracts.edit': { en: 'Edit contracts', th: 'แก้ไขสัญญา' },
     'contracts.renew': { en: 'Renew contracts', th: 'ต่ออายุสัญญา' },
-    'contracts.alerts': { en: 'Receive expiry alerts', th: 'รับการแจ้งเตือนหมดอายุ' },
+    'contracts.alerts': { en: 'Contract Expiry Notification', th: 'การแจ้งเตือนสัญญาหมดอายุ' },
     'employees.view': { en: 'View directory', th: 'ดูรายชื่อพนักงาน' },
     'employees.add': { en: 'Add employee', th: 'เพิ่มพนักงาน' },
     'employees.import': { en: 'Import employees (CSV)', th: 'นำเข้าข้อมูลพนักงาน (CSV)' },
