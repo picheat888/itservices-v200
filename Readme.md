@@ -3,7 +3,7 @@
 ระบบ **IT Service Desk** สำหรับจัดการงาน IT ภายในองค์กร (Inaba Foods)
 พัฒนาด้วย **Laravel 12 + React 19 (SPA) + TypeScript + Tailwind CSS v4**
 
-> สถานะปัจจุบัน: **ถึง Phase-7** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts)
+> สถานะปัจจุบัน: **ถึง Phase-8** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups
 
 ---
 
@@ -306,6 +306,69 @@
 
 ---
 
+## Phase 8 — Master Data (Settings module) (เสร็จแล้ว)
+
+> spec: `docs/superpowers/specs/2026-05-27-master-data-design.md` · plan: `docs/superpowers/plans/2026-05-27-master-data.md`
+
+เพิ่มแท็บ **Master Data** ใน Settings module เป็น lookup table กลางที่ใช้ร่วมกันโดย Assets, Contract และ Stock — มี 6 sub-tab: Brands, Models, Categories, Supplier/Vendor, Warehouse และ Locations (ย้ายมาจากแท็บ Locations เดิม)
+
+### 1. เปลี่ยน Navigation
+- ลบแท็บ **Locations** ออกจาก Settings nav (top-level)
+- เพิ่มแท็บ **Master Data** (`Boxes` icon) แทน — Locations กลายเป็น sub-tab ที่ 6 ใน Master Data
+
+### 2. Backend
+
+| Entity | Table | Fields |
+|--------|-------|--------|
+| Brand | `brands` | name (unique), description? |
+| Model | `asset_models` | name, brand_id (FK→brands nullable nullOnDelete), description? |
+| Category | `categories` | name, type ENUM(asset/contract/stock), description? |
+| Vendor | `vendors` | name, contact?, phone?, email?, address? |
+| Warehouse | `warehouses` | name (unique), description? |
+
+- **Migrations**: 5 ตาราง (`2026_05_27_030700..030704_create_*.php`)
+- **`App\Enums\CategoryType`**: backed enum (`asset`/`contract`/`stock`) — ใช้ `Rule::enum(CategoryType::class)` ใน validation กัน hardcoded string ที่ไม่ sync
+- **Models**: `Brand` · `AssetModel` (belongsTo Brand) · `Category` (cast `type` → `CategoryType`) · `Vendor` · `Warehouse` — `$fillable` ครบ, ไม่มี soft deletes
+- **Controllers** (`app/Http/Controllers/Api/`): `BrandController`, `AssetModelController`, `CategoryController`, `VendorController`, `WarehouseController` — แต่ละตัวมี `index/store/update/destroy`, gate ด้วย `abort_unless($user->isSuper())`, บันทึก `AuditLog::record()` ทุก write
+- **Routes** (`routes/api.php`): `apiResource('brands/asset-models/categories/vendors/warehouses')→except(['show'])` ภายใต้ `auth:sanctum`
+- **API Resources**: `BrandResource` · `AssetModelResource` (eager-load brand) · `CategoryResource` · `VendorResource` · `WarehouseResource`
+
+### 3. Frontend
+
+- **Types** (`resources/js/types/index.ts`): เพิ่ม `Brand`, `AssetModel`, `CategoryType`, `Category`, `Vendor`, `Warehouse`
+- **API service** (`resources/js/services/masterDataApi.ts`): 5 object (brandApi / assetModelApi / categoryApi / vendorApi / warehouseApi) — list/create/update/remove ผ่าน `mutate<T>` helper เดิม
+- **Hooks** (`resources/js/hooks/use-master-data.ts`): 5 query hooks + 5 mutation factories ด้วย query key constants (`['brands'] as const`) + `onSuccess: invalidate`
+- **i18n** (`resources/js/lib/i18n.ts`): เพิ่ม 26 keys ทั้ง EN/TH — `set_master_data`, `md_brands`…`md_warehouses`, `md_add_brand`…`md_add_warehouse`, field labels, type labels
+- **`MasterDataTab`** (ใน `pages/settings/index.tsx`): horizontal pill-tab bar (6 tabs) + render รายการด้านล่าง
+  - `BrandsList` — name + description (muted); inline-edit row
+  - `ModelsList` — name + brand dropdown (SearchSelect); add/edit form 2 fields + clear-brand option (`—`)
+  - `CategoriesList` — name + type badge สี (`asset`=น้ำเงิน / `contract`=ม่วง / `stock`=เขียว)
+  - `VendorsList` — name + phone/email secondary line; form 5 fields
+  - `WarehousesList` — name + description; inline-edit row
+  - `LocationsList` — logic เดิมของ LocationsTab ไม่เปลี่ยน (แค่ย้าย + ลบ inner heading ซ้ำ)
+- ทุก `add()` / `saveEdit()` ครอบด้วย try/catch + `Swal.fire({ icon: 'error', … })` เมื่อ mutation ล้มเหลว (เช่น FK constraint / unique violation)
+
+### 4. Tests
+
+- **`tests/Feature/MasterDataTest.php`**: 31 tests, 53 assertions
+  - Guest 401 (5 tests, 1 ต่อ resource)
+  - Non-super forbidden 403 (5 tests)
+  - Brand CRUD + uniqueness (5 tests)
+  - AssetModel with/without brand (4 tests)
+  - Category type validation (3 tests)
+  - Vendor email validation (3 tests)
+  - Warehouse CRUD + uniqueness (3 tests)
+  - Update/Delete ครอบ Brand + AssetModel (3 tests)
+
+**ไฟล์เพิ่ม**: `database/migrations/2026_05_27_030700..030704_create_*.php` · `app/Enums/CategoryType.php` · `app/Models/{Brand,AssetModel,Category,Vendor,Warehouse}.php` · `app/Http/Controllers/Api/{Brand,AssetModel,Category,Vendor,Warehouse}Controller.php` · `app/Http/Resources/{Brand,AssetModel,Category,Vendor,Warehouse}Resource.php` · `resources/js/services/masterDataApi.ts` · `resources/js/hooks/use-master-data.ts` · `tests/Feature/MasterDataTest.php` · `docs/superpowers/specs/2026-05-27-master-data-design.md` · `docs/superpowers/plans/2026-05-27-master-data.md`
+**ไฟล์แก้**: `routes/api.php` · `resources/js/types/index.ts` · `resources/js/lib/i18n.ts` · `resources/js/pages/settings/index.tsx`
+
+**ตรวจสอบ**: migration ✅ · `vendor/bin/pint` ✅ · **PHPUnit `MasterDataTest` 31 ผ่าน** ✅
+
+> หมายเหตุ: test ที่ fail 17 รายการเป็นของ starter-kit เดิม (auth/settings แบบ Inertia ที่ถอดออกตั้งแต่ Phase-1) — ไม่เกี่ยวกับงานนี้
+
+---
+
 ## โครงสร้างโปรเจกต์ (Frontend)
 
 ```
@@ -387,7 +450,7 @@ npm run build
 | 8 | Notifications System (in-app) | 🟡 Bell + dropdown + tabs ตามโมดูล + ปิดทีละรายการ + event พนักงานใหม่ (Phase-5) + contract expiry (Phase-7, แท็บ Contracts live) · trigger ticket/request/asset รอ |
 | 9 | Email Notifications | ✅ Phase-4 (template library + SMTP + queued send) |
 | 10 | Report / Export | ⏳ รอ |
-| 11 | Settings | 🟡 Display/Branding/Company/Locations/Email/**Security** เสร็จ · ส่วนอื่นรอโมดูล |
+| 11 | Settings | 🟡 Display/Branding/Company/Email/Security เสร็จ · **Master Data** (Brands/Models/Categories/Vendors/Warehouses/Locations) Phase-8 · ส่วนอื่นรอโมดูล |
 
 ---
 
