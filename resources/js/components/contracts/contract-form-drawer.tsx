@@ -241,7 +241,14 @@ export function ContractFormDrawer({
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={`${t('contract_value')} (฿)`} required error={err.value}>
-                            <Input type="number" className="font-mono" value={form.value} onChange={(e) => upd('value', e.target.value)} placeholder="2140000" />
+                            <Input
+                                type="text"
+                                inputMode="numeric"
+                                className="font-mono"
+                                value={form.value ? Number(form.value).toLocaleString() : ''}
+                                onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
+                                placeholder="2,140,000"
+                            />
                         </Field>
                         <Field label={t('contract_billing')}>
                             <select
