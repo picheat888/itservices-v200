@@ -37,6 +37,7 @@ class ContractResource extends JsonResource
             'reminder_days' => $this->reminderThreshold(),
             'notify_150' => $this->notify_150,
             'notify_120' => $this->notify_120,
+            'notify_90' => $this->notify_90,
             'notify_60' => $this->notify_60,
             'notify_45' => $this->notify_45,
             'notify_30' => $this->notify_30,

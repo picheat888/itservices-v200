@@ -25,6 +25,20 @@ function moduleOf(type: string): string {
     return 'employees'; // new_employee + employee.*
 }
 
+/**
+ * Icon + a distinct colour per notification kind so the bell is scannable at a
+ * glance: contract expiry = amber, offboarding = red, new-account = emerald.
+ */
+function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; color: string; bg: string } {
+    if (n.data.type === 'contract_expiring') {
+        return { Icon: CalendarClock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
+    if (n.data.subtype === 'offboarding') {
+        return { Icon: UserMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+    }
+    return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+}
+
 export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     const t = useT();
     const navigate = useNavigate();
@@ -43,11 +57,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (
-                ref.current &&
-                !ref.current.contains(e.target as Node) &&
-                !(e.target as HTMLElement).closest('[data-notif-btn]')
-            ) {
+            if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as HTMLElement).closest('[data-notif-btn]')) {
                 onClose();
             }
         };
@@ -58,7 +68,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     const handleClick = (n: AppNotification) => {
         if (!n.read) markRead.mutate(n.id);
         if (moduleOf(n.data.type) === 'contracts') {
-            navigate('/contracts');
+            navigate(`/contracts?view=${n.data.contract_id}`);
         } else {
             navigate(`/employees?highlight=${n.data.employee_id}`);
         }
@@ -68,13 +78,13 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     return (
         <div
             ref={ref}
-            className="absolute right-4 top-14 z-50 w-[430px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
+            className="border-border bg-popover absolute top-14 right-4 z-50 w-[430px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-lg"
         >
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <div>
                     <div className="text-sm font-semibold">{t('notif_title')}</div>
                     {unread > 0 && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-muted-foreground text-xs">
                             {unread} {t('notif_unread')}
                         </div>
                     )}
@@ -83,18 +93,18 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                     <button
                         onClick={() => markAllRead.mutate()}
                         disabled={unread === 0 || markAllRead.isPending}
-                        className="rounded-md px-2 py-1 text-xs font-medium text-brand hover:bg-accent disabled:opacity-40"
+                        className="text-brand hover:bg-accent rounded-md px-2 py-1 text-xs font-medium disabled:opacity-40"
                     >
                         {t('notif_mark_all')}
                     </button>
-                    <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent">
+                    <button onClick={onClose} className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md">
                         <X className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
             {/* Per-module filter tabs */}
-            <div className="flex gap-1 overflow-x-auto border-b border-border px-2 py-2">
+            <div className="border-border flex gap-1 overflow-x-auto border-b px-2 py-2">
                 {NOTIF_TABS.map((tb) => (
                     <button
                         key={tb.id}
@@ -112,56 +122,59 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
             <div className="max-h-[360px] overflow-y-auto">
                 {!activeTab.live ? (
                     <div className="px-4 py-12 text-center">
-                        <div className="text-sm font-medium text-muted-foreground">{t('coming_soon')}</div>
-                        <div className="mx-auto mt-1 max-w-[240px] text-xs text-muted-foreground">{t('notif_module_soon')}</div>
+                        <div className="text-muted-foreground text-sm font-medium">{t('coming_soon')}</div>
+                        <div className="text-muted-foreground mx-auto mt-1 max-w-[240px] text-xs">{t('notif_module_soon')}</div>
                     </div>
                 ) : visibleItems.length === 0 ? (
-                    <div className="py-12 text-center text-sm text-muted-foreground">{t('notif_empty')}</div>
+                    <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
                 ) : (
-                    visibleItems.map((n) => (
-                    <div
-                        key={n.id}
-                        onClick={() => handleClick(n)}
-                        className={cn(
-                            'group flex cursor-pointer gap-3 border-b border-border/60 px-4 py-3 transition-colors hover:bg-accent/50',
-                            !n.read && 'bg-brand/[0.04]',
-                        )}
-                    >
-                        {n.data.type === 'contract_expiring' ? (
-                            <CalendarClock className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
-                        ) : n.data.subtype === 'offboarding' ? (
-                            <UserMinus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-red-500')} />
-                        ) : (
-                            <UserPlus className={cn('mt-0.5 h-[18px] w-[18px] shrink-0', n.read ? 'text-muted-foreground' : 'text-amber-500')} />
-                        )}
-                        <div className="min-w-0 flex-1">
-                            <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>
-                                {n.data.type === 'contract_expiring'
-                                    ? `${n.data.contract_vendor} (${n.data.contract_code})`
-                                    : `${n.data.employee_name} (${n.data.employee_code})`}
-                            </div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">
-                                {n.data.type === 'contract_expiring'
-                                    ? t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining))
-                                    : n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required')}
-                            </div>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                            <span className="text-[11px] text-muted-foreground">{n.created_at}</span>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    dismiss.mutate(n.id);
-                                }}
-                                aria-label={t('notif_dismiss')}
-                                title={t('notif_dismiss')}
-                                className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                    visibleItems.map((n) => {
+                        const { Icon, color, bg } = iconMeta(n);
+                        return (
+                            <div
+                                key={n.id}
+                                onClick={() => handleClick(n)}
+                                className={cn(
+                                    'group border-border/60 hover:bg-accent/50 flex cursor-pointer gap-3 border-b px-4 py-3 transition-colors',
+                                    !n.read && 'bg-brand/[0.04]',
+                                )}
                             >
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                    </div>
-                    ))
+                                <div
+                                    className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', n.read ? 'bg-muted' : bg)}
+                                >
+                                    <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>
+                                        {n.data.type === 'contract_expiring'
+                                            ? `${n.data.contract_vendor} (${n.data.contract_code})`
+                                            : `${n.data.employee_name} (${n.data.employee_code})`}
+                                    </div>
+                                    <div className="text-muted-foreground mt-0.5 text-xs">
+                                        {n.data.type === 'contract_expiring'
+                                            ? t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining))
+                                            : n.data.subtype === 'offboarding'
+                                              ? t('notif_resigned')
+                                              : t('notif_cred_required')}
+                                    </div>
+                                </div>
+                                <div className="flex shrink-0 flex-col items-end gap-1">
+                                    <span className="text-muted-foreground text-[11px]">{n.created_at}</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            dismiss.mutate(n.id);
+                                        }}
+                                        aria-label={t('notif_dismiss')}
+                                        title={t('notif_dismiss')}
+                                        className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })
                 )}
             </div>
         </div>
