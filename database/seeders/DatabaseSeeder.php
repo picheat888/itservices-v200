@@ -53,5 +53,6 @@ class DatabaseSeeder extends Seeder
         $this->call(OrgSeeder::class);
         $this->call(AvatarDemoSeeder::class);
         $this->call(ContractSeeder::class);
+        $this->call(MasterDataSeeder::class);
     }
 }
