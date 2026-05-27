@@ -357,15 +357,23 @@ function BrandsList() {
 
     const add = async () => {
         if (!newName.trim()) return;
-        await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
-        setNewName('');
-        setNewDesc('');
+        try {
+            await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
+            setNewName('');
+            setNewDesc('');
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const saveEdit = async () => {
         if (editId == null || !editName.trim()) return;
-        await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
-        setEditId(null);
+        try {
+            await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
+            setEditId(null);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     return (
@@ -429,15 +437,23 @@ function ModelsList() {
 
     const add = async () => {
         if (!newName.trim()) return;
-        await create.mutateAsync({ name: newName.trim(), brand_id: newBrandId ? Number(newBrandId) : null });
-        setNewName('');
-        setNewBrandId('');
+        try {
+            await create.mutateAsync({ name: newName.trim(), brand_id: newBrandId ? Number(newBrandId) : null });
+            setNewName('');
+            setNewBrandId('');
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const saveEdit = async () => {
         if (editId == null || !editName.trim()) return;
-        await update.mutateAsync({ id: editId, name: editName.trim(), brand_id: editBrandId ? Number(editBrandId) : null });
-        setEditId(null);
+        try {
+            await update.mutateAsync({ id: editId, name: editName.trim(), brand_id: editBrandId ? Number(editBrandId) : null });
+            setEditId(null);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     return (
@@ -529,15 +545,23 @@ function CategoriesList() {
 
     const add = async () => {
         if (!newName.trim()) return;
-        await create.mutateAsync({ name: newName.trim(), type: newType });
-        setNewName('');
-        setNewType('asset');
+        try {
+            await create.mutateAsync({ name: newName.trim(), type: newType });
+            setNewName('');
+            setNewType('asset');
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const saveEdit = async () => {
         if (editId == null || !editName.trim()) return;
-        await update.mutateAsync({ id: editId, name: editName.trim(), type: editType });
-        setEditId(null);
+        try {
+            await update.mutateAsync({ id: editId, name: editName.trim(), type: editType });
+            setEditId(null);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const typeOptions: { value: CategoryType; label: string }[] = [
@@ -625,27 +649,35 @@ function VendorsList() {
 
     const add = async () => {
         if (!newForm.name.trim()) return;
-        await create.mutateAsync({
-            name: newForm.name.trim(),
-            contact: newForm.contact.trim() || undefined,
-            phone: newForm.phone.trim() || undefined,
-            email: newForm.email.trim() || undefined,
-            address: newForm.address.trim() || undefined,
-        });
-        setNewForm(emptyForm);
+        try {
+            await create.mutateAsync({
+                name: newForm.name.trim(),
+                contact: newForm.contact.trim() || undefined,
+                phone: newForm.phone.trim() || undefined,
+                email: newForm.email.trim() || undefined,
+                address: newForm.address.trim() || undefined,
+            });
+            setNewForm(emptyForm);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const saveEdit = async () => {
         if (editId == null || !editForm.name.trim()) return;
-        await update.mutateAsync({
-            id: editId,
-            name: editForm.name.trim(),
-            contact: editForm.contact.trim() || undefined,
-            phone: editForm.phone.trim() || undefined,
-            email: editForm.email.trim() || undefined,
-            address: editForm.address.trim() || undefined,
-        });
-        setEditId(null);
+        try {
+            await update.mutateAsync({
+                id: editId,
+                name: editForm.name.trim(),
+                contact: editForm.contact.trim() || undefined,
+                phone: editForm.phone.trim() || undefined,
+                email: editForm.email.trim() || undefined,
+                address: editForm.address.trim() || undefined,
+            });
+            setEditId(null);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     return (
@@ -731,15 +763,23 @@ function WarehousesList() {
 
     const add = async () => {
         if (!newName.trim()) return;
-        await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
-        setNewName('');
-        setNewDesc('');
+        try {
+            await create.mutateAsync({ name: newName.trim(), description: newDesc.trim() || undefined });
+            setNewName('');
+            setNewDesc('');
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     const saveEdit = async () => {
         if (editId == null || !editName.trim()) return;
-        await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
-        setEditId(null);
+        try {
+            await update.mutateAsync({ id: editId, name: editName.trim(), description: editDesc.trim() || undefined });
+            setEditId(null);
+        } catch {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+        }
     };
 
     return (
