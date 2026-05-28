@@ -1,4 +1,4 @@
-import type { ApiEnvelope, AssetModel, Brand, Category, CategoryType, Vendor, Warehouse } from '@/types';
+import type { ApiEnvelope, AssetModel, Brand, Category, StockStatus, Unit, Vendor, Warehouse, WarrantyType } from '@/types';
 import { ensureCsrf, http } from './http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -25,20 +25,20 @@ export const assetModelApi = {
 
 export const categoryApi = {
     list: () => http.get<ApiEnvelope<Category[]>>('/categories').then((r) => r.data.data),
-    create: (payload: { name: string; type: CategoryType; description?: string }) =>
+    create: (payload: { name: string; name_th?: string; description?: string }) =>
         mutate<Category>('post', '/categories', payload),
-    update: (id: number, payload: { name: string; type: CategoryType; description?: string }) =>
+    update: (id: number, payload: { name: string; name_th?: string; description?: string }) =>
         mutate<Category>('put', `/categories/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/categories/${id}`),
 };
 
 export const vendorApi = {
     list: () => http.get<ApiEnvelope<Vendor[]>>('/vendors').then((r) => r.data.data),
-    create: (payload: { name: string; contact?: string; phone?: string; email?: string; address?: string }) =>
+    create: (payload: { name: string; name_th?: string; contact?: string; phone?: string; email?: string; address?: string }) =>
         mutate<Vendor>('post', '/vendors', payload),
     update: (
         id: number,
-        payload: { name: string; contact?: string; phone?: string; email?: string; address?: string },
+        payload: { name: string; name_th?: string; contact?: string; phone?: string; email?: string; address?: string },
     ) => mutate<Vendor>('put', `/vendors/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/vendors/${id}`),
 };
@@ -49,4 +49,25 @@ export const warehouseApi = {
     update: (id: number, payload: { name: string; description?: string }) =>
         mutate<Warehouse>('put', `/warehouses/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/warehouses/${id}`),
+};
+
+export const unitApi = {
+    list: () => http.get<ApiEnvelope<Unit[]>>('/units').then((r) => r.data.data),
+    create: (payload: { name: string; description?: string }) => mutate<Unit>('post', '/units', payload),
+    update: (id: number, payload: { name: string; description?: string }) => mutate<Unit>('put', `/units/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/units/${id}`),
+};
+
+export const stockStatusApi = {
+    list: () => http.get<ApiEnvelope<StockStatus[]>>('/stock-statuses').then((r) => r.data.data),
+    create: (payload: { name: string; description?: string }) => mutate<StockStatus>('post', '/stock-statuses', payload),
+    update: (id: number, payload: { name: string; description?: string }) => mutate<StockStatus>('put', `/stock-statuses/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/stock-statuses/${id}`),
+};
+
+export const warrantyTypeApi = {
+    list: () => http.get<ApiEnvelope<WarrantyType[]>>('/warranty-types').then((r) => r.data.data),
+    create: (payload: { name: string; description?: string }) => mutate<WarrantyType>('post', '/warranty-types', payload),
+    update: (id: number, payload: { name: string; description?: string }) => mutate<WarrantyType>('put', `/warranty-types/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/warranty-types/${id}`),
 };

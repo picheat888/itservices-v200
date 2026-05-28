@@ -23,7 +23,6 @@ export interface ContractPayload {
     value: number;
     billing_cycle: Contract['billing_cycle'];
     auto_renew?: boolean;
-    owner_id?: number | null;
     notify_150?: boolean;
     notify_120?: boolean;
     notify_60?: boolean;

@@ -22,6 +22,7 @@ class VendorController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            'name_th' => ['required', 'string', 'max:120'],
             'contact' => ['nullable', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:120'],
@@ -39,6 +40,7 @@ class VendorController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
+            'name_th' => ['required', 'string', 'max:120'],
             'contact' => ['nullable', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:120'],

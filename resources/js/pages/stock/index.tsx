@@ -1,0 +1,446 @@
+import { Column, DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { MovementDrawer } from '@/components/stock/movement-drawer';
+import { RequestDrawer } from '@/components/stock/request-drawer';
+import { StockItemModal } from '@/components/stock/stock-item-modal';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/hooks/use-auth';
+import { useCategories, useWarehouses } from '@/hooks/use-master-data';
+import { useStockItems, useStockMovements, useStockRequestActions, useStockRequests, useStockSummary } from '@/hooks/use-stock';
+import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import type { Role, StockItem, StockItemStatus, StockMovementType, StockRequestStatus } from '@/types';
+import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Boxes, Check, Pencil, Plus, RotateCcw, Search, Send, TriangleAlert, X } from 'lucide-react';
+import { useState } from 'react';
+import Swal from 'sweetalert2';
+
+const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
+    ok: 'green', low: 'amber', out: 'red', over: 'blue', dead: 'gray',
+};
+
+/** Visual Min/Max bar — current marker against the healthy min..max band. */
+function StockBar({ item }: { item: StockItem }) {
+    const scaleMax = Math.max(item.max_stock * 1.4, item.current_stock + 1);
+    const minPct = (item.min_stock / scaleMax) * 100;
+    const maxPct = (item.max_stock / scaleMax) * 100;
+    const curPct = Math.min(100, (item.current_stock / scaleMax) * 100);
+    const fill =
+        item.status === 'out' || item.status === 'low' ? 'bg-destructive'
+        : item.status === 'over' ? 'bg-blue-500'
+        : item.status === 'dead' ? 'bg-muted-foreground'
+        : 'bg-emerald-500';
+    return (
+        <div className="flex items-center gap-2.5">
+            <div className="bg-muted relative h-1.5 flex-1 rounded-full">
+                <div className="absolute inset-y-0 rounded-full bg-emerald-500/20" style={{ left: `${minPct}%`, width: `${Math.max(0, maxPct - minPct)}%` }} />
+                <div className="absolute -inset-y-0.5 w-px bg-amber-500" style={{ left: `${minPct}%` }} />
+                <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${maxPct}%` }} />
+                <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
+            </div>
+            <div className="w-[72px] text-right font-mono text-xs">
+                <span className="font-bold">{item.current_stock}</span>
+                <span className="text-muted-foreground"> / {item.min_stock}–{item.max_stock}</span>
+            </div>
+        </div>
+    );
+}
+
+export default function StockPage() {
+    const t = useT();
+    const { user } = useAuth();
+    const role = (user?.role ?? 'user') as Role;
+    const perms = user?.permissions ?? [];
+    const can = (p: string) => role === 'super' || perms.includes(`stock.${p}`);
+    const canManage = can('manage_items');
+
+    const [tab, setTab] = useState<'dashboard' | 'items' | 'movements' | 'requests' | 'audit'>('dashboard');
+    const [search, setSearch] = useState('');
+    const [cat, setCat] = useState('all');
+    const [wh, setWh] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [editItem, setEditItem] = useState<StockItem | null>(null);
+    const [addOpen, setAddOpen] = useState(false);
+    const [moveKind, setMoveKind] = useState<StockMovementType | null>(null);
+    const [reqOpen, setReqOpen] = useState(false);
+
+    const { data: summary } = useStockSummary();
+    const { data: categories = [] } = useCategories();
+    const { data: warehouses = [] } = useWarehouses();
+    const { data: items = [] } = useStockItems({
+        search,
+        category: cat === 'all' ? undefined : cat,
+        warehouse: wh === 'all' ? undefined : wh,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+    });
+
+    const fmtK = (n: number) => `฿${(n / 1000).toFixed(0)}K`;
+
+    const statusBadge = (s: StockItemStatus) => <StatusBadge tone={STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>;
+
+    const columns: Column<StockItem>[] = [
+        { key: 'sku', header: 'SKU', render: (i) => <span className="font-mono text-xs">{i.sku}</span> },
+        {
+            key: 'name',
+            header: t('stock_item'),
+            render: (i) => (
+                <div>
+                    <div className="text-sm font-medium">{i.name}</div>
+                    <div className="text-muted-foreground text-xs">{[i.brand, i.model].filter(Boolean).join(' · ') || '—'}</div>
+                </div>
+            ),
+        },
+        { key: 'category', header: t('stock_category'), render: (i) => <span className="text-sm">{i.category ?? '—'}</span> },
+        { key: 'warehouse', header: t('stock_warehouse'), render: (i) => <span className="text-sm">{i.warehouse ?? '—'}</span> },
+        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[220px]', render: (i) => <StockBar item={i} /> },
+        { key: 'cost', header: t('stock_cost'), align: 'right', render: (i) => <span className="font-mono text-xs">฿{i.cost.toLocaleString()}</span> },
+        { key: 'status', header: t('status'), render: (i) => statusBadge(i.status) },
+        {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            render: (i) =>
+                canManage ? (
+                    <button onClick={() => setEditItem(i)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
+                        <Pencil className="h-4 w-4" />
+                    </button>
+                ) : null,
+        },
+    ];
+
+    const kpis = [
+        { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
+        { label: t('stock_kpi_value'), value: summary ? fmtK(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
+        { label: t('stock_kpi_low'), value: summary?.low_count ?? '—', sub: t('stock_needs_reorder'), icon: AlertTriangle },
+        { label: t('stock_kpi_over'), value: summary?.over_count ?? '—', sub: t('stock_overstock'), icon: TriangleAlert },
+    ];
+
+    const hasAlerts = !!summary && (summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
+
+    const tabs = [
+        { id: 'dashboard' as const, label: t('sub_dashboard') },
+        { id: 'items' as const, label: t('stock_items_tab'), count: summary?.skus },
+        { id: 'movements' as const, label: t('stock_movements_tab') },
+        { id: 'requests' as const, label: t('stock_requests_tab') },
+        { id: 'audit' as const, label: t('stock_audit_tab') },
+    ];
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold">{t('stock_title')}</h1>
+                    <p className="text-muted-foreground text-sm">{t('stock_subtitle')}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    {can('request') && (
+                        <Button variant="outline" onClick={() => setReqOpen(true)}>
+                            <Send className="h-4 w-4" />
+                            {t('stock_request')}
+                        </Button>
+                    )}
+                    {can('receive') && (
+                        <Button variant="outline" onClick={() => setMoveKind('receive')}>
+                            <ArrowDownToLine className="h-4 w-4" />
+                            {t('stock_mv_receive')}
+                        </Button>
+                    )}
+                    {canManage && (
+                        <Button onClick={() => setAddOpen(true)}>
+                            <Plus className="h-4 w-4" />
+                            {t('stock_new_item')}
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {kpis.map((k) => {
+                    const Icon = k.icon;
+                    return (
+                        <Card key={k.label} className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div className="text-muted-foreground text-sm">{k.label}</div>
+                                <span className="text-brand bg-brand/10 flex h-9 w-9 items-center justify-center rounded-lg"><Icon className="h-[18px] w-[18px]" /></span>
+                            </div>
+                            <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
+                            <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
+                        </Card>
+                    );
+                })}
+            </div>
+
+            {hasAlerts && summary && (
+                <Card className={cn('border p-4', summary.low_count ? 'border-destructive/40' : 'border-amber-500/40')}>
+                    <div className="flex items-center gap-3">
+                        <span className={cn('flex h-10 w-10 items-center justify-center rounded-full', summary.low_count ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600')}>
+                            <AlertTriangle className="h-5 w-5" />
+                        </span>
+                        <div className="flex-1">
+                            <div className="font-semibold">{t('stock_minmax_alerts')}</div>
+                            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-4 text-sm">
+                                {summary.low_count > 0 && <span><b className="text-destructive">{summary.low_count}</b> {t('stock_below_or_out')}</span>}
+                                {summary.over_count > 0 && <span><b className="text-blue-600">{summary.over_count}</b> {t('stock_overstock')}</span>}
+                                {summary.dead_count > 0 && <span><b className="text-muted-foreground">{summary.dead_count}</b> {t('stock_dead_90')}</span>}
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={() => setTab('items')}>{t('stock_view_items')}</Button>
+                    </div>
+                </Card>
+            )}
+
+            <Card className="overflow-hidden">
+                <div className="border-border flex flex-wrap gap-1 border-b px-3 pt-1">
+                    {tabs.map((tb) => (
+                        <button
+                            key={tb.id}
+                            onClick={() => setTab(tb.id)}
+                            className={cn('-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors', tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground border-transparent hover:text-foreground')}
+                        >
+                            {tb.label}
+                            {tb.count != null && <span className="ml-1.5 font-mono text-xs opacity-60">{tb.count}</span>}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="p-5">
+                    {tab === 'dashboard' && <DashboardTab summary={summary} t={t} />}
+
+                    {tab === 'items' && (
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="relative w-full max-w-xs">
+                                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('stock_search')} className="pl-9" />
+                                </div>
+                                <Select value={cat} onValueChange={setCat}>
+                                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('stock_all_categories')}</SelectItem>
+                                        {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={wh} onValueChange={setWh}>
+                                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('stock_all_warehouses')}</SelectItem>
+                                        {warehouses.map((w) => <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">{t('stock_all_statuses')}</SelectItem>
+                                        {(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => (
+                                            <SelectItem key={s} value={s}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <DataTable columns={columns} rows={items} rowKey={(i) => i.id} />
+                        </div>
+                    )}
+
+                    {tab === 'movements' && <MovementsTab can={can} onNew={setMoveKind} />}
+                    {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} />}
+
+                    {tab === 'audit' && (
+                        <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-16 text-center text-sm">
+                            <Boxes className="h-8 w-8" />
+                            {t('stock_phase_next')}
+                        </div>
+                    )}
+                </div>
+            </Card>
+
+            <StockItemModal open={addOpen || !!editItem} item={editItem} onClose={() => { setAddOpen(false); setEditItem(null); }} />
+            <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
+            <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
+        </div>
+    );
+}
+
+const MV_META: Record<StockMovementType, { tone: 'green' | 'violet' | 'blue' | 'amber'; icon: typeof ArrowDownToLine }> = {
+    receive: { tone: 'green', icon: ArrowDownToLine },
+    issue: { tone: 'violet', icon: ArrowUpFromLine },
+    return: { tone: 'blue', icon: RotateCcw },
+    transfer: { tone: 'amber', icon: ArrowLeftRight },
+};
+
+const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
+    pending: 'amber', approved: 'blue', fulfilled: 'green', rejected: 'red',
+};
+
+function MovementsTab({ can, onNew }: { can: (p: string) => boolean; onNew: (k: StockMovementType) => void }) {
+    const t = useT();
+    const [type, setType] = useState('all');
+    const { data: movements = [] } = useStockMovements(type === 'all' ? undefined : type);
+
+    const newButtons: { kind: StockMovementType; perm: string }[] = [
+        { kind: 'receive', perm: 'receive' },
+        { kind: 'issue', perm: 'fulfill' },
+        { kind: 'return', perm: 'return' },
+        { kind: 'transfer', perm: 'transfer' },
+    ];
+
+    const columns: Column<(typeof movements)[number]>[] = [
+        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{m.moved_at?.slice(0, 16)}</span> },
+        {
+            key: 'type',
+            header: t('stock_mv_type'),
+            render: (m) => {
+                const meta = MV_META[m.type];
+                const Icon = meta.icon;
+                return <StatusBadge tone={meta.tone}><Icon className="h-3 w-3" />{t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}</StatusBadge>;
+            },
+        },
+        {
+            key: 'item',
+            header: t('stock_item'),
+            render: (m) => (
+                <div>
+                    <div className="font-mono text-xs">{m.sku}</div>
+                    <div className="text-muted-foreground truncate text-xs">{m.item_name}</div>
+                </div>
+            ),
+        },
+        { key: 'qty', header: t('stock_qty'), align: 'right', render: (m) => <span className="font-mono font-bold">{m.qty}</span> },
+        { key: 'from', header: t('stock_from'), render: (m) => <span className="text-sm">{m.from || '—'}</span> },
+        { key: 'to', header: t('stock_to'), render: (m) => <span className="text-sm">{m.to || '—'}</span> },
+        { key: 'reference', header: t('stock_reference'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.reference || '—'}</span> },
+        { key: 'recorded_by', header: t('stock_by'), render: (m) => <span className="text-sm">{m.recorded_by || '—'}</span> },
+    ];
+
+    return (
+        <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+                <Select value={type} onValueChange={setType}>
+                    <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t('stock_all_types')}</SelectItem>
+                        {(['receive', 'issue', 'return', 'transfer'] as StockMovementType[]).map((k) => (
+                            <SelectItem key={k} value={k}>{t(`stock_mv_${k}` as Parameters<typeof t>[0])}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <div className="ml-auto flex gap-1.5">
+                    {newButtons.filter((b) => can(b.perm)).map((b) => {
+                        const Icon = MV_META[b.kind].icon;
+                        return (
+                            <Button key={b.kind} variant="outline" size="sm" onClick={() => onNew(b.kind)}>
+                                <Icon className="h-3.5 w-3.5" />
+                                {t(`stock_mv_${b.kind}` as Parameters<typeof t>[0])}
+                            </Button>
+                        );
+                    })}
+                </div>
+            </div>
+            <DataTable columns={columns} rows={movements} rowKey={(m) => m.id} />
+        </div>
+    );
+}
+
+function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
+    const t = useT();
+    const { data: requests = [] } = useStockRequests();
+    const { approve, reject, fulfill } = useStockRequestActions();
+
+    const onError = (e: unknown) => {
+        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+    };
+
+    const columns: Column<(typeof requests)[number]>[] = [
+        { key: 'id', header: '#', render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+        { key: 'requester', header: t('stock_requester'), render: (r) => <span className="text-sm font-medium">{r.requester_name}</span> },
+        { key: 'dept', header: t('department'), render: (r) => <span className="text-sm">{r.dept || '—'}</span> },
+        {
+            key: 'item',
+            header: t('stock_item'),
+            render: (r) => (
+                <div>
+                    <div className="font-mono text-xs">{r.sku}</div>
+                    <div className="text-muted-foreground truncate text-xs">{r.item_name}</div>
+                </div>
+            ),
+        },
+        { key: 'qty', header: t('stock_qty'), align: 'right', render: (r) => <span className="font-mono font-bold">{r.qty}</span> },
+        { key: 'reason', header: t('stock_reason'), render: (r) => <span className="text-sm">{r.reason}</span> },
+        { key: 'status', header: t('status'), render: (r) => <StatusBadge tone={REQ_TONE[r.status]}>{t(`stock_rq_${r.status}` as Parameters<typeof t>[0])}</StatusBadge> },
+        {
+            key: 'actions',
+            header: t('actions'),
+            align: 'right',
+            render: (r) => (
+                <div className="flex justify-end gap-1.5">
+                    {can('approve') && r.status === 'pending' && (
+                        <>
+                            <Button size="sm" variant="outline" onClick={() => approve.mutate(r.id, { onError })}><Check className="h-3.5 w-3.5 text-emerald-600" />{t('stock_approve')}</Button>
+                            <Button size="sm" variant="outline" onClick={() => reject.mutate(r.id, { onError })}><X className="h-3.5 w-3.5 text-destructive" /></Button>
+                        </>
+                    )}
+                    {can('fulfill') && r.status === 'approved' && (
+                        <Button size="sm" onClick={() => fulfill.mutate(r.id, { onError })}><ArrowUpFromLine className="h-3.5 w-3.5" />{t('stock_fulfill')}</Button>
+                    )}
+                    {(r.status === 'fulfilled' || r.status === 'rejected') && <span className="text-muted-foreground text-xs">—</span>}
+                </div>
+            ),
+        },
+    ];
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-end">
+                {can('request') && (
+                    <Button onClick={onNew}>
+                        <Plus className="h-4 w-4" />
+                        {t('stock_new_request')}
+                    </Button>
+                )}
+            </div>
+            <DataTable columns={columns} rows={requests} rowKey={(r) => r.id} />
+        </div>
+    );
+}
+
+function DashboardTab({ summary, t }: { summary: ReturnType<typeof useStockSummary>['data']; t: ReturnType<typeof useT> }) {
+    if (!summary) return <div className="text-muted-foreground py-10 text-center text-sm">—</div>;
+    const maxUnits = Math.max(1, ...summary.by_category.map((c) => c.units));
+    return (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div>
+                <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
+                <div className="space-y-2">
+                    {summary.by_warehouse.map((w) => (
+                        <div key={w.warehouse} className="border-border flex items-center justify-between rounded-md border px-3 py-2.5">
+                            <div className="text-sm font-medium">{w.warehouse}</div>
+                            <div className="flex gap-6 text-right font-mono text-sm">
+                                <div><div className="text-muted-foreground text-[10px] uppercase">SKU</div>{w.skus}</div>
+                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>{w.units}</div>
+                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>฿{(w.value / 1000).toFixed(0)}K</div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <div>
+                <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
+                <div className="space-y-2.5">
+                    {summary.by_category.map((c) => (
+                        <div key={c.category}>
+                            <div className="mb-1 flex justify-between text-sm">
+                                <span>{c.category}</span>
+                                <span className="text-muted-foreground font-mono">{c.units}</span>
+                            </div>
+                            <div className="bg-muted h-1.5 rounded-full">
+                                <span className="bg-brand block h-full rounded-full" style={{ width: `${(c.units / maxUnits) * 100}%` }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}

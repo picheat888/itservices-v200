@@ -12,6 +12,7 @@ import LoginPage from '@/pages/login';
 import PermissionsPage from '@/pages/permissions';
 import PlaceholderPage from '@/pages/placeholder';
 import SettingsPage from '@/pages/settings';
+import StockPage from '@/pages/stock';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
@@ -24,7 +25,6 @@ const modules: { path: string; titleKey: string }[] = [
     { path: 'tickets', titleKey: 'tickets' },
     { path: 'requests', titleKey: 'requests' },
     { path: 'assets', titleKey: 'assets' },
-    { path: 'stock', titleKey: 'stock' },
     { path: 'reports', titleKey: 'reports' },
 ];
 
@@ -41,6 +41,7 @@ function App() {
                         <Route index element={<DashboardPage />} />
                         <Route path="employees" element={<EmployeesPage />} />
                         <Route path="contracts" element={<ContractsPage />} />
+                        <Route path="stock" element={<StockPage />} />
                         <Route path="email-templates" element={<EmailTemplatesPage />} />
                         <Route path="permissions" element={<PermissionsPage />} />
                         <Route path="settings" element={<SettingsPage />} />

@@ -74,7 +74,6 @@ export function ContractDetailDrawer({
                             label={t('contract_auto_renew')}
                             value={contract.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
                         />
-                        {contract.owner && <KV label={t('contract_owner')} value={contract.owner} />}
                     </div>
 
                     {/* Notification schedule — alerts are sent automatically by the

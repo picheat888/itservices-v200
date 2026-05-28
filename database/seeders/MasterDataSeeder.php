@@ -2,12 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Enums\CategoryType;
 use App\Models\AssetModel;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\StockStatus;
+use App\Models\Unit;
 use App\Models\Vendor;
 use App\Models\Warehouse;
+use App\Models\WarrantyType;
 use Illuminate\Database\Seeder;
 
 class MasterDataSeeder extends Seeder
@@ -78,34 +80,31 @@ class MasterDataSeeder extends Seeder
 
         // ── Categories ──────────────────────────────────────────────────────────
         $categories = [
-            // Asset
-            ['name' => 'แล็ปท็อป',           'type' => CategoryType::Asset,    'description' => 'Notebook / Laptop ทุกยี่ห้อ'],
-            ['name' => 'เดสก์ท็อป',          'type' => CategoryType::Asset,    'description' => 'Desktop PC / Mini PC'],
-            ['name' => 'เซิร์ฟเวอร์',        'type' => CategoryType::Asset,    'description' => 'Rack / Tower Server'],
-            ['name' => 'จอภาพ',              'type' => CategoryType::Asset,    'description' => 'Monitor / Display'],
-            ['name' => 'เครื่องพิมพ์',       'type' => CategoryType::Asset,    'description' => 'Printer / MFP / Plotter'],
-            ['name' => 'สวิตช์ / เราเตอร์',  'type' => CategoryType::Asset,    'description' => 'Network Switch, Router, AP'],
-            ['name' => 'UPS',                'type' => CategoryType::Asset,    'description' => 'Uninterruptible Power Supply'],
-            ['name' => 'กล้องวงจรปิด',       'type' => CategoryType::Asset,    'description' => 'CCTV Camera / NVR'],
-            ['name' => 'โทรศัพท์',           'type' => CategoryType::Asset,    'description' => 'IP Phone / Mobile / Tablet'],
-            ['name' => 'อุปกรณ์อื่น ๆ',      'type' => CategoryType::Asset,    'description' => 'อุปกรณ์ IT ที่ไม่อยู่ในหมวดข้างต้น'],
-            // Contract
-            ['name' => 'ซอฟต์แวร์ลิขสิทธิ์', 'type' => CategoryType::Contract, 'description' => 'Software license (subscription / perpetual)'],
-            ['name' => 'บำรุงรักษา',          'type' => CategoryType::Contract, 'description' => 'Hardware/Software maintenance & support'],
-            ['name' => 'เช่าอุปกรณ์',         'type' => CategoryType::Contract, 'description' => 'Device / Equipment rental'],
-            ['name' => 'อินเทอร์เน็ต / WAN',  'type' => CategoryType::Contract, 'description' => 'Internet, Leased line, MPLS'],
-            ['name' => 'บริการ Cloud',         'type' => CategoryType::Contract, 'description' => 'IaaS / PaaS / SaaS cloud contract'],
-            // Stock
-            ['name' => 'ตลับหมึก / Toner',    'type' => CategoryType::Stock,    'description' => 'Inkjet cartridge และ Laser toner'],
-            ['name' => 'อะไหล่คอมพิวเตอร์',   'type' => CategoryType::Stock,    'description' => 'RAM, SSD, HDD, PSU, CPU'],
-            ['name' => 'สายเคเบิล',           'type' => CategoryType::Stock,    'description' => 'LAN, HDMI, DP, USB, Power cable'],
-            ['name' => 'อุปกรณ์เสริม',        'type' => CategoryType::Stock,    'description' => 'เมาส์, คีย์บอร์ด, Hub, Adapter'],
-            ['name' => 'วัสดุสิ้นเปลือง',     'type' => CategoryType::Stock,    'description' => 'แผ่น CD/DVD, แฟลชไดร์ฟ, กระดาษพิมพ์'],
+            ['name' => 'แล็ปท็อป',           'description' => 'Notebook / Laptop ทุกยี่ห้อ'],
+            ['name' => 'เดสก์ท็อป',          'description' => 'Desktop PC / Mini PC'],
+            ['name' => 'เซิร์ฟเวอร์',        'description' => 'Rack / Tower Server'],
+            ['name' => 'จอภาพ',              'description' => 'Monitor / Display'],
+            ['name' => 'เครื่องพิมพ์',       'description' => 'Printer / MFP / Plotter'],
+            ['name' => 'สวิตช์ / เราเตอร์',  'description' => 'Network Switch, Router, AP'],
+            ['name' => 'UPS',                'description' => 'Uninterruptible Power Supply'],
+            ['name' => 'กล้องวงจรปิด',       'description' => 'CCTV Camera / NVR'],
+            ['name' => 'โทรศัพท์',           'description' => 'IP Phone / Mobile / Tablet'],
+            ['name' => 'อุปกรณ์อื่น ๆ',      'description' => 'อุปกรณ์ IT ที่ไม่อยู่ในหมวดข้างต้น'],
+            ['name' => 'ซอฟต์แวร์ลิขสิทธิ์', 'description' => 'Software license (subscription / perpetual)'],
+            ['name' => 'บำรุงรักษา',          'description' => 'Hardware/Software maintenance & support'],
+            ['name' => 'เช่าอุปกรณ์',         'description' => 'Device / Equipment rental'],
+            ['name' => 'อินเทอร์เน็ต / WAN',  'description' => 'Internet, Leased line, MPLS'],
+            ['name' => 'บริการ Cloud',         'description' => 'IaaS / PaaS / SaaS cloud contract'],
+            ['name' => 'ตลับหมึก / Toner',    'description' => 'Inkjet cartridge และ Laser toner'],
+            ['name' => 'อะไหล่คอมพิวเตอร์',   'description' => 'RAM, SSD, HDD, PSU, CPU'],
+            ['name' => 'สายเคเบิล',           'description' => 'LAN, HDMI, DP, USB, Power cable'],
+            ['name' => 'อุปกรณ์เสริม',        'description' => 'เมาส์, คีย์บอร์ด, Hub, Adapter'],
+            ['name' => 'วัสดุสิ้นเปลือง',     'description' => 'แผ่น CD/DVD, แฟลชไดร์ฟ, กระดาษพิมพ์'],
         ];
 
         foreach ($categories as $c) {
             Category::updateOrCreate(
-                ['name' => $c['name'], 'type' => $c['type']],
+                ['name' => $c['name']],
                 ['description' => $c['description']],
             );
         }
@@ -204,6 +203,46 @@ class MasterDataSeeder extends Seeder
 
         foreach ($warehouses as $w) {
             Warehouse::updateOrCreate(['name' => $w['name']], ['description' => $w['description']]);
+        }
+
+        // ── Units (Stock module) ──────────────────────────────────────────────────
+        $units = [
+            ['name' => 'unit', 'description' => 'ชิ้น / เครื่อง'],
+            ['name' => 'piece', 'description' => 'ชิ้น'],
+            ['name' => 'module', 'description' => 'โมดูล (เช่น RAM)'],
+            ['name' => 'drive', 'description' => 'ไดรฟ์ (SSD/HDD)'],
+            ['name' => 'cartridge', 'description' => 'ตลับ (หมึก/Toner)'],
+            ['name' => 'box', 'description' => 'กล่อง'],
+            ['name' => 'set', 'description' => 'ชุด'],
+        ];
+        foreach ($units as $u) {
+            Unit::updateOrCreate(['name' => $u['name']], ['description' => $u['description']]);
+        }
+
+        // ── Stock statuses (item condition — Stock module) ────────────────────────
+        $stockStatuses = [
+            ['name' => 'New', 'description' => 'ของใหม่ ยังไม่เปิดใช้งาน'],
+            ['name' => 'Used', 'description' => 'ผ่านการใช้งานแล้ว'],
+            ['name' => 'Refurbished', 'description' => 'ปรับสภาพใหม่'],
+            ['name' => 'Damaged', 'description' => 'ชำรุด รอซ่อม/ตัดจำหน่าย'],
+            ['name' => 'Reserved', 'description' => 'จองไว้สำหรับงาน/โครงการ'],
+        ];
+        foreach ($stockStatuses as $s) {
+            StockStatus::updateOrCreate(['name' => $s['name']], ['description' => $s['description']]);
+        }
+
+        // ── Warranty types (Stock module) ─────────────────────────────────────────
+        $warrantyTypes = [
+            ['name' => 'No warranty', 'description' => 'ไม่มีการรับประกัน'],
+            ['name' => '1-year', 'description' => 'รับประกัน 1 ปี'],
+            ['name' => '2-year', 'description' => 'รับประกัน 2 ปี'],
+            ['name' => '3-year onsite', 'description' => 'รับประกัน 3 ปี บริการถึงที่'],
+            ['name' => '5-year', 'description' => 'รับประกัน 5 ปี'],
+            ['name' => 'Lifetime', 'description' => 'รับประกันตลอดอายุการใช้งาน'],
+            ['name' => 'Limited Lifetime', 'description' => 'รับประกันตลอดอายุแบบมีเงื่อนไข'],
+        ];
+        foreach ($warrantyTypes as $w) {
+            WarrantyType::updateOrCreate(['name' => $w['name']], ['description' => $w['description']]);
         }
     }
 }
