@@ -69,14 +69,6 @@ const TYPE_TONE: Record<ContractType, 'blue' | 'violet' | 'amber' | 'green' | 'g
     other: 'gray',
 };
 
-const TYPE_LABEL: Record<ContractType, { en: string; th: string }> = {
-    software: { en: 'Software', th: 'ซอฟต์แวร์' },
-    hardware: { en: 'Hardware', th: 'ฮาร์ดแวร์' },
-    service: { en: 'Service', th: 'บริการ' },
-    connectivity: { en: 'Network', th: 'เครือข่าย' },
-    other: { en: 'Other', th: 'อื่นๆ' },
-};
-
 export default function ContractsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -231,7 +223,7 @@ export default function ContractsPage() {
                                         setSearch(e.target.value);
                                         setPage(1);
                                     }}
-                                    placeholder={`${t('contract_vendor')} / ${t('contract_name')}`}
+                                    placeholder={`${t('contract_vendor')} / ${t('contract_title')}`}
                                     className="h-9 pl-9"
                                 />
                             </div>
@@ -268,9 +260,9 @@ export default function ContractsPage() {
                                     <thead>
                                         <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th className="px-4 py-2.5">{t('contract_code')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_type')}</th>
+                                            <th className="px-4 py-2.5">{t('contract_title')}</th>
                                             <th className="px-4 py-2.5">{t('contract_vendor')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_name')}</th>
+                                            <th className="px-4 py-2.5">{t('contract_type')}</th>
                                             <th className="px-4 py-2.5">{t('contract_start')}</th>
                                             <th className="px-4 py-2.5">{t('contract_end')}</th>
                                             <th className="px-4 py-2.5">{t('contract_days_remaining')}</th>
@@ -286,13 +278,15 @@ export default function ContractsPage() {
                                                 className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
                                             >
                                                 <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{c.code}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <StatusBadge tone={TYPE_TONE[c.type]}>
-                                                        {lang === 'th' ? TYPE_LABEL[c.type].th : TYPE_LABEL[c.type].en}
-                                                    </StatusBadge>
+                                                <td className="max-w-[280px] truncate px-4 py-2.5">
+                                                    {c.title || <span className="text-muted-foreground">—</span>}
                                                 </td>
                                                 <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
-                                                <td className="max-w-[280px] truncate px-4 py-2.5">{c.name}</td>
+                                                <td className="px-4 py-2.5">
+                                                    <StatusBadge tone={TYPE_TONE[c.type]}>
+                                                        {t(`contract_type_${c.type}`)}
+                                                    </StatusBadge>
+                                                </td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.start}</td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{c.end}</td>
                                                 <td className="px-4 py-2.5">

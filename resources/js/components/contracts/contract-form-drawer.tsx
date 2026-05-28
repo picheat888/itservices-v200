@@ -8,8 +8,8 @@ import { useVendors } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { BillingCycle, Contract, ContractAttachment, ContractType, Vendor } from '@/types';
-import { Calendar, Check, Cog, FileText, Laptop, Loader2, Paperclip, Wifi, X } from 'lucide-react';
+import { ASSET_LINKABLE_CONTRACT_TYPES, type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/types';
+import { Calendar, Check, Cog, FileText, Laptop, Loader2, Package, Paperclip, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 const MAX_FILES = 10;
@@ -26,6 +26,7 @@ const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string 
     { value: 'hardware', icon: Laptop, labelKey: 'contract_type_hardware' },
     { value: 'service', icon: Cog, labelKey: 'contract_type_service' },
     { value: 'connectivity', icon: Wifi, labelKey: 'contract_type_connectivity' },
+    { value: 'other', icon: Package, labelKey: 'contract_type_other' },
 ];
 
 const REMINDER_DAYS = [150, 120, 90, 60, 45, 30, 7] as const;
@@ -35,6 +36,7 @@ interface FormState {
     code: string;
     type: ContractType;
     vendor: string;
+    title: string;
     name: string;
     start_date: string;
     end_date: string;
@@ -55,6 +57,7 @@ const EMPTY: FormState = {
     code: '',
     type: 'software',
     vendor: '',
+    title: '',
     name: '',
     start_date: '',
     end_date: '',
@@ -95,18 +98,19 @@ export function ContractFormDrawer({
     const [fileErr, setFileErr] = useState('');
 
     const vendorOptions = useMemo(() => {
+        // Value stays the canonical vendor name (what's stored on the contract);
+        // only the label follows the active language so the Thai name surfaces.
         const opts = (vendors as Vendor[]).map((v) => ({
             value: v.name,
-            label: v.name,
-            sub: v.contact ?? undefined,
-            search: `${v.name} ${v.contact ?? ''}`,
+            label: lang === 'th' ? (v.name_th ?? v.name) : v.name,
+            search: `${v.name} ${v.name_th ?? ''}`,
         }));
         // Keep existing vendor visible when editing a contract not yet in master data
         if (form.vendor && !opts.some((o) => o.value === form.vendor)) {
-            opts.unshift({ value: form.vendor, label: form.vendor, sub: undefined, search: form.vendor });
+            opts.unshift({ value: form.vendor, label: form.vendor, search: form.vendor });
         }
         return opts;
-    }, [vendors, form.vendor]);
+    }, [vendors, form.vendor, lang]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
@@ -124,6 +128,7 @@ export function ContractFormDrawer({
                 code: editing.code,
                 type: editing.type,
                 vendor: editing.vendor,
+                title: editing.title ?? '',
                 name: editing.name,
                 start_date: editing.start,
                 end_date: editing.end,
@@ -180,6 +185,7 @@ export function ContractFormDrawer({
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         if (!form.code.trim()) e.code = required;
         if (!form.vendor.trim()) e.vendor = required;
+        if (!form.title.trim()) e.title = required;
         if (!form.name.trim()) e.name = required;
         if (!form.start_date) e.start_date = required;
         if (!form.end_date) e.end_date = required;
@@ -194,6 +200,7 @@ export function ContractFormDrawer({
             code: form.code.trim(),
             type: form.type,
             vendor: form.vendor.trim(),
+            title: form.title.trim(),
             name: form.name.trim(),
             start_date: form.start_date,
             end_date: form.end_date,
@@ -249,7 +256,7 @@ export function ContractFormDrawer({
                         <div className="mb-2 text-xs font-semibold text-muted-foreground">
                             {t('contract_type')} <span className="text-destructive">*</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div className="grid grid-cols-5 gap-2">
                             {TYPE_META.map((tp) => {
                                 const Icon = tp.icon;
                                 const active = form.type === tp.value;
@@ -273,6 +280,14 @@ export function ContractFormDrawer({
 
                     <Field label={t('contract_code')} help={t('contract_code_hint')} required error={err.code}>
                         <Input value={form.code} onChange={(e) => upd('code', e.target.value)} placeholder="CT-2026-001" className="font-mono" />
+                    </Field>
+
+                    <Field label={t('contract_title')} required error={err.title}>
+                        <Input
+                            value={form.title}
+                            onChange={(e) => upd('title', e.target.value)}
+                            placeholder={lang === 'th' ? 'เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี' : 'e.g. Annual printer lease agreement'}
+                        />
                     </Field>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -381,9 +396,12 @@ export function ContractFormDrawer({
                         </div>
                     </Field>
 
-                    <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
-                        <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">{t('coming_soon')}</div>
-                    </Field>
+                    {/* Linked assets only applies to hardware, network, and other contracts */}
+                    {ASSET_LINKABLE_CONTRACT_TYPES.includes(form.type) && (
+                        <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
+                            <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">{t('coming_soon')}</div>
+                        </Field>
+                    )}
 
                     <Field label={t('contract_attachments')}>
                         <div className="space-y-2">

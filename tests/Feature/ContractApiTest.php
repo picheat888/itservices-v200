@@ -29,6 +29,7 @@ class ContractApiTest extends TestCase
             'code' => 'CT-TEST-001',
             'vendor' => 'Microsoft Thailand',
             'name' => 'Microsoft 365 — 320 seats',
+            'title' => 'Microsoft 365 Enterprise Agreement',
             'type' => 'software',
             'start_date' => '2025-01-01',
             'end_date' => '2027-01-01',
@@ -40,7 +41,9 @@ class ContractApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.vendor', 'Microsoft Thailand')
             ->assertJsonPath('data.value_display', '฿2,140,000/yr')
-            ->assertJsonPath('data.status', 'active');
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.cancelled_at', null)
+            ->assertJsonStructure(['data' => ['created_at', 'updated_at']]);
 
         $this->assertDatabaseHas('contracts', ['vendor' => 'Microsoft Thailand']);
         $this->getJson('/api/contracts')->assertOk()->assertJsonCount(1, 'data');
@@ -106,6 +109,17 @@ class ContractApiTest extends TestCase
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01',
             'value' => 1000, 'billing_cycle' => 'yearly',
         ])->assertStatus(422)->assertJsonValidationErrors('code');
+    }
+
+    public function test_contract_title_is_required(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-TEST-002', 'vendor' => 'X', 'name' => 'Y', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01',
+            'value' => 1000, 'billing_cycle' => 'yearly',
+        ])->assertStatus(422)->assertJsonValidationErrors('title');
     }
 
     public function test_user_without_permission_cannot_create_contract(): void

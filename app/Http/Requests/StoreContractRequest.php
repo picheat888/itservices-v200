@@ -31,6 +31,7 @@ class StoreContractRequest extends FormRequest
             'code' => ['required', 'string', 'max:50', Rule::unique('contracts', 'code')->ignore($contractId)],
             'vendor' => ['required', 'string', 'max:255'],
             'name' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'type' => ['required', Rule::enum(ContractType::class)],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
