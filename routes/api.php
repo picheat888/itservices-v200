@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('assets/{asset}/accept', [AssetController::class, 'accept'])->name('api.assets.accept');
     Route::post('assets/{asset}/receive', [AssetController::class, 'markReceived'])->name('api.assets.receive');
     Route::post('assets/{asset}/maintenance', [AssetController::class, 'toggleMaintenance'])->name('api.assets.maintenance');
+    Route::post('assets/{asset}/to-stock', [AssetController::class, 'toStock'])->name('api.assets.to-stock');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module
