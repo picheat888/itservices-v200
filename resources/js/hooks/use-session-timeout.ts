@@ -19,8 +19,10 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchst
  * - Polls every 5 s; shows a warning modal before forced logout.
  * - Activity events (mouse / keyboard / scroll) keep resetting the clock
  *   as long as the warning modal is not yet open.
- * - extendSession() dismisses the modal and resets the clock.
+ * - extendSession() pings the server to refresh _sec_last_activity, then resets the clock.
  * - doLogout()     logs the user out immediately.
+ * - visibilitychange recalculates from wall-clock time when the tab regains focus,
+ *   which corrects the countdown after background-tab timer throttling.
  */
 export function useSessionTimeout(timeoutMinutes: number) {
     const qc = useQueryClient();
@@ -28,11 +30,14 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const [showWarning, setShowWarning] = useState(false);
     const [secondsLeft, setSecondsLeft] = useState(WARN_BEFORE_SEC);
 
-    const timeoutMsRef = useRef(0);        // 0 = disabled
+    const timeoutMsRef = useRef(0);           // 0 = disabled
     const lastActivityRef = useRef(Date.now());
     const warningActiveRef = useRef(false);
     const mainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Absolute wall-clock time at which the session will expire (set when warning first shown).
+    // Used so the countdown is immune to background-tab setInterval throttling.
+    const expiresAtRef = useRef<number>(0);
 
     const clearCountdown = () => {
         if (countdownRef.current) {
@@ -53,9 +58,38 @@ export function useSessionTimeout(timeoutMinutes: number) {
         window.location.href = '/login?reason=session_expired';
     }, [qc]);
 
+    /**
+     * Starts (or restarts) the visual countdown using wall-clock time rather than
+     * decrement-per-tick. This makes the display accurate even when the browser
+     * throttles setInterval in background tabs.
+     */
+    const startCountdown = useCallback(
+        (expiresAt: number) => {
+            clearCountdown();
+            countdownRef.current = setInterval(() => {
+                const secs = Math.ceil((expiresAt - Date.now()) / 1_000);
+                if (secs <= 0) {
+                    clearCountdown();
+                    doLogout();
+                    return;
+                }
+                setSecondsLeft(secs);
+            }, 500);
+        },
+        [doLogout],
+    );
+
     const extendSession = useCallback(() => {
+        // Ping the server first so CheckSessionTimeout updates _sec_last_activity.
+        // Without this call only the frontend timer resets; the server session
+        // stays stale and the next real API call triggers a 401 redirect.
+        authApi.ping().catch(() => {
+            // 401 means the session already expired while the modal was open.
+            // The http interceptor will redirect to /login — nothing more to do here.
+        });
         lastActivityRef.current = Date.now();
         warningActiveRef.current = false;
+        expiresAtRef.current = 0;
         setShowWarning(false);
         setSecondsLeft(WARN_BEFORE_SEC);
         clearCountdown();
@@ -69,6 +103,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
         // If a warning was showing for the old timeout, dismiss it.
         if (warningActiveRef.current) {
             warningActiveRef.current = false;
+            expiresAtRef.current = 0;
             setShowWarning(false);
             setSecondsLeft(WARN_BEFORE_SEC);
             clearCountdown();
@@ -85,6 +120,47 @@ export function useSessionTimeout(timeoutMinutes: number) {
         ACTIVITY_EVENTS.forEach((e) => window.addEventListener(e, handle, { passive: true }));
         return () => ACTIVITY_EVENTS.forEach((e) => window.removeEventListener(e, handle));
     }, []);
+
+    /**
+     * Recalculates session state from wall-clock time whenever the tab regains
+     * focus. This corrects the countdown after background-tab timer throttling —
+     * the scenario where the user returns to a tab and the display shows e.g.
+     * "33 s" even though the session has already expired on the server.
+     */
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState !== 'visible') return;
+
+            const ms = timeoutMsRef.current;
+            if (ms <= 0) return;
+
+            const idle = Date.now() - lastActivityRef.current;
+            const remaining = ms - idle;
+            const warnAt = Math.min(WARN_BEFORE_SEC * 1_000, ms * 0.25);
+
+            if (remaining <= 0) {
+                // Session truly expired while tab was in background — logout immediately.
+                doLogout();
+                return;
+            }
+
+            if (remaining <= warnAt) {
+                // (Re-)calculate expiry from wall clock and restart countdown with accurate value.
+                const expiresAt = Date.now() + remaining;
+                expiresAtRef.current = expiresAt;
+                const secs = Math.max(1, Math.ceil(remaining / 1_000));
+                setSecondsLeft(secs);
+                if (!warningActiveRef.current) {
+                    warningActiveRef.current = true;
+                    setShowWarning(true);
+                }
+                startCountdown(expiresAt);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [doLogout, startCountdown]);
 
     // Main polling loop.
     useEffect(() => {
@@ -105,21 +181,12 @@ export function useSessionTimeout(timeoutMinutes: number) {
 
             if (remaining <= warnAt) {
                 warningActiveRef.current = true;
+                const expiresAt = Date.now() + remaining;
+                expiresAtRef.current = expiresAt;
                 const secs = Math.max(1, Math.ceil(remaining / 1_000));
                 setSecondsLeft(secs);
                 setShowWarning(true);
-
-                // Start the visible countdown.
-                countdownRef.current = setInterval(() => {
-                    setSecondsLeft((s) => {
-                        const next = s - 1;
-                        if (next <= 0) {
-                            doLogout();
-                            return 0;
-                        }
-                        return next;
-                    });
-                }, 1_000);
+                startCountdown(expiresAt);
             }
         }, POLL_INTERVAL_MS);
 
@@ -127,7 +194,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
             if (mainIntervalRef.current) clearInterval(mainIntervalRef.current);
             clearCountdown();
         };
-    }, [doLogout]);
+    }, [doLogout, startCountdown]);
 
     return { showWarning, secondsLeft, extendSession, doLogout };
 }
