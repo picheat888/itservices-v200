@@ -228,7 +228,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                     onKeyDown={(e) => {
                         if (e.key !== 'Enter' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
                         e.preventDefault();
-                        step < 3 ? next() : submit();
+                        if (step < 3) next(); else void submit();
                     }}
                 >
                     {step === 1 && (
