@@ -107,7 +107,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         return Object.keys(e).length === 0;
     };
 
-    const next = () => validateStep(step) && setStep((s) => s + 1);
+    const next = () => { if (validateStep(step)) setStep((s) => s + 1); };
 
     const submit = async () => {
         if (!validateStep(1) || !validateStep(2)) return;
@@ -148,7 +148,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const photoInitials = `${form.firstName[0] ?? ''}${form.lastName[0] ?? ''}`.toUpperCase();
 
     return (
-        <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+        <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
                 {cropSrc && (
                     <PhotoCropDialog
