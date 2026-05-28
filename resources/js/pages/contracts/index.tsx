@@ -154,24 +154,6 @@ export default function ContractsPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <StatCard label={t('contract_total')} value={summary?.total ?? '—'} icon={FileText} />
-                <StatCard label={t('contract_active')} value={summary?.active ?? '—'} icon={CheckCircle2} />
-                <StatCard
-                    label={t('expiring_soon')}
-                    value={summary?.expiring ?? '—'}
-                    hint={lang === 'th' ? 'ตามช่วงแจ้งเตือนสัญญา' : 'within reminder window'}
-                    hintDanger
-                    icon={Clock}
-                />
-                <StatCard
-                    label={t('contract_annual_value')}
-                    value={summary?.annual_value ?? '—'}
-                    hint={lang === 'th' ? 'ไม่รวมสัญญาที่ยกเลิก' : 'excluding cancelled'}
-                    icon={TrendingUp}
-                />
-            </div>
-
             {!!summary?.expiring && (
                 <Card className="border-amber-500/40 bg-amber-500/5 p-4">
                     <div className="flex items-center gap-3.5">
@@ -421,33 +403,74 @@ function DashboardTab({
             </div>
         );
 
-    // Group upcoming contracts into the next 12 monthly buckets; expired ones are listed separately.
+    // 12-month window starting 2 months back, so the current month (NOW) sits in
+    // the third column and recently-expired contracts stay visible to its left.
     const now = new Date();
     const months = Array.from({ length: 12 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const offset = i - 2;
+        const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
         return {
             key: `${d.getFullYear()}-${d.getMonth()}`,
             label: d.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short' }),
-            showYear: i === 0 || d.getMonth() === 0,
             year: d.getFullYear(),
-            items: [] as typeof summary.timeline,
+            isNow: offset === 0,
         };
     });
-    const overdue: typeof summary.timeline = [];
-    summary.timeline.forEach((c) => {
-        if (c.days <= 0) {
-            overdue.push(c);
-            return;
+
+    // Place each contract at its true position along the axis (0–1 across the 12
+    // months) by its expiry day, then stack into lanes so near-overlapping dots
+    // spread vertically instead of piling on one spot — a real scatter timeline.
+    const points = summary.timeline
+        .map((c) => {
+            const [y, mo, day] = c.end.split('-').map(Number);
+            let idx = months.findIndex((m) => m.key === `${y}-${mo - 1}`);
+            let within = 0.5;
+            if (idx === -1) {
+                // Outside the window: pin already-expired to the far left, far-future to the right.
+                idx = c.days <= 0 ? 0 : 11;
+                within = c.days <= 0 ? 0.1 : 0.9;
+            } else {
+                const daysInMonth = new Date(y, mo, 0).getDate();
+                within = Math.min(0.95, Math.max(0.05, (day - 0.5) / daysInMonth));
+            }
+            return { c, frac: (idx + within) / 12 };
+        })
+        .sort((a, b) => a.frac - b.frac);
+
+    const MIN_GAP = 0.03; // dots closer than 3% of the axis get pushed to a new lane
+    const laneLastFrac: number[] = [];
+    const placed = points.map((p) => {
+        let lane = 0;
+        while (lane < laneLastFrac.length && p.frac - laneLastFrac[lane] < MIN_GAP) {
+            lane++;
         }
-        const [y, mo] = c.end.split('-').map(Number);
-        const bucket = months.find((m) => m.key === `${y}-${mo - 1}`) ?? months[months.length - 1];
-        bucket.items.push(c);
+        laneLastFrac[lane] = p.frac;
+        return { ...p, lane };
     });
-    const peak = Math.max(1, ...months.map((m) => m.items.length));
+    const laneCount = Math.max(1, laneLastFrac.length);
+    const plotHeight = Math.max(64, laneCount * 16 + 16);
 
     return (
         <div className="space-y-6 p-5">
-            {/* Expiry timeline — one column per month for the next 12 months */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
+                <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
+                <StatCard
+                    label={t('expiring_soon')}
+                    value={summary.expiring}
+                    hint={lang === 'th' ? 'ตามช่วงแจ้งเตือนสัญญา' : 'within reminder window'}
+                    hintDanger
+                    icon={Clock}
+                />
+                <StatCard
+                    label={t('contract_annual_value')}
+                    value={summary.annual_value}
+                    hint={lang === 'th' ? 'ไม่รวมสัญญาที่ยกเลิก' : 'excluding cancelled'}
+                    icon={TrendingUp}
+                />
+            </div>
+
+            {/* Expiry timeline — 12 months, starting 2 months back with NOW in the third column */}
             <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('contract_timeline')}</span>
@@ -469,56 +492,56 @@ function DashboardTab({
 
                 {summary.timeline.length === 0 ? (
                     <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-6 text-center text-sm">
-                        {lang === 'th' ? 'ไม่มีสัญญาที่จะหมดอายุใน 12 เดือนข้างหน้า' : 'No expirations in the next 12 months.'}
+                        {lang === 'th' ? 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้' : 'No expirations in this 12-month window.'}
                     </div>
                 ) : (
-                    <div className="border-border rounded-md border">
-                        <div className="grid grid-cols-12 items-end gap-px px-2 pt-3">
+                    <div className="bg-muted/40 relative overflow-hidden rounded-lg">
+                        {/* Full-height NOW column highlight, sitting behind the dots and labels */}
+                        <div className="pointer-events-none absolute inset-0 grid grid-cols-12 px-2">
                             {months.map((m) => (
-                                <div key={m.key} className="flex flex-col items-center justify-end gap-1" style={{ minHeight: `${peak * 16 + 8}px` }}>
-                                    {m.items.map((c) => (
-                                        <button
-                                            key={c.id}
-                                            title={`${c.code} · ${c.name} — ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`}
-                                            onClick={() => onSelect(c.id)}
-                                            className={cn(
-                                                'ring-background h-3 w-3 rounded-full ring-2 transition-transform hover:scale-125',
-                                                c.days <= 30 ? 'bg-amber-500' : 'bg-brand',
-                                            )}
-                                        />
-                                    ))}
-                                </div>
+                                <div key={m.key} className={m.isNow ? 'bg-brand/10' : ''} />
                             ))}
                         </div>
-                        <div className="border-border mt-1 grid grid-cols-12 gap-px border-t px-2 py-1.5">
+                        <div className="relative z-10 mx-2 mt-3" style={{ height: `${plotHeight}px` }}>
+                            {/* Month separators */}
+                            {months.slice(1).map((m, i) => (
+                                <div key={m.key} className="border-border/40 absolute inset-y-0 border-l" style={{ left: `${((i + 1) / 12) * 100}%` }} />
+                            ))}
+                            {/* Axis baseline */}
+                            <div className="border-border absolute inset-x-0 bottom-0 border-t" />
+                            {/* Contract dots, positioned by actual expiry date */}
+                            {placed.map(({ c, frac, lane }) => (
+                                <button
+                                    key={c.id}
+                                    title={
+                                        c.days <= 0
+                                            ? `${c.code} · ${c.name} — ${c.end} (${lang === 'th' ? `หมดอายุไป ${-c.days} วัน` : `expired ${-c.days}d ago`})`
+                                            : `${c.code} · ${c.name} — ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`
+                                    }
+                                    onClick={() => onSelect(c.id)}
+                                    className={cn(
+                                        'ring-background absolute h-3 w-3 -translate-x-1/2 rounded-full ring-2 transition-transform hover:z-10 hover:scale-125',
+                                        c.days <= 0 ? 'bg-destructive' : c.days <= 30 ? 'bg-amber-500' : 'bg-brand',
+                                    )}
+                                    style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
+                                />
+                            ))}
+                        </div>
+                        <div className="relative z-10 mt-1 grid grid-cols-12 px-2 py-1.5">
                             {months.map((m) => (
                                 <div key={m.key} className="text-center leading-tight">
-                                    <div className="text-foreground text-[11px] font-medium">
+                                    {m.isNow && (
+                                        <div className="text-brand text-[9px] font-bold tracking-wide uppercase">
+                                            {lang === 'th' ? 'ปัจจุบัน' : 'NOW'}
+                                        </div>
+                                    )}
+                                    <div className={cn('text-[11px] font-medium', m.isNow ? 'text-brand font-bold' : 'text-foreground')}>
                                         {m.label}
-                                        {m.showYear ? ` '${String(m.year).slice(2)}` : ''}
                                     </div>
-                                    <div className="text-muted-foreground text-[10px]">{m.items.length || ''}</div>
+                                    <div className={cn('text-[10px]', m.isNow ? 'text-brand/80' : 'text-muted-foreground')}>{m.year}</div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                )}
-
-                {overdue.length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-destructive text-[11px] font-medium tracking-wide uppercase">
-                            {lang === 'th' ? 'เลยกำหนด' : 'Overdue'}
-                        </span>
-                        {overdue.map((c) => (
-                            <button
-                                key={c.id}
-                                onClick={() => onSelect(c.id)}
-                                className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-full border px-2.5 py-0.5 text-xs transition-colors"
-                            >
-                                {c.code} · {-c.days}
-                                {lang === 'th' ? ' วัน' : 'd'}
-                            </button>
-                        ))}
                     </div>
                 )}
             </div>

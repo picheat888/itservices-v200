@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Enums\ContractType;
 use App\Models\Contract;
+use App\Models\ContractAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -41,6 +42,13 @@ class ContractResource extends JsonResource
             'notify_30' => $this->notify_30,
             'notify_7' => $this->notify_7,
             'notes' => $this->notes,
+            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn (ContractAttachment $a) => [
+                'id' => $a->id,
+                'name' => $a->original_name,
+                'size' => $a->size,
+                'url' => $a->url(),
+                'created_at' => $a->created_at?->toDateString(),
+            ])->all(), []),
             // Assets module not built yet — leased equipment cannot be linked.
             'linked_assets' => [],
         ];

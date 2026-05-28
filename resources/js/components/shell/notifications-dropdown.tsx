@@ -31,6 +31,10 @@ function moduleOf(type: string): string {
  */
 function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; color: string; bg: string } {
     if (n.data.type === 'contract_expiring') {
+        // Already past due → red; still inside the reminder window → amber.
+        if ((n.data.days_remaining ?? 0) <= 0) {
+            return { Icon: CalendarClock, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        }
         return { Icon: CalendarClock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
     if (n.data.subtype === 'offboarding') {
@@ -164,7 +168,9 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                     </div>
                                     <div className="text-muted-foreground mt-0.5 text-xs">
                                         {n.data.type === 'contract_expiring'
-                                            ? t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining))
+                                            ? (n.data.days_remaining ?? 0) <= 0
+                                                ? t('notif_contract_expired').replace('{days}', String(Math.abs(n.data.days_remaining ?? 0)))
+                                                : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining))
                                             : n.data.subtype === 'offboarding'
                                               ? t('notif_resigned')
                                               : t('notif_cred_required')}

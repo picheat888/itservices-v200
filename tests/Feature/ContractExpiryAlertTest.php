@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract;
 use App\Models\ContractAlertLog;
+use App\Models\ContractBellLog;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
@@ -26,7 +27,7 @@ class ContractExpiryAlertTest extends TestCase
         return User::factory()->create(['role' => 'itrole', 'email' => $email]);
     }
 
-    /** Creates an active contract expiring in $days days with the given thresholds enabled. */
+    /** Creates a contract whose end date is $days from now (negative = already expired) with the given thresholds enabled. */
     private function contractExpiringIn(int $days, array $thresholds): Contract
     {
         // Explicitly set all notify columns so DB defaults don't bleed in.
@@ -47,22 +48,22 @@ class ContractExpiryAlertTest extends TestCase
         return app(ContractExpiryAlertService::class);
     }
 
-    public function test_alerts_a_contract_that_crossed_a_threshold(): void
+    public function test_fires_a_daily_bell_for_a_contract_in_its_reminder_window(): void
     {
         Notification::fake();
         Bus::fake();
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(30, [30]);
 
-        $sent = $this->service()->run();
+        $belled = $this->service()->run();
 
-        $this->assertSame(1, $sent);
+        $this->assertSame(1, $belled);
         Notification::assertSentTo($user, ContractExpiryNotification::class);
-        Bus::assertDispatched(SendTemplatedEmail::class);
-        $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 30]);
+        $this->assertSame(1, ContractBellLog::where('contract_id', $contract->id)
+            ->whereDate('bell_date', now()->toDateString())->count());
     }
 
-    public function test_does_not_alert_twice_for_the_same_threshold(): void
+    public function test_bell_does_not_fire_twice_on_the_same_day(): void
     {
         Notification::fake();
         Bus::fake();
@@ -73,21 +74,127 @@ class ContractExpiryAlertTest extends TestCase
         $secondRun = $this->service()->run();
 
         $this->assertSame(0, $secondRun);
+        $this->assertSame(1, ContractBellLog::count());
+    }
+
+    public function test_bell_fires_again_the_next_day(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();
+        $this->travel(1)->days();
+        $secondRun = $this->service()->run();
+
+        $this->assertSame(1, $secondRun);
+        $this->assertSame(2, ContractBellLog::count());
+        // The email channel must NOT re-fire — same threshold already covered.
         $this->assertSame(1, ContractAlertLog::count());
     }
 
-    public function test_crossing_multiple_thresholds_sends_one_alert_and_logs_all(): void
+    public function test_fires_a_bell_for_an_expired_contract(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(-5, [30]);
+
+        $belled = $this->service()->run();
+
+        $this->assertSame(1, $belled);
+        Notification::assertSentTo($user, ContractExpiryNotification::class);
+        $this->assertDatabaseHas('contract_bell_logs', ['contract_id' => $contract->id]);
+    }
+
+    public function test_emails_at_a_crossed_threshold_and_logs_it(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();
+
+        Bus::assertDispatched(SendTemplatedEmail::class);
+        $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 30]);
+    }
+
+    public function test_does_not_email_the_same_threshold_twice(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();
+        $this->travel(1)->days();
+        $this->service()->run();
+
+        // One threshold email across both days (the bell carries the daily nag).
+        Bus::assertDispatchedTimes(SendTemplatedEmail::class, 1);
+        $this->assertSame(1, ContractAlertLog::count());
+    }
+
+    public function test_crossing_multiple_thresholds_emails_once_and_logs_all(): void
     {
         Notification::fake();
         Bus::fake();
         $this->alertedUser();
         $contract = $this->contractExpiringIn(25, [60, 30]); // both 60 and 30 crossed
 
-        $sent = $this->service()->run();
+        $this->service()->run();
 
-        $this->assertSame(1, $sent);
+        Bus::assertDispatchedTimes(SendTemplatedEmail::class, 1);
         $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 30]);
         $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 60]);
+    }
+
+    public function test_sends_one_expired_email_then_no_more(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $contract = $this->contractExpiringIn(-5, [30]);
+
+        $this->service()->run();
+        $this->travel(1)->days();
+        $this->service()->run();
+
+        // The expired mail is one-shot (sentinel threshold 0); the bell still nags daily.
+        Bus::assertDispatchedTimes(SendTemplatedEmail::class, 1);
+        $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 0]);
+        $this->assertSame(2, ContractBellLog::count());
+    }
+
+    public function test_skips_a_contract_with_no_reminders_enabled(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $this->contractExpiringIn(-5, []); // expired but opted out of all reminders
+
+        $belled = $this->service()->run();
+
+        $this->assertSame(0, $belled);
+        Notification::assertNothingSent();
+        $this->assertSame(0, ContractBellLog::count());
+        $this->assertSame(0, ContractAlertLog::count());
+    }
+
+    public function test_cancelled_contracts_are_skipped(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        $cancelled = $this->contractExpiringIn(30, [30]);
+        $cancelled->update(['cancelled_at' => now()]);
+
+        $belled = $this->service()->run();
+
+        $this->assertSame(0, $belled);
+        $this->assertSame(0, ContractBellLog::count());
     }
 
     public function test_user_without_permission_is_not_notified(): void
@@ -97,31 +204,17 @@ class ContractExpiryAlertTest extends TestCase
         User::factory()->create(['role' => 'user', 'email' => 'nobody@inaba.co.th']);
         $this->contractExpiringIn(30, [30]);
 
-        $sent = $this->service()->run();
+        $belled = $this->service()->run();
 
-        $this->assertSame(0, $sent);
+        $this->assertSame(0, $belled);
         Notification::assertNothingSent();
-        // The threshold must NOT be burned when nobody is configured to receive
-        // it — otherwise enabling the permission later would never deliver it.
+        // No ledger may be burned when nobody is configured to receive alerts —
+        // otherwise enabling the permission later would never deliver them.
+        $this->assertSame(0, ContractBellLog::count());
         $this->assertSame(0, ContractAlertLog::count());
     }
 
-    public function test_cancelled_and_expired_contracts_are_skipped(): void
-    {
-        Notification::fake();
-        Bus::fake();
-        $this->alertedUser();
-        $cancelled = $this->contractExpiringIn(30, [30]);
-        $cancelled->update(['cancelled_at' => now()]);
-        $expired = $this->contractExpiringIn(-5, [30]);
-
-        $sent = $this->service()->run();
-
-        $this->assertSame(0, $sent);
-        $this->assertSame(0, ContractAlertLog::count());
-    }
-
-    public function test_reset_lets_a_renewed_contract_alert_again(): void
+    public function test_reset_clears_both_ledgers(): void
     {
         Notification::fake();
         Bus::fake();
@@ -129,11 +222,30 @@ class ContractExpiryAlertTest extends TestCase
         $contract = $this->contractExpiringIn(30, [30]);
         $this->service()->run();
 
-        $this->service()->resetForContract($contract);
-        $contract->update(['end_date' => now()->addDays(30)]);
-        $sent = $this->service()->run();
+        $this->assertSame(1, ContractBellLog::count());
+        $this->assertSame(1, ContractAlertLog::count());
 
-        $this->assertSame(1, $sent);
+        $this->service()->resetForContract($contract);
+
+        $this->assertSame(0, ContractBellLog::count());
+        $this->assertSame(0, ContractAlertLog::count());
+    }
+
+    public function test_renewing_via_api_resets_the_ledgers(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $this->service()->run(); // logs bell + threshold 30
+
+        $this->actingAs($user)
+            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
+            ->assertOk();
+
+        $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
+        $this->assertSame(0, ContractBellLog::where('contract_id', $contract->id)->count());
     }
 
     public function test_command_runs_and_reports_count(): void
@@ -148,22 +260,6 @@ class ContractExpiryAlertTest extends TestCase
             ->assertExitCode(0);
     }
 
-    public function test_renewing_via_api_resets_the_alert_ledger(): void
-    {
-        Notification::fake();
-        Bus::fake();
-        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
-        $user = $this->alertedUser();
-        $contract = $this->contractExpiringIn(30, [30]);
-        $this->service()->run(); // logs threshold 30
-
-        $this->actingAs($user)
-            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
-            ->assertOk();
-
-        $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
-    }
-
     public function test_alerts_on_the_90_day_threshold(): void
     {
         Notification::fake();
@@ -171,9 +267,9 @@ class ContractExpiryAlertTest extends TestCase
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(90, [90]);
 
-        $sent = $this->service()->run();
+        $belled = $this->service()->run();
 
-        $this->assertSame(1, $sent);
+        $this->assertSame(1, $belled);
         Notification::assertSentTo($user, ContractExpiryNotification::class);
         $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 90]);
     }

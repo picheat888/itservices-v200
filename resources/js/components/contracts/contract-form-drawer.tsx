@@ -8,9 +8,18 @@ import { useVendors } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { BillingCycle, Contract, ContractType, Vendor } from '@/types';
-import { Calendar, Check, Cog, FileText, Laptop, Loader2, Paperclip, Wifi } from 'lucide-react';
+import type { BillingCycle, Contract, ContractAttachment, ContractType, Vendor } from '@/types';
+import { Calendar, Check, Cog, FileText, Laptop, Loader2, Paperclip, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+
+const MAX_FILES = 10;
+const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+
+/** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
+function formatSize(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string }[] = [
     { value: 'software', icon: FileText, labelKey: 'contract_type_software' },
@@ -74,9 +83,16 @@ export function ContractFormDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { create, update } = useContractMutations();
+    const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
+
+    // Attachments: already-saved files (with pending removals) + newly picked files
+    // not yet uploaded. Both are applied when the form is saved.
+    const [existing, setExisting] = useState<ContractAttachment[]>([]);
+    const [removedIds, setRemovedIds] = useState<number[]>([]);
+    const [pending, setPending] = useState<File[]>([]);
+    const [fileErr, setFileErr] = useState('');
 
     const vendorOptions = useMemo(() => {
         const opts = (vendors as Vendor[]).map((v) => ({
@@ -99,6 +115,10 @@ export function ContractFormDrawer({
         if (!open) return;
         setErr({});
         setSaveState('idle');
+        setExisting(editing?.attachments ?? []);
+        setRemovedIds([]);
+        setPending([]);
+        setFileErr('');
         if (editing) {
             setForm({
                 code: editing.code,
@@ -126,7 +146,36 @@ export function ContractFormDrawer({
 
     const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-    const submit = () => {
+    const visibleExisting = existing.filter((a) => !removedIds.includes(a.id));
+    const atMax = visibleExisting.length + pending.length >= MAX_FILES;
+
+    // Validate picked files client-side (PDF only, ≤25MB, within the count cap).
+    const onPickFiles = (list: FileList | null) => {
+        if (!list) return;
+        setFileErr('');
+        let slots = MAX_FILES - visibleExisting.length - pending.length;
+        const accepted: File[] = [];
+        for (const f of Array.from(list)) {
+            const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+            if (!isPdf) {
+                setFileErr(t('attachment_pdf_only'));
+                continue;
+            }
+            if (f.size > MAX_SIZE) {
+                setFileErr(t('attachment_too_big'));
+                continue;
+            }
+            if (slots <= 0) {
+                setFileErr(t('attachment_max'));
+                break;
+            }
+            accepted.push(f);
+            slots--;
+        }
+        if (accepted.length) setPending((p) => [...p, ...accepted]);
+    };
+
+    const submit = async () => {
         const e: Record<string, string> = {};
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         if (!form.code.trim()) e.code = required;
@@ -161,22 +210,30 @@ export function ContractFormDrawer({
             notes: form.notes.trim() || null,
         };
 
-        const onSuccess = () => {
+        try {
+            // Persist the contract first so a new one has an id to attach files to.
+            const saved = editing ? await update.mutateAsync({ id: editing.id, payload }) : await create.mutateAsync(payload);
+            const id = editing ? editing.id : saved.id;
+
+            for (const attachmentId of removedIds) {
+                await deleteAttachment.mutateAsync({ id, attachmentId });
+            }
+            if (pending.length) {
+                await uploadAttachments.mutateAsync({ id, files: pending });
+            }
+
             setSaveState('done');
             setTimeout(() => {
                 setSaveState('idle');
                 onClose();
             }, 700);
-        };
-
-        if (editing) {
-            update.mutate({ id: editing.id, payload }, { onSuccess });
-        } else {
-            create.mutate(payload, { onSuccess });
+        } catch (e) {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            setFileErr(msg || t('attachment_upload_failed'));
         }
     };
 
-    const saving = create.isPending || update.isPending;
+    const saving = create.isPending || update.isPending || uploadAttachments.isPending || deleteAttachment.isPending;
 
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -328,10 +385,74 @@ export function ContractFormDrawer({
                         <div className="rounded-md bg-muted/50 px-3 py-4 text-center text-sm text-muted-foreground">{t('coming_soon')}</div>
                     </Field>
 
-                    <Field label={t('contract_attachments')} help={lang === 'th' ? 'PDF ไม่เกิน 25MB' : 'PDF up to 25MB'}>
-                        <div className="flex flex-col items-center gap-1 rounded-md border border-dashed border-border px-3 py-5 text-center text-sm text-muted-foreground">
-                            <Paperclip className="h-4 w-4" />
-                            <span>{t('coming_soon')}</span>
+                    <Field label={t('contract_attachments')}>
+                        <div className="space-y-2">
+                            {visibleExisting.length === 0 && pending.length === 0 && (
+                                <p className="text-xs text-muted-foreground">{t('attachment_none')}</p>
+                            )}
+
+                            {visibleExisting.map((a) => (
+                                <div key={`e-${a.id}`} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <a
+                                        href={a.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="min-w-0 flex-1 truncate hover:text-brand hover:underline"
+                                    >
+                                        {a.name}
+                                    </a>
+                                    <span className="shrink-0 text-xs text-muted-foreground">{formatSize(a.size)}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRemovedIds((r) => [...r, a.id])}
+                                        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {pending.map((f, i) => (
+                                <div key={`p-${i}`} className="flex items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-sm">
+                                    <FileText className="text-brand h-4 w-4 shrink-0" />
+                                    <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                                    <span className="bg-brand/10 text-brand shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                                        {t('attachment_new')}
+                                    </span>
+                                    <span className="shrink-0 text-xs text-muted-foreground">{formatSize(f.size)}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPending((p) => p.filter((_, j) => j !== i))}
+                                        className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {!atMax && (
+                                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground hover:bg-accent">
+                                    <Paperclip className="h-4 w-4" />
+                                    <span>{t('attachment_pick')}</span>
+                                    <input
+                                        type="file"
+                                        accept="application/pdf"
+                                        multiple
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            onPickFiles(e.target.files);
+                                            e.target.value = '';
+                                        }}
+                                    />
+                                </label>
+                            )}
+
+                            {fileErr ? (
+                                <p className="text-xs text-destructive">{fileErr}</p>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">{t('attachment_hint')}</p>
+                            )}
                         </div>
                     </Field>
                 </div>

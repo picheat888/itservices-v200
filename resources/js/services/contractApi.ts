@@ -57,4 +57,13 @@ export const contractApi = {
     renew: (id: number, months = 12) => mutate<Contract>('post', `/contracts/${id}/renew`, { months }),
     cancel: (id: number) => mutate<Contract>('post', `/contracts/${id}/cancel`),
     remove: (id: number) => mutate<void>('delete', `/contracts/${id}`),
+    uploadAttachments: async (id: number, files: File[]): Promise<Contract> => {
+        await ensureCsrf();
+        const fd = new FormData();
+        files.forEach((f) => fd.append('files[]', f));
+        const { data } = await http.post<ApiEnvelope<Contract>>(`/contracts/${id}/attachments`, fd);
+        return data.data;
+    },
+    deleteAttachment: (id: number, attachmentId: number) =>
+        mutate<Contract>('delete', `/contracts/${id}/attachments/${attachmentId}`),
 };
