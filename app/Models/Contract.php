@@ -16,7 +16,7 @@ class Contract extends Model
     }
 
     protected $fillable = [
-        'code', 'vendor', 'name', 'type', 'start_date', 'end_date',
+        'code', 'vendor', 'name', 'title', 'type', 'start_date', 'end_date',
         'value', 'billing_cycle', 'auto_renew', 'cancelled_at',
         'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];
