@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
@@ -87,6 +88,15 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('contracts/{contract}/attachments', [ContractAttachmentController::class, 'store'])->name('api.contracts.attachments.store');
     Route::delete('contracts/{contract}/attachments/{attachment}', [ContractAttachmentController::class, 'destroy'])->name('api.contracts.attachments.destroy');
     Route::apiResource('contracts', ContractController::class);
+
+    // Assets Management module
+    Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
+    Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
+    Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');
+    Route::post('assets/{asset}/accept', [AssetController::class, 'accept'])->name('api.assets.accept');
+    Route::post('assets/{asset}/receive', [AssetController::class, 'markReceived'])->name('api.assets.receive');
+    Route::post('assets/{asset}/maintenance', [AssetController::class, 'toggleMaintenance'])->name('api.assets.maintenance');
+    Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module
     Route::get('stock-items/summary', [StockItemController::class, 'summary'])->name('api.stock-items.summary');
