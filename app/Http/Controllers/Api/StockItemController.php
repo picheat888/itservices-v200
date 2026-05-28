@@ -48,7 +48,10 @@ class StockItemController extends Controller
 
         if ($request->filled('status')) {
             $status = $request->query('status');
-            $items = $items->filter(fn (StockItem $i) => $i->status() === $status)->values();
+            // 'alerts' is a virtual filter: show every item that is not healthy (ok).
+            $items = $status === 'alerts'
+                ? $items->filter(fn (StockItem $i) => $i->status() !== 'ok')->values()
+                : $items->filter(fn (StockItem $i) => $i->status() === $status)->values();
         }
 
         return response()->json([
@@ -67,7 +70,8 @@ class StockItemController extends Controller
 
         $items = StockItem::all();
 
-        $low = $items->filter(fn (StockItem $i) => in_array($i->status(), ['low', 'out'], true));
+        $out = $items->filter(fn (StockItem $i) => $i->status() === 'out');
+        $low = $items->filter(fn (StockItem $i) => $i->status() === 'low');
         $over = $items->filter(fn (StockItem $i) => $i->status() === 'over');
         $dead = $items->filter(fn (StockItem $i) => $i->status() === 'dead');
 
@@ -88,11 +92,13 @@ class StockItemController extends Controller
             'skus' => $items->count(),
             'total_units' => $items->sum('current_stock'),
             'total_value' => round($items->sum(fn (StockItem $i) => (float) $i->cost * $i->current_stock)),
+            'out_count' => $out->count(),
             'low_count' => $low->count(),
             'over_count' => $over->count(),
             'dead_count' => $dead->count(),
+            'out_items' => StockItemResource::collection($out->sortBy('name')->values()),
             'low_items' => StockItemResource::collection($low->sortBy('current_stock')->values()),
-            'over_items' => StockItemResource::collection($over->values()),
+            'over_items' => StockItemResource::collection($over->sortByDesc(fn (StockItem $i) => $i->current_stock - $i->max_stock)->values()),
             'dead_items' => StockItemResource::collection($dead->values()),
             'by_warehouse' => $byWarehouse,
             'by_category' => $byCategory,

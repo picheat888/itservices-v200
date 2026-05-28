@@ -1,3 +1,4 @@
+import type React from 'react';
 import { Column, DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { MovementDrawer } from '@/components/stock/movement-drawer';
@@ -45,6 +46,45 @@ function StockBar({ item }: { item: StockItem }) {
                 <span className="text-muted-foreground"> / {item.min_stock}–{item.max_stock}</span>
             </div>
         </div>
+    );
+}
+
+
+/** Alert banner shown when any items are in a warning state. Displays real item data grouped by type. */
+function AlertCard({
+    summary,
+    t,
+    onViewItems,
+}: {
+    summary: import('@/types').StockSummary;
+    t: ReturnType<typeof useT>;
+    onViewItems: () => void;
+}) {
+    const hasCritical = summary.out_count > 0 || summary.low_count > 0;
+    return (
+        <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                    <span className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full', hasCritical ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600')}>
+                        <AlertTriangle className="h-5 w-5" />
+                    </span>
+                    <div>
+                        <div className="font-semibold">{t('stock_minmax_alerts')}</div>
+                        <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
+                            {[
+                                summary.out_count > 0  && <span key="out"  className="text-destructive font-medium">{summary.out_count} {t('stock_alert_out')}</span>,
+                                summary.low_count > 0  && <span key="low"  className="text-amber-600 font-medium">{summary.low_count} {t('stock_alert_low')}</span>,
+                                summary.over_count > 0 && <span key="over" className="text-blue-600 font-medium">{summary.over_count} {t('stock_alert_over')}</span>,
+                                summary.dead_count > 0 && <span key="dead" className="text-muted-foreground font-medium">{summary.dead_count} {t('stock_alert_dead')}</span>,
+                            ].filter(Boolean).reduce<React.ReactNode[]>((acc, el, i) => (i === 0 ? [el] : [...acc, <span key={`sep-${i}`} className="text-muted-foreground/50">|</span>, el]), [])}
+                        </div>
+                    </div>
+                </div>
+                <Button variant="outline" size="sm" className="shrink-0" onClick={onViewItems}>{t('stock_view_items')}</Button>
+            </div>
+
+        </Card>
     );
 }
 
@@ -113,11 +153,11 @@ export default function StockPage() {
     const kpis = [
         { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
         { label: t('stock_kpi_value'), value: summary ? fmtK(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
-        { label: t('stock_kpi_low'), value: summary?.low_count ?? '—', sub: t('stock_needs_reorder'), icon: AlertTriangle },
+        { label: t('stock_kpi_low'), value: summary ? (summary.out_count + summary.low_count) : '—', sub: t('stock_needs_reorder'), icon: AlertTriangle },
         { label: t('stock_kpi_over'), value: summary?.over_count ?? '—', sub: t('stock_overstock'), icon: TriangleAlert },
     ];
 
-    const hasAlerts = !!summary && (summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
+    const hasAlerts = !!summary && (summary.out_count > 0 || summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
 
     const tabs = [
         { id: 'dashboard' as const, label: t('sub_dashboard') },
@@ -173,22 +213,7 @@ export default function StockPage() {
             </div>
 
             {hasAlerts && summary && (
-                <Card className={cn('border p-4', summary.low_count ? 'border-destructive/40' : 'border-amber-500/40')}>
-                    <div className="flex items-center gap-3">
-                        <span className={cn('flex h-10 w-10 items-center justify-center rounded-full', summary.low_count ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600')}>
-                            <AlertTriangle className="h-5 w-5" />
-                        </span>
-                        <div className="flex-1">
-                            <div className="font-semibold">{t('stock_minmax_alerts')}</div>
-                            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-4 text-sm">
-                                {summary.low_count > 0 && <span><b className="text-destructive">{summary.low_count}</b> {t('stock_below_or_out')}</span>}
-                                {summary.over_count > 0 && <span><b className="text-blue-600">{summary.over_count}</b> {t('stock_overstock')}</span>}
-                                {summary.dead_count > 0 && <span><b className="text-muted-foreground">{summary.dead_count}</b> {t('stock_dead_90')}</span>}
-                            </div>
-                        </div>
-                        <Button variant="outline" onClick={() => setTab('items')}>{t('stock_view_items')}</Button>
-                    </div>
-                </Card>
+                <AlertCard summary={summary} t={t} onViewItems={() => { setTab('items'); setStatusFilter('alerts'); }} />
             )}
 
             <Card className="overflow-hidden">
@@ -233,11 +258,22 @@ export default function StockPage() {
                                     <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">{t('stock_all_statuses')}</SelectItem>
+                                        <SelectItem value="alerts">{t('stock_st_alerts')}</SelectItem>
                                         {(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => (
                                             <SelectItem key={s} value={s}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {(search !== '' || cat !== 'all' || wh !== 'all' || statusFilter !== 'all') && (
+                                    <a
+                                        href="#"
+                                        onClick={(e) => { e.preventDefault(); setSearch(''); setCat('all'); setWh('all'); setStatusFilter('all'); }}
+                                        className="flex items-center gap-1 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-medium text-brand hover:bg-brand/20 transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                        Reset
+                                    </a>
+                                )}
                             </div>
                             <DataTable columns={columns} rows={items} rowKey={(i) => i.id} />
                         </div>
