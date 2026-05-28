@@ -35,7 +35,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        $query = Contract::with('owner')
+        $query = Contract::query()
             ->orderByRaw('cancelled_at IS NOT NULL')
             ->orderBy('end_date');
 
@@ -88,7 +88,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        $contracts = Contract::with('owner')->get();
+        $contracts = Contract::all();
 
         $live = $contracts->filter(fn ($c) => $c->cancelled_at === null);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
@@ -151,7 +151,7 @@ class ContractController extends Controller
         $contract = $this->service->create($request->validated());
         AuditLog::record('Created contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load('owner')))
+        return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -159,7 +159,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load('owner')))->response();
+        return (new ContractResource($contract))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
@@ -167,7 +167,7 @@ class ContractController extends Controller
         $contract = $this->service->update($contract, $request->validated());
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load('owner')))
+        return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -181,7 +181,7 @@ class ContractController extends Controller
         $this->alertService->resetForContract($contract);
         AuditLog::record('Renewed contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load('owner')))
+        return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -194,7 +194,7 @@ class ContractController extends Controller
         $action = $contract->cancelled_at !== null ? 'Cancelled contract' : 'Reactivated contract';
         AuditLog::record($action, "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load('owner')))
+        return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
     }
 

@@ -37,7 +37,6 @@ class StoreContractRequest extends FormRequest
             'value' => ['required', 'numeric', 'min:0'],
             'billing_cycle' => ['required', Rule::in(['monthly', 'quarterly', 'yearly'])],
             'auto_renew' => ['sometimes', 'boolean'],
-            'owner_id' => ['nullable', 'integer', 'exists:employees,id'],
             'notify_150' => ['sometimes', 'boolean'],
             'notify_120' => ['sometimes', 'boolean'],
             'notify_90' => ['sometimes', 'boolean'],

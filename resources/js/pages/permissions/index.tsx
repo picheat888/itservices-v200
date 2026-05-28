@@ -20,7 +20,7 @@ import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-lab
 import { cn } from '@/lib/utils';
 import type { AuditDetails, GroupRole, RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
-import { Check, ChevronLeft, ChevronRight, Eye, Pencil, Plus, Save, Trash2, Users } from 'lucide-react';
+import { Briefcase, Check, ChevronLeft, ChevronRight, Eye, Pencil, Plus, Save, Shield, Trash2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -70,9 +70,19 @@ export default function PermissionsPage() {
 // Groups the permission modules under the same sections as the sidebar nav
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
-const PERM_SECTIONS: { label: string; modules: string[] }[] = [
-    { label: 'nav_workspace', modules: ['employees', 'tickets', 'requests', 'assets', 'contracts'] },
-    { label: 'nav_admin', modules: ['system'] },
+const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
+    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees'] },
+    { label: 'nav_admin', icon: Shield, modules: ['system'] },
+];
+
+// Administration is presented as the design's four cards. Permission / Email /
+// Setting reuse the live `system.*` keys (toggleable + persisted); the remaining
+// rows are presentational "coming soon" placeholders for features not yet built.
+const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
+    { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
+    { module: 'email_templates', keys: ['system.configure_notifications', 'email.edit', 'email.enable', 'email.create', 'email.test'] },
+    { module: 'settings', keys: ['system.edit_settings', 'settings.branding', 'settings.sla', 'settings.masterdata', 'settings.integrations'] },
+    { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
 
 
@@ -128,11 +138,15 @@ function RolesTab() {
     // Build the section list from the catalog, dropping empty sections and
     // sweeping any unmapped module into a trailing "Other" section.
     const sections = PERM_SECTIONS
-        .map((s) => ({ label: s.label, modules: s.modules.filter((m) => data.catalog[m]) }))
+        .map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) }))
         .filter((s) => s.modules.length > 0);
     const knownModules = new Set(PERM_SECTIONS.flatMap((s) => s.modules));
     const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
-    if (leftover.length > 0) sections.push({ label: 'perm_other', modules: leftover });
+    if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
+
+    // A toggle reads "on" only for live permissions the role actually holds
+    // (super holds every live permission). Used for the section/module counts.
+    const isOn = (key: string) => isLivePermission(key) && (role.is_super || draft.has(key));
 
     return (
         <>
@@ -238,19 +252,35 @@ function RolesTab() {
                     </div>
 
                     <div className="space-y-6">
-                        {sections.map((section) => (
+                        {sections.map((section) => {
+                            const SectionIcon = section.icon;
+                            // Workspace cards come from the backend catalog; Administration is
+                            // presented as the design's fixed four-card split.
+                            const groups = section.label === 'nav_admin'
+                                ? ADMIN_GROUPS
+                                : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
+                            const sectionActions = groups.flatMap((g) => g.keys);
+                            const sectionOn = sectionActions.filter(isOn).length;
+                            return (
                             <div key={section.label}>
-                                <div className="mb-3 border-b border-border pb-1.5 text-sm font-bold text-foreground">
-                                    {t(section.label)}
+                                <div className="mb-3 flex items-center gap-2 border-b border-border pb-1.5">
+                                    <SectionIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-sm font-bold text-foreground">{t(section.label)}</span>
+                                    <span className="ml-auto font-mono text-[11px] text-muted-foreground">{sectionOn} / {sectionActions.length}</span>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    {section.modules.map((module) => (
-                                        <div key={module} className="rounded-lg border border-border p-3.5">
-                                            <div className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{moduleLabel(module, lang)}</div>
+                                    {groups.map((group) => {
+                                        const moduleOn = group.keys.filter(isOn).length;
+                                        return (
+                                        <div key={group.module} className="rounded-lg border border-border p-3.5">
+                                            <div className="mb-2.5 flex items-center justify-between gap-2">
+                                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{moduleLabel(group.module, lang)}</span>
+                                                <span className={cn('font-mono text-[10.5px] font-bold', moduleOn === 0 ? 'text-muted-foreground' : 'text-brand')}>{moduleOn}/{group.keys.length}</span>
+                                            </div>
                                             <div className="space-y-2">
-                                                {data.catalog[module].map((action) => {
-                                                    const key = `${module}.${action}`;
+                                                {group.keys.map((key) => {
+                                                    const [mod, action] = key.split('.');
                                                     const live = isLivePermission(key);
                                                     // Coming-soon permissions are shown off and locked — the
                                                     // feature isn't built yet, so the switch can't be turned on.
@@ -259,7 +289,7 @@ function RolesTab() {
                                                     return (
                                                         <div key={key} className="flex items-center justify-between gap-2">
                                                             <span className={cn('text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
-                                                                {actionLabel(module, action, lang)}
+                                                                {actionLabel(mod, action, lang)}
                                                                 {!live && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
                                                             </span>
                                                             <button
@@ -282,10 +312,12 @@ function RolesTab() {
                                                 })}
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

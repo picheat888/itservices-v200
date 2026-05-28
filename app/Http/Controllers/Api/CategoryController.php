@@ -2,20 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\CategoryType;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class CategoryController extends Controller
 {
-    /** List all categories ordered by type then name. */
+    /** List all categories ordered by name. */
     public function index(): JsonResponse
     {
-        return response()->json(['data' => Category::orderBy('type')->orderBy('name')->get()]);
+        return response()->json(['data' => Category::orderBy('name')->get()]);
     }
 
     /** Create a new category. */
@@ -24,11 +22,11 @@ class CategoryController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'type' => ['required', Rule::enum(CategoryType::class)],
+            'name_th' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $category = Category::create($data);
-        AuditLog::record('Created category', "{$category->name} ({$category->type->value})");
+        AuditLog::record('Created category', $category->name);
 
         return response()->json(['data' => $category, 'message' => 'success'], 201);
     }
@@ -39,11 +37,11 @@ class CategoryController extends Controller
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'type' => ['required', Rule::enum(CategoryType::class)],
+            'name_th' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $category->update($data);
-        AuditLog::record('Updated category', "{$category->name} ({$category->type->value})");
+        AuditLog::record('Updated category', $category->name);
 
         return response()->json(['data' => $category, 'message' => 'success']);
     }

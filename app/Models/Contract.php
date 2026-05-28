@@ -5,13 +5,12 @@ namespace App\Models;
 use App\Enums\ContractType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Contract extends Model
 {
     protected $fillable = [
         'code', 'vendor', 'name', 'type', 'start_date', 'end_date',
-        'value', 'billing_cycle', 'auto_renew', 'owner_id', 'cancelled_at',
+        'value', 'billing_cycle', 'auto_renew', 'cancelled_at',
         'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];
 
@@ -44,11 +43,6 @@ class Contract extends Model
                 $contract->code = sprintf('CT-%d-%03d', $year, $next);
             }
         });
-    }
-
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(Employee::class, 'owner_id');
     }
 
     /** All supported reminder thresholds, in days before expiry (earliest first). */

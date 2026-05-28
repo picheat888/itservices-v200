@@ -101,8 +101,6 @@ export interface Contract {
     value_display: string;
     billing_cycle: BillingCycle;
     auto_renew: boolean;
-    owner_id: number | null;
-    owner: string | null;
     status: ContractStatus;
     days_remaining: number;
     in_reminder: boolean;
@@ -160,18 +158,17 @@ export interface AssetModel {
     description?: string | null;
 }
 
-export type CategoryType = 'asset' | 'contract' | 'stock';
-
 export interface Category {
     id: number;
     name: string;
-    type: CategoryType;
+    name_th?: string | null;
     description?: string | null;
 }
 
 export interface Vendor {
     id: number;
     name: string;
+    name_th?: string | null;
     contact?: string | null;
     phone?: string | null;
     email?: string | null;
@@ -182,4 +179,96 @@ export interface Warehouse {
     id: number;
     name: string;
     description?: string | null;
+}
+
+export interface Unit {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+export interface StockStatus {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+export interface WarrantyType {
+    id: number;
+    name: string;
+    description?: string | null;
+}
+
+export type StockItemStatus = 'ok' | 'low' | 'out' | 'over' | 'dead';
+
+export interface StockItem {
+    id: number;
+    sku: string;
+    name: string;
+    serial: string | null;
+    category: string | null;
+    brand: string | null;
+    model: string | null;
+    unit: string;
+    cost: number;
+    current_stock: number;
+    min_stock: number;
+    max_stock: number;
+    warehouse: string | null;
+    supplier: string | null;
+    warranty: string | null;
+    last_move_at: string | null;
+    days_since_move: number | null;
+    status: StockItemStatus;
+    total_value: number;
+}
+
+export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer';
+
+export interface StockMovement {
+    id: number;
+    type: StockMovementType;
+    stock_item_id: number;
+    sku: string | null;
+    item_name: string | null;
+    qty: number;
+    from: string | null;
+    to: string | null;
+    reference: string | null;
+    recorded_by: string | null;
+    notes: string | null;
+    moved_at: string | null;
+}
+
+export type StockRequestStatus = 'pending' | 'approved' | 'fulfilled' | 'rejected';
+
+export interface StockRequest {
+    id: number;
+    stock_item_id: number;
+    sku: string | null;
+    item_name: string | null;
+    requester_name: string;
+    dept: string | null;
+    qty: number;
+    reason: string;
+    status: StockRequestStatus;
+    approver_name: string | null;
+    approved_at: string | null;
+    fulfilled_at: string | null;
+    rejected_at: string | null;
+    created_at: string | null;
+}
+
+export interface StockSummary {
+    skus: number;
+    total_units: number;
+    total_value: number;
+    low_count: number;
+    over_count: number;
+    dead_count: number;
+    low_items: StockItem[];
+    over_items: StockItem[];
+    dead_items: StockItem[];
+    by_warehouse: { warehouse: string; skus: number; units: number; value: number }[];
+    by_category: { category: string; skus: number; units: number }[];
 }
