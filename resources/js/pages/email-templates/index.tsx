@@ -93,7 +93,7 @@ export default function EmailTemplatesPage() {
     const [edit, setEdit] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
 
-    const templates = data?.data ?? [];
+    const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
 
     // Derive unique module prefixes from keys (e.g. "ticket" from "ticket.created")
