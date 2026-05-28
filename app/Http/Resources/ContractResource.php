@@ -29,8 +29,6 @@ class ContractResource extends JsonResource
             'value_display' => $this->valueDisplay(),
             'billing_cycle' => $this->billing_cycle,
             'auto_renew' => $this->auto_renew,
-            'owner_id' => $this->owner_id,
-            'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
             'status' => $this->status,
             'days_remaining' => $this->daysRemaining(),
             'in_reminder' => $this->isInReminder(),

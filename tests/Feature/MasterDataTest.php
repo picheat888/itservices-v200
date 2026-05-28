@@ -169,39 +169,49 @@ class MasterDataTest extends TestCase
     public function test_super_can_create_category(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/categories', ['name' => 'Laptop', 'type' => 'asset'])
+            ->postJson('/api/categories', ['name' => 'Laptop'])
             ->assertCreated()
-            ->assertJsonPath('data.type', 'asset');
+            ->assertJsonPath('data.name', 'Laptop');
     }
 
-    public function test_category_type_must_be_valid(): void
+    public function test_super_can_create_category_with_thai_name(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/categories', ['name' => 'X', 'type' => 'invalid'])
-            ->assertUnprocessable();
+            ->postJson('/api/categories', ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'])
+            ->assertCreated()
+            ->assertJsonPath('data.name_th', 'แล็ปท็อป');
+
+        $this->assertDatabaseHas('categories', ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+    }
+
+    public function test_category_name_is_required(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/categories', [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
     }
 
     public function test_regular_user_cannot_create_category(): void
     {
         $this->actingAs($this->regularUser())
-            ->postJson('/api/categories', ['name' => 'X', 'type' => 'asset'])
+            ->postJson('/api/categories', ['name' => 'X'])
             ->assertForbidden();
     }
 
     public function test_super_can_update_category(): void
     {
-        $category = Category::create(['name' => 'Laptop', 'type' => 'asset']);
+        $category = Category::create(['name' => 'Laptop']);
 
         $this->actingAs($this->superUser())
-            ->putJson("/api/categories/{$category->id}", ['name' => 'Desktop', 'type' => 'stock'])
+            ->putJson("/api/categories/{$category->id}", ['name' => 'Desktop'])
             ->assertOk()
-            ->assertJsonPath('data.name', 'Desktop')
-            ->assertJsonPath('data.type', 'stock');
+            ->assertJsonPath('data.name', 'Desktop');
     }
 
     public function test_super_can_delete_category(): void
     {
-        $category = Category::create(['name' => 'Laptop', 'type' => 'asset']);
+        $category = Category::create(['name' => 'Laptop']);
 
         $this->actingAs($this->superUser())
             ->deleteJson("/api/categories/{$category->id}")
@@ -217,6 +227,7 @@ class MasterDataTest extends TestCase
         $this->actingAs($this->superUser())
             ->postJson('/api/vendors', [
                 'name' => 'TechCorp',
+                'name_th' => 'เทคคอร์ป',
                 'email' => 'sales@techcorp.com',
                 'phone' => '02-111-2222',
             ])
@@ -224,11 +235,43 @@ class MasterDataTest extends TestCase
             ->assertJsonPath('data.name', 'TechCorp');
     }
 
+    public function test_vendor_thai_name_is_required_on_create(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/vendors', ['name' => 'TechCorp'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name_th');
+    }
+
+    public function test_vendor_thai_name_is_required_on_update(): void
+    {
+        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+
+        $this->actingAs($this->superUser())
+            ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd', 'name_th' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name_th');
+    }
+
+    public function test_super_can_create_vendor_with_thai_name(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/vendors', [
+                'name' => 'TechCorp',
+                'name_th' => 'เทคคอร์ป',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.name_th', 'เทคคอร์ป');
+
+        $this->assertDatabaseHas('vendors', ['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+    }
+
     public function test_vendor_email_must_be_valid(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/vendors', ['name' => 'X', 'email' => 'not-an-email'])
-            ->assertUnprocessable();
+            ->postJson('/api/vendors', ['name' => 'X', 'name_th' => 'เอ็กซ์', 'email' => 'not-an-email'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
     }
 
     public function test_regular_user_cannot_create_vendor(): void
@@ -240,10 +283,10 @@ class MasterDataTest extends TestCase
 
     public function test_super_can_update_vendor(): void
     {
-        $vendor = Vendor::create(['name' => 'TechCorp']);
+        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
 
         $this->actingAs($this->superUser())
-            ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd'])
+            ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd', 'name_th' => 'เทคคอร์ป จำกัด'])
             ->assertOk()
             ->assertJsonPath('data.name', 'TechCorp Ltd');
     }

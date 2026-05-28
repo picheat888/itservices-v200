@@ -22,11 +22,13 @@ interface DataTableProps<T> {
     onRowClick?: (row: T) => void;
     /** Hide the built-in pagination bar — use when the parent handles server-side pagination */
     hidePagination?: boolean;
+    /** Content rendered on the right of the search row (e.g. an Add button). */
+    actions?: React.ReactNode;
 }
 
 const PAGE_SIZES = [20, 50, 100];
 
-export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
@@ -50,18 +52,25 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
 
     return (
         <div className="space-y-3">
-            {searchable && (
-                <div className="relative w-full max-w-xs">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        value={query}
-                        onChange={(e) => {
-                            setQuery(e.target.value);
-                            setPage(1);
-                        }}
-                        placeholder={t('search_placeholder')}
-                        className="pl-9"
-                    />
+            {(searchable || actions) && (
+                <div className="flex items-center justify-between gap-2">
+                    {searchable ? (
+                        <div className="relative w-full max-w-xs">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                value={query}
+                                onChange={(e) => {
+                                    setQuery(e.target.value);
+                                    setPage(1);
+                                }}
+                                placeholder={t('search_placeholder')}
+                                className="pl-9"
+                            />
+                        </div>
+                    ) : (
+                        <span />
+                    )}
+                    {actions}
                 </div>
             )}
 

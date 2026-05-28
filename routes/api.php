@@ -16,8 +16,14 @@ use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\StockItemController;
+use App\Http\Controllers\Api\StockMovementController;
+use App\Http\Controllers\Api\StockRequestController;
+use App\Http\Controllers\Api\StockStatusController;
+use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\VendorController;
 use App\Http\Controllers\Api\WarehouseController;
+use App\Http\Controllers\Api\WarrantyTypeController;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +71,9 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::apiResource('categories', CategoryController::class)->except(['show']);
     Route::apiResource('vendors', VendorController::class)->except(['show']);
     Route::apiResource('warehouses', WarehouseController::class)->except(['show']);
+    Route::apiResource('units', UnitController::class)->except(['show']);
+    Route::apiResource('stock-statuses', StockStatusController::class)->except(['show']);
+    Route::apiResource('warranty-types', WarrantyTypeController::class)->except(['show']);
 
     // Contract & Rental module
     Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
@@ -73,6 +82,17 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('contracts/{contract}/renew', [ContractController::class, 'renew'])->name('api.contracts.renew');
     Route::post('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('api.contracts.cancel');
     Route::apiResource('contracts', ContractController::class);
+
+    // Stock / Inventory module
+    Route::get('stock-items/summary', [StockItemController::class, 'summary'])->name('api.stock-items.summary');
+    Route::apiResource('stock-items', StockItemController::class);
+    Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
+    Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');
+    Route::get('stock-requests', [StockRequestController::class, 'index'])->name('api.stock-requests.index');
+    Route::post('stock-requests', [StockRequestController::class, 'store'])->name('api.stock-requests.store');
+    Route::post('stock-requests/{stockRequest}/approve', [StockRequestController::class, 'approve'])->name('api.stock-requests.approve');
+    Route::post('stock-requests/{stockRequest}/reject', [StockRequestController::class, 'reject'])->name('api.stock-requests.reject');
+    Route::post('stock-requests/{stockRequest}/fulfill', [StockRequestController::class, 'fulfill'])->name('api.stock-requests.fulfill');
 
     // Permissions / RBAC + audit
     Route::get('permissions', [RolePermissionController::class, 'index'])->name('api.permissions.index');

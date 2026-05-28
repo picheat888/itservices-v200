@@ -7,8 +7,15 @@ const MODULES: Record<string, L> = {
     requests: { en: 'Requests', th: 'คำขอ' },
     assets: { en: 'Assets', th: 'ทรัพย์สิน' },
     contracts: { en: 'Contracts', th: 'สัญญา' },
+    stock: { en: 'Stock', th: 'คลังพัสดุ' },
     employees: { en: 'Employees', th: 'พนักงาน' },
     system: { en: 'System', th: 'ระบบ' },
+    // Administration sub-groups (design split). Permission/Email/Setting reuse the
+    // live system.* keys; the rest are presentational "coming soon" placeholders.
+    permissions: { en: 'Permission', th: 'สิทธิ์การใช้งาน' },
+    email_templates: { en: 'Email Templates', th: 'เทมเพลตอีเมล' },
+    settings: { en: 'Setting', th: 'ตั้งค่า' },
+    reports: { en: 'Reports', th: 'รายงาน' },
 };
 
 const ACTIONS: Record<string, L> = {
@@ -33,6 +40,17 @@ const ACTIONS: Record<string, L> = {
     'contracts.import': { en: 'Import contracts (CSV)', th: 'นำเข้าข้อมูลสัญญา (CSV)' },
     'contracts.renew': { en: 'Renew contracts', th: 'ต่ออายุสัญญา' },
     'contracts.alerts': { en: 'Contract Expiry Notification', th: 'การแจ้งเตือนสัญญาหมดอายุ' },
+    'stock.view': { en: 'View stock', th: 'ดูคลังพัสดุ' },
+    'stock.request': { en: 'Submit stock request', th: 'ขอเบิกพัสดุ' },
+    'stock.approve': { en: 'Approve stock requests', th: 'อนุมัติคำขอเบิก' },
+    'stock.fulfill': { en: 'Issue / fulfill', th: 'จ่ายของ' },
+    'stock.receive': { en: 'Receive into stock', th: 'รับเข้าคลัง' },
+    'stock.transfer': { en: 'Transfer between warehouses', th: 'ย้ายระหว่างคลัง' },
+    'stock.return': { en: 'Process returns', th: 'รับคืนพัสดุ' },
+    'stock.manage_items': { en: 'Manage SKU (Min/Max)', th: 'จัดการรายการสินค้า (SKU, Min/Max)' },
+    'stock.manage_warehouse': { en: 'Manage warehouses (master data)', th: 'จัดการคลัง (ข้อมูลหลัก)' },
+    'stock.audit': { en: 'Stock count / audit', th: 'นับสต็อก / ตรวจสอบ' },
+    'stock.delete': { en: 'Write-off stock', th: 'ตัดจำหน่ายพัสดุ' },
     'employees.view': { en: 'View directory', th: 'ดูรายชื่อพนักงาน' },
     'employees.add': { en: 'Add employee', th: 'เพิ่มพนักงาน' },
     'employees.import': { en: 'Import employees (CSV)', th: 'นำเข้าข้อมูลพนักงาน (CSV)' },
@@ -48,6 +66,22 @@ const ACTIONS: Record<string, L> = {
     'system.edit_settings': { en: 'Edit settings', th: 'แก้ไขการตั้งค่าระบบ' },
     'system.configure_notifications': { en: 'Configure notifications', th: 'ตั้งค่าการแจ้งเตือน' },
     'system.view_audit': { en: 'View audit log', th: 'ดูบันทึกการตรวจสอบ' },
+    // Reports module — not built yet (all coming soon).
+    'reports.view': { en: 'View reports', th: 'ดูรายงาน' },
+    'reports.run': { en: 'Run reports', th: 'เรียกใช้รายงาน' },
+    'reports.export': { en: 'Export data (CSV / XLSX)', th: 'ส่งออกข้อมูล (CSV / XLSX)' },
+    'reports.schedule': { en: 'Schedule automated runs', th: 'ตั้งกำหนดการอัตโนมัติ' },
+    'reports.custom': { en: 'Create custom report', th: 'สร้างรายงานแบบกำหนดเอง' },
+    // Email Templates — granular enforcement coming soon (configure_notifications is live).
+    'email.edit': { en: 'Edit template content', th: 'แก้ไขเนื้อหาเทมเพลต' },
+    'email.enable': { en: 'Enable / disable templates', th: 'เปิด / ปิดเทมเพลต' },
+    'email.create': { en: 'Create new template', th: 'สร้างเทมเพลตใหม่' },
+    'email.test': { en: 'Send test email', th: 'ส่งอีเมลทดสอบ' },
+    // Settings — granular enforcement coming soon (edit_settings is live).
+    'settings.branding': { en: 'Branding & theme', th: 'ปรับแบรนด์ / ธีม' },
+    'settings.sla': { en: 'SLA & statuses', th: 'แก้ไข SLA และสถานะ' },
+    'settings.masterdata': { en: 'Manage Master Data', th: 'จัดการ Master Data' },
+    'settings.integrations': { en: 'External integrations', th: 'การเชื่อมต่อระบบภายนอก' },
 };
 
 export const moduleLabel = (key: string, lang: Lang) => MODULES[key]?.[lang] ?? key;
@@ -62,6 +96,15 @@ const LIVE = new Set<string>([
     'contracts.import',
     'contracts.renew',
     'contracts.alerts',
+    'stock.view',
+    'stock.request',
+    'stock.approve',
+    'stock.fulfill',
+    'stock.receive',
+    'stock.transfer',
+    'stock.return',
+    'stock.manage_items',
+    'stock.delete',
     'employees.view',
     'employees.add',
     'employees.import',
