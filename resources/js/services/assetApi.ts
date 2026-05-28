@@ -53,6 +53,7 @@ export const assetApi = {
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
     receive: (id: number) => mutate<Asset>('post', `/assets/${id}/receive`),
     toggleMaintenance: (id: number) => mutate<Asset>('post', `/assets/${id}/maintenance`),
+    toStock: (id: number, body: { sku: string; warehouse?: string; qty: number; reason?: string }) => mutate<Asset>('post', `/assets/${id}/to-stock`, body),
     bulk: async (ids: number[], op: 'maintenance' | 'writeoff', reason?: string): Promise<{ updated: number }> => {
         await ensureCsrf();
         const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, reason });
