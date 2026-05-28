@@ -1,4 +1,4 @@
-import type { ApiEnvelope, Asset, AssetSummary } from '@/types';
+import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog } from '@/types';
 import { ensureCsrf, http } from './http';
 
 export interface AssetPageMeta {
@@ -44,6 +44,7 @@ export const assetApi = {
     list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string }) =>
         http.get<AssetPageResponse>('/assets', { params }).then((r) => r.data),
     summary: () => http.get<AssetSummary>('/assets/summary').then((r) => r.data),
+    transfers: () => http.get<{ data: AssetTransferLog[] }>('/assets/transfers').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
     update: (id: number, payload: AssetPayload) => mutate<Asset>('put', `/assets/${id}`, payload),

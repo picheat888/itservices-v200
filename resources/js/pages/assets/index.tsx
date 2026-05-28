@@ -8,15 +8,15 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { useAssetMutations, useAssets, useAssetSummary } from '@/hooks/use-assets';
+import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '@/hooks/use-assets';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset, AssetStatus, AssetType, Role } from '@/types';
-import { Box, CheckCircle2, ChevronLeft, ChevronRight, Clock, Cog, Download, Eye, Pencil, Plus, RefreshCcw, Search, Share2, Trash2 } from 'lucide-react';
+import { ArrowRight, Box, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Cog, Download, Eye, Pencil, Plus, RefreshCcw, Search, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
-type Tab = 'dashboard' | 'inventory';
+type Tab = 'dashboard' | 'inventory' | 'transfers';
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
     return (
@@ -69,7 +69,8 @@ export default function AssetsPage() {
         source: sourceFilter || undefined,
         status: statusFilter || undefined,
     });
-    const { toggleMaintenance, receive, bulk } = useAssetMutations();
+    const { toggleMaintenance, receive, accept, bulk } = useAssetMutations();
+    const { data: transfers = [] } = useAssetTransfers();
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
@@ -126,7 +127,7 @@ export default function AssetsPage() {
 
             <Card className="overflow-hidden">
                 <div className="flex gap-1 border-b border-border px-2">
-                    {(['dashboard', 'inventory'] as Tab[]).map((tb) => (
+                    {(['dashboard', 'inventory', 'transfers'] as Tab[]).map((tb) => (
                         <button
                             key={tb}
                             onClick={() => setTab(tb)}
@@ -135,7 +136,7 @@ export default function AssetsPage() {
                                 tab === tb ? 'border-brand text-brand' : 'border-transparent text-muted-foreground hover:text-foreground',
                             )}
                         >
-                            {tb === 'dashboard' ? t('asset_dashboard') : t('asset_inventory')}
+                            {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
                             {tb === 'inventory' && <span className="text-muted-foreground ml-1.5 font-mono text-xs">{summary?.total ?? 0}</span>}
                         </button>
                     ))}
@@ -306,6 +307,11 @@ export default function AssetsPage() {
                                                 <td className="px-4 py-2.5 font-mono text-xs">{a.value_display}</td>
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex items-center justify-end gap-1">
+                                                        {canTransfer && a.status === 'pending_acceptance' && (
+                                                            <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_accept')} onClick={() => accept.mutate(a.id)}>
+                                                                <Check className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                         {canTransfer && a.status === 'pending_return' && (
                                                             <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_mark_received')} onClick={() => receive.mutate(a.id)}>
                                                                 <CheckCircle2 className="h-4 w-4" />
@@ -354,6 +360,41 @@ export default function AssetsPage() {
                             </div>
                         )}
                     </>
+                )}
+
+                {tab === 'transfers' && (
+                    <div className="overflow-x-auto">
+                        {transfers.length === 0 ? (
+                            <div className="text-muted-foreground px-4 py-16 text-center text-sm">{t('asset_none')}</div>
+                        ) : (
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                        <th className="px-4 py-2.5">{t('asset_registered')}</th>
+                                        <th className="px-4 py-2.5">{t('asset_tag')}</th>
+                                        <th className="px-4 py-2.5">{lang === 'th' ? 'จาก' : 'From'}</th>
+                                        <th className="px-4 py-2.5" />
+                                        <th className="px-4 py-2.5">{t('asset_new_owner')}</th>
+                                        <th className="px-4 py-2.5">{t('asset_reason')}</th>
+                                        <th className="px-4 py-2.5">{lang === 'th' ? 'โดย' : 'By'}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {transfers.map((tr) => (
+                                        <tr key={tr.id} className="border-border/60 border-b last:border-0">
+                                            <td className="px-4 py-2.5 font-mono text-xs">{tr.date}</td>
+                                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tr.asset_tag}</td>
+                                            <td className="px-4 py-2.5">{tr.from_owner ?? '—'}</td>
+                                            <td className="text-muted-foreground px-4 py-2.5"><ArrowRight className="h-4 w-4" /></td>
+                                            <td className="px-4 py-2.5 font-medium">{tr.to_owner}</td>
+                                            <td className="text-muted-foreground px-4 py-2.5">{tr.reason ?? '—'}</td>
+                                            <td className="px-4 py-2.5">{tr.performed_by ?? '—'}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
                 )}
             </Card>
 

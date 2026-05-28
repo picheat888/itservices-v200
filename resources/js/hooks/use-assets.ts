@@ -22,11 +22,14 @@ export const useAssets = (params: { page: number; per_page: number; search: stri
 
 export const useAssetSummary = () => useQuery({ queryKey: SUMMARY, queryFn: assetApi.summary });
 
+export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'], queryFn: assetApi.transfers });
+
 export function useAssetMutations() {
     const qc = useQueryClient();
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ASSETS });
         qc.invalidateQueries({ queryKey: ['assets-list'] });
+        qc.invalidateQueries({ queryKey: ['asset-transfers'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
     };
     return {
