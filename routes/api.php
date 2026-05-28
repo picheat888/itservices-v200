@@ -33,6 +33,8 @@ Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.
 Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function () {
     Route::post('logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])->name('api.me');
+    // Lightweight heartbeat used by the session-timeout modal to refresh _sec_last_activity on the server.
+    Route::get('session/ping', fn () => response()->json(['ok' => true]))->name('api.session.ping');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])->name('api.password.change');

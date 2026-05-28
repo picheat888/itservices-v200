@@ -40,4 +40,9 @@ export const authApi = {
         const { data } = await http.put<ApiEnvelope<User>>('/password', payload);
         return data.data;
     },
+
+    /** Touches the server session so CheckSessionTimeout resets _sec_last_activity. */
+    async ping(): Promise<void> {
+        await http.get('/session/ping');
+    },
 };
