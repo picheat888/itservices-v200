@@ -263,9 +263,11 @@ export interface StockSummary {
     skus: number;
     total_units: number;
     total_value: number;
+    out_count: number;
     low_count: number;
     over_count: number;
     dead_count: number;
+    out_items: StockItem[];
     low_items: StockItem[];
     over_items: StockItem[];
     dead_items: StockItem[];
