@@ -6,7 +6,13 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Contract } from '@/types';
-import { Ban, SquarePen } from 'lucide-react';
+import { Ban, FileText, SquarePen } from 'lucide-react';
+
+/** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
+function formatSize(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
@@ -118,6 +124,30 @@ export function ContractDetailDrawer({
                         <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">
                             {t('contract_link_assets_sub')}
                         </div>
+                    </div>
+
+                    {/* Attachments — PDF documents, opens in a new tab. */}
+                    <div>
+                        <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('contract_attachments')}</div>
+                        {contract.attachments.length === 0 ? (
+                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">{t('attachment_none')}</div>
+                        ) : (
+                            <div className="space-y-2">
+                                {contract.attachments.map((a) => (
+                                    <a
+                                        key={a.id}
+                                        href={a.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="border-border hover:bg-accent/50 flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                                    >
+                                        <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+                                        <span className="hover:text-brand min-w-0 flex-1 truncate">{a.name}</span>
+                                        <span className="text-muted-foreground shrink-0 text-xs">{formatSize(a.size)}</span>
+                                    </a>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {contract.notes && (

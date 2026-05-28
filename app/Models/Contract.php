@@ -5,9 +5,16 @@ namespace App\Models;
 use App\Enums\ContractType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
 {
+    /** Uploaded PDF documents for this contract (newest first). */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ContractAttachment::class)->latest();
+    }
+
     protected $fillable = [
         'code', 'vendor', 'name', 'type', 'start_date', 'end_date',
         'value', 'billing_cycle', 'auto_renew', 'cancelled_at',

@@ -34,6 +34,7 @@ export function useContractMutations() {
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: CONTRACTS });
         qc.invalidateQueries({ queryKey: ['contracts-list'] });
+        qc.invalidateQueries({ queryKey: ['contract'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
     };
     return {
@@ -45,5 +46,13 @@ export function useContractMutations() {
         cancel: useMutation({ mutationFn: (id: number) => contractApi.cancel(id), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => contractApi.remove(id), onSuccess: invalidate }),
         import: useMutation({ mutationFn: (file: File) => contractApi.import(file), onSuccess: invalidate }),
+        uploadAttachments: useMutation({
+            mutationFn: (v: { id: number; files: File[] }) => contractApi.uploadAttachments(v.id, v.files),
+            onSuccess: invalidate,
+        }),
+        deleteAttachment: useMutation({
+            mutationFn: (v: { id: number; attachmentId: number }) => contractApi.deleteAttachment(v.id, v.attachmentId),
+            onSuccess: invalidate,
+        }),
     };
 }

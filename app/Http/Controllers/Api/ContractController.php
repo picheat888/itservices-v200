@@ -11,6 +11,7 @@ use App\Services\ContractExpiryAlertService;
 use App\Services\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ContractController extends Controller
@@ -36,6 +37,7 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
+            ->with('attachments')
             ->orderByRaw('cancelled_at IS NOT NULL')
             ->orderBy('end_date');
 
@@ -108,9 +110,10 @@ class ContractController extends Controller
             ->take(5)
             ->values();
 
-        // Dots for the timeline: anything from 2 months ago to 12 months out.
+        // Dots for the timeline: the full 2 months behind us (the window's two
+        // past columns) through ~12 months out.
         $timeline = $live
-            ->filter(fn ($c) => $c->daysRemaining() > -60 && $c->daysRemaining() < 365)
+            ->filter(fn ($c) => $c->daysRemaining() > -95 && $c->daysRemaining() < 365)
             ->map(fn ($c) => [
                 'id' => $c->id,
                 'code' => $c->code,
@@ -159,7 +162,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract))->response();
+        return (new ContractResource($contract->load('attachments')))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
@@ -202,6 +205,12 @@ class ContractController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
         AuditLog::record('Deleted contract', "{$contract->name} ({$contract->code})");
+
+        // Remove the attachment files; the DB rows go via cascade on delete.
+        $paths = $contract->attachments()->pluck('path')->all();
+        if ($paths !== []) {
+            Storage::disk('public')->delete($paths);
+        }
         $contract->delete();
 
         return response()->json(['message' => 'success']);
