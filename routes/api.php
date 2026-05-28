@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ContractAttachmentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
 use App\Http\Controllers\Api\EmailTemplateController;
@@ -83,6 +84,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('contracts/import', [ContractController::class, 'import'])->name('api.contracts.import');
     Route::post('contracts/{contract}/renew', [ContractController::class, 'renew'])->name('api.contracts.renew');
     Route::post('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('api.contracts.cancel');
+    Route::post('contracts/{contract}/attachments', [ContractAttachmentController::class, 'store'])->name('api.contracts.attachments.store');
+    Route::delete('contracts/{contract}/attachments/{attachment}', [ContractAttachmentController::class, 'destroy'])->name('api.contracts.attachments.destroy');
     Route::apiResource('contracts', ContractController::class);
 
     // Stock / Inventory module

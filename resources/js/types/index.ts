@@ -89,6 +89,14 @@ export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' 
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
 export type ContractStatus = 'active' | 'expired' | 'cancelled';
 
+export interface ContractAttachment {
+    id: number;
+    name: string;
+    size: number;
+    url: string;
+    created_at: string | null;
+}
+
 export interface Contract {
     id: number;
     code: string;
@@ -113,6 +121,7 @@ export interface Contract {
     notify_30: boolean;
     notify_7: boolean;
     notes: string | null;
+    attachments: ContractAttachment[];
     linked_assets: never[];
 }
 

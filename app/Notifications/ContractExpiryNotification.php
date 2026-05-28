@@ -6,9 +6,11 @@ use App\Models\Contract;
 use Illuminate\Notifications\Notification;
 
 /**
- * In-app (database) bell alert that a contract is approaching expiry. Sent to
- * every user whose role holds the contracts.alerts permission. The payload
- * shape mirrors the employee notifications so the bell can render it.
+ * In-app (database) bell alert that a contract is approaching expiry — or has
+ * already expired, in which case daysRemaining is zero or negative and the bell
+ * renders an "expired N days ago" state. Sent to every user whose role holds the
+ * contracts.alerts permission; the payload shape mirrors the employee
+ * notifications so the bell can render it.
  */
 class ContractExpiryNotification extends Notification
 {
