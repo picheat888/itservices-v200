@@ -31,6 +31,7 @@ export function useAssetMutations() {
         qc.invalidateQueries({ queryKey: ['assets-list'] });
         qc.invalidateQueries({ queryKey: ['asset-transfers'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
+        qc.invalidateQueries({ queryKey: ['stock-items'] });
     };
     return {
         create: useMutation({ mutationFn: (p: AssetPayload) => assetApi.create(p), onSuccess: invalidate }),
@@ -46,6 +47,11 @@ export function useAssetMutations() {
         accept: useMutation({ mutationFn: (id: number) => assetApi.accept(id), onSuccess: invalidate }),
         receive: useMutation({ mutationFn: (id: number) => assetApi.receive(id), onSuccess: invalidate }),
         toggleMaintenance: useMutation({ mutationFn: (id: number) => assetApi.toggleMaintenance(id), onSuccess: invalidate }),
+        toStock: useMutation({
+            mutationFn: (v: { id: number; sku: string; warehouse?: string; qty: number; reason?: string }) =>
+                assetApi.toStock(v.id, { sku: v.sku, warehouse: v.warehouse, qty: v.qty, reason: v.reason }),
+            onSuccess: invalidate,
+        }),
         bulk: useMutation({
             mutationFn: (v: { ids: number[]; op: 'maintenance' | 'writeoff'; reason?: string }) => assetApi.bulk(v.ids, v.op, v.reason),
             onSuccess: invalidate,

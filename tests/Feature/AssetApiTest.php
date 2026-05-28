@@ -155,4 +155,16 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.0.from_owner', 'Pool — IT')
             ->assertJsonPath('data.0.reason', 'New hire');
     }
+
+    public function test_convert_to_stock_creates_a_stock_item(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'model' => 'Dell Latitude', 'value' => 30000]);
+
+        $this->postJson("/api/assets/{$asset->id}/to-stock", ['sku' => 'STK-TEST-1', 'qty' => 2, 'warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending_stock');
+
+        $this->assertDatabaseHas('stock_items', ['sku' => 'STK-TEST-1', 'current_stock' => 2, 'name' => 'Dell Latitude']);
+    }
 }

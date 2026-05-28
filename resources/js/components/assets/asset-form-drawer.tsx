@@ -1,15 +1,17 @@
 import { ASSET_TYPES } from '@/components/assets/asset-meta';
 import { Field } from '@/components/shared/field';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAssetMutations } from '@/hooks/use-assets';
+import { useContracts } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset, AssetSource, AssetType } from '@/types';
 import { Check, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface FormState {
     type: AssetType;
@@ -26,6 +28,7 @@ interface FormState {
     warranty_end: string;
     lease_start: string;
     lease_end: string;
+    contract_id: string;
     notes: string;
 }
 
@@ -44,6 +47,7 @@ const EMPTY: FormState = {
     warranty_end: '',
     lease_start: '',
     lease_end: '',
+    contract_id: '',
     notes: '',
 };
 
@@ -76,6 +80,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 warranty_end: editing.warranty_end ?? '',
                 lease_start: editing.lease_start ?? '',
                 lease_end: editing.lease_end ?? '',
+                contract_id: editing.contract_id ? String(editing.contract_id) : '',
                 notes: editing.notes ?? '',
             });
         } else {
@@ -85,6 +90,18 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
 
     const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
     const rented = form.source === 'rented';
+
+    // Contracts to choose from when linking a rented asset to its vendor contract.
+    const { data: contractData } = useContracts({ page: 1, per_page: 100, search: '', tab: 'all' });
+    const contractOptions = useMemo(
+        () =>
+            (contractData?.data ?? []).map((c) => ({
+                value: String(c.id),
+                label: `${c.code} — ${c.vendor}`,
+                search: `${c.code} ${c.vendor} ${c.title ?? ''}`,
+            })),
+        [contractData],
+    );
 
     const submit = async () => {
         const e: Record<string, string> = {};
@@ -109,6 +126,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             warranty_end: rented ? null : form.warranty_end || null,
             lease_start: rented ? form.lease_start || null : null,
             lease_end: rented ? form.lease_end || null : null,
+            contract_id: rented && form.contract_id ? Number(form.contract_id) : null,
             notes: form.notes.trim() || null,
         };
 
@@ -214,14 +232,24 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     </div>
 
                     {rented ? (
-                        <div className="grid grid-cols-2 gap-4">
-                            <Field label={t('asset_lease_start')}>
-                                <Input type="date" className={dateInput} value={form.lease_start} onChange={(e) => upd('lease_start', e.target.value)} />
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                <Field label={t('asset_lease_start')}>
+                                    <Input type="date" className={dateInput} value={form.lease_start} onChange={(e) => upd('lease_start', e.target.value)} />
+                                </Field>
+                                <Field label={t('asset_lease_end')}>
+                                    <Input type="date" className={dateInput} value={form.lease_end} onChange={(e) => upd('lease_end', e.target.value)} />
+                                </Field>
+                            </div>
+                            <Field label={t('asset_linked_contract')}>
+                                <SearchableSelect
+                                    value={form.contract_id}
+                                    onChange={(v) => upd('contract_id', v)}
+                                    options={contractOptions}
+                                    placeholder={lang === 'th' ? 'เลือกสัญญา (ถ้ามี)' : 'Select contract (optional)'}
+                                />
                             </Field>
-                            <Field label={t('asset_lease_end')}>
-                                <Input type="date" className={dateInput} value={form.lease_end} onChange={(e) => upd('lease_end', e.target.value)} />
-                            </Field>
-                        </div>
+                        </>
                     ) : (
                         <div className="grid grid-cols-2 gap-4">
                             <Field label={t('asset_purchase_date')}>

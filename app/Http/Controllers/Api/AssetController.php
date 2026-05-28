@@ -12,6 +12,7 @@ use App\Models\AuditLog;
 use App\Services\AssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
@@ -196,6 +197,23 @@ class AssetController extends Controller
         AuditLog::record('Asset maintenance toggled', "{$asset->tag} → {$asset->status?->value}");
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
+    }
+
+    /** Convert an asset into a stock item and mark it pending-stock (requires assets.retire). */
+    public function toStock(Request $request, Asset $asset): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
+        $data = $request->validate([
+            'sku' => ['required', 'string', 'max:60', Rule::unique('stock_items', 'sku')],
+            'warehouse' => ['nullable', 'string', 'max:120'],
+            'qty' => ['required', 'integer', 'min:1'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $item = $this->service->convertToStock($asset, $data);
+        AuditLog::record('Converted asset to stock', "{$asset->tag} → {$item->sku}");
+
+        return (new AssetResource($asset->fresh()))->additional(['message' => 'success'])->response();
     }
 
     /** Bulk-apply maintenance or write-off to many assets (requires assets.retire). */

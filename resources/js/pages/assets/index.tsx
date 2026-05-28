@@ -1,6 +1,7 @@
 import { AssetDetailDrawer } from '@/components/assets/asset-detail-drawer';
 import { AssetFormDrawer } from '@/components/assets/asset-form-drawer';
 import { ASSET_STATUS_META, ASSET_TYPES, AssetStatusBadge, AssetTypeIcon } from '@/components/assets/asset-meta';
+import { AssetToStockModal } from '@/components/assets/asset-to-stock-modal';
 import { AssetTransferDrawer } from '@/components/assets/asset-transfer-drawer';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset, AssetStatus, AssetType, Role } from '@/types';
-import { ArrowRight, Box, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Cog, Download, Eye, Pencil, Plus, RefreshCcw, Search, Share2, Trash2 } from 'lucide-react';
+import { Archive, ArrowRight, Box, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Cog, Download, Eye, Pencil, Plus, RefreshCcw, Search, Share2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 type Tab = 'dashboard' | 'inventory' | 'transfers';
@@ -59,6 +60,7 @@ export default function AssetsPage() {
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Asset | null>(null);
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);
+    const [toStockAsset, setToStockAsset] = useState<Asset | null>(null);
 
     const { data: summary } = useAssetSummary();
     const { data: listData, isLoading } = useAssets({
@@ -327,6 +329,11 @@ export default function AssetsPage() {
                                                                 <Cog className="h-4 w-4" />
                                                             </button>
                                                         )}
+                                                        {canRetire && !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
+                                                            <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_to_stock')} onClick={() => setToStockAsset(a)}>
+                                                                <Archive className="h-4 w-4" />
+                                                            </button>
+                                                        )}
                                                         {canEdit && (
                                                             <button className="hover:bg-accent rounded-md p-1.5" title={t('edit_asset')} onClick={() => openEdit(a)}>
                                                                 <Pencil className="h-4 w-4" />
@@ -401,6 +408,7 @@ export default function AssetsPage() {
             <AssetDetailDrawer asset={detail} onClose={() => setDetail(null)} onTransfer={(a) => { setDetail(null); setTransferAsset(a); }} onReceive={(a) => { setDetail(null); receive.mutate(a.id); }} canTransfer={canTransfer} />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
             <AssetTransferDrawer asset={transferAsset} onClose={() => setTransferAsset(null)} />
+            <AssetToStockModal asset={toStockAsset} onClose={() => setToStockAsset(null)} />
         </div>
     );
 }

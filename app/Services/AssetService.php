@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\AssetStatus;
 use App\Models\Asset;
 use App\Models\AssetTransfer;
+use App\Models\StockItem;
 
 class AssetService
 {
@@ -126,6 +127,38 @@ class AssetService
         ]);
 
         return $asset->fresh();
+    }
+
+    /**
+     * Move an asset into the Stock module: create a stock item seeded from the
+     * asset's details and mark the asset as pending-stock.
+     *
+     * @param  array{sku: string, qty: int, warehouse?: ?string, reason?: ?string}  $data
+     */
+    public function convertToStock(Asset $asset, array $data): StockItem
+    {
+        $item = StockItem::create([
+            'sku' => $data['sku'],
+            'name' => $asset->model,
+            'serial' => $asset->serial,
+            'brand' => $asset->brand,
+            'model' => $asset->model,
+            'unit' => 'unit',
+            'cost' => $asset->value,
+            'current_stock' => $data['qty'],
+            'min_stock' => 0,
+            'max_stock' => $data['qty'],
+            'warehouse' => $data['warehouse'] ?? null,
+            'supplier' => $asset->supplier,
+            'last_move_at' => now(),
+        ]);
+
+        $asset->update([
+            'status' => AssetStatus::PendingStock,
+            'last_reason' => $data['reason'] ?? null,
+        ]);
+
+        return $item;
     }
 
     /**
