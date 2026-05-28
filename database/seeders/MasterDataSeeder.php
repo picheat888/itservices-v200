@@ -110,72 +110,96 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Vendors ─────────────────────────────────────────────────────────────
+        // `name` holds the English vendor name, `name_th` the Thai one, so the UI
+        // can show either depending on the active language. `old` is the legacy
+        // Thai-only `name` from earlier seeds — used to update existing rows in
+        // place rather than creating duplicates when re-seeding a live database.
         $vendors = [
             [
-                'name' => 'บริษัท แอดวานซ์ อินโฟ เซอร์วิส จำกัด (มหาชน)',
+                'old' => 'บริษัท แอดวานซ์ อินโฟ เซอร์วิส จำกัด (มหาชน)',
+                'name' => 'Advanced Info Service PCL (AIS)',
+                'name_th' => 'บริษัท แอดวานซ์ อินโฟ เซอร์วิส จำกัด (มหาชน)',
                 'contact' => 'ฝ่ายลูกค้าองค์กร',
                 'phone' => '02-299-5000',
                 'email' => 'enterprise@ais.th',
                 'address' => '414 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400',
             ],
             [
-                'name' => 'บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด',
+                'old' => 'บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด',
+                'name' => 'Microsoft (Thailand) Limited',
+                'name_th' => 'บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด',
                 'contact' => 'Microsoft Enterprise Sales',
                 'phone' => '02-844-1000',
                 'email' => 'thasales@microsoft.com',
                 'address' => '388 อาคาร Exchange Tower ชั้น 30 ถนนสุขุมวิท กรุงเทพฯ 10110',
             ],
             [
-                'name' => 'บริษัท ซิสโก้ ซิสเต็มส์ (ประเทศไทย) จำกัด',
+                'old' => 'บริษัท ซิสโก้ ซิสเต็มส์ (ประเทศไทย) จำกัด',
+                'name' => 'Cisco Systems (Thailand) Limited',
+                'name_th' => 'บริษัท ซิสโก้ ซิสเต็มส์ (ประเทศไทย) จำกัด',
                 'contact' => 'Cisco Thailand Partner',
                 'phone' => '02-632-7999',
                 'email' => 'th-partners@cisco.com',
                 'address' => '87/2 อาคาร CRC Tower ชั้น 32 ถนนวิทยุ กรุงเทพฯ 10330',
             ],
             [
-                'name' => 'บริษัท เดลล์ คอร์ปอเรชั่น (ประเทศไทย) จำกัด',
+                'old' => 'บริษัท เดลล์ คอร์ปอเรชั่น (ประเทศไทย) จำกัด',
+                'name' => 'Dell Corporation (Thailand) Limited',
+                'name_th' => 'บริษัท เดลล์ คอร์ปอเรชั่น (ประเทศไทย) จำกัด',
                 'contact' => 'Dell Business Direct',
                 'phone' => '02-684-5555',
                 'email' => 'th.support@dell.com',
                 'address' => '689 อาคาร Bhiraj Tower ชั้น 21 ถนนสุขุมวิท กรุงเทพฯ 10110',
             ],
             [
-                'name' => 'บริษัท เอชพี ประเทศไทย จำกัด',
+                'old' => 'บริษัท เอชพี ประเทศไทย จำกัด',
+                'name' => 'HP (Thailand) Co., Ltd.',
+                'name_th' => 'บริษัท เอชพี ประเทศไทย จำกัด',
                 'contact' => 'HP Enterprise Thailand',
                 'phone' => '02-353-9000',
                 'email' => 'th.enterprise@hp.com',
                 'address' => '195 อาคาร Empire Tower ชั้น 43 ถนนสาทรใต้ กรุงเทพฯ 10120',
             ],
             [
-                'name' => 'บริษัท เลโนโว (ประเทศไทย) จำกัด',
+                'old' => 'บริษัท เลโนโว (ประเทศไทย) จำกัด',
+                'name' => 'Lenovo (Thailand) Limited',
+                'name_th' => 'บริษัท เลโนโว (ประเทศไทย) จำกัด',
                 'contact' => 'Lenovo Corporate Sales',
                 'phone' => '02-026-4600',
                 'email' => 'th.b2b@lenovo.com',
                 'address' => 'อาคาร Glas Haus ชั้น 15 ถนนสุขุมวิท 25 กรุงเทพฯ 10110',
             ],
             [
-                'name' => 'บริษัท อีซี่บาย จำกัด (มหาชน) — ฝ่ายขายองค์กร',
+                'old' => 'บริษัท อีซี่บาย จำกัด (มหาชน) — ฝ่ายขายองค์กร',
+                'name' => 'EasyBuy PCL — Corporate Sales',
+                'name_th' => 'บริษัท อีซี่บาย จำกัด (มหาชน) — ฝ่ายขายองค์กร',
                 'contact' => 'Corporate Account',
                 'phone' => '02-685-3888',
                 'email' => 'corporate@easybuying.net',
                 'address' => '55 อาคาร Wave Place ชั้น 19 ถนนวิทยุ กรุงเทพฯ 10330',
             ],
             [
-                'name' => 'ห้างหุ้นส่วนจำกัด ไอที วัน สตอร์',
+                'old' => 'ห้างหุ้นส่วนจำกัด ไอที วัน สตอร์',
+                'name' => 'IT One Store Ltd., Part.',
+                'name_th' => 'ห้างหุ้นส่วนจำกัด ไอที วัน สตอร์',
                 'contact' => 'คุณสมชาย วงศ์พาณิชย์',
                 'phone' => '038-312-456',
                 'email' => 'sales@itonestoreth.com',
                 'address' => '99/12 นิคมอุตสาหกรรมอมตะนคร ชลบุรี 20000',
             ],
             [
-                'name' => 'บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)',
+                'old' => 'บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)',
+                'name' => 'True Corporation PCL',
+                'name_th' => 'บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)',
                 'contact' => 'True Business Center',
                 'phone' => '02-858-5858',
                 'email' => 'business@true.th',
                 'address' => '18 อาคาร True Tower ถนนรัชดาภิเษก กรุงเทพฯ 10310',
             ],
             [
-                'name' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) — ฝ่าย IT',
+                'old' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) — ฝ่าย IT',
+                'name' => 'SE-Education PCL — IT Dept.',
+                'name_th' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) — ฝ่าย IT',
                 'contact' => 'ฝ่ายจัดซื้อ IT',
                 'phone' => '02-826-8000',
                 'email' => 'procurement@se-ed.com',
@@ -184,12 +208,23 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($vendors as $v) {
-            Vendor::updateOrCreate(['name' => $v['name']], [
+            // Match a legacy Thai-named row or an already-migrated English-named
+            // row so re-seeding updates in place instead of duplicating.
+            $vendor = Vendor::where('name', $v['old'])->orWhere('name', $v['name'])->first();
+            $attributes = [
+                'name' => $v['name'],
+                'name_th' => $v['name_th'],
                 'contact' => $v['contact'],
                 'phone' => $v['phone'],
                 'email' => $v['email'],
                 'address' => $v['address'],
-            ]);
+            ];
+
+            if ($vendor) {
+                $vendor->update($attributes);
+            } else {
+                Vendor::create($attributes);
+            }
         }
 
         // ── Warehouses ──────────────────────────────────────────────────────────

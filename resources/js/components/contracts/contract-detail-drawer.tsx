@@ -5,7 +5,7 @@ import { useContractMutations } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Contract } from '@/types';
+import { ASSET_LINKABLE_CONTRACT_TYPES, type Contract } from '@/types';
 import { Ban, FileText, SquarePen } from 'lucide-react';
 
 /** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
@@ -58,7 +58,7 @@ export function ContractDetailDrawer({
         <Sheet open={!!contract} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side="right" className="flex w-[620px] flex-col sm:max-w-[620px]">
                 <SheetHeader>
-                    <SheetTitle>{contract.name}</SheetTitle>
+                    <SheetTitle>{contract.title || contract.name}</SheetTitle>
                     <SheetDescription>{contract.vendor}</SheetDescription>
                 </SheetHeader>
 
@@ -71,15 +71,45 @@ export function ContractDetailDrawer({
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <KV label="ID" value={contract.code} mono />
+                        <KV label={t('contract_code')} value={contract.code} mono />
                         <KV label={t('contract_vendor')} value={contract.vendor} />
+                        <div className="col-span-2">
+                            <KV label={t('contract_name')} value={contract.name} />
+                        </div>
+                        <KV label={t('contract_type')} value={t(`contract_type_${contract.type}`)} />
+                        <KV label={t('contract_billing')} value={t(`contract_billing_${contract.billing_cycle}`)} />
                         <KV label={t('contract_start')} value={contract.start} mono />
                         <KV label={t('contract_end')} value={contract.end} mono />
                         <KV label={t('contract_value')} value={contract.value_display} mono />
                         <KV
+                            label={t('contract_days_remaining')}
+                            value={
+                                cancelled
+                                    ? '—'
+                                    : days >= 0
+                                      ? `${days} ${lang === 'th' ? 'วัน' : 'days'}`
+                                      : lang === 'th'
+                                        ? `เกินกำหนด ${-days} วัน`
+                                        : `${-days} days overdue`
+                            }
+                        />
+                        <KV
                             label={t('contract_auto_renew')}
                             value={contract.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
                         />
+                        <KV
+                            label={t('contract_reminder_threshold')}
+                            value={
+                                contract.reminder_days
+                                    ? `${contract.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
+                                    : '—'
+                            }
+                        />
+                        {cancelled && contract.cancelled_at && (
+                            <KV label={t('contract_cancelled_on')} value={contract.cancelled_at} mono />
+                        )}
+                        <KV label={t('contract_created')} value={contract.created_at ?? '—'} mono />
+                        <KV label={t('contract_updated')} value={contract.updated_at ?? '—'} mono />
                     </div>
 
                     {/* Notification schedule — alerts are sent automatically by the
@@ -113,18 +143,21 @@ export function ContractDetailDrawer({
                         </div>
                     </div>
 
-                    {/* Linked assets — depends on the Assets module which is not built yet. */}
-                    <div>
-                        <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
-                            {t('contract_link_assets')}
-                            <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium tracking-normal normal-case">
-                                {t('coming_soon')}
-                            </span>
+                    {/* Linked assets — only for hardware, network, and other contracts.
+                        Depends on the Assets module which is not built yet. */}
+                    {ASSET_LINKABLE_CONTRACT_TYPES.includes(contract.type) && (
+                        <div>
+                            <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                                {t('contract_link_assets')}
+                                <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium tracking-normal normal-case">
+                                    {t('coming_soon')}
+                                </span>
+                            </div>
+                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">
+                                {t('contract_link_assets_sub')}
+                            </div>
                         </div>
-                        <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">
-                            {t('contract_link_assets_sub')}
-                        </div>
-                    </div>
+                    )}
 
                     {/* Attachments — PDF documents, opens in a new tab. */}
                     <div>

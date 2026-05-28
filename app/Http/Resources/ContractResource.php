@@ -23,6 +23,7 @@ class ContractResource extends JsonResource
             'code' => $this->code,
             'vendor' => $this->vendor,
             'name' => $this->name,
+            'title' => $this->title,
             'type' => $type?->value ?? ContractType::Software->value,
             'start' => $this->start_date?->toDateString(),
             'end' => $this->end_date?->toDateString(),
@@ -51,6 +52,9 @@ class ContractResource extends JsonResource
             ])->all(), []),
             // Assets module not built yet — leased equipment cannot be linked.
             'linked_assets' => [],
+            'cancelled_at' => $this->cancelled_at?->toDateString(),
+            'created_at' => $this->created_at?->toDateString(),
+            'updated_at' => $this->updated_at?->toDateString(),
         ];
     }
 
