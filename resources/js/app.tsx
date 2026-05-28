@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/auth/protected-route';
 import { AppShell } from '@/components/shell/app-shell';
 import { useApplyTheme } from '@/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
+import AssetsPage from '@/pages/assets';
 import ContractsPage from '@/pages/contracts';
 import DashboardPage from '@/pages/dashboard';
 import EmailTemplatesPage from '@/pages/email-templates';
@@ -24,7 +25,6 @@ const queryClient = new QueryClient({
 const modules: { path: string; titleKey: string }[] = [
     { path: 'tickets', titleKey: 'tickets' },
     { path: 'requests', titleKey: 'requests' },
-    { path: 'assets', titleKey: 'assets' },
     { path: 'reports', titleKey: 'reports' },
 ];
 
@@ -40,6 +40,7 @@ function App() {
                     <Route element={<AppShell />}>
                         <Route index element={<DashboardPage />} />
                         <Route path="employees" element={<EmployeesPage />} />
+                        <Route path="assets" element={<AssetsPage />} />
                         <Route path="contracts" element={<ContractsPage />} />
                         <Route path="stock" element={<StockPage />} />
                         <Route path="email-templates" element={<EmailTemplatesPage />} />

@@ -143,6 +143,61 @@ export interface ContractSummary {
     action_queue: { id: number; code: string; name: string; vendor: string; days: number }[];
 }
 
+// Assets Management module
+export type AssetType = 'laptop' | 'desktop' | 'mobile' | 'printer' | 'server' | 'network' | 'other';
+export type AssetSource = 'purchased' | 'rented';
+export type AssetStatus =
+    | 'ready'
+    | 'pending_acceptance'
+    | 'deployed'
+    | 'pending_return'
+    | 'maintenance'
+    | 'writeoff'
+    | 'pending_stock';
+
+export interface Asset {
+    id: number;
+    tag: string;
+    type: AssetType;
+    brand: string | null;
+    model: string;
+    serial: string | null;
+    source: AssetSource;
+    status: AssetStatus;
+    owner: string | null;
+    initial_owner: string | null;
+    department: string | null;
+    location: string | null;
+    value: number;
+    value_display: string;
+    supplier: string | null;
+    purchase_date: string | null;
+    warranty_end: string | null;
+    contract_id: number | null;
+    contract_code?: string | null;
+    lease_start: string | null;
+    lease_end: string | null;
+    cover_end: string | null;
+    registered_date: string | null;
+    notes: string | null;
+    last_reason: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+export interface AssetSummary {
+    total: number;
+    deployed: number;
+    ready: number;
+    pending_acceptance: number;
+    pending_return: number;
+    maintenance: number;
+    writeoff: number;
+    total_value: number;
+    by_type: { type: AssetType; count: number }[];
+    top_value: Asset[];
+}
+
 export interface NavItem {
     id: string;
     label: string;
