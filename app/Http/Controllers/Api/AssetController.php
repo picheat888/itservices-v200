@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreAssetRequest;
 use App\Http\Resources\AssetResource;
 use App\Models\Asset;
+use App\Models\AssetTransfer;
 use App\Models\AuditLog;
 use App\Services\AssetService;
 use Illuminate\Http\JsonResponse;
@@ -97,6 +98,25 @@ class AssetController extends Controller
         ]);
     }
 
+    /** Recent ownership-change history across all assets (newest first). */
+    public function transfers(Request $request): JsonResponse
+    {
+        $this->gateView($request);
+
+        $log = AssetTransfer::latest()->limit(100)->get()->map(fn (AssetTransfer $tr) => [
+            'id' => $tr->id,
+            'date' => $tr->created_at?->toDateString(),
+            'asset_tag' => $tr->asset_tag,
+            'asset_model' => $tr->asset_model,
+            'from_owner' => $tr->from_owner,
+            'to_owner' => $tr->to_owner,
+            'reason' => $tr->reason,
+            'performed_by' => $tr->performed_by,
+        ]);
+
+        return response()->json(['data' => $log]);
+    }
+
     public function store(StoreAssetRequest $request): JsonResponse
     {
         $asset = $this->service->create($request->validated());
@@ -142,7 +162,7 @@ class AssetController extends Controller
         ]);
         abort_if($asset->isDeployed(), 422, 'Asset is deployed — mark it returned first.');
 
-        $asset = $this->service->transfer($asset, $data['owner'], $data['reason'] ?? null);
+        $asset = $this->service->transfer($asset, $data['owner'], $data['reason'] ?? null, $request->user()?->name);
         AuditLog::record('Transferred asset', "{$asset->tag} → {$data['owner']}");
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -162,7 +182,7 @@ class AssetController extends Controller
     public function markReceived(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
-        $asset = $this->service->markReceived($asset);
+        $asset = $this->service->markReceived($asset, $request->user()?->name);
         AuditLog::record('Received asset', $asset->tag);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();

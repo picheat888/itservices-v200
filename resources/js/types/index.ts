@@ -185,6 +185,17 @@ export interface Asset {
     updated_at: string | null;
 }
 
+export interface AssetTransferLog {
+    id: number;
+    date: string | null;
+    asset_tag: string;
+    asset_model: string;
+    from_owner: string | null;
+    to_owner: string;
+    reason: string | null;
+    performed_by: string | null;
+}
+
 export interface AssetSummary {
     total: number;
     deployed: number;

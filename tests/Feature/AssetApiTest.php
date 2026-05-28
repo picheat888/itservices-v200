@@ -141,4 +141,18 @@ class AssetApiTest extends TestCase
 
         $this->assertSame('writeoff', $a->fresh()->status->value);
     }
+
+    public function test_transfer_is_recorded_in_the_transfer_log(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'reason' => 'New hire'])->assertOk();
+
+        $this->getJson('/api/assets/transfers')
+            ->assertOk()
+            ->assertJsonPath('data.0.to_owner', 'EMP-2000')
+            ->assertJsonPath('data.0.from_owner', 'Pool — IT')
+            ->assertJsonPath('data.0.reason', 'New hire');
+    }
 }
