@@ -92,6 +92,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
 
     // Ticket module
     Route::get('tickets/summary', [TicketController::class, 'summary'])->name('api.tickets.summary');
+    Route::get('tickets/staff', [TicketController::class, 'staff'])->name('api.tickets.staff');
     Route::post('tickets/{ticket}/take', [TicketController::class, 'take'])->name('api.tickets.take');
     Route::post('tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('api.tickets.assign');
     Route::post('tickets/{ticket}/resolve', [TicketController::class, 'resolve'])->name('api.tickets.resolve');
