@@ -95,6 +95,23 @@ class TicketController extends Controller
         ]);
     }
 
+    /**
+     * IT staff who can be assigned a ticket — login accounts holding the super or
+     * admin (IT) role. Used to populate the super admin's assign dropdown.
+     */
+    public function staff(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('tickets.assign'), 403);
+
+        $staff = User::query()
+            ->whereHas('role', fn ($q) => $q->whereIn('key', ['super', 'admin']))
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]);
+
+        return response()->json(['data' => $staff]);
+    }
+
     /** Raise a new ticket; the requester is the current user's linked employee. */
     public function store(StoreTicketRequest $request): JsonResponse
     {

@@ -144,14 +144,7 @@ export interface ContractSummary {
 // Assets Management module
 export type AssetType = 'laptop' | 'desktop' | 'mobile' | 'printer' | 'server' | 'network' | 'other';
 export type AssetSource = 'purchased' | 'rented';
-export type AssetStatus =
-    | 'ready'
-    | 'pending_acceptance'
-    | 'deployed'
-    | 'pending_return'
-    | 'maintenance'
-    | 'writeoff'
-    | 'pending_stock';
+export type AssetStatus = 'ready' | 'pending_acceptance' | 'deployed' | 'pending_return' | 'maintenance' | 'writeoff' | 'pending_stock';
 
 export interface Asset {
     id: number;
@@ -205,6 +198,45 @@ export interface AssetSummary {
     total_value: number;
     by_type: { type: AssetType; count: number }[];
     top_value: Asset[];
+}
+
+// Ticket module types
+export type TicketStatus = 'open' | 'in_progress' | 'completed' | 'canceled';
+export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
+export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export interface Ticket {
+    id: number;
+    ticket_no: string;
+    subject: string;
+    subject_th: string | null;
+    description: string;
+    category: TicketCategory;
+    priority: TicketPriority | null;
+    status: TicketStatus;
+    requester_id: number;
+    requester_code?: string | null;
+    requester_name?: string | null;
+    assignee_id: number | null;
+    assignee_name?: string | null;
+    callback_phone: string | null;
+    related_asset_id: number | null;
+    related_asset_tag?: string | null;
+    related_asset_model?: string | null;
+    take_note: string | null;
+    resolution: string | null;
+    resolved_at: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+export interface TicketSummary {
+    total: number;
+    open: number;
+    in_progress: number;
+    completed: number;
+    canceled: number;
+    by_category: { category: TicketCategory; count: number }[];
 }
 
 export interface NavItem {
