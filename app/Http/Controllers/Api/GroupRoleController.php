@@ -31,19 +31,18 @@ class GroupRoleController extends Controller
         $usernames = Employee::whereIn('id', $newEmployeeIds)->pluck('username')->filter();
         User::where(function ($q) use ($emails, $usernames) {
             $q->whereIn('email', $emails)->orWhereIn('username', $usernames);
-        })->update(['role' => $group->role?->key, 'role_id' => $group->role_id]);
+        })->update(['role_id' => $group->role_id]);
     }
 
     /** Sets the login account's role for an employee (matched by email or username). */
     private function setUserRole(Employee $employee, ?string $roleKey): void
     {
-        $roleKey = $roleKey ?: 'user';
-        $roleId = Role::where('key', $roleKey)->value('id');
+        $roleId = Role::where('key', $roleKey ?: 'user')->value('id');
 
         if ($employee->email) {
-            User::where('email', $employee->email)->update(['role' => $roleKey, 'role_id' => $roleId]);
+            User::where('email', $employee->email)->update(['role_id' => $roleId]);
         } elseif ($employee->username) {
-            User::where('username', $employee->username)->update(['role' => $roleKey, 'role_id' => $roleId]);
+            User::where('username', $employee->username)->update(['role_id' => $roleId]);
         }
     }
 

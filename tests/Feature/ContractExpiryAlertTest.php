@@ -6,6 +6,7 @@ use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract;
 use App\Models\ContractAlertLog;
 use App\Models\ContractBellLog;
+use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
@@ -19,10 +20,17 @@ class ContractExpiryAlertTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** Grants a permission to a role (resolved to role_id), creating the role if needed. */
+    private function grant(string $roleKey, string $permission): void
+    {
+        $roleId = Role::firstOrCreate(['key' => $roleKey], ['name' => ucfirst($roleKey), 'color' => '#64748b', 'is_system' => false])->id;
+        RolePermission::firstOrCreate(['role_id' => $roleId, 'permission' => $permission], ['allowed' => true]);
+    }
+
     /** A user whose role grants contracts.alerts. */
     private function alertedUser(string $email = 'it@inaba.co.th'): User
     {
-        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.alerts'], ['allowed' => true]);
+        $this->grant('itrole', 'contracts.alerts');
 
         return User::factory()->create(['role' => 'itrole', 'email' => $email]);
     }
@@ -235,7 +243,7 @@ class ContractExpiryAlertTest extends TestCase
     {
         Notification::fake();
         Bus::fake();
-        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
+        $this->grant('itrole', 'contracts.renew');
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(30, [30]);
         $this->service()->run(); // logs bell + threshold 30
@@ -317,7 +325,7 @@ class ContractExpiryAlertTest extends TestCase
     public function test_renew_removes_the_bell_notification(): void
     {
         Bus::fake();
-        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
+        $this->grant('itrole', 'contracts.renew');
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(30, [30]);
         $this->service()->run();

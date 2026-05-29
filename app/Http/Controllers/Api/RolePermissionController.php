@@ -72,12 +72,10 @@ class RolePermissionController extends Controller
         // Snapshot current permissions before overwriting to compute the diff.
         $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
 
-        // Upsert in bulk instead of N individual updateOrCreate calls; write BOTH
-        // role_id (new FK) and legacy role (still NOT NULL until dropped in a later task).
+        // Upsert in bulk instead of N individual updateOrCreate calls.
         $grantedSet = array_flip($granted);
         $upsertRows = array_map(fn ($key) => [
             'role_id' => $roleId,
-            'role' => $role, // legacy column still NOT NULL until it is dropped in a later task
             'permission' => $key,
             'allowed' => isset($grantedSet[$key]),
         ], Permissions::all());
