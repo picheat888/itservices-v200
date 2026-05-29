@@ -24,7 +24,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
-            'role' => (string) $this->role,
+            'role' => $this->role?->key,
             'role_label' => $this->roleLabel(),
             // The Role Group that grants this user's permission level. A user may
             // belong to several groups (e.g. "All Staff" plus "IT Team"); the one
@@ -56,7 +56,7 @@ class UserResource extends JsonResource
 
         $groups = $employee->groupRoles()->get();
 
-        return $groups->firstWhere('role', $this->role)?->name
+        return $groups->firstWhere('role', $this->role?->key)?->name
             ?? $groups->first()?->name;
     }
 }

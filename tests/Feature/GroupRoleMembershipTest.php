@@ -71,7 +71,7 @@ class GroupRoleMembershipTest extends TestCase
             ->putJson("/api/group-roles/{$itTeam->id}", ['name' => 'IT Team', 'role' => 'admin', 'employee_ids' => [$emp->id]])
             ->assertOk();
 
-        $this->assertSame('admin', $user->fresh()->role);
+        $this->assertSame('admin', $user->fresh()->role?->key);
     }
 
     public function test_creating_a_group_also_moves_members_out_of_their_old_group(): void
@@ -114,7 +114,7 @@ class GroupRoleMembershipTest extends TestCase
 
         $this->assertDatabaseHas('group_role_employee', ['group_role_id' => $default->id, 'employee_id' => $emp->id]);
         $this->assertSame(1, $this->groupCount($emp->id));
-        $this->assertSame('user', $user->fresh()->role);
+        $this->assertSame('user', $user->fresh()->role?->key);
     }
 
     public function test_removing_from_the_default_group_leaves_the_employee_groupless(): void
@@ -130,6 +130,6 @@ class GroupRoleMembershipTest extends TestCase
             ->assertOk();
 
         $this->assertSame(0, $this->groupCount($emp->id));
-        $this->assertSame('user', $user->fresh()->role);
+        $this->assertSame('user', $user->fresh()->role?->key);
     }
 }

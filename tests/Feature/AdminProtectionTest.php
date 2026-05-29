@@ -37,8 +37,9 @@ class AdminProtectionTest extends TestCase
     private function userWith(string ...$permissions): User
     {
         $user = User::factory()->create(['role' => 'staff']);
+        $staffRole = Role::where('key', 'staff')->first();
         foreach ($permissions as $permission) {
-            RolePermission::create(['role' => 'staff', 'permission' => $permission, 'allowed' => true]);
+            RolePermission::create(['role_id' => $staffRole->id, 'permission' => $permission, 'allowed' => true]);
         }
 
         return $user;
@@ -94,7 +95,7 @@ class AdminProtectionTest extends TestCase
 
     public function test_non_super_cannot_modify_the_admin_group(): void
     {
-        $group = GroupRole::create(['name' => 'Admins', 'role' => 'super']);
+        $group = GroupRole::create(['name' => 'Admins', 'role_id' => Role::where('key', 'super')->value('id')]);
 
         $this->actingAs($this->userWith('system.manage_groups'));
 
@@ -104,7 +105,7 @@ class AdminProtectionTest extends TestCase
 
     public function test_non_super_cannot_delete_the_admin_group(): void
     {
-        $group = GroupRole::create(['name' => 'Admins', 'role' => 'super']);
+        $group = GroupRole::create(['name' => 'Admins', 'role_id' => Role::where('key', 'super')->value('id')]);
 
         $this->actingAs($this->userWith('system.manage_groups'));
 
@@ -116,7 +117,7 @@ class AdminProtectionTest extends TestCase
 
     public function test_super_can_manage_the_admin_group(): void
     {
-        $group = GroupRole::create(['name' => 'Admins', 'role' => 'super']);
+        $group = GroupRole::create(['name' => 'Admins', 'role_id' => Role::where('key', 'super')->value('id')]);
 
         $this->actingAs($this->super());
 
