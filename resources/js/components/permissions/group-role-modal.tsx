@@ -123,9 +123,9 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
     /** Commits the create/update mutation, then briefly shows a "Saved" state. */
     const persist = async () => {
-        // department_ids is no longer managed here — Department is now only a
-        // quick-add shortcut for employees, not a group↔department link.
-        const payload = { name, role: role || null, employee_ids: empIds, department_ids: [] };
+        // Department is only a quick-add shortcut for picking employees — it is not
+        // linked to the group (the group↔department pivot was removed).
+        const payload = { name, role: role || null, employee_ids: empIds };
         if (group) await update.mutateAsync({ id: group.id, payload });
         else await create.mutateAsync(payload);
         setSaved(true);

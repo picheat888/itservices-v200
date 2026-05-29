@@ -61,11 +61,8 @@ export interface GroupRole {
     role: string | null;
     role_label: string | null;
     employee_ids: number[];
-    department_ids: number[];
     employees: { id: number; name: string; code: string }[];
-    departments: { id: number; name: string }[];
     member_count: number;
-    department_count: number;
 }
 
 export interface GroupRoleListResponse {
@@ -77,7 +74,6 @@ export interface GroupRolePayload {
     name: string;
     role: string | null;
     employee_ids: number[];
-    department_ids: number[];
 }
 
 async function send<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
