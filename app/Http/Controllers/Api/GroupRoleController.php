@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class GroupRoleController extends Controller
@@ -33,26 +34,65 @@ class GroupRoleController extends Controller
         })->update(['role' => $group->role]);
     }
 
+    /** Sets the login account's role for an employee (matched by email or username). */
+    private function setUserRole(Employee $employee, ?string $role): void
+    {
+        $role = $role ?: 'user';
+
+        if ($employee->email) {
+            User::where('email', $employee->email)->update(['role' => $role]);
+        } elseif ($employee->username) {
+            User::where('username', $employee->username)->update(['role' => $role]);
+        }
+    }
+
     /**
-     * Resets User.role to 'user' (or next group's role) for employees removed from a group.
+     * Move semantics for "one employee, one group": detach the given employees
+     * from every OTHER group, then set this group's membership to exactly them.
+     *
+     * @param  array<int>  $employeeIds
+     */
+    private function moveEmployeesInto(GroupRole $group, array $employeeIds): void
+    {
+        if (count($employeeIds) > 0) {
+            DB::table('group_role_employee')
+                ->whereIn('employee_id', $employeeIds)
+                ->where('group_role_id', '!=', $group->id)
+                ->delete();
+        }
+
+        $group->employees()->sync($employeeIds);
+    }
+
+    /**
+     * Handles employees removed from a group. An employee who now belongs to no
+     * group falls back to the default group (preserving "everyone has exactly one
+     * group"); if there is no default group, or they were removed FROM it, they
+     * become group-less with the base 'user' role.
      *
      * @param  array<int>  $removedEmployeeIds
      */
-    private function resetRoleForOrphans(array $removedEmployeeIds): void
+    private function fallbackOrphansToDefault(GroupRole $fromGroup, array $removedEmployeeIds): void
     {
+        $defaultId = (int) AppSetting::get('default_employee_group_id', 0);
+        $defaultGroup = $defaultId ? GroupRole::find($defaultId) : null;
+
         foreach ($removedEmployeeIds as $empId) {
             $employee = Employee::find($empId);
             if (! $employee) {
                 continue;
             }
 
-            $otherGroup = $employee->groupRoles()->first();
-            $newRole = $otherGroup?->role ?? 'user';
+            // Still in another group? Then this was a move, not an orphaning.
+            if ($employee->groupRoles()->exists()) {
+                continue;
+            }
 
-            if ($employee->email) {
-                User::where('email', $employee->email)->update(['role' => $newRole]);
-            } elseif ($employee->username) {
-                User::where('username', $employee->username)->update(['role' => $newRole]);
+            if ($defaultGroup && $defaultGroup->id !== $fromGroup->id) {
+                $defaultGroup->employees()->syncWithoutDetaching([$empId]);
+                $this->setUserRole($employee, $defaultGroup->role);
+            } else {
+                $this->setUserRole($employee, 'user');
             }
         }
     }
@@ -123,10 +163,15 @@ class GroupRoleController extends Controller
         $data = $this->validateData($request);
         $this->guardSuperGroup($request, null, $data['role'] ?? null);
 
-        $group = GroupRole::create(['name' => $data['name'], 'role' => $data['role'] ?? null]);
-        $group->employees()->sync($data['employee_ids'] ?? []);
-        $group->departments()->sync($data['department_ids'] ?? []);
-        $this->syncUserRoles($group, $data['employee_ids'] ?? []);
+        $employeeIds = $data['employee_ids'] ?? [];
+        $group = DB::transaction(function () use ($data, $employeeIds) {
+            $group = GroupRole::create(['name' => $data['name'], 'role' => $data['role'] ?? null]);
+            $this->moveEmployeesInto($group, $employeeIds);
+            $group->departments()->sync($data['department_ids'] ?? []);
+            $this->syncUserRoles($group, $employeeIds);
+
+            return $group;
+        });
 
         AuditLog::record('Created role group', $group->name);
 
@@ -142,19 +187,21 @@ class GroupRoleController extends Controller
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
 
-        $groupRole->update(['name' => $data['name'], 'role' => $data['role'] ?? null]);
-        $groupRole->employees()->sync($newEmployeeIds);
-        $groupRole->departments()->sync($data['department_ids'] ?? []);
-        $this->syncUserRoles($groupRole, $newEmployeeIds);
+        DB::transaction(function () use ($groupRole, $data, $oldEmployeeIds, $newEmployeeIds) {
+            $groupRole->update(['name' => $data['name'], 'role' => $data['role'] ?? null]);
+            $this->moveEmployeesInto($groupRole, $newEmployeeIds);
+            $groupRole->departments()->sync($data['department_ids'] ?? []);
+            $this->syncUserRoles($groupRole, $newEmployeeIds);
 
-        $removed = array_diff($oldEmployeeIds, $newEmployeeIds);
-        if (count($removed) > 0) {
-            $this->resetRoleForOrphans(array_values($removed));
-        }
+            $removed = array_diff($oldEmployeeIds, $newEmployeeIds);
+            if (count($removed) > 0) {
+                $this->fallbackOrphansToDefault($groupRole, array_values($removed));
+            }
+        });
 
         AuditLog::record('Updated role group', $groupRole->name);
 
-        return response()->json(['data' => $this->present($groupRole), 'message' => 'success']);
+        return response()->json(['data' => $this->present($groupRole->load(['employees', 'departments'])), 'message' => 'success']);
     }
 
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
@@ -170,7 +217,7 @@ class GroupRoleController extends Controller
         $memberIds = $groupRole->employees->pluck('id')->all();
         $name = $groupRole->name;
         $groupRole->delete();
-        $this->resetRoleForOrphans($memberIds);
+        $this->fallbackOrphansToDefault($groupRole, $memberIds);
 
         AuditLog::record('Deleted role group', $name);
 

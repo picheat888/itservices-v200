@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useGroupRoleMutations, usePermissionMatrix } from '@/hooks/use-permissions';
+import { useGroupRoleMutations, useGroupRoles, usePermissionMatrix } from '@/hooks/use-permissions';
 import { useDepartments, useEmployees } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { departmentApi } from '@/services/orgApi';
 import type { GroupRole } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
-import { Info, UserPlus, Users, X } from 'lucide-react';
+import { ArrowRight, Check, Info, Loader2, UserPlus, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface DeptEmployee {
@@ -21,6 +21,15 @@ interface DeptEmployee {
     code: string;
 }
 
+/** One employee about to be moved out of their current group into this one. */
+interface MoveRow {
+    id: number;
+    name: string;
+    fromGroup: string;
+    fromRole: string;
+    toRole: string;
+}
+
 export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClose: () => void; group: GroupRole | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -28,11 +37,19 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     const { data: matrix } = usePermissionMatrix();
     const { data: employees = [] } = useEmployees();
     const { data: departments = [] } = useDepartments();
+    const { data: groupsData } = useGroupRoles();
 
     const [name, setName] = useState('');
     const [role, setRole] = useState<string>('');
     const [empIds, setEmpIds] = useState<number[]>([]);
     const [deptIds, setDeptIds] = useState<number[]>([]);
+
+    // Review-before-move: holds the employees that will be pulled out of another
+    // group on save. When non-null, the confirmation dialog is shown.
+    const [pendingMoves, setPendingMoves] = useState<MoveRow[] | null>(null);
+
+    // Brief "Saved" success state shown on the save/OK button before the modal closes.
+    const [saved, setSaved] = useState(false);
 
     // Department employee expansion panel
     const [expandedDeptId, setExpandedDeptId] = useState<number | null>(null);
@@ -47,6 +64,8 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             setDeptIds(group?.department_ids ?? []);
             setExpandedDeptId(null);
             setDeptMembers([]);
+            setPendingMoves(null);
+            setSaved(false);
         }
     }, [open, group]);
 
@@ -82,15 +101,78 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
         [employees, empIds, lang],
     );
 
-    const submit = async () => {
-        if (!name.trim()) return;
+    /** Resolves a role key to its human label from the permission matrix. */
+    const roleLabel = (roleKey: string | null) => (roleKey ? matrix?.roles.find((r) => r.value === roleKey)?.label ?? roleKey : '—');
+
+    /** Selected employees that currently belong to a different group (a move). */
+    const computeMoves = (): MoveRow[] => {
+        const groups = groupsData?.data ?? [];
+        return empIds.flatMap((id) => {
+            const from = groups.find((g) => g.id !== group?.id && g.employee_ids.includes(id));
+            if (!from) return [];
+            const e = employees.find((x) => x.id === id);
+            return [
+                {
+                    id,
+                    name: e ? (lang === 'th' ? e.name_th ?? e.name : e.name) : String(id),
+                    fromGroup: from.name,
+                    fromRole: from.role_label ?? roleLabel(from.role),
+                    toRole: roleLabel(role || null),
+                },
+            ];
+        });
+    };
+
+    /** Commits the create/update mutation, then briefly shows a "Saved" state. */
+    const persist = async () => {
         const payload = { name, role: role || null, employee_ids: empIds, department_ids: deptIds };
         if (group) await update.mutateAsync({ id: group.id, payload });
         else await create.mutateAsync(payload);
-        onClose();
+        setSaved(true);
+        // Keep the dialog (review or main) open so the green check lands on the
+        // button the user just clicked, then close.
+        setTimeout(() => {
+            setPendingMoves(null);
+            onClose();
+        }, 900);
+    };
+
+    /** On save: if any selected employee is moving groups, review first; else commit. */
+    const submit = () => {
+        if (!name.trim()) return;
+        const moves = computeMoves();
+        if (moves.length > 0) {
+            setPendingMoves(moves);
+            return;
+        }
+        void persist();
+    };
+
+    const saving = create.isPending || update.isPending;
+
+    /** Save/OK button label that swaps to a spinner then a green check while saving. */
+    const saveButtonLabel = (idleLabel: string) => {
+        if (saved) {
+            return (
+                <span className="flex items-center gap-1.5">
+                    <Check className="h-4 w-4" />
+                    {lang === 'th' ? 'บันทึกแล้ว' : 'Saved'}
+                </span>
+            );
+        }
+        if (saving) {
+            return (
+                <span className="flex items-center gap-1.5">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {lang === 'th' ? 'กำลังบันทึก…' : 'Saving…'}
+                </span>
+            );
+        }
+        return idleLabel;
     };
 
     return (
+        <>
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
@@ -233,11 +315,53 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!name.trim() || create.isPending || update.isPending}>
-                        {t('save')}
+                    <Button onClick={submit} disabled={!name.trim() || saving || saved}>
+                        {saveButtonLabel(t('save'))}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+
+        {/* Review-before-move confirmation */}
+        <Dialog open={pendingMoves !== null} onOpenChange={(o) => !o && setPendingMoves(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{lang === 'th' ? 'ยืนยันการย้ายกลุ่ม' : 'Confirm group move'}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                        {lang === 'th'
+                            ? `พนักงานต่อไปนี้จะถูกย้ายมาอยู่กลุ่ม “${name}” และสิทธิ์ (role) จะเปลี่ยนตามกลุ่มใหม่ — 1 คนอยู่ได้กลุ่มเดียวเท่านั้น:`
+                            : `These employees will be moved into “${name}” and their permission role will change — an employee may belong to only one group:`}
+                    </p>
+                    <ul className="space-y-1.5">
+                        {(pendingMoves ?? []).map((m) => (
+                            <li
+                                key={m.id}
+                                className="flex flex-wrap items-center gap-1.5 rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs"
+                            >
+                                <span className="font-medium">{m.name}</span>
+                                <span className="text-muted-foreground">
+                                    {m.fromGroup} [{m.fromRole}]
+                                </span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-brand">
+                                    {name} [{m.toRole}]
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setPendingMoves(null)} disabled={saving || saved}>
+                        {t('cancel')}
+                    </Button>
+                    <Button onClick={() => void persist()} disabled={saving || saved}>
+                        {saveButtonLabel('OK')}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

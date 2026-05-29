@@ -6,6 +6,8 @@ import { useRoleMutations } from '@/hooks/use-permissions';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { RoleRow } from '@/services/permissionApi';
+import { useUiStore } from '@/stores/ui';
+import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -13,14 +15,18 @@ const COLORS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed'
 
 export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () => void; role: RoleRow | null }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { create, update } = useRoleMutations();
     const [name, setName] = useState('');
     const [color, setColor] = useState(COLORS[0]);
+    // Brief "Saved" success state shown on the save button before the modal closes.
+    const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (open) {
             setName(role?.label ?? '');
             setColor(role?.color ?? COLORS[0]);
+            setSaved(false);
         }
     }, [open, role]);
 
@@ -56,8 +62,33 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
             }
         } else {
             await create.mutateAsync({ name, color });
-            onClose();
+            setSaved(true);
+            // Let the green check land for a moment before the dialog closes.
+            setTimeout(onClose, 900);
         }
+    };
+
+    const saving = create.isPending || update.isPending;
+
+    /** Save button label that swaps to a spinner then a green check while saving. */
+    const saveButtonLabel = () => {
+        if (saved) {
+            return (
+                <span className="flex items-center gap-1.5">
+                    <Check className="h-4 w-4" />
+                    {lang === 'th' ? 'บันทึกแล้ว' : 'Saved'}
+                </span>
+            );
+        }
+        if (saving) {
+            return (
+                <span className="flex items-center gap-1.5">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {lang === 'th' ? 'กำลังบันทึก…' : 'Saving…'}
+                </span>
+            );
+        }
+        return t('save');
     };
 
     return (
@@ -89,11 +120,11 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={onClose} disabled={saving || saved}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!name.trim() || create.isPending || update.isPending}>
-                        {t('save')}
+                    <Button onClick={submit} disabled={!name.trim() || saving || saved}>
+                        {saveButtonLabel()}
                     </Button>
                 </DialogFooter>
             </DialogContent>

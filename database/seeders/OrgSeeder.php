@@ -108,7 +108,7 @@ class OrgSeeder extends Seeder
         ];
         foreach ($links as $code => $username) {
             Employee::where('code', $code)->update([
-                'username'     => $username,
+                'username' => $username,
                 'login_method' => 'userpass',
             ]);
         }
@@ -122,6 +122,7 @@ class OrgSeeder extends Seeder
     private function seedGroupRoles(): void
     {
         $groups = [
+            ['name' => 'Administrator', 'role' => 'super'],
             ['name' => 'All Staff', 'role' => 'user'],
             ['name' => 'IT Team', 'role' => 'admin'],
             ['name' => 'HR Team', 'role' => 'hr'],
@@ -130,20 +131,36 @@ class OrgSeeder extends Seeder
             GroupRole::updateOrCreate(['name' => $g['name']], ['role' => $g['role']]);
         }
 
+        $admin = GroupRole::where('name', 'Administrator')->first();
         $allStaff = GroupRole::where('name', 'All Staff')->first();
-        $itTeam   = GroupRole::where('name', 'IT Team')->first();
-        $hrTeam   = GroupRole::where('name', 'HR Team')->first();
+        $itTeam = GroupRole::where('name', 'IT Team')->first();
+        $hrTeam = GroupRole::where('name', 'HR Team')->first();
 
-        // Default group: every active employee belongs to "All Staff".
-        $activeIds = Employee::where('status', 'active')->pluck('id')->all();
-        $allStaff?->employees()->syncWithoutDetaching($activeIds);
+        // Each employee belongs to exactly one group; assign by priority so the
+        // sets stay disjoint: Administrator > HR Team > IT Team > All Staff.
+        $assigned = [];
 
-        // Department-aligned groups for the IT and HR teams.
-        $itIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'IT'))->pluck('id')->all();
-        $itTeam?->employees()->syncWithoutDetaching($itIds);
+        // Administrator: the super demo account's employee (username 'super').
+        $adminIds = Employee::where('username', 'super')->pluck('id')->all();
+        $admin?->employees()->sync($adminIds);
+        $assigned = array_merge($assigned, $adminIds);
 
-        $hrIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'HR'))->pluck('id')->all();
-        $hrTeam?->employees()->syncWithoutDetaching($hrIds);
+        // HR Team: HR-department employees not already placed.
+        $hrIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'HR'))
+            ->whereNotIn('id', $assigned)->pluck('id')->all();
+        $hrTeam?->employees()->sync($hrIds);
+        $assigned = array_merge($assigned, $hrIds);
+
+        // IT Team: IT-department employees not already placed.
+        $itIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'IT'))
+            ->whereNotIn('id', $assigned)->pluck('id')->all();
+        $itTeam?->employees()->sync($itIds);
+        $assigned = array_merge($assigned, $itIds);
+
+        // All Staff (default): every remaining active employee.
+        $restIds = Employee::where('status', 'active')
+            ->whereNotIn('id', $assigned)->pluck('id')->all();
+        $allStaff?->employees()->sync($restIds);
 
         // Record the default group used to resolve role keys for new accounts.
         if ($allStaff) {
