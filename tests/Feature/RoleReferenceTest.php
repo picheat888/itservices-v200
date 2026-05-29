@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
+use App\Models\GroupRole;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,5 +49,22 @@ class RoleReferenceTest extends TestCase
         $this->assertDatabaseHas('role_permissions', [
             'role_id' => $hr->id, 'permission' => 'employees.view', 'allowed' => true,
         ]);
+    }
+
+    public function test_credential_creation_uses_group_role_id(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $hr = Role::create(['key' => 'hr', 'name' => 'HR', 'color' => '#111', 'is_system' => false]);
+
+        $employee = Employee::create(['code' => 'EMP-7100', 'name' => 'Grouped', 'email' => 'g7100@x.test']);
+        $group = GroupRole::create(['name' => 'HR Team', 'role_id' => $hr->id]);
+        $group->employees()->attach($employee->id);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'grouped', 'password' => 'secret123', 'password_confirmation' => 'secret123',
+        ])->assertCreated();
+
+        $this->assertSame($hr->id, User::where('username', 'grouped')->first()->role_id);
     }
 }
