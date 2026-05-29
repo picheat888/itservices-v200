@@ -210,7 +210,6 @@ class EmployeeService
                 'department_id' => $deptId,
                 'position_id' => $posId,
                 'joined_at' => $joined !== '' ? $joined : null,
-                'login_method' => 'email',
                 'status' => EmployeeStatus::Active,
             ];
         }
