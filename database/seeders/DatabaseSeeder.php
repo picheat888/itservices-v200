@@ -41,10 +41,17 @@ class DatabaseSeeder extends Seeder
         }
 
         // Default RBAC grants (super bypasses, not stored).
-        foreach (Permissions::defaults() as $role => $granted) {
+        // role_permissions references roles via role_id, so resolve each role key
+        // to its persisted id before writing (the legacy `role` string column was dropped).
+        $roleIdByKey = Role::pluck('id', 'key');
+        foreach (Permissions::defaults() as $roleKey => $granted) {
+            $roleId = $roleIdByKey[$roleKey] ?? null;
+            if ($roleId === null) {
+                continue;
+            }
             foreach (Permissions::all() as $key) {
                 RolePermission::updateOrCreate(
-                    ['role' => $role, 'permission' => $key],
+                    ['role_id' => $roleId, 'permission' => $key],
                     ['allowed' => in_array($key, $granted, true)],
                 );
             }
