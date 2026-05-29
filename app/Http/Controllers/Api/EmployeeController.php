@@ -257,10 +257,8 @@ class EmployeeController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
 
-        // Find the user account by matching email or username
-        $user = User::where('email', $employee->email)
-            ->orWhere('username', $employee->username)
-            ->first();
+        // Find the user account via the FK relation
+        $user = $employee->user;
 
         if (! $user) {
             return response()->json(['message' => 'no_account'], 422);
@@ -283,11 +281,7 @@ class EmployeeController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
 
-        $alreadyHasAccount = User::where('email', $employee->email)
-            ->when($employee->username, fn ($q) => $q->orWhere('username', $employee->username))
-            ->exists();
-
-        if ($alreadyHasAccount) {
+        if ($employee->user()->exists()) {
             return response()->json(['message' => 'Employee already has a login account.'], 422);
         }
 
