@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\GroupRole;
 use App\Models\Location;
 use App\Models\Position;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class OrgSeeder extends Seeder
@@ -79,7 +80,6 @@ class OrgSeeder extends Seeder
                     'position_id' => $posId[$e['pos']] ?? null,
                     'email' => $e['email'],
                     'phone' => $e['phone'],
-                    'login_method' => 'email',
                     'joined_at' => $e['joined_at'],
                     'status' => $e['status'] ?? 'active',
                     'resign_reason' => $e['resign_reason'] ?? null,
@@ -93,10 +93,9 @@ class OrgSeeder extends Seeder
     }
 
     /**
-     * Links the four demo login users to their matching employee records so the
-     * directory shows "Has account". These people exist as both User and Employee
-     * (Wichai=super, Kanya=it, Ratana=hr, Pimchanok=user); matching the employee's
-     * username to the login username makes EmployeeResource::has_account resolve true.
+     * Links the four demo login users to their matching employee records via the
+     * users.employee_id FK. Sets the employee's username for display purposes and
+     * points the User row back to the correct Employee, so has_account resolves true.
      */
     private function linkDemoAccounts(): void
     {
@@ -107,10 +106,12 @@ class OrgSeeder extends Seeder
             'EMP-1305' => 'user',  // Pimchanok Wongwai
         ];
         foreach ($links as $code => $username) {
-            Employee::where('code', $code)->update([
-                'username' => $username,
-                'login_method' => 'userpass',
-            ]);
+            $employee = Employee::where('code', $code)->first();
+            if (! $employee) {
+                continue;
+            }
+            $employee->update(['username' => $username]);
+            User::where('username', $username)->update(['employee_id' => $employee->id]);
         }
     }
 
