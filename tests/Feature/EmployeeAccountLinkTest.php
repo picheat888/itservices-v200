@@ -73,4 +73,21 @@ class EmployeeAccountLinkTest extends TestCase
             'username' => 'dupuser', 'password' => 'secret123', 'password_confirmation' => 'secret123',
         ])->assertStatus(422);
     }
+
+    public function test_index_filters_by_account_via_fk(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $withAcct = Employee::create(['code' => 'EMP-9007', 'name' => 'WithAcct', 'email' => 'wa@x.test']);
+        User::factory()->create(['employee_id' => $withAcct->id]);
+        $without = Employee::create(['code' => 'EMP-9008', 'name' => 'WithoutAcct', 'email' => 'wo@x.test']);
+
+        $hasCodes = collect($this->getJson('/api/employees?page=1&status=has_account')->json('data'))->pluck('code');
+        $noCodes = collect($this->getJson('/api/employees?page=1&status=no_account')->json('data'))->pluck('code');
+
+        $this->assertTrue($hasCodes->contains('EMP-9007'));
+        $this->assertFalse($hasCodes->contains('EMP-9008'));
+        $this->assertTrue($noCodes->contains('EMP-9008'));
+        $this->assertFalse($noCodes->contains('EMP-9007'));
+    }
 }
