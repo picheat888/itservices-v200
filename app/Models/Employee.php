@@ -6,6 +6,7 @@ use App\Enums\EmployeeStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
@@ -39,6 +40,12 @@ class Employee extends Model
         return $this->belongsToMany(GroupRole::class, 'group_role_employee');
     }
 
+    /** The login account linked to this employee, or null if none. */
+    public function user(): HasOne
+    {
+        return $this->hasOne(User::class);
+    }
+
     /**
      * The login account linked to this employee, matched by email or username
      * (the same link used by User::linkedEmployee). Null for employees with no
@@ -46,26 +53,13 @@ class Employee extends Model
      */
     public function linkedUser(): ?User
     {
-        if (! $this->email && ! $this->username) {
-            return null;
-        }
-
-        return User::query()
-            ->where(function ($q) {
-                if ($this->email) {
-                    $q->orWhere('email', $this->email);
-                }
-                if ($this->username) {
-                    $q->orWhere('username', $this->username);
-                }
-            })
-            ->first();
+        return $this->user;
     }
 
     /** True when this employee's linked login account holds the super (Administrator) role. */
     public function isSuperAdmin(): bool
     {
-        return $this->linkedUser()?->isSuper() ?? false;
+        return $this->user?->isSuper() ?? false;
     }
 
     public function department(): BelongsTo
