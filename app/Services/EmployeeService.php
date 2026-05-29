@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Employee;
 use App\Models\GroupRole;
 use App\Models\Position;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
@@ -51,15 +52,13 @@ class EmployeeService
      */
     public function createUserWithCredentials(Employee $employee, string $username, string $password): User
     {
-        $roleKey = $this->resolveGroupRole($employee);
-
         $user = User::create([
             'name' => $employee->name,
             'email' => $employee->email ?: null,
             'username' => $username,
             'password' => Hash::make($password),
             'password_changed_at' => now(),
-            'role' => $roleKey,
+            'role_id' => $this->resolveGroupRole($employee),
             'employee_id' => $employee->id,
         ]);
 
@@ -231,12 +230,15 @@ class EmployeeService
         return ['imported' => count($prepared), 'errors' => []];
     }
 
-    /** Returns the role key from the employee's first GroupRole, or 'user'. */
-    private function resolveGroupRole(Employee $employee): string
+    /** Returns the role_id from the employee's first GroupRole, or the base 'user' role id. */
+    private function resolveGroupRole(Employee $employee): int
     {
         $group = $employee->groupRoles()->first();
 
-        return $group?->role ?? 'user';
+        return $group?->role_id ?? Role::firstOrCreate(
+            ['key' => 'user'],
+            ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false],
+        )->id;
     }
 
     /**
