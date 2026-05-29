@@ -15,7 +15,7 @@ import { useStockItems, useStockMovements, useStockRequestActions, useStockReque
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { Role, StockItem, StockItemStatus, StockMovementType, StockRequestStatus } from '@/types';
-import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Boxes, Check, Pencil, Plus, RotateCcw, Search, Send, TriangleAlert, X } from 'lucide-react';
+import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Boxes, Check, Pencil, Plus, RotateCcw, Search, Send, X } from 'lucide-react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -117,6 +117,9 @@ export default function StockPage() {
         status: statusFilter === 'all' ? undefined : statusFilter,
     });
 
+    const { data: requests = [] } = useStockRequests();
+    const pendingRequests = requests.filter((r) => r.status === 'pending').length;
+
     const { symbol } = useCurrency();
     const fmtK = (n: number) => `${symbol}${(n / 1000).toFixed(0)}K`;
 
@@ -154,9 +157,9 @@ export default function StockPage() {
 
     const kpis = [
         { label: t('stock_kpi_skus'), value: summary?.skus ?? '—', sub: `${summary?.total_units ?? 0} ${t('stock_units_total')}`, icon: Archive },
+        { label: t('stock_kpi_low'), value: summary ? (summary.out_count + summary.low_count + summary.over_count) : '—', sub: t('stock_needs_reorder'), icon: AlertTriangle },
+        { label: t('stock_kpi_over'), value: pendingRequests, sub: t('stock_overstock'), icon: Send },
         { label: t('stock_kpi_value'), value: summary ? fmtK(summary.total_value) : '—', sub: t('stock_at_cost'), icon: Boxes },
-        { label: t('stock_kpi_low'), value: summary ? (summary.out_count + summary.low_count) : '—', sub: t('stock_needs_reorder'), icon: AlertTriangle },
-        { label: t('stock_kpi_over'), value: summary?.over_count ?? '—', sub: t('stock_overstock'), icon: TriangleAlert },
     ];
 
     const hasAlerts = !!summary && (summary.out_count > 0 || summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
@@ -198,22 +201,6 @@ export default function StockPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                {kpis.map((k) => {
-                    const Icon = k.icon;
-                    return (
-                        <Card key={k.label} className="p-5">
-                            <div className="flex items-start justify-between">
-                                <div className="text-muted-foreground text-sm">{k.label}</div>
-                                <span className="text-brand bg-brand/10 flex h-9 w-9 items-center justify-center rounded-lg"><Icon className="h-[18px] w-[18px]" /></span>
-                            </div>
-                            <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
-                            <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
-                        </Card>
-                    );
-                })}
-            </div>
-
             {hasAlerts && summary && (
                 <AlertCard summary={summary} t={t} onViewItems={() => { setTab('items'); setStatusFilter('alerts'); }} />
             )}
@@ -233,7 +220,29 @@ export default function StockPage() {
                 </div>
 
                 <div className="p-5">
-                    {tab === 'dashboard' && <DashboardTab summary={summary} t={t} />}
+                    {tab === 'dashboard' && (
+                        <DashboardTab
+                            summary={summary}
+                            t={t}
+                            kpis={kpis}
+                            onSelectWarehouse={(w) => {
+                                // Jump to the Items tab showing only the chosen warehouse.
+                                setSearch('');
+                                setCat('all');
+                                setStatusFilter('all');
+                                setWh(w);
+                                setTab('items');
+                            }}
+                            onSelectCategory={(c) => {
+                                // Jump to the Items tab showing only the chosen category.
+                                setSearch('');
+                                setWh('all');
+                                setStatusFilter('all');
+                                setCat(c);
+                                setTab('items');
+                            }}
+                        />
+                    )}
 
                     {tab === 'items' && (
                         <div className="space-y-3">
@@ -443,43 +452,79 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
     );
 }
 
-function DashboardTab({ summary, t }: { summary: ReturnType<typeof useStockSummary>['data']; t: ReturnType<typeof useT> }) {
+type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive };
+
+function DashboardTab({ summary, t, kpis, onSelectWarehouse, onSelectCategory }: { summary: ReturnType<typeof useStockSummary>['data']; t: ReturnType<typeof useT>; kpis: Kpi[]; onSelectWarehouse: (warehouse: string) => void; onSelectCategory: (category: string) => void }) {
     const { symbol } = useCurrency();
-    if (!summary) return <div className="text-muted-foreground py-10 text-center text-sm">—</div>;
-    const maxUnits = Math.max(1, ...summary.by_category.map((c) => c.units));
+    const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     return (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-            <div>
-                <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
-                <div className="space-y-2">
-                    {summary.by_warehouse.map((w) => (
-                        <div key={w.warehouse} className="border-border flex items-center justify-between rounded-md border px-3 py-2.5">
-                            <div className="text-sm font-medium">{w.warehouse}</div>
-                            <div className="flex gap-6 text-right font-mono text-sm">
-                                <div><div className="text-muted-foreground text-[10px] uppercase">SKU</div>{w.skus}</div>
-                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>{w.units}</div>
-                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>{symbol}{(w.value / 1000).toFixed(0)}K</div>
+        <div className="space-y-8">
+            {/* KPI cards live on the Dashboard tab. */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {kpis.map((k) => {
+                    const Icon = k.icon;
+                    return (
+                        <Card key={k.label} className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div className="text-muted-foreground text-sm">{k.label}</div>
+                                <span className="text-brand bg-brand/10 flex h-9 w-9 items-center justify-center rounded-lg"><Icon className="h-[18px] w-[18px]" /></span>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                            <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
+                            <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
+                        </Card>
+                    );
+                })}
             </div>
-            <div>
-                <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
-                <div className="space-y-2.5">
-                    {summary.by_category.map((c) => (
-                        <div key={c.category}>
-                            <div className="mb-1 flex justify-between text-sm">
-                                <span>{c.category}</span>
-                                <span className="text-muted-foreground font-mono">{c.units}</span>
-                            </div>
-                            <div className="bg-muted h-1.5 rounded-full">
-                                <span className="bg-brand block h-full rounded-full" style={{ width: `${(c.units / maxUnits) * 100}%` }} />
-                            </div>
+
+            {!summary ? (
+                <div className="text-muted-foreground py-10 text-center text-sm">—</div>
+            ) : (
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                    <div>
+                        <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
+                        <div className="space-y-2">
+                            {summary.by_warehouse.map((w) => (
+                                <button
+                                    type="button"
+                                    key={w.warehouse}
+                                    onClick={() => onSelectWarehouse(w.warehouse)}
+                                    title={t('stock_view_items')}
+                                    className="border-border hover:bg-accent/50 hover:border-brand/40 flex w-full items-center justify-between rounded-md border px-3 py-2.5 text-left transition-colors"
+                                >
+                                    <div className="text-sm font-medium">{w.warehouse}</div>
+                                    <div className="flex gap-6 text-right font-mono text-sm">
+                                        <div><div className="text-muted-foreground text-[10px] uppercase">SKU</div>{w.skus}</div>
+                                        <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>{w.units}</div>
+                                        <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>{symbol}{(w.value / 1000).toFixed(0)}K</div>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
-                    ))}
+                    </div>
+                    <div>
+                        <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
+                        <div className="space-y-2.5">
+                            {summary.by_category.map((c) => (
+                                <button
+                                    type="button"
+                                    key={c.category}
+                                    onClick={() => onSelectCategory(c.category)}
+                                    title={t('stock_view_items')}
+                                    className="group block w-full text-left"
+                                >
+                                    <div className="mb-1 flex justify-between text-sm">
+                                        <span className="group-hover:text-brand transition-colors">{c.category}</span>
+                                        <span className="text-muted-foreground font-mono">{c.units}</span>
+                                    </div>
+                                    <div className="bg-muted h-1.5 rounded-full">
+                                        <span className="bg-brand block h-full rounded-full" style={{ width: `${(c.units / maxUnits) * 100}%` }} />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
