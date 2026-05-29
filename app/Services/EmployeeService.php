@@ -60,14 +60,11 @@ class EmployeeService
             'password' => Hash::make($password),
             'password_changed_at' => now(),
             'role' => $roleKey,
+            'employee_id' => $employee->id,
         ]);
 
-        // Mirror the username onto the employee so has_account resolves correctly
-        // and the account stays linked for future reset-password lookups.
-        $employee->update([
-            'username' => $username,
-            'login_method' => 'userpass',
-        ]);
+        // Mirror the username onto the employee for display/search.
+        $employee->update(['username' => $username]);
 
         return $user;
     }

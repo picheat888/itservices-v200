@@ -19,4 +19,21 @@ class EmployeeAccountLinkTest extends TestCase
         $this->assertSame($user->id, $employee->fresh()->user->id);
         $this->assertSame($employee->id, $user->fresh()->employee->id);
     }
+
+    public function test_setting_credentials_links_the_account_via_fk(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = Employee::create(['code' => 'EMP-9002', 'name' => 'New Hire', 'email' => 'nh@x.test']);
+
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'newhire',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertCreated();
+
+        $user = User::where('username', 'newhire')->first();
+        $this->assertNotNull($user);
+        $this->assertSame($employee->id, $user->employee_id);
+        $this->assertTrue($employee->fresh()->user()->exists());
+    }
 }
