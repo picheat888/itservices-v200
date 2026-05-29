@@ -7,6 +7,7 @@ use App\Enums\UserRole;
 use App\Support\Permissions;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,7 @@ class User extends Authenticatable
         'password_changed_at',
         'role',
         'preferences',
+        'employee_id',
     ];
 
     /** Default per-user display preferences. */
@@ -147,26 +149,19 @@ class User extends Authenticatable
         return $changedAt === null || $changedAt->addDays($days)->isPast();
     }
 
+    /** The employee this login account belongs to (null for system-only accounts). */
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
     /**
      * The Employee record this login account belongs to, matched by email or
      * username (the same link used by has_account). Null for system-only accounts.
      */
     public function linkedEmployee(): ?Employee
     {
-        if (! $this->email && ! $this->username) {
-            return null;
-        }
-
-        return Employee::query()
-            ->where(function ($q) {
-                if ($this->email) {
-                    $q->orWhere('email', $this->email);
-                }
-                if ($this->username) {
-                    $q->orWhere('username', $this->username);
-                }
-            })
-            ->first();
+        return $this->employee;
     }
 
     /** Resolves the profile photo URL from the linked Employee record. */
