@@ -7,6 +7,7 @@ use App\Models\ContractAlertLog;
 use App\Models\ContractBellLog;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
@@ -74,6 +75,12 @@ class ContractExpiryAlertService
     {
         ContractAlertLog::where('contract_id', $contract->id)->delete();
         ContractBellLog::where('contract_id', $contract->id)->delete();
+
+        // Also drop the in-app bell so a renewed contract stops showing a stale
+        // "expiring soon" alert; a fresh term will re-bell on the next run.
+        DatabaseNotification::where('type', ContractExpiryNotification::class)
+            ->where('data->contract_id', $contract->id)
+            ->delete();
     }
 
     /**
@@ -94,10 +101,34 @@ class ContractExpiryAlertService
             return false;
         }
 
+        // Overwrite rather than stack: drop each recipient's existing bell for
+        // this contract first, so today's resend leaves a single, freshly-unread
+        // alert. It therefore re-surfaces even if the user had already marked it
+        // read — and keeps doing so daily until the contract is renewed (which
+        // clears the ledgers via resetForContract) or cancelled (filtered out of
+        // the run entirely).
+        $this->clearBellNotifications($contract, $recipients);
+
         Notification::send($recipients, new ContractExpiryNotification($contract, $days));
         ContractBellLog::create(['contract_id' => $contract->id, 'bell_date' => $today]);
 
         return true;
+    }
+
+    /**
+     * Removes any existing in-app bell notifications for this contract from the
+     * given recipients, leaving the daily resend to recreate exactly one each.
+     *
+     * @param  Collection<int, User>  $recipients
+     */
+    private function clearBellNotifications(Contract $contract, Collection $recipients): void
+    {
+        foreach ($recipients as $recipient) {
+            $recipient->notifications()
+                ->where('type', ContractExpiryNotification::class)
+                ->where('data->contract_id', $contract->id)
+                ->delete();
+        }
     }
 
     /**
