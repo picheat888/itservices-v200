@@ -134,11 +134,8 @@ class GroupRoleController extends Controller
             'role' => $g->role?->key,
             'role_label' => $g->role ? ($g->role->name ?? $g->role->key) : null,
             'employee_ids' => $g->employees->pluck('id'),
-            'department_ids' => $g->departments->pluck('id'),
             'employees' => $g->employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'code' => $e->code]),
-            'departments' => $g->departments->map(fn ($d) => ['id' => $d->id, 'name' => $d->name]),
             'member_count' => $g->employees->count(),
-            'department_count' => $g->departments->count(),
         ];
     }
 
@@ -146,7 +143,7 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
 
-        $groups = GroupRole::with(['employees', 'departments'])
+        $groups = GroupRole::with(['employees'])
             ->orderBy('name')
             ->get()
             ->map(fn ($g) => $this->present($g));
@@ -167,7 +164,6 @@ class GroupRoleController extends Controller
         $group = DB::transaction(function () use ($data, $employeeIds) {
             $group = GroupRole::create(['name' => $data['name'], 'role' => $data['role'] ?? null]);
             $this->moveEmployeesInto($group, $employeeIds);
-            $group->departments()->sync($data['department_ids'] ?? []);
             $this->syncUserRoles($group, $employeeIds);
 
             return $group;
@@ -190,7 +186,6 @@ class GroupRoleController extends Controller
         DB::transaction(function () use ($groupRole, $data, $oldEmployeeIds, $newEmployeeIds) {
             $groupRole->update(['name' => $data['name'], 'role' => $data['role'] ?? null]);
             $this->moveEmployeesInto($groupRole, $newEmployeeIds);
-            $groupRole->departments()->sync($data['department_ids'] ?? []);
             $this->syncUserRoles($groupRole, $newEmployeeIds);
 
             $removed = array_diff($oldEmployeeIds, $newEmployeeIds);
@@ -201,7 +196,7 @@ class GroupRoleController extends Controller
 
         AuditLog::record('Updated role group', $groupRole->name);
 
-        return response()->json(['data' => $this->present($groupRole->load(['employees', 'departments'])), 'message' => 'success']);
+        return response()->json(['data' => $this->present($groupRole->load(['employees'])), 'message' => 'success']);
     }
 
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
@@ -252,8 +247,6 @@ class GroupRoleController extends Controller
             'role' => ['nullable', 'string', Rule::exists('roles', 'key')],
             'employee_ids' => ['array'],
             'employee_ids.*' => ['exists:employees,id'],
-            'department_ids' => ['array'],
-            'department_ids.*' => ['exists:departments,id'],
         ]);
     }
 }

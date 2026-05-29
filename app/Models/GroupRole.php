@@ -43,12 +43,4 @@ class GroupRole extends Model
     {
         return $this->belongsToMany(Employee::class, 'group_role_employee');
     }
-
-    /**
-     * Departments that belong to this group role.
-     */
-    public function departments(): BelongsToMany
-    {
-        return $this->belongsToMany(Department::class, 'group_role_department');
-    }
 }
