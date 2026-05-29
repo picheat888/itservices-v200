@@ -39,7 +39,6 @@ export interface ApiEnvelope<T> {
 }
 
 export type EmployeeStatus = 'active' | 'resigned';
-export type LoginMethod = 'email' | 'userpass';
 
 export interface Department {
     id: number;
@@ -75,7 +74,6 @@ export interface Employee {
     position: string | null;
     email: string | null;
     phone: string | null;
-    login_method: LoginMethod;
     username: string | null;
     joined_at: string | null;
     status: EmployeeStatus;

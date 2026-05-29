@@ -83,7 +83,6 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const displayName = `${firstName} ${lastName}`.trim() || user.name;
     const previewUrl = photo ? URL.createObjectURL(photo) : user.photo_url;
     const department = lang === 'th' ? emp?.department_th ?? emp?.department : emp?.department;
-    const loginMethod = emp?.login_method === 'email' ? t('emp_login_email') : t('emp_login_userpass');
 
     const pickPhoto = (f?: File) => {
         setSaved(false);
@@ -226,7 +225,6 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         <div className="grid grid-cols-2 gap-4">
                             <Row label={t('login_email')} value={user.email} mono />
                             <Row label={t('emp_username')} value={user.username} mono />
-                            <Row label={t('emp_login_method')} value={emp ? loginMethod : undefined} />
                             <Row label={t('permission_level')} value={user.group_name ?? user.role_label} />
                         </div>
                     </div>
