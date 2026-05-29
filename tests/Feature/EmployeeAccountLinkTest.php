@@ -36,4 +36,41 @@ class EmployeeAccountLinkTest extends TestCase
         $this->assertSame($employee->id, $user->employee_id);
         $this->assertTrue($employee->fresh()->user()->exists());
     }
+
+    public function test_reset_password_uses_fk_link(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $linked = Employee::create(['code' => 'EMP-9003', 'name' => 'Linked', 'email' => 'l@x.test']);
+        User::factory()->create(['employee_id' => $linked->id]);
+        $unlinked = Employee::create(['code' => 'EMP-9004', 'name' => 'Unlinked', 'email' => 'u@x.test']);
+
+        $this->postJson("/api/employees/{$linked->id}/reset-password")
+            ->assertOk()->assertJsonPath('new_password', 'EMP-9003');
+
+        $this->postJson("/api/employees/{$unlinked->id}/reset-password")
+            ->assertStatus(422)->assertJsonPath('message', 'no_account');
+    }
+
+    public function test_has_account_flag_reflects_fk(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $linked = Employee::create(['code' => 'EMP-9005', 'name' => 'HasAcct', 'email' => 'h@x.test']);
+        User::factory()->create(['employee_id' => $linked->id]);
+
+        $this->getJson("/api/employees/{$linked->id}")
+            ->assertOk()->assertJsonPath('data.has_account', true);
+    }
+
+    public function test_credentials_rejected_when_already_linked(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = Employee::create(['code' => 'EMP-9006', 'name' => 'Dup', 'email' => 'd@x.test']);
+        User::factory()->create(['employee_id' => $employee->id]);
+
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'dupuser', 'password' => 'secret123', 'password_confirmation' => 'secret123',
+        ])->assertStatus(422);
+    }
 }

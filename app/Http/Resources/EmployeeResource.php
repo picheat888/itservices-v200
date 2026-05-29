@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use App\Enums\EmployeeStatus;
 use App\Models\Employee;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -19,15 +18,10 @@ class EmployeeResource extends JsonResource
     {
         $status = $this->status instanceof EmployeeStatus ? $this->status : EmployeeStatus::tryFrom((string) $this->status);
 
-        // Resolve the linked login account once: drives both has_account and the
-        // is_super_admin flag (used to lock down editing Administrator records).
-        $linkedUser = User::where('email', $this->email)
-            ->orWhere(function ($q) {
-                if ($this->username) {
-                    $q->where('username', $this->username);
-                }
-            })
-            ->first();
+        // Resolve the linked login account once via the FK relation: drives both
+        // has_account and the is_super_admin flag (used to lock down editing
+        // Administrator records).
+        $linkedUser = $this->user;
 
         return [
             'id' => $this->id,
@@ -42,7 +36,6 @@ class EmployeeResource extends JsonResource
             'position' => $this->whenLoaded('position', fn () => $this->position?->title),
             'email' => $this->email,
             'phone' => $this->phone,
-            'login_method' => $this->login_method,
             'username' => $this->username,
             'joined_at' => $this->joined_at?->toDateString(),
             'status' => $status?->value ?? EmployeeStatus::Active->value,
