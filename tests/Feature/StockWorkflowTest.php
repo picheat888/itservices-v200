@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\StockItem;
 use App\Models\StockRequest;
@@ -22,8 +23,9 @@ class StockWorkflowTest extends TestCase
     private function userWith(array $permissions): User
     {
         $user = User::factory()->create(['role' => 'user']);
+        $roleId = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false])->id;
         foreach ($permissions as $p) {
-            RolePermission::updateOrCreate(['role' => 'user', 'permission' => $p], ['allowed' => true]);
+            RolePermission::updateOrCreate(['role_id' => $roleId, 'permission' => $p], ['allowed' => true]);
         }
 
         return $user;

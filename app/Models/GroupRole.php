@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class GroupRole extends Model
 {
+    // 'role' is kept fillable as a write-alias: assigning a role *key* string is
+    // resolved to role_id by setRoleAttribute(); it never persists a column.
     protected $fillable = ['name', 'role_id', 'role'];
 
     /**
-     * The role assigned to this group (resolved via role_id FK).
+     * The role assigned to this group (resolved via role_id FK). $group->role
+     * returns the Role model; use $group->role?->key for the key string.
      */
     public function role(): BelongsTo
     {
@@ -19,34 +22,18 @@ class GroupRole extends Model
     }
 
     /**
-     * Read-accessor: ensures $group->role always returns the Role *model* (via
-     * role_id FK) and not the legacy `role` string column that still exists in the
-     * schema during this transitional migration phase. The string column is dropped
-     * in a later task. Access the key via $group->role?->key.
-     */
-    public function getRoleAttribute(): ?Role
-    {
-        return $this->getRelationValue('role');
-    }
-
-    /**
-     * Compatibility write-mutator: assigning a role *key* (string) resolves it to
-     * role_id and also preserves the legacy `role` column value while the old
-     * column still exists in the schema. Dropped in a later migration task.
+     * Compatibility write-mutator: assigning a role *key* string resolves it to
+     * role_id, so `['role' => '<key>']` assignments still work.
      */
     public function setRoleAttribute(?string $key): void
     {
-        if ($key === null) {
-            $this->attributes['role_id'] = null;
-            $this->attributes['role'] = null;
-        } else {
-            $role = Role::firstOrCreate(
+        $this->attributes['role_id'] = $key === null
+            ? null
+            : Role::firstOrCreate(
                 ['key' => $key],
                 ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => $key === 'super'],
-            );
-            $this->attributes['role_id'] = $role->id;
-            $this->attributes['role'] = $key;
-        }
+            )->id;
+        unset($this->attributes['role']);
     }
 
     /**
