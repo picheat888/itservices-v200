@@ -19,30 +19,30 @@ class RolePermissionController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
 
-        // Single query: all granted permissions grouped by role key
-        $permsByRole = RolePermission::where('allowed', true)
-            ->get(['role', 'permission'])
-            ->groupBy('role')
+        // Single query: all granted permissions grouped by role_id
+        $permsByRoleId = RolePermission::where('allowed', true)
+            ->get(['role_id', 'permission'])
+            ->groupBy('role_id')
             ->map(fn ($rows) => $rows->pluck('permission')->all());
 
-        // Single query: member counts per role
-        $memberCounts = User::select('role', DB::raw('count(*) as cnt'))
-            ->whereNotNull('role')
-            ->groupBy('role')
-            ->pluck('cnt', 'role');
+        // Single query: member counts per role_id
+        $memberCounts = User::select('role_id', DB::raw('count(*) as cnt'))
+            ->whereNotNull('role_id')
+            ->groupBy('role_id')
+            ->pluck('cnt', 'role_id');
 
-        $roles = Role::orderByDesc('is_system')->orderBy('name')->get()->map(function (Role $role) use ($permsByRole, $memberCounts) {
+        $roles = Role::orderByDesc('is_system')->orderBy('name')->get()->map(function (Role $role) use ($permsByRoleId, $memberCounts) {
             $allowed = $role->key === 'super'
                 ? Permissions::all()
-                : ($permsByRole[$role->key] ?? []);
+                : ($permsByRoleId[$role->id] ?? []);
 
             return [
-                'value'     => $role->key,
-                'label'     => $role->name,
-                'color'     => $role->color,
-                'is_super'  => $role->key === 'super',
+                'value' => $role->key,
+                'label' => $role->name,
+                'color' => $role->color,
+                'is_super' => $role->key === 'super',
                 'is_system' => $role->is_system,
-                'members'   => (int) ($memberCounts[$role->key] ?? 0),
+                'members' => (int) ($memberCounts[$role->id] ?? 0),
                 'permissions' => $allowed,
             ];
         });
@@ -50,7 +50,7 @@ class RolePermissionController extends Controller
         return response()->json([
             'data' => [
                 'catalog' => Permissions::catalog(),
-                'roles'   => $roles,
+                'roles' => $roles,
             ],
         ]);
     }
@@ -59,29 +59,32 @@ class RolePermissionController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
         abort_if($role === 'super', 422, 'Administrator Template permissions cannot be changed.');
+        $roleId = Role::where('key', $role)->value('id');
+        abort_if($roleId === null, 404);
 
         $data = $request->validate([
-            'permissions'   => ['present', 'array'],
+            'permissions' => ['present', 'array'],
             'permissions.*' => [Rule::in(Permissions::all())],
         ]);
 
         $granted = $data['permissions'];
 
         // Snapshot current permissions before overwriting to compute the diff.
-        $before = RolePermission::where('role', $role)->where('allowed', true)->pluck('permission')->all();
+        $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
 
-        // Upsert in bulk instead of N individual updateOrCreate calls
-        $allPerms = Permissions::all();
+        // Upsert in bulk instead of N individual updateOrCreate calls; write BOTH
+        // role_id (new FK) and legacy role (still NOT NULL until dropped in a later task).
         $grantedSet = array_flip($granted);
         $upsertRows = array_map(fn ($key) => [
-            'role'       => $role,
+            'role_id' => $roleId,
+            'role' => $role, // legacy column still NOT NULL until it is dropped in a later task
             'permission' => $key,
-            'allowed'    => isset($grantedSet[$key]),
-        ], $allPerms);
+            'allowed' => isset($grantedSet[$key]),
+        ], Permissions::all());
 
-        RolePermission::upsert($upsertRows, ['role', 'permission'], ['allowed']);
+        RolePermission::upsert($upsertRows, ['role_id', 'permission'], ['allowed']);
 
-        $added   = array_values(array_diff($granted, $before));
+        $added = array_values(array_diff($granted, $before));
         $removed = array_values(array_diff($before, $granted));
 
         AuditLog::record(
