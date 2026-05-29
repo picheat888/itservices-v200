@@ -23,7 +23,7 @@ class GroupRoleController extends Controller
      */
     private function syncUserRoles(GroupRole $group, array $newEmployeeIds): void
     {
-        if (! $group->role || count($newEmployeeIds) === 0) {
+        if (! $group->role_id || count($newEmployeeIds) === 0) {
             return;
         }
 
@@ -31,18 +31,19 @@ class GroupRoleController extends Controller
         $usernames = Employee::whereIn('id', $newEmployeeIds)->pluck('username')->filter();
         User::where(function ($q) use ($emails, $usernames) {
             $q->whereIn('email', $emails)->orWhereIn('username', $usernames);
-        })->update(['role' => $group->role]);
+        })->update(['role' => $group->role?->key, 'role_id' => $group->role_id]);
     }
 
     /** Sets the login account's role for an employee (matched by email or username). */
-    private function setUserRole(Employee $employee, ?string $role): void
+    private function setUserRole(Employee $employee, ?string $roleKey): void
     {
-        $role = $role ?: 'user';
+        $roleKey = $roleKey ?: 'user';
+        $roleId = Role::where('key', $roleKey)->value('id');
 
         if ($employee->email) {
-            User::where('email', $employee->email)->update(['role' => $role]);
+            User::where('email', $employee->email)->update(['role' => $roleKey, 'role_id' => $roleId]);
         } elseif ($employee->username) {
-            User::where('username', $employee->username)->update(['role' => $role]);
+            User::where('username', $employee->username)->update(['role' => $roleKey, 'role_id' => $roleId]);
         }
     }
 
@@ -90,7 +91,7 @@ class GroupRoleController extends Controller
 
             if ($defaultGroup && $defaultGroup->id !== $fromGroup->id) {
                 $defaultGroup->employees()->syncWithoutDetaching([$empId]);
-                $this->setUserRole($employee, $defaultGroup->role);
+                $this->setUserRole($employee, $defaultGroup->role?->key);
             } else {
                 $this->setUserRole($employee, 'user');
             }
@@ -131,8 +132,8 @@ class GroupRoleController extends Controller
         return [
             'id' => $g->id,
             'name' => $g->name,
-            'role' => $g->role,
-            'role_label' => $g->role ? (Role::where('key', $g->role)->value('name') ?? $g->role) : null,
+            'role' => $g->role?->key,
+            'role_label' => $g->role ? ($g->role->name ?? $g->role->key) : null,
             'employee_ids' => $g->employees->pluck('id'),
             'department_ids' => $g->departments->pluck('id'),
             'employees' => $g->employees->map(fn ($e) => ['id' => $e->id, 'name' => $e->name, 'code' => $e->code]),
@@ -182,7 +183,7 @@ class GroupRoleController extends Controller
     {
         $this->gate($request);
         $data = $this->validateData($request);
-        $this->guardSuperGroup($request, $groupRole->role, $data['role'] ?? null);
+        $this->guardSuperGroup($request, $groupRole->role?->key, $data['role'] ?? null);
 
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
@@ -207,7 +208,7 @@ class GroupRoleController extends Controller
     public function destroy(Request $request, GroupRole $groupRole): JsonResponse
     {
         $this->gate($request);
-        $this->guardSuperGroup($request, $groupRole->role);
+        $this->guardSuperGroup($request, $groupRole->role?->key);
 
         // Unset default group if this one is being deleted
         if ((int) AppSetting::get('default_employee_group_id', 0) === $groupRole->id) {
