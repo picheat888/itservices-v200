@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreContractRequest;
 use App\Http\Resources\ContractResource;
+use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\Contract;
 use App\Services\ContractExpiryAlertService;
@@ -96,7 +97,9 @@ class ContractController extends Controller
         $live = $contracts->filter(fn ($c) => $c->cancelled_at === null);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
         $expired = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
-        $active = $live->filter(fn ($c) => $c->daysRemaining() > 0);
+        // "Active" = healthy contracts only — exclude those already inside their
+        // reminder window so active/expiring/expired stay mutually exclusive.
+        $active = $live->filter(fn ($c) => $c->daysRemaining() > 0 && ! $c->isInReminder());
         $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null);
 
         $annual = $live->sum('value');
@@ -304,17 +307,19 @@ class ContractController extends Controller
         return $rows;
     }
 
-    /** Formats a baht amount as a compact "฿4.31M" / "฿820K" string. */
+    /** Formats an amount as a compact "฿4.31M" / "฿820K" string (symbol per Settings currency). */
     private function formatMoney(float $amount): string
     {
+        $symbol = AppSetting::currencySymbol();
+
         if ($amount >= 1_000_000) {
-            return '฿'.number_format($amount / 1_000_000, 2).'M';
+            return $symbol.number_format($amount / 1_000_000, 2).'M';
         }
 
         if ($amount >= 1_000) {
-            return '฿'.number_format($amount / 1_000).'K';
+            return $symbol.number_format($amount / 1_000).'K';
         }
 
-        return '฿'.number_format($amount);
+        return $symbol.number_format($amount);
     }
 }

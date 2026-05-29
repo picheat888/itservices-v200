@@ -1,6 +1,17 @@
+import type { AssetStatusColors } from '@/services/settingsApi';
 import type { Density, Lang, SidebarStyle } from '@/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+// Default asset status badge colors — mirrors SettingsController::assetStatusColorDefaults.
+const DEFAULT_ASSET_STATUS_COLORS: AssetStatusColors = {
+    deployed: '#0284c7',
+    ready: '#059669',
+    pending_acceptance: '#d97706',
+    pending_return: '#d97706',
+    maintenance: '#d97706',
+    writeoff: '#dc2626',
+};
 
 // Brand name tracks APP_NAME (exposed to the SPA as VITE_APP_NAME).
 // Editable later from Settings → Branding.
@@ -16,6 +27,7 @@ interface UiState {
     brandSub: string;
     accent: string;
     logoUrl: string | null;
+    assetStatusColors: AssetStatusColors;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -27,6 +39,7 @@ interface UiState {
     setBrand: (name: string, sub: string) => void;
     setAccent: (accent: string) => void;
     setLogo: (logoUrl: string | null) => void;
+    setAssetStatusColors: (colors: AssetStatusColors) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -41,6 +54,7 @@ export const useUiStore = create<UiState>()(
             brandSub: 'Service Desk',
             accent: '#2563eb',
             logoUrl: null,
+            assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
@@ -52,6 +66,7 @@ export const useUiStore = create<UiState>()(
             setBrand: (brandName, brandSub) => set({ brandName, brandSub }),
             setAccent: (accent) => set({ accent }),
             setLogo: (logoUrl) => set({ logoUrl }),
+            setAssetStatusColors: (assetStatusColors) => set({ assetStatusColors }),
         }),
         {
             name: 'itservices-ui',
@@ -64,6 +79,7 @@ export const useUiStore = create<UiState>()(
                 radius: s.radius,
                 sidebar: s.sidebar,
                 accent: s.accent,
+                assetStatusColors: s.assetStatusColors,
             }),
         },
     ),

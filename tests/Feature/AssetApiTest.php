@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AppSetting;
 use App\Models\Asset;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -64,6 +65,17 @@ class AssetApiTest extends TestCase
         ])->assertCreated()
             ->assertJsonPath('data.value_display', '฿8,500/mo')
             ->assertJsonPath('data.tag', fn ($tag) => str_starts_with($tag, 'RNT-NE-'));
+    }
+
+    public function test_value_display_uses_the_configured_currency_symbol(): void
+    {
+        AppSetting::put('currency', 'USD');
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/assets', [
+            'type' => 'laptop', 'source' => 'purchased', 'model' => 'MacBook Pro', 'value' => 32100,
+        ])->assertCreated()
+            ->assertJsonPath('data.value_display', '$32,100');
     }
 
     public function test_model_is_required(): void

@@ -9,12 +9,13 @@ import { Column, DataTable } from '@/components/shared/data-table';
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
 import { SearchSelect } from '@/components/shared/search-select';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
-import { useResetLogo, useSettings, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
+import { useResetLogo, useSettings, useUpdateAssetColors, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
 import {
     useAssetModelMutations,
     useAssetModels,
@@ -47,11 +48,11 @@ import {
     Boxes,
     Building2,
     Construction,
+    Info,
     Mail,
     MapPin,
     MonitorCog,
     Pencil,
-    Plug,
     Plus,
     Send,
     Shield,
@@ -65,7 +66,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
-type Section = 'display' | 'company' | 'branding' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'integrations' | 'security';
+type Section = 'display' | 'company' | 'branding' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'security';
 
 const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 
@@ -94,7 +95,6 @@ const VALID_SECTIONS: Section[] = [
     'tickets',
     'assets',
     'workflow',
-    'integrations',
     'security',
 ];
 
@@ -141,9 +141,8 @@ export default function SettingsPage() {
         { id: 'master-data', label: t('set_master_data'), icon: Boxes, ready: true },
         { id: 'email', label: t('set_email'), icon: Mail, ready: true },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket },
-        { id: 'assets', label: t('set_assets'), icon: Box },
+        { id: 'assets', label: t('set_assets'), icon: Box, ready: true },
         { id: 'workflow', label: t('set_workflow'), icon: Workflow },
-        { id: 'integrations', label: t('set_integrations'), icon: Plug },
         { id: 'security', label: t('set_security'), icon: Shield },
     ];
 
@@ -182,8 +181,9 @@ export default function SettingsPage() {
                     {section === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
                     {section === 'master-data' && <MasterDataTab />}
                     {section === 'email' && <EmailTab />}
+                    {section === 'assets' && <AssetsTab />}
                     {section === 'security' && <SecurityTab />}
-                    {!['display', 'company', 'branding', 'master-data', 'email', 'security'].includes(section) && <ComingSoon />}
+                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'security'].includes(section) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -1102,6 +1102,95 @@ function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolea
     );
 }
 
+// Swatch palette + the asset statuses shown in the color editor (mirrors the design).
+const ASSET_STATUS_PALETTE = ['#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0ea5e9', '#64748b'];
+const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
+    { key: 'deployed', labelKey: 'asset_deployed' },
+    { key: 'ready', labelKey: 'asset_ready' },
+    { key: 'pending_acceptance', labelKey: 'asset_pending_accept' },
+    { key: 'pending_return', labelKey: 'asset_pending_return' },
+    { key: 'maintenance', labelKey: 'asset_maintenance' },
+    { key: 'writeoff', labelKey: 'asset_writeoff' },
+];
+
+/**
+ * AssetsTab — system-wide asset status badge color editor. Picks a color per
+ * status from a fixed palette; on Save the colors persist to app_settings and
+ * sync into the UI store so every asset badge updates across the system.
+ */
+function AssetsTab() {
+    const t = useT();
+    const storeColors = useUiStore((s) => s.assetStatusColors);
+    const update = useUpdateAssetColors();
+    const [draft, setDraft] = useState<Record<string, string>>(storeColors);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        setDraft(storeColors);
+    }, [storeColors]);
+
+    const dirty = ASSET_STATUS_ROWS.some((r) => draft[r.key] !== storeColors[r.key]);
+
+    const setColor = (key: string, color: string) => {
+        setDraft((d) => ({ ...d, [key]: color }));
+        setSaved(false);
+    };
+
+    return (
+        <div className="max-w-3xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_assets_title')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_assets_desc')}</p>
+            </div>
+
+            <div className="bg-muted/50 text-muted-foreground mb-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs">
+                <Boxes className="h-4 w-4 shrink-0" />
+                <span>
+                    {t('set_assets_masterdata_note')} <span className="text-foreground font-semibold">{t('set_master_data')}</span>
+                </span>
+            </div>
+
+            <p className="text-muted-foreground mb-3 text-xs">{t('set_assets_colors_note')}</p>
+            <div className="space-y-3">
+                {ASSET_STATUS_ROWS.map((r) => {
+                    const cur = draft[r.key];
+                    return (
+                        <div key={r.key} className="border-border grid grid-cols-[1fr_auto] items-center gap-3 rounded-lg border px-3.5 py-3">
+                            <StatusBadge color={cur}>{t(r.labelKey)}</StatusBadge>
+                            <div className="flex gap-1.5">
+                                {ASSET_STATUS_PALETTE.map((c) => (
+                                    <button
+                                        key={c}
+                                        type="button"
+                                        onClick={() => setColor(r.key, c)}
+                                        aria-label={c}
+                                        className={cn(
+                                            'ring-offset-background h-7 w-7 rounded-full ring-2 ring-offset-2 transition-all',
+                                            cur?.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
+                                        )}
+                                        style={{ background: c }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="bg-blue-500/10 mt-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
+                <Info className="h-4 w-4 shrink-0" />
+                <span>{t('set_assets_apply_note')}</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-5">
+                <SaveButton onClick={() => update.mutate({ asset_status_colors: draft }, { onSuccess: () => setSaved(true) })} loading={update.isPending} success={saved} disabled={!dirty}>
+                    {t('save')}
+                </SaveButton>
+            </div>
+        </div>
+    );
+}
+
 function CompanyTab({
     form,
     set,
@@ -1117,30 +1206,32 @@ function CompanyTab({
 }) {
     const t = useT();
     return (
-        <div className="max-w-2xl">
+        <div className="max-w-3xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_company_title')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_company_desc')}</p>
             </div>
             <div className="space-y-5">
-                <Field label={t('set_company_name')}>
-                    <Input value={form.company_name} onChange={(e) => set('company_name', e.target.value)} />
-                </Field>
-                <Field label={t('set_legal_name')}>
-                    <Input value={form.legal_name} onChange={(e) => set('legal_name', e.target.value)} />
-                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                    <Field label={t('set_company_name')}>
+                        <Input value={form.company_name} onChange={(e) => set('company_name', e.target.value)} placeholder="Acme Co., Ltd." />
+                    </Field>
+                    <Field label={t('set_legal_name')}>
+                        <Input value={form.legal_name} onChange={(e) => set('legal_name', e.target.value)} placeholder="บริษัท แอคมี จำกัด" />
+                    </Field>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                     <Field label={t('set_tax_id')}>
-                        <Input className="font-mono" value={form.tax_id} onChange={(e) => set('tax_id', e.target.value)} />
+                        <Input className="font-mono" value={form.tax_id} onChange={(e) => set('tax_id', e.target.value)} placeholder="0000000000000" />
                     </Field>
                     <Field label={t('set_industry')}>
-                        <Input value={form.industry} onChange={(e) => set('industry', e.target.value)} />
+                        <Input value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Manufacturing" />
                     </Field>
                 </div>
                 <Field label={t('set_address')}>
-                    <Input value={form.address} onChange={(e) => set('address', e.target.value)} />
+                    <Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Street, City, Country" />
                 </Field>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <Field label={t('set_country')}>
                         <SearchSelect
                             value={form.country}
@@ -1157,15 +1248,16 @@ function CompanyTab({
                             placeholder="Select currency…"
                         />
                     </Field>
-                    <Field label={t('set_timezone')}>
-                        <SearchSelect
-                            value={form.timezone}
-                            onChange={(v) => set('timezone', v)}
-                            options={timezoneOptions}
-                            placeholder="Select timezone…"
-                        />
-                    </Field>
                 </div>
+                {/* Timezone on its own full-width row so the long "(UTC+07:00) …" labels fit. */}
+                <Field label={t('set_timezone')}>
+                    <SearchSelect
+                        value={form.timezone}
+                        onChange={(v) => set('timezone', v)}
+                        options={timezoneOptions}
+                        placeholder="Select timezone…"
+                    />
+                </Field>
                 <SaveRow onSave={onSave} saving={saving} saved={saved} />
             </div>
         </div>

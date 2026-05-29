@@ -1,16 +1,18 @@
-import { settingsApi, type DisplayPayload, type SettingsData, type SettingsPayload } from '@/services/settingsApi';
+import { currencySymbol } from '@/lib/currency';
+import { settingsApi, type AssetColorsPayload, type DisplayPayload, type SettingsData, type SettingsPayload } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 const KEY = ['settings'] as const;
 
-/** Applies the system-wide display theme (accent/density/radius) to the UI store. */
+/** Applies the system-wide display theme (accent/density/radius) + asset colors to the UI store. */
 function applyTheme(data: SettingsData) {
     const s = useUiStore.getState();
     if (data.theme_accent) s.setAccent(data.theme_accent);
     if (data.theme_density) s.setDensity(data.theme_density);
     if (typeof data.theme_radius === 'number') s.setRadius(data.theme_radius);
+    if (data.asset_status_colors) s.setAssetStatusColors(data.asset_status_colors);
 }
 
 // Falls back to the bundled default logo so the tab icon reverts (instead of
@@ -54,6 +56,17 @@ export function useSettings() {
     return useQuery({ queryKey: KEY, queryFn: settingsApi.get, staleTime: 60 * 1000 });
 }
 
+/**
+ * Resolves the system currency (Settings -> Company) to its code + display
+ * symbol. Reads the cached settings query, so it stays in sync after a save.
+ */
+export function useCurrency() {
+    const { data } = useSettings();
+    const code = data?.currency ?? 'THB';
+
+    return { code, symbol: currencySymbol(code) };
+}
+
 function useSyncStore() {
     const setBrand = useUiStore((s) => s.setBrand);
     const setLogo = useUiStore((s) => s.setLogo);
@@ -75,6 +88,12 @@ export function useUpdateSettings() {
 export function useUpdateDisplay() {
     const sync = useSyncStore();
     return useMutation({ mutationFn: (payload: DisplayPayload) => settingsApi.updateDisplay(payload), onSuccess: sync });
+}
+
+/** Persists the system-wide asset status badge colors (Settings -> Assets). */
+export function useUpdateAssetColors() {
+    const sync = useSyncStore();
+    return useMutation({ mutationFn: (payload: AssetColorsPayload) => settingsApi.updateAssetColors(payload), onSuccess: sync });
 }
 
 export function useUploadLogo() {
