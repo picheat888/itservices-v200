@@ -46,8 +46,8 @@ class AdminProtectionTest extends TestCase
 
     public function test_non_super_with_edit_permission_cannot_edit_an_admin_employee(): void
     {
-        $admin = User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th']);
         $adminEmployee = Employee::create(['name' => 'Boss', 'email' => 'boss@inaba.co.th']);
+        User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th', 'employee_id' => $adminEmployee->id]);
 
         $this->actingAs($this->userWith('employees.edit'));
 
@@ -59,8 +59,8 @@ class AdminProtectionTest extends TestCase
 
     public function test_super_can_edit_an_admin_employee(): void
     {
-        User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th']);
         $adminEmployee = Employee::create(['name' => 'Boss', 'email' => 'boss@inaba.co.th']);
+        User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th', 'employee_id' => $adminEmployee->id]);
 
         $this->actingAs($this->super());
 
