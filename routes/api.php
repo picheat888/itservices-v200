@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\StockItemController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StockRequestController;
 use App\Http\Controllers\Api\StockStatusController;
+use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UnitController;
 use App\Http\Controllers\Api\VendorController;
 use App\Http\Controllers\Api\WarehouseController;
@@ -88,6 +89,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('contracts/{contract}/attachments', [ContractAttachmentController::class, 'store'])->name('api.contracts.attachments.store');
     Route::delete('contracts/{contract}/attachments/{attachment}', [ContractAttachmentController::class, 'destroy'])->name('api.contracts.attachments.destroy');
     Route::apiResource('contracts', ContractController::class);
+
+    // Ticket module
+    Route::get('tickets/summary', [TicketController::class, 'summary'])->name('api.tickets.summary');
+    Route::post('tickets/{ticket}/take', [TicketController::class, 'take'])->name('api.tickets.take');
+    Route::post('tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('api.tickets.assign');
+    Route::post('tickets/{ticket}/resolve', [TicketController::class, 'resolve'])->name('api.tickets.resolve');
+    Route::apiResource('tickets', TicketController::class)->except(['update']);
 
     // Assets Management module
     Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
