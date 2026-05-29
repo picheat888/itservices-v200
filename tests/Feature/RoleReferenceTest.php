@@ -33,4 +33,19 @@ class RoleReferenceTest extends TestCase
         $this->assertFalse($plain->isSuper());
         $this->assertSame(1, $super->members());
     }
+
+    public function test_permission_matrix_update_persists_by_role_id(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $hr = Role::create(['key' => 'hr', 'name' => 'HR', 'color' => '#111', 'is_system' => false]);
+        $actor = User::factory()->create(['role' => 'super']);
+
+        $this->actingAs($actor)->putJson('/api/permissions/hr', [
+            'permissions' => ['employees.view'],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('role_permissions', [
+            'role_id' => $hr->id, 'permission' => 'employees.view', 'allowed' => true,
+        ]);
+    }
 }
