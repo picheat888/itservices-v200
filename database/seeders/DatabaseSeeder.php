@@ -63,5 +63,6 @@ class DatabaseSeeder extends Seeder
         $this->call(MasterDataSeeder::class);
         $this->call(StockSeeder::class);
         $this->call(AssetSeeder::class);
+        $this->call(TicketSeeder::class);
     }
 }
