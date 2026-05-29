@@ -195,6 +195,10 @@ export function ContractFormDrawer({
         if (form.start_date && form.end_date && form.end_date < form.start_date) {
             e.end_date = lang === 'th' ? 'ต้องไม่ก่อนวันเริ่ม' : 'Must be after start';
         }
+        // At least one reminder threshold must be selected.
+        if (!REMINDER_DAYS.some((d) => form[`notify_${d}` as ReminderKey])) {
+            e.notify = lang === 'th' ? 'เลือกอย่างน้อย 1 ช่วง' : 'Select at least one';
+        }
         setErr(e);
         if (Object.keys(e).length) return;
 
@@ -292,23 +296,22 @@ export function ContractFormDrawer({
                         />
                     </Field>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Field label={t('contract_vendor')} required error={err.vendor}>
-                            <SearchableSelect
-                                value={form.vendor}
-                                onChange={(v) => upd('vendor', v)}
-                                options={vendorOptions}
-                                placeholder={lang === 'th' ? 'เลือกผู้จำหน่าย' : 'Select vendor'}
-                            />
-                        </Field>
-                        <Field label={t('contract_name')} required error={err.name}>
-                            <Input
-                                value={form.name}
-                                onChange={(e) => upd('name', e.target.value)}
-                                placeholder={lang === 'th' ? 'เช่น Microsoft 365 — 320 สิทธิ์' : 'e.g. Microsoft 365 — 320 seats'}
-                            />
-                        </Field>
-                    </div>
+                    <Field label={t('contract_vendor')} required error={err.vendor}>
+                        <SearchableSelect
+                            value={form.vendor}
+                            onChange={(v) => upd('vendor', v)}
+                            options={vendorOptions}
+                            placeholder={lang === 'th' ? 'เลือกผู้จำหน่าย' : 'Select vendor'}
+                        />
+                    </Field>
+
+                    <Field label={t('contract_name')} required error={err.name}>
+                        <Input
+                            value={form.name}
+                            onChange={(e) => upd('name', e.target.value)}
+                            placeholder={lang === 'th' ? 'เช่น Microsoft 365 — 320 สิทธิ์' : 'e.g. Microsoft 365 — 320 seats'}
+                        />
+                    </Field>
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('contract_start')} required error={err.start_date}>
@@ -376,7 +379,7 @@ export function ContractFormDrawer({
                         </label>
                     </Field>
 
-                    <Field label={t('contract_notify')}>
+                    <Field label={t('contract_notify')} required error={err.notify}>
                         <div className="flex flex-wrap gap-2">
                             {REMINDER_DAYS.map((d) => {
                                 const key = `notify_${d}` as ReminderKey;
