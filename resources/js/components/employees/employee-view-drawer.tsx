@@ -98,7 +98,6 @@ export function EmployeeViewDrawer({
                                 <Row label={t('emp_employee_id')} value={employee.code} mono />
                                 <Row label={t('emp_phone')} value={employee.phone} mono />
                                 <Row label={t('joined')} value={employee.joined_at} mono />
-                                <Row label={t('emp_login_method')} value={employee.login_method === 'email' ? t('emp_login_email') : t('emp_login_userpass')} />
                             </div>
 
                             {showCredentials && (
