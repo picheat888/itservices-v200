@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Employee;
 use App\Models\GroupRole;
 use App\Models\Role;
+use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -66,5 +67,18 @@ class RoleReferenceTest extends TestCase
         ])->assertCreated();
 
         $this->assertSame($hr->id, User::where('username', 'grouped')->first()->role_id);
+    }
+
+    public function test_deleting_a_role_cascades_its_permissions(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $custom = Role::create(['key' => 'tempx', 'name' => 'Temp', 'color' => '#111', 'is_system' => false]);
+        RolePermission::create(['role_id' => $custom->id, 'permission' => 'employees.view', 'allowed' => true]);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $this->deleteJson('/api/roles/tempx')->assertOk();
+
+        $this->assertDatabaseMissing('roles', ['id' => $custom->id]);
+        $this->assertDatabaseMissing('role_permissions', ['role_id' => $custom->id]);
     }
 }
