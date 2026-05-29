@@ -273,4 +273,60 @@ class ContractExpiryAlertTest extends TestCase
         Notification::assertSentTo($user, ContractExpiryNotification::class);
         $this->assertDatabaseHas('contract_alert_logs', ['contract_id' => $contract->id, 'threshold' => 90]);
     }
+
+    /** Returns the count of bell notifications a user holds for one contract. */
+    private function bellsFor(User $user, Contract $contract): int
+    {
+        return $user->fresh()->notifications()
+            ->where('type', ContractExpiryNotification::class)
+            ->where('data->contract_id', $contract->id)
+            ->count();
+    }
+
+    public function test_daily_bell_overwrites_instead_of_stacking(): void
+    {
+        // Real notifications (no Notification::fake) so we can inspect the rows.
+        Bus::fake();
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();   // day 1
+        $this->travel(1)->days();
+        $this->service()->run();   // day 2 — overwrites, does not stack
+
+        $this->assertSame(1, $this->bellsFor($user, $contract));
+    }
+
+    public function test_daily_bell_resurfaces_as_unread_after_being_read(): void
+    {
+        Bus::fake();
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+
+        $this->service()->run();                              // unread bell appears
+        $user->fresh()->unreadNotifications->markAsRead();    // user reads it
+        $this->assertSame(0, $user->fresh()->unreadNotifications()->count());
+
+        $this->travel(1)->days();
+        $this->service()->run();                              // next day re-surfaces it
+
+        $this->assertSame(1, $user->fresh()->unreadNotifications()->count());
+        $this->assertSame(1, $this->bellsFor($user, $contract));
+    }
+
+    public function test_renew_removes_the_bell_notification(): void
+    {
+        Bus::fake();
+        RolePermission::firstOrCreate(['role' => 'itrole', 'permission' => 'contracts.renew'], ['allowed' => true]);
+        $user = $this->alertedUser();
+        $contract = $this->contractExpiringIn(30, [30]);
+        $this->service()->run();
+        $this->assertSame(1, $this->bellsFor($user, $contract));
+
+        $this->actingAs($user)
+            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
+            ->assertOk();
+
+        $this->assertSame(0, $this->bellsFor($user, $contract));
+    }
 }

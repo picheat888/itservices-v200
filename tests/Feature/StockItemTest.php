@@ -63,16 +63,19 @@ class StockItemTest extends TestCase
 
     public function test_summary_reports_alert_buckets(): void
     {
-        $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);            // out → low bucket
+        $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);            // out
         $this->makeItem(['current_stock' => 1, 'min_stock' => 5]);            // low
         $this->makeItem(['current_stock' => 30, 'max_stock' => 10]);          // over
         $this->makeItem(['current_stock' => 5, 'last_move_at' => now()->subDays(200)]); // dead
 
+        // out and low are reported as separate buckets; the UI sums them for its
+        // "needs reorder" KPI (out_count + low_count).
         $this->actingAs($this->superUser())
             ->getJson('/api/stock-items/summary')
             ->assertOk()
             ->assertJsonPath('skus', 4)
-            ->assertJsonPath('low_count', 2)
+            ->assertJsonPath('out_count', 1)
+            ->assertJsonPath('low_count', 1)
             ->assertJsonPath('over_count', 1)
             ->assertJsonPath('dead_count', 1);
     }

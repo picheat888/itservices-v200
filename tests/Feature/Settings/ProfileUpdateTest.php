@@ -10,90 +10,38 @@ class ProfileUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_profile_page_is_displayed()
+    /** A user with the edit-own permission can update their display name (POST /api/profile). */
+    public function test_profile_name_can_be_updated(): void
     {
-        $user = User::factory()->create();
+        // Super accounts carry every permission, including employees.edit_own.
+        $user = User::factory()->create(['role' => 'super']);
 
-        $response = $this
-            ->actingAs($user)
-            ->get('/settings/profile');
+        $this->actingAs($user)
+            ->postJson('/api/profile', ['name' => 'Updated Name'])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Updated Name');
 
-        $response->assertOk();
+        $this->assertSame('Updated Name', $user->refresh()->name);
     }
 
-    public function test_profile_information_can_be_updated()
+    /** Name is required when updating the profile. */
+    public function test_name_is_required(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'super']);
 
-        $response = $this
-            ->actingAs($user)
-            ->patch('/settings/profile', [
-                'name' => 'Test User',
-                'email' => 'test@example.com',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/settings/profile');
-
-        $user->refresh();
-
-        $this->assertSame('Test User', $user->name);
-        $this->assertSame('test@example.com', $user->email);
-        $this->assertNull($user->email_verified_at);
+        $this->actingAs($user)
+            ->postJson('/api/profile', ['name' => ''])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('name');
     }
 
-    public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged()
+    /** A user lacking employees.edit_own cannot update their profile. */
+    public function test_users_without_permission_cannot_update_profile(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['role' => 'user']);
 
-        $response = $this
-            ->actingAs($user)
-            ->patch('/settings/profile', [
-                'name' => 'Test User',
-                'email' => $user->email,
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/settings/profile');
-
-        $this->assertNotNull($user->refresh()->email_verified_at);
-    }
-
-    public function test_user_can_delete_their_account()
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->delete('/settings/profile', [
-                'password' => 'password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/');
-
-        $this->assertGuest();
-        $this->assertNull($user->fresh());
-    }
-
-    public function test_correct_password_must_be_provided_to_delete_account()
-    {
-        $user = User::factory()->create();
-
-        $response = $this
-            ->actingAs($user)
-            ->from('/settings/profile')
-            ->delete('/settings/profile', [
-                'password' => 'wrong-password',
-            ]);
-
-        $response
-            ->assertSessionHasErrors('password')
-            ->assertRedirect('/settings/profile');
-
-        $this->assertNotNull($user->fresh());
+        $this->actingAs($user)
+            ->postJson('/api/profile', ['name' => 'Nope'])
+            ->assertForbidden();
     }
 }

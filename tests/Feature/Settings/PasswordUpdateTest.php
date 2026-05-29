@@ -11,41 +11,36 @@ class PasswordUpdateTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_password_can_be_updated()
+    /** A correct current password lets the user set a new one (PUT /api/password). */
+    public function test_password_can_be_updated(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/settings/password')
-            ->put('/settings/password', [
+        $this->actingAs($user)
+            ->putJson('/api/password', [
                 'current_password' => 'password',
                 'password' => 'new-password',
                 'password_confirmation' => 'new-password',
-            ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect('/settings/password');
+            ])
+            ->assertOk();
 
         $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
     }
 
-    public function test_correct_password_must_be_provided_to_update_password()
+    /** A wrong current password is rejected and the password is left unchanged. */
+    public function test_correct_password_must_be_provided_to_update_password(): void
     {
         $user = User::factory()->create();
 
-        $response = $this
-            ->actingAs($user)
-            ->from('/settings/password')
-            ->put('/settings/password', [
+        $this->actingAs($user)
+            ->putJson('/api/password', [
                 'current_password' => 'wrong-password',
                 'password' => 'new-password',
                 'password_confirmation' => 'new-password',
-            ]);
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('current_password');
 
-        $response
-            ->assertSessionHasErrors('current_password')
-            ->assertRedirect('/settings/password');
+        $this->assertTrue(Hash::check('password', $user->refresh()->password));
     }
 }

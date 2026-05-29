@@ -10,45 +10,64 @@ class AuthenticationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_login_screen_can_be_rendered()
-    {
-        $response = $this->get('/login');
-
-        $response->assertStatus(200);
-    }
-
-    public function test_users_can_authenticate_using_the_login_screen()
+    /** A valid email + password returns the signed-in user and starts a session. */
+    public function test_users_can_authenticate_via_the_api(): void
     {
         $user = User::factory()->create();
 
-        $response = $this->post('/login', [
-            'email' => $user->email,
-            'password' => 'password',
-        ]);
+        // A stateful Origin makes Sanctum attach the session middleware, just as
+        // the real SPA does when it posts credentials.
+        $this->withHeader('Origin', 'http://localhost:8000')
+            ->postJson('/api/login', [
+                'login' => $user->email,
+                'password' => 'password',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->id)
+            ->assertJsonPath('message', 'success');
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
     }
 
-    public function test_users_can_not_authenticate_with_invalid_password()
+    /** A wrong password fails validation on the `login` field and leaves the user a guest. */
+    public function test_users_cannot_authenticate_with_an_invalid_password(): void
     {
         $user = User::factory()->create();
 
-        $this->post('/login', [
-            'email' => $user->email,
+        $this->postJson('/api/login', [
+            'login' => $user->email,
             'password' => 'wrong-password',
-        ]);
+        ])->assertStatus(422)->assertJsonValidationErrors('login');
 
         $this->assertGuest();
     }
 
-    public function test_users_can_logout()
+    /** The authenticated user can read their own account via /api/me. */
+    public function test_authenticated_user_can_fetch_their_profile(): void
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->post('/logout');
+        $this->actingAs($user)
+            ->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->id);
+    }
 
-        $this->assertGuest();
-        $response->assertRedirect('/');
+    /** Guests cannot read /api/me. */
+    public function test_guests_cannot_fetch_a_profile(): void
+    {
+        $this->getJson('/api/me')->assertUnauthorized();
+    }
+
+    /** Logout returns success for an authenticated user. */
+    public function test_users_can_logout(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'http://localhost:8000')
+            ->postJson('/api/logout')
+            ->assertOk()
+            ->assertJsonPath('message', 'success');
     }
 }
