@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import { useCurrency } from '@/hooks/use-settings';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
 import { useStockItems, useStockMovements, useStockRequestActions, useStockRequests, useStockSummary } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
@@ -116,7 +117,8 @@ export default function StockPage() {
         status: statusFilter === 'all' ? undefined : statusFilter,
     });
 
-    const fmtK = (n: number) => `฿${(n / 1000).toFixed(0)}K`;
+    const { symbol } = useCurrency();
+    const fmtK = (n: number) => `${symbol}${(n / 1000).toFixed(0)}K`;
 
     const statusBadge = (s: StockItemStatus) => <StatusBadge tone={STATUS_TONE[s]}>{t(`stock_st_${s}` as Parameters<typeof t>[0])}</StatusBadge>;
 
@@ -135,7 +137,7 @@ export default function StockPage() {
         { key: 'category', header: t('stock_category'), render: (i) => <span className="text-sm">{i.category ?? '—'}</span> },
         { key: 'warehouse', header: t('stock_warehouse'), render: (i) => <span className="text-sm">{i.warehouse ?? '—'}</span> },
         { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[220px]', render: (i) => <StockBar item={i} /> },
-        { key: 'cost', header: t('stock_cost'), align: 'right', render: (i) => <span className="font-mono text-xs">฿{i.cost.toLocaleString()}</span> },
+        { key: 'cost', header: t('stock_cost'), align: 'right', render: (i) => <span className="font-mono text-xs">{symbol}{i.cost.toLocaleString()}</span> },
         { key: 'status', header: t('status'), render: (i) => statusBadge(i.status) },
         {
             key: 'actions',
@@ -442,6 +444,7 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
 }
 
 function DashboardTab({ summary, t }: { summary: ReturnType<typeof useStockSummary>['data']; t: ReturnType<typeof useT> }) {
+    const { symbol } = useCurrency();
     if (!summary) return <div className="text-muted-foreground py-10 text-center text-sm">—</div>;
     const maxUnits = Math.max(1, ...summary.by_category.map((c) => c.units));
     return (
@@ -455,7 +458,7 @@ function DashboardTab({ summary, t }: { summary: ReturnType<typeof useStockSumma
                             <div className="flex gap-6 text-right font-mono text-sm">
                                 <div><div className="text-muted-foreground text-[10px] uppercase">SKU</div>{w.skus}</div>
                                 <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>{w.units}</div>
-                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>฿{(w.value / 1000).toFixed(0)}K</div>
+                                <div><div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>{symbol}{(w.value / 1000).toFixed(0)}K</div>
                             </div>
                         </div>
                     ))}

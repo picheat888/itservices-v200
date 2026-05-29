@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAssetMutations } from '@/hooks/use-assets';
 import { useContracts } from '@/hooks/use-contracts';
+import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -55,6 +56,7 @@ const EMPTY: FormState = {
 export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; editing: Asset | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { symbol } = useCurrency();
     const { create, update } = useAssetMutations();
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
@@ -217,7 +219,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Field label={`${rented ? t('asset_monthly_fee') : t('asset_purchase_price')}`} required error={err.value}>
+                        <Field label={`${rented ? t('asset_monthly_fee') : t('asset_purchase_price')} (${symbol})`} required error={err.value}>
                             <Input
                                 inputMode="numeric"
                                 className="font-mono"

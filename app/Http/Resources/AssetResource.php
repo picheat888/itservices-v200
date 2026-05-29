@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\AssetSource;
+use App\Models\AppSetting;
 use App\Models\Asset;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -46,10 +47,10 @@ class AssetResource extends JsonResource
         ];
     }
 
-    /** "฿38,500" for owned assets, "฿8,500/mo" for rented. */
+    /** "฿38,500" for owned assets, "฿8,500/mo" for rented (symbol per Settings currency). */
     private function valueDisplay(): string
     {
-        $amount = '฿'.number_format((float) $this->value);
+        $amount = AppSetting::currencySymbol().number_format((float) $this->value);
 
         return $this->source === AssetSource::Rented ? $amount.'/mo' : $amount;
     }

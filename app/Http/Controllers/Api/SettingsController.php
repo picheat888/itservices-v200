@@ -32,6 +32,21 @@ class SettingsController extends Controller
         'theme_radius' => '10',
     ];
 
+    /**
+     * Default asset status badge colors (system-wide). Editable from
+     * Settings -> Assets; stored as JSON under the `asset_status_colors` key.
+     *
+     * @var array<string, string>
+     */
+    private array $assetStatusColorDefaults = [
+        'deployed' => '#0284c7',
+        'ready' => '#059669',
+        'pending_acceptance' => '#d97706',
+        'pending_return' => '#d97706',
+        'maintenance' => '#d97706',
+        'writeoff' => '#dc2626',
+    ];
+
     public function show(): JsonResponse
     {
         return response()->json(['data' => $this->payload(), 'message' => 'success']);
@@ -57,9 +72,18 @@ class SettingsController extends Controller
             'theme_accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'theme_density' => ['sometimes', 'in:compact,normal,cozy'],
             'theme_radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
+            // Asset status badge colors — a map of status => hex color.
+            'asset_status_colors' => ['sometimes', 'array'],
+            'asset_status_colors.*' => ['string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
 
         foreach ($data as $key => $value) {
+            // The color map is stored as JSON; everything else is a scalar string.
+            if ($key === 'asset_status_colors') {
+                AppSetting::put($key, json_encode($value));
+
+                continue;
+            }
             AppSetting::put($key, $value === null ? '' : (string) $value);
         }
         AuditLog::record('Updated settings', implode(', ', array_keys($data)));
@@ -227,6 +251,11 @@ class SettingsController extends Controller
         $defaultRole = AppSetting::get('default_employee_role', 'user');
         $values['default_employee_role'] = $defaultRole;
         $values['default_employee_role_label'] = Role::where('key', $defaultRole)->value('name') ?? $defaultRole;
+
+        // Asset status colors: stored saved values merged over defaults so any
+        // status without an explicit override still resolves to a color.
+        $stored = json_decode((string) AppSetting::get('asset_status_colors', '{}'), true);
+        $values['asset_status_colors'] = array_merge($this->assetStatusColorDefaults, is_array($stored) ? $stored : []);
 
         return $values;
     }

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { useContract, useContracts, useContractSummary } from '@/hooks/use-contracts';
+import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -389,6 +390,7 @@ function DashboardTab({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { symbol } = useCurrency();
 
     if (!summary)
         return (
@@ -549,7 +551,7 @@ function DashboardTab({
                             <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
-                                    <span className="text-muted-foreground font-mono text-xs">฿{Math.round(r.amount / 1000)}K</span>
+                                    <span className="text-muted-foreground font-mono text-xs">{symbol}{Math.round(r.amount / 1000)}K</span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
                                     <span className="bg-brand block h-full rounded-full" style={{ width: `${(r.amount / maxVendor) * 100}%` }} />
