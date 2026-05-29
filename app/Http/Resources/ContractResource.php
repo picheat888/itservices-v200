@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\ContractType;
+use App\Models\AppSetting;
 use App\Models\Contract;
 use App\Models\ContractAttachment;
 use Illuminate\Http\Request;
@@ -58,7 +59,7 @@ class ContractResource extends JsonResource
         ];
     }
 
-    /** Builds the "฿2,140,000/yr" style display string from raw value + cycle. */
+    /** Builds the "฿2,140,000/yr" style display string from raw value + cycle (symbol per Settings currency). */
     private function valueDisplay(): string
     {
         $suffix = match ($this->billing_cycle) {
@@ -67,6 +68,6 @@ class ContractResource extends JsonResource
             default => '/yr',
         };
 
-        return '฿'.number_format((float) $this->value).$suffix;
+        return AppSetting::currencySymbol().number_format((float) $this->value).$suffix;
     }
 }

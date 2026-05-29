@@ -16,13 +16,15 @@ interface DropdownRect {
     top: number;
     left: number;
     width: number;
+    // Cap so the panel never spills past the bottom of the viewport.
+    maxHeight: number;
 }
 
 /** Dropdown with an inline search box, rendered as a portal so it is never clipped by parent overflow. */
 export function SearchSelect({ value, onChange, options, placeholder, className }: SearchSelectProps) {
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const [rect, setRect] = useState<DropdownRect>({ top: 0, left: 0, width: 0 });
+    const [rect, setRect] = useState<DropdownRect>({ top: 0, left: 0, width: 0, maxHeight: 320 });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
 
@@ -40,7 +42,12 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
     const handleOpen = () => {
         if (triggerRef.current) {
             const r = triggerRef.current.getBoundingClientRect();
-            setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+            const margin = 8;
+            // Always drop below the trigger; cap the height to the room left
+            // beneath it so the list scrolls instead of spilling off-screen.
+            const spaceBelow = window.innerHeight - r.bottom - margin;
+            const maxHeight = Math.min(320, spaceBelow);
+            setRect({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight });
         }
         setOpen((prev) => !prev);
     };
@@ -111,11 +118,18 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                 createPortal(
                     <div
                         id="search-select-portal"
-                        style={{ position: 'fixed', top: rect.top, left: rect.left, width: rect.width, zIndex: 9999 }}
-                        className="rounded-md border bg-popover shadow-md"
+                        style={{
+                            position: 'fixed',
+                            top: rect.top,
+                            left: rect.left,
+                            width: rect.width,
+                            maxHeight: rect.maxHeight,
+                            zIndex: 9999,
+                        }}
+                        className="flex flex-col overflow-hidden rounded-md border bg-popover shadow-md"
                     >
                         {/* Search row */}
-                        <div className="flex items-center border-b px-3">
+                        <div className="flex shrink-0 items-center border-b px-3">
                             <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
                             <input
                                 ref={searchRef}
@@ -128,7 +142,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                         </div>
 
                         {/* Options list */}
-                        <div className="max-h-56 overflow-y-auto py-1">
+                        <div className="min-h-0 flex-1 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
                                 <div className="px-3 py-2 text-sm text-muted-foreground">No results</div>
                             ) : (

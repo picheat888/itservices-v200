@@ -1,4 +1,5 @@
 import { StatusBadge } from '@/components/shared/status-badge';
+import { useUiStore } from '@/stores/ui';
 import type { AssetStatus, AssetType } from '@/types';
 import { Box, Laptop, Monitor, Network, Printer, Server, Smartphone } from 'lucide-react';
 
@@ -15,10 +16,11 @@ export const ASSET_STATUS_META: Record<AssetStatus, { tone: Tone; key: string }>
     pending_stock: { tone: 'violet', key: 'asset_pending_stock' },
 };
 
-/** Coloured badge for an asset's lifecycle status. */
+/** Coloured badge for an asset's lifecycle status (color is system-wide, set in Settings -> Assets). */
 export function AssetStatusBadge({ status, t }: { status: AssetStatus; t: (k: string) => string }) {
     const meta = ASSET_STATUS_META[status] ?? { tone: 'gray' as Tone, key: status };
-    return <StatusBadge tone={meta.tone}>{t(meta.key)}</StatusBadge>;
+    const color = useUiStore((s) => s.assetStatusColors[status]);
+    return <StatusBadge tone={meta.tone} color={color}>{t(meta.key)}</StatusBadge>;
 }
 
 const TYPE_ICON: Record<AssetType, typeof Box> = {

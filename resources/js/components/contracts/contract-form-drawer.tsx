@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useContractMutations } from '@/hooks/use-contracts';
+import { useCurrency } from '@/hooks/use-settings';
 import { useVendors } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -86,6 +87,7 @@ export function ContractFormDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { symbol } = useCurrency();
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
@@ -334,7 +336,7 @@ export function ContractFormDrawer({
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <Field label={`${t('contract_value')} (฿)`} required error={err.value}>
+                        <Field label={`${t('contract_value')} (${symbol})`} required error={err.value}>
                             <Input
                                 type="text"
                                 inputMode="numeric"

@@ -16,15 +16,30 @@ export interface SettingsData {
     theme_accent: string;
     theme_density: 'compact' | 'normal' | 'cozy';
     theme_radius: number;
+    asset_status_colors: AssetStatusColors;
     default_employee_role: string;
     default_employee_role_label: string;
 }
 
-// Company/Branding payload — theme + logo + default role are handled separately.
+// Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
+export type AssetStatusColors = Record<string, string>;
+
+// Company/Branding payload — theme + logo + default role + asset colors are handled separately.
 export type SettingsPayload = Omit<
     SettingsData,
-    'logo_url' | 'default_employee_role' | 'default_employee_role_label' | 'theme_accent' | 'theme_density' | 'theme_radius'
+    | 'logo_url'
+    | 'default_employee_role'
+    | 'default_employee_role_label'
+    | 'theme_accent'
+    | 'theme_density'
+    | 'theme_radius'
+    | 'asset_status_colors'
 >;
+
+// Asset status colors payload — system-wide, saved via the same PUT /settings endpoint.
+export interface AssetColorsPayload {
+    asset_status_colors: AssetStatusColors;
+}
 
 // Display (theme) payload — system-wide, saved via the same PUT /settings endpoint.
 export interface DisplayPayload {
@@ -69,6 +84,12 @@ export const settingsApi = {
     },
 
     updateDisplay: async (payload: DisplayPayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        return data.data;
+    },
+
+    updateAssetColors: async (payload: AssetColorsPayload) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
         return data.data;
