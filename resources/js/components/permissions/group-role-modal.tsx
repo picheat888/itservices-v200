@@ -42,7 +42,6 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
     const [name, setName] = useState('');
     const [role, setRole] = useState<string>('');
     const [empIds, setEmpIds] = useState<number[]>([]);
-    const [deptIds, setDeptIds] = useState<number[]>([]);
 
     // Review-before-move: holds the employees that will be pulled out of another
     // group on save. When non-null, the confirmation dialog is shown.
@@ -61,7 +60,6 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             setName(group?.name ?? '');
             setRole(group?.role ?? '');
             setEmpIds(group?.employee_ids ?? []);
-            setDeptIds(group?.department_ids ?? []);
             setExpandedDeptId(null);
             setDeptMembers([]);
             setPendingMoves(null);
@@ -125,7 +123,9 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
 
     /** Commits the create/update mutation, then briefly shows a "Saved" state. */
     const persist = async () => {
-        const payload = { name, role: role || null, employee_ids: empIds, department_ids: deptIds };
+        // department_ids is no longer managed here — Department is now only a
+        // quick-add shortcut for employees, not a group↔department link.
+        const payload = { name, role: role || null, employee_ids: empIds, department_ids: [] };
         if (group) await update.mutateAsync({ id: group.id, payload });
         else await create.mutateAsync(payload);
         setSaved(true);
@@ -217,37 +217,28 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                         )}
                     </Field>
 
-                    {/* Department selector — click to expand member list */}
-                    <Field label={t('gr_departments')}>
+                    {/* Quick add by department — clicking a department expands its
+                        members so they can be added to the employee list above. It
+                        does NOT link the department to the group. */}
+                    <Field label={t('gr_departments')} help={t('gr_quick_add_dept_help')}>
                         <div className="space-y-2">
                             <div className="flex flex-wrap gap-1.5">
                                 {departments.map((d) => {
-                                    const on = deptIds.includes(d.id);
                                     const isExpanded = expandedDeptId === d.id;
                                     return (
-                                        <div key={d.id} className="flex items-center gap-0.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => setDeptIds((p) => (on ? p.filter((x) => x !== d.id) : [...p, d.id]))}
-                                                className={cn(
-                                                    'rounded-l-full border px-2.5 py-1 text-xs transition-colors',
-                                                    on ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:bg-accent/50',
-                                                )}
-                                            >
-                                                {lang === 'th' ? d.name_th ?? d.name : d.name}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                title={t('gr_dept_members')}
-                                                onClick={() => handleDeptToggle(d.id)}
-                                                className={cn(
-                                                    'rounded-r-full border border-l-0 px-1.5 py-1 text-xs transition-colors',
-                                                    isExpanded ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:bg-accent/50',
-                                                )}
-                                            >
-                                                <Users className="h-3 w-3" />
-                                            </button>
-                                        </div>
+                                        <button
+                                            key={d.id}
+                                            type="button"
+                                            title={t('gr_dept_members')}
+                                            onClick={() => handleDeptToggle(d.id)}
+                                            className={cn(
+                                                'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors',
+                                                isExpanded ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:bg-accent/50',
+                                            )}
+                                        >
+                                            {lang === 'th' ? d.name_th ?? d.name : d.name}
+                                            <Users className="h-3 w-3" />
+                                        </button>
                                     );
                                 })}
                             </div>
