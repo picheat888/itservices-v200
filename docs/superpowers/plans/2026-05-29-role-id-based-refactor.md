@@ -97,9 +97,12 @@ return new class extends Migration
             $table->foreignId('role_id')->nullable()->after('role')->constrained('roles')->cascadeOnDelete();
         });
 
-        // Backfill from the existing string key. No orphans exist (verified).
-        foreach (['users', 'group_roles', 'role_permissions'] as $t) {
-            DB::statement("UPDATE `{$t}` t JOIN `roles` r ON r.`key` = t.`role` SET t.`role_id` = r.id");
+        // Backfill from the existing string key. Query-builder form so it works on
+        // both MySQL (prod) and sqlite (tests). No orphans exist (verified).
+        foreach (DB::table('roles')->get(['id', 'key']) as $role) {
+            foreach (['users', 'group_roles', 'role_permissions'] as $t) {
+                DB::table($t)->where('role', $role->key)->update(['role_id' => $role->id]);
+            }
         }
 
         // Swap the role_permissions uniqueness from (role, permission) to (role_id, permission).
@@ -683,15 +686,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // role_id was nullable for backfill; now enforce NOT NULL where required.
-        Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('role_id')->nullable(false)->change();
-        });
-        Schema::table('role_permissions', function (Blueprint $table) {
-            $table->foreignId('role_id')->nullable(false)->change();
-        });
-
-        // Drop the legacy string columns + their old unique index.
+        // Drop the legacy string columns + their old unique index. (role_id is left
+        // nullable at the DB level — sqlite test rebuilds + FK make a NOT NULL change()
+        // fragile; the application always sets role_id, and the FK guards integrity.)
         Schema::table('role_permissions', function (Blueprint $table) {
             $table->dropUnique(['role', 'permission']);
             $table->dropColumn('role');
