@@ -47,9 +47,8 @@ class Employee extends Model
     }
 
     /**
-     * The login account linked to this employee, matched by email or username
-     * (the same link used by User::linkedEmployee). Null for employees with no
-     * system account.
+     * Backwards-compatible accessor for the linked login account. Delegates to
+     * the user() FK relation. Null for employees with no system account.
      */
     public function linkedUser(): ?User
     {

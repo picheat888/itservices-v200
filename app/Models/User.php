@@ -156,8 +156,8 @@ class User extends Authenticatable
     }
 
     /**
-     * The Employee record this login account belongs to, matched by email or
-     * username (the same link used by has_account). Null for system-only accounts.
+     * Backwards-compatible accessor for the linked employee. Delegates to the
+     * employee() FK relation. Null for system-only accounts.
      */
     public function linkedEmployee(): ?Employee
     {
