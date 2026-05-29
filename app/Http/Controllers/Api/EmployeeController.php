@@ -46,9 +46,9 @@ class EmployeeController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Resigned sink to the bottom; within active, no-account first; then by name.
-        $query = Employee::with(['department', 'position'])
+        $query = Employee::with(['department', 'position', 'user'])
             ->orderByRaw("status = 'resigned'")
-            ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.email = employees.email OR users.username = employees.username)')
+            ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
             ->orderBy('name');
 
         if ($request->has('page')) {
@@ -74,17 +74,9 @@ class EmployeeController extends Controller
             } elseif ($status === 'resigned') {
                 $query->where('status', 'resigned');
             } elseif ($status === 'no_account') {
-                $query->where('status', 'active')->whereNotExists(function ($q) {
-                    $q->from('users')
-                        ->whereColumn('users.email', 'employees.email')
-                        ->orWhereColumn('users.username', 'employees.username');
-                });
+                $query->where('status', 'active')->whereDoesntHave('user');
             } elseif ($status === 'has_account') {
-                $query->where('status', 'active')->whereExists(function ($q) {
-                    $q->from('users')
-                        ->whereColumn('users.email', 'employees.email')
-                        ->orWhereColumn('users.username', 'employees.username');
-                });
+                $query->where('status', 'active')->whereHas('user');
             }
 
             $paginator = $query->paginate($perPage);
