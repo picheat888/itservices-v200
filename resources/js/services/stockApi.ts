@@ -1,4 +1,4 @@
-import type { ApiEnvelope, StockItem, StockMovement, StockMovementType, StockRequest, StockSummary } from '@/types';
+import type { ApiEnvelope, StockCount, StockItem, StockMovement, StockMovementType, StockRequest, StockSummary } from '@/types';
 import { ensureCsrf, http } from './http';
 
 export interface StockMovementPayload {
@@ -49,8 +49,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 }
 
 export const stockApi = {
-    list: (params: StockItemListParams) =>
-        http.get<ApiEnvelope<StockItem[]>>('/stock-items', { params }).then((r) => r.data.data),
+    list: (params: StockItemListParams) => http.get<ApiEnvelope<StockItem[]>>('/stock-items', { params }).then((r) => r.data.data),
     summary: () => http.get<StockSummary>('/stock-items/summary').then((r) => r.data),
     create: (payload: StockItemPayload) => mutate<StockItem>('post', '/stock-items', payload),
     update: (id: number, payload: StockItemPayload) => mutate<StockItem>('put', `/stock-items/${id}`, payload),
@@ -58,8 +57,7 @@ export const stockApi = {
 };
 
 export const stockMovementApi = {
-    list: (params: { type?: string }) =>
-        http.get<ApiEnvelope<StockMovement[]>>('/stock-movements', { params }).then((r) => r.data.data),
+    list: (params: { type?: string }) => http.get<ApiEnvelope<StockMovement[]>>('/stock-movements', { params }).then((r) => r.data.data),
     create: (payload: StockMovementPayload) => mutate<StockMovement>('post', '/stock-movements', payload),
 };
 
@@ -69,4 +67,13 @@ export const stockRequestApi = {
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),
     reject: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/reject`),
     fulfill: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`),
+};
+
+export const stockCountApi = {
+    list: () => http.get<ApiEnvelope<StockCount[]>>('/stock-counts').then((r) => r.data.data),
+    get: (id: number) => http.get<ApiEnvelope<StockCount>>(`/stock-counts/${id}`).then((r) => r.data.data),
+    open: (body: { warehouse?: string | null; category?: string | null; note?: string | null }) => mutate<StockCount>('post', '/stock-counts', body),
+    saveCounts: (id: number, counts: Record<number, number | null>) => mutate<StockCount>('put', `/stock-counts/${id}`, { counts }),
+    commit: (id: number) => mutate<StockCount>('post', `/stock-counts/${id}/commit`, {}),
+    cancel: (id: number) => mutate<void>('delete', `/stock-counts/${id}`),
 };
