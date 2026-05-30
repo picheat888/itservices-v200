@@ -19,7 +19,7 @@ class WarehouseController extends Controller
     /** Create a new warehouse. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.manage_warehouse'), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:warehouses,name'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -33,7 +33,7 @@ class WarehouseController extends Controller
     /** Update an existing warehouse. */
     public function update(Request $request, Warehouse $warehouse): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.manage_warehouse'), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:warehouses,name,'.$warehouse->id],
             'description' => ['nullable', 'string', 'max:255'],
@@ -47,7 +47,7 @@ class WarehouseController extends Controller
     /** Delete a warehouse. */
     public function destroy(Request $request, Warehouse $warehouse): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.manage_warehouse'), 403);
         AuditLog::record('Deleted warehouse', $warehouse->name);
         $warehouse->delete();
 
