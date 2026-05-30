@@ -31,11 +31,13 @@ import {
     ArrowUpFromLine,
     Boxes,
     Check,
+    Layers,
     Pencil,
     Plus,
     RotateCcw,
     Search,
     Send,
+    Warehouse,
     X,
 } from 'lucide-react';
 import type React from 'react';
@@ -974,7 +976,12 @@ function DashboardTab({
                                                 className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
                                                 style={{ animationDelay: `${i * 40}ms` }}
                                             >
-                                                <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', MV_TONE_BG[meta.tone])}>
+                                                <span
+                                                    className={cn(
+                                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                                                        MV_TONE_BG[meta.tone],
+                                                    )}
+                                                >
                                                     <MIcon className="h-4 w-4" />
                                                 </span>
                                                 <div className="min-w-0 flex-1">
@@ -984,7 +991,12 @@ function DashboardTab({
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
-                                                    <div className={cn('font-mono text-sm font-bold', inbound ? 'text-emerald-600' : 'text-destructive')}>
+                                                    <div
+                                                        className={cn(
+                                                            'font-mono text-sm font-bold',
+                                                            inbound ? 'text-emerald-600' : 'text-destructive',
+                                                        )}
+                                                    >
                                                         {inbound ? '+' : '−'}
                                                         {m.qty}
                                                     </div>
@@ -998,20 +1010,32 @@ function DashboardTab({
                         </Card>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
-                            <div className="space-y-2">
-                                {summary.by_warehouse.map((w) => (
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        {/* By warehouse */}
+                        <Card className="overflow-hidden p-0">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                                <Warehouse className="text-brand h-4 w-4" />
+                                <span className="text-sm font-semibold">{t('stock_by_warehouse')}</span>
+                            </div>
+                            <div className="divide-border/60 divide-y">
+                                {summary.by_warehouse.map((w, i) => (
                                     <button
                                         type="button"
                                         key={w.warehouse}
                                         onClick={() => onSelectWarehouse(w.warehouse)}
                                         title={t('stock_view_items')}
-                                        className="border-border hover:bg-accent/50 hover:border-brand/40 flex w-full items-center justify-between rounded-md border px-3 py-2.5 text-left transition-colors"
+                                        className="sc-row hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
+                                        style={{ animationDelay: `${i * 40}ms` }}
                                     >
-                                        <div className="text-sm font-medium">{w.warehouse}</div>
-                                        <div className="flex gap-6 text-right font-mono text-sm">
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                                                <Warehouse className="h-3.5 w-3.5" />
+                                            </span>
+                                            <span className="group-hover:text-brand truncate text-sm font-medium transition-colors">
+                                                {w.warehouse}
+                                            </span>
+                                        </div>
+                                        <div className="flex shrink-0 gap-5 text-right font-mono text-sm">
                                             <div>
                                                 <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
                                                 {w.skus}
@@ -1029,32 +1053,38 @@ function DashboardTab({
                                     </button>
                                 ))}
                             </div>
-                        </div>
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
-                            <div className="space-y-2.5">
-                                {summary.by_category.map((c) => (
+                        </Card>
+
+                        {/* By category */}
+                        <Card className="overflow-hidden p-0">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                                <Layers className="text-brand h-4 w-4" />
+                                <span className="text-sm font-semibold">{t('stock_by_category')}</span>
+                            </div>
+                            <div className="space-y-3.5 p-4">
+                                {summary.by_category.map((c, i) => (
                                     <button
                                         type="button"
                                         key={c.category}
                                         onClick={() => onSelectCategory(c.category)}
                                         title={t('stock_view_items')}
-                                        className="group block w-full text-left"
+                                        className="sc-row group block w-full text-left"
+                                        style={{ animationDelay: `${i * 40}ms` }}
                                     >
-                                        <div className="mb-1 flex justify-between text-sm">
-                                            <span className="group-hover:text-brand transition-colors">{c.category}</span>
-                                            <span className="text-muted-foreground font-mono">{c.units}</span>
+                                        <div className="mb-1.5 flex items-center justify-between text-sm">
+                                            <span className="group-hover:text-brand font-medium transition-colors">{c.category}</span>
+                                            <span className="text-muted-foreground font-mono text-xs">{c.units}</span>
                                         </div>
-                                        <div className="bg-muted h-1.5 rounded-full">
+                                        <div className="bg-muted h-2 overflow-hidden rounded-full">
                                             <span
-                                                className="bg-brand block h-full rounded-full"
+                                                className="bg-brand block h-full rounded-full transition-all"
                                                 style={{ width: `${(c.units / maxUnits) * 100}%` }}
                                             />
                                         </div>
                                     </button>
                                 ))}
                             </div>
-                        </div>
+                        </Card>
                     </div>
                 </>
             )}
