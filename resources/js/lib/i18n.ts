@@ -723,6 +723,15 @@ const en: Dict = {
     ticket_unassigned_hint: 'This case is unassigned. Take it to start working.',
     ticket_working_hint: "You're working on this case. Record resolution details before closing.",
     ticket_notify_assignee: 'The selected staff member will be notified immediately.',
+    ticket_avg_response: 'Avg. response',
+    ticket_sla_met: 'SLA met',
+    set_sla_title: 'Service-level agreements',
+    set_sla_desc: 'Response and resolution targets by priority. Used to compute SLA met / missed on the ticket dashboard.',
+    set_sla_response: 'First response',
+    set_sla_resolution: 'Resolution (close)',
+    set_sla_minutes: 'min',
+    set_sla_hours: 'hours',
+    set_sla_note: 'Tickets use these targets to compute SLA met %. The resolution target drives the dashboard SLA figure.',
 };
 
 const th: Dict = {
@@ -1437,6 +1446,15 @@ const th: Dict = {
     ticket_unassigned_hint: 'เคสนี้ยังไม่มีผู้รับผิดชอบ กดรับเคสเพื่อเริ่มดำเนินการ',
     ticket_working_hint: 'คุณกำลังทำงานบนเคสนี้ — กรุณาใส่รายละเอียดการแก้ไขก่อนปิดเคส',
     ticket_notify_assignee: 'ระบบจะแจ้งเตือนเจ้าหน้าที่ที่ได้รับมอบหมายทันที',
+    ticket_avg_response: 'เวลาตอบกลับเฉลี่ย',
+    ticket_sla_met: 'SLA สำเร็จ',
+    set_sla_title: 'ข้อตกลงระดับการให้บริการ (SLA)',
+    set_sla_desc: 'เป้าเวลาตอบกลับและปิดเคสตามความสำคัญ ใช้คำนวณ SLA สำเร็จ/ไม่สำเร็จบน dashboard ตั๋ว',
+    set_sla_response: 'ตอบกลับครั้งแรก',
+    set_sla_resolution: 'ปิดเคส',
+    set_sla_minutes: 'นาที',
+    set_sla_hours: 'ชั่วโมง',
+    set_sla_note: 'ระบบใช้ค่าเหล่านี้คำนวณ % SLA สำเร็จ โดยเป้า "ปิดเคส" เป็นตัวกำหนดตัวเลข SLA บน dashboard',
 };
 
 const dictionaries: Record<Lang, Dict> = { en, th };

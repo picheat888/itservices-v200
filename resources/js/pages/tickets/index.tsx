@@ -21,6 +21,13 @@ import { useState } from 'react';
 type Tab = 'dashboard' | 'all' | 'mine';
 const ALL = '__all__';
 
+/** Formats an average-response duration (minutes) as "42m" or "1h 5m"; "—" when null. */
+function formatMinutes(minutes: number | null): string {
+    if (minutes == null) return '—';
+    if (minutes < 60) return `${minutes}m`;
+    return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+}
+
 function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Box }) {
     return (
         <Card className="p-5">
@@ -106,8 +113,12 @@ export default function TicketsPage() {
                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <StatCard label={t('ticket_open')} value={summary?.open ?? 0} icon={TicketIcon} />
                     <StatCard label={t('ticket_in_progress')} value={summary?.in_progress ?? 0} icon={RefreshCcw} />
-                    <StatCard label={t('ticket_completed')} value={summary?.completed ?? 0} icon={CheckCircle2} />
-                    <StatCard label={lang === 'th' ? 'ทั้งหมด' : 'Total'} value={summary?.total ?? 0} icon={Clock} />
+                    <StatCard label={t('ticket_avg_response')} value={formatMinutes(summary?.avg_response_minutes ?? null)} icon={Clock} />
+                    <StatCard
+                        label={t('ticket_sla_met')}
+                        value={summary?.sla_met_pct == null ? '—' : `${summary.sla_met_pct}%`}
+                        icon={CheckCircle2}
+                    />
                 </div>
             )}
 

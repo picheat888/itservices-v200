@@ -17,12 +17,20 @@ export interface SettingsData {
     theme_density: 'compact' | 'normal' | 'cozy';
     theme_radius: number;
     asset_status_colors: AssetStatusColors;
+    ticket_sla: TicketSlaTargets;
     default_employee_role: string;
     default_employee_role_label: string;
 }
 
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
 export type AssetStatusColors = Record<string, string>;
+
+// Per-priority SLA targets: response in minutes, resolve (close) in hours.
+export type TicketSlaTargets = Record<string, { response: number; resolve: number }>;
+
+export interface TicketSlaPayload {
+    ticket_sla: TicketSlaTargets;
+}
 
 // Company/Branding payload — theme + logo + default role + asset colors are handled separately.
 export type SettingsPayload = Omit<
@@ -34,6 +42,7 @@ export type SettingsPayload = Omit<
     | 'theme_density'
     | 'theme_radius'
     | 'asset_status_colors'
+    | 'ticket_sla'
 >;
 
 // Asset status colors payload — system-wide, saved via the same PUT /settings endpoint.
@@ -90,6 +99,12 @@ export const settingsApi = {
     },
 
     updateAssetColors: async (payload: AssetColorsPayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        return data.data;
+    },
+
+    updateTicketSla: async (payload: TicketSlaPayload) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
         return data.data;

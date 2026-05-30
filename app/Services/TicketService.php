@@ -43,6 +43,7 @@ class TicketService
             'take_note' => $note,
             'related_asset_id' => $relatedAssetId,
             'status' => TicketStatus::InProgress,
+            'responded_at' => $ticket->responded_at ?? now(),
         ]);
 
         return $ticket->fresh();
@@ -58,6 +59,7 @@ class TicketService
             'assignee_id' => $staff->id,
             'priority' => $priority,
             'status' => TicketStatus::InProgress,
+            'responded_at' => $ticket->responded_at ?? now(),
         ]);
 
         return $ticket->fresh();
