@@ -346,7 +346,34 @@ export interface StockItem {
     total_value: number;
 }
 
-export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer';
+export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';
+
+export type StockCountStatus = 'draft' | 'committed' | 'canceled';
+
+export interface StockCountLine {
+    id: number;
+    stock_item_id: number;
+    sku: string | null;
+    name: string | null;
+    system_qty: number;
+    counted_qty: number | null;
+    variance: number | null;
+}
+
+export interface StockCount {
+    id: number;
+    reference: string;
+    warehouse: string | null;
+    category: string | null;
+    status: StockCountStatus;
+    note: string | null;
+    counted_by?: string | null;
+    committed_at: string | null;
+    created_at: string | null;
+    lines?: StockCountLine[];
+    line_count?: number;
+    counted_lines?: number;
+}
 
 export interface StockMovement {
     id: number;
