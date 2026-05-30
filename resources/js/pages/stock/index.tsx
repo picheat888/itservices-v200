@@ -847,7 +847,10 @@ function DashboardTab({
     onSelectCategory: (category: string) => void;
 }) {
     const { symbol } = useCurrency();
+    const { data: movements = [] } = useStockMovements();
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
+    // Items below their minimum, out-of-stock first, are the reorder queue.
+    const reorderItems = summary ? [...summary.out_items, ...summary.low_items] : [];
     return (
         <div className="space-y-8">
             {/* KPI cards live on the Dashboard tab. */}
@@ -872,61 +875,135 @@ function DashboardTab({
             {!summary ? (
                 <div className="text-muted-foreground py-10 text-center text-sm">—</div>
             ) : (
-                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                    <div>
-                        <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
-                        <div className="space-y-2">
-                            {summary.by_warehouse.map((w) => (
-                                <button
-                                    type="button"
-                                    key={w.warehouse}
-                                    onClick={() => onSelectWarehouse(w.warehouse)}
-                                    title={t('stock_view_items')}
-                                    className="border-border hover:bg-accent/50 hover:border-brand/40 flex w-full items-center justify-between rounded-md border px-3 py-2.5 text-left transition-colors"
-                                >
-                                    <div className="text-sm font-medium">{w.warehouse}</div>
-                                    <div className="flex gap-6 text-right font-mono text-sm">
-                                        <div>
-                                            <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
-                                            {w.skus}
+                <>
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                        <div>
+                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
+                            <div className="space-y-2">
+                                {summary.by_warehouse.map((w) => (
+                                    <button
+                                        type="button"
+                                        key={w.warehouse}
+                                        onClick={() => onSelectWarehouse(w.warehouse)}
+                                        title={t('stock_view_items')}
+                                        className="border-border hover:bg-accent/50 hover:border-brand/40 flex w-full items-center justify-between rounded-md border px-3 py-2.5 text-left transition-colors"
+                                    >
+                                        <div className="text-sm font-medium">{w.warehouse}</div>
+                                        <div className="flex gap-6 text-right font-mono text-sm">
+                                            <div>
+                                                <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
+                                                {w.skus}
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
+                                                {w.units}
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>
+                                                {symbol}
+                                                {(w.value / 1000).toFixed(0)}K
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
-                                            {w.units}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
+                            <div className="space-y-2.5">
+                                {summary.by_category.map((c) => (
+                                    <button
+                                        type="button"
+                                        key={c.category}
+                                        onClick={() => onSelectCategory(c.category)}
+                                        title={t('stock_view_items')}
+                                        className="group block w-full text-left"
+                                    >
+                                        <div className="mb-1 flex justify-between text-sm">
+                                            <span className="group-hover:text-brand transition-colors">{c.category}</span>
+                                            <span className="text-muted-foreground font-mono">{c.units}</span>
                                         </div>
-                                        <div>
-                                            <div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>
-                                            {symbol}
-                                            {(w.value / 1000).toFixed(0)}K
+                                        <div className="bg-muted h-1.5 rounded-full">
+                                            <span
+                                                className="bg-brand block h-full rounded-full"
+                                                style={{ width: `${(c.units / maxUnits) * 100}%` }}
+                                            />
                                         </div>
-                                    </div>
-                                </button>
-                            ))}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
-                    <div>
-                        <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_category')}</div>
-                        <div className="space-y-2.5">
-                            {summary.by_category.map((c) => (
-                                <button
-                                    type="button"
-                                    key={c.category}
-                                    onClick={() => onSelectCategory(c.category)}
-                                    title={t('stock_view_items')}
-                                    className="group block w-full text-left"
-                                >
-                                    <div className="mb-1 flex justify-between text-sm">
-                                        <span className="group-hover:text-brand transition-colors">{c.category}</span>
-                                        <span className="text-muted-foreground font-mono">{c.units}</span>
-                                    </div>
-                                    <div className="bg-muted h-1.5 rounded-full">
-                                        <span className="bg-brand block h-full rounded-full" style={{ width: `${(c.units / maxUnits) * 100}%` }} />
-                                    </div>
-                                </button>
-                            ))}
+
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                        <div>
+                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_action_queue')}</div>
+                            {reorderItems.length === 0 ? (
+                                <div className="text-muted-foreground border-border rounded-md border border-dashed py-8 text-center text-sm">
+                                    {t('stock_all_stocked')}
+                                </div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {reorderItems.slice(0, 6).map((it) => (
+                                        <div key={it.id} className="border-border flex items-center gap-3 rounded-md border px-3 py-2">
+                                            <span
+                                                className={cn(
+                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                                                    it.current_stock === 0 ? 'bg-destructive' : 'bg-amber-500',
+                                                )}
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <div className="truncate text-sm font-medium">{it.name}</div>
+                                                <div className="text-muted-foreground font-mono text-xs">
+                                                    {it.sku} · {it.warehouse || '—'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right text-xs">
+                                                <div className="text-muted-foreground font-mono">
+                                                    {it.current_stock}/{it.min_stock}
+                                                </div>
+                                                <div className="font-mono font-semibold text-emerald-600">
+                                                    +{Math.max(0, it.max_stock - it.current_stock)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_recent_moves')}</div>
+                            {movements.length === 0 ? (
+                                <div className="text-muted-foreground border-border rounded-md border border-dashed py-8 text-center text-sm">
+                                    {t('stock_no_moves')}
+                                </div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {movements.slice(0, 6).map((m) => {
+                                        const meta = MV_META[m.type];
+                                        const MIcon = meta.icon;
+                                        return (
+                                            <div key={m.id} className="border-border flex items-center gap-3 rounded-md border px-3 py-2">
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-medium">{m.item_name}</div>
+                                                    <div className="text-muted-foreground font-mono text-xs">{m.sku}</div>
+                                                </div>
+                                                <StatusBadge tone={meta.tone}>
+                                                    <MIcon className="h-3 w-3" />
+                                                    {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
+                                                </StatusBadge>
+                                                <div className="text-right">
+                                                    <div className="font-mono text-sm font-bold">{m.qty}</div>
+                                                    <div className="text-muted-foreground font-mono text-[11px]">{m.moved_at?.slice(5, 16)}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );
