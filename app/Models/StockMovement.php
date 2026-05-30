@@ -13,7 +13,7 @@ class StockMovement extends Model
     ];
 
     /** Movement types that increase on-hand stock; the rest decrease it. */
-    public const INBOUND = ['receive', 'return'];
+    public const INBOUND = ['receive', 'return', 'adjust_up'];
 
     protected function casts(): array
     {
