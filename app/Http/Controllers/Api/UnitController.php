@@ -38,8 +38,9 @@ class UnitController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:units,name,'.$unit->id],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $unit->getOriginal();
         $unit->update($data);
-        AuditLog::record('Updated unit', $unit->name);
+        AuditLog::record('Updated unit', $unit->name, AuditLog::changes($before, $unit));
 
         return response()->json(['data' => $unit, 'message' => 'success']);
     }

@@ -38,8 +38,9 @@ class WarehouseController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:warehouses,name,'.$warehouse->id],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $warehouse->getOriginal();
         $warehouse->update($data);
-        AuditLog::record('Updated warehouse', $warehouse->name);
+        AuditLog::record('Updated warehouse', $warehouse->name, AuditLog::changes($before, $warehouse));
 
         return response()->json(['data' => $warehouse, 'message' => 'success']);
     }

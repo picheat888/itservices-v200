@@ -25,6 +25,8 @@ export interface AuditDetails {
     from?: string;
     /** New value name */
     to?: string;
+    /** Field-level before/after diff: { field: { from, to } } (from AuditLog::changes) */
+    changes?: Record<string, { from: unknown; to: unknown }>;
 }
 
 export interface AuditEntry {
@@ -48,6 +50,14 @@ export interface AuditMeta {
     per_page: number;
     current_page: number;
     last_page: number;
+    /** Distinct actor names, for the actor filter dropdown. */
+    users?: string[];
+}
+
+export interface AuditFilters {
+    q?: string;
+    category?: string;
+    user?: string;
 }
 
 export interface AuditLogsResponse {
@@ -85,8 +95,18 @@ async function send<T>(method: 'post' | 'put' | 'delete', url: string, body?: un
 export const permissionApi = {
     matrix: () => http.get<ApiEnvelope<PermissionMatrix>>('/permissions').then((r) => r.data.data),
     updateRole: (role: string, permissions: string[]) => send<PermissionMatrix>('put', `/permissions/${role}`, { permissions }),
-    auditLogs: (page: number, perPage: number) =>
-        http.get<AuditLogsResponse>('/audit-logs', { params: { page, per_page: perPage } }).then((r) => r.data),
+    auditLogs: (page: number, perPage: number, filters: AuditFilters = {}) =>
+        http
+            .get<AuditLogsResponse>('/audit-logs', {
+                params: {
+                    page,
+                    per_page: perPage,
+                    q: filters.q || undefined,
+                    category: filters.category && filters.category !== 'all' ? filters.category : undefined,
+                    user: filters.user && filters.user !== 'all' ? filters.user : undefined,
+                },
+            })
+            .then((r) => r.data),
 };
 
 export const roleApi = {

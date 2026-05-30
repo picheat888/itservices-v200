@@ -46,8 +46,9 @@ class VendorController extends Controller
             'email' => ['nullable', 'email', 'max:120'],
             'address' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $vendor->getOriginal();
         $vendor->update($data);
-        AuditLog::record('Updated vendor', $vendor->name);
+        AuditLog::record('Updated vendor', $vendor->name, AuditLog::changes($before, $vendor));
 
         return response()->json(['data' => $vendor, 'message' => 'success']);
     }

@@ -8,6 +8,8 @@ use App\Models\AuditLog;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\StockRequest;
+use App\Services\StockLotService;
+use App\Services\StockSerialService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,11 @@ use Illuminate\Validation\ValidationException;
 
 class StockRequestController extends Controller
 {
+    public function __construct(
+        private readonly StockSerialService $serialService,
+        private readonly StockLotService $lotService,
+    ) {}
+
     /**
      * Request list. Approvers / fulfillers (and super) see every request;
      * everyone else sees only the ones they submitted.
@@ -49,14 +56,12 @@ class StockRequestController extends Controller
             'stock_item_id' => ['required', 'integer', 'exists:stock_items,id'],
             'qty' => ['required', 'integer', 'min:1'],
             'reason' => ['required', 'string', 'max:2000'],
-            'dept' => ['nullable', 'string', 'max:160'],
         ]);
 
         $stockRequest = StockRequest::create([
             'stock_item_id' => $data['stock_item_id'],
             'user_id' => $user->id,
             'requester_name' => $user->name,
-            'dept' => $data['dept'] ?? null,
             'qty' => $data['qty'],
             'reason' => $data['reason'],
             'status' => 'pending',
@@ -106,7 +111,13 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.fulfill'), 403);
         $this->assertStatus($stockRequest, 'approved');
 
-        DB::transaction(function () use ($stockRequest, $user) {
+        // Serialized items require the exact serials being issued to be chosen.
+        $data = $request->validate([
+            'serial_ids' => ['array'],
+            'serial_ids.*' => ['integer'],
+        ]);
+
+        DB::transaction(function () use ($stockRequest, $user, $data) {
             /** @var StockItem $item */
             $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
 
@@ -131,6 +142,12 @@ class StockRequestController extends Controller
             $item->current_stock -= $stockRequest->qty;
             $item->last_move_at = now()->toDateString();
             $item->save();
+
+            // Draw the issued units down the FIFO lots.
+            $this->lotService->consume($item, $stockRequest->qty);
+
+            // Retire the chosen serials from stock (no-op for quantity-only items).
+            $this->serialService->issue($item, $data['serial_ids'] ?? [], $stockRequest->qty);
 
             $stockRequest->update(['status' => 'fulfilled', 'fulfilled_at' => now()]);
         });

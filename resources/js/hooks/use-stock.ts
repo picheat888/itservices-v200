@@ -28,6 +28,13 @@ export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey:
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
 export const useStockSummary = () => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary });
 
+/** Every serial known to the system — used to flag duplicates while receiving. */
+export const useExistingSerials = () => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials });
+
+/** A single stock item with its per-unit serials (for the detail view). */
+export const useStockItem = (id: number | null) =>
+    useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null });
+
 /** Create/update/delete mutations; invalidate both list and summary. */
 export function useStockItemMutations() {
     const qc = useQueryClient();
@@ -76,7 +83,10 @@ export function useStockRequestActions() {
         submit: useMutation({ mutationFn: (p: StockRequestPayload) => stockRequestApi.create(p), onSuccess: inv }),
         approve: useMutation({ mutationFn: (id: number) => stockRequestApi.approve(id), onSuccess: inv }),
         reject: useMutation({ mutationFn: (id: number) => stockRequestApi.reject(id), onSuccess: inv }),
-        fulfill: useMutation({ mutationFn: (id: number) => stockRequestApi.fulfill(id), onSuccess: inv }),
+        fulfill: useMutation({
+            mutationFn: (v: { id: number; serialIds?: number[] }) => stockRequestApi.fulfill(v.id, { serial_ids: v.serialIds }),
+            onSuccess: inv,
+        }),
     };
 }
 
@@ -98,7 +108,8 @@ export function useStockCountMutations() {
     };
     return {
         open: useMutation({
-            mutationFn: (b: { warehouse?: string | null; category?: string | null; note?: string | null }) => stockCountApi.open(b),
+            mutationFn: (b: { warehouse?: string | null; category?: string | null; note?: string | null; stock_item_ids?: number[] }) =>
+                stockCountApi.open(b),
             onSuccess: inv,
         }),
         save: useMutation({

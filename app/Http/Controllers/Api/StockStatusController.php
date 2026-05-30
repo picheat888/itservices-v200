@@ -38,8 +38,9 @@ class StockStatusController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:stock_statuses,name,'.$stockStatus->id],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $stockStatus->getOriginal();
         $stockStatus->update($data);
-        AuditLog::record('Updated stock status', $stockStatus->name);
+        AuditLog::record('Updated stock status', $stockStatus->name, AuditLog::changes($before, $stockStatus));
 
         return response()->json(['data' => $stockStatus, 'message' => 'success']);
     }

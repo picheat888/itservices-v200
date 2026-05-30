@@ -136,8 +136,9 @@ class AssetController extends Controller
 
     public function update(StoreAssetRequest $request, Asset $asset): JsonResponse
     {
+        $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
-        AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model}");
+        AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model}", AuditLog::changes($before, $asset));
 
         return (new AssetResource($asset->load('contract')))
             ->additional(['message' => 'success'])->response();

@@ -74,6 +74,31 @@ export function useCurrency() {
     return { code, symbol: currencySymbol(code) };
 }
 
+/**
+ * Formats backend timestamps in the system-configured timezone (Settings -> Company).
+ * The API emits naive UTC strings ("YYYY-MM-DD HH:mm:ss"), so they're treated as UTC
+ * and converted to the configured zone. Returns "YYYY-MM-DD HH:mm" (or date only).
+ */
+export function useDateTime() {
+    const { data } = useSettings();
+    const tz = data?.timezone || 'Asia/Bangkok';
+
+    const format = (value: string | null | undefined, withTime = true): string => {
+        if (!value) return '—';
+        const hasZone = /[zZ]|[+-]\d\d:?\d\d$/.test(value);
+        const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+        const date = new Date(hasZone ? normalized : `${normalized}Z`);
+        if (Number.isNaN(date.getTime())) return value;
+
+        const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+        if (!withTime) return ymd;
+        const hm = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
+        return `${ymd} ${hm}`;
+    };
+
+    return { tz, format };
+}
+
 function useSyncStore() {
     const setBrand = useUiStore((s) => s.setBrand);
     const setLogo = useUiStore((s) => s.setLogo);

@@ -8,9 +8,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class StockItem extends Model
 {
     protected $fillable = [
-        'sku', 'name', 'serial', 'category', 'brand', 'model', 'unit',
+        'sku', 'name', 'serial', 'track_serial', 'category', 'brand', 'model', 'unit',
         'cost', 'current_stock', 'min_stock', 'max_stock',
         'warehouse', 'supplier', 'warranty', 'last_move_at',
+    ];
+
+    /**
+     * Defaults so a freshly-created SKU (which no longer sends stock/cost — those
+     * come from Receive) reports 0 immediately, not null.
+     */
+    protected $attributes = [
+        'current_stock' => 0,
+        'cost' => 0,
+        'min_stock' => 0,
+        'max_stock' => 0,
+        'track_serial' => false,
     ];
 
     /** Days with no movement before an item is considered "dead stock". */
@@ -22,9 +34,36 @@ class StockItem extends Model
         return $this->hasMany(StockMovement::class)->latest('moved_at');
     }
 
+    /** @return HasMany<StockItemSerial, $this> */
+    public function serials(): HasMany
+    {
+        return $this->hasMany(StockItemSerial::class);
+    }
+
+    /** @return HasMany<StockLot, $this> */
+    public function lots(): HasMany
+    {
+        return $this->hasMany(StockLot::class);
+    }
+
+    /** FIFO stock value: Σ(qty_remaining × unit_cost) across open lots. */
+    public function stockValue(): float
+    {
+        $lots = $this->relationLoaded('lots') ? $this->lots : $this->lots()->get();
+
+        return (float) $lots->sum(fn (StockLot $l) => $l->qty_remaining * (float) $l->unit_cost);
+    }
+
+    /** Weighted-average unit cost of the stock currently on hand (0 when empty). */
+    public function avgCost(): float
+    {
+        return $this->current_stock > 0 ? round($this->stockValue() / $this->current_stock, 2) : 0.0;
+    }
+
     protected function casts(): array
     {
         return [
+            'track_serial' => 'boolean',
             'cost' => 'decimal:2',
             'current_stock' => 'integer',
             'min_stock' => 'integer',

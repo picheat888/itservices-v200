@@ -1,19 +1,23 @@
 import { Column, DataTable } from '@/components/shared/data-table';
+import { FilterPopover } from '@/components/shared/filter-popover';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { MovementDrawer } from '@/components/stock/movement-drawer';
 import { RequestDrawer } from '@/components/stock/request-drawer';
+import { StockItemDetailModal } from '@/components/stock/stock-item-detail-modal';
 import { StockItemModal } from '@/components/stock/stock-item-modal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { useAuth } from '@/hooks/use-auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
-import { useCurrency } from '@/hooks/use-settings';
+import { useCurrency, useDateTime } from '@/hooks/use-settings';
 import {
     useStockCount,
     useStockCountMutations,
     useStockCounts,
+    useStockItem,
     useStockItems,
     useStockMovements,
     useStockRequestActions,
@@ -22,21 +26,24 @@ import {
 } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { Role, StockItem, StockItemStatus, StockMovementType, StockRequestStatus } from '@/types';
+import type { Role, StockItem, StockItemStatus, StockMovementType, StockRequest, StockRequestStatus } from '@/types';
 import {
     AlertTriangle,
     Archive,
     ArrowDownToLine,
     ArrowLeftRight,
+    ArrowRight,
     ArrowUpFromLine,
     Boxes,
     Check,
+    ClipboardList,
+    FilePlus2,
     Layers,
-    Pencil,
     Plus,
     RotateCcw,
     Search,
     Send,
+    SquarePen,
     Warehouse,
     X,
 } from 'lucide-react';
@@ -52,12 +59,29 @@ const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 
     dead: 'gray',
 };
 
-/** Visual Min/Max bar — current marker against the healthy min..max band. */
+// Fixed screen anchors for the min/max gridlines — identical on every row so the
+// markers (and their labels) line up vertically down the whole Stock items table.
+const BAR_MIN_X = 20;
+const BAR_MAX_X = 80;
+
+/** Visual Min/Max bar (bullet-chart style). The min/max gridlines are pinned at
+ *  fixed positions so they align across rows; the current value is mapped onto the
+ *  low (0..min) / healthy (min..max) / over (max..) zones via piecewise scaling. */
 function StockBar({ item }: { item: StockItem }) {
-    const scaleMax = Math.max(item.max_stock * 1.4, item.current_stock + 1);
-    const minPct = (item.min_stock / scaleMax) * 100;
-    const maxPct = (item.max_stock / scaleMax) * 100;
-    const curPct = Math.min(100, (item.current_stock / scaleMax) * 100);
+    const { min_stock: min, max_stock: max, current_stock: cur } = item;
+
+    // Map the current value to a screen percentage so that `min` always lands on
+    // BAR_MIN_X and `max` always on BAR_MAX_X, regardless of the row's actual values.
+    let curPct: number;
+    if (cur <= min) {
+        curPct = min > 0 ? (cur / min) * BAR_MIN_X : 0;
+    } else if (cur <= max) {
+        curPct = BAR_MIN_X + ((cur - min) / Math.max(1, max - min)) * (BAR_MAX_X - BAR_MIN_X);
+    } else {
+        const over = (cur - max) / Math.max(1, max - min);
+        curPct = Math.min(100, BAR_MAX_X + over * (100 - BAR_MAX_X));
+    }
+
     const fill =
         item.status === 'out' || item.status === 'low'
             ? 'bg-destructive'
@@ -67,21 +91,21 @@ function StockBar({ item }: { item: StockItem }) {
                 ? 'bg-muted-foreground'
                 : 'bg-emerald-500';
     return (
-        <div className="flex items-center gap-2.5">
-            <div className="bg-muted relative h-1.5 flex-1 rounded-full">
-                <div
-                    className="absolute inset-y-0 rounded-full bg-emerald-500/20"
-                    style={{ left: `${minPct}%`, width: `${Math.max(0, maxPct - minPct)}%` }}
-                />
-                <div className="absolute -inset-y-0.5 w-px bg-amber-500" style={{ left: `${minPct}%` }} />
-                <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${maxPct}%` }} />
+        <div className="w-full min-w-[160px] pb-0.5">
+            <div className="bg-muted relative h-1.5 w-full rounded-full">
+                {/* Healthy band between the fixed min and max gridlines. */}
+                <div className="absolute inset-y-0 rounded-full bg-emerald-500/20" style={{ left: `${BAR_MIN_X}%`, width: `${BAR_MAX_X - BAR_MIN_X}%` }} />
+                <div className="absolute -inset-y-0.5 w-px bg-amber-500" style={{ left: `${BAR_MIN_X}%` }} />
+                <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${BAR_MAX_X}%` }} />
                 <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
             </div>
-            <div className="w-[72px] text-right font-mono text-xs">
-                <span className="font-bold">{item.current_stock}</span>
-                <span className="text-muted-foreground">
-                    {' '}
-                    / {item.min_stock}–{item.max_stock}
+            {/* Min / Max labels sit under the fixed gridlines → aligned across all rows. */}
+            <div className="relative mt-1 h-3 font-mono text-[10px]">
+                <span className="absolute -translate-x-1/2 whitespace-nowrap text-amber-600" style={{ left: `${BAR_MIN_X}%` }}>
+                    {min}
+                </span>
+                <span className="absolute -translate-x-1/2 whitespace-nowrap text-blue-600" style={{ left: `${BAR_MAX_X}%` }}>
+                    {max}
                 </span>
             </div>
         </div>
@@ -168,6 +192,7 @@ export default function StockPage() {
     const [wh, setWh] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [editItem, setEditItem] = useState<StockItem | null>(null);
+    const [viewId, setViewId] = useState<number | null>(null);
     const [addOpen, setAddOpen] = useState(false);
     const [moveKind, setMoveKind] = useState<StockMovementType | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
@@ -175,7 +200,7 @@ export default function StockPage() {
     const { data: summary } = useStockSummary();
     const { data: categories = [] } = useCategories();
     const { data: warehouses = [] } = useWarehouses();
-    const { data: items = [] } = useStockItems({
+    const { data: items = [], isLoading: itemsLoading } = useStockItems({
         search,
         category: cat === 'all' ? undefined : cat,
         warehouse: wh === 'all' ? undefined : wh,
@@ -204,15 +229,21 @@ export default function StockPage() {
         },
         { key: 'category', header: t('stock_category'), render: (i) => <span className="text-sm">{i.category ?? '—'}</span> },
         { key: 'warehouse', header: t('stock_warehouse'), render: (i) => <span className="text-sm">{i.warehouse ?? '—'}</span> },
-        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[220px]', render: (i) => <StockBar item={i} /> },
+        { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[180px]', render: (i) => <StockBar item={i} /> },
         {
-            key: 'cost',
-            header: t('stock_cost'),
+            key: 'current',
+            header: t('stock_current'),
+            align: 'right',
+            render: (i) => <span className="font-mono text-sm font-bold">{i.current_stock.toLocaleString()}</span>,
+        },
+        {
+            key: 'value',
+            header: t('stock_value'),
             align: 'right',
             render: (i) => (
                 <span className="font-mono text-xs">
                     {symbol}
-                    {i.cost.toLocaleString()}
+                    {i.total_value.toLocaleString()}
                 </span>
             ),
         },
@@ -221,12 +252,23 @@ export default function StockPage() {
             key: 'actions',
             header: '',
             align: 'right',
-            render: (i) =>
-                canManage ? (
-                    <button onClick={() => setEditItem(i)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
-                        <Pencil className="h-4 w-4" />
-                    </button>
-                ) : null,
+            render: (i) => (
+                <div className="flex justify-end gap-1">
+                    {canManage && (
+                        <button
+                            // Stop the click from bubbling to the row (which opens the detail view).
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setEditItem(i);
+                            }}
+                            title={t('stock_edit_item')}
+                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                        >
+                            <SquarePen className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+            ),
         },
     ];
 
@@ -247,10 +289,23 @@ export default function StockPage() {
     const tabs = [
         { id: 'dashboard' as const, label: t('sub_dashboard') },
         { id: 'items' as const, label: t('stock_items_tab'), count: summary?.skus },
-        { id: 'movements' as const, label: t('stock_movements_tab') },
         { id: 'requests' as const, label: t('stock_requests_tab') },
         { id: 'audit' as const, label: t('stock_audit_tab') },
+        { id: 'movements' as const, label: t('stock_movements_tab') },
     ];
+
+    // Active item filters surfaced as removable chips (search stays in its own box).
+    const statusChipLabel = statusFilter === 'alerts' ? t('stock_st_alerts') : t(`stock_st_${statusFilter}` as Parameters<typeof t>[0]);
+    const activeChips = [
+        cat !== 'all' ? { key: 'cat', label: cat, clear: () => setCat('all') } : null,
+        wh !== 'all' ? { key: 'wh', label: wh, clear: () => setWh('all') } : null,
+        statusFilter !== 'all' ? { key: 'status', label: statusChipLabel, clear: () => setStatusFilter('all') } : null,
+    ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
+    const resetItemFilters = () => {
+        setCat('all');
+        setWh('all');
+        setStatusFilter('all');
+    };
 
     return (
         <div className="space-y-6">
@@ -264,18 +319,6 @@ export default function StockPage() {
                         <Button variant="outline" onClick={() => setReqOpen(true)}>
                             <Send className="h-4 w-4" />
                             {t('stock_request')}
-                        </Button>
-                    )}
-                    {can('receive') && (
-                        <Button variant="outline" onClick={() => setMoveKind('receive')}>
-                            <ArrowDownToLine className="h-4 w-4" />
-                            {t('stock_mv_receive')}
-                        </Button>
-                    )}
-                    {canManage && (
-                        <Button onClick={() => setAddOpen(true)}>
-                            <Plus className="h-4 w-4" />
-                            {t('stock_new_item')}
                         </Button>
                     )}
                 </div>
@@ -346,68 +389,119 @@ export default function StockPage() {
                                         className="pl-9"
                                     />
                                 </div>
-                                <Select value={cat} onValueChange={setCat}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('stock_all_categories')}</SelectItem>
-                                        {categories.map((c) => (
-                                            <SelectItem key={c.id} value={c.name}>
-                                                {c.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={wh} onValueChange={setWh}>
-                                    <SelectTrigger className="w-48">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('stock_all_warehouses')}</SelectItem>
-                                        {warehouses.map((w) => (
-                                            <SelectItem key={w.id} value={w.name}>
-                                                {w.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                    <SelectTrigger className="w-44">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">{t('stock_all_statuses')}</SelectItem>
-                                        <SelectItem value="alerts">{t('stock_st_alerts')}</SelectItem>
-                                        {(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => (
-                                            <SelectItem key={s} value={s}>
-                                                {t(`stock_st_${s}` as Parameters<typeof t>[0])}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {(search !== '' || cat !== 'all' || wh !== 'all' || statusFilter !== 'all') && (
-                                    <a
-                                        href="#"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setSearch('');
-                                            setCat('all');
-                                            setWh('all');
-                                            setStatusFilter('all');
-                                        }}
-                                        className="bg-brand/10 text-brand hover:bg-brand/20 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
-                                    >
-                                        <X className="h-3 w-3" />
-                                        Reset
-                                    </a>
-                                )}
+                                <FilterPopover count={activeChips.length}>
+                                    {() => (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_category')}</div>
+                                                <SearchableSelect
+                                                    value={cat}
+                                                    onChange={setCat}
+                                                    options={[
+                                                        { value: 'all', label: t('stock_all_categories'), search: t('stock_all_categories') },
+                                                        ...categories.map((c) => ({ value: c.name, label: c.name, search: c.name })),
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_warehouse')}</div>
+                                                <SearchableSelect
+                                                    value={wh}
+                                                    onChange={setWh}
+                                                    options={[
+                                                        { value: 'all', label: t('stock_all_warehouses'), search: t('stock_all_warehouses') },
+                                                        ...warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })),
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('status')}</div>
+                                                <SearchableSelect
+                                                    value={statusFilter}
+                                                    onChange={setStatusFilter}
+                                                    options={[
+                                                        { value: 'all', label: t('stock_all_statuses'), search: t('stock_all_statuses') },
+                                                        { value: 'alerts', label: t('stock_st_alerts'), search: t('stock_st_alerts') },
+                                                        ...(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => ({
+                                                            value: s,
+                                                            label: t(`stock_st_${s}` as Parameters<typeof t>[0]),
+                                                            search: t(`stock_st_${s}` as Parameters<typeof t>[0]),
+                                                        })),
+                                                    ]}
+                                                />
+                                            </div>
+                                            {activeChips.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={resetItemFilters}
+                                                    className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs font-medium"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                    {t('reset_filters')}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </FilterPopover>
+                                <div className="ml-auto flex flex-wrap items-center gap-2">
+                                    {can('receive') && (
+                                        <Button variant="outline" onClick={() => setMoveKind('receive')}>
+                                            <ArrowDownToLine className="h-4 w-4" />
+                                            {t('stock_mv_receive')}
+                                        </Button>
+                                    )}
+                                    {can('return') && (
+                                        <Button variant="outline" onClick={() => setMoveKind('return')}>
+                                            <RotateCcw className="h-4 w-4" />
+                                            {t('stock_mv_return')}
+                                        </Button>
+                                    )}
+                                    {can('transfer') && (
+                                        <Button variant="outline" onClick={() => setMoveKind('transfer')}>
+                                            <ArrowLeftRight className="h-4 w-4" />
+                                            {t('stock_mv_transfer')}
+                                        </Button>
+                                    )}
+                                    {canManage && (
+                                        <Button onClick={() => setAddOpen(true)}>
+                                            <Plus className="h-4 w-4" />
+                                            {t('stock_new_sku')}
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
-                            <DataTable columns={columns} rows={items} rowKey={(i) => i.id} />
+
+                            {/* Active filters as removable chips. */}
+                            {activeChips.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    {activeChips.map((c) => (
+                                        <button
+                                            key={c.key}
+                                            type="button"
+                                            onClick={c.clear}
+                                            className="bg-brand/10 text-brand hover:bg-brand/20 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors"
+                                        >
+                                            {c.label}
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    ))}
+                                    {activeChips.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={resetItemFilters}
+                                            className="text-muted-foreground hover:text-foreground px-1 text-xs font-medium"
+                                        >
+                                            {t('reset_filters')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            <DataTable columns={columns} rows={items} rowKey={(i) => i.id} onRowClick={(i) => setViewId(i.id)} loading={itemsLoading} />
                         </div>
                     )}
 
-                    {tab === 'movements' && <MovementsTab can={can} onNew={setMoveKind} />}
+                    {tab === 'movements' && <MovementsTab />}
                     {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} />}
 
                     {tab === 'audit' && <AuditTab can={can} />}
@@ -422,6 +516,7 @@ export default function StockPage() {
                     setEditItem(null);
                 }}
             />
+            <StockItemDetailModal itemId={viewId} onClose={() => setViewId(null)} />
             <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
         </div>
@@ -463,20 +558,16 @@ const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> =
     rejected: 'red',
 };
 
-function MovementsTab({ can, onNew }: { can: (p: string) => boolean; onNew: (k: StockMovementType) => void }) {
+function MovementsTab() {
     const t = useT();
+    const { symbol } = useCurrency();
+    const { format: fmtDateTime } = useDateTime();
     const [type, setType] = useState('all');
-    const { data: movements = [] } = useStockMovements(type === 'all' ? undefined : type);
-
-    const newButtons: { kind: StockMovementType; perm: string }[] = [
-        { kind: 'receive', perm: 'receive' },
-        { kind: 'issue', perm: 'fulfill' },
-        { kind: 'return', perm: 'return' },
-        { kind: 'transfer', perm: 'transfer' },
-    ];
+    const { data: movements = [], isLoading: movementsLoading } = useStockMovements(type === 'all' ? undefined : type);
+    const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
 
     const columns: Column<(typeof movements)[number]>[] = [
-        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{m.moved_at?.slice(0, 16)}</span> },
+        { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{fmtDateTime(m.moved_at)}</span> },
         {
             key: 'type',
             header: t('stock_mv_type'),
@@ -515,52 +606,180 @@ function MovementsTab({ can, onNew }: { can: (p: string) => boolean; onNew: (k: 
     return (
         <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-                <Select value={type} onValueChange={setType}>
-                    <SelectTrigger className="w-44">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">{t('stock_all_types')}</SelectItem>
-                        {(['receive', 'issue', 'return', 'transfer'] as StockMovementType[]).map((k) => (
-                            <SelectItem key={k} value={k}>
-                                {t(`stock_mv_${k}` as Parameters<typeof t>[0])}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <div className="ml-auto flex gap-1.5">
-                    {newButtons
-                        .filter((b) => can(b.perm))
-                        .map((b) => {
-                            const Icon = MV_META[b.kind].icon;
-                            return (
-                                <Button key={b.kind} variant="outline" size="sm" onClick={() => onNew(b.kind)}>
-                                    <Icon className="h-3.5 w-3.5" />
-                                    {t(`stock_mv_${b.kind}` as Parameters<typeof t>[0])}
-                                </Button>
-                            );
-                        })}
+                <div className="w-44">
+                    <SearchableSelect
+                        value={type}
+                        onChange={setType}
+                        options={[
+                            { value: 'all', label: t('stock_all_types'), search: t('stock_all_types') },
+                            ...(['receive', 'issue', 'return', 'transfer'] as StockMovementType[]).map((k) => ({
+                                value: k,
+                                label: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
+                                search: t(`stock_mv_${k}` as Parameters<typeof t>[0]),
+                            })),
+                        ]}
+                    />
                 </div>
             </div>
-            <DataTable columns={columns} rows={movements} rowKey={(m) => m.id} />
+            <DataTable columns={columns} rows={movements} rowKey={(m) => m.id} onRowClick={(m) => setViewMove(m)} loading={movementsLoading} />
+
+            {/* Movement detail — the per-entry audit-log view. */}
+            <Dialog open={!!viewMove} onOpenChange={(o) => !o && setViewMove(null)}>
+                <DialogContent className="max-w-md">
+                    {viewMove &&
+                        (() => {
+                            const meta = MV_META[viewMove.type];
+                            const Icon = meta.icon;
+                            const inbound = ['receive', 'return', 'adjust_up'].includes(viewMove.type);
+                            return (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2.5">
+                                            <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', MV_TONE_BG[meta.tone])}>
+                                                <Icon className="h-[18px] w-[18px]" />
+                                            </span>
+                                            <div>
+                                                <div className="text-base leading-tight">{t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}</div>
+                                                <div className="text-muted-foreground font-mono text-[11px] font-normal">{viewMove.reference || '—'}</div>
+                                            </div>
+                                        </DialogTitle>
+                                    </DialogHeader>
+
+                                    <div className="space-y-4">
+                                        {/* Item + signed quantity */}
+                                        <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
+                                            <div className="min-w-0">
+                                                <div className="truncate text-sm font-semibold">{viewMove.item_name}</div>
+                                                <div className="text-muted-foreground font-mono text-xs">{viewMove.sku}</div>
+                                            </div>
+                                            <div className={cn('shrink-0 font-mono text-2xl font-bold', inbound ? 'text-emerald-600' : 'text-destructive')}>
+                                                {inbound ? '+' : '−'}
+                                                {viewMove.qty}
+                                            </div>
+                                        </div>
+
+                                        {/* From → To flow */}
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <div className="bg-muted/40 min-w-0 flex-1 rounded-lg px-3 py-2">
+                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_from')}</div>
+                                                <div className="truncate">{viewMove.from || '—'}</div>
+                                            </div>
+                                            <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                                            <div className="bg-muted/40 min-w-0 flex-1 rounded-lg px-3 py-2">
+                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_to')}</div>
+                                                <div className="truncate">{viewMove.to || '—'}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Receive lot cost strip */}
+                                        {viewMove.unit_cost != null && (
+                                            <div className="border-border flex items-center justify-between gap-2 rounded-lg border p-3">
+                                                <div>
+                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_unit_cost')}</div>
+                                                    <div className="font-mono text-sm">
+                                                        {symbol}
+                                                        {viewMove.unit_cost.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                                <span className="text-muted-foreground font-mono text-sm">× {viewMove.qty}</span>
+                                                <div className="text-right">
+                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_lot_value')}</div>
+                                                    <div className="font-mono text-sm font-bold text-emerald-600">
+                                                        {symbol}
+                                                        {(viewMove.qty * viewMove.unit_cost).toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Audit meta */}
+                                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                            <div>
+                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_by')}</div>
+                                                <div className="text-sm">{viewMove.recorded_by || '—'}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('audit_time')}</div>
+                                                <div className="font-mono text-sm">{fmtDateTime(viewMove.moved_at)}</div>
+                                            </div>
+                                        </div>
+
+                                        {viewMove.notes && (
+                                            <div className="bg-muted/40 rounded-lg p-3">
+                                                <div className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">{t('stock_notes')}</div>
+                                                <div className="text-sm">{viewMove.notes}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            );
+                        })()}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
 function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
-    const { data: requests = [] } = useStockRequests();
+    const { data: requests = [], isLoading: requestsLoading } = useStockRequests();
     const { approve, reject, fulfill } = useStockRequestActions();
+    const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
+    const [issueSerialIds, setIssueSerialIds] = useState<number[]>([]);
+    // Live item detail (on-hand + per-unit serials) for the request being fulfilled.
+    const { data: fulfillItem } = useStockItem(fulfillReq?.stock_item_id ?? null);
+    // Reset the serial selection each time a different request opens.
+    useEffect(() => {
+        setIssueSerialIds([]);
+    }, [fulfillReq?.id]);
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
         Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
     };
 
+    // One-line summary of the request, shown inside the confirm dialogs.
+    const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} — ${r.item_name ?? ''}  ·  ×${r.qty}  ·  ${r.requester_name}`;
+
+    const confirmApprove = async (r: (typeof requests)[number]) => {
+        const res = await Swal.fire({
+            title: t('stock_approve_confirm'),
+            text: reqSummary(r),
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: t('stock_approve'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#059669',
+            cancelButtonColor: '#6b7280',
+            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            reverseButtons: true,
+        });
+        if (res.isConfirmed) {
+            approve.mutate(r.id, { onError });
+        }
+    };
+
+    const confirmReject = async (r: (typeof requests)[number]) => {
+        const res = await Swal.fire({
+            title: t('stock_reject_confirm'),
+            text: reqSummary(r),
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: t('stock_reject'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            reverseButtons: true,
+        });
+        if (res.isConfirmed) {
+            reject.mutate(r.id, { onError });
+        }
+    };
+
     const columns: Column<(typeof requests)[number]>[] = [
         { key: 'id', header: '#', render: (r) => <span className="font-mono text-xs">{r.id}</span> },
         { key: 'requester', header: t('stock_requester'), render: (r) => <span className="text-sm font-medium">{r.requester_name}</span> },
-        { key: 'dept', header: t('department'), render: (r) => <span className="text-sm">{r.dept || '—'}</span> },
         {
             key: 'item',
             header: t('stock_item'),
@@ -586,17 +805,17 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                 <div className="flex justify-end gap-1.5">
                     {can('approve') && r.status === 'pending' && (
                         <>
-                            <Button size="sm" variant="outline" onClick={() => approve.mutate(r.id, { onError })}>
+                            <Button size="sm" variant="outline" onClick={() => confirmApprove(r)}>
                                 <Check className="h-3.5 w-3.5 text-emerald-600" />
                                 {t('stock_approve')}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => reject.mutate(r.id, { onError })}>
+                            <Button size="sm" variant="outline" title={t('stock_reject')} onClick={() => confirmReject(r)}>
                                 <X className="text-destructive h-3.5 w-3.5" />
                             </Button>
                         </>
                     )}
                     {can('fulfill') && r.status === 'approved' && (
-                        <Button size="sm" onClick={() => fulfill.mutate(r.id, { onError })}>
+                        <Button size="sm" onClick={() => setFulfillReq(r)}>
                             <ArrowUpFromLine className="h-3.5 w-3.5" />
                             {t('stock_fulfill')}
                         </Button>
@@ -607,17 +826,141 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
         },
     ];
 
+    // Stock impact + serial selection for the fulfill dialog.
+    const fulfillOnHand = fulfillItem?.current_stock ?? 0;
+    const fulfillShort = !!fulfillReq && fulfillOnHand < fulfillReq.qty;
+    const fulfillSerialized = !!fulfillItem?.track_serial;
+    const fulfillInStock = (fulfillItem?.serials ?? []).filter((s) => s.status === 'in_stock');
+    const fulfillSerialOk = !fulfillSerialized || (!!fulfillReq && issueSerialIds.length === fulfillReq.qty);
+    const toggleIssueSerial = (id: number) =>
+        setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+                <div className="text-muted-foreground text-sm">{t('stock_requests_caption')}</div>
                 {can('request') && (
                     <Button onClick={onNew}>
-                        <Plus className="h-4 w-4" />
-                        {t('stock_new_request')}
+                        <FilePlus2 className="h-4 w-4" />
+                        {t('stock_request')}
                     </Button>
                 )}
             </div>
-            <DataTable columns={columns} rows={requests} rowKey={(r) => r.id} />
+            <DataTable columns={columns} rows={requests} rowKey={(r) => r.id} loading={requestsLoading} />
+
+            {/* Fulfill — review the deduction and issue stock to the requester from here. */}
+            <Dialog open={!!fulfillReq} onOpenChange={(o) => !o && setFulfillReq(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ArrowUpFromLine className="h-5 w-5 text-violet-600" />
+                            {t('stock_fulfill')}
+                        </DialogTitle>
+                    </DialogHeader>
+                    {fulfillReq && (
+                        <div className="space-y-4">
+                            <div className="border-border rounded-lg border p-3">
+                                <div className="text-sm font-semibold">{fulfillReq.item_name}</div>
+                                <div className="text-muted-foreground font-mono text-xs">
+                                    {fulfillReq.sku} · {t('stock_requester')}: {fulfillReq.requester_name}
+                                </div>
+                            </div>
+
+                            {/* Stock impact read as an equation: current − issued = new on-hand */}
+                            <div className="bg-muted/40 flex items-stretch rounded-xl p-3">
+                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
+                                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_stock')}</span>
+                                    <span className="font-mono text-2xl font-bold tabular-nums">{fulfillOnHand}</span>
+                                </div>
+                                <div className="text-muted-foreground/60 flex items-center text-xl font-light">−</div>
+                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
+                                    <span className="text-[10px] font-medium tracking-wide text-violet-600 uppercase">{t('stock_mv_issue')}</span>
+                                    <span className="font-mono text-2xl font-bold tabular-nums text-violet-600">{fulfillReq.qty}</span>
+                                </div>
+                                <div className="text-muted-foreground/60 flex items-center text-xl font-light">=</div>
+                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
+                                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_new_onhand')}</span>
+                                    <span className={cn('font-mono text-2xl font-bold tabular-nums', fulfillShort ? 'text-destructive' : 'text-emerald-600')}>
+                                        {fulfillOnHand - fulfillReq.qty}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {fulfillShort && (
+                                <div className="border-destructive/40 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
+                                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                                    {t('stock_insufficient')} ({fulfillOnHand})
+                                </div>
+                            )}
+
+                            {/* Serialized: choose exactly the units (serials) that go out. */}
+                            {fulfillSerialized && !fulfillShort && (
+                                <div className="border-border overflow-hidden rounded-lg border">
+                                    <div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
+                                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                                            {t('stock_pick_serials')}
+                                        </span>
+                                        <span className={cn('font-mono text-xs', fulfillSerialOk ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                            {issueSerialIds.length}/{fulfillReq.qty}
+                                        </span>
+                                    </div>
+                                    <div className="max-h-48 overflow-auto">
+                                        {fulfillInStock.length === 0 ? (
+                                            <div className="text-muted-foreground py-6 text-center text-xs">{t('stock_no_serials')}</div>
+                                        ) : (
+                                            fulfillInStock.map((s) => {
+                                                const checked = issueSerialIds.includes(s.id);
+                                                // Block extra picks once the requested qty is reached.
+                                                const atLimit = !checked && issueSerialIds.length >= fulfillReq.qty;
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        type="button"
+                                                        disabled={atLimit}
+                                                        onClick={() => toggleIssueSerial(s.id)}
+                                                        className="hover:bg-accent/40 border-border/60 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0 disabled:opacity-40"
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                                                checked ? 'bg-brand border-brand text-white' : 'border-input',
+                                                            )}
+                                                        >
+                                                            {checked && <Check className="h-3 w-3" />}
+                                                        </span>
+                                                        <span className="flex-1 font-mono text-xs">{s.serial}</span>
+                                                        {s.received_at && (
+                                                            <span className="text-muted-foreground font-mono text-[11px]">{s.received_at.slice(0, 10)}</span>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setFulfillReq(null)} disabled={fulfill.isPending}>
+                            {t('cancel')}
+                        </Button>
+                        <Button
+                            disabled={!fulfillReq || fulfillShort || !fulfillSerialOk || fulfill.isPending}
+                            onClick={() =>
+                                fulfillReq &&
+                                fulfill.mutate(
+                                    { id: fulfillReq.id, serialIds: fulfillSerialized ? issueSerialIds : undefined },
+                                    { onError, onSuccess: () => setFulfillReq(null) },
+                                )
+                            }
+                        >
+                            <ArrowUpFromLine className="h-4 w-4" />
+                            {t('stock_fulfill_deduct')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -625,15 +968,17 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
-    const { data: sessions = [] } = useStockCounts(can('audit'));
-    const { open, save, commit } = useStockCountMutations();
+    const { data: sessions = [], isLoading: sessionsLoading } = useStockCounts(can('audit'));
+    const { open, save, commit, cancel } = useStockCountMutations();
     const { data: warehouses = [] } = useWarehouses();
-    const { data: categories = [] } = useCategories();
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const { data: session } = useStockCount(selectedId);
+    const { data: allItems = [] } = useStockItems({});
     const [creating, setCreating] = useState(false);
     const [wh, setWh] = useState('all');
     const [cat, setCat] = useState('all');
+    const [selectedSkus, setSelectedSkus] = useState<number[]>([]);
+    const [skuSearch, setSkuSearch] = useState('');
     const [entries, setEntries] = useState<Record<number, string>>({});
 
     const onError = (e: unknown) => {
@@ -651,16 +996,28 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
         setEntries(seed);
     }, [session?.id, session?.status]);
 
+    // Reset the New count picker back to its defaults.
+    const resetPicker = () => {
+        setCreating(false);
+        setWh('all');
+        setCat('all');
+        setSelectedSkus([]);
+        setSkuSearch('');
+    };
+
     const start = async () => {
+        if (selectedSkus.length === 0) return;
         try {
-            const created = await open.mutateAsync({ warehouse: wh === 'all' ? null : wh, category: cat === 'all' ? null : cat });
+            const created = await open.mutateAsync({
+                warehouse: wh === 'all' ? null : wh,
+                category: cat === 'all' ? null : cat,
+                stock_item_ids: selectedSkus,
+            });
             setSelectedId(created.id);
         } catch (e) {
             onError(e);
         } finally {
-            setCreating(false);
-            setWh('all');
-            setCat('all');
+            resetPicker();
         }
     };
 
@@ -674,180 +1031,306 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
 
     const statusTone = (s: string) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
-    // ── Count sheet (a session is open) ──────────────────────────
-    if (session) {
-        const isDraft = session.status === 'draft';
-        const anyCounted = Object.values(entries).some((v) => v.trim() !== '');
-        return (
-            <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedId(null)}>
-                        {t('stock_count_back')}
-                    </Button>
-                    <span className="font-mono text-sm font-semibold">{session.reference}</span>
-                    <StatusBadge tone={statusTone(session.status)}>{t(`stock_count_${session.status}` as Parameters<typeof t>[0])}</StatusBadge>
-                    {session.warehouse && <span className="text-muted-foreground text-xs">{session.warehouse}</span>}
-                    {isDraft && can('audit') && (
-                        <div className="ml-auto flex gap-1.5">
-                            <Button variant="outline" size="sm" onClick={() => save.mutate({ id: session.id, counts: countsPayload() }, { onError })}>
-                                {t('stock_count_save')}
-                            </Button>
-                            <Button size="sm" disabled={!anyCounted || commit.isPending} onClick={() => commit.mutate(session.id, { onError })}>
-                                <Check className="h-3.5 w-3.5" />
-                                {t('stock_count_commit')}
-                            </Button>
-                        </div>
-                    )}
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                <th className="px-3 py-2">{t('stock_item')}</th>
-                                <th className="px-3 py-2 text-right">{t('stock_count_system')}</th>
-                                <th className="px-3 py-2 text-right">{t('stock_count_counted')}</th>
-                                <th className="px-3 py-2 text-right">{t('stock_count_variance')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {(session.lines ?? []).map((l) => {
-                                const entered = entries[l.id] ?? '';
-                                const variance = isDraft ? (entered.trim() === '' ? null : (parseInt(entered, 10) || 0) - l.system_qty) : l.variance;
-                                return (
-                                    <tr key={l.id} className="border-border/60 border-b last:border-0">
-                                        <td className="px-3 py-2">
-                                            <div className="font-mono text-xs">{l.sku}</div>
-                                            <div className="text-muted-foreground truncate text-xs">{l.name}</div>
-                                        </td>
-                                        <td className="px-3 py-2 text-right font-mono">{l.system_qty}</td>
-                                        <td className="px-3 py-2 text-right">
-                                            {isDraft ? (
-                                                <Input
-                                                    inputMode="numeric"
-                                                    value={entered}
-                                                    onChange={(e) => setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))}
-                                                    className="ml-auto h-8 w-20 text-right font-mono"
-                                                />
-                                            ) : (
-                                                <span className="font-mono">{l.counted_qty ?? '—'}</span>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-2 text-right">
-                                            {variance === null ? (
-                                                <span className="text-muted-foreground">—</span>
-                                            ) : (
-                                                <span
-                                                    className={cn(
-                                                        'font-mono font-semibold',
-                                                        variance > 0
-                                                            ? 'text-emerald-600'
-                                                            : variance < 0
-                                                              ? 'text-destructive'
-                                                              : 'text-muted-foreground',
-                                                    )}
-                                                >
-                                                    {variance > 0 ? `+${variance}` : variance}
-                                                </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        );
-    }
+    // ── New count picker: warehouse → categories with stock → selectable SKUs ──
+    const itemsInWh = wh === 'all' ? allItems : allItems.filter((i) => i.warehouse === wh);
+    const warehouseOptions = [
+        { value: 'all', label: `${t('stock_count_all_wh')} (${allItems.length})`, search: t('stock_count_all_wh') },
+        ...warehouses.map((w) => ({
+            value: w.name,
+            label: `${w.name} (${allItems.filter((i) => i.warehouse === w.name).length})`,
+            search: w.name,
+        })),
+    ];
+    const catCounts = itemsInWh.reduce<Record<string, number>>((acc, i) => {
+        const c = i.category ?? '—';
+        acc[c] = (acc[c] ?? 0) + 1;
+        return acc;
+    }, {});
+    const categoryOptions = [
+        { value: 'all', label: `${t('stock_count_all_cat')} (${itemsInWh.length})`, search: t('stock_count_all_cat') },
+        ...Object.entries(catCounts).map(([c, n]) => ({ value: c, label: `${c} (${n})`, search: c })),
+    ];
+    const skuList = (cat === 'all' ? itemsInWh : itemsInWh.filter((i) => (i.category ?? '—') === cat)).filter(
+        (i) => !skuSearch || `${i.sku} ${i.name}`.toLowerCase().includes(skuSearch.toLowerCase()),
+    );
+    const allVisibleSelected = skuList.length > 0 && skuList.every((i) => selectedSkus.includes(i.id));
+    const toggleSku = (id: number) => setSelectedSkus((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const toggleAllVisible = () => {
+        const ids = skuList.map((i) => i.id);
+        setSelectedSkus((prev) => (allVisibleSelected ? prev.filter((x) => !ids.includes(x)) : [...new Set([...prev, ...ids])]));
+    };
+    // Switching warehouse resets the category + selection (a SKU lives in one warehouse).
+    const onPickWarehouse = (v: string) => {
+        setWh(v);
+        setCat('all');
+        setSelectedSkus([]);
+    };
 
-    // ── Session list + create form ───────────────────────────────
+    // ── Session list + create form (count sheet opens in a dialog) ──
+    const isDraft = session?.status === 'draft';
+    const anyCounted = Object.values(entries).some((v) => v.trim() !== '');
+    // Columns mirror the shared DataTable used by the other Stock tabs.
+    const sessionColumns: Column<(typeof sessions)[number]>[] = [
+        { key: 'reference', header: t('stock_count_ref'), render: (s) => <span className="font-mono text-xs font-semibold">{s.reference}</span> },
+        { key: 'warehouse', header: t('stock_warehouse'), render: (s) => <span className="text-sm">{s.warehouse || '—'}</span> },
+        {
+            key: 'status',
+            header: t('status'),
+            render: (s) => <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>,
+        },
+        {
+            key: 'progress',
+            header: t('stock_count_progress'),
+            align: 'right',
+            render: (s) => (
+                <span className="font-mono text-xs">
+                    {s.counted_lines ?? 0}/{s.line_count ?? 0}
+                </span>
+            ),
+        },
+        {
+            key: 'created_at',
+            header: t('audit_time'),
+            render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.created_at?.slice(0, 10)}</span>,
+        },
+        {
+            key: 'actions',
+            header: '',
+            align: 'right',
+            render: (s) =>
+                s.status === 'draft' && can('audit') ? (
+                    <button
+                        // Cancel a draft session — confirm first, and stop the row's open-on-click.
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            const res = await Swal.fire({
+                                title: t('stock_count_cancel'),
+                                text: `${s.reference} — ${t('stock_count_cancel_confirm')}`,
+                                icon: 'warning',
+                                showCancelButton: true,
+                                confirmButtonText: t('stock_count_cancel'),
+                                cancelButtonText: t('stock_count_back'),
+                                confirmButtonColor: '#ef4444',
+                                cancelButtonColor: '#6b7280',
+                                customClass: {
+                                    popup: '!rounded-xl !shadow-xl',
+                                    confirmButton: '!rounded-lg !font-medium',
+                                    cancelButton: '!rounded-lg !font-medium',
+                                },
+                                reverseButtons: true,
+                            });
+                            if (res.isConfirmed) {
+                                cancel.mutate(s.id, { onError });
+                            }
+                        }}
+                        title={t('stock_count_cancel')}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                ) : null,
+        },
+    ];
+
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">{t('stock_audit_tab')}</div>
-                {can('audit') && !creating && (
+                <div className="text-muted-foreground text-sm">{t('stock_counting_system')}</div>
+                {can('audit') && (
                     <Button onClick={() => setCreating(true)}>
-                        <Plus className="h-4 w-4" />
-                        {t('stock_new_count')}
+                        <ClipboardList className="h-4 w-4" />
+                        {t('stock_count_action')}
                     </Button>
                 )}
             </div>
 
-            {creating && (
-                <Card className="flex flex-wrap items-end gap-3 p-4">
-                    <Select value={wh} onValueChange={setWh}>
-                        <SelectTrigger className="w-48">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">{t('stock_count_all_wh')}</SelectItem>
-                            {warehouses.map((w) => (
-                                <SelectItem key={w.id} value={w.name}>
-                                    {w.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select value={cat} onValueChange={setCat}>
-                        <SelectTrigger className="w-48">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">{t('stock_count_all_cat')}</SelectItem>
-                            {categories.map((c) => (
-                                <SelectItem key={c.id} value={c.name}>
-                                    {c.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button onClick={start} disabled={open.isPending}>
-                        {t('stock_count_start')}
-                    </Button>
-                    <Button variant="outline" onClick={() => setCreating(false)}>
-                        {t('cancel')}
-                    </Button>
-                </Card>
-            )}
+            <DataTable columns={sessionColumns} rows={sessions} rowKey={(s) => s.id} onRowClick={(s) => setSelectedId(s.id)} loading={sessionsLoading} />
 
-            {sessions.length === 0 ? (
-                <div className="text-muted-foreground py-12 text-center text-sm">{t('stock_count_none')}</div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                <th className="px-3 py-2">{t('stock_count_ref')}</th>
-                                <th className="px-3 py-2">{t('stock_warehouse')}</th>
-                                <th className="px-3 py-2">{t('status')}</th>
-                                <th className="px-3 py-2 text-right">{t('stock_count_progress')}</th>
-                                <th className="px-3 py-2">{t('audit_time')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sessions.map((s) => (
-                                <tr
-                                    key={s.id}
-                                    className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
-                                    onClick={() => setSelectedId(s.id)}
+            {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
+            <Dialog open={creating} onOpenChange={(o) => !o && resetPicker()}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>{t('stock_new_count')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {/* Scope: warehouse + category (counts show what actually has stock) */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_warehouse')}</div>
+                                <SearchableSelect value={wh} onChange={onPickWarehouse} options={warehouseOptions} />
+                            </div>
+                            <div>
+                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_category')}</div>
+                                <SearchableSelect value={cat} onChange={setCat} options={categoryOptions} />
+                            </div>
+                        </div>
+
+                        {/* SKU picker */}
+                        <div className="border-border overflow-hidden rounded-xl border">
+                            <div className="border-border bg-muted/30 flex items-center gap-3 border-b px-3 py-2">
+                                <button
+                                    type="button"
+                                    onClick={toggleAllVisible}
+                                    disabled={skuList.length === 0}
+                                    className="flex items-center gap-2 text-sm font-medium disabled:opacity-40"
                                 >
-                                    <td className="px-3 py-2 font-mono text-xs font-semibold">{s.reference}</td>
-                                    <td className="px-3 py-2">{s.warehouse || '—'}</td>
-                                    <td className="px-3 py-2">
-                                        <StatusBadge tone={statusTone(s.status)}>
-                                            {t(`stock_count_${s.status}` as Parameters<typeof t>[0])}
-                                        </StatusBadge>
-                                    </td>
-                                    <td className="px-3 py-2 text-right font-mono text-xs">
-                                        {s.counted_lines ?? 0}/{s.line_count ?? 0} {t('stock_count_progress')}
-                                    </td>
-                                    <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{s.created_at?.slice(0, 10)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+                                    <span
+                                        className={cn(
+                                            'flex h-4 w-4 items-center justify-center rounded border',
+                                            allVisibleSelected ? 'bg-brand border-brand text-white' : 'border-input',
+                                        )}
+                                    >
+                                        {allVisibleSelected && <Check className="h-3 w-3" />}
+                                    </span>
+                                    {t('stock_select_all')}
+                                </button>
+                                <span className="text-muted-foreground text-xs">
+                                    {selectedSkus.length} {t('stock_count_selected')}
+                                </span>
+                                <div className="relative ml-auto w-44">
+                                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                                    <Input
+                                        value={skuSearch}
+                                        onChange={(e) => setSkuSearch(e.target.value)}
+                                        placeholder={t('stock_search')}
+                                        className="h-8 pl-8 text-sm"
+                                    />
+                                </div>
+                            </div>
+                            <div className="max-h-72 overflow-auto">
+                                {skuList.length === 0 ? (
+                                    <div className="text-muted-foreground py-10 text-center text-sm">{t('stock_count_empty_scope')}</div>
+                                ) : (
+                                    skuList.map((i) => {
+                                        const checked = selectedSkus.includes(i.id);
+                                        return (
+                                            <button
+                                                key={i.id}
+                                                type="button"
+                                                onClick={() => toggleSku(i.id)}
+                                                className="hover:bg-accent/40 border-border/60 flex w-full items-center gap-3 border-b px-3 py-2 text-left last:border-0"
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                                        checked ? 'bg-brand border-brand text-white' : 'border-input',
+                                                    )}
+                                                >
+                                                    {checked && <Check className="h-3 w-3" />}
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="font-mono text-xs">{i.sku}</div>
+                                                    <div className="text-muted-foreground truncate text-xs">{i.name}</div>
+                                                </div>
+                                                <span className="text-muted-foreground shrink-0 text-xs">{i.category ?? '—'}</span>
+                                                <span className="w-12 shrink-0 text-right font-mono text-sm font-semibold">{i.current_stock}</span>
+                                            </button>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={resetPicker}>
+                            {t('cancel')}
+                        </Button>
+                        <Button onClick={start} disabled={open.isPending || selectedSkus.length === 0}>
+                            {t('stock_count_start')}
+                            {selectedSkus.length > 0 && ` (${selectedSkus.length})`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Count sheet — opens in a dialog when a session row is clicked. */}
+            <Dialog open={selectedId !== null} onOpenChange={(o) => !o && setSelectedId(null)}>
+                <DialogContent className="max-w-3xl">
+                    {session ? (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle className="flex flex-wrap items-center gap-2">
+                                    <span className="font-mono text-sm font-semibold">{session.reference}</span>
+                                    <StatusBadge tone={statusTone(session.status)}>
+                                        {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
+                                    </StatusBadge>
+                                    {session.warehouse && <span className="text-muted-foreground text-xs font-normal">{session.warehouse}</span>}
+                                </DialogTitle>
+                            </DialogHeader>
+                            <div className="max-h-[60vh] overflow-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-card sticky top-0">
+                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                            <th className="px-3 py-2">{t('stock_item')}</th>
+                                            <th className="px-3 py-2 text-right">{t('stock_count_system')}</th>
+                                            <th className="px-3 py-2 text-right">{t('stock_count_counted')}</th>
+                                            <th className="px-3 py-2 text-right">{t('stock_count_variance')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(session.lines ?? []).map((l) => {
+                                            const entered = entries[l.id] ?? '';
+                                            const variance = isDraft ? (entered.trim() === '' ? null : (parseInt(entered, 10) || 0) - l.system_qty) : l.variance;
+                                            return (
+                                                <tr key={l.id} className="border-border/60 border-b last:border-0">
+                                                    <td className="px-3 py-2">
+                                                        <div className="font-mono text-xs">{l.sku}</div>
+                                                        <div className="text-muted-foreground truncate text-xs">{l.name}</div>
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right font-mono">{l.system_qty}</td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {isDraft ? (
+                                                            <Input
+                                                                inputMode="numeric"
+                                                                value={entered}
+                                                                onChange={(e) => setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))}
+                                                                className="ml-auto h-8 w-20 text-right font-mono"
+                                                            />
+                                                        ) : (
+                                                            <span className="font-mono">{l.counted_qty ?? '—'}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-right">
+                                                        {variance === null ? (
+                                                            <span className="text-muted-foreground">—</span>
+                                                        ) : (
+                                                            <span
+                                                                className={cn(
+                                                                    'font-mono font-semibold',
+                                                                    variance > 0
+                                                                        ? 'text-emerald-600'
+                                                                        : variance < 0
+                                                                          ? 'text-destructive'
+                                                                          : 'text-muted-foreground',
+                                                                )}
+                                                            >
+                                                                {variance > 0 ? `+${variance}` : variance}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {isDraft && can('audit') && (
+                                <DialogFooter>
+                                    <Button variant="outline" onClick={() => save.mutate({ id: session.id, counts: countsPayload() }, { onError })}>
+                                        {t('stock_count_save')}
+                                    </Button>
+                                    <Button disabled={!anyCounted || commit.isPending} onClick={() => commit.mutate(session.id, { onError })}>
+                                        <Check className="h-3.5 w-3.5" />
+                                        {t('stock_count_commit')}
+                                    </Button>
+                                </DialogFooter>
+                            )}
+                        </>
+                    ) : (
+                        <div className="text-muted-foreground py-12 text-center text-sm">…</div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
@@ -886,7 +1369,9 @@ function DashboardTab({
                                     <Icon className="h-[18px] w-[18px]" />
                                 </span>
                             </div>
-                            <div className="mt-2 font-mono text-3xl font-bold">{k.value}</div>
+                            <div className="mt-2 font-mono text-3xl font-bold">
+                                {summary ? k.value : <div className="bg-muted h-8 w-16 animate-pulse rounded" />}
+                            </div>
                             <div className="text-muted-foreground mt-1 text-xs">{k.sub}</div>
                         </Card>
                     );
@@ -894,7 +1379,11 @@ function DashboardTab({
             </div>
 
             {!summary ? (
-                <div className="text-muted-foreground py-10 text-center text-sm">—</div>
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="border-border bg-muted/40 h-64 animate-pulse rounded-xl border" />
+                    ))}
+                </div>
             ) : (
                 <>
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

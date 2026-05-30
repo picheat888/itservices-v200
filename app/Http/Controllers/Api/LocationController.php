@@ -29,8 +29,9 @@ class LocationController extends Controller
     {
         abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
+        $before = $location->getOriginal();
         $location->update($data);
-        AuditLog::record('Updated location', $location->name);
+        AuditLog::record('Updated location', $location->name, AuditLog::changes($before, $location));
 
         return response()->json(['data' => $location, 'message' => 'success']);
     }

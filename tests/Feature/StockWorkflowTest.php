@@ -57,17 +57,30 @@ class StockWorkflowTest extends TestCase
         $this->assertSame(12, $item->fresh()->current_stock);
     }
 
-    public function test_issue_decreases_stock_and_blocks_when_insufficient(): void
+    public function test_direct_issue_movement_is_not_allowed(): void
     {
+        // Issuing is request-only now; 'issue' is not a valid direct movement type.
         $item = $this->item(3);
 
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'qty' => 2])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+
+        $this->assertSame(3, $item->fresh()->current_stock);
+    }
+
+    public function test_outbound_transfer_decreases_stock_and_blocks_when_insufficient(): void
+    {
+        $item = $this->item(3);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2])
             ->assertCreated();
         $this->assertSame(1, $item->fresh()->current_stock);
 
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'qty' => 5])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('qty');
     }
@@ -75,11 +88,11 @@ class StockWorkflowTest extends TestCase
     public function test_movement_requires_type_specific_permission(): void
     {
         $item = $this->item();
-        // Holds only stock.receive — cannot issue.
+        // Holds only stock.receive — cannot transfer.
         $user = $this->userWith(['stock.view', 'stock.receive']);
 
         $this->actingAs($user)
-            ->postJson('/api/stock-movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'qty' => 1])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1])
             ->assertForbidden();
 
         $this->actingAs($user)

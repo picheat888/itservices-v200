@@ -56,12 +56,12 @@ export function useCategoryMutations() {
     const inv = () => qc.invalidateQueries({ queryKey: CATS });
     return {
         create: useMutation({
-            mutationFn: (p: { name: string; name_th?: string; description?: string }) => categoryApi.create(p),
+            mutationFn: (p: { name: string; name_th?: string; description?: string; track_serial?: boolean }) => categoryApi.create(p),
             onSuccess: inv,
         }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; name_th?: string; description?: string }) =>
-                categoryApi.update(v.id, { name: v.name, name_th: v.name_th, description: v.description }),
+            mutationFn: (v: { id: number; name: string; name_th?: string; description?: string; track_serial?: boolean }) =>
+                categoryApi.update(v.id, { name: v.name, name_th: v.name_th, description: v.description, track_serial: v.track_serial }),
             onSuccess: inv,
         }),
         remove: useMutation({ mutationFn: (id: number) => categoryApi.remove(id), onSuccess: inv }),

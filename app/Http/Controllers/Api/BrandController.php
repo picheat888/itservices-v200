@@ -38,8 +38,9 @@ class BrandController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:brands,name,'.$brand->id],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $brand->getOriginal();
         $brand->update($data);
-        AuditLog::record('Updated brand', $brand->name);
+        AuditLog::record('Updated brand', $brand->name, AuditLog::changes($before, $brand));
 
         return response()->json(['data' => $brand, 'message' => 'success']);
     }

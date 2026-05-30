@@ -82,21 +82,22 @@ class StockItemTest extends TestCase
 
     public function test_super_can_create_stock_item(): void
     {
+        // A new SKU starts empty — stock and cost are no longer set here, they
+        // arrive via Receive (per-lot). So it's created with 0 on-hand ("out").
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
                 'sku' => 'SK-NEW-001',
                 'name' => 'New SSD',
                 'unit' => 'drive',
-                'cost' => 2100,
-                'current_stock' => 4,
                 'min_stock' => 2,
                 'max_stock' => 12,
             ])
             ->assertCreated()
             ->assertJsonPath('data.sku', 'SK-NEW-001')
-            ->assertJsonPath('data.status', 'ok');
+            ->assertJsonPath('data.current_stock', 0)
+            ->assertJsonPath('data.status', 'out');
 
-        $this->assertDatabaseHas('stock_items', ['sku' => 'SK-NEW-001']);
+        $this->assertDatabaseHas('stock_items', ['sku' => 'SK-NEW-001', 'current_stock' => 0]);
     }
 
     public function test_user_without_manage_items_cannot_create(): void

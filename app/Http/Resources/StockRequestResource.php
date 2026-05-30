@@ -22,7 +22,6 @@ class StockRequestResource extends JsonResource
             'sku' => $this->whenLoaded('item', fn () => $this->item?->sku),
             'item_name' => $this->whenLoaded('item', fn () => $this->item?->name),
             'requester_name' => $this->requester_name,
-            'dept' => $this->dept,
             'qty' => $this->qty,
             'reason' => $this->reason,
             'status' => $this->status,

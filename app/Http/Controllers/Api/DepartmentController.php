@@ -30,8 +30,9 @@ class DepartmentController extends Controller
 
     public function update(StoreDepartmentRequest $request, Department $department): JsonResponse
     {
+        $before = $department->getOriginal();
         $department->update($request->validated());
-        AuditLog::record('Updated department', $department->name);
+        AuditLog::record('Updated department', $department->name, AuditLog::changes($before, $department));
 
         return (new DepartmentResource($department))->additional(['message' => 'success'])->response();
     }

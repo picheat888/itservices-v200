@@ -28,16 +28,16 @@ class EmailTemplateController extends Controller
 
         $templates = EmailTemplate::orderBy('id')->get();
 
-        $sentTotal   = EmailLog::where('status', 'sent')->count();
+        $sentTotal = EmailLog::where('status', 'sent')->count();
         $failedTotal = EmailLog::where('status', 'failed')->count();
-        $attempts    = $sentTotal + $failedTotal;
+        $attempts = $sentTotal + $failedTotal;
 
         return response()->json([
-            'data'  => EmailTemplateResource::collection($templates),
+            'data' => EmailTemplateResource::collection($templates),
             'stats' => [
-                'templates'     => $templates->count(),
-                'enabled'       => $templates->where('enabled', true)->count(),
-                'sent_today'    => EmailLog::where('status', 'sent')->whereDate('created_at', today())->count(),
+                'templates' => $templates->count(),
+                'enabled' => $templates->where('enabled', true)->count(),
+                'sent_today' => EmailLog::where('status', 'sent')->whereDate('created_at', today())->count(),
                 'delivery_rate' => $attempts > 0 ? round($sentTotal / $attempts * 100, 1) : null,
             ],
         ]);
@@ -49,11 +49,11 @@ class EmailTemplateController extends Controller
         $this->gate($request);
 
         $data = $request->validate([
-            'key'       => ['required', 'string', 'max:100', 'unique:email_templates,key'],
-            'name'      => ['required', 'string', 'max:150'],
-            'subject'   => ['required', 'string', 'max:255'],
+            'key' => ['required', 'string', 'max:100', 'unique:email_templates,key'],
+            'name' => ['required', 'string', 'max:150'],
+            'subject' => ['required', 'string', 'max:255'],
             'body_html' => ['required', 'string'],
-            'enabled'   => ['sometimes', 'boolean'],
+            'enabled' => ['sometimes', 'boolean'],
         ]);
 
         $template = EmailTemplate::create($data);
@@ -68,14 +68,15 @@ class EmailTemplateController extends Controller
         $this->gate($request);
 
         $data = $request->validate([
-            'name'      => ['sometimes', 'string', 'max:150'],
-            'subject'   => ['sometimes', 'string', 'max:255'],
+            'name' => ['sometimes', 'string', 'max:150'],
+            'subject' => ['sometimes', 'string', 'max:255'],
             'body_html' => ['sometimes', 'string'],
-            'enabled'   => ['sometimes', 'boolean'],
+            'enabled' => ['sometimes', 'boolean'],
         ]);
 
+        $before = $emailTemplate->getOriginal();
         $emailTemplate->update($data);
-        AuditLog::record('Updated email template', $emailTemplate->name);
+        AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }
@@ -92,18 +93,18 @@ class EmailTemplateController extends Controller
 
         $vars = [
             'user.first_name' => explode(' ', (string) $request->user()->name)[0] ?? 'there',
-            'user.email'      => $to,
-            'ticket.id'       => 'TKT-0001',
-            'ticket.subject'  => 'Sample ticket',
+            'user.email' => $to,
+            'ticket.id' => 'TKT-0001',
+            'ticket.subject' => 'Sample ticket',
             'contract.vendor' => 'Sample Vendor',
-            'reference.id'    => 'REF-0001',
-            'employee.name'   => 'Sample Employee',
-            'employee.code'   => 'EMP-0001',
+            'reference.id' => 'REF-0001',
+            'employee.name' => 'Sample Employee',
+            'employee.code' => 'EMP-0001',
         ];
 
         $subject = $this->service->render($emailTemplate->subject, $vars);
-        $html    = $this->service->render($emailTemplate->body_html, $vars);
-        $ok      = $this->service->deliver($to, $subject, $html, $emailTemplate->key);
+        $html = $this->service->render($emailTemplate->body_html, $vars);
+        $ok = $this->service->deliver($to, $subject, $html, $emailTemplate->key);
 
         return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok], $ok ? 200 : 502);
     }
