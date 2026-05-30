@@ -964,45 +964,36 @@ function DashboardTab({
                             {movements.length === 0 ? (
                                 <div className="text-muted-foreground py-12 text-center text-sm">{t('stock_no_moves')}</div>
                             ) : (
-                                <div className="relative px-5 py-4">
-                                    <span className="bg-border absolute top-5 bottom-5 left-[27px] w-px" />
-                                    <div className="space-y-3.5">
-                                        {movements.slice(0, 6).map((m, i) => {
-                                            const meta = MV_META[m.type];
-                                            const MIcon = meta.icon;
-                                            const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
-                                            return (
-                                                <div key={m.id} className="sc-row flex items-center gap-3" style={{ animationDelay: `${i * 40}ms` }}>
-                                                    <span
-                                                        className={cn(
-                                                            'ring-card relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4',
-                                                            MV_TONE_BG[meta.tone],
-                                                        )}
-                                                    >
-                                                        <MIcon className="h-3 w-3" />
-                                                    </span>
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                        <div className="text-muted-foreground font-mono text-[11px]">
-                                                            {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
-                                                        </div>
-                                                    </div>
-                                                    <div className="shrink-0 text-right">
-                                                        <div
-                                                            className={cn(
-                                                                'font-mono text-sm font-bold',
-                                                                inbound ? 'text-emerald-600' : 'text-destructive',
-                                                            )}
-                                                        >
-                                                            {inbound ? '+' : '−'}
-                                                            {m.qty}
-                                                        </div>
-                                                        <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
+                                <div className="p-1.5">
+                                    {movements.slice(0, 6).map((m, i) => {
+                                        const meta = MV_META[m.type];
+                                        const MIcon = meta.icon;
+                                        const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
+                                        return (
+                                            <div
+                                                key={m.id}
+                                                className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
+                                                style={{ animationDelay: `${i * 40}ms` }}
+                                            >
+                                                <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', MV_TONE_BG[meta.tone])}>
+                                                    <MIcon className="h-4 w-4" />
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-medium">{m.item_name}</div>
+                                                    <div className="text-muted-foreground font-mono text-[11px]">
+                                                        {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                                <div className="shrink-0 text-right">
+                                                    <div className={cn('font-mono text-sm font-bold', inbound ? 'text-emerald-600' : 'text-destructive')}>
+                                                        {inbound ? '+' : '−'}
+                                                        {m.qty}
+                                                    </div>
+                                                    <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </Card>
