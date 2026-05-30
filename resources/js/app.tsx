@@ -1,6 +1,7 @@
 import '../css/app.css';
 
 import { ProtectedRoute } from '@/components/auth/protected-route';
+import { RequirePermission } from '@/components/auth/require-permission';
 import { AppShell } from '@/components/shell/app-shell';
 import { useApplyTheme } from '@/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
@@ -40,8 +41,22 @@ function App() {
                     <Route element={<AppShell />}>
                         <Route index element={<DashboardPage />} />
                         <Route path="employees" element={<EmployeesPage />} />
-                        <Route path="tickets" element={<TicketsPage />} />
-                        <Route path="assets" element={<AssetsPage />} />
+                        <Route
+                            path="tickets"
+                            element={
+                                <RequirePermission anyOf={['tickets.create', 'tickets.view_all']}>
+                                    <TicketsPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="assets"
+                            element={
+                                <RequirePermission anyOf={['assets.view']}>
+                                    <AssetsPage />
+                                </RequirePermission>
+                            }
+                        />
                         <Route path="contracts" element={<ContractsPage />} />
                         <Route path="stock" element={<StockPage />} />
                         <Route path="email-templates" element={<EmailTemplatesPage />} />
