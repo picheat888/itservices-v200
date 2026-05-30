@@ -48,4 +48,12 @@ export const ticketApi = {
     assign: (id: number, body: { assignee_id: number; priority: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
     remove: (id: number) => mutate<void>('delete', `/tickets/${id}`),
+    uploadAttachments: async (id: number, files: File[]): Promise<Ticket> => {
+        await ensureCsrf();
+        const fd = new FormData();
+        files.forEach((f) => fd.append('files[]', f));
+        const { data } = await http.post<ApiEnvelope<Ticket>>(`/tickets/${id}/attachments`, fd);
+        return data.data;
+    },
+    deleteAttachment: (id: number, attachmentId: number) => mutate<Ticket>('delete', `/tickets/${id}/attachments/${attachmentId}`),
 };
