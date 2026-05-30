@@ -38,8 +38,9 @@ class WarrantyTypeController extends Controller
             'name' => ['required', 'string', 'max:120', 'unique:warranty_types,name,'.$warrantyType->id],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $warrantyType->getOriginal();
         $warrantyType->update($data);
-        AuditLog::record('Updated warranty type', $warrantyType->name);
+        AuditLog::record('Updated warranty type', $warrantyType->name, AuditLog::changes($before, $warrantyType));
 
         return response()->json(['data' => $warrantyType, 'message' => 'success']);
     }

@@ -15,6 +15,12 @@ class Contract extends Model
         return $this->hasMany(ContractAttachment::class)->latest();
     }
 
+    /** Assets linked to this contract (e.g. leased hardware), ordered by tag. */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(Asset::class)->orderBy('tag');
+    }
+
     protected $fillable = [
         'code', 'vendor', 'name', 'title', 'type', 'start_date', 'end_date',
         'value', 'billing_cycle', 'auto_renew', 'cancelled_at',

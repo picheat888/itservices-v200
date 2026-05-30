@@ -115,6 +115,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
 
     // Stock / Inventory module
     Route::get('stock-items/summary', [StockItemController::class, 'summary'])->name('api.stock-items.summary');
+    Route::get('stock-items/serials', [StockItemController::class, 'serials'])->name('api.stock-items.serials');
     Route::apiResource('stock-items', StockItemController::class);
     Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
     Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');

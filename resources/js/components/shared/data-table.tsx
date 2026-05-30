@@ -24,11 +24,13 @@ interface DataTableProps<T> {
     hidePagination?: boolean;
     /** Content rendered on the right of the search row (e.g. an Add button). */
     actions?: React.ReactNode;
+    /** Show shimmering skeleton rows instead of the empty state while data loads. */
+    loading?: boolean;
 }
 
 const PAGE_SIZES = [20, 50, 100];
 
-export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions, loading }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
@@ -92,14 +94,30 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
                         </tr>
                     </thead>
                     <tbody>
-                        {pageRows.length === 0 && (
+                        {loading &&
+                            Array.from({ length: 6 }).map((_, r) => (
+                                <tr key={`skeleton-${r}`} className="border-b border-border/60 last:border-0">
+                                    {columns.map((c) => (
+                                        <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align))}>
+                                            <div
+                                                className={cn(
+                                                    'h-4 animate-pulse rounded bg-muted',
+                                                    c.align === 'right' ? 'ml-auto w-12' : c.align === 'center' ? 'mx-auto w-16' : 'w-3/4 max-w-[160px]',
+                                                )}
+                                            />
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
+                        {!loading && pageRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className="px-4 py-10 text-center text-muted-foreground">
                                     {lang === 'th' ? 'ไม่พบข้อมูล' : 'No data'}
                                 </td>
                             </tr>
                         )}
-                        {pageRows.map((row) => (
+                        {!loading &&
+                            pageRows.map((row) => (
                             <tr
                                 key={rowKey(row)}
                                 onClick={() => onRowClick?.(row)}

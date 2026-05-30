@@ -27,8 +27,9 @@ class PositionController extends Controller
 
     public function update(StorePositionRequest $request, Position $position): JsonResponse
     {
+        $before = $position->getOriginal();
         $position->update($request->validated());
-        AuditLog::record('Updated position', $position->title);
+        AuditLog::record('Updated position', $position->title, AuditLog::changes($before, $position));
 
         return (new PositionResource($position))->additional(['message' => 'success'])->response();
     }

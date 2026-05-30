@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset;
 use App\Models\Contract;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -47,6 +48,29 @@ class ContractApiTest extends TestCase
 
         $this->assertDatabaseHas('contracts', ['vendor' => 'Microsoft Thailand']);
         $this->getJson('/api/contracts')->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_contract_payload_includes_linked_assets(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create([
+            'code' => 'CT-LINK-1', 'vendor' => 'Dell', 'name' => 'Server support', 'type' => 'hardware',
+            'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100000, 'billing_cycle' => 'yearly',
+        ]);
+        Asset::create([
+            'tag' => 'INB-SV-01', 'type' => 'server', 'brand' => 'Dell', 'model' => 'PowerEdge R750',
+            'status' => 'deployed', 'owner' => 'Rack 2', 'contract_id' => $contract->id,
+        ]);
+        // An unlinked asset must NOT appear under this contract.
+        Asset::create(['tag' => 'INB-LT-01', 'type' => 'laptop', 'brand' => 'HP', 'model' => 'EliteBook', 'status' => 'ready']);
+
+        $this->getJson('/api/contracts')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.0.linked_assets')
+            ->assertJsonPath('data.0.linked_assets.0.tag', 'INB-SV-01')
+            ->assertJsonPath('data.0.linked_assets.0.name', 'Dell PowerEdge R750')
+            ->assertJsonPath('data.0.linked_assets.0.status', 'deployed');
     }
 
     public function test_summary_reports_status_counts(): void

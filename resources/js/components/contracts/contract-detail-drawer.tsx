@@ -8,6 +8,16 @@ import { useUiStore } from '@/stores/ui';
 import { ASSET_LINKABLE_CONTRACT_TYPES, type Contract } from '@/types';
 import { Ban, FileText, SquarePen } from 'lucide-react';
 
+/** Asset status → StatusBadge tone for the linked-assets list. */
+const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
+    deployed: 'blue',
+    ready: 'green',
+    pending_acceptance: 'amber',
+    pending_return: 'amber',
+    maintenance: 'amber',
+    writeoff: 'red',
+};
+
 /** Human-readable file size, e.g. "1.4 MB" / "820 KB". */
 function formatSize(bytes: number): string {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -143,19 +153,36 @@ export function ContractDetailDrawer({
                         </div>
                     </div>
 
-                    {/* Linked assets — only for hardware, network, and other contracts.
-                        Depends on the Assets module which is not built yet. */}
+                    {/* Linked assets — only for hardware, connectivity, and other contracts.
+                        Assets are linked from the asset form (Assets module). */}
                     {ASSET_LINKABLE_CONTRACT_TYPES.includes(contract.type) && (
                         <div>
                             <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
                                 {t('contract_link_assets')}
-                                <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium tracking-normal normal-case">
-                                    {t('coming_soon')}
-                                </span>
+                                {contract.linked_assets.length > 0 && (
+                                    <span className="font-mono text-[11px] tracking-normal normal-case">{contract.linked_assets.length}</span>
+                                )}
                             </div>
-                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">
-                                {t('contract_link_assets_sub')}
-                            </div>
+                            {contract.linked_assets.length === 0 ? (
+                                <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">
+                                    {t('contract_link_assets_sub')}
+                                </div>
+                            ) : (
+                                <div className="space-y-1.5">
+                                    {contract.linked_assets.map((a) => (
+                                        <div key={a.id} className="border-border flex items-center gap-3 rounded-md border px-3 py-2">
+                                            <span className="font-mono text-xs">{a.tag}</span>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="truncate text-sm font-medium">{a.name}</div>
+                                                {a.owner && <div className="text-muted-foreground truncate text-xs">{a.owner}</div>}
+                                            </div>
+                                            {a.status && (
+                                                <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 

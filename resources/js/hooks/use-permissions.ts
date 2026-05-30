@@ -1,4 +1,4 @@
-import { groupRoleApi, permissionApi, roleApi, type GroupRoleListResponse, type GroupRolePayload } from '@/services/permissionApi';
+import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '@/services/permissionApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = ['permissions-matrix'] as const;
@@ -50,9 +50,9 @@ export function useSetDefaultGroup() {
     });
 }
 
-export const useAuditLogs = (page: number, perPage: number) =>
+export const useAuditLogs = (page: number, perPage: number, filters: AuditFilters = {}) =>
     useQuery({
-        queryKey: ['audit-logs', page, perPage],
-        queryFn: () => permissionApi.auditLogs(page, perPage),
+        queryKey: ['audit-logs', page, perPage, filters],
+        queryFn: () => permissionApi.auditLogs(page, perPage, filters),
         placeholderData: (prev) => prev,
     });

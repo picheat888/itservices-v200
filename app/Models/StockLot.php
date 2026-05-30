@@ -5,20 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class StockRequest extends Model
+class StockLot extends Model
 {
     protected $fillable = [
-        'stock_item_id', 'user_id', 'requester_name', 'qty', 'reason',
-        'status', 'approver_name', 'approved_at', 'fulfilled_at', 'rejected_at',
+        'stock_item_id', 'stock_movement_id', 'unit_cost',
+        'qty_received', 'qty_remaining', 'received_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'qty' => 'integer',
-            'approved_at' => 'datetime',
-            'fulfilled_at' => 'datetime',
-            'rejected_at' => 'datetime',
+            'unit_cost' => 'decimal:2',
+            'qty_received' => 'integer',
+            'qty_remaining' => 'integer',
+            'received_at' => 'datetime',
         ];
     }
 

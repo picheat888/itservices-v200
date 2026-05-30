@@ -38,7 +38,7 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with('attachments')
+            ->with(['attachments', 'assets'])
             ->orderByRaw('cancelled_at IS NOT NULL')
             ->orderBy('end_date');
 
@@ -166,13 +166,14 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load('attachments')))->response();
+        return (new ContractResource($contract->load(['attachments', 'assets'])))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
     {
+        $before = $contract->getOriginal();
         $contract = $this->service->update($contract, $request->validated());
-        AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})");
+        AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract));
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();

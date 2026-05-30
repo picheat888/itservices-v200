@@ -7,6 +7,7 @@ use App\Http\Requests\StoreStockItemRequest;
 use App\Http\Resources\StockItemResource;
 use App\Models\AuditLog;
 use App\Models\StockItem;
+use App\Models\StockItemSerial;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -26,7 +27,7 @@ class StockItemController extends Controller
     {
         $this->gateView($request);
 
-        $query = StockItem::query()->orderBy('name');
+        $query = StockItem::query()->with('lots')->orderBy('name');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -68,7 +69,7 @@ class StockItemController extends Controller
     {
         $this->gateView($request);
 
-        $items = StockItem::all();
+        $items = StockItem::with('lots')->get();
 
         $out = $items->filter(fn (StockItem $i) => $i->status() === 'out');
         $low = $items->filter(fn (StockItem $i) => $i->status() === 'low');
@@ -79,7 +80,7 @@ class StockItemController extends Controller
             'warehouse' => $name ?: '—',
             'skus' => $group->count(),
             'units' => $group->sum('current_stock'),
-            'value' => round($group->sum(fn (StockItem $i) => (float) $i->cost * $i->current_stock)),
+            'value' => round($group->sum(fn (StockItem $i) => $i->stockValue())),
         ])->values();
 
         $byCategory = $items->groupBy('category')->map(fn ($group, $name) => [
@@ -91,7 +92,7 @@ class StockItemController extends Controller
         return response()->json([
             'skus' => $items->count(),
             'total_units' => $items->sum('current_stock'),
-            'total_value' => round($items->sum(fn (StockItem $i) => (float) $i->cost * $i->current_stock)),
+            'total_value' => round($items->sum(fn (StockItem $i) => $i->stockValue())),
             'out_count' => $out->count(),
             'low_count' => $low->count(),
             'over_count' => $over->count(),
@@ -105,6 +106,15 @@ class StockItemController extends Controller
         ]);
     }
 
+    /** Flat list of every serial known to the system — used by the receive
+     *  drawer to flag duplicates live as the user captures serials. */
+    public function serials(Request $request): JsonResponse
+    {
+        $this->gateView($request);
+
+        return response()->json(['data' => StockItemSerial::orderBy('serial')->pluck('serial')]);
+    }
+
     /** Create a stock item. */
     public function store(StoreStockItemRequest $request): JsonResponse
     {
@@ -114,10 +124,15 @@ class StockItemController extends Controller
         return (new StockItemResource($item))->response()->setStatusCode(201);
     }
 
-    /** Show a single stock item. */
+    /** Show a single stock item, including every per-unit serial registered to it. */
     public function show(Request $request, StockItem $stockItem): JsonResponse
     {
         $this->gateView($request);
+
+        $stockItem->load([
+            'lots' => fn ($q) => $q->orderBy('received_at')->orderBy('id'),
+            'serials' => fn ($q) => $q->orderBy('serial'),
+        ]);
 
         return (new StockItemResource($stockItem))->response();
     }
@@ -125,8 +140,9 @@ class StockItemController extends Controller
     /** Update a stock item. */
     public function update(StoreStockItemRequest $request, StockItem $stockItem): JsonResponse
     {
+        $before = $stockItem->getOriginal();
         $stockItem->update($request->validated());
-        AuditLog::record('Updated stock item', "{$stockItem->sku} — {$stockItem->name}");
+        AuditLog::record('Updated stock item', "{$stockItem->sku} — {$stockItem->name}", AuditLog::changes($before, $stockItem));
 
         return (new StockItemResource($stockItem))->response();
     }

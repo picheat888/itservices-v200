@@ -33,6 +33,8 @@ class StockCountController extends Controller
             'warehouse' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:120'],
             'note' => ['nullable', 'string', 'max:2000'],
+            'stock_item_ids' => ['array'],
+            'stock_item_ids.*' => ['integer', 'exists:stock_items,id'],
         ]);
 
         $count = $this->service->open($data, $request->user());

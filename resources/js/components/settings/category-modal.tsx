@@ -1,5 +1,6 @@
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
+import { SerialToggle } from '@/components/shared/serial-toggle';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const [name, setName] = useState('');
     const [nameTh, setNameTh] = useState('');
     const [description, setDescription] = useState('');
+    const [trackSerial, setTrackSerial] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -29,6 +31,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             setName(category?.name ?? '');
             setNameTh(category?.name_th ?? '');
             setDescription(category?.description ?? '');
+            setTrackSerial(category?.track_serial ?? false);
         }
     }, [open, category]);
 
@@ -36,7 +39,12 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
         if (!name.trim()) {
             return;
         }
-        const payload = { name: name.trim(), name_th: nameTh.trim() || undefined, description: description.trim() || undefined };
+        const payload = {
+            name: name.trim(),
+            name_th: nameTh.trim() || undefined,
+            description: description.trim() || undefined,
+            track_serial: trackSerial,
+        };
         try {
             if (category) {
                 await update.mutateAsync({ id: category.id, ...payload });
@@ -67,6 +75,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                     <Field label={t('md_description')}>
                         <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('md_description')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
                     </Field>
+                    <SerialToggle value={trackSerial} onChange={setTrackSerial} />
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={saving}>

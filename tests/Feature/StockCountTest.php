@@ -36,6 +36,19 @@ class StockCountTest extends TestCase
             ->assertJsonPath('data.lines.0.system_qty', 10);
     }
 
+    public function test_open_with_explicit_sku_ids_snapshots_only_those_items(): void
+    {
+        $a = $this->item('A-1', 10, 'Main');
+        $this->item('B-1', 5, 'Main');
+        $c = $this->item('C-1', 3, 'Main');
+        $this->actingAs($this->super());
+
+        // Pick only A-1 and C-1 — warehouse has 3 items but we count 2.
+        $this->postJson('/api/stock-counts', ['warehouse' => 'Main', 'stock_item_ids' => [$a->id, $c->id]])
+            ->assertCreated()
+            ->assertJsonCount(2, 'data.lines');
+    }
+
     public function test_save_counts_then_commit_adjusts_stock_and_logs_movement(): void
     {
         $item = $this->item('A-1', 10);

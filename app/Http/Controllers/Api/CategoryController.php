@@ -24,6 +24,7 @@ class CategoryController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:255'],
+            'track_serial' => ['boolean'],
         ]);
         $category = Category::create($data);
         AuditLog::record('Created category', $category->name);
@@ -39,9 +40,11 @@ class CategoryController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:255'],
+            'track_serial' => ['boolean'],
         ]);
+        $before = $category->getOriginal();
         $category->update($data);
-        AuditLog::record('Updated category', $category->name);
+        AuditLog::record('Updated category', $category->name, AuditLog::changes($before, $category));
 
         return response()->json(['data' => $category, 'message' => 'success']);
     }
