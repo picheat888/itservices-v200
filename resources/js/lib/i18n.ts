@@ -732,6 +732,9 @@ const en: Dict = {
     set_sla_minutes: 'min',
     set_sla_hours: 'hours',
     set_sla_note: 'Tickets use these targets to compute SLA met %. The resolution target drives the dashboard SLA figure.',
+    noaccess_title: 'No access',
+    noaccess_desc: "You don't have permission to view this section. Contact an administrator if you think this is a mistake.",
+    noaccess_back: 'Back to dashboard',
 };
 
 const th: Dict = {
@@ -1455,6 +1458,9 @@ const th: Dict = {
     set_sla_minutes: 'นาที',
     set_sla_hours: 'ชั่วโมง',
     set_sla_note: 'ระบบใช้ค่าเหล่านี้คำนวณ % SLA สำเร็จ โดยเป้า "ปิดเคส" เป็นตัวกำหนดตัวเลข SLA บน dashboard',
+    noaccess_title: 'ไม่มีสิทธิ์เข้าถึง',
+    noaccess_desc: 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาดโปรดติดต่อผู้ดูแลระบบ',
+    noaccess_back: 'กลับหน้า Dashboard',
 };
 
 const dictionaries: Record<Lang, Dict> = { en, th };
