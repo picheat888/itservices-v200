@@ -1,5 +1,6 @@
 import {
     stockApi,
+    stockCountApi,
     stockMovementApi,
     stockRequestApi,
     type StockItemPayload,
@@ -12,6 +13,7 @@ const ITEMS = ['stock-items'] as const;
 const SUMMARY = ['stock-summary'] as const;
 const MOVEMENTS = ['stock-movements'] as const;
 const REQUESTS = ['stock-requests'] as const;
+const COUNTS = ['stock-counts'] as const;
 
 interface StockItemFilters {
     search?: string;
@@ -21,8 +23,7 @@ interface StockItemFilters {
 }
 
 /** Stock item list, scoped by the active filters. */
-export const useStockItems = (filters: StockItemFilters) =>
-    useQuery({ queryKey: [...ITEMS, filters], queryFn: () => stockApi.list(filters) });
+export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey: [...ITEMS, filters], queryFn: () => stockApi.list(filters) });
 
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
 export const useStockSummary = () => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary });
@@ -76,5 +77,35 @@ export function useStockRequestActions() {
         approve: useMutation({ mutationFn: (id: number) => stockRequestApi.approve(id), onSuccess: inv }),
         reject: useMutation({ mutationFn: (id: number) => stockRequestApi.reject(id), onSuccess: inv }),
         fulfill: useMutation({ mutationFn: (id: number) => stockRequestApi.fulfill(id), onSuccess: inv }),
+    };
+}
+
+/** Recent stock-count sessions (newest first). */
+export const useStockCounts = (enabled = true) => useQuery({ queryKey: COUNTS, queryFn: stockCountApi.list, enabled });
+
+/** A single count session with its lines (for the count sheet). */
+export const useStockCount = (id: number | null) =>
+    useQuery({ queryKey: [...COUNTS, id], queryFn: () => stockCountApi.get(id as number), enabled: id !== null });
+
+/** Count-session mutations (open / save / commit / cancel); refresh counts, items, movements, summary. */
+export function useStockCountMutations() {
+    const qc = useQueryClient();
+    const inv = () => {
+        qc.invalidateQueries({ queryKey: COUNTS });
+        qc.invalidateQueries({ queryKey: ITEMS });
+        qc.invalidateQueries({ queryKey: MOVEMENTS });
+        qc.invalidateQueries({ queryKey: SUMMARY });
+    };
+    return {
+        open: useMutation({
+            mutationFn: (b: { warehouse?: string | null; category?: string | null; note?: string | null }) => stockCountApi.open(b),
+            onSuccess: inv,
+        }),
+        save: useMutation({
+            mutationFn: (v: { id: number; counts: Record<number, number | null> }) => stockCountApi.saveCounts(v.id, v.counts),
+            onSuccess: inv,
+        }),
+        commit: useMutation({ mutationFn: (id: number) => stockCountApi.commit(id), onSuccess: inv }),
+        cancel: useMutation({ mutationFn: (id: number) => stockCountApi.cancel(id), onSuccess: inv }),
     };
 }
