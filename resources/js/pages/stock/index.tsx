@@ -895,6 +895,119 @@ function DashboardTab({
                 <div className="text-muted-foreground py-10 text-center text-sm">—</div>
             ) : (
                 <>
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <style>{stockConsoleStyles}</style>
+
+                        {/* Action queue — reorder card with left severity accents */}
+                        <Card className="overflow-hidden p-0">
+                            <div className="border-border flex items-center justify-between border-b px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    <span className="text-sm font-semibold">{t('stock_action_queue')}</span>
+                                </div>
+                                {reorderItems.length > 0 && (
+                                    <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
+                                        {reorderItems.length}
+                                    </span>
+                                )}
+                            </div>
+                            {reorderItems.length === 0 ? (
+                                <div className="text-muted-foreground flex flex-col items-center gap-2 py-12 text-center text-sm">
+                                    <Check className="h-6 w-6 text-emerald-500" />
+                                    {t('stock_all_stocked')}
+                                </div>
+                            ) : (
+                                <div className="divide-border/60 divide-y">
+                                    {reorderItems.slice(0, 6).map((it, i) => {
+                                        const out = it.current_stock === 0;
+                                        return (
+                                            <div
+                                                key={it.id}
+                                                className="sc-row hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors"
+                                                style={{ animationDelay: `${i * 40}ms` }}
+                                            >
+                                                <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
+                                                <div className="min-w-0 flex-1 py-0.5">
+                                                    <div className="truncate text-sm font-medium">{it.name}</div>
+                                                    <div className="text-muted-foreground font-mono text-[11px]">
+                                                        {it.sku} · {it.warehouse || '—'}
+                                                    </div>
+                                                </div>
+                                                <div className="flex shrink-0 flex-col items-end justify-center">
+                                                    <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-500/12 px-2 py-0.5 font-mono text-xs font-bold text-emerald-600">
+                                                        <ArrowUpFromLine className="h-3 w-3" />
+                                                        {Math.max(0, it.max_stock - it.current_stock)}
+                                                    </span>
+                                                    <span className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+                                                        {it.current_stock}/{it.min_stock}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </Card>
+
+                        {/* Recent movements — vertical timeline feed */}
+                        <Card className="overflow-hidden p-0">
+                            <div className="border-border flex items-center justify-between border-b px-5 py-3">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="sc-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                    </span>
+                                    <span className="text-sm font-semibold">{t('stock_recent_moves')}</span>
+                                </div>
+                                <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
+                            </div>
+                            {movements.length === 0 ? (
+                                <div className="text-muted-foreground py-12 text-center text-sm">{t('stock_no_moves')}</div>
+                            ) : (
+                                <div className="relative px-5 py-4">
+                                    <span className="bg-border absolute top-5 bottom-5 left-[27px] w-px" />
+                                    <div className="space-y-3.5">
+                                        {movements.slice(0, 6).map((m, i) => {
+                                            const meta = MV_META[m.type];
+                                            const MIcon = meta.icon;
+                                            const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
+                                            return (
+                                                <div key={m.id} className="sc-row flex items-center gap-3" style={{ animationDelay: `${i * 40}ms` }}>
+                                                    <span
+                                                        className={cn(
+                                                            'ring-card relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4',
+                                                            MV_TONE_BG[meta.tone],
+                                                        )}
+                                                    >
+                                                        <MIcon className="h-3 w-3" />
+                                                    </span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="truncate text-sm font-medium">{m.item_name}</div>
+                                                        <div className="text-muted-foreground font-mono text-[11px]">
+                                                            {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
+                                                        </div>
+                                                    </div>
+                                                    <div className="shrink-0 text-right">
+                                                        <div
+                                                            className={cn(
+                                                                'font-mono text-sm font-bold',
+                                                                inbound ? 'text-emerald-600' : 'text-destructive',
+                                                            )}
+                                                        >
+                                                            {inbound ? '+' : '−'}
+                                                            {m.qty}
+                                                        </div>
+                                                        <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </Card>
+                    </div>
+
                     <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                         <div>
                             <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_by_warehouse')}</div>
@@ -951,131 +1064,6 @@ function DashboardTab({
                                     </button>
                                 ))}
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                        <style>{stockConsoleStyles}</style>
-
-                        {/* Action queue — reorder console */}
-                        <div className="border-border overflow-hidden rounded-xl border shadow-sm">
-                            <div className="border-border bg-muted/30 flex items-center gap-2 border-b px-4 py-2.5">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-600">
-                                    <AlertTriangle className="h-3.5 w-3.5" />
-                                </span>
-                                <span className="text-sm font-semibold tracking-tight">{t('stock_action_queue')}</span>
-                                {reorderItems.length > 0 && (
-                                    <span className="bg-destructive/10 text-destructive ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
-                                        {reorderItems.length}
-                                    </span>
-                                )}
-                            </div>
-                            {reorderItems.length === 0 ? (
-                                <div className="text-muted-foreground flex flex-col items-center gap-2 py-10 text-center text-sm">
-                                    <Check className="h-6 w-6 text-emerald-500" />
-                                    {t('stock_all_stocked')}
-                                </div>
-                            ) : (
-                                <div className="p-1.5">
-                                    {reorderItems.slice(0, 6).map((it, i) => {
-                                        const out = it.current_stock === 0;
-                                        const fillPct = it.min_stock > 0 ? Math.min(100, (it.current_stock / it.min_stock) * 100) : 0;
-                                        return (
-                                            <div
-                                                key={it.id}
-                                                className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
-                                                style={{ animationDelay: `${i * 45}ms` }}
-                                            >
-                                                <span
-                                                    className={cn(
-                                                        'h-2.5 w-2.5 shrink-0 rounded-full',
-                                                        out ? 'bg-destructive sc-led' : 'bg-amber-500',
-                                                    )}
-                                                />
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium">{it.name}</div>
-                                                    <div className="mt-1 flex items-center gap-2">
-                                                        <span className="text-muted-foreground font-mono text-[11px]">{it.sku}</span>
-                                                        <span className="text-muted-foreground/40">·</span>
-                                                        <span className="text-muted-foreground text-[11px]">{it.warehouse || '—'}</span>
-                                                        <span className="bg-muted ml-1 h-1 w-14 overflow-hidden rounded-full">
-                                                            <span
-                                                                className={cn('block h-full rounded-full', out ? 'bg-destructive' : 'bg-amber-500')}
-                                                                style={{ width: `${fillPct}%` }}
-                                                            />
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="shrink-0 text-right">
-                                                    <div className="text-muted-foreground font-mono text-[11px]">
-                                                        {it.current_stock}/{it.min_stock}
-                                                    </div>
-                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600">
-                                                        +{Math.max(0, it.max_stock - it.current_stock)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Recent movements — live feed */}
-                        <div className="border-border overflow-hidden rounded-xl border shadow-sm">
-                            <div className="border-border bg-muted/30 flex items-center gap-2.5 border-b px-4 py-2.5">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="sc-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                                </span>
-                                <span className="text-sm font-semibold tracking-tight">{t('stock_recent_moves')}</span>
-                                <span className="text-muted-foreground ml-auto font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
-                            </div>
-                            {movements.length === 0 ? (
-                                <div className="text-muted-foreground py-10 text-center text-sm">{t('stock_no_moves')}</div>
-                            ) : (
-                                <div className="p-1.5">
-                                    {movements.slice(0, 6).map((m, i) => {
-                                        const meta = MV_META[m.type];
-                                        const MIcon = meta.icon;
-                                        const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
-                                        return (
-                                            <div
-                                                key={m.id}
-                                                className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
-                                                style={{ animationDelay: `${i * 45}ms` }}
-                                            >
-                                                <span
-                                                    className={cn(
-                                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                                                        MV_TONE_BG[meta.tone],
-                                                    )}
-                                                >
-                                                    <MIcon className="h-4 w-4" />
-                                                </span>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                    <div className="text-muted-foreground font-mono text-[11px]">
-                                                        {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
-                                                    </div>
-                                                </div>
-                                                <div className="shrink-0 text-right">
-                                                    <div
-                                                        className={cn(
-                                                            'font-mono text-sm font-bold',
-                                                            inbound ? 'text-emerald-600' : 'text-destructive',
-                                                        )}
-                                                    >
-                                                        {inbound ? '+' : '−'}
-                                                        {m.qty}
-                                                    </div>
-                                                    <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </>
