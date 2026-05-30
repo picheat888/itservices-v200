@@ -49,5 +49,13 @@ export function useTicketMutations() {
             onSuccess: invalidate,
         }),
         remove: useMutation({ mutationFn: (id: number) => ticketApi.remove(id), onSuccess: invalidate }),
+        uploadAttachments: useMutation({
+            mutationFn: (v: { id: number; files: File[] }) => ticketApi.uploadAttachments(v.id, v.files),
+            onSuccess: invalidate,
+        }),
+        deleteAttachment: useMutation({
+            mutationFn: (v: { id: number; attachmentId: number }) => ticketApi.deleteAttachment(v.id, v.attachmentId),
+            onSuccess: invalidate,
+        }),
     };
 }
