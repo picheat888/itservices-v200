@@ -90,6 +90,16 @@ export const actionLabel = (module: string, action: string, lang: Lang) => ACTIO
 // Permission keys whose enforcement is actually live today. Everything else is
 // shown with a "(Coming soon)" tag in the matrix (toggle still persists).
 const LIVE = new Set<string>([
+    'tickets.view_all',
+    'tickets.create',
+    'tickets.assign',
+    'tickets.resolve',
+    'tickets.delete',
+    'assets.view',
+    'assets.register',
+    'assets.transfer',
+    'assets.retire',
+    'assets.edit',
     'contracts.view',
     'contracts.create',
     'contracts.edit',
