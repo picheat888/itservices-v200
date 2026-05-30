@@ -40,18 +40,18 @@ export default function PermissionsPage() {
         <div className="space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">{t('permissions')}</h1>
-                <p className="text-sm text-muted-foreground">{t('perm_sub')}</p>
+                <p className="text-muted-foreground text-sm">{t('perm_sub')}</p>
             </div>
 
             <Card className="overflow-hidden p-0">
-                <div className="flex gap-1 border-b border-border px-3 pt-1">
+                <div className="border-border flex gap-1 border-b px-3 pt-1">
                     {tabs.map((tb) => (
                         <button
                             key={tb.id}
                             onClick={() => setTab(tb.id)}
                             className={cn(
                                 '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                                tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
                             )}
                         >
                             {tb.label}
@@ -85,7 +85,6 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
 
-
 function RolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -115,15 +114,18 @@ function RolesTab() {
         return false;
     }, [draft, role]);
 
-    if (isLoading || !data || !role) return (
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-            <div className="border-b border-border p-2 lg:border-b-0 lg:border-r"><ListSkeleton rows={4} /></div>
-            <div className="space-y-3 p-5">
-                <TableSkeleton rows={6} cols={3} />
-                <TableSkeleton rows={4} cols={3} />
+    if (isLoading || !data || !role)
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
+                <div className="border-border border-b p-2 lg:border-r lg:border-b-0">
+                    <ListSkeleton rows={4} />
+                </div>
+                <div className="space-y-3 p-5">
+                    <TableSkeleton rows={6} cols={3} />
+                    <TableSkeleton rows={4} cols={3} />
+                </div>
             </div>
-        </div>
-    );
+        );
 
     const toggle = (key: string) => {
         if (role.is_super) return;
@@ -137,9 +139,9 @@ function RolesTab() {
 
     // Build the section list from the catalog, dropping empty sections and
     // sweeping any unmapped module into a trailing "Other" section.
-    const sections = PERM_SECTIONS
-        .map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) }))
-        .filter((s) => s.modules.length > 0);
+    const sections = PERM_SECTIONS.map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) })).filter(
+        (s) => s.modules.length > 0,
+    );
     const knownModules = new Set(PERM_SECTIONS.flatMap((s) => s.modules));
     const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
     if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
@@ -150,8 +152,8 @@ function RolesTab() {
 
     return (
         <>
-            <div className="flex items-center justify-between border-b border-border p-3">
-                <span className="text-sm text-muted-foreground">
+            <div className="border-border flex items-center justify-between border-b p-3">
+                <span className="text-muted-foreground text-sm">
                     {lang === 'th' ? 'Role Templates ทั้งหมดในระบบ' : 'All Role Templates in the System'}
                 </span>
                 <Button onClick={() => setRoleModal({ open: true, role: null })}>
@@ -161,29 +163,34 @@ function RolesTab() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr]">
-                <div className="border-b border-border lg:border-b-0 lg:border-r">
+                <div className="border-border border-b lg:border-r lg:border-b-0">
                     {roles.map((r) => (
                         <div
                             key={r.value}
+                            onClick={() => setSelected(r.value)}
                             className={cn(
-                                'group flex items-center justify-between border-b border-border px-4 py-3.5 transition-colors hover:bg-accent/50',
+                                'group border-border hover:bg-accent/50 flex cursor-pointer items-center justify-between border-b px-4 py-3.5 transition-colors',
                                 r.value === role.value && 'bg-brand/10',
                             )}
                         >
-                            <button onClick={() => setSelected(r.value)} className="flex flex-1 items-center gap-2 text-left">
+                            <div className="flex flex-1 items-center gap-2 text-left">
                                 <span className="h-6 w-1.5 shrink-0 rounded" style={{ background: r.color }} />
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
-                            </button>
+                            </div>
                             {!r.is_system && (
-                                <div className="flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="pointer-events-none flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
                                     <button
-                                        onClick={() => setRoleModal({ open: true, role: r })}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setRoleModal({ open: true, role: r });
+                                        }}
+                                        className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
                                     <button
-                                        onClick={async () => {
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
                                             const result = await Swal.fire({
                                                 title: t('confirm_delete'),
                                                 text: r.label,
@@ -202,7 +209,7 @@ function RolesTab() {
                                             });
                                             if (result.isConfirmed) roleMut.remove.mutate(r.value);
                                         }}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                                        className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
                                     >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </button>
@@ -216,7 +223,7 @@ function RolesTab() {
                     <div className="mb-4 flex items-start justify-between gap-3">
                         <div>
                             <div className="text-lg font-bold">{role.label}</div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-muted-foreground text-xs">
                                 {role.is_super ? t('perm_super_locked') : `${draft.size} ${t('perm_enabled')}`}
                             </div>
                         </div>
@@ -256,66 +263,87 @@ function RolesTab() {
                             const SectionIcon = section.icon;
                             // Workspace cards come from the backend catalog; Administration is
                             // presented as the design's fixed four-card split.
-                            const groups = section.label === 'nav_admin'
-                                ? ADMIN_GROUPS
-                                : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
+                            const groups =
+                                section.label === 'nav_admin'
+                                    ? ADMIN_GROUPS
+                                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
                             const sectionActions = groups.flatMap((g) => g.keys);
                             const sectionOn = sectionActions.filter(isOn).length;
                             return (
-                            <div key={section.label}>
-                                <div className="mb-3 flex items-center gap-2 border-b border-border pb-1.5">
-                                    <SectionIcon className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-sm font-bold text-foreground">{t(section.label)}</span>
-                                    <span className="ml-auto font-mono text-[11px] text-muted-foreground">{sectionOn} / {sectionActions.length}</span>
-                                </div>
+                                <div key={section.label}>
+                                    <div className="border-border mb-3 flex items-center gap-2 border-b pb-1.5">
+                                        <SectionIcon className="text-muted-foreground h-4 w-4" />
+                                        <span className="text-foreground text-sm font-bold">{t(section.label)}</span>
+                                        <span className="text-muted-foreground ml-auto font-mono text-[11px]">
+                                            {sectionOn} / {sectionActions.length}
+                                        </span>
+                                    </div>
 
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    {groups.map((group) => {
-                                        const moduleOn = group.keys.filter(isOn).length;
-                                        return (
-                                        <div key={group.module} className="rounded-lg border border-border p-3.5">
-                                            <div className="mb-2.5 flex items-center justify-between gap-2">
-                                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{moduleLabel(group.module, lang)}</span>
-                                                <span className={cn('font-mono text-[10.5px] font-bold', moduleOn === 0 ? 'text-muted-foreground' : 'text-brand')}>{moduleOn}/{group.keys.length}</span>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {group.keys.map((key) => {
-                                                    const [mod, action] = key.split('.');
-                                                    const live = isLivePermission(key);
-                                                    // Coming-soon permissions are shown off and locked — the
-                                                    // feature isn't built yet, so the switch can't be turned on.
-                                                    const on = live && (role.is_super || draft.has(key));
-                                                    const locked = role.is_super || !live;
-                                                    return (
-                                                        <div key={key} className="flex items-center justify-between gap-2">
-                                                            <span className={cn('text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
-                                                                {actionLabel(mod, action, lang)}
-                                                                {!live && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
-                                                            </span>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => { if (!locked) toggle(key); }}
-                                                                disabled={locked}
-                                                                className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60', on ? 'bg-brand' : 'bg-muted')}
-                                                            >
-                                                                <span
-                                                                    className={cn(
-                                                                        'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                                                                        on ? 'left-[1.125rem]' : 'left-0.5',
-                                                                    )}
-                                                                >
-                                                                    {on && <Check className="h-2.5 w-2.5 text-brand" />}
-                                                                </span>
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                        );
-                                    })}
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        {groups.map((group) => {
+                                            const moduleOn = group.keys.filter(isOn).length;
+                                            return (
+                                                <div key={group.module} className="border-border rounded-lg border p-3.5">
+                                                    <div className="mb-2.5 flex items-center justify-between gap-2">
+                                                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                                                            {moduleLabel(group.module, lang)}
+                                                        </span>
+                                                        <span
+                                                            className={cn(
+                                                                'font-mono text-[10.5px] font-bold',
+                                                                moduleOn === 0 ? 'text-muted-foreground' : 'text-brand',
+                                                            )}
+                                                        >
+                                                            {moduleOn}/{group.keys.length}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {group.keys.map((key) => {
+                                                            const [mod, action] = key.split('.');
+                                                            const live = isLivePermission(key);
+                                                            // Coming-soon permissions are shown off and locked — the
+                                                            // feature isn't built yet, so the switch can't be turned on.
+                                                            const on = live && (role.is_super || draft.has(key));
+                                                            const locked = role.is_super || !live;
+                                                            return (
+                                                                <div key={key} className="flex items-center justify-between gap-2">
+                                                                    <span className={cn('text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
+                                                                        {actionLabel(mod, action, lang)}
+                                                                        {!live && (
+                                                                            <span className="ml-1 text-[11px] italic opacity-70">
+                                                                                ({t('coming_soon_tag')})
+                                                                            </span>
+                                                                        )}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            if (!locked) toggle(key);
+                                                                        }}
+                                                                        disabled={locked}
+                                                                        className={cn(
+                                                                            'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-60',
+                                                                            on ? 'bg-brand' : 'bg-muted',
+                                                                        )}
+                                                                    >
+                                                                        <span
+                                                                            className={cn(
+                                                                                'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
+                                                                                on ? 'left-[1.125rem]' : 'left-0.5',
+                                                                            )}
+                                                                        >
+                                                                            {on && <Check className="text-brand h-2.5 w-2.5" />}
+                                                                        </span>
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
                             );
                         })}
                     </div>
@@ -344,25 +372,30 @@ function GroupRolesTab() {
 
     const defaultGroup = groups.find((g) => g.id === defaultGroupId);
 
-    if (isLoading) return <div className="p-5"><CardGridSkeleton count={4} cols={4} /></div>;
+    if (isLoading)
+        return (
+            <div className="p-5">
+                <CardGridSkeleton count={4} cols={4} />
+            </div>
+        );
 
     return (
         <div className="space-y-4 p-5">
             {/* Default Role Group selector */}
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
+            <div className="border-border flex flex-wrap items-end justify-between gap-3 border-b pb-4">
                 <div className="space-y-1">
-                    <div className="text-xs font-medium text-muted-foreground">{t('perm_default_group')}</div>
+                    <div className="text-muted-foreground text-xs font-medium">{t('perm_default_group')}</div>
                     <button
                         onClick={() => {
                             setPendingDefault(defaultGroupId);
                             setDefaultDialog(true);
                         }}
-                        className="flex h-9 w-64 items-center gap-2 rounded-md border border-border bg-background px-3 text-sm transition-colors hover:bg-accent"
+                        className="border-border bg-background hover:bg-accent flex h-9 w-64 items-center gap-2 rounded-md border px-3 text-sm transition-colors"
                     >
                         {defaultGroup ? (
                             <>
-                                <Users className="h-4 w-4 shrink-0 text-brand" />
-                                <span className="truncate font-medium text-brand">{defaultGroup.name}</span>
+                                <Users className="text-brand h-4 w-4 shrink-0" />
+                                <span className="text-brand truncate font-medium">{defaultGroup.name}</span>
                             </>
                         ) : (
                             <span className="text-muted-foreground">{lang === 'th' ? '(ยังไม่ได้ตั้งค่า)' : '(not set)'}</span>
@@ -376,9 +409,7 @@ function GroupRolesTab() {
             </div>
 
             {groups.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
-                    {t('gr_empty')}
-                </div>
+                <div className="border-border text-muted-foreground rounded-lg border border-dashed py-12 text-center text-sm">{t('gr_empty')}</div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -387,13 +418,13 @@ function GroupRolesTab() {
                     // Only a super admin may edit or delete the Administrator role group.
                     const adminLocked = g.role === 'super' && !isSuper;
                     return (
-                        <Card key={g.id} className={cn('p-4', isDefault && 'ring-2 ring-brand/40')}>
+                        <Card key={g.id} className={cn('p-4', isDefault && 'ring-brand/40 ring-2')}>
                             <div className="flex items-start justify-between">
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-1.5">
                                         <span className="truncate font-semibold">{g.name}</span>
                                         {isDefault && (
-                                            <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-semibold text-brand">
+                                            <span className="bg-brand/10 text-brand shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold">
                                                 Default
                                             </span>
                                         )}
@@ -404,7 +435,7 @@ function GroupRolesTab() {
                                         onClick={() => setModal({ open: true, group: g })}
                                         disabled={adminLocked}
                                         title={adminLocked ? t('gr_admin_protected') : undefined}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                                        className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                                     >
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
@@ -430,19 +461,19 @@ function GroupRolesTab() {
                                         }}
                                         disabled={adminLocked}
                                         title={adminLocked ? t('gr_admin_protected') : undefined}
-                                        className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                                        className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                                     >
                                         <Trash2 className="h-3.5 w-3.5" />
                                     </button>
                                 </div>
                             </div>
                             {g.role_label && (
-                                <span className="mt-2 inline-block rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-medium text-brand">
+                                <span className="bg-brand/10 text-brand mt-2 inline-block rounded-full px-2.5 py-0.5 text-xs font-medium">
                                     {g.role_label}
                                 </span>
                             )}
-                            <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1.5 font-mono font-semibold text-foreground">
+                            <div className="border-border text-muted-foreground mt-3 flex items-center justify-between border-t pt-3 text-sm">
+                                <span className="text-foreground flex items-center gap-1.5 font-mono font-semibold">
                                     <Users className="h-3.5 w-3.5" /> {g.member_count}
                                 </span>
                                 <span>{lang === 'th' ? 'สมาชิก' : 'Members'}</span>
@@ -538,23 +569,26 @@ function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: stri
         <div className="space-y-3 px-5 py-3">
             {hasRoleChange && (
                 <div className="flex items-center gap-2 text-sm">
-                    <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground line-through">{details.from}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="rounded bg-brand/10 px-2 py-0.5 font-medium text-brand">{details.to}</span>
+                    <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{details.from}</span>
+                    <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
+                    <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">{details.to}</span>
                 </div>
             )}
             {hasPermDiff && (
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
                     {(details.added ?? []).length > 0 && (
                         <div className="min-w-0">
-                            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
+                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-emerald-600 uppercase">
                                 {lang === 'th' ? 'เพิ่มสิทธิ์' : 'Added'}
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {(details.added ?? []).map((key) => {
                                     const [mod, act] = key.split('.');
                                     return (
-                                        <span key={key} className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                                        <span
+                                            key={key}
+                                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                        >
                                             <span className="opacity-60">{moduleLabel(mod, lang as 'en' | 'th')} /</span>
                                             {actionLabel(mod, act, lang as 'en' | 'th')}
                                         </span>
@@ -565,14 +599,17 @@ function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: stri
                     )}
                     {(details.removed ?? []).length > 0 && (
                         <div className="min-w-0">
-                            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-rose-500">
+                            <div className="mb-1 text-[11px] font-semibold tracking-wide text-rose-500 uppercase">
                                 {lang === 'th' ? 'ถอดสิทธิ์' : 'Removed'}
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {(details.removed ?? []).map((key) => {
                                     const [mod, act] = key.split('.');
                                     return (
-                                        <span key={key} className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-400">
+                                        <span
+                                            key={key}
+                                            className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                                        >
                                             <span className="opacity-60">{moduleLabel(mod, lang as 'en' | 'th')} /</span>
                                             {actionLabel(mod, act, lang as 'en' | 'th')}
                                         </span>
@@ -615,16 +652,24 @@ function AuditTab() {
         setExpandedId(null);
     };
 
-    if (isLoading) return <div className="p-5"><TableSkeleton rows={8} cols={5} /></div>;
+    if (isLoading)
+        return (
+            <div className="p-5">
+                <TableSkeleton rows={8} cols={5} />
+            </div>
+        );
 
     return (
         <div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-b border-border">
+                        <tr className="border-border border-b">
                             {[t('audit_time'), t('audit_user'), 'Action', t('audit_target'), ''].map((h) => (
-                                <th key={h} className="px-5 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <th
+                                    key={h}
+                                    className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase"
+                                >
                                     {h}
                                 </th>
                             ))}
@@ -633,7 +678,7 @@ function AuditTab() {
                     <tbody>
                         {logs.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">
+                                <td colSpan={5} className="text-muted-foreground px-5 py-10 text-center">
                                     {t('audit_empty')}
                                 </td>
                             </tr>
@@ -647,24 +692,26 @@ function AuditTab() {
                                         key={l.id}
                                         onClick={() => showDetails && setExpandedId(isExpanded ? null : l.id)}
                                         className={cn(
-                                            'border-b border-border/60 transition-colors',
-                                            showDetails && 'cursor-pointer hover:bg-accent/40',
+                                            'border-border/60 border-b transition-colors',
+                                            showDetails && 'hover:bg-accent/40 cursor-pointer',
                                             isExpanded && 'bg-accent/30',
                                             !isExpanded && 'last:border-0',
                                         )}
                                     >
-                                        <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">
+                                        <td className="text-muted-foreground px-5 py-2.5 font-mono text-xs">
                                             {new Date(l.created_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB')}
                                         </td>
                                         <td className="px-5 py-2.5">{l.user_name}</td>
                                         <td className="px-5 py-2.5 font-medium">{l.action}</td>
-                                        <td className="px-5 py-2.5 text-muted-foreground">{l.target ?? '—'}</td>
+                                        <td className="text-muted-foreground px-5 py-2.5">{l.target ?? '—'}</td>
                                         <td className="px-5 py-2.5">
                                             {showDetails && (
                                                 <button
                                                     className={cn(
                                                         'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
-                                                        isExpanded ? 'bg-brand/10 text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                                                        isExpanded
+                                                            ? 'bg-brand/10 text-brand'
+                                                            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                                                     )}
                                                     aria-label="View details"
                                                 >
@@ -674,7 +721,7 @@ function AuditTab() {
                                         </td>
                                     </tr>
                                     {isExpanded && l.details && (
-                                        <tr key={`${l.id}-detail`} className="border-b border-border/60 bg-accent/20">
+                                        <tr key={`${l.id}-detail`} className="border-border/60 bg-accent/20 border-b">
                                             <td colSpan={5} className="py-0">
                                                 <AuditDetailPanel details={l.details} lang={lang} />
                                             </td>
@@ -688,13 +735,10 @@ function AuditTab() {
             </div>
 
             {/* Pagination bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-sm text-muted-foreground">
+            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3 text-sm">
                 <div className="flex items-center gap-2">
                     <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                    <Select
-                        value={String(pageSize)}
-                        onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}
-                    >
+                    <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}>
                         <SelectTrigger className="h-8 w-[72px]">
                             <SelectValue />
                         </SelectTrigger>
@@ -716,17 +760,17 @@ function AuditTab() {
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page <= 1}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="px-1 font-medium text-foreground">
+                        <span className="text-foreground px-1 font-medium">
                             {page} / {totalPages}
                         </span>
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page >= totalPages}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
