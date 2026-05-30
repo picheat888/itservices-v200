@@ -247,6 +247,8 @@ export interface TicketSummary {
     completed: number;
     canceled: number;
     by_category: { category: TicketCategory; count: number }[];
+    avg_response_minutes: number | null;
+    sla_met_pct: number | null;
 }
 
 export interface NavItem {

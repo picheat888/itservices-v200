@@ -1,47 +1,55 @@
 import { BrandModal } from '@/components/settings/brand-modal';
 import { CategoryModal } from '@/components/settings/category-modal';
 import { LocationModal } from '@/components/settings/location-modal';
+import { LookupSection } from '@/components/settings/lookup-section';
 import { ModelModal } from '@/components/settings/model-modal';
 import { VendorModal } from '@/components/settings/vendor-modal';
 import { WarehouseModal } from '@/components/settings/warehouse-modal';
-import { LookupSection } from '@/components/settings/lookup-section';
 import { Column, DataTable } from '@/components/shared/data-table';
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
 import { SearchSelect } from '@/components/shared/search-select';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { TicketPriorityBadge } from '@/components/tickets/ticket-meta';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLocationMutations, useLocations } from '@/hooks/use-org';
-import { useResetLogo, useSettings, useUpdateAssetColors, useUpdateDisplay, useUpdateSettings, useUploadLogo } from '@/hooks/use-settings';
 import {
     useAssetModelMutations,
     useAssetModels,
     useBrandMutations,
     useBrands,
-    useCategoryMutations,
     useCategories,
+    useCategoryMutations,
+    useStockStatuses,
+    useStockStatusMutations,
+    useUnitMutations,
+    useUnits,
     useVendorMutations,
     useVendors,
     useWarehouseMutations,
     useWarehouses,
-    useUnits,
-    useUnitMutations,
-    useStockStatuses,
-    useStockStatusMutations,
-    useWarrantyTypes,
     useWarrantyTypeMutations,
+    useWarrantyTypes,
 } from '@/hooks/use-master-data';
-import type { AssetModel, Brand, Category, LocationItem, Vendor, Warehouse } from '@/types';
+import { useLocationMutations, useLocations } from '@/hooks/use-org';
+import {
+    useResetLogo,
+    useSettings,
+    useUpdateAssetColors,
+    useUpdateDisplay,
+    useUpdateSettings,
+    useUpdateTicketSla,
+    useUploadLogo,
+} from '@/hooks/use-settings';
 import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
 import { settingsApi, type MailSettingsPayload, type SecuritySettings, type SettingsPayload } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
-import type { Density } from '@/types';
+import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Box,
@@ -86,17 +94,7 @@ const emptyForm: SettingsPayload = {
     timezone: 'Asia/Bangkok',
 };
 
-const VALID_SECTIONS: Section[] = [
-    'display',
-    'company',
-    'branding',
-    'master-data',
-    'email',
-    'tickets',
-    'assets',
-    'workflow',
-    'security',
-];
+const VALID_SECTIONS: Section[] = ['display', 'company', 'branding', 'master-data', 'email', 'tickets', 'assets', 'workflow', 'security'];
 
 function sectionFromHash(): Section {
     const s = window.location.hash.replace('#', '') as Section;
@@ -182,8 +180,9 @@ export default function SettingsPage() {
                     {section === 'master-data' && <MasterDataTab />}
                     {section === 'email' && <EmailTab />}
                     {section === 'assets' && <AssetsTab />}
+                    {section === 'tickets' && <TicketsTab />}
                     {section === 'security' && <SecurityTab />}
-                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'security'].includes(section) && <ComingSoon />}
+                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(section) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -366,12 +365,28 @@ function MasterDataTab() {
  * data tables. Shows Save + Cancel while a row is in edit mode, otherwise the
  * Edit + Delete buttons.
  */
-function RowActions({ editing, onSave, onCancel, onEdit, onDelete, saving }: { editing?: boolean; onSave?: () => void; onCancel?: () => void; onEdit: () => void; onDelete: () => void; saving?: boolean }) {
+function RowActions({
+    editing,
+    onSave,
+    onCancel,
+    onEdit,
+    onDelete,
+    saving,
+}: {
+    editing?: boolean;
+    onSave?: () => void;
+    onCancel?: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    saving?: boolean;
+}) {
     const t = useT();
     if (editing) {
         return (
             <div className="flex justify-end gap-1">
-                <Button size="sm" onClick={onSave} disabled={saving}>{t('save')}</Button>
+                <Button size="sm" onClick={onSave} disabled={saving}>
+                    {t('save')}
+                </Button>
                 <button onClick={onCancel} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
                     <X className="h-4 w-4" />
                 </button>
@@ -416,7 +431,14 @@ function BrandsList() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            render: (b) => <RowActions onEdit={() => setEditBrand(b)} onDelete={() => { if (confirm(`${t('confirm_delete')} ${b.name}`)) remove.mutate(b.id); }} />,
+            render: (b) => (
+                <RowActions
+                    onEdit={() => setEditBrand(b)}
+                    onDelete={() => {
+                        if (confirm(`${t('confirm_delete')} ${b.name}`)) remove.mutate(b.id);
+                    }}
+                />
+            ),
         },
     ];
 
@@ -484,7 +506,14 @@ function ModelsList() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            render: (m) => <RowActions onEdit={() => setEditModel(m)} onDelete={() => { if (confirm(`${t('confirm_delete')} ${m.name}`)) remove.mutate(m.id); }} />,
+            render: (m) => (
+                <RowActions
+                    onEdit={() => setEditModel(m)}
+                    onDelete={() => {
+                        if (confirm(`${t('confirm_delete')} ${m.name}`)) remove.mutate(m.id);
+                    }}
+                />
+            ),
         },
     ];
 
@@ -544,7 +573,14 @@ function CategoriesList() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            render: (c) => <RowActions onEdit={() => setEditCategory(c)} onDelete={() => { if (confirm(`${t('confirm_delete')} ${c.name}`)) remove.mutate(c.id); }} />,
+            render: (c) => (
+                <RowActions
+                    onEdit={() => setEditCategory(c)}
+                    onDelete={() => {
+                        if (confirm(`${t('confirm_delete')} ${c.name}`)) remove.mutate(c.id);
+                    }}
+                />
+            ),
         },
     ];
 
@@ -624,7 +660,12 @@ function VendorsList() {
                     <button onClick={() => setEditVendor(v)} className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
                         <Pencil className="h-4 w-4" />
                     </button>
-                    <button onClick={() => { if (confirm(`${t('confirm_delete')} ${v.name}`)) remove.mutate(v.id); }} className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md">
+                    <button
+                        onClick={() => {
+                            if (confirm(`${t('confirm_delete')} ${v.name}`)) remove.mutate(v.id);
+                        }}
+                        className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                    >
                         <Trash2 className="h-4 w-4" />
                     </button>
                 </div>
@@ -684,7 +725,14 @@ function WarehousesList() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            render: (w) => <RowActions onEdit={() => setEditWarehouse(w)} onDelete={() => { if (confirm(`${t('confirm_delete')} ${w.name}`)) remove.mutate(w.id); }} />,
+            render: (w) => (
+                <RowActions
+                    onEdit={() => setEditWarehouse(w)}
+                    onDelete={() => {
+                        if (confirm(`${t('confirm_delete')} ${w.name}`)) remove.mutate(w.id);
+                    }}
+                />
+            ),
         },
     ];
 
@@ -738,7 +786,14 @@ function LocationsList() {
             key: 'actions',
             header: t('actions'),
             align: 'right',
-            render: (loc) => <RowActions onEdit={() => setEditLocation(loc)} onDelete={() => { if (confirm(`${t('confirm_delete')} ${loc.name}`)) remove.mutate(loc.id); }} />,
+            render: (loc) => (
+                <RowActions
+                    onEdit={() => setEditLocation(loc)}
+                    onDelete={() => {
+                        if (confirm(`${t('confirm_delete')} ${loc.name}`)) remove.mutate(loc.id);
+                    }}
+                />
+            ),
         },
     ];
 
@@ -773,7 +828,16 @@ function UnitsList() {
     const t = useT();
     const { data: units = [] } = useUnits();
     const mutations = useUnitMutations();
-    return <LookupSection rows={units} mutations={mutations} addLabel={t('md_add_unit')} editLabel={t('md_edit_unit')} nameLabel={t('md_unit_name')} addButtonLabel={t('md_add_unit')} />;
+    return (
+        <LookupSection
+            rows={units}
+            mutations={mutations}
+            addLabel={t('md_add_unit')}
+            editLabel={t('md_edit_unit')}
+            nameLabel={t('md_unit_name')}
+            addButtonLabel={t('md_add_unit')}
+        />
+    );
 }
 
 /** Stock statuses lookup (Stock module master data). */
@@ -781,7 +845,16 @@ function StockStatusesList() {
     const t = useT();
     const { data: statuses = [] } = useStockStatuses();
     const mutations = useStockStatusMutations();
-    return <LookupSection rows={statuses} mutations={mutations} addLabel={t('md_add_stock_status')} editLabel={t('md_edit_stock_status')} nameLabel={t('md_stock_status_name')} addButtonLabel={t('md_add_stock_status')} />;
+    return (
+        <LookupSection
+            rows={statuses}
+            mutations={mutations}
+            addLabel={t('md_add_stock_status')}
+            editLabel={t('md_edit_stock_status')}
+            nameLabel={t('md_stock_status_name')}
+            addButtonLabel={t('md_add_stock_status')}
+        />
+    );
 }
 
 /** Warranty types lookup (Stock module master data). */
@@ -789,7 +862,16 @@ function WarrantyTypesList() {
     const t = useT();
     const { data: warranties = [] } = useWarrantyTypes();
     const mutations = useWarrantyTypeMutations();
-    return <LookupSection rows={warranties} mutations={mutations} addLabel={t('md_add_warranty_type')} editLabel={t('md_edit_warranty_type')} nameLabel={t('md_warranty_type_name')} addButtonLabel={t('md_add_warranty_type')} />;
+    return (
+        <LookupSection
+            rows={warranties}
+            mutations={mutations}
+            addLabel={t('md_add_warranty_type')}
+            editLabel={t('md_edit_warranty_type')}
+            nameLabel={t('md_warranty_type_name')}
+            addButtonLabel={t('md_add_warranty_type')}
+        />
+    );
 }
 
 function ComingSoon() {
@@ -894,7 +976,13 @@ function EmailTab() {
                 </div>
 
                 <Field label={t('set_email_username')}>
-                    <Input value={form.username ?? ''} onChange={(e) => set('username', e.target.value)} className="font-mono" autoComplete="off" placeholder="Username" />
+                    <Input
+                        value={form.username ?? ''}
+                        onChange={(e) => set('username', e.target.value)}
+                        className="font-mono"
+                        autoComplete="off"
+                        placeholder="Username"
+                    />
                 </Field>
 
                 <Field label={t('set_email_password')} help={hasPassword ? t('set_email_password_hint') : undefined}>
@@ -1177,13 +1265,112 @@ function AssetsTab() {
                 })}
             </div>
 
-            <div className="bg-blue-500/10 mt-5 flex items-center gap-2 rounded-md px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
+            <div className="mt-5 flex items-center gap-2 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
                 <Info className="h-4 w-4 shrink-0" />
                 <span>{t('set_assets_apply_note')}</span>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-5">
-                <SaveButton onClick={() => update.mutate({ asset_status_colors: draft }, { onSuccess: () => setSaved(true) })} loading={update.isPending} success={saved} disabled={!dirty}>
+                <SaveButton
+                    onClick={() => update.mutate({ asset_status_colors: draft }, { onSuccess: () => setSaved(true) })}
+                    loading={update.isPending}
+                    success={saved}
+                    disabled={!dirty}
+                >
+                    {t('save')}
+                </SaveButton>
+            </div>
+        </div>
+    );
+}
+
+const SLA_PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
+
+/** Settings → Tickets: edit the per-priority SLA response/resolution targets. */
+function TicketsTab() {
+    const t = useT();
+    const { data } = useSettings();
+    const update = useUpdateTicketSla();
+    const stored = data?.ticket_sla;
+    const [draft, setDraft] = useState<Record<string, { response: number; resolve: number }>>({});
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        if (stored) setDraft(stored);
+    }, [stored]);
+
+    const dirty =
+        !!stored && SLA_PRIORITIES.some((p) => draft[p] && (draft[p].response !== stored[p]?.response || draft[p].resolve !== stored[p]?.resolve));
+
+    const setField = (p: TicketPriority, key: 'response' | 'resolve', value: number) => {
+        setDraft((d) => ({ ...d, [p]: { ...d[p], [key]: value } }));
+        setSaved(false);
+    };
+
+    return (
+        <div className="max-w-3xl">
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_sla_title')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_sla_desc')}</p>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                            <th className="px-3 py-2">{t('ticket_priority')}</th>
+                            <th className="px-3 py-2">{t('set_sla_response')}</th>
+                            <th className="px-3 py-2">{t('set_sla_resolution')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {SLA_PRIORITIES.map((p) => (
+                            <tr key={p} className="border-border/60 border-b last:border-0">
+                                <td className="px-3 py-3">
+                                    <TicketPriorityBadge priority={p} t={t} />
+                                </td>
+                                <td className="px-3 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            value={draft[p]?.response ?? ''}
+                                            onChange={(e) => setField(p, 'response', Math.max(1, Number(e.target.value)))}
+                                            className="h-9 w-24 font-mono"
+                                        />
+                                        <span className="text-muted-foreground text-xs">{t('set_sla_minutes')}</span>
+                                    </div>
+                                </td>
+                                <td className="px-3 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            value={draft[p]?.resolve ?? ''}
+                                            onChange={(e) => setField(p, 'resolve', Math.max(1, Number(e.target.value)))}
+                                            className="h-9 w-24 font-mono"
+                                        />
+                                        <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="mt-5 flex items-center gap-2 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs text-blue-600 dark:text-blue-400">
+                <Info className="h-4 w-4 shrink-0" />
+                <span>{t('set_sla_note')}</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-5">
+                <SaveButton
+                    onClick={() => update.mutate({ ticket_sla: draft }, { onSuccess: () => setSaved(true) })}
+                    loading={update.isPending}
+                    success={saved}
+                    disabled={!dirty}
+                >
                     {t('save')}
                 </SaveButton>
             </div>
@@ -1222,7 +1409,12 @@ function CompanyTab({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <Field label={t('set_tax_id')}>
-                        <Input className="font-mono" value={form.tax_id} onChange={(e) => set('tax_id', e.target.value)} placeholder="0000000000000" />
+                        <Input
+                            className="font-mono"
+                            value={form.tax_id}
+                            onChange={(e) => set('tax_id', e.target.value)}
+                            placeholder="0000000000000"
+                        />
                     </Field>
                     <Field label={t('set_industry')}>
                         <Input value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Manufacturing" />

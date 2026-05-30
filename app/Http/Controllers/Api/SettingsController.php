@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Models\MailSetting;
 use App\Models\Role;
 use App\Services\EmailNotificationService;
+use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -75,11 +76,15 @@ class SettingsController extends Controller
             // Asset status badge colors — a map of status => hex color.
             'asset_status_colors' => ['sometimes', 'array'],
             'asset_status_colors.*' => ['string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            // Ticket SLA targets — a map of priority => { response (min), resolve (hours) }.
+            'ticket_sla' => ['sometimes', 'array'],
+            'ticket_sla.*.response' => ['required_with:ticket_sla', 'integer', 'min:1', 'max:10080'],
+            'ticket_sla.*.resolve' => ['required_with:ticket_sla', 'integer', 'min:1', 'max:8760'],
         ]);
 
         foreach ($data as $key => $value) {
-            // The color map is stored as JSON; everything else is a scalar string.
-            if ($key === 'asset_status_colors') {
+            // Map values are stored as JSON; everything else is a scalar string.
+            if ($key === 'asset_status_colors' || $key === 'ticket_sla') {
                 AppSetting::put($key, json_encode($value));
 
                 continue;
@@ -256,6 +261,9 @@ class SettingsController extends Controller
         // status without an explicit override still resolves to a color.
         $stored = json_decode((string) AppSetting::get('asset_status_colors', '{}'), true);
         $values['asset_status_colors'] = array_merge($this->assetStatusColorDefaults, is_array($stored) ? $stored : []);
+
+        // Ticket SLA targets: saved values merged over defaults (see TicketSla).
+        $values['ticket_sla'] = TicketSla::targets();
 
         return $values;
     }

@@ -12,6 +12,8 @@ use App\Models\AuditLog;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\TicketService;
+use App\Support\TicketSla;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -92,6 +94,8 @@ class TicketController extends Controller
             'completed' => $tickets->where('status', TicketStatus::Completed)->count(),
             'canceled' => $tickets->where('status', TicketStatus::Canceled)->count(),
             'by_category' => $byCategory,
+            'avg_response_minutes' => $this->avgResponseMinutes($tickets),
+            'sla_met_pct' => $this->slaMetPct($tickets),
         ]);
     }
 
@@ -110,6 +114,44 @@ class TicketController extends Controller
             ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]);
 
         return response()->json(['data' => $staff]);
+    }
+
+    /**
+     * Average first-response time in minutes (created → responded), rounded.
+     * Null when no ticket has been responded to yet.
+     *
+     * @param  Collection<int, Ticket>  $tickets
+     */
+    private function avgResponseMinutes(Collection $tickets): ?int
+    {
+        $responded = $tickets->filter(fn (Ticket $t) => $t->responded_at !== null);
+        if ($responded->isEmpty()) {
+            return null;
+        }
+
+        return (int) round($responded->avg(fn (Ticket $t) => $t->created_at->diffInMinutes($t->responded_at)));
+    }
+
+    /**
+     * Percentage of completed tickets closed within their priority's resolution
+     * target. Null when nothing has been completed yet.
+     *
+     * @param  Collection<int, Ticket>  $tickets
+     */
+    private function slaMetPct(Collection $tickets): ?int
+    {
+        $completed = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed && $t->resolved_at !== null);
+        if ($completed->isEmpty()) {
+            return null;
+        }
+
+        $met = $completed->filter(function (Ticket $t) {
+            $target = $t->created_at->copy()->addHours(TicketSla::resolveHours($t->priority?->value));
+
+            return $t->resolved_at->lessThanOrEqualTo($target);
+        })->count();
+
+        return (int) round(($met / $completed->count()) * 100);
     }
 
     /** Raise a new ticket; the requester is the current user's linked employee. */
