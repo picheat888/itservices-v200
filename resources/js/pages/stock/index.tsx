@@ -933,13 +933,12 @@ function DashboardTab({
                                                         {it.sku} · {it.warehouse || '—'}
                                                     </div>
                                                 </div>
-                                                <div className="flex shrink-0 flex-col items-end justify-center">
-                                                    <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-500/12 px-2 py-0.5 font-mono text-xs font-bold text-emerald-600">
-                                                        <ArrowUpFromLine className="h-3 w-3" />
-                                                        {Math.max(0, it.max_stock - it.current_stock)}
-                                                    </span>
-                                                    <span className="text-muted-foreground mt-0.5 font-mono text-[10px]">
+                                                <div className="shrink-0 text-right">
+                                                    <div className="text-muted-foreground font-mono text-[11px]">
                                                         {it.current_stock}/{it.min_stock}
+                                                    </div>
+                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600">
+                                                        +{Math.max(0, it.max_stock - it.current_stock)}
                                                     </span>
                                                 </div>
                                             </div>
