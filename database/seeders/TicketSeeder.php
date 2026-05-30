@@ -74,6 +74,21 @@ class TicketSeeder extends Seeder
                 'priority' => 'critical', 'status' => 'completed', 'requester' => 'EMP-1213', 'assignee' => 'super', 'created_h' => 20, 'resp_m' => 15, 'resolve_h' => 6,
                 'resolution' => 'Restarted the core switch and the ERP service; restored access after a VLAN fix.',
             ],
+
+            // Canceled — taken then closed without a fix (responded_at set, so they
+            // still count toward Avg. response; canceled tickets are excluded from SLA met %).
+            [
+                'ticket_no' => 'TKT-2853', 'subject' => 'Duplicate VPN access request', 'subject_th' => 'คำขอ VPN ซ้ำ',
+                'description' => 'User opened a second ticket for the same VPN issue.', 'category' => 'network',
+                'priority' => 'low', 'status' => 'canceled', 'requester' => 'EMP-1042', 'assignee' => 'it', 'created_h' => 40, 'resp_m' => 55, 'resolve_h' => 3,
+                'resolution' => 'Duplicate of TKT-2861 — consolidated into the original ticket and canceled this one.',
+            ],
+            [
+                'ticket_no' => 'TKT-2852', 'subject' => 'Replace keyboard — resigned staff', 'subject_th' => 'เปลี่ยนคีย์บอร์ด — พนักงานลาออก',
+                'description' => 'Keyboard replacement requested for a desk being vacated.', 'category' => 'hardware',
+                'priority' => 'medium', 'status' => 'canceled', 'requester' => 'EMP-1422', 'assignee' => 'super', 'created_h' => 26, 'resp_m' => 25, 'resolve_h' => 4,
+                'resolution' => 'Requester is leaving and the device was decommissioned — canceling per the department head.',
+            ],
         ];
 
         foreach ($tickets as $t) {
