@@ -20,7 +20,7 @@ class Ticket extends Model
         'ticket_no', 'subject', 'subject_th', 'description',
         'category', 'priority', 'status',
         'requester_id', 'assignee_id', 'callback_phone', 'related_asset_id',
-        'take_note', 'resolution', 'resolved_at',
+        'take_note', 'resolution', 'resolved_at', 'responded_at',
     ];
 
     protected function casts(): array
@@ -30,6 +30,7 @@ class Ticket extends Model
             'priority' => TicketPriority::class,
             'status' => TicketStatus::class,
             'resolved_at' => 'datetime',
+            'responded_at' => 'datetime',
         ];
     }
 

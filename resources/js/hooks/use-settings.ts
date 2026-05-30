@@ -1,5 +1,12 @@
 import { currencySymbol } from '@/lib/currency';
-import { settingsApi, type AssetColorsPayload, type DisplayPayload, type SettingsData, type SettingsPayload } from '@/services/settingsApi';
+import {
+    settingsApi,
+    type AssetColorsPayload,
+    type DisplayPayload,
+    type SettingsData,
+    type SettingsPayload,
+    type TicketSlaPayload,
+} from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -94,6 +101,12 @@ export function useUpdateDisplay() {
 export function useUpdateAssetColors() {
     const sync = useSyncStore();
     return useMutation({ mutationFn: (payload: AssetColorsPayload) => settingsApi.updateAssetColors(payload), onSuccess: sync });
+}
+
+/** Persists the per-priority ticket SLA targets (Settings -> Tickets). */
+export function useUpdateTicketSla() {
+    const sync = useSyncStore();
+    return useMutation({ mutationFn: (payload: TicketSlaPayload) => settingsApi.updateTicketSla(payload), onSuccess: sync });
 }
 
 export function useUploadLogo() {
