@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
+import type { Role } from '@/types';
 import { ArrowRight, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -9,13 +10,17 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 const REDIRECT_SECONDS = 15;
 
 /**
- * Gates a route's content. The user passes when they are the super admin or hold
- * at least one of the `anyOf` permission keys; otherwise an inline NoAccess screen
- * is shown (the URL is left unchanged — no redirect).
+ * Gates a route's content. The user passes when they are the super admin, hold at
+ * least one of the `anyOf` permission keys, or have one of the `roles` (used by
+ * role-gated modules such as Reports). Otherwise an inline NoAccess screen is shown
+ * (the URL is left unchanged — no redirect).
  */
-export function RequirePermission({ anyOf, children }: { anyOf: string[]; children: React.ReactNode }) {
+export function RequirePermission({ anyOf, roles, children }: { anyOf?: string[]; roles?: Role[]; children: React.ReactNode }) {
     const { user } = useAuth();
-    const allowed = user?.role === 'super' || anyOf.some((p) => user?.permissions?.includes(p));
+    const allowed =
+        user?.role === 'super' ||
+        (anyOf?.some((p) => user?.permissions?.includes(p)) ?? false) ||
+        (!!user?.role && (roles?.includes(user.role) ?? false));
 
     if (allowed) {
         return <>{children}</>;
