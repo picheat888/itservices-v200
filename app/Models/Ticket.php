@@ -9,6 +9,7 @@ use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Ticket extends Model
 {
@@ -62,6 +63,15 @@ class Ticket extends Model
     public function relatedAsset(): BelongsTo
     {
         return $this->belongsTo(Asset::class, 'related_asset_id');
+    }
+
+    /** Images/PDFs uploaded against this ticket.
+     *
+     * @return HasMany<TicketAttachment, $this>
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TicketAttachment::class);
     }
 
     /** True when the ticket is still waiting for an IT staff to pick it up. */

@@ -2,11 +2,18 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-meta';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useTicketMutations } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Ticket } from '@/types';
-import { Check, RefreshCcw, Users, X, Zap } from 'lucide-react';
+import { Check, Paperclip, RefreshCcw, Users, X, Zap } from 'lucide-react';
 import type { ResolveMode } from './resolve-ticket-modal';
+
+/** Human-readable file size (KB/MB) for the attachment list. */
+function formatSize(bytes: number): string {
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
@@ -39,6 +46,7 @@ export function TicketDetailDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { deleteAttachment } = useTicketMutations();
     if (!ticket) return null;
 
     const subject = lang === 'th' && ticket.subject_th ? ticket.subject_th : ticket.subject;
@@ -121,6 +129,31 @@ export function TicketDetailDrawer({
                             >
                                 {ticket.resolution}
                             </p>
+                        </div>
+                    )}
+
+                    {ticket.attachments && ticket.attachments.length > 0 && (
+                        <div>
+                            <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{t('ticket_attach')}</div>
+                            <ul className="space-y-1.5">
+                                {ticket.attachments.map((a) => (
+                                    <li key={a.id} className="border-border flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                                        <Paperclip className="text-muted-foreground h-4 w-4 shrink-0" />
+                                        <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-brand flex-1 truncate hover:underline">
+                                            {a.name}
+                                        </a>
+                                        <span className="text-muted-foreground shrink-0 font-mono text-xs">{formatSize(a.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="text-muted-foreground hover:text-destructive shrink-0"
+                                            onClick={() => deleteAttachment.mutate({ id: ticket.id, attachmentId: a.id })}
+                                            disabled={deleteAttachment.isPending}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
                 </div>

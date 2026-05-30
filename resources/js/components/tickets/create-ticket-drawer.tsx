@@ -8,19 +8,20 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { TicketCategory } from '@/types';
-import { Loader2, Paperclip, Send } from 'lucide-react';
+import { Loader2, Paperclip, Send, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 /** Employee-facing form to raise a ticket. Priority and assignee are set later by IT. */
 export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { create } = useTicketMutations();
+    const { create, uploadAttachments } = useTicketMutations();
 
     const [category, setCategory] = useState<TicketCategory>('hardware');
     const [subject, setSubject] = useState('');
     const [description, setDescription] = useState('');
     const [phone, setPhone] = useState('');
+    const [files, setFiles] = useState<File[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -29,6 +30,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setSubject('');
             setDescription('');
             setPhone('');
+            setFiles([]);
             setErrors({});
         }
     }, [open]);
@@ -43,13 +45,16 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
         setErrors(e);
         if (Object.keys(e).length) return;
 
-        await create.mutateAsync({
+        const ticket = await create.mutateAsync({
             subject: subject.trim(),
             subject_th: lang === 'th' ? subject.trim() : null,
             description: description.trim(),
             category,
             callback_phone: phone.trim(),
         });
+        if (files.length > 0 && ticket?.id) {
+            await uploadAttachments.mutateAsync({ id: ticket.id, files });
+        }
         onClose();
     };
 
@@ -126,12 +131,33 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                     </Field>
 
                     <Field label={t('ticket_attach')} help={t('ticket_attach_help')}>
-                        <div className="border-border text-muted-foreground rounded-md border border-dashed px-4 py-5 text-center text-sm">
-                            <Paperclip className="mx-auto h-5 w-5" />
-                            <div className="mt-1.5 opacity-70">
-                                {lang === 'th' ? 'แนบไฟล์ได้ในเฟสถัดไป' : 'File attachments coming in a later phase'}
-                            </div>
-                        </div>
+                        <label className="border-border hover:border-brand/50 text-muted-foreground flex cursor-pointer flex-col items-center rounded-md border border-dashed px-4 py-5 text-center text-sm transition-colors">
+                            <Paperclip className="h-5 w-5" />
+                            <span className="mt-1.5">{lang === 'th' ? 'คลิกเพื่อเลือกไฟล์' : 'Click to choose files'}</span>
+                            <input
+                                type="file"
+                                multiple
+                                accept="image/png,image/jpeg,application/pdf"
+                                className="hidden"
+                                onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
+                            />
+                        </label>
+                        {files.length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                                {files.map((f, i) => (
+                                    <li key={i} className="bg-muted/50 flex items-center justify-between gap-2 rounded px-2.5 py-1.5 text-xs">
+                                        <span className="truncate">{f.name}</span>
+                                        <button
+                                            type="button"
+                                            className="text-muted-foreground hover:text-destructive shrink-0"
+                                            onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </Field>
                 </div>
 
@@ -139,8 +165,12 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                     <Button variant="outline" className="flex-1" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" onClick={submit} disabled={create.isPending}>
-                        {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <Button className="flex-1" onClick={submit} disabled={create.isPending || uploadAttachments.isPending}>
+                        {create.isPending || uploadAttachments.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Send className="h-4 w-4" />
+                        )}
                         {t('submit_ticket')}
                     </Button>
                 </SheetFooter>

@@ -205,6 +205,15 @@ export type TicketStatus = 'open' | 'in_progress' | 'completed' | 'canceled';
 export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
 export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
 
+export interface TicketAttachment {
+    id: number;
+    name: string;
+    size: number;
+    mime: string;
+    url: string;
+    created_at: string | null;
+}
+
 export interface Ticket {
     id: number;
     ticket_no: string;
@@ -226,6 +235,7 @@ export interface Ticket {
     take_note: string | null;
     resolution: string | null;
     resolved_at: string | null;
+    attachments?: TicketAttachment[];
     created_at: string | null;
     updated_at: string | null;
 }

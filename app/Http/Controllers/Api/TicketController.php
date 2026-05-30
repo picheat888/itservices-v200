@@ -34,7 +34,7 @@ class TicketController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset'])->latest('id');
+        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset', 'attachments'])->latest('id');
 
         if (! $this->canViewAll($request)) {
             $query->where('requester_id', $request->user()?->employee_id);
@@ -121,7 +121,7 @@ class TicketController extends Controller
         $ticket = $this->service->create($request->validated(), $employee);
         AuditLog::record('Created ticket', "{$ticket->ticket_no} — {$ticket->subject}");
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset'])))
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -132,7 +132,7 @@ class TicketController extends Controller
             403,
         );
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset'])))->response();
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))->response();
     }
 
     /** An IT staff takes an open, unassigned case for themselves (tickets.resolve). */
@@ -156,7 +156,7 @@ class TicketController extends Controller
         );
         AuditLog::record('Took ticket', "{$ticket->ticket_no} → {$request->user()?->name}");
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset'])))
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -175,7 +175,7 @@ class TicketController extends Controller
         $ticket = $this->service->assign($ticket, $staff, TicketPriority::from($data['priority']));
         AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}");
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset'])))
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -197,7 +197,7 @@ class TicketController extends Controller
         $ticket = $this->service->resolve($ticket, $data['mode'] === 'complete', $data['resolution']);
         AuditLog::record('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset'])))
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
     }
 

@@ -41,6 +41,15 @@ class TicketResource extends JsonResource
             'resolution' => $this->resolution,
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 
+            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($a) => [
+                'id' => $a->id,
+                'name' => $a->original_name,
+                'size' => $a->size,
+                'mime' => $a->mime,
+                'url' => $a->url(),
+                'created_at' => $a->created_at?->toIso8601String(),
+            ])),
+
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
