@@ -435,6 +435,25 @@ const MV_META: Record<StockMovementType, { tone: 'green' | 'violet' | 'blue' | '
     adjust_down: { tone: 'amber', icon: ArrowUpFromLine },
 };
 
+/** Tinted icon backgrounds for the movement feed, keyed by the MV_META tone. */
+const MV_TONE_BG: Record<'green' | 'violet' | 'blue' | 'amber', string> = {
+    green: 'bg-emerald-500/12 text-emerald-600',
+    violet: 'bg-violet-500/12 text-violet-600',
+    blue: 'bg-blue-500/12 text-blue-600',
+    amber: 'bg-amber-500/12 text-amber-600',
+};
+
+/** Scoped keyframes for the dashboard consoles (staggered reveal, LED pulse, live ping). */
+const stockConsoleStyles = `
+@keyframes sc-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes sc-led { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes sc-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
+.sc-row { animation: sc-fade .35s ease both; }
+.sc-led { box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 20%, transparent); animation: sc-led 1.1s ease-in-out infinite; }
+.sc-ping { animation: sc-ping 1.5s cubic-bezier(0,0,.2,1) infinite; }
+@media (prefers-reduced-motion: reduce) { .sc-row, .sc-led, .sc-ping { animation: none; } }
+`;
+
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
     approved: 'blue',
@@ -935,66 +954,122 @@ function DashboardTab({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_action_queue')}</div>
+                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <style>{stockConsoleStyles}</style>
+
+                        {/* Action queue — reorder console */}
+                        <div className="border-border overflow-hidden rounded-xl border shadow-sm">
+                            <div className="border-border bg-muted/30 flex items-center gap-2 border-b px-4 py-2.5">
+                                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/15 text-amber-600">
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                </span>
+                                <span className="text-sm font-semibold tracking-tight">{t('stock_action_queue')}</span>
+                                {reorderItems.length > 0 && (
+                                    <span className="bg-destructive/10 text-destructive ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
+                                        {reorderItems.length}
+                                    </span>
+                                )}
+                            </div>
                             {reorderItems.length === 0 ? (
-                                <div className="text-muted-foreground border-border rounded-md border border-dashed py-8 text-center text-sm">
+                                <div className="text-muted-foreground flex flex-col items-center gap-2 py-10 text-center text-sm">
+                                    <Check className="h-6 w-6 text-emerald-500" />
                                     {t('stock_all_stocked')}
                                 </div>
                             ) : (
-                                <div className="space-y-1.5">
-                                    {reorderItems.slice(0, 6).map((it) => (
-                                        <div key={it.id} className="border-border flex items-center gap-3 rounded-md border px-3 py-2">
-                                            <span
-                                                className={cn(
-                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
-                                                    it.current_stock === 0 ? 'bg-destructive' : 'bg-amber-500',
-                                                )}
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <div className="truncate text-sm font-medium">{it.name}</div>
-                                                <div className="text-muted-foreground font-mono text-xs">
-                                                    {it.sku} · {it.warehouse || '—'}
+                                <div className="p-1.5">
+                                    {reorderItems.slice(0, 6).map((it, i) => {
+                                        const out = it.current_stock === 0;
+                                        const fillPct = it.min_stock > 0 ? Math.min(100, (it.current_stock / it.min_stock) * 100) : 0;
+                                        return (
+                                            <div
+                                                key={it.id}
+                                                className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
+                                                style={{ animationDelay: `${i * 45}ms` }}
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'h-2.5 w-2.5 shrink-0 rounded-full',
+                                                        out ? 'bg-destructive sc-led' : 'bg-amber-500',
+                                                    )}
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="truncate text-sm font-medium">{it.name}</div>
+                                                    <div className="mt-1 flex items-center gap-2">
+                                                        <span className="text-muted-foreground font-mono text-[11px]">{it.sku}</span>
+                                                        <span className="text-muted-foreground/40">·</span>
+                                                        <span className="text-muted-foreground text-[11px]">{it.warehouse || '—'}</span>
+                                                        <span className="bg-muted ml-1 h-1 w-14 overflow-hidden rounded-full">
+                                                            <span
+                                                                className={cn('block h-full rounded-full', out ? 'bg-destructive' : 'bg-amber-500')}
+                                                                style={{ width: `${fillPct}%` }}
+                                                            />
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="shrink-0 text-right">
+                                                    <div className="text-muted-foreground font-mono text-[11px]">
+                                                        {it.current_stock}/{it.min_stock}
+                                                    </div>
+                                                    <span className="mt-0.5 inline-flex items-center rounded-md bg-emerald-500/12 px-1.5 py-0.5 font-mono text-xs font-bold text-emerald-600">
+                                                        +{Math.max(0, it.max_stock - it.current_stock)}
+                                                    </span>
                                                 </div>
                                             </div>
-                                            <div className="text-right text-xs">
-                                                <div className="text-muted-foreground font-mono">
-                                                    {it.current_stock}/{it.min_stock}
-                                                </div>
-                                                <div className="font-mono font-semibold text-emerald-600">
-                                                    +{Math.max(0, it.max_stock - it.current_stock)}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('stock_recent_moves')}</div>
+
+                        {/* Recent movements — live feed */}
+                        <div className="border-border overflow-hidden rounded-xl border shadow-sm">
+                            <div className="border-border bg-muted/30 flex items-center gap-2.5 border-b px-4 py-2.5">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="sc-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                                </span>
+                                <span className="text-sm font-semibold tracking-tight">{t('stock_recent_moves')}</span>
+                                <span className="text-muted-foreground ml-auto font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
+                            </div>
                             {movements.length === 0 ? (
-                                <div className="text-muted-foreground border-border rounded-md border border-dashed py-8 text-center text-sm">
-                                    {t('stock_no_moves')}
-                                </div>
+                                <div className="text-muted-foreground py-10 text-center text-sm">{t('stock_no_moves')}</div>
                             ) : (
-                                <div className="space-y-1.5">
-                                    {movements.slice(0, 6).map((m) => {
+                                <div className="p-1.5">
+                                    {movements.slice(0, 6).map((m, i) => {
                                         const meta = MV_META[m.type];
                                         const MIcon = meta.icon;
+                                        const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
                                         return (
-                                            <div key={m.id} className="border-border flex items-center gap-3 rounded-md border px-3 py-2">
+                                            <div
+                                                key={m.id}
+                                                className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
+                                                style={{ animationDelay: `${i * 45}ms` }}
+                                            >
+                                                <span
+                                                    className={cn(
+                                                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                                                        MV_TONE_BG[meta.tone],
+                                                    )}
+                                                >
+                                                    <MIcon className="h-4 w-4" />
+                                                </span>
                                                 <div className="min-w-0 flex-1">
                                                     <div className="truncate text-sm font-medium">{m.item_name}</div>
-                                                    <div className="text-muted-foreground font-mono text-xs">{m.sku}</div>
+                                                    <div className="text-muted-foreground font-mono text-[11px]">
+                                                        {m.sku} · {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
+                                                    </div>
                                                 </div>
-                                                <StatusBadge tone={meta.tone}>
-                                                    <MIcon className="h-3 w-3" />
-                                                    {t(`stock_mv_${m.type}` as Parameters<typeof t>[0])}
-                                                </StatusBadge>
-                                                <div className="text-right">
-                                                    <div className="font-mono text-sm font-bold">{m.qty}</div>
-                                                    <div className="text-muted-foreground font-mono text-[11px]">{m.moved_at?.slice(5, 16)}</div>
+                                                <div className="shrink-0 text-right">
+                                                    <div
+                                                        className={cn(
+                                                            'font-mono text-sm font-bold',
+                                                            inbound ? 'text-emerald-600' : 'text-destructive',
+                                                        )}
+                                                    >
+                                                        {inbound ? '+' : '−'}
+                                                        {m.qty}
+                                                    </div>
+                                                    <div className="text-muted-foreground font-mono text-[10px]">{m.moved_at?.slice(5, 16)}</div>
                                                 </div>
                                             </div>
                                         );
