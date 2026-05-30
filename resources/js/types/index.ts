@@ -97,6 +97,14 @@ export interface ContractAttachment {
     created_at: string | null;
 }
 
+export interface ContractLinkedAsset {
+    id: number;
+    tag: string;
+    name: string;
+    status: string | null;
+    owner: string | null;
+}
+
 export interface Contract {
     id: number;
     code: string;
@@ -123,7 +131,7 @@ export interface Contract {
     notify_7: boolean;
     notes: string | null;
     attachments: ContractAttachment[];
-    linked_assets: never[];
+    linked_assets: ContractLinkedAsset[];
     cancelled_at: string | null;
     created_at: string | null;
     updated_at: string | null;
@@ -286,6 +294,7 @@ export interface Category {
     name: string;
     name_th?: string | null;
     description?: string | null;
+    track_serial?: boolean;
 }
 
 export interface Vendor {
@@ -324,11 +333,32 @@ export interface WarrantyType {
 
 export type StockItemStatus = 'ok' | 'low' | 'out' | 'over' | 'dead';
 
+export type StockSerialStatus = 'in_stock' | 'issued' | 'returned' | 'retired';
+
+export interface StockItemSerial {
+    id: number;
+    serial: string;
+    status: StockSerialStatus;
+    warehouse: string | null;
+    reference: string | null;
+    received_at: string | null;
+}
+
+export interface StockLot {
+    id: number;
+    unit_cost: number;
+    qty_received: number;
+    qty_remaining: number;
+    value: number;
+    received_at: string | null;
+}
+
 export interface StockItem {
     id: number;
     sku: string;
     name: string;
     serial: string | null;
+    track_serial: boolean;
     category: string | null;
     brand: string | null;
     model: string | null;
@@ -344,6 +374,10 @@ export interface StockItem {
     days_since_move: number | null;
     status: StockItemStatus;
     total_value: number;
+    /** Per-unit serials — only present on the single-item (show) response. */
+    serials?: StockItemSerial[];
+    /** FIFO cost lots — only present on the single-item (show) response. */
+    lots?: StockLot[];
 }
 
 export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';
@@ -382,6 +416,7 @@ export interface StockMovement {
     sku: string | null;
     item_name: string | null;
     qty: number;
+    unit_cost: number | null;
     from: string | null;
     to: string | null;
     reference: string | null;
@@ -398,7 +433,6 @@ export interface StockRequest {
     sku: string | null;
     item_name: string | null;
     requester_name: string;
-    dept: string | null;
     qty: number;
     reason: string;
     status: StockRequestStatus;

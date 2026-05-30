@@ -50,9 +50,11 @@ class RoleController extends Controller
             'name' => ['required', 'string', 'max:60'],
             'color' => ['nullable', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
         ]);
+
+        $before = $role->getOriginal();
         $role->update($data);
 
-        AuditLog::record('Updated role', $role->name);
+        AuditLog::record('Updated role', $role->name, AuditLog::changes($before, $role));
 
         return response()->json(['data' => $role, 'message' => 'success']);
     }

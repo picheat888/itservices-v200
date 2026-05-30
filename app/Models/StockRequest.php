@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockRequest extends Model
 {
     protected $fillable = [
-        'stock_item_id', 'user_id', 'requester_name', 'dept', 'qty', 'reason',
+        'stock_item_id', 'user_id', 'requester_name', 'qty', 'reason',
         'status', 'approver_name', 'approved_at', 'fulfilled_at', 'rejected_at',
     ];
 

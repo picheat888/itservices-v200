@@ -41,9 +41,10 @@ class AssetModelController extends Controller
             'brand_id' => ['nullable', 'exists:brands,id'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
+        $before = $assetModel->getOriginal();
         $assetModel->update($data);
         $assetModel->load('brand');
-        AuditLog::record('Updated asset model', $assetModel->name);
+        AuditLog::record('Updated asset model', $assetModel->name, AuditLog::changes($before, $assetModel));
 
         return response()->json(['data' => $assetModel, 'message' => 'success']);
     }

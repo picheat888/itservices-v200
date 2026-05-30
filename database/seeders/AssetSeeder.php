@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Asset;
+use App\Models\Contract;
 use Illuminate\Database\Seeder;
 
 class AssetSeeder extends Seeder
@@ -55,6 +56,22 @@ class AssetSeeder extends Seeder
                 'registered_date' => $startDate,
                 'last_reason' => $reason,
             ]);
+        }
+
+        // Link a few demo assets to their vendor contracts (hardware / connectivity),
+        // so each contract's "Linked assets" panel has data to show.
+        $links = [
+            'INB-SV-00003' => 'CT-2025-001', // Dell server → Dell server hardware support
+            'RNT-NW-00012' => 'CT-2023-008', // Cisco switch → Cisco Meraki network
+            'INB-PR-00118' => 'CT-DEMO-D60', // Canon printer → Canon printer fleet lease
+            'INB-LT-00231' => 'CT-DEMO-007', // Lenovo laptop → Lenovo workstation lease
+            'INB-LT-00232' => 'CT-DEMO-007',
+        ];
+        foreach ($links as $tag => $code) {
+            $contractId = Contract::where('code', $code)->value('id');
+            if ($contractId) {
+                Asset::where('tag', $tag)->update(['contract_id' => $contractId]);
+            }
         }
     }
 }

@@ -1,11 +1,14 @@
 import { GroupRoleModal } from '@/components/permissions/group-role-modal';
 import { RoleModal } from '@/components/permissions/role-modal';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import { useDateTime } from '@/hooks/use-settings';
 import {
     useAuditLogs,
     useGroupRoleMutations,
@@ -18,9 +21,9 @@ import {
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
 import { cn } from '@/lib/utils';
-import type { AuditDetails, GroupRole, RoleRow } from '@/services/permissionApi';
+import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
-import { Briefcase, Check, ChevronLeft, ChevronRight, Eye, Pencil, Plus, Save, Shield, Trash2, Users } from 'lucide-react';
+import { ArrowLeftRight, Briefcase, Check, ChevronLeft, ChevronRight, Eye, LogIn, Pencil, Plus, Save, Search, Shield, Trash2, Users, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -564,9 +567,26 @@ function GroupRolesTab() {
 function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: string }) {
     const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
+    const changeEntries = Object.entries(details.changes ?? {});
+
+    // Render a diff value (null/'' shown as a muted dash).
+    const diffValue = (v: unknown) =>
+        v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : String(v);
 
     return (
         <div className="space-y-3 px-5 py-3">
+            {changeEntries.length > 0 && (
+                <div className="space-y-1.5">
+                    {changeEntries.map(([field, { from, to }]) => (
+                        <div key={field} className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground w-32 shrink-0 truncate font-mono text-xs">{field}</span>
+                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{diffValue(from)}</span>
+                            <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">{diffValue(to)}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
             {hasRoleChange && (
                 <div className="flex items-center gap-2 text-sm">
                     <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{details.from}</span>
@@ -626,24 +646,111 @@ function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: stri
 
 const PAGE_SIZES = [20, 50, 100] as const;
 
+/** Tinted icon-chip classes for the audit feed, keyed by action tone. */
+const AUDIT_TONE: Record<string, string> = {
+    emerald: 'bg-emerald-500/12 text-emerald-600',
+    blue: 'bg-blue-500/12 text-blue-600',
+    rose: 'bg-rose-500/12 text-rose-600',
+    slate: 'bg-muted text-muted-foreground',
+};
+
+/** Map an action string to an icon + tone by its leading verb. */
+function auditMeta(action: string): { icon: typeof Plus; tone: string } {
+    const a = action.toLowerCase();
+    if (/^(created|registered|submitted|opened|uploaded|imported)/.test(a)) return { icon: Plus, tone: 'emerald' };
+    if (/^(deleted|removed)/.test(a)) return { icon: Trash2, tone: 'rose' };
+    if (/^rejected/.test(a)) return { icon: X, tone: 'rose' };
+    if (/^(approved|accepted|received|committed|fulfilled|resolved)/.test(a)) return { icon: Check, tone: 'emerald' };
+    if (/^(signed|changed own|updated own)/.test(a)) return { icon: LogIn, tone: 'slate' };
+    if (/^stock /.test(a)) return { icon: ArrowLeftRight, tone: 'blue' };
+    return { icon: Pencil, tone: 'blue' }; // updated / renewed / set / changed / …
+}
+
+/** Up-to-two-letter initials for the actor avatar. */
+function auditInitials(name: string | null): string {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
+}
+
+/** Compact "time ago" label; the full timestamp lives in the title attribute. */
+function auditAgo(iso: string, lang: string): string {
+    const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
+    if (m < 60) return lang === 'th' ? `${m} น.` : `${m}m`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return lang === 'th' ? `${h} ชม.` : `${h}h`;
+    const d = Math.floor(h / 24);
+    if (d < 7) return lang === 'th' ? `${d} วัน` : `${d}d`;
+    return new Date(iso).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB');
+}
+
+/** One-line diff summary shown under the action in the table. */
+function auditDiffSummary(d: AuditDetails | null): string | null {
+    if (!d) return null;
+    const val = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
+    const changes = Object.entries(d.changes ?? {});
+    if (changes.length > 0) {
+        const [field, { from, to }] = changes[0];
+        const head = `${field}: ${val(from)} → ${val(to)}`;
+        return changes.length > 1 ? `${head}  +${changes.length - 1}` : head;
+    }
+    const added = d.added?.length ?? 0;
+    const removed = d.removed?.length ?? 0;
+    if (added || removed) return [added ? `+${added}` : null, removed ? `−${removed}` : null].filter(Boolean).join(' / ');
+    if (d.from !== undefined || d.to !== undefined) return `${val(d.from)} → ${val(d.to)}`;
+    return null;
+}
+
 function AuditTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { format: fmtDateTime } = useDateTime();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<10 | 20 | 50 | 100>(20);
     const [expandedId, setExpandedId] = useState<number | null>(null);
+    const [q, setQ] = useState('');
+    const [category, setCategory] = useState('all');
+    const [user, setUser] = useState('all');
+    const filters: AuditFilters = { q, category, user };
 
-    const { data, isLoading } = useAuditLogs(page, pageSize);
+    const { data, isLoading } = useAuditLogs(page, pageSize, filters);
     const logs = data?.data ?? [];
     const meta = data?.meta;
     const totalPages = meta?.last_page ?? 1;
     const total = meta?.total ?? 0;
+    const users = meta?.users ?? [];
     const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const to = Math.min(page * pageSize, total);
 
+    // Reset to the first page whenever a filter changes.
+    useEffect(() => {
+        setPage(1);
+        setExpandedId(null);
+    }, [q, category, user]);
+
+    const categoryOptions = [
+        { value: 'all', label: lang === 'th' ? 'ทุกประเภท' : 'All actions' },
+        { value: 'created', label: lang === 'th' ? 'สร้าง' : 'Created' },
+        { value: 'updated', label: lang === 'th' ? 'แก้ไข' : 'Updated' },
+        { value: 'deleted', label: lang === 'th' ? 'ลบ' : 'Deleted' },
+        { value: 'workflow', label: lang === 'th' ? 'อนุมัติ / สต็อก' : 'Workflow' },
+        { value: 'auth', label: lang === 'th' ? 'เข้าระบบ' : 'Auth' },
+    ].map((o) => ({ ...o, search: o.label }));
+    const userOptions = [
+        { value: 'all', label: lang === 'th' ? 'ทุกคน' : 'All users', search: '' },
+        ...users.map((u) => ({ value: u, label: u, search: u })),
+    ];
+
     const hasDetails = (d: AuditDetails | null): boolean => {
         if (!d) return false;
-        return (d.added?.length ?? 0) > 0 || (d.removed?.length ?? 0) > 0 || d.from !== undefined || d.to !== undefined;
+        return (
+            (d.added?.length ?? 0) > 0 ||
+            (d.removed?.length ?? 0) > 0 ||
+            d.from !== undefined ||
+            d.to !== undefined ||
+            Object.keys(d.changes ?? {}).length > 0
+        );
     };
 
     const handlePageSize = (size: 10 | 20 | 50 | 100) => {
@@ -652,22 +759,29 @@ function AuditTab() {
         setExpandedId(null);
     };
 
-    if (isLoading)
-        return (
-            <div className="p-5">
-                <TableSkeleton rows={8} cols={5} />
-            </div>
-        );
-
     return (
         <div>
+            {/* Filter bar */}
+            <div className="border-border flex flex-wrap items-center gap-2 border-b px-5 py-3">
+                <div className="relative w-full max-w-xs">
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('search_placeholder')} className="pl-9" />
+                </div>
+                <div className="w-44">
+                    <SearchableSelect value={category} onChange={setCategory} options={categoryOptions} />
+                </div>
+                <div className="w-44">
+                    <SearchableSelect value={user} onChange={setUser} options={userOptions} />
+                </div>
+            </div>
+
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="border-border border-b">
-                            {[t('audit_time'), t('audit_user'), 'Action', t('audit_target'), ''].map((h) => (
+                            {['Event', t('audit_user'), t('audit_target'), t('audit_time'), ''].map((h, i) => (
                                 <th
-                                    key={h}
+                                    key={i}
                                     className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase"
                                 >
                                     {h}
@@ -676,57 +790,85 @@ function AuditTab() {
                         </tr>
                     </thead>
                     <tbody>
-                        {logs.length === 0 && (
+                        {isLoading && (
+                            <tr>
+                                <td colSpan={5} className="p-5">
+                                    <TableSkeleton rows={8} cols={5} />
+                                </td>
+                            </tr>
+                        )}
+                        {!isLoading && logs.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="text-muted-foreground px-5 py-10 text-center">
                                     {t('audit_empty')}
                                 </td>
                             </tr>
                         )}
-                        {logs.map((l) => {
-                            const isExpanded = expandedId === l.id;
-                            const showDetails = hasDetails(l.details);
-                            return (
-                                <>
-                                    <tr
-                                        key={l.id}
-                                        onClick={() => showDetails && setExpandedId(isExpanded ? null : l.id)}
-                                        className={cn(
-                                            'border-border/60 border-b transition-colors',
-                                            showDetails && 'hover:bg-accent/40 cursor-pointer',
-                                            isExpanded && 'bg-accent/30',
-                                            !isExpanded && 'last:border-0',
-                                        )}
-                                    >
-                                        <td className="text-muted-foreground px-5 py-2.5 font-mono text-xs">
-                                            {new Date(l.created_at).toLocaleString(lang === 'th' ? 'th-TH' : 'en-GB')}
-                                        </td>
-                                        <td className="px-5 py-2.5">{l.user_name}</td>
-                                        <td className="px-5 py-2.5 font-medium">{l.action}</td>
-                                        <td className="text-muted-foreground px-5 py-2.5">{l.target ?? '—'}</td>
-                                        <td className="px-5 py-2.5">
-                                            {showDetails && (
-                                                <button
-                                                    className={cn(
-                                                        'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
-                                                        isExpanded
-                                                            ? 'bg-brand/10 text-brand'
-                                                            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                                                    )}
-                                                    aria-label="View details"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                        {!isLoading &&
+                            logs.map((l) => {
+                                const isExpanded = expandedId === l.id;
+                                const showDetails = hasDetails(l.details);
+                                const am = auditMeta(l.action);
+                                const AIcon = am.icon;
+                                const summary = auditDiffSummary(l.details);
+                                return (
+                                    <>
+                                        <tr
+                                            key={l.id}
+                                            onClick={() => showDetails && setExpandedId(isExpanded ? null : l.id)}
+                                            className={cn(
+                                                'border-border/60 border-b transition-colors',
+                                                showDetails && 'hover:bg-accent/40 cursor-pointer',
+                                                isExpanded && 'bg-accent/30',
+                                                !isExpanded && 'last:border-0',
                                             )}
-                                        </td>
-                                    </tr>
-                                    {isExpanded && l.details && (
-                                        <tr key={`${l.id}-detail`} className="border-border/60 bg-accent/20 border-b">
-                                            <td colSpan={5} className="py-0">
-                                                <AuditDetailPanel details={l.details} lang={lang} />
+                                        >
+                                            <td className="px-5 py-3">
+                                                <div className="flex items-start gap-2.5">
+                                                    <span className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', AUDIT_TONE[am.tone])}>
+                                                        <AIcon className="h-4 w-4" />
+                                                    </span>
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium">{l.action}</div>
+                                                        {summary && <div className="text-muted-foreground truncate font-mono text-xs">{summary}</div>}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold">
+                                                        {auditInitials(l.user_name)}
+                                                    </span>
+                                                    <span className="truncate text-sm">{l.user_name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="text-muted-foreground px-5 py-3">{l.target ?? '—'}</td>
+                                            <td className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap" title={fmtDateTime(l.created_at)}>
+                                                {auditAgo(l.created_at, lang)}
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                {showDetails && (
+                                                    <button
+                                                        className={cn(
+                                                            'flex h-7 w-7 items-center justify-center rounded-md transition-colors',
+                                                            isExpanded
+                                                                ? 'bg-brand/10 text-brand'
+                                                                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                                                        )}
+                                                        aria-label="View details"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
-                                    )}
+                                        {isExpanded && l.details && (
+                                            <tr key={`${l.id}-detail`} className="border-border/60 bg-accent/20 border-b">
+                                                <td colSpan={5} className="py-0">
+                                                    <AuditDetailPanel details={l.details} lang={lang} />
+                                                </td>
+                                            </tr>
+                                        )}
                                 </>
                             );
                         })}

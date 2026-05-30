@@ -79,33 +79,36 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Categories ──────────────────────────────────────────────────────────
+        // `serial` is the default for the "keep all serial numbers" toggle when a
+        // new SKU is created under this category. High-value, individually tracked
+        // hardware defaults to serialized; consumables/parts are quantity-only.
         $categories = [
-            ['name' => 'แล็ปท็อป',           'description' => 'Notebook / Laptop ทุกยี่ห้อ'],
-            ['name' => 'เดสก์ท็อป',          'description' => 'Desktop PC / Mini PC'],
-            ['name' => 'เซิร์ฟเวอร์',        'description' => 'Rack / Tower Server'],
-            ['name' => 'จอภาพ',              'description' => 'Monitor / Display'],
-            ['name' => 'เครื่องพิมพ์',       'description' => 'Printer / MFP / Plotter'],
-            ['name' => 'สวิตช์ / เราเตอร์',  'description' => 'Network Switch, Router, AP'],
-            ['name' => 'UPS',                'description' => 'Uninterruptible Power Supply'],
-            ['name' => 'กล้องวงจรปิด',       'description' => 'CCTV Camera / NVR'],
-            ['name' => 'โทรศัพท์',           'description' => 'IP Phone / Mobile / Tablet'],
-            ['name' => 'อุปกรณ์อื่น ๆ',      'description' => 'อุปกรณ์ IT ที่ไม่อยู่ในหมวดข้างต้น'],
-            ['name' => 'ซอฟต์แวร์ลิขสิทธิ์', 'description' => 'Software license (subscription / perpetual)'],
-            ['name' => 'บำรุงรักษา',          'description' => 'Hardware/Software maintenance & support'],
-            ['name' => 'เช่าอุปกรณ์',         'description' => 'Device / Equipment rental'],
-            ['name' => 'อินเทอร์เน็ต / WAN',  'description' => 'Internet, Leased line, MPLS'],
-            ['name' => 'บริการ Cloud',         'description' => 'IaaS / PaaS / SaaS cloud contract'],
-            ['name' => 'ตลับหมึก / Toner',    'description' => 'Inkjet cartridge และ Laser toner'],
-            ['name' => 'อะไหล่คอมพิวเตอร์',   'description' => 'RAM, SSD, HDD, PSU, CPU'],
-            ['name' => 'สายเคเบิล',           'description' => 'LAN, HDMI, DP, USB, Power cable'],
-            ['name' => 'อุปกรณ์เสริม',        'description' => 'เมาส์, คีย์บอร์ด, Hub, Adapter'],
-            ['name' => 'วัสดุสิ้นเปลือง',     'description' => 'แผ่น CD/DVD, แฟลชไดร์ฟ, กระดาษพิมพ์'],
+            ['name' => 'แล็ปท็อป',           'description' => 'Notebook / Laptop ทุกยี่ห้อ',           'serial' => true],
+            ['name' => 'เดสก์ท็อป',          'description' => 'Desktop PC / Mini PC',                   'serial' => true],
+            ['name' => 'เซิร์ฟเวอร์',        'description' => 'Rack / Tower Server',                    'serial' => true],
+            ['name' => 'จอภาพ',              'description' => 'Monitor / Display',                      'serial' => true],
+            ['name' => 'เครื่องพิมพ์',       'description' => 'Printer / MFP / Plotter',                'serial' => true],
+            ['name' => 'สวิตช์ / เราเตอร์',  'description' => 'Network Switch, Router, AP',              'serial' => true],
+            ['name' => 'UPS',                'description' => 'Uninterruptible Power Supply',           'serial' => true],
+            ['name' => 'กล้องวงจรปิด',       'description' => 'CCTV Camera / NVR',                      'serial' => true],
+            ['name' => 'โทรศัพท์',           'description' => 'IP Phone / Mobile / Tablet',             'serial' => true],
+            ['name' => 'อุปกรณ์อื่น ๆ',      'description' => 'อุปกรณ์ IT ที่ไม่อยู่ในหมวดข้างต้น',     'serial' => false],
+            ['name' => 'ซอฟต์แวร์ลิขสิทธิ์', 'description' => 'Software license (subscription / perpetual)', 'serial' => false],
+            ['name' => 'บำรุงรักษา',          'description' => 'Hardware/Software maintenance & support', 'serial' => false],
+            ['name' => 'เช่าอุปกรณ์',         'description' => 'Device / Equipment rental',              'serial' => false],
+            ['name' => 'อินเทอร์เน็ต / WAN',  'description' => 'Internet, Leased line, MPLS',            'serial' => false],
+            ['name' => 'บริการ Cloud',         'description' => 'IaaS / PaaS / SaaS cloud contract',     'serial' => false],
+            ['name' => 'ตลับหมึก / Toner',    'description' => 'Inkjet cartridge และ Laser toner',      'serial' => false],
+            ['name' => 'อะไหล่คอมพิวเตอร์',   'description' => 'RAM, SSD, HDD, PSU, CPU',                'serial' => false],
+            ['name' => 'สายเคเบิล',           'description' => 'LAN, HDMI, DP, USB, Power cable',        'serial' => false],
+            ['name' => 'อุปกรณ์เสริม',        'description' => 'เมาส์, คีย์บอร์ด, Hub, Adapter',         'serial' => false],
+            ['name' => 'วัสดุสิ้นเปลือง',     'description' => 'แผ่น CD/DVD, แฟลชไดร์ฟ, กระดาษพิมพ์',     'serial' => false],
         ];
 
         foreach ($categories as $c) {
             Category::updateOrCreate(
                 ['name' => $c['name']],
-                ['description' => $c['description']],
+                ['description' => $c['description'], 'track_serial' => $c['serial']],
             );
         }
 

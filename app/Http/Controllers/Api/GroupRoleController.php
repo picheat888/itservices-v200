@@ -183,7 +183,10 @@ class GroupRoleController extends Controller
         $oldEmployeeIds = $groupRole->employees->pluck('id')->all();
         $newEmployeeIds = $data['employee_ids'] ?? [];
 
-        DB::transaction(function () use ($groupRole, $data, $oldEmployeeIds, $newEmployeeIds) {
+        $before = [];
+
+        DB::transaction(function () use ($groupRole, $data, $oldEmployeeIds, $newEmployeeIds, &$before) {
+            $before = $groupRole->getOriginal();
             $groupRole->update(['name' => $data['name'], 'role' => $data['role'] ?? null]);
             $this->moveEmployeesInto($groupRole, $newEmployeeIds);
             $this->syncUserRoles($groupRole, $newEmployeeIds);
@@ -194,7 +197,7 @@ class GroupRoleController extends Controller
             }
         });
 
-        AuditLog::record('Updated role group', $groupRole->name);
+        AuditLog::record('Updated role group', $groupRole->name, AuditLog::changes($before, $groupRole));
 
         return response()->json(['data' => $this->present($groupRole->load(['employees'])), 'message' => 'success']);
     }

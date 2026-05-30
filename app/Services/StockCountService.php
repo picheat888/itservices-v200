@@ -12,11 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 class StockCountService
 {
+    public function __construct(private readonly StockLotService $lotService) {}
+
     /**
-     * Open a draft session, snapshotting current_stock for every item that matches
-     * the optional warehouse / category filter.
+     * Open a draft session, snapshotting current_stock for the items to count.
+     * When explicit `stock_item_ids` are given those exact SKUs are used;
+     * otherwise every item matching the optional warehouse / category filter.
      *
-     * @param  array{warehouse?:?string, category?:?string, note?:?string}  $filters
+     * @param  array{warehouse?:?string, category?:?string, note?:?string, stock_item_ids?:array<int>}  $filters
      */
     public function open(array $filters, User $user): StockCount
     {
@@ -29,11 +32,14 @@ class StockCountService
                 'counted_by' => $user->id,
             ]);
 
-            $items = StockItem::query()
-                ->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->where('warehouse', $w))
-                ->when($filters['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
-                ->orderBy('sku')
-                ->get(['id', 'current_stock']);
+            $query = StockItem::query();
+            if (! empty($filters['stock_item_ids'])) {
+                $query->whereIn('id', $filters['stock_item_ids']);
+            } else {
+                $query->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->where('warehouse', $w))
+                    ->when($filters['category'] ?? null, fn ($q, $c) => $q->where('category', $c));
+            }
+            $items = $query->orderBy('sku')->get(['id', 'current_stock']);
 
             foreach ($items as $item) {
                 $count->lines()->create([
@@ -102,6 +108,9 @@ class StockCountService
                     'current_stock' => $line->counted_qty,
                     'last_move_at' => now()->toDateString(),
                 ]);
+
+                // Realign FIFO lots with the counted quantity.
+                $this->lotService->reconcile($line->item, $line->counted_qty);
             }
 
             $count->update(['status' => StockCountStatus::Committed, 'committed_at' => now()]);

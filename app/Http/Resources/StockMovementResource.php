@@ -23,6 +23,7 @@ class StockMovementResource extends JsonResource
             'sku' => $this->whenLoaded('item', fn () => $this->item?->sku),
             'item_name' => $this->whenLoaded('item', fn () => $this->item?->name),
             'qty' => $this->qty,
+            'unit_cost' => $this->unit_cost !== null ? (float) $this->unit_cost : null,
             'from' => $this->from_label,
             'to' => $this->to_label,
             'reference' => $this->reference,

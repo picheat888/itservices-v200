@@ -1,9 +1,10 @@
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
+import { SerialToggle } from '@/components/shared/serial-toggle';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { useAssetModels, useBrands, useCategories, useUnits, useVendors, useWarehouses, useWarrantyTypes } from '@/hooks/use-master-data';
 import { useStockItemMutations } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
@@ -18,18 +19,37 @@ const empty: StockItemPayload = {
     sku: '',
     name: '',
     serial: '',
+    track_serial: false,
     category: '',
     brand: '',
     model: '',
     unit: 'unit',
-    cost: 0,
-    current_stock: 0,
     min_stock: 0,
     max_stock: 0,
     warehouse: '',
     supplier: '',
     warranty: '',
 };
+
+/** Map an existing item onto the editable form payload (keys ordered to match
+ *  `empty` so two payloads can be compared for the "is dirty" check). */
+function itemToForm(item: StockItem): StockItemPayload {
+    return {
+        sku: item.sku,
+        name: item.name,
+        serial: item.serial ?? '',
+        track_serial: item.track_serial,
+        category: item.category ?? '',
+        brand: item.brand ?? '',
+        model: item.model ?? '',
+        unit: item.unit,
+        min_stock: item.min_stock,
+        max_stock: item.max_stock,
+        warehouse: item.warehouse ?? '',
+        supplier: item.supplier ?? '',
+        warranty: item.warranty ?? '',
+    };
+}
 
 /**
  * StockItemModal — add/edit a stock item. Dropdowns pull from the shared Master
@@ -50,29 +70,21 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     useEffect(() => {
         if (!open) return;
-        setForm(
-            item
-                ? {
-                      sku: item.sku,
-                      name: item.name,
-                      serial: item.serial ?? '',
-                      category: item.category ?? '',
-                      brand: item.brand ?? '',
-                      model: item.model ?? '',
-                      unit: item.unit,
-                      cost: item.cost,
-                      current_stock: item.current_stock,
-                      min_stock: item.min_stock,
-                      max_stock: item.max_stock,
-                      warehouse: item.warehouse ?? '',
-                      supplier: item.supplier ?? '',
-                      warranty: item.warranty ?? '',
-                  }
-                : empty,
-        );
+        setForm(item ? itemToForm(item) : empty);
     }, [open, item]);
 
+    // When editing, the Save button stays disabled until something actually changes.
+    const isDirty = !item || JSON.stringify(form) !== JSON.stringify(itemToForm(item));
+    const isValid = !!form.sku.trim() && !!form.name.trim();
+
     const set = <K extends keyof StockItemPayload>(k: K, v: StockItemPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+    // Picking a category seeds the serial-tracking default from that category.
+    // For an existing item we never silently flip the saved choice.
+    const onCategoryChange = (v: string) => {
+        const cat = categories.find((c) => c.name === v);
+        setForm((f) => ({ ...f, category: v, track_serial: item ? f.track_serial : !!cat?.track_serial }));
+    };
 
     // Models are scoped to the chosen brand; with no brand picked, show them all.
     const selectedBrand = brands.find((b) => b.name === form.brand);
@@ -80,6 +92,35 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     const submit = async () => {
         if (!form.sku.trim() || !form.name.trim()) return;
+        // Editing an existing item asks for confirmation before saving changes.
+        if (item) {
+            const result = await Swal.fire({
+                title: t('stock_edit_item'),
+                text: t('stock_edit_confirm'),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: t('save'),
+                cancelButtonText: t('cancel'),
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#6b7280',
+                customClass: {
+                    popup: '!rounded-xl !shadow-xl',
+                    confirmButton: '!rounded-lg !font-medium',
+                    cancelButton: '!rounded-lg !font-medium',
+                },
+                reverseButtons: true,
+                // Re-enable pointer events blocked by the parent Radix dialog.
+                didOpen: () => {
+                    const container = Swal.getContainer();
+                    if (container) {
+                        container.style.pointerEvents = 'auto';
+                    }
+                },
+            });
+            if (!result.isConfirmed) {
+                return;
+            }
+        }
         try {
             if (item) {
                 await update.mutateAsync({ id: item.id, payload: form });
@@ -94,157 +135,114 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-w-2xl">
+            <DialogContent
+                className="max-w-2xl"
+                // While the serial-tracking confirm (Swal) is open, don't let its
+                // Escape / backdrop click bubble up and close this modal too.
+                onEscapeKeyDown={(e) => {
+                    if (Swal.isVisible()) {
+                        e.preventDefault();
+                    }
+                }}
+                onInteractOutside={(e) => {
+                    if (Swal.isVisible()) {
+                        e.preventDefault();
+                    }
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>{item ? t('stock_edit_item') : t('stock_new_item')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="SKU" required>
-                            <Input
-                                value={form.sku}
-                                onChange={(e) => set('sku', e.target.value)}
-                                disabled={!!item}
-                                placeholder="SK-NB-003"
-                                className="font-mono"
-                            />
-                        </Field>
-                        <Field label={t('stock_serial')}>
-                            <Input value={form.serial ?? ''} onChange={(e) => set('serial', e.target.value)} className="font-mono" />
-                        </Field>
-                    </div>
+                    <Field label="SKU" required>
+                        <Input
+                            value={form.sku}
+                            onChange={(e) => set('sku', e.target.value)}
+                            disabled={!!item}
+                            placeholder="SK-NB-003"
+                            className="font-mono"
+                        />
+                    </Field>
                     <Field label={t('stock_item_name')} required>
                         <Input value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
                     </Field>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_category')}>
-                            <Select value={form.category || undefined} onValueChange={(v) => set('category', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {categories.map((c) => (
-                                        <SelectItem key={c.id} value={c.name}>
-                                            {c.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                value={form.category ?? ''}
+                                onChange={onCategoryChange}
+                                placeholder="—"
+                                options={categories.map((c) => ({ value: c.name, label: c.name, search: c.name }))}
+                            />
                         </Field>
                         <Field label={t('stock_unit')}>
-                            <Select value={form.unit || undefined} onValueChange={(v) => set('unit', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="unit" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {units.map((u) => (
-                                        <SelectItem key={u.id} value={u.name}>
-                                            {u.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                value={form.unit || ''}
+                                onChange={(v) => set('unit', v)}
+                                placeholder="unit"
+                                options={units.map((u) => ({ value: u.name, label: u.name, search: u.name }))}
+                            />
+                        </Field>
+                    </div>
+                    <SerialToggle value={form.track_serial ?? false} onChange={(v) => set('track_serial', v)} confirmOnEnable />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Field label={t('stock_brand')}>
+                            <SearchableSelect
+                                value={form.brand ?? ''}
+                                onChange={(v) => setForm((f) => ({ ...f, brand: v, model: '' }))}
+                                placeholder="—"
+                                options={brands.map((b) => ({ value: b.name, label: b.name, search: b.name }))}
+                            />
+                        </Field>
+                        <Field label={t('stock_model')}>
+                            <SearchableSelect
+                                value={form.model ?? ''}
+                                onChange={(v) => set('model', v)}
+                                placeholder="—"
+                                options={modelOptions.map((m) => ({ value: m.name, label: m.name, search: m.name }))}
+                            />
                         </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_brand')}>
-                            <Select value={form.brand || undefined} onValueChange={(v) => setForm((f) => ({ ...f, brand: v, model: '' }))}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {brands.map((b) => (
-                                        <SelectItem key={b.id} value={b.name}>
-                                            {b.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                        <Field label={t('stock_model')}>
-                            <Select value={form.model || undefined} onValueChange={(v) => set('model', v)} disabled={modelOptions.length === 0}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {modelOptions.map((m) => (
-                                        <SelectItem key={m.id} value={m.name}>
-                                            {m.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                        <Field label={t('stock_current')}>
-                            <Input
-                                type="number"
-                                value={form.current_stock}
-                                onChange={(e) => set('current_stock', +e.target.value)}
-                                className="font-mono"
-                            />
-                        </Field>
                         <Field label="Min">
                             <Input type="number" value={form.min_stock} onChange={(e) => set('min_stock', +e.target.value)} className="font-mono" />
                         </Field>
                         <Field label="Max">
                             <Input type="number" value={form.max_stock} onChange={(e) => set('max_stock', +e.target.value)} className="font-mono" />
                         </Field>
-                        <Field label={t('stock_cost')}>
-                            <Input type="number" value={form.cost} onChange={(e) => set('cost', +e.target.value)} className="font-mono" />
-                        </Field>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_warehouse')}>
-                            <Select value={form.warehouse || undefined} onValueChange={(v) => set('warehouse', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {warehouses.map((w) => (
-                                        <SelectItem key={w.id} value={w.name}>
-                                            {w.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                value={form.warehouse ?? ''}
+                                onChange={(v) => set('warehouse', v)}
+                                placeholder="—"
+                                options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                            />
                         </Field>
                         <Field label={t('stock_supplier')}>
-                            <Select value={form.supplier || undefined} onValueChange={(v) => set('supplier', v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {vendors.map((v) => (
-                                        <SelectItem key={v.id} value={v.name}>
-                                            {v.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <SearchableSelect
+                                value={form.supplier ?? ''}
+                                onChange={(v) => set('supplier', v)}
+                                placeholder="—"
+                                options={vendors.map((v) => ({ value: v.name, label: v.name, search: v.name }))}
+                            />
                         </Field>
                     </div>
                     <Field label={t('stock_warranty')}>
-                        <Select value={form.warranty || undefined} onValueChange={(v) => set('warranty', v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="—" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {warranties.map((w) => (
-                                    <SelectItem key={w.id} value={w.name}>
-                                        {w.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                            value={form.warranty ?? ''}
+                            onChange={(v) => set('warranty', v)}
+                            placeholder="—"
+                            options={warranties.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <SaveButton loading={saving} onClick={submit} disabled={!form.sku.trim() || !form.name.trim()} />
+                    <SaveButton loading={saving} onClick={submit} disabled={!isValid || !isDirty} />
                 </DialogFooter>
             </DialogContent>
         </Dialog>

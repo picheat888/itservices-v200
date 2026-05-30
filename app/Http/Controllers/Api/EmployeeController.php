@@ -229,8 +229,9 @@ class EmployeeController extends Controller
             'Only an Administrator can edit an Administrator account.'
         );
 
+        $before = $employee->getOriginal();
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
-        AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})");
+        AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})", AuditLog::changes($before, $employee));
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
     }

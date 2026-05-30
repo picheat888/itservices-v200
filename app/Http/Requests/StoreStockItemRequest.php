@@ -28,12 +28,13 @@ class StoreStockItemRequest extends FormRequest
             'sku' => ['required', 'string', 'max:60', Rule::unique('stock_items', 'sku')->ignore($itemId)],
             'name' => ['required', 'string', 'max:200'],
             'serial' => ['nullable', 'string', 'max:120'],
+            'track_serial' => ['boolean'],
             'category' => ['nullable', 'string', 'max:120'],
             'brand' => ['nullable', 'string', 'max:120'],
             'model' => ['nullable', 'string', 'max:120'],
             'unit' => ['required', 'string', 'max:40'],
-            'cost' => ['required', 'numeric', 'min:0'],
-            'current_stock' => ['required', 'integer', 'min:0'],
+            // current_stock and cost are no longer set on the SKU — stock arrives
+            // via Receive (per-lot cost), and value is derived from FIFO lots.
             'min_stock' => ['required', 'integer', 'min:0'],
             'max_stock' => ['required', 'integer', 'min:0'],
             'warehouse' => ['nullable', 'string', 'max:120'],
