@@ -114,6 +114,7 @@ const LIVE = new Set<string>([
     'stock.transfer',
     'stock.return',
     'stock.manage_items',
+    'stock.manage_warehouse',
     'stock.delete',
     'employees.view',
     'employees.add',

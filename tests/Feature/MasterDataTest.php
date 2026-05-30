@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AssetModel;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\RolePermission;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\Warehouse;
@@ -326,6 +327,17 @@ class MasterDataTest extends TestCase
         $this->actingAs($this->regularUser())
             ->postJson('/api/warehouses', ['name' => 'X'])
             ->assertForbidden();
+    }
+
+    public function test_non_super_user_granted_manage_warehouse_can_create(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'stock.manage_warehouse', 'allowed' => true]);
+
+        $this->actingAs($user)
+            ->postJson('/api/warehouses', ['name' => 'Keeper Store'])
+            ->assertCreated()
+            ->assertJsonPath('data.name', 'Keeper Store');
     }
 
     public function test_super_can_update_warehouse(): void
