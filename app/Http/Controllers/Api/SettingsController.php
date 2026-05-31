@@ -105,6 +105,21 @@ class SettingsController extends Controller
         return $this->show();
     }
 
+    /** Per-priority ticket SLA targets (Settings -> Ticket & SLA). Gated by permission:settings.sla. */
+    public function updateSla(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ticket_sla' => ['required', 'array'],
+            'ticket_sla.*.response' => ['required', 'integer', 'min:1', 'max:10080'],
+            'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+        ]);
+
+        AppSetting::put('ticket_sla', json_encode($data['ticket_sla']));
+        AuditLog::record('Updated SLA settings', 'ticket_sla');
+
+        return $this->show();
+    }
+
     /** System-wide display theme (Settings -> Display). Gated by permission:settings.display. */
     public function updateDisplay(Request $request): JsonResponse
     {

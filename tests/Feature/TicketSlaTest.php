@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\Employee;
+use App\Models\RolePermission;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -77,11 +78,21 @@ class TicketSlaTest extends TestCase
 
         $this->getJson('/api/settings')->assertOk()->assertJsonPath('data.ticket_sla.critical.resolve', 4);
 
-        $this->putJson('/api/settings', ['ticket_sla' => [
+        $this->putJson('/api/settings/sla', ['ticket_sla' => [
             'critical' => ['response' => 10, 'resolve' => 2],
             'high' => ['response' => 30, 'resolve' => 8],
             'medium' => ['response' => 120, 'resolve' => 24],
             'low' => ['response' => 240, 'resolve' => 72],
         ]])->assertOk()->assertJsonPath('data.ticket_sla.critical.resolve', 2);
+    }
+
+    public function test_granted_user_can_update_sla(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'settings.sla', 'allowed' => true]);
+
+        $this->actingAs($user)
+            ->putJson('/api/settings/sla', ['ticket_sla' => ['critical' => ['response' => 15, 'resolve' => 4]]])
+            ->assertOk();
     }
 }
