@@ -20,7 +20,8 @@ class Permissions
             'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts'],
             'stock' => ['view', 'request', 'approve', 'fulfill', 'receive', 'transfer', 'return', 'manage_items', 'manage_warehouse', 'audit', 'delete'],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
-            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'edit_settings', 'configure_notifications', 'view_audit'],
+            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
+            'settings' => ['company', 'branding', 'display', 'masterdata', 'email', 'sla', 'assets', 'workflows', 'security'],
         ];
     }
 
