@@ -8,8 +8,10 @@ use App\Models\AuditLog;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\StockRequest;
+use App\Services\StockBalanceService;
 use App\Services\StockLotService;
 use App\Services\StockSerialService;
+use App\Support\DocNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,7 @@ class StockRequestController extends Controller
     public function __construct(
         private readonly StockSerialService $serialService,
         private readonly StockLotService $lotService,
+        private readonly StockBalanceService $balances,
     ) {}
 
     /**
@@ -115,11 +118,16 @@ class StockRequestController extends Controller
         $data = $request->validate([
             'serial_ids' => ['array'],
             'serial_ids.*' => ['integer'],
+            'from_warehouse' => ['nullable', 'string', 'max:120'],
         ]);
 
         DB::transaction(function () use ($stockRequest, $user, $data) {
             /** @var StockItem $item */
             $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
+
+            // Resolve the source warehouse: use the caller's choice, falling back to the
+            // item's home warehouse, and finally 'Unassigned' for unconfigured items.
+            $fromWarehouse = $data['from_warehouse'] ?? ($item->warehouse ?: 'Unassigned');
 
             if ($item->current_stock < $stockRequest->qty) {
                 throw ValidationException::withMessages([
@@ -128,10 +136,11 @@ class StockRequestController extends Controller
             }
 
             StockMovement::create([
+                'doc_no' => DocNumber::next('issue', (int) now()->year),
                 'type' => 'issue',
                 'stock_item_id' => $item->id,
                 'qty' => $stockRequest->qty,
-                'from_label' => $item->warehouse,
+                'from_label' => $fromWarehouse,
                 'to_label' => $stockRequest->requester_name,
                 'reference' => "REQ-{$stockRequest->id}",
                 'recorded_by' => $user->name,
@@ -139,6 +148,8 @@ class StockRequestController extends Controller
                 'moved_at' => now(),
             ]);
 
+            // Per-warehouse guard + cached total + FIFO + serials.
+            $this->balances->remove($item, $fromWarehouse, $stockRequest->qty);
             $item->current_stock -= $stockRequest->qty;
             $item->last_move_at = now()->toDateString();
             $item->save();

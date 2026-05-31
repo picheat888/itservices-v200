@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\StockBalance;
 use App\Models\StockItem;
 use App\Models\StockRequest;
 use App\Models\User;
@@ -109,7 +110,14 @@ class StockWorkflowTest extends TestCase
 
     public function test_request_workflow_submit_approve_fulfill(): void
     {
-        $item = $this->item(10);
+        $item = $this->item(0);
+        $super = $this->superUser();
+
+        // Seed 10 units at WH-HQ via the receive endpoint so a balance row exists.
+        $this->actingAs($super)
+            ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10])
+            ->assertCreated();
+
         $requester = $this->userWith(['stock.view', 'stock.request']);
 
         $reqId = $this->actingAs($requester)
@@ -146,6 +154,27 @@ class StockWorkflowTest extends TestCase
             ->postJson("/api/stock-requests/{$req->id}/fulfill")
             ->assertUnprocessable()
             ->assertJsonValidationErrors('status');
+    }
+
+    public function test_fulfill_deducts_from_chosen_source_warehouse(): void
+    {
+        $this->actingAs($this->superUser());
+        $item = $this->item(0);
+        // Receive 10 into WH-HQ and 5 into WH-2.
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10, 'to_label' => 'WH-HQ'])->assertCreated();
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'to_label' => 'WH-2'])->assertCreated();
+
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'user_id' => $this->superUser()->id,
+            'requester_name' => 'Tester', 'qty' => 4, 'reason' => 'x', 'status' => 'approved',
+        ]);
+
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill", ['from_warehouse' => 'WH-2'])->assertOk();
+
+        $this->assertSame(11, $item->fresh()->current_stock);
+        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-2'])->value('qty'));
+        $this->assertSame(10, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-HQ'])->value('qty'));
+        $this->assertDatabaseHas('stock_movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'from_label' => 'WH-2']);
     }
 
     public function test_requester_only_sees_own_requests(): void
