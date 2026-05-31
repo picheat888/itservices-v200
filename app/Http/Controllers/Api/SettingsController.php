@@ -177,11 +177,9 @@ class SettingsController extends Controller
         return response()->json(['data' => $this->securityPayload(), 'message' => 'success']);
     }
 
-    /** Updates the security policy (session timeout + password expiry). Super only. */
+    /** Updates the security policy (session timeout + password expiry). Gated by route middleware permission:settings.security. */
     public function updateSecurity(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
-
         $data = $request->validate([
             // 0 disables the respective policy.
             'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
