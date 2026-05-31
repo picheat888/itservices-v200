@@ -53,6 +53,28 @@ class SettingsController extends Controller
         return response()->json(['data' => $this->payload(), 'message' => 'success']);
     }
 
+    /** Company information (Settings -> Company). Gated by route middleware permission:settings.company. */
+    public function updateCompany(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'company_name' => ['sometimes', 'required', 'string', 'max:150'],
+            'legal_name' => ['sometimes', 'nullable', 'string', 'max:150'],
+            'tax_id' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'industry' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'timezone' => ['sometimes', 'nullable', 'string', 'max:60'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            AppSetting::put($key, $value === null ? '' : (string) $value);
+        }
+        AuditLog::record('Updated company settings', implode(', ', array_keys($data)));
+
+        return $this->show();
+    }
+
     public function update(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->isSuper(), 403);
