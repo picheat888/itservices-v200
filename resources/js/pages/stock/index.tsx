@@ -836,8 +836,11 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
     ];
 
     // Stock impact + serial selection for the fulfill dialog.
-    const fulfillOnHand = fulfillItem?.current_stock ?? 0;
-    const fulfillShort = !!fulfillReq && fulfillOnHand < fulfillReq.qty;
+    // When a source warehouse is chosen, use that warehouse's balance; otherwise fall back to the global total.
+    const fulfillSourceQty = fulfillFromWarehouse
+        ? (fulfillItem?.balances?.find((b) => b.warehouse === fulfillFromWarehouse)?.qty ?? 0)
+        : (fulfillItem?.current_stock ?? 0);
+    const fulfillShort = !!fulfillReq && fulfillSourceQty < fulfillReq.qty;
     const fulfillSerialized = !!fulfillItem?.track_serial;
     // Scope available serials to in_stock units in the selected source warehouse.
     const fulfillInStock = (fulfillItem?.serials ?? []).filter(
@@ -889,6 +892,7 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                                         setIssueSerialIds([]);
                                     }}
                                     options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                                    placeholder={t('stock_select_warehouse')}
                                 />
                             </div>
 
@@ -896,7 +900,7 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                             <div className="bg-muted/40 flex items-stretch rounded-xl p-3">
                                 <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
                                     <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_stock')}</span>
-                                    <span className="font-mono text-2xl font-bold tabular-nums">{fulfillOnHand}</span>
+                                    <span className="font-mono text-2xl font-bold tabular-nums">{fulfillSourceQty}</span>
                                 </div>
                                 <div className="text-muted-foreground/60 flex items-center text-xl font-light">−</div>
                                 <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
@@ -907,7 +911,7 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                                 <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
                                     <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_new_onhand')}</span>
                                     <span className={cn('font-mono text-2xl font-bold tabular-nums', fulfillShort ? 'text-destructive' : 'text-emerald-600')}>
-                                        {fulfillOnHand - fulfillReq.qty}
+                                        {fulfillSourceQty - fulfillReq.qty}
                                     </span>
                                 </div>
                             </div>
@@ -915,7 +919,7 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                             {fulfillShort && (
                                 <div className="border-destructive/40 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
                                     <AlertTriangle className="h-4 w-4 shrink-0" />
-                                    {t('stock_insufficient')} ({fulfillOnHand})
+                                    {t('stock_insufficient')} ({fulfillSourceQty})
                                 </div>
                             )}
 
