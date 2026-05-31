@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStockItemRequest;
 use App\Http\Resources\StockItemResource;
 use App\Models\AuditLog;
+use App\Models\StockBalance;
 use App\Models\StockItem;
 use App\Models\StockItemSerial;
 use Illuminate\Http\JsonResponse;
@@ -76,12 +77,19 @@ class StockItemController extends Controller
         $over = $items->filter(fn (StockItem $i) => $i->status() === 'over');
         $dead = $items->filter(fn (StockItem $i) => $i->status() === 'dead');
 
-        $byWarehouse = $items->groupBy('warehouse')->map(fn ($group, $name) => [
-            'warehouse' => $name ?: '—',
-            'skus' => $group->count(),
-            'units' => $group->sum('current_stock'),
-            'value' => round($group->sum(fn (StockItem $i) => $i->stockValue())),
-        ])->values();
+        // Aggregate per-warehouse totals from stock_balances so that items
+        // split across multiple warehouses are counted accurately.
+        // Per-warehouse cost (value) is out of scope for FIFO lot costing.
+        $byWarehouse = StockBalance::query()
+            ->selectRaw('warehouse, COUNT(DISTINCT stock_item_id) as skus, SUM(qty) as units')
+            ->groupBy('warehouse')
+            ->get()
+            ->map(fn ($row) => [
+                'warehouse' => $row->warehouse ?: '—',
+                'skus' => (int) $row->skus,
+                'units' => (int) $row->units,
+            ])
+            ->values();
 
         $byCategory = $items->groupBy('category')->map(fn ($group, $name) => [
             'category' => $name ?: '—',
@@ -132,6 +140,7 @@ class StockItemController extends Controller
         $stockItem->load([
             'lots' => fn ($q) => $q->orderBy('received_at')->orderBy('id'),
             'serials' => fn ($q) => $q->orderBy('serial'),
+            'balances' => fn ($q) => $q->orderBy('warehouse'),
         ]);
 
         return (new StockItemResource($stockItem))->response();
