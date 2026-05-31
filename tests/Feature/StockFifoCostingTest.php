@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\StockItem;
 use App\Models\StockLot;
+use App\Models\StockRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,14 +63,18 @@ class StockFifoCostingTest extends TestCase
     public function test_outbound_consumes_oldest_lot_first_fifo(): void
     {
         $item = $this->item();
-        $this->actingAs($this->super());
+        $super = $this->super();
+        $this->actingAs($super);
 
         $this->receive($item, 10, 100);   // lot A @100
         $this->receive($item, 10, 250);   // lot B @250
 
-        // Outbound 12 (transfer) → all of lot A (10) + 2 of lot B → remaining 8 @250 = 2000
-        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 12])
-            ->assertCreated();
+        // Consume 12 via an issue (fulfilling a request) — transfer is now stock-neutral.
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'user_id' => $super->id,
+            'requester_name' => 'Tester', 'qty' => 12, 'reason' => 'fifo', 'status' => 'approved',
+        ]);
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill")->assertOk();
 
         $item->refresh();
         $this->assertSame(8, $item->current_stock);

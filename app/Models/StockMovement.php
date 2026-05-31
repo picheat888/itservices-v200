@@ -24,9 +24,13 @@ class StockMovement extends Model
         ];
     }
 
-    /** Signed stock delta this movement applies (+qty inbound, -qty outbound). */
+    /** Signed stock delta this movement applies to the SKU total. Transfer is neutral. */
     public function delta(): int
     {
+        if ($this->type === 'transfer') {
+            return 0;
+        }
+
         return in_array($this->type, self::INBOUND, true) ? $this->qty : -$this->qty;
     }
 
