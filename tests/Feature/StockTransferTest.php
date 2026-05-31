@@ -90,4 +90,26 @@ class StockTransferTest extends TestCase
         $this->assertSame('WH-A', StockItemSerial::where('serial', 'SNT-2')->value('warehouse'));
         $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-B'])->value('qty'));
     }
+
+    public function test_transfer_requires_from_and_to_warehouse(): void
+    {
+        $this->actingAs($this->super());
+        $item = $this->item();
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 5, 'to_label' => 'WH-A'])->assertCreated();
+
+        $this->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['from_label', 'to_label']);
+    }
+
+    public function test_receive_without_warehouse_falls_back_to_item_home(): void
+    {
+        $this->actingAs($this->super());
+        $item = $this->item(); // warehouse WH-A
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 4])->assertCreated();
+
+        // Balance lands at the item's home warehouse, never an empty string.
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        $this->assertSame(0, StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => ''])->count());
+    }
 }
