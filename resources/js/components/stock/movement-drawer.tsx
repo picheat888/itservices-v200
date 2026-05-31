@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useVendors, useWarehouses } from '@/hooks/use-master-data';
-import { useExistingSerials, useRecordMovement, useStockItems } from '@/hooks/use-stock';
+import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { StockItem, StockMovementType } from '@/types';
-import { AlertTriangle, ArrowDownToLine, Box, Check, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
+import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -44,7 +44,10 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
     const [reference, setReference] = useState('');
     const [notes, setNotes] = useState('');
 
-    // Serialized capture state.
+    // Transfer-specific state: selected serial ids (for serialized SKUs).
+    const [transferSerialIds, setTransferSerialIds] = useState<Set<number>>(new Set());
+
+    // Serialized capture state (receive mode).
     const [serials, setSerials] = useState<string[]>([]);
     const [mode, setMode] = useState<'manual' | 'scan'>('manual');
     const [scan, setScan] = useState('');
@@ -56,6 +59,11 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
     const selected = items.find((i) => String(i.id) === sku);
     const isSerial = isReceive && !!selected?.track_serial;
+    const isTransfer = kind === 'transfer';
+
+    // Fetch per-warehouse detail (balances + serials) only when in transfer mode and a SKU is selected.
+    const transferItemId = isTransfer && sku ? Number(sku) : null;
+    const { data: transferItemDetail } = useStockItem(transferItemId);
 
     // Every serial already known to the system, normalised for case-insensitive matching.
     const existingSet = useMemo(() => new Set(existingSerials.map((s) => s.trim().toLowerCase())), [existingSerials]);
@@ -77,10 +85,17 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         setScan('');
         setDone(null);
         setLabelOpen(false);
+        setTransferSerialIds(new Set());
         // Sensible from/to defaults per movement kind, prefilled from the item's
         // own master-data fields (supplier / warehouse) when receiving.
-        setFrom(kind === 'receive' ? (first?.supplier ?? '') : (first?.warehouse ?? ''));
-        setTo(kind === 'receive' || kind === 'return' ? (first?.warehouse ?? '') : '');
+        // Transfer: From = item's default warehouse, To = empty (user must pick).
+        if (kind === 'transfer') {
+            setFrom(first?.warehouse ?? '');
+            setTo('');
+        } else {
+            setFrom(kind === 'receive' ? (first?.supplier ?? '') : (first?.warehouse ?? ''));
+            setTo(kind === 'receive' || kind === 'return' ? (first?.warehouse ?? '') : '');
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, kind]);
 
@@ -93,14 +108,19 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
     // Picking a different SKU reseeds serial rows and, when receiving, prefills the
     // supplier/warehouse from the item's master-data fields.
+    // For transfer, resets From to the item's default warehouse and clears serial selection.
     const onSkuChange = (value: string) => {
         const it = items.find((i) => String(i.id) === value);
         setSku(value);
         setQty(1);
         setSerials(isReceive && it?.track_serial ? [''] : []);
+        setTransferSerialIds(new Set());
         if (kind === 'receive') {
             setFrom(it?.supplier ?? '');
             setTo(it?.warehouse ?? '');
+        } else if (kind === 'transfer') {
+            setFrom(it?.warehouse ?? '');
+            setTo('');
         }
     };
 
@@ -171,12 +191,47 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
     const dupCount = statuses.filter((s) => s === 'dup-system' || s === 'dup-batch').length;
     const emptyCount = statuses.filter((s) => s === 'empty').length;
     const serialValid = isSerial && serials.length > 0 && statuses.every((s) => s === 'ok');
-    const canSubmit = !!selected && (isSerial ? serialValid : qty >= 1);
+
+    // Transfer validation derived from per-warehouse detail.
+    const transferIsSerial = isTransfer && !!selected?.track_serial;
+    const sourceBalance = isTransfer ? (transferItemDetail?.balances?.find((b) => b.warehouse === from)?.qty ?? 0) : 0;
+    const availableTransferSerials = useMemo(
+        () => (transferItemDetail?.serials ?? []).filter((s) => s.status === 'in_stock' && s.warehouse === from),
+        [transferItemDetail, from],
+    );
+    const transferQtyValid = !transferIsSerial && qty >= 1 && qty <= sourceBalance;
+    const transferSerialValid = transferIsSerial && transferSerialIds.size > 0;
+    const sameWarehouse = isTransfer && !!from && from === to;
+    const canSubmitTransfer = isTransfer && !!selected && !!from && !!to && !sameWarehouse && (transferIsSerial ? transferSerialValid : transferQtyValid);
+
+    const canSubmit = isTransfer ? canSubmitTransfer : !!selected && (isSerial ? serialValid : qty >= 1);
 
     const submit = async () => {
         if (!selected || !canSubmit) {
             return;
         }
+
+        // Build payload — transfer has its own shape (no reference, uses serial_ids not serials).
+        if (isTransfer) {
+            const effectiveQty = transferIsSerial ? transferSerialIds.size : qty;
+            try {
+                await record.mutateAsync({
+                    type: 'transfer',
+                    stock_item_id: selected.id,
+                    qty: effectiveQty,
+                    from_label: from.trim() || undefined,
+                    to_label: to.trim() || undefined,
+                    notes: notes.trim() || undefined,
+                    serial_ids: transferIsSerial ? [...transferSerialIds] : undefined,
+                });
+                setTimeout(onClose, CLOSE_DELAY_MS);
+            } catch (e) {
+                const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+                Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+            }
+            return;
+        }
+
         const cleanSerials = isSerial ? serials.map((s) => s.trim()) : undefined;
         const effectiveQty = isSerial ? serials.length : qty;
         try {
@@ -303,7 +358,213 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         />
                     </Field>
 
-                    {/* Tracking badge */}
+                    {/* ====================================================
+                        TRANSFER MODE — rebuilt warehouse-aware experience
+                        ==================================================== */}
+                    {isTransfer && selected && (
+                        <div className="space-y-3">
+                            {/* Auto doc-no hint chip */}
+                            <div className="flex items-center gap-1.5">
+                                <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs">
+                                    <MoveRight className="h-3 w-3" />
+                                    TRF-XXXXXX — เลขเอกสารจะสร้างอัตโนมัติ
+                                </span>
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium',
+                                        selected.track_serial ? 'border-brand/40 bg-brand/5 text-brand border' : 'bg-muted text-muted-foreground',
+                                    )}
+                                >
+                                    {selected.track_serial ? (
+                                        <>
+                                            <ShieldCheck className="h-3 w-3" />
+                                            {t('stock_serialized')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Box className="h-3 w-3" />
+                                            {t('stock_qty_only')}
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+
+                            {/* From / Arrow / To — three-column flow layout */}
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+                                <Field label={t('stock_from')} required>
+                                    <SearchableSelect
+                                        value={from}
+                                        onChange={(v) => {
+                                            setFrom(v);
+                                            setTransferSerialIds(new Set());
+                                            setQty(1);
+                                        }}
+                                        placeholder={t('stock_warehouse')}
+                                        options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                                    />
+                                </Field>
+
+                                {/* Arrow icon — centred between the two selects */}
+                                <div className="flex h-9 w-8 shrink-0 items-center justify-center">
+                                    <ArrowRight className="text-muted-foreground h-4 w-4" />
+                                </div>
+
+                                <Field label={t('stock_to')} required>
+                                    <SearchableSelect
+                                        value={to}
+                                        onChange={setTo}
+                                        placeholder={t('stock_warehouse')}
+                                        options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                                    />
+                                </Field>
+                            </div>
+
+                            {/* Same-warehouse guard banner */}
+                            {sameWarehouse && (
+                                <div className="text-destructive flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs dark:border-red-800 dark:bg-red-950/30">
+                                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                    ต้นทางและปลายทางต้องไม่ใช่คลังเดียวกัน
+                                </div>
+                            )}
+
+                            {/* Per-warehouse availability badge */}
+                            {from && !sameWarehouse && (
+                                <div className="bg-muted/50 flex items-center justify-between rounded-md px-3 py-2">
+                                    <span className="text-muted-foreground text-xs">
+                                        คงเหลือที่ <b className="text-foreground">{from}</b>
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            'font-mono text-sm font-semibold',
+                                            sourceBalance === 0 ? 'text-destructive' : sourceBalance <= (selected.min_stock ?? 0) ? 'text-amber-600' : 'text-emerald-600',
+                                        )}
+                                    >
+                                        {sourceBalance}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Qty-only transfer: quantity input */}
+                            {!selected.track_serial && from && !sameWarehouse && (
+                                <Field label={t('stock_qty')} required>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={sourceBalance}
+                                        value={qty}
+                                        disabled={sourceBalance === 0}
+                                        onChange={(e) => setQty(Math.max(1, Math.min(sourceBalance, +e.target.value)))}
+                                        className="font-mono"
+                                    />
+                                    {qty > sourceBalance && sourceBalance > 0 && (
+                                        <p className="text-destructive mt-1 text-xs">จำนวนเกินคงเหลือในคลังต้นทาง</p>
+                                    )}
+                                    {sourceBalance === 0 && (
+                                        <p className="text-destructive mt-1 text-xs">ไม่มีสินค้าในคลังต้นทาง</p>
+                                    )}
+                                </Field>
+                            )}
+
+                            {/* Serialized transfer: checkbox pick list */}
+                            {selected.track_serial && from && !sameWarehouse && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                                            เลือก Serial ที่จะย้าย
+                                        </span>
+                                        {availableTransferSerials.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="text-brand hover:text-brand/80 text-xs font-medium transition-colors"
+                                                onClick={() => {
+                                                    if (transferSerialIds.size === availableTransferSerials.length) {
+                                                        setTransferSerialIds(new Set());
+                                                    } else {
+                                                        setTransferSerialIds(new Set(availableTransferSerials.map((s) => s.id)));
+                                                    }
+                                                }}
+                                            >
+                                                {transferSerialIds.size === availableTransferSerials.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {availableTransferSerials.length > 0 ? (
+                                        <div className="max-h-52 space-y-1 overflow-y-auto">
+                                            {availableTransferSerials.map((s) => {
+                                                const checked = transferSerialIds.has(s.id);
+                                                return (
+                                                    <label
+                                                        key={s.id}
+                                                        className={cn(
+                                                            'flex cursor-pointer items-center gap-2.5 rounded-md border px-2.5 py-2 transition-colors',
+                                                            checked
+                                                                ? 'border-brand/40 bg-brand/5'
+                                                                : 'border-border hover:bg-muted/50',
+                                                        )}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            className="accent-brand h-4 w-4 shrink-0 rounded"
+                                                            checked={checked}
+                                                            onChange={() => {
+                                                                setTransferSerialIds((prev) => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(s.id)) {
+                                                                        next.delete(s.id);
+                                                                    } else {
+                                                                        next.add(s.id);
+                                                                    }
+                                                                    return next;
+                                                                });
+                                                            }}
+                                                        />
+                                                        <span className="font-mono text-sm">{s.serial}</span>
+                                                        {checked && <Check className="text-brand ml-auto h-3.5 w-3.5" />}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div className="text-muted-foreground rounded-md border border-dashed py-5 text-center text-xs">
+                                            ไม่มี Serial ที่พร้อมย้ายจากคลัง {from || '—'}
+                                        </div>
+                                    )}
+
+                                    {/* Transfer serial summary bar */}
+                                    {availableTransferSerials.length > 0 && (
+                                        <div className="bg-muted/50 rounded-md p-2.5">
+                                            <div className="bg-muted h-1.5 overflow-hidden rounded-full">
+                                                <span
+                                                    className="bg-brand block h-full rounded-full transition-all"
+                                                    style={{
+                                                        width: `${availableTransferSerials.length ? (transferSerialIds.size / availableTransferSerials.length) * 100 : 0}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="mt-1.5 flex items-center gap-x-3 text-xs">
+                                                <span>
+                                                    <b className="font-mono">{transferSerialIds.size}</b>/{availableTransferSerials.length} เลือก
+                                                </span>
+                                                {transferSerialIds.size > 0 && (
+                                                    <span className="text-brand flex items-center gap-1">
+                                                        <Check className="h-3 w-3" />
+                                                        พร้อมย้าย
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ====================================================
+                        RECEIVE / RETURN / ISSUE modes (unchanged)
+                        ==================================================== */}
+
+                    {/* Tracking badge — receive only */}
                     {selected && isReceive && (
                         <div
                             className={cn(
@@ -325,17 +586,22 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_reference')}>
-                            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO-2026-118 / REQ-12" className="font-mono" />
-                        </Field>
-                        <Field label={t('stock_from')}>
-                            {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
-                        </Field>
-                    </div>
-                    <Field label={t('stock_to')}>
-                        {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
-                    </Field>
+                    {/* Reference + From — shown for receive/return/issue only, not transfer */}
+                    {!isTransfer && (
+                        <>
+                            <div className="grid grid-cols-2 gap-3">
+                                <Field label={t('stock_reference')}>
+                                    <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="PO-2026-118 / REQ-12" className="font-mono" />
+                                </Field>
+                                <Field label={t('stock_from')}>
+                                    {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
+                                </Field>
+                            </div>
+                            <Field label={t('stock_to')}>
+                                {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
+                            </Field>
+                        </>
+                    )}
 
                     {/* Receive captures the per-lot unit cost (optional) for FIFO valuation. */}
                     {selected && isReceive && (
@@ -352,14 +618,14 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </Field>
                     )}
 
-                    {/* Quantity-only capture */}
-                    {selected && !isSerial && (
+                    {/* Quantity-only capture — receive/return/issue only */}
+                    {selected && !isSerial && !isTransfer && (
                         <Field label={isReceive ? t('stock_qty_received') : t('stock_qty')} required>
                             <Input type="number" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} className="font-mono" />
                         </Field>
                     )}
 
-                    {/* Serialized capture */}
+                    {/* Serialized capture — receive only */}
                     {selected && isSerial && (
                         <div className="space-y-2.5">
                             <div className="flex items-center justify-between">
@@ -534,6 +800,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     </Button>
                     <SaveButton loading={record.isPending} onClick={submit} disabled={!canSubmit}>
                         {isSerial ? `${t('stock_mv_receive')} (${okCount})` : undefined}
+                        {isTransfer && transferIsSerial && transferSerialIds.size > 0 ? `${t('stock_mv_transfer')} (${transferSerialIds.size})` : undefined}
                     </SaveButton>
                 </DialogFooter>
             </DialogContent>
