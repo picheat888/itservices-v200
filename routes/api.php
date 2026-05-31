@@ -48,6 +48,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
         ->middleware('permission:settings.branding')->name('api.settings.branding');
+    Route::put('settings/display', [SettingsController::class, 'updateDisplay'])
+        ->middleware('permission:settings.display')->name('api.settings.display');
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])
         ->middleware('permission:settings.branding')->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])
