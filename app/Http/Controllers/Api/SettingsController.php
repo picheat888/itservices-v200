@@ -91,6 +91,23 @@ class SettingsController extends Controller
         return $this->show();
     }
 
+    /** System-wide display theme (Settings -> Display). Gated by permission:settings.display. */
+    public function updateDisplay(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'theme_accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'theme_density' => ['sometimes', 'in:compact,normal,cozy'],
+            'theme_radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            AppSetting::put($key, (string) $value);
+        }
+        AuditLog::record('Updated display settings', implode(', ', array_keys($data)));
+
+        return $this->show();
+    }
+
     public function update(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->isSuper(), 403);

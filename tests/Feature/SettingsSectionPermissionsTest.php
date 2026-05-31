@@ -68,4 +68,27 @@ class SettingsSectionPermissionsTest extends TestCase
             ->postJson('/api/settings/logo', [])
             ->assertForbidden();
     }
+
+    public function test_display_requires_settings_display_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->putJson('/api/settings/display', ['theme_accent' => '#123456'])
+            ->assertForbidden();
+    }
+
+    public function test_granted_user_can_update_display(): void
+    {
+        $this->actingAs($this->userWith('settings.display'))
+            ->putJson('/api/settings/display', ['theme_accent' => '#123456', 'theme_density' => 'compact', 'theme_radius' => 12])
+            ->assertOk()
+            ->assertJsonPath('data.theme_accent', '#123456')
+            ->assertJsonPath('data.theme_radius', 12);
+    }
+
+    public function test_display_rejects_invalid_accent(): void
+    {
+        $this->actingAs($this->userWith('settings.display'))
+            ->putJson('/api/settings/display', ['theme_accent' => 'blue'])
+            ->assertStatus(422)->assertJsonValidationErrors('theme_accent');
+    }
 }
