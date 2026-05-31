@@ -1350,7 +1350,6 @@ function DashboardTab({
     onSelectWarehouse: (warehouse: string) => void;
     onSelectCategory: (category: string) => void;
 }) {
-    const { symbol } = useCurrency();
     const { data: movements = [] } = useStockMovements();
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     // Items below their minimum, out-of-stock first, are the reorder queue.
@@ -1532,11 +1531,6 @@ function DashboardTab({
                                             <div>
                                                 <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
                                                 {w.units}
-                                            </div>
-                                            <div>
-                                                <div className="text-muted-foreground text-[10px] uppercase">{t('stock_value')}</div>
-                                                {symbol}
-                                                {(w.value / 1000).toFixed(0)}K
                                             </div>
                                         </div>
                                     </button>

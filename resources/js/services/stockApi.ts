@@ -72,7 +72,7 @@ export const stockRequestApi = {
     create: (payload: StockRequestPayload) => mutate<StockRequest>('post', '/stock-requests', payload),
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),
     reject: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/reject`),
-    fulfill: (id: number, body?: { serial_ids?: number[] }) => mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
+    fulfill: (id: number, body?: { serial_ids?: number[]; from_warehouse?: string }) => mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
 };
 
 export const stockCountApi = {
