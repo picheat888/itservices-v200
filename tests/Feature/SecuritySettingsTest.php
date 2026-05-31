@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\CheckSessionTimeout;
 use App\Models\AppSetting;
+use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -60,6 +61,17 @@ class SecuritySettingsTest extends TestCase
             'session_timeout_minutes' => 30,
             'password_expiry_days' => 90,
         ])->assertForbidden();
+    }
+
+    public function test_granted_user_can_update_security_settings(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'settings.security', 'allowed' => true]);
+
+        $this->actingAs($user)
+            ->putJson('/api/settings/security', ['session_timeout_minutes' => 15, 'password_expiry_days' => 0])
+            ->assertOk()
+            ->assertJsonPath('data.session_timeout_minutes', 15);
     }
 
     public function test_change_password_rejects_wrong_current_password(): void
