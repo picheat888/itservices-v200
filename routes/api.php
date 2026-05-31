@@ -43,7 +43,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])->name('api.password.change');
-    Route::put('settings', [SettingsController::class, 'update'])->name('api.settings.update');
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
@@ -60,9 +59,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         ->middleware('permission:settings.branding')->name('api.settings.logo.delete');
     Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])->name('api.settings.security.update');
-    Route::get('settings/mail', [SettingsController::class, 'mailSettings'])->name('api.settings.mail');
-    Route::put('settings/mail', [SettingsController::class, 'updateMailSettings'])->name('api.settings.mail.update');
-    Route::post('settings/mail/test', [SettingsController::class, 'testMail'])->name('api.settings.mail.test');
+    Route::get('settings/mail', [SettingsController::class, 'mailSettings'])
+        ->middleware('permission:settings.email')->name('api.settings.mail');
+    Route::put('settings/mail', [SettingsController::class, 'updateMailSettings'])
+        ->middleware('permission:settings.email')->name('api.settings.mail.update');
+    Route::post('settings/mail/test', [SettingsController::class, 'testMail'])
+        ->middleware('permission:settings.email')->name('api.settings.mail.test');
 
     // Email Notifications (templates)
     Route::get('email-templates', [EmailTemplateController::class, 'index'])->name('api.email-templates.index');

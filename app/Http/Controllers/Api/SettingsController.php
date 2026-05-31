@@ -137,49 +137,6 @@ class SettingsController extends Controller
         return $this->show();
     }
 
-    public function update(Request $request): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
-
-        // 'sometimes' lets each Settings tab send only its own fields (Company,
-        // Branding, or Display) — only the keys present get validated & saved.
-        $data = $request->validate([
-            'brand_name' => ['sometimes', 'required', 'string', 'max:60'],
-            'brand_sub' => ['sometimes', 'nullable', 'string', 'max:60'],
-            'company_name' => ['sometimes', 'required', 'string', 'max:150'],
-            'legal_name' => ['sometimes', 'nullable', 'string', 'max:150'],
-            'tax_id' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'industry' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'country' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
-            'timezone' => ['sometimes', 'nullable', 'string', 'max:60'],
-            'theme_accent' => ['sometimes', 'string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'theme_density' => ['sometimes', 'in:compact,normal,cozy'],
-            'theme_radius' => ['sometimes', 'integer', 'min:0', 'max:20'],
-            // Asset status badge colors — a map of status => hex color.
-            'asset_status_colors' => ['sometimes', 'array'],
-            'asset_status_colors.*' => ['string', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            // Ticket SLA targets — a map of priority => { response (min), resolve (hours) }.
-            'ticket_sla' => ['sometimes', 'array'],
-            'ticket_sla.*.response' => ['required_with:ticket_sla', 'integer', 'min:1', 'max:10080'],
-            'ticket_sla.*.resolve' => ['required_with:ticket_sla', 'integer', 'min:1', 'max:8760'],
-        ]);
-
-        foreach ($data as $key => $value) {
-            // Map values are stored as JSON; everything else is a scalar string.
-            if ($key === 'asset_status_colors' || $key === 'ticket_sla') {
-                AppSetting::put($key, json_encode($value));
-
-                continue;
-            }
-            AppSetting::put($key, $value === null ? '' : (string) $value);
-        }
-        AuditLog::record('Updated settings', implode(', ', array_keys($data)));
-
-        return $this->show();
-    }
-
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
@@ -253,8 +210,6 @@ class SettingsController extends Controller
     /** Returns the SMTP settings with the password masked (never sent to the client). */
     public function mailSettings(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.edit_settings'), 403);
-
         $s = MailSetting::current();
 
         return response()->json([
@@ -274,8 +229,6 @@ class SettingsController extends Controller
     /** Updates the SMTP settings. A blank password leaves the stored one intact. */
     public function updateMailSettings(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.edit_settings'), 403);
-
         $data = $request->validate([
             'host' => ['nullable', 'string', 'max:255'],
             'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
@@ -302,8 +255,6 @@ class SettingsController extends Controller
     /** Sends a test email to the current user using the saved SMTP config. */
     public function testMail(Request $request, EmailNotificationService $service): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.edit_settings'), 403);
-
         if (! MailSetting::current()->isConfigured()) {
             return response()->json(['message' => 'SMTP is not configured. Please fill in Host and From Address first.', 'sent' => false], 422);
         }
