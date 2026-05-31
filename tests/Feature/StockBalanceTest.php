@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\StockBalance;
 use App\Models\StockItem;
+use App\Services\StockBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class StockBalanceTest extends TestCase
@@ -28,5 +30,61 @@ class StockBalanceTest extends TestCase
 
         $this->assertSame(8, (int) $item->balances()->sum('qty'));
         $this->assertCount(2, $item->balances);
+    }
+
+    public function test_add_creates_and_increments_balance(): void
+    {
+        $svc = app(StockBalanceService::class);
+        $item = $this->item();
+
+        $svc->add($item, 'WH-A', 5);
+        $svc->add($item, 'WH-A', 3);
+
+        $this->assertSame(8, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+    }
+
+    public function test_remove_decrements_and_rejects_negative(): void
+    {
+        $svc = app(StockBalanceService::class);
+        $item = $this->item();
+        $svc->add($item, 'WH-A', 5);
+
+        $svc->remove($item, 'WH-A', 2);
+        $this->assertSame(3, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+
+        $this->expectException(ValidationException::class);
+        $svc->remove($item, 'WH-A', 99);
+    }
+
+    public function test_move_transfers_between_warehouses(): void
+    {
+        $svc = app(StockBalanceService::class);
+        $item = $this->item();
+        $svc->add($item, 'WH-A', 10);
+
+        $svc->move($item, 'WH-A', 'WH-B', 4);
+
+        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-B'])->value('qty'));
+    }
+
+    public function test_move_rejects_same_warehouse(): void
+    {
+        $svc = app(StockBalanceService::class);
+        $item = $this->item();
+        $svc->add($item, 'WH-A', 10);
+
+        $this->expectException(ValidationException::class);
+        $svc->move($item, 'WH-A', 'WH-A', 1);
+    }
+
+    public function test_rebuild_for_seeds_single_balance_from_current_stock(): void
+    {
+        $svc = app(StockBalanceService::class);
+        $item = $this->item(12);
+
+        $svc->rebuildFor($item);
+
+        $this->assertSame(12, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
     }
 }
