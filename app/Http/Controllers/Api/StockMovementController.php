@@ -67,8 +67,8 @@ class StockMovementController extends Controller
             // serial_ids on a serialized transfer, so it is only required when neither is supplied.
             'qty' => ['required_without_all:serials,serial_ids', 'nullable', 'integer', 'min:1'],
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
-            'from_label' => ['nullable', 'string', 'max:200'],
-            'to_label' => ['nullable', 'string', 'max:200'],
+            'from_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:200'],
+            'to_label' => ['required_if:type,transfer', 'nullable', 'string', 'max:200'],
             'reference' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'moved_at' => ['nullable', 'date'],
@@ -204,7 +204,10 @@ class StockMovementController extends Controller
                 $item->save();
 
                 if ($inbound) {
-                    $this->balances->add($item, (string) $toWh, $qty);
+                    // Resolve the destination warehouse once; fall back to the item's home
+                    // warehouse so balances and serials always agree and never land at ''.
+                    $inboundWarehouse = $toWh ?: ($item->warehouse ?: 'Unassigned');
+                    $this->balances->add($item, $inboundWarehouse, $qty);
                     $this->lotService->addLot($item, $qty, $unitCost, $movement->id, $movement->moved_at);
                 } else {
                     $this->balances->remove($item, (string) $fromWh, $qty);
@@ -218,7 +221,7 @@ class StockMovementController extends Controller
                         'stock_movement_id' => $movement->id,
                         'serial' => $serial,
                         'status' => 'in_stock',
-                        'warehouse' => $toWh ?? $item->warehouse,
+                        'warehouse' => $inboundWarehouse,
                         'reference' => $data['reference'] ?? null,
                         'received_at' => $movement->moved_at,
                     ]);

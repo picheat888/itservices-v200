@@ -99,7 +99,7 @@ class StockWorkflowTest extends TestCase
         $user = $this->userWith(['stock.view', 'stock.receive']);
 
         $this->actingAs($user)
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 1, 'from_label' => 'WH-A', 'to_label' => 'WH-B'])
             ->assertForbidden();
 
         $this->actingAs($user)
