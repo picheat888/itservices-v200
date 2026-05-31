@@ -84,7 +84,8 @@ export function useStockRequestActions() {
         approve: useMutation({ mutationFn: (id: number) => stockRequestApi.approve(id), onSuccess: inv }),
         reject: useMutation({ mutationFn: (id: number) => stockRequestApi.reject(id), onSuccess: inv }),
         fulfill: useMutation({
-            mutationFn: (v: { id: number; serialIds?: number[] }) => stockRequestApi.fulfill(v.id, { serial_ids: v.serialIds }),
+            mutationFn: (v: { id: number; serialIds?: number[]; fromWarehouse?: string }) =>
+                stockRequestApi.fulfill(v.id, { serial_ids: v.serialIds, from_warehouse: v.fromWarehouse }),
             onSuccess: inv,
         }),
     };

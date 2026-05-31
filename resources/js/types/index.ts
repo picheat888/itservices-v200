@@ -334,6 +334,11 @@ export interface WarrantyType {
 
 export type StockItemStatus = 'ok' | 'low' | 'out' | 'over' | 'dead';
 
+export interface StockBalance {
+    warehouse: string;
+    qty: number;
+}
+
 export type StockSerialStatus = 'in_stock' | 'issued' | 'returned' | 'retired';
 
 export interface StockItemSerial {
@@ -379,6 +384,8 @@ export interface StockItem {
     serials?: StockItemSerial[];
     /** FIFO cost lots — only present on the single-item (show) response. */
     lots?: StockLot[];
+    /** Per-warehouse balances — only present on the single-item (show) response. */
+    balances?: StockBalance[];
 }
 
 export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';
@@ -412,6 +419,7 @@ export interface StockCount {
 
 export interface StockMovement {
     id: number;
+    doc_no: string | null;
     type: StockMovementType;
     stock_item_id: number;
     sku: string | null;
@@ -456,6 +464,6 @@ export interface StockSummary {
     low_items: StockItem[];
     over_items: StockItem[];
     dead_items: StockItem[];
-    by_warehouse: { warehouse: string; skus: number; units: number; value: number }[];
+    by_warehouse: { warehouse: string; skus: number; units: number }[];
     by_category: { category: string; skus: number; units: number }[];
 }
