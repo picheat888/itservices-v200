@@ -102,7 +102,7 @@ function App() {
                         <Route
                             path="settings"
                             element={
-                                <RequirePermission anyOf={['system.edit_settings']}>
+                                <RequirePermission anyOf={['settings.company', 'settings.branding', 'settings.display', 'settings.masterdata', 'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security']}>
                                     <SettingsPage />
                                 </RequirePermission>
                             }
