@@ -46,6 +46,12 @@ class StockItem extends Model
         return $this->hasMany(StockLot::class);
     }
 
+    /** @return HasMany<StockBalance, $this> */
+    public function balances(): HasMany
+    {
+        return $this->hasMany(StockBalance::class);
+    }
+
     /** FIFO stock value: Σ(qty_remaining × unit_cost) across open lots. */
     public function stockValue(): float
     {
