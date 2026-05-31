@@ -91,6 +91,20 @@ class SettingsController extends Controller
         return $this->show();
     }
 
+    /** Asset status badge colors (Settings -> Assets). Gated by permission:settings.assets. */
+    public function updateAssets(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'asset_status_colors' => ['required', 'array'],
+            'asset_status_colors.*' => ['string', 'regex:/^#[0-9a-fA-F]{6}$/'],
+        ]);
+
+        AppSetting::put('asset_status_colors', json_encode($data['asset_status_colors']));
+        AuditLog::record('Updated asset settings', 'asset_status_colors');
+
+        return $this->show();
+    }
+
     /** System-wide display theme (Settings -> Display). Gated by permission:settings.display. */
     public function updateDisplay(Request $request): JsonResponse
     {

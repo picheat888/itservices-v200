@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AppSetting;
+use App\Models\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -30,7 +31,7 @@ class AssetStatusColorsTest extends TestCase
     {
         $this->actingAs($this->super());
 
-        $this->putJson('/api/settings', [
+        $this->putJson('/api/settings/assets', [
             'asset_status_colors' => [
                 'deployed' => '#7c3aed',
                 'ready' => '#0ea5e9',
@@ -52,7 +53,7 @@ class AssetStatusColorsTest extends TestCase
     {
         $this->actingAs($this->super());
 
-        $this->putJson('/api/settings', [
+        $this->putJson('/api/settings/assets', [
             'asset_status_colors' => ['deployed' => 'red'],
         ])->assertStatus(422)->assertJsonValidationErrors('asset_status_colors.deployed');
     }
@@ -61,8 +62,19 @@ class AssetStatusColorsTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'user']));
 
-        $this->putJson('/api/settings', [
+        $this->putJson('/api/settings/assets', [
             'asset_status_colors' => ['deployed' => '#7c3aed'],
         ])->assertForbidden();
+    }
+
+    public function test_granted_user_can_update_asset_colors(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'settings.assets', 'allowed' => true]);
+
+        $this->actingAs($user)
+            ->putJson('/api/settings/assets', ['asset_status_colors' => ['deployed' => '#7c3aed']])
+            ->assertOk()
+            ->assertJsonPath('data.asset_status_colors.deployed', '#7c3aed');
     }
 }
