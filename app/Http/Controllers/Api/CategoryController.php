@@ -19,7 +19,6 @@ class CategoryController extends Controller
     /** Create a new category. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
@@ -35,7 +34,6 @@ class CategoryController extends Controller
     /** Update an existing category. */
     public function update(Request $request, Category $category): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
@@ -50,9 +48,8 @@ class CategoryController extends Controller
     }
 
     /** Delete a category. */
-    public function destroy(Request $request, Category $category): JsonResponse
+    public function destroy(Category $category): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted category', $category->name);
         $category->delete();
 

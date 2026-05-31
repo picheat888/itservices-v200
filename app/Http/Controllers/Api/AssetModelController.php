@@ -19,7 +19,6 @@ class AssetModelController extends Controller
     /** Create a new asset model. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'brand_id' => ['nullable', 'exists:brands,id'],
@@ -35,7 +34,6 @@ class AssetModelController extends Controller
     /** Update an existing asset model. */
     public function update(Request $request, AssetModel $assetModel): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'brand_id' => ['nullable', 'exists:brands,id'],
@@ -50,9 +48,8 @@ class AssetModelController extends Controller
     }
 
     /** Delete an asset model. */
-    public function destroy(Request $request, AssetModel $assetModel): JsonResponse
+    public function destroy(AssetModel $assetModel): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted asset model', $assetModel->name);
         $assetModel->delete();
 

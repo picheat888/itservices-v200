@@ -19,7 +19,6 @@ class WarrantyTypeController extends Controller
     /** Create a new warranty type. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:warranty_types,name'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -33,7 +32,6 @@ class WarrantyTypeController extends Controller
     /** Update an existing warranty type. */
     public function update(Request $request, WarrantyType $warrantyType): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:warranty_types,name,'.$warrantyType->id],
             'description' => ['nullable', 'string', 'max:255'],
@@ -46,9 +44,8 @@ class WarrantyTypeController extends Controller
     }
 
     /** Delete a warranty type. */
-    public function destroy(Request $request, WarrantyType $warrantyType): JsonResponse
+    public function destroy(WarrantyType $warrantyType): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted warranty type', $warrantyType->name);
         $warrantyType->delete();
 

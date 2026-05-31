@@ -85,17 +85,28 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
     Route::apiResource('departments', DepartmentController::class)->except(['show']);
-    Route::apiResource('locations', LocationController::class)->except(['show']);
+    // Master Data — reads open (consumed by Asset/Contract/Stock forms); writes gated by settings.masterdata.
+    Route::get('brands', [BrandController::class, 'index'])->name('api.brands.index');
+    Route::get('asset-models', [AssetModelController::class, 'index'])->name('api.asset-models.index');
+    Route::get('categories', [CategoryController::class, 'index'])->name('api.categories.index');
+    Route::get('vendors', [VendorController::class, 'index'])->name('api.vendors.index');
+    Route::get('warehouses', [WarehouseController::class, 'index'])->name('api.warehouses.index');
+    Route::get('units', [UnitController::class, 'index'])->name('api.units.index');
+    Route::get('stock-statuses', [StockStatusController::class, 'index'])->name('api.stock-statuses.index');
+    Route::get('warranty-types', [WarrantyTypeController::class, 'index'])->name('api.warranty-types.index');
+    Route::get('locations', [LocationController::class, 'index'])->name('api.locations.index');
 
-    // Master Data module
-    Route::apiResource('brands', BrandController::class)->except(['show']);
-    Route::apiResource('asset-models', AssetModelController::class)->except(['show']);
-    Route::apiResource('categories', CategoryController::class)->except(['show']);
-    Route::apiResource('vendors', VendorController::class)->except(['show']);
-    Route::apiResource('warehouses', WarehouseController::class)->except(['show']);
-    Route::apiResource('units', UnitController::class)->except(['show']);
-    Route::apiResource('stock-statuses', StockStatusController::class)->except(['show']);
-    Route::apiResource('warranty-types', WarrantyTypeController::class)->except(['show']);
+    Route::middleware('permission:settings.masterdata')->group(function () {
+        Route::apiResource('brands', BrandController::class)->except(['show', 'index']);
+        Route::apiResource('asset-models', AssetModelController::class)->except(['show', 'index']);
+        Route::apiResource('categories', CategoryController::class)->except(['show', 'index']);
+        Route::apiResource('vendors', VendorController::class)->except(['show', 'index']);
+        Route::apiResource('warehouses', WarehouseController::class)->except(['show', 'index']);
+        Route::apiResource('units', UnitController::class)->except(['show', 'index']);
+        Route::apiResource('stock-statuses', StockStatusController::class)->except(['show', 'index']);
+        Route::apiResource('warranty-types', WarrantyTypeController::class)->except(['show', 'index']);
+        Route::apiResource('locations', LocationController::class)->except(['show', 'index']);
+    });
 
     // Contract & Rental module
     Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
