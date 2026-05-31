@@ -10,7 +10,6 @@ import { useAuth, useUpdateProfile } from '@/hooks/use-auth';
 import { useEmployee } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Role } from '@/types';
 import { Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -78,7 +77,6 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     }, [open, user]);
 
     if (!user) return null;
-    const role = user.role as Role;
 
     const displayName = `${firstName} ${lastName}`.trim() || user.name;
     const previewUrl = photo ? URL.createObjectURL(photo) : user.photo_url;
@@ -165,7 +163,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         </div>
                         <div className="min-w-0">
                             <div className="truncate text-lg font-bold">{displayName}</div>
-                            <div className="truncate text-sm text-muted-foreground">{user.group_name ?? t(`role_${role}` as const)}</div>
+                            <div className="truncate text-sm text-muted-foreground">{user.group_name ?? user.role_label}</div>
                             {emp && (
                                 <div className="mt-1">
                                     {emp.status === 'resigned' ? (
