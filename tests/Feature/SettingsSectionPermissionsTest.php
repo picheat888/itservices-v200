@@ -91,4 +91,26 @@ class SettingsSectionPermissionsTest extends TestCase
             ->putJson('/api/settings/display', ['theme_accent' => 'blue'])
             ->assertStatus(422)->assertJsonValidationErrors('theme_accent');
     }
+
+    public function test_mail_settings_require_settings_email_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->getJson('/api/settings/mail')
+            ->assertForbidden();
+    }
+
+    public function test_granted_user_can_read_mail_settings(): void
+    {
+        $this->actingAs($this->userWith('settings.email'))
+            ->getJson('/api/settings/mail')
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['host', 'port', 'has_password', 'from_address']]);
+    }
+
+    public function test_legacy_combined_settings_route_is_gone(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->putJson('/api/settings', ['company_name' => 'X'])
+            ->assertStatus(405); // only GET /settings remains
+    }
 }
