@@ -145,7 +145,10 @@ function RolesTab() {
     const sections = PERM_SECTIONS.map((s) => ({ label: s.label, icon: s.icon, modules: s.modules.filter((m) => data.catalog[m]) })).filter(
         (s) => s.modules.length > 0,
     );
-    const knownModules = new Set(PERM_SECTIONS.flatMap((s) => s.modules));
+    // Modules surfaced by the fixed Administration cards (ADMIN_GROUPS) — e.g. the
+    // `settings` catalog module — are already presented under nav_admin, so exclude
+    // them from the trailing "Other" catch-all to avoid a duplicate card.
+    const knownModules = new Set([...PERM_SECTIONS.flatMap((s) => s.modules), ...ADMIN_GROUPS.map((g) => g.module)]);
     const leftover = Object.keys(data.catalog).filter((m) => !knownModules.has(m));
     if (leftover.length > 0) sections.push({ label: 'perm_other', icon: Shield, modules: leftover });
 
