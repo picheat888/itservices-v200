@@ -18,6 +18,7 @@ class StockMovementResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'doc_no' => $this->doc_no,
             'type' => $this->type,
             'stock_item_id' => $this->stock_item_id,
             'sku' => $this->whenLoaded('item', fn () => $this->item?->sku),
