@@ -36,7 +36,10 @@ export const navGroups: NavGroup[] = [
             { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: ['super', 'admin', 'hr'] },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-templates', icon: Mail, permission: 'system.configure_notifications' },
-            { id: 'settings', label: 'settings', to: '/settings', icon: Settings, permission: 'system.edit_settings' },
+            { id: 'settings', label: 'settings', to: '/settings', icon: Settings, anyOf: [
+                'settings.company', 'settings.branding', 'settings.display', 'settings.masterdata',
+                'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security',
+            ] },
         ],
     },
 ];
