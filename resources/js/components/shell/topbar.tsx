@@ -28,6 +28,11 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
     const current = navGroups.flatMap((g) => g.items).find((i) => i.to === pathname);
     const here = current ? t(current.label) : t('overall');
 
+    // Show the role's stored display name (role_label) sent by the API — works
+    // for both built-in roles and custom Role Templates. Falls back to the role
+    // key only when the label is missing (e.g. system accounts with no role).
+    const roleLabel = user?.role_label ?? role;
+
     return (
         <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
             <button
@@ -39,7 +44,7 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
             </button>
 
             <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">{t(`role_${role}` as const)}</span>
+                <span className="text-muted-foreground">{roleLabel}</span>
                 <span className="text-muted-foreground">/</span>
                 <span className="font-medium">{here}</span>
             </div>

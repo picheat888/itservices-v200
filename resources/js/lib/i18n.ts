@@ -15,12 +15,6 @@ const en: Dict = {
     filters: 'Filters',
     reset_filters: 'Clear filters',
 
-    // Roles
-    role_super: 'Super Administrator',
-    role_admin: 'IT Staff',
-    role_hr: 'HR Officer',
-    role_user: 'Employee',
-
     // Nav items
     overall: 'Dashboard',
     employees: 'Employees',
@@ -836,11 +830,6 @@ const th: Dict = {
     search_placeholder: 'ค้นหา…',
     filters: 'ตัวกรอง',
     reset_filters: 'ล้างตัวกรอง',
-
-    role_super: 'ผู้ดูแลระบบสูงสุด',
-    role_admin: 'เจ้าหน้าที่ไอที',
-    role_hr: 'เจ้าหน้าที่ฝ่ายบุคคล',
-    role_user: 'พนักงาน',
 
     overall: 'Dashboard',
     employees: 'พนักงาน',
