@@ -22,9 +22,19 @@ class EnsurePermissionMiddlewareTest extends TestCase
         return $request;
     }
 
+    public function test_guest_without_user_is_rejected(): void
+    {
+        $request = Request::create('/api/settings/company', 'PUT');
+
+        $this->expectException(HttpException::class);
+        (new EnsurePermission)->handle($request, fn () => response('ok'), 'settings.company');
+    }
+
     public function test_blocks_user_without_permission(): void
     {
-        $request = $this->requestFor(User::factory()->create(['role' => 'user']));
+        $user = User::factory()->create(['role' => 'user']);
+        $this->assertFalse($user->hasPermission('settings.company'));
+        $request = $this->requestFor($user);
 
         $this->expectException(HttpException::class);
         (new EnsurePermission)->handle($request, fn () => response('ok'), 'settings.company');
