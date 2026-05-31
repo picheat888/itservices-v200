@@ -41,12 +41,12 @@ export type CompanyPayload = Pick<
 // Branding — saved via PUT /settings/branding.
 export type BrandingPayload = Pick<SettingsData, 'brand_name' | 'brand_sub'>;
 
-// Asset status colors payload — system-wide, saved via the same PUT /settings endpoint.
+// Asset status colors payload — system-wide, saved via PUT /settings/assets.
 export interface AssetColorsPayload {
     asset_status_colors: AssetStatusColors;
 }
 
-// Display (theme) payload — system-wide, saved via the same PUT /settings endpoint.
+// Display (theme) payload — system-wide, saved via PUT /settings/display.
 export interface DisplayPayload {
     theme_accent: string;
     theme_density: 'compact' | 'normal' | 'cozy';

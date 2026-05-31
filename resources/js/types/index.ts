@@ -267,6 +267,7 @@ export interface NavItem {
     count?: number;
     roles?: Role[];
     permission?: string;
+    anyOf?: string[];
 }
 
 export interface NavGroup {
