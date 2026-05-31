@@ -2,9 +2,10 @@ import { currencySymbol } from '@/lib/currency';
 import {
     settingsApi,
     type AssetColorsPayload,
+    type BrandingPayload,
+    type CompanyPayload,
     type DisplayPayload,
     type SettingsData,
-    type SettingsPayload,
     type TicketSlaPayload,
 } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
@@ -112,9 +113,14 @@ function useSyncStore() {
     };
 }
 
-export function useUpdateSettings() {
+export function useUpdateCompany() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: SettingsPayload) => settingsApi.update(payload), onSuccess: sync });
+    return useMutation({ mutationFn: (payload: CompanyPayload) => settingsApi.updateCompany(payload), onSuccess: sync });
+}
+
+export function useUpdateBranding() {
+    const sync = useSyncStore();
+    return useMutation({ mutationFn: (payload: BrandingPayload) => settingsApi.updateBranding(payload), onSuccess: sync });
 }
 
 export function useUpdateDisplay() {

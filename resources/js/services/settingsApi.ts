@@ -32,18 +32,14 @@ export interface TicketSlaPayload {
     ticket_sla: TicketSlaTargets;
 }
 
-// Company/Branding payload — theme + logo + default role + asset colors are handled separately.
-export type SettingsPayload = Omit<
+// Company info — saved via PUT /settings/company.
+export type CompanyPayload = Pick<
     SettingsData,
-    | 'logo_url'
-    | 'default_employee_role'
-    | 'default_employee_role_label'
-    | 'theme_accent'
-    | 'theme_density'
-    | 'theme_radius'
-    | 'asset_status_colors'
-    | 'ticket_sla'
+    'company_name' | 'legal_name' | 'tax_id' | 'industry' | 'address' | 'country' | 'currency' | 'timezone'
 >;
+
+// Branding — saved via PUT /settings/branding.
+export type BrandingPayload = Pick<SettingsData, 'brand_name' | 'brand_sub'>;
 
 // Asset status colors payload — system-wide, saved via the same PUT /settings endpoint.
 export interface AssetColorsPayload {
@@ -86,27 +82,33 @@ export interface MailSettingsPayload {
 export const settingsApi = {
     get: () => http.get<ApiEnvelope<SettingsData>>('/settings').then((r) => r.data.data),
 
-    update: async (payload: SettingsPayload) => {
+    updateCompany: async (payload: CompanyPayload) => {
         await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/company', payload);
+        return data.data;
+    },
+
+    updateBranding: async (payload: BrandingPayload) => {
+        await ensureCsrf();
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/branding', payload);
         return data.data;
     },
 
     updateDisplay: async (payload: DisplayPayload) => {
         await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/display', payload);
         return data.data;
     },
 
     updateAssetColors: async (payload: AssetColorsPayload) => {
         await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/assets', payload);
         return data.data;
     },
 
     updateTicketSla: async (payload: TicketSlaPayload) => {
         await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings', payload);
+        const { data } = await http.put<ApiEnvelope<SettingsData>>('/settings/sla', payload);
         return data.data;
     },
 

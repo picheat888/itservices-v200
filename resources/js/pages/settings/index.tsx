@@ -34,12 +34,14 @@ import {
     useWarrantyTypes,
 } from '@/hooks/use-master-data';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
+import { useAuth } from '@/hooks/use-auth';
 import {
     useResetLogo,
     useSettings,
     useUpdateAssetColors,
+    useUpdateBranding,
+    useUpdateCompany,
     useUpdateDisplay,
-    useUpdateSettings,
     useUpdateTicketSla,
     useUploadLogo,
 } from '@/hooks/use-settings';
@@ -47,7 +49,8 @@ import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
-import { settingsApi, type MailSettingsPayload, type SecuritySettings, type SettingsPayload } from '@/services/settingsApi';
+import { NoAccess } from '@/components/auth/require-permission';
+import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -81,7 +84,10 @@ const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed
 // Bundled default web logo (public/logo.svg) — shown when no custom logo is set.
 const DEFAULT_LOGO = '/logo.svg';
 
-const emptyForm: SettingsPayload = {
+// Combined local form type covering both company and branding fields.
+type SettingsForm = CompanyPayload & BrandingPayload;
+
+const emptyForm: SettingsForm = {
     brand_name: '',
     brand_sub: '',
     company_name: '',
@@ -103,6 +109,7 @@ function sectionFromHash(): Section {
 
 export default function SettingsPage() {
     const t = useT();
+    const { can, user } = useAuth();
     const [section, setSection] = useState<Section>(sectionFromHash);
     const { data } = useSettings();
 
@@ -110,8 +117,8 @@ export default function SettingsPage() {
         setSection(s);
         window.location.hash = s;
     };
-    const update = useUpdateSettings();
-    const [form, setForm] = useState<SettingsPayload>(emptyForm);
+    const update = useUpdateCompany();
+    const [form, setForm] = useState<SettingsForm>(emptyForm);
 
     useEffect(() => {
         if (data) {
@@ -130,19 +137,37 @@ export default function SettingsPage() {
         }
     }, [data]);
 
-    const set = <K extends keyof SettingsPayload>(k: K, v: SettingsPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
+    const set = <K extends keyof SettingsForm>(k: K, v: SettingsForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-    const nav: { id: Section; label: string; icon: typeof Building2; ready?: boolean }[] = [
-        { id: 'company', label: t('set_company'), icon: Building2, ready: true },
-        { id: 'branding', label: t('set_branding'), icon: Sparkles, ready: true },
-        { id: 'display', label: t('set_display'), icon: MonitorCog, ready: true },
-        { id: 'master-data', label: t('set_master_data'), icon: Boxes, ready: true },
-        { id: 'email', label: t('set_email'), icon: Mail, ready: true },
-        { id: 'tickets', label: t('set_tickets'), icon: Ticket },
-        { id: 'assets', label: t('set_assets'), icon: Box, ready: true },
-        { id: 'workflow', label: t('set_workflow'), icon: Workflow },
-        { id: 'security', label: t('set_security'), icon: Shield },
+    /** Extracts only the company fields for the PUT /settings/company endpoint. */
+    const companyPayload = (): CompanyPayload => ({
+        company_name: form.company_name,
+        legal_name: form.legal_name,
+        tax_id: form.tax_id,
+        industry: form.industry,
+        address: form.address,
+        country: form.country,
+        currency: form.currency,
+        timezone: form.timezone,
+    });
+
+    const allNav: { id: Section; label: string; icon: typeof Building2; perm: string }[] = [
+        { id: 'company', label: t('set_company'), icon: Building2, perm: 'settings.company' },
+        { id: 'branding', label: t('set_branding'), icon: Sparkles, perm: 'settings.branding' },
+        { id: 'display', label: t('set_display'), icon: MonitorCog, perm: 'settings.display' },
+        { id: 'master-data', label: t('set_master_data'), icon: Boxes, perm: 'settings.masterdata' },
+        { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
+        { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
+        { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
+        { id: 'workflow', label: t('set_workflow'), icon: Workflow, perm: 'settings.workflows' },
+        { id: 'security', label: t('set_security'), icon: Shield, perm: 'settings.security' },
     ];
+    const nav = allNav.filter((n) => user?.role === 'super' || can(n.perm));
+
+    if (nav.length === 0) return <NoAccess />;
+
+    // If the hash/section points at a tab the user can't see, fall back to the first visible one.
+    const activeSection = nav.some((n) => n.id === section) ? section : nav[0].id;
 
     return (
         <div className="space-y-6">
@@ -161,7 +186,7 @@ export default function SettingsPage() {
                                 onClick={() => changeSection(n.id)}
                                 className={cn(
                                     'flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
-                                    section === n.id ? 'bg-brand/10 text-brand font-semibold' : 'text-muted-foreground hover:bg-accent/50',
+                                    activeSection === n.id ? 'bg-brand/10 text-brand font-semibold' : 'text-muted-foreground hover:bg-accent/50',
                                 )}
                             >
                                 <Icon className="h-4 w-4" />
@@ -172,17 +197,17 @@ export default function SettingsPage() {
                 </nav>
 
                 <div className="p-6">
-                    {section === 'display' && <DisplayTab />}
-                    {section === 'company' && (
-                        <CompanyTab form={form} set={set} onSave={() => update.mutate(form)} saving={update.isPending} saved={update.isSuccess} />
+                    {activeSection === 'display' && <DisplayTab />}
+                    {activeSection === 'company' && (
+                        <CompanyTab form={form} set={set} onSave={() => update.mutate(companyPayload())} saving={update.isPending} saved={update.isSuccess} />
                     )}
-                    {section === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
-                    {section === 'master-data' && <MasterDataTab />}
-                    {section === 'email' && <EmailTab />}
-                    {section === 'assets' && <AssetsTab />}
-                    {section === 'tickets' && <TicketsTab />}
-                    {section === 'security' && <SecurityTab />}
-                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(section) && <ComingSoon />}
+                    {activeSection === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
+                    {activeSection === 'master-data' && <MasterDataTab />}
+                    {activeSection === 'email' && <EmailTab />}
+                    {activeSection === 'assets' && <AssetsTab />}
+                    {activeSection === 'tickets' && <TicketsTab />}
+                    {activeSection === 'security' && <SecurityTab />}
+                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(activeSection) && <ComingSoon />}
                 </div>
             </Card>
         </div>
@@ -1176,7 +1201,7 @@ function SecurityPolicyRow({
 }
 
 interface SetFn {
-    <K extends keyof SettingsPayload>(k: K, v: SettingsPayload[K]): void;
+    <K extends keyof SettingsForm>(k: K, v: SettingsForm[K]): void;
 }
 
 function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
@@ -1385,7 +1410,7 @@ function CompanyTab({
     saving,
     saved,
 }: {
-    form: SettingsPayload;
+    form: SettingsForm;
     set: SetFn;
     onSave: () => void;
     saving: boolean;
@@ -1456,9 +1481,9 @@ function CompanyTab({
     );
 }
 
-function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn; logoUrl: string | null }) {
+function BrandingTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; logoUrl: string | null }) {
     const t = useT();
-    const update = useUpdateSettings();
+    const update = useUpdateBranding();
     const uploadLogo = useUploadLogo();
     const resetLogo = useResetLogo();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -1508,7 +1533,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsPayload; set: SetFn
         } else if (file) {
             await uploadLogo.mutateAsync(file);
         }
-        await update.mutateAsync(form);
+        await update.mutateAsync({ brand_name: form.brand_name, brand_sub: form.brand_sub });
         setFile(null);
         setSaved(true);
     };

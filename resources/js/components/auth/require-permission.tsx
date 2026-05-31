@@ -35,7 +35,7 @@ export function RequirePermission({ anyOf, roles, children }: { anyOf?: string[]
  * the dashboard; the manual button leaves immediately. The timer is cleared on
  * unmount to avoid a stray redirect.
  */
-function NoAccess() {
+export function NoAccess() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const navigate = useNavigate();
