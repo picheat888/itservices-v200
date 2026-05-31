@@ -70,17 +70,24 @@ class StockWorkflowTest extends TestCase
         $this->assertSame(3, $item->fresh()->current_stock);
     }
 
-    public function test_outbound_transfer_decreases_stock_and_blocks_when_insufficient(): void
+    public function test_transfer_is_neutral_moves_balance_and_blocks_when_source_insufficient(): void
     {
-        $item = $this->item(3);
+        $item = $this->item(0);
 
+        // Seed the source warehouse via a receive (creates a balance at WH-HQ).
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2])
+            ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-HQ'])
             ->assertCreated();
-        $this->assertSame(1, $item->fresh()->current_stock);
 
+        // Transfer 2 from WH-HQ → WH-2: total on-hand is unchanged (neutral).
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5])
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
+            ->assertCreated();
+        $this->assertSame(3, $item->fresh()->current_stock);
+
+        // Only 1 left at WH-HQ → transferring 5 from there is rejected.
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('qty');
     }
