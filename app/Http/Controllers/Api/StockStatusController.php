@@ -19,7 +19,6 @@ class StockStatusController extends Controller
     /** Create a new stock status. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:stock_statuses,name'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -33,7 +32,6 @@ class StockStatusController extends Controller
     /** Update an existing stock status. */
     public function update(Request $request, StockStatus $stockStatus): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:stock_statuses,name,'.$stockStatus->id],
             'description' => ['nullable', 'string', 'max:255'],
@@ -46,9 +44,8 @@ class StockStatusController extends Controller
     }
 
     /** Delete a stock status. */
-    public function destroy(Request $request, StockStatus $stockStatus): JsonResponse
+    public function destroy(StockStatus $stockStatus): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted stock status', $stockStatus->name);
         $stockStatus->delete();
 

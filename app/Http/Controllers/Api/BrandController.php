@@ -19,7 +19,6 @@ class BrandController extends Controller
     /** Create a new brand. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:brands,name'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -33,7 +32,6 @@ class BrandController extends Controller
     /** Update an existing brand. */
     public function update(Request $request, Brand $brand): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:brands,name,'.$brand->id],
             'description' => ['nullable', 'string', 'max:255'],
@@ -46,9 +44,8 @@ class BrandController extends Controller
     }
 
     /** Delete a brand. */
-    public function destroy(Request $request, Brand $brand): JsonResponse
+    public function destroy(Brand $brand): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted brand', $brand->name);
         $brand->delete();
 

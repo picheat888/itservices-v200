@@ -19,7 +19,6 @@ class UnitController extends Controller
     /** Create a new unit. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:units,name'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -33,7 +32,6 @@ class UnitController extends Controller
     /** Update an existing unit. */
     public function update(Request $request, Unit $unit): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120', 'unique:units,name,'.$unit->id],
             'description' => ['nullable', 'string', 'max:255'],
@@ -46,9 +44,8 @@ class UnitController extends Controller
     }
 
     /** Delete a unit. */
-    public function destroy(Request $request, Unit $unit): JsonResponse
+    public function destroy(Unit $unit): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted unit', $unit->name);
         $unit->delete();
 

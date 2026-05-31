@@ -19,7 +19,6 @@ class VendorController extends Controller
     /** Create a new vendor. */
     public function store(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['required', 'string', 'max:120'],
@@ -37,7 +36,6 @@ class VendorController extends Controller
     /** Update an existing vendor. */
     public function update(Request $request, Vendor $vendor): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['required', 'string', 'max:120'],
@@ -54,9 +52,8 @@ class VendorController extends Controller
     }
 
     /** Delete a vendor. */
-    public function destroy(Request $request, Vendor $vendor): JsonResponse
+    public function destroy(Vendor $vendor): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
         AuditLog::record('Deleted vendor', $vendor->name);
         $vendor->delete();
 

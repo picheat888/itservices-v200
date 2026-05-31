@@ -26,6 +26,14 @@ class MasterDataTest extends TestCase
         return User::factory()->create(['role' => 'user']);
     }
 
+    private function masterDataUser(): User
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'settings.masterdata', 'allowed' => true]);
+
+        return $user;
+    }
+
     // ── Guest / unauthenticated ──────────────────────────────
 
     public function test_guest_cannot_access_brands(): void
@@ -329,15 +337,21 @@ class MasterDataTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_non_super_user_granted_manage_warehouse_can_create(): void
+    public function test_user_granted_masterdata_can_create_warehouse(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
-        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'stock.manage_warehouse', 'allowed' => true]);
-
-        $this->actingAs($user)
+        $this->actingAs($this->masterDataUser())
             ->postJson('/api/warehouses', ['name' => 'Keeper Store'])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Keeper Store');
+    }
+
+    public function test_reads_stay_open_without_masterdata_permission(): void
+    {
+        Brand::create(['name' => 'HP']);
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->getJson('/api/brands')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_super_can_update_warehouse(): void
