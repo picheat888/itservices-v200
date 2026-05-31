@@ -63,7 +63,6 @@ const ACTIONS: Record<string, L> = {
     'system.manage_permissions': { en: 'Manage permissions', th: 'จัดการสิทธิ์การใช้งาน' },
     'system.manage_roles': { en: 'Manage roles', th: 'จัดการบทบาท' },
     'system.manage_groups': { en: 'Manage groups', th: 'จัดการกลุ่มผู้ใช้' },
-    'system.edit_settings': { en: 'Edit settings', th: 'แก้ไขการตั้งค่าระบบ' },
     'system.configure_notifications': { en: 'Configure notifications', th: 'ตั้งค่าการแจ้งเตือน' },
     'system.view_audit': { en: 'View audit log', th: 'ดูบันทึกการตรวจสอบ' },
     // Reports module — not built yet (all coming soon).
@@ -77,11 +76,16 @@ const ACTIONS: Record<string, L> = {
     'email.enable': { en: 'Enable / disable templates', th: 'เปิด / ปิดเทมเพลต' },
     'email.create': { en: 'Create new template', th: 'สร้างเทมเพลตใหม่' },
     'email.test': { en: 'Send test email', th: 'ส่งอีเมลทดสอบ' },
-    // Settings — granular enforcement coming soon (edit_settings is live).
-    'settings.branding': { en: 'Branding & theme', th: 'ปรับแบรนด์ / ธีม' },
-    'settings.sla': { en: 'SLA & statuses', th: 'แก้ไข SLA และสถานะ' },
-    'settings.masterdata': { en: 'Manage Master Data', th: 'จัดการ Master Data' },
-    'settings.integrations': { en: 'External integrations', th: 'การเชื่อมต่อระบบภายนอก' },
+    // Settings — granular per-section permissions
+    'settings.company': { en: 'Company information', th: 'ข้อมูลบริษัท' },
+    'settings.branding': { en: 'Branding & logo', th: 'แบรนด์ & โลโก้' },
+    'settings.display': { en: 'Display theme', th: 'ธีมการแสดงผล' },
+    'settings.masterdata': { en: 'Master Data', th: 'จัดการ Master Data' },
+    'settings.email': { en: 'Email (SMTP) settings', th: 'ตั้งค่าอีเมล (SMTP)' },
+    'settings.sla': { en: 'Ticket & SLA', th: 'ตั๋ว & SLA' },
+    'settings.assets': { en: 'Asset settings', th: 'ตั้งค่าทรัพย์สิน' },
+    'settings.workflows': { en: 'Workflow settings', th: 'ตั้งค่าเวิร์กโฟลว์' },
+    'settings.security': { en: 'Security policy', th: 'นโยบายความปลอดภัย' },
 };
 
 export const moduleLabel = (key: string, lang: Lang) => MODULES[key]?.[lang] ?? key;
@@ -128,8 +132,9 @@ const LIVE = new Set<string>([
     'system.manage_permissions',
     'system.manage_roles',
     'system.manage_groups',
-    'system.edit_settings',
     'system.view_audit',
+    'settings.company', 'settings.branding', 'settings.display', 'settings.masterdata',
+    'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security',
 ]);
 
 export const isLivePermission = (key: string) => LIVE.has(key);

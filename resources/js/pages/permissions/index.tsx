@@ -84,7 +84,7 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
     { module: 'email_templates', keys: ['system.configure_notifications', 'email.edit', 'email.enable', 'email.create', 'email.test'] },
-    { module: 'settings', keys: ['system.edit_settings', 'settings.branding', 'settings.sla', 'settings.masterdata', 'settings.integrations'] },
+    { module: 'settings', keys: ['settings.company', 'settings.branding', 'settings.display', 'settings.masterdata', 'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security'] },
     { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
 
