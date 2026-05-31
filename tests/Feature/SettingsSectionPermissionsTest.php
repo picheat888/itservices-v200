@@ -44,4 +44,28 @@ class SettingsSectionPermissionsTest extends TestCase
             ->putJson('/api/settings/company', ['company_name' => 'Acme'])
             ->assertOk();
     }
+
+    public function test_branding_requires_settings_branding_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->putJson('/api/settings/branding', ['brand_name' => 'IT'])
+            ->assertForbidden();
+    }
+
+    public function test_granted_user_can_update_branding(): void
+    {
+        $this->actingAs($this->userWith('settings.branding'))
+            ->putJson('/api/settings/branding', ['brand_name' => 'Inaba IT', 'brand_sub' => 'Desk'])
+            ->assertOk()
+            ->assertJsonPath('data.brand_name', 'Inaba IT');
+
+        $this->assertSame('Inaba IT', AppSetting::get('brand_name'));
+    }
+
+    public function test_logo_upload_requires_settings_branding_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']))
+            ->postJson('/api/settings/logo', [])
+            ->assertForbidden();
+    }
 }

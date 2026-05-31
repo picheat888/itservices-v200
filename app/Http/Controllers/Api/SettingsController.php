@@ -75,6 +75,22 @@ class SettingsController extends Controller
         return $this->show();
     }
 
+    /** Branding name/subtitle (Settings -> Branding). Logo upload/delete are separate routes, same permission. */
+    public function updateBranding(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'brand_name' => ['sometimes', 'required', 'string', 'max:60'],
+            'brand_sub' => ['sometimes', 'nullable', 'string', 'max:60'],
+        ]);
+
+        foreach ($data as $key => $value) {
+            AppSetting::put($key, $value === null ? '' : (string) $value);
+        }
+        AuditLog::record('Updated branding settings', implode(', ', array_keys($data)));
+
+        return $this->show();
+    }
+
     public function update(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->isSuper(), 403);
@@ -120,8 +136,6 @@ class SettingsController extends Controller
 
     public function uploadLogo(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
-
         $request->validate([
             // SVG mime is image/svg+xml; png covers raster. Max 2MB per the design.
             'logo' => ['required', 'file', 'mimes:png,svg,svg+xml', 'max:2048'],
@@ -142,8 +156,6 @@ class SettingsController extends Controller
     /** Removes the custom logo and reverts to the text-based default. */
     public function deleteLogo(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->isSuper(), 403);
-
         if ($old = AppSetting::get('logo_path')) {
             Storage::disk('public')->delete($old);
             AppSetting::put('logo_path', null);

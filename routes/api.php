@@ -46,8 +46,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('settings', [SettingsController::class, 'update'])->name('api.settings.update');
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
         ->middleware('permission:settings.company')->name('api.settings.company');
-    Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])->name('api.settings.logo');
-    Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])->name('api.settings.logo.delete');
+    Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
+        ->middleware('permission:settings.branding')->name('api.settings.branding');
+    Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])
+        ->middleware('permission:settings.branding')->name('api.settings.logo');
+    Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])
+        ->middleware('permission:settings.branding')->name('api.settings.logo.delete');
     Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])->name('api.settings.security.update');
     Route::get('settings/mail', [SettingsController::class, 'mailSettings'])->name('api.settings.mail');
