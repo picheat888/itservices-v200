@@ -48,6 +48,11 @@ class StockItemResource extends JsonResource
                 'reference' => $s->reference,
                 'received_at' => $s->received_at?->toDateTimeString(),
             ])),
+            // Per-warehouse balances (eager-loaded on show). Used in the detail modal.
+            'balances' => $this->whenLoaded('balances', fn () => $this->balances->map(fn ($b) => [
+                'warehouse' => $b->warehouse,
+                'qty' => $b->qty,
+            ])->values()),
             // FIFO cost lots (eager-loaded). `value` is the remaining-on-hand worth of the lot.
             'lots' => $this->whenLoaded('lots', fn () => $this->lots->map(fn ($l) => [
                 'id' => $l->id,

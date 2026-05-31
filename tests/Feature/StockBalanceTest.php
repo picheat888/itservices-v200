@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\StockBalance;
 use App\Models\StockItem;
+use App\Models\User;
 use App\Services\StockBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -76,6 +77,21 @@ class StockBalanceTest extends TestCase
 
         $this->expectException(ValidationException::class);
         $svc->move($item, 'WH-A', 'WH-A', 1);
+    }
+
+    public function test_summary_groups_units_by_balance_warehouse(): void
+    {
+        $user = User::factory()->create(['role' => 'super']);
+        $item = $this->item(0);
+        app(StockBalanceService::class)->add($item, 'WH-A', 7);
+        app(StockBalanceService::class)->add($item, 'WH-B', 3);
+        $item->update(['current_stock' => 10]);
+
+        $res = $this->actingAs($user)->getJson('/api/stock-items/summary')->assertOk();
+        $byWh = collect($res->json('by_warehouse'))->keyBy('warehouse');
+
+        $this->assertSame(7, $byWh['WH-A']['units']);
+        $this->assertSame(3, $byWh['WH-B']['units']);
     }
 
     public function test_rebuild_for_seeds_single_balance_from_current_stock(): void
