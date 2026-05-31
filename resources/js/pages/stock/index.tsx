@@ -723,15 +723,24 @@ function MovementsTab() {
 function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
     const { data: requests = [], isLoading: requestsLoading } = useStockRequests();
+    const { data: warehouses = [] } = useWarehouses();
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     const [issueSerialIds, setIssueSerialIds] = useState<number[]>([]);
+    /** Source warehouse to deduct from when fulfilling; seeded from the item's home warehouse. */
+    const [fulfillFromWarehouse, setFulfillFromWarehouse] = useState<string>('');
     // Live item detail (on-hand + per-unit serials) for the request being fulfilled.
     const { data: fulfillItem } = useStockItem(fulfillReq?.stock_item_id ?? null);
     // Reset the serial selection each time a different request opens.
     useEffect(() => {
         setIssueSerialIds([]);
     }, [fulfillReq?.id]);
+    // Seed the source warehouse from the item's home warehouse once detail loads.
+    useEffect(() => {
+        if (fulfillItem?.warehouse) {
+            setFulfillFromWarehouse(fulfillItem.warehouse);
+        }
+    }, [fulfillReq?.id, fulfillItem?.warehouse]);
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -830,7 +839,10 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
     const fulfillOnHand = fulfillItem?.current_stock ?? 0;
     const fulfillShort = !!fulfillReq && fulfillOnHand < fulfillReq.qty;
     const fulfillSerialized = !!fulfillItem?.track_serial;
-    const fulfillInStock = (fulfillItem?.serials ?? []).filter((s) => s.status === 'in_stock');
+    // Scope available serials to in_stock units in the selected source warehouse.
+    const fulfillInStock = (fulfillItem?.serials ?? []).filter(
+        (s) => s.status === 'in_stock' && (!fulfillFromWarehouse || s.warehouse === fulfillFromWarehouse),
+    );
     const fulfillSerialOk = !fulfillSerialized || (!!fulfillReq && issueSerialIds.length === fulfillReq.qty);
     const toggleIssueSerial = (id: number) =>
         setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -864,6 +876,20 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                                 <div className="text-muted-foreground font-mono text-xs">
                                     {fulfillReq.sku} · {t('stock_requester')}: {fulfillReq.requester_name}
                                 </div>
+                            </div>
+
+                            {/* Source warehouse picker — determines which warehouse's balance is deducted */}
+                            <div>
+                                <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('stock_warehouse')}</div>
+                                <SearchableSelect
+                                    value={fulfillFromWarehouse}
+                                    onChange={(v) => {
+                                        setFulfillFromWarehouse(v);
+                                        // Clear serial selection when the source warehouse changes.
+                                        setIssueSerialIds([]);
+                                    }}
+                                    options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                                />
                             </div>
 
                             {/* Stock impact read as an equation: current − issued = new on-hand */}
@@ -950,7 +976,11 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                             onClick={() =>
                                 fulfillReq &&
                                 fulfill.mutate(
-                                    { id: fulfillReq.id, serialIds: fulfillSerialized ? issueSerialIds : undefined },
+                                    {
+                                        id: fulfillReq.id,
+                                        serialIds: fulfillSerialized ? issueSerialIds : undefined,
+                                        fromWarehouse: fulfillFromWarehouse || undefined,
+                                    },
                                     { onError, onSuccess: () => setFulfillReq(null) },
                                 )
                             }
