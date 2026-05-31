@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Support\Permissions;
 use Tests\TestCase;
 
-class PermissionCatalogTest extends TestCase
+/** Tests the settings permission group and the removal of system.edit_settings. */
+class SettingsPermissionsTest extends TestCase
 {
-    public function test_settings_module_has_nine_granular_keys(): void
+    public function test_settings_module_exposes_expected_keys(): void
     {
         $expected = [
             'settings.company', 'settings.branding', 'settings.display',
@@ -18,6 +19,9 @@ class PermissionCatalogTest extends TestCase
         foreach ($expected as $key) {
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
+
+        $settingsKeys = array_filter(Permissions::all(), fn ($key) => str_starts_with($key, 'settings.'));
+        $this->assertCount(9, $settingsKeys);
     }
 
     public function test_legacy_edit_settings_key_is_removed(): void
