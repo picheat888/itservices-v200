@@ -300,9 +300,11 @@ class StockMovementController extends Controller
                 'stock_item_id' => $item->id,
                 'qty' => $qty,
                 'unit_cost' => $unitCost,
-                'from_label' => $fromWh,
+                // A return carries neither a source label nor an external reference
+                // (only the destination warehouse matters), so drop them for that type.
+                'from_label' => $type === 'return' ? null : $fromWh,
                 'to_label' => $toWh,
-                'reference' => $data['reference'] ?? null,
+                'reference' => $type === 'return' ? null : ($data['reference'] ?? null),
                 'recorded_by' => $recordedBy,
                 'user_id' => $userId,
                 'notes' => $data['notes'] ?? null,
@@ -345,7 +347,7 @@ class StockMovementController extends Controller
                     $this->balances->add($item, $inboundWarehouse, $qty);
 
                     if ($type === 'return' && $item->track_serial && $serialIds !== []) {
-                        $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $fromWh, $inboundLotCost);
+                        $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $inboundLotCost);
                     } else {
                         $this->lotService->addLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
                     }
@@ -394,7 +396,7 @@ class StockMovementController extends Controller
      *
      * @param  array<int>  $serialIds
      */
-    private function returnSerials(StockItem $item, array $serialIds, string $warehouse, StockMovement $movement, ?string $recordedBy, ?int $userId, ?string $fromLabel, ?float $fallbackCost = null): void
+    private function returnSerials(StockItem $item, array $serialIds, string $warehouse, StockMovement $movement, ?string $recordedBy, ?int $userId, ?float $fallbackCost = null): void
     {
         $serials = StockItemSerial::with('movement')
             ->whereIn('id', $serialIds)
@@ -421,9 +423,7 @@ class StockMovementController extends Controller
         foreach ($serials as $row) {
             StockItemSerialEvent::log($row, 'returned', [
                 'stock_movement_id' => $movement->id,
-                'reference' => $movement->reference,
                 'warehouse' => $warehouse,
-                'from_label' => $fromLabel,
                 'user_id' => $userId,
                 'recorded_by' => $recordedBy,
                 'occurred_at' => $movement->moved_at,
