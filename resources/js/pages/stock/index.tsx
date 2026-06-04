@@ -1,5 +1,6 @@
 import { Column, DataTable } from '@/components/shared/data-table';
 import { FilterPopover } from '@/components/shared/filter-popover';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { MovementDrawer } from '@/components/stock/movement-drawer';
 import { RequestDrawer } from '@/components/stock/request-drawer';
@@ -9,15 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { SearchableSelect } from '@/components/shared/searchable-select';
 import { useAuth } from '@/hooks/use-auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
 import { useCurrency, useDateTime } from '@/hooks/use-settings';
 import {
+    useMovementSerials,
     useStockCount,
     useStockCountMutations,
     useStockCounts,
     useStockItem,
+    useStockItemMutations,
     useStockItems,
     useStockMovements,
     useStockRequestActions,
@@ -26,7 +28,7 @@ import {
 } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { Role, StockItem, StockItemStatus, StockMovementType, StockRequest, StockRequestStatus } from '@/types';
+import type { Role, StockCountAdjustMode, StockItem, StockItemStatus, StockMovementType, StockRequest, StockRequestStatus } from '@/types';
 import {
     AlertTriangle,
     Archive,
@@ -38,14 +40,19 @@ import {
     Check,
     ClipboardList,
     FilePlus2,
+    FileText,
     Layers,
+    Loader2,
     Plus,
+    Printer,
     RotateCcw,
     Search,
     Send,
     SquarePen,
+    Trash2,
     Warehouse,
     X,
+    Zap,
 } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -94,7 +101,10 @@ function StockBar({ item }: { item: StockItem }) {
         <div className="w-full min-w-[160px] pb-0.5">
             <div className="bg-muted relative h-1.5 w-full rounded-full">
                 {/* Healthy band between the fixed min and max gridlines. */}
-                <div className="absolute inset-y-0 rounded-full bg-emerald-500/20" style={{ left: `${BAR_MIN_X}%`, width: `${BAR_MAX_X - BAR_MIN_X}%` }} />
+                <div
+                    className="absolute inset-y-0 rounded-full bg-emerald-500/20"
+                    style={{ left: `${BAR_MIN_X}%`, width: `${BAR_MAX_X - BAR_MIN_X}%` }}
+                />
                 <div className="absolute -inset-y-0.5 w-px bg-amber-500" style={{ left: `${BAR_MIN_X}%` }} />
                 <div className="absolute -inset-y-0.5 w-px bg-blue-500" style={{ left: `${BAR_MAX_X}%` }} />
                 <div className={cn('absolute inset-y-0 left-0 rounded-full', fill)} style={{ width: `${curPct}%` }} />
@@ -210,6 +220,44 @@ export default function StockPage() {
     const { data: requests = [] } = useStockRequests();
     const pendingRequests = requests.filter((r) => r.status === 'pending').length;
 
+    const { remove } = useStockItemMutations();
+
+    // Delete an empty SKU after a confirm. Only items with 0 on-hand and 0 value
+    // are deletable (the button is disabled otherwise); the server enforces this too.
+    const confirmDelete = async (i: StockItem) => {
+        const res = await Swal.fire({
+            title: t('stock_delete_item'),
+            html: `<div class="font-mono text-sm">${i.sku}</div><div class="text-sm">${i.name}</div><div class="mt-2 text-xs text-muted-foreground">${t('stock_delete_confirm')}</div>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: t('delete'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            reverseButtons: true,
+        });
+        if (res.isConfirmed) {
+            remove.mutate(i.id, {
+                onError: (e) => {
+                    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+                    Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: msg ?? 'Something went wrong.',
+            // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
+            didOpen: () => {
+                const container = Swal.getContainer();
+                if (container) {
+                    container.style.pointerEvents = 'auto';
+                }
+            },
+        });
+                },
+            });
+        }
+    };
+
     const { symbol } = useCurrency();
     const fmtK = (n: number) => `${symbol}${(n / 1000).toFixed(0)}K`;
 
@@ -228,7 +276,6 @@ export default function StockPage() {
             ),
         },
         { key: 'category', header: t('stock_category'), render: (i) => <span className="text-sm">{i.category ?? '—'}</span> },
-        { key: 'warehouse', header: t('stock_warehouse'), render: (i) => <span className="text-sm">{i.warehouse ?? '—'}</span> },
         { key: 'bar', header: `${t('stock_stock')} (Min / Max)`, className: 'min-w-[180px]', render: (i) => <StockBar item={i} /> },
         {
             key: 'current',
@@ -252,23 +299,40 @@ export default function StockPage() {
             key: 'actions',
             header: '',
             align: 'right',
-            render: (i) => (
-                <div className="flex justify-end gap-1">
-                    {canManage && (
-                        <button
-                            // Stop the click from bubbling to the row (which opens the detail view).
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setEditItem(i);
-                            }}
-                            title={t('stock_edit_item')}
-                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <SquarePen className="h-4 w-4" />
-                        </button>
-                    )}
-                </div>
-            ),
+            render: (i) => {
+                // An item is removable only when it holds no stock and carries no value.
+                const deletable = i.current_stock === 0 && i.total_value === 0;
+                return (
+                    <div className="flex justify-end gap-1">
+                        {canManage && (
+                            <button
+                                // Stop the click from bubbling to the row (which opens the detail view).
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditItem(i);
+                                }}
+                                title={t('stock_edit_item')}
+                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <SquarePen className="h-4 w-4" />
+                            </button>
+                        )}
+                        {can('delete') && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (deletable) confirmDelete(i);
+                                }}
+                                disabled={!deletable}
+                                title={deletable ? t('stock_delete_item') : t('stock_delete_blocked')}
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md disabled:pointer-events-none disabled:opacity-30"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        )}
+                    </div>
+                );
+            },
         },
     ];
 
@@ -497,7 +561,13 @@ export default function StockPage() {
                                 </div>
                             )}
 
-                            <DataTable columns={columns} rows={items} rowKey={(i) => i.id} onRowClick={(i) => setViewId(i.id)} loading={itemsLoading} />
+                            <DataTable
+                                columns={columns}
+                                rows={items}
+                                rowKey={(i) => i.id}
+                                onRowClick={(i) => setViewId(i.id)}
+                                loading={itemsLoading}
+                            />
                         </div>
                     )}
 
@@ -565,8 +635,15 @@ function MovementsTab() {
     const [type, setType] = useState('all');
     const { data: movements = [], isLoading: movementsLoading } = useStockMovements(type === 'all' ? undefined : type);
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
+    // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
+    const { data: moveSerials = [] } = useMovementSerials(viewMove?.id ?? null);
 
     const columns: Column<(typeof movements)[number]>[] = [
+        {
+            key: 'doc_no',
+            header: t('stock_doc_no'),
+            render: (m) => <span className="font-mono text-xs font-semibold">{m.doc_no ?? '—'}</span>,
+        },
         { key: 'moved_at', header: t('audit_time'), render: (m) => <span className="font-mono text-xs">{fmtDateTime(m.moved_at)}</span> },
         {
             key: 'type',
@@ -634,23 +711,40 @@ function MovementsTab() {
                             return (
                                 <>
                                     <DialogHeader>
-                                        <DialogTitle className="flex items-center gap-2.5">
-                                            <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', MV_TONE_BG[meta.tone])}>
-                                                <Icon className="h-[18px] w-[18px]" />
+                                        <DialogTitle className="flex items-start gap-3 pt-2 text-left">
+                                            {/* Type icon — tinted by movement tone. */}
+                                            <span className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl', MV_TONE_BG[meta.tone])}>
+                                                <Icon className="h-6 w-6" />
                                             </span>
-                                            <div>
-                                                <div className="text-base leading-tight">{t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}</div>
-                                                <div className="text-muted-foreground font-mono text-[11px] font-normal">{viewMove.reference || '—'}</div>
+                                            {/* Action label + timestamp, with the document number (and optional
+                                                external reference) as the audit record's identity beneath. */}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <span className="truncate text-base leading-tight font-semibold">
+                                                        {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])}
+                                                    </span>
+                                                    <span className="text-muted-foreground shrink-0 font-mono text-[11px] font-normal">
+                                                        {fmtDateTime(viewMove.moved_at)}
+                                                    </span>
+                                                </div>
+                                                <div className="text-muted-foreground mt-0.5 font-mono text-[11px] font-normal">
+                                                    {t('stock_doc_no')} : {viewMove.doc_no ?? '—'}
+                                                </div>
+                                                {viewMove.reference && (
+                                                    <div className="text-muted-foreground font-mono text-[11px] font-normal">
+                                                        {t('stock_reference')} : {viewMove.reference}
+                                                    </div>
+                                                )}
                                             </div>
                                         </DialogTitle>
                                     </DialogHeader>
 
-                                    <div className="space-y-4">
+                                    <div className="max-h-[72vh] space-y-4 overflow-auto">
                                         {/* Item + signed quantity */}
                                         <div className="border-border flex items-center justify-between gap-3 rounded-xl border p-3.5">
                                             <div className="min-w-0">
                                                 <div className="truncate text-sm font-semibold">{viewMove.item_name}</div>
-                                                <div className="text-muted-foreground font-mono text-xs">{viewMove.sku}</div>
+                                                <div className="text-muted-foreground font-mono text-xs">SKU : {viewMove.sku}</div>
                                             </div>
                                             <div className={cn('shrink-0 font-mono text-2xl font-bold', inbound ? 'text-emerald-600' : 'text-destructive')}>
                                                 {inbound ? '+' : '−'}
@@ -658,58 +752,109 @@ function MovementsTab() {
                                             </div>
                                         </div>
 
-                                        {/* From → To flow */}
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <div className="bg-muted/40 min-w-0 flex-1 rounded-lg px-3 py-2">
-                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_from')}</div>
-                                                <div className="truncate">{viewMove.from || '—'}</div>
+                                        {/* Source → destination. A return has no source, so it shows just the
+                                            destination warehouse; movements with a source use the From → To flow.
+                                            Adjustments have neither, so nothing renders. */}
+                                        {!viewMove.from && viewMove.to ? (
+                                            <div className="border-border rounded-xl border p-3">
+                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                                    {viewMove.type === 'return' ? t('stock_to_warehouse') : t('stock_to')}
+                                                </div>
+                                                <div className="truncate text-sm">{viewMove.to}</div>
                                             </div>
-                                            <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                                            <div className="bg-muted/40 min-w-0 flex-1 rounded-lg px-3 py-2">
-                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_to')}</div>
-                                                <div className="truncate">{viewMove.to || '—'}</div>
+                                        ) : viewMove.from || viewMove.to ? (
+                                            <div className="border-border grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-xl border p-3">
+                                                <div className="min-w-0">
+                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                                        {viewMove.type === 'receive' ? t('stock_supplier') : t('stock_from')}
+                                                    </div>
+                                                    <div className="truncate text-sm">{viewMove.from || '—'}</div>
+                                                </div>
+                                                <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                <div className="min-w-0 text-right">
+                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                                        {viewMove.type === 'receive' ? t('stock_warehouse') : t('stock_to')}
+                                                    </div>
+                                                    <div className="truncate text-sm">{viewMove.to || '—'}</div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        ) : null}
 
-                                        {/* Receive lot cost strip */}
+                                        {/* Value: unit cost · qty · total (receive lots only) */}
                                         {viewMove.unit_cost != null && (
-                                            <div className="border-border flex items-center justify-between gap-2 rounded-lg border p-3">
-                                                <div>
-                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_unit_cost')}</div>
-                                                    <div className="font-mono text-sm">
-                                                        {symbol}
-                                                        {viewMove.unit_cost.toLocaleString()}
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">{t('stock_value')}</div>
+                                                <div className="border-border grid grid-cols-3 overflow-hidden rounded-lg border text-center text-sm">
+                                                    <div className="bg-card px-2 py-2">
+                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_unit_cost')}</div>
+                                                        <div className="mt-0.5 font-mono">{symbol}{viewMove.unit_cost.toLocaleString()}</div>
                                                     </div>
-                                                </div>
-                                                <span className="text-muted-foreground font-mono text-sm">× {viewMove.qty}</span>
-                                                <div className="text-right">
-                                                    <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_lot_value')}</div>
-                                                    <div className="font-mono text-sm font-bold text-emerald-600">
-                                                        {symbol}
-                                                        {(viewMove.qty * viewMove.unit_cost).toLocaleString()}
+                                                    <div className="border-border bg-card border-l px-2 py-2">
+                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_qty')}</div>
+                                                        <div className="mt-0.5 font-mono">{viewMove.qty}</div>
+                                                    </div>
+                                                    <div className="border-border bg-card border-l px-2 py-2">
+                                                        <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_mv_total')}</div>
+                                                        <div className="mt-0.5 font-mono font-bold text-emerald-600">
+                                                            {symbol}{(viewMove.qty * viewMove.unit_cost).toLocaleString()}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Audit meta */}
-                                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                                        {/* Serial list + reprint labels (retroactive, e.g. for a Receive) */}
+                                        {moveSerials.length > 0 && (
                                             <div>
-                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('stock_by')}</div>
-                                                <div className="text-sm">{viewMove.recorded_by || '—'}</div>
+                                                <div className="mb-1 flex items-center justify-between gap-2">
+                                                    <span className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                                        {t('stock_serial_list')}
+                                                    </span>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => window.open(`/api/stock-movements/${viewMove.id}/labels/pdf`, '_blank')}
+                                                    >
+                                                        <Printer className="h-3.5 w-3.5" />
+                                                        {t('stock_print')}
+                                                    </Button>
+                                                </div>
+                                                <div className="border-border max-h-48 overflow-auto rounded-lg border">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-muted/40 sticky top-0">
+                                                            <tr className="text-muted-foreground text-left text-[10px] tracking-wide uppercase">
+                                                                <th className="w-10 px-3 py-1.5">#</th>
+                                                                <th className="px-3 py-1.5">{t('stock_hist_serial')}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {moveSerials.map((s, i) => (
+                                                                <tr key={s} className="border-border/60 border-t">
+                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{i + 1}</td>
+                                                                    <td className="px-3 py-1.5 font-mono text-xs">{s}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="text-muted-foreground text-[10px] tracking-wide uppercase">{t('audit_time')}</div>
-                                                <div className="font-mono text-sm">{fmtDateTime(viewMove.moved_at)}</div>
-                                            </div>
-                                        </div>
+                                        )}
 
+                                        {/* Notes */}
                                         {viewMove.notes && (
-                                            <div className="bg-muted/40 rounded-lg p-3">
+                                            <div>
                                                 <div className="text-muted-foreground mb-1 text-[10px] tracking-wide uppercase">{t('stock_notes')}</div>
-                                                <div className="text-sm">{viewMove.notes}</div>
+                                                <div className="bg-muted/40 rounded-lg p-3 text-sm">{viewMove.notes}</div>
                                             </div>
                                         )}
+
+                                        {/* Recorded by (type-aware label) */}
+                                        <div>
+                                            <div className="text-muted-foreground text-[10px] tracking-wide uppercase">
+                                                {t(`stock_mv_${viewMove.type}` as Parameters<typeof t>[0])} {t('stock_by')}
+                                            </div>
+                                            <div className="text-sm">{viewMove.recorded_by || '—'}</div>
+                                        </div>
                                     </div>
                                 </>
                             );
@@ -723,28 +868,47 @@ function MovementsTab() {
 function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
     const { data: requests = [], isLoading: requestsLoading } = useStockRequests();
-    const { data: warehouses = [] } = useWarehouses();
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     const [issueSerialIds, setIssueSerialIds] = useState<number[]>([]);
-    /** Source warehouse to deduct from when fulfilling; seeded from the item's home warehouse. */
-    const [fulfillFromWarehouse, setFulfillFromWarehouse] = useState<string>('');
-    // Live item detail (on-hand + per-unit serials) for the request being fulfilled.
+    // Warehouse filter for the serial pick list (large serialized SKUs span many warehouses).
+    const [serialWh, setSerialWh] = useState<string>('all');
+    // Per-warehouse qty to draw when fulfilling a quantity-only item (warehouse → qty).
+    const [alloc, setAlloc] = useState<Record<string, number>>({});
+    // Live item detail (on-hand + per-unit serials + balances) for the request being fulfilled.
     const { data: fulfillItem } = useStockItem(fulfillReq?.stock_item_id ?? null);
-    // Reset the serial selection each time a different request opens.
+
+    // Reset selection and greedily pre-fill the allocation (largest warehouse first)
+    // whenever a different request opens or its stock detail loads.
     useEffect(() => {
         setIssueSerialIds([]);
-    }, [fulfillReq?.id]);
-    // Seed the source warehouse from the item's home warehouse once detail loads.
-    useEffect(() => {
-        if (fulfillItem?.warehouse) {
-            setFulfillFromWarehouse(fulfillItem.warehouse);
+        setSerialWh('all');
+        const bals = [...(fulfillItem?.balances ?? [])].filter((b) => b.qty > 0).sort((a, b) => b.qty - a.qty);
+        let remaining = fulfillReq?.qty ?? 0;
+        const next: Record<string, number> = {};
+        for (const b of bals) {
+            if (remaining <= 0) break;
+            const take = Math.min(b.qty, remaining);
+            next[b.warehouse] = take;
+            remaining -= take;
         }
-    }, [fulfillReq?.id, fulfillItem?.warehouse]);
+        setAlloc(next);
+    }, [fulfillReq?.id, fulfillItem]);
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: msg ?? 'Something went wrong.',
+            // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
+            didOpen: () => {
+                const container = Swal.getContainer();
+                if (container) {
+                    container.style.pointerEvents = 'auto';
+                }
+            },
+        });
     };
 
     // One-line summary of the request, shown inside the confirm dialogs.
@@ -787,7 +951,11 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
     };
 
     const columns: Column<(typeof requests)[number]>[] = [
-        { key: 'id', header: '#', render: (r) => <span className="font-mono text-xs">{r.id}</span> },
+        {
+            key: 'id',
+            header: t('stock_request_no'),
+            render: (r) => <span className="font-mono text-xs font-semibold">{r.reference ?? `REQ-${String(r.id).padStart(4, '0')}`}</span>,
+        },
         { key: 'requester', header: t('stock_requester'), render: (r) => <span className="text-sm font-medium">{r.requester_name}</span> },
         {
             key: 'item',
@@ -835,20 +1003,31 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
         },
     ];
 
-    // Stock impact + serial selection for the fulfill dialog.
-    // When a source warehouse is chosen, use that warehouse's balance; otherwise fall back to the global total.
-    const fulfillSourceQty = fulfillFromWarehouse
-        ? (fulfillItem?.balances?.find((b) => b.warehouse === fulfillFromWarehouse)?.qty ?? 0)
-        : (fulfillItem?.current_stock ?? 0);
-    const fulfillShort = !!fulfillReq && fulfillSourceQty < fulfillReq.qty;
+    // Fulfill dialog derivations.
     const fulfillSerialized = !!fulfillItem?.track_serial;
-    // Scope available serials to in_stock units in the selected source warehouse.
-    const fulfillInStock = (fulfillItem?.serials ?? []).filter(
-        (s) => s.status === 'in_stock' && (!fulfillFromWarehouse || s.warehouse === fulfillFromWarehouse),
-    );
-    const fulfillSerialOk = !fulfillSerialized || (!!fulfillReq && issueSerialIds.length === fulfillReq.qty);
-    const toggleIssueSerial = (id: number) =>
-        setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    // Warehouses holding stock for this item — the rows of the allocation grid.
+    const fulfillBalances = (fulfillItem?.balances ?? []).filter((b) => b.qty > 0);
+    const totalAvailable = fulfillBalances.reduce((s, b) => s + b.qty, 0);
+    // Serialized: every in-stock serial is pickable, across all warehouses, ordered
+    // FIFO (oldest received first) so the top of the list is what should go out first.
+    const fulfillInStock = (fulfillItem?.serials ?? [])
+        .filter((s) => s.status === 'in_stock')
+        .sort((a, b) => (a.received_at ?? '').localeCompare(b.received_at ?? ''));
+    // Per-warehouse counts for the filter chips.
+    const serialWhCounts = fulfillInStock.reduce<Record<string, number>>((m, s) => {
+        const k = s.warehouse ?? '—';
+        m[k] = (m[k] ?? 0) + 1;
+        return m;
+    }, {});
+    const visibleSerials = serialWh === 'all' ? fulfillInStock : fulfillInStock.filter((s) => (s.warehouse ?? '—') === serialWh);
+    // Auto-pick the oldest `qty` serials (pure FIFO across all warehouses) in one click.
+    const pickFifo = () => setIssueSerialIds(fulfillInStock.slice(0, fulfillReq?.qty ?? 0).map((s) => s.id));
+    const allocTotal = Object.values(alloc).reduce((s, n) => s + n, 0);
+    // Ready when the chosen units cover exactly the requested qty.
+    const fulfillReady = fulfillSerialized ? !!fulfillReq && issueSerialIds.length === fulfillReq.qty : !!fulfillReq && allocTotal === fulfillReq.qty;
+    const toggleIssueSerial = (id: number) => setIssueSerialIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    const setAllocFor = (warehouse: string, max: number, raw: number) =>
+        setAlloc((a) => ({ ...a, [warehouse]: Math.max(0, Math.min(max, Math.trunc(raw) || 0)) }));
 
     return (
         <div className="space-y-3">
@@ -881,64 +1060,96 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                                 </div>
                             </div>
 
-                            {/* Source warehouse picker — determines which warehouse's balance is deducted */}
-                            <div>
-                                <div className="text-muted-foreground mb-1.5 text-xs font-medium">{t('stock_warehouse')}</div>
-                                <SearchableSelect
-                                    value={fulfillFromWarehouse}
-                                    onChange={(v) => {
-                                        setFulfillFromWarehouse(v);
-                                        // Clear serial selection when the source warehouse changes.
-                                        setIssueSerialIds([]);
-                                    }}
-                                    options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
-                                    placeholder={t('stock_select_warehouse')}
-                                />
-                            </div>
-
-                            {/* Stock impact read as an equation: current − issued = new on-hand */}
-                            <div className="bg-muted/40 flex items-stretch rounded-xl p-3">
-                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
-                                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_stock')}</span>
-                                    <span className="font-mono text-2xl font-bold tabular-nums">{fulfillSourceQty}</span>
-                                </div>
-                                <div className="text-muted-foreground/60 flex items-center text-xl font-light">−</div>
-                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
-                                    <span className="text-[10px] font-medium tracking-wide text-violet-600 uppercase">{t('stock_mv_issue')}</span>
-                                    <span className="font-mono text-2xl font-bold tabular-nums text-violet-600">{fulfillReq.qty}</span>
-                                </div>
-                                <div className="text-muted-foreground/60 flex items-center text-xl font-light">=</div>
-                                <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
-                                    <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">{t('stock_new_onhand')}</span>
-                                    <span className={cn('font-mono text-2xl font-bold tabular-nums', fulfillShort ? 'text-destructive' : 'text-emerald-600')}>
-                                        {fulfillSourceQty - fulfillReq.qty}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {fulfillShort && (
-                                <div className="border-destructive/40 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
-                                    <AlertTriangle className="h-4 w-4 shrink-0" />
-                                    {t('stock_insufficient')} ({fulfillSourceQty})
+                            {/* Quantity-only: spread the issue across warehouses (greedy pre-fill, editable). */}
+                            {!fulfillSerialized && (
+                                <div className="border-border overflow-hidden rounded-lg border">
+                                    <div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
+                                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                                            {t('stock_issue_from')}
+                                        </span>
+                                        <span className={cn('font-mono text-xs', fulfillReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                            {allocTotal}/{fulfillReq.qty}
+                                        </span>
+                                    </div>
+                                    {fulfillBalances.length === 0 ? (
+                                        <div className="text-muted-foreground py-6 text-center text-xs">{t('stock_no_stock')}</div>
+                                    ) : (
+                                        fulfillBalances.map((b) => (
+                                            <div
+                                                key={b.warehouse}
+                                                className="border-border/60 flex items-center gap-3 border-b px-3 py-2 last:border-0"
+                                            >
+                                                <span className="flex-1 text-sm">{b.warehouse}</span>
+                                                <span className="text-muted-foreground font-mono text-xs">
+                                                    {b.qty} {fulfillItem?.unit}
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={b.qty}
+                                                    value={alloc[b.warehouse] ?? 0}
+                                                    onChange={(e) => setAllocFor(b.warehouse, b.qty, +e.target.value)}
+                                                    className="h-8 w-20 text-right font-mono"
+                                                />
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             )}
 
-                            {/* Serialized: choose exactly the units (serials) that go out. */}
-                            {fulfillSerialized && !fulfillShort && (
+                            {totalAvailable < fulfillReq.qty && (
+                                <div className="border-destructive/40 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border p-3 text-sm">
+                                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                                    {t('stock_insufficient')} ({totalAvailable})
+                                </div>
+                            )}
+
+                            {/* Serialized: pick exactly the units (serials) that go out — across any warehouse. */}
+                            {fulfillSerialized && (
                                 <div className="border-border overflow-hidden rounded-lg border">
                                     <div className="border-border bg-muted/30 flex items-center justify-between border-b px-3 py-2">
                                         <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                             {t('stock_pick_serials')}
                                         </span>
-                                        <span className={cn('font-mono text-xs', fulfillSerialOk ? 'text-emerald-600' : 'text-muted-foreground')}>
-                                            {issueSerialIds.length}/{fulfillReq.qty}
-                                        </span>
+                                        <div className="flex items-center gap-2.5">
+                                            <button
+                                                type="button"
+                                                onClick={pickFifo}
+                                                className="text-brand hover:text-brand/80 text-xs font-medium transition-colors"
+                                            >
+                                                {t('stock_pick_fifo')} ({fulfillReq.qty})
+                                            </button>
+                                            <span className={cn('font-mono text-xs', fulfillReady ? 'text-emerald-600' : 'text-muted-foreground')}>
+                                                {issueSerialIds.length}/{fulfillReq.qty}
+                                            </span>
+                                        </div>
                                     </div>
+                                    {/* Warehouse filter — only when serials span more than one warehouse. */}
+                                    {Object.keys(serialWhCounts).length > 1 && (
+                                        <div className="border-border/60 flex flex-wrap gap-1.5 border-b px-3 py-2">
+                                            {[['all', fulfillInStock.length] as const, ...Object.entries(serialWhCounts)].map(([wh, n]) => (
+                                                <button
+                                                    key={wh}
+                                                    type="button"
+                                                    onClick={() => setSerialWh(wh as string)}
+                                                    className={cn(
+                                                        'rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors',
+                                                        serialWh === wh
+                                                            ? 'border-brand bg-brand/10 text-brand'
+                                                            : 'border-border text-muted-foreground hover:bg-accent/50',
+                                                    )}
+                                                >
+                                                    {wh === 'all' ? t('stock_all_warehouses') : (wh as string)}{' '}
+                                                    <span className="font-mono opacity-70">{n}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="max-h-48 overflow-auto">
-                                        {fulfillInStock.length === 0 ? (
+                                        {visibleSerials.length === 0 ? (
                                             <div className="text-muted-foreground py-6 text-center text-xs">{t('stock_no_serials')}</div>
                                         ) : (
-                                            fulfillInStock.map((s) => {
+                                            visibleSerials.map((s) => {
                                                 const checked = issueSerialIds.includes(s.id);
                                                 // Block extra picks once the requested qty is reached.
                                                 const atLimit = !checked && issueSerialIds.length >= fulfillReq.qty;
@@ -959,8 +1170,11 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                                                             {checked && <Check className="h-3 w-3" />}
                                                         </span>
                                                         <span className="flex-1 font-mono text-xs">{s.serial}</span>
+                                                        <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
                                                         {s.received_at && (
-                                                            <span className="text-muted-foreground font-mono text-[11px]">{s.received_at.slice(0, 10)}</span>
+                                                            <span className="text-muted-foreground font-mono text-[11px]">
+                                                                {s.received_at.slice(0, 10)}
+                                                            </span>
                                                         )}
                                                     </button>
                                                 );
@@ -976,14 +1190,18 @@ function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () =>
                             {t('cancel')}
                         </Button>
                         <Button
-                            disabled={!fulfillReq || fulfillShort || !fulfillSerialOk || fulfill.isPending}
+                            disabled={!fulfillReq || !fulfillReady || fulfill.isPending}
                             onClick={() =>
                                 fulfillReq &&
                                 fulfill.mutate(
                                     {
                                         id: fulfillReq.id,
                                         serialIds: fulfillSerialized ? issueSerialIds : undefined,
-                                        fromWarehouse: fulfillFromWarehouse || undefined,
+                                        allocations: fulfillSerialized
+                                            ? undefined
+                                            : Object.entries(alloc)
+                                                  .filter(([, q]) => q > 0)
+                                                  .map(([warehouse, qty]) => ({ warehouse, qty })),
                                     },
                                     { onError, onSuccess: () => setFulfillReq(null) },
                                 )
@@ -1014,10 +1232,56 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
     const [selectedSkus, setSelectedSkus] = useState<number[]>([]);
     const [skuSearch, setSkuSearch] = useState('');
     const [entries, setEntries] = useState<Record<number, string>>({});
+    const [mode, setMode] = useState<StockCountAdjustMode>('auto');
+    // Per-button busy flags so a standalone Save draft never spins the Commit button (and vice-versa).
+    const [savingDraft, setSavingDraft] = useState(false);
+    const [committing, setCommitting] = useState(false);
+    // Brief success flash on the Commit button (the sheet flips to committed view right after).
+    const [committedFlash, setCommittedFlash] = useState(false);
+    // Serial verification (Auto): serialized lines that came up short need their missing units ticked.
+    type SerialCheckItem = { stock_item_id: number; sku: string | null; name: string | null; need: number; serials: { id: number; serial: string }[] };
+    const [serialCheck, setSerialCheck] = useState<SerialCheckItem[] | null>(null);
+    const [missingByItem, setMissingByItem] = useState<Record<number, number[]>>({});
+
+    const toggleSerial = (itemId: number, serialId: number) =>
+        setMissingByItem((prev) => {
+            const cur = prev[itemId] ?? [];
+            return { ...prev, [itemId]: cur.includes(serialId) ? cur.filter((x) => x !== serialId) : [...cur, serialId] };
+        });
+
+    const serialCheckOk = (serialCheck ?? []).every((it) => (missingByItem[it.stock_item_id] ?? []).length === it.need);
+
+    // Persist on-screen counts, then commit with the chosen mode + any ticked-missing serials.
+    const runCommit = async (missing: Record<number, number[]>) => {
+        if (!session) return;
+        setCommitting(true);
+        try {
+            await save.mutateAsync({ id: session.id, counts: countsPayload() });
+            await commit.mutateAsync({ id: session.id, mode, missingSerials: missing });
+            setCommittedFlash(true);
+            window.setTimeout(() => setCommittedFlash(false), 1200);
+        } catch (e) {
+            onError(e);
+        } finally {
+            setCommitting(false);
+            setSerialCheck(null);
+        }
+    };
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: msg ?? 'Something went wrong.',
+            // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
+            didOpen: () => {
+                const container = Swal.getContainer();
+                if (container) {
+                    container.style.pointerEvents = 'auto';
+                }
+            },
+        });
     };
 
     // Seed the inputs from the session's stored counts whenever it loads/changes.
@@ -1066,12 +1330,14 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
     const statusTone = (s: string) => (s === 'committed' ? 'green' : s === 'canceled' ? 'gray' : 'amber');
 
     // ── New count picker: warehouse → categories with stock → selectable SKUs ──
-    const itemsInWh = wh === 'all' ? allItems : allItems.filter((i) => i.warehouse === wh);
+    // "In warehouse W" = the SKU holds stock there (per-warehouse balances).
+    const inWarehouse = (i: StockItem, w: string) => (i.balances ?? []).some((b) => b.warehouse === w && b.qty > 0);
+    const itemsInWh = wh === 'all' ? allItems : allItems.filter((i) => inWarehouse(i, wh));
     const warehouseOptions = [
         { value: 'all', label: `${t('stock_count_all_wh')} (${allItems.length})`, search: t('stock_count_all_wh') },
         ...warehouses.map((w) => ({
             value: w.name,
-            label: `${w.name} (${allItems.filter((i) => i.warehouse === w.name).length})`,
+            label: `${w.name} (${allItems.filter((i) => inWarehouse(i, w.name)).length})`,
             search: w.name,
         })),
     ];
@@ -1103,29 +1369,86 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
     // ── Session list + create form (count sheet opens in a dialog) ──
     const isDraft = session?.status === 'draft';
     const anyCounted = Object.values(entries).some((v) => v.trim() !== '');
+
+    // Live audit summary for the open sheet: counted progress, # of discrepancies, net variance.
+    // In draft it reflects what's typed (entries); once committed it reads the stored line values.
+    const countSummary = (() => {
+        const lines = session?.lines ?? [];
+        let counted = 0;
+        let discrepancies = 0;
+        let net = 0;
+        for (const l of lines) {
+            const raw = entries[l.id] ?? '';
+            const lineVariance = isDraft ? (raw.trim() === '' ? null : (parseInt(raw, 10) || 0) - l.system_qty) : l.variance;
+            const lineCounted = isDraft ? raw.trim() !== '' : l.counted_qty !== null;
+            if (lineCounted) counted++;
+            if (lineVariance !== null && lineVariance !== 0) {
+                discrepancies++;
+                net += lineVariance;
+            }
+        }
+        return { total: lines.length, counted, discrepancies, net };
+    })();
+
+    // A session with any serialized line must commit with Auto (Manual can't reconcile serials).
+    const hasSerial = (session?.lines ?? []).some((l) => l.track_serial);
+    useEffect(() => {
+        if (hasSerial) setMode('auto');
+    }, [hasSerial]);
+
     // Columns mirror the shared DataTable used by the other Stock tabs.
     const sessionColumns: Column<(typeof sessions)[number]>[] = [
-        { key: 'reference', header: t('stock_count_ref'), render: (s) => <span className="font-mono text-xs font-semibold">{s.reference}</span> },
-        { key: 'warehouse', header: t('stock_warehouse'), render: (s) => <span className="text-sm">{s.warehouse || '—'}</span> },
         {
-            key: 'status',
-            header: t('status'),
-            render: (s) => <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>,
+            key: 'reference',
+            header: t('stock_doc_no'),
+            className: 'whitespace-nowrap',
+            render: (s) => <span className="font-mono text-xs font-semibold">{s.reference}</span>,
+        },
+        {
+            key: 'created_at',
+            header: t('audit_time'),
+            className: 'whitespace-nowrap',
+            render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.created_at?.slice(0, 10)}</span>,
+        },
+        {
+            key: 'warehouse',
+            header: t('stock_warehouse'),
+            className: 'whitespace-nowrap',
+            // No specific warehouse = the count spanned every warehouse.
+            render: (s) => <span className="text-sm">{s.warehouse || t('stock_count_all_wh')}</span>,
         },
         {
             key: 'progress',
             header: t('stock_count_progress'),
-            align: 'right',
+            className: 'whitespace-nowrap',
             render: (s) => (
                 <span className="font-mono text-xs">
                     {s.counted_lines ?? 0}/{s.line_count ?? 0}
                 </span>
             ),
         },
+        // Empty spacer soaks up the slack: left group stays tight, right group hugs the edge.
+        { key: 'spacer', header: '', className: 'w-full', render: () => null },
         {
-            key: 'created_at',
-            header: t('audit_time'),
-            render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.created_at?.slice(0, 10)}</span>,
+            key: 'status',
+            header: t('status'),
+            className: 'whitespace-nowrap',
+            render: (s) => <StatusBadge tone={statusTone(s.status)}>{t(`stock_count_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>,
+        },
+        {
+            key: 'adjust_mode',
+            header: t('stock_count_adjust_by'),
+            className: 'whitespace-nowrap',
+            // Only committed counts carry a mode; drafts/canceled show nothing yet.
+            render: (s) =>
+                s.status === 'committed' && s.adjust_mode ? (
+                    <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                        {s.adjust_mode === 'manual' ? <FileText className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                        {s.adjust_mode === 'manual' ? t('stock_count_mode_badge_manual') : t('stock_count_mode_badge_auto')}
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
         },
         {
             key: 'actions',
@@ -1160,7 +1483,7 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
                         title={t('stock_count_cancel')}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                     </button>
                 ) : null,
         },
@@ -1178,7 +1501,13 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
                 )}
             </div>
 
-            <DataTable columns={sessionColumns} rows={sessions} rowKey={(s) => s.id} onRowClick={(s) => setSelectedId(s.id)} loading={sessionsLoading} />
+            <DataTable
+                columns={sessionColumns}
+                rows={sessions}
+                rowKey={(s) => s.id}
+                onRowClick={(s) => setSelectedId(s.id)}
+                loading={sessionsLoading}
+            />
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}
             <Dialog open={creating} onOpenChange={(o) => !o && resetPicker()}>
@@ -1279,49 +1608,156 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={selectedId !== null} onOpenChange={(o) => !o && setSelectedId(null)}>
-                <DialogContent className="max-w-3xl">
+                <DialogContent
+                    className="max-w-3xl"
+                    // The commit-confirm Swal renders at <body> (outside this content). While it's open,
+                    // neither Esc nor clicking its buttons (an "outside" interaction) should close this sheet.
+                    onEscapeKeyDown={(e) => {
+                        if (Swal.isVisible()) {
+                            e.preventDefault();
+                        }
+                    }}
+                    onInteractOutside={(e) => {
+                        if (Swal.isVisible()) {
+                            e.preventDefault();
+                        }
+                    }}
+                >
                     {session ? (
                         <>
                             <DialogHeader>
-                                <DialogTitle className="flex flex-wrap items-center gap-2">
-                                    <span className="font-mono text-sm font-semibold">{session.reference}</span>
-                                    <StatusBadge tone={statusTone(session.status)}>
-                                        {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
-                                    </StatusBadge>
-                                    {session.warehouse && <span className="text-muted-foreground text-xs font-normal">{session.warehouse}</span>}
+                                <DialogTitle className="space-y-1">
+                                    {/* Title + status on top; reference drops to its own line below. */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-base font-semibold">{t('stock_count_sheet_title')}</span>
+                                        <StatusBadge tone={statusTone(session.status)}>
+                                            {t(`stock_count_${session.status}` as Parameters<typeof t>[0])}
+                                        </StatusBadge>
+                                        {session.status === 'committed' && session.adjust_mode && (
+                                            <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] font-normal">
+                                                {session.adjust_mode === 'manual' ? <FileText className="h-3 w-3" /> : <Zap className="h-3 w-3" />}
+                                                {session.adjust_mode === 'manual' ? t('stock_count_mode_badge_manual') : t('stock_count_mode_badge_auto')}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-muted-foreground font-mono text-xs font-semibold">{session.reference}</span>
+                                        <span className="text-muted-foreground text-xs font-normal">· {session.warehouse || t('stock_count_all_wh')}</span>
+                                    </div>
                                 </DialogTitle>
                             </DialogHeader>
+
+                            {/* Audit summary — counted progress, discrepancy count, net variance. */}
+                            <div className="border-border grid grid-cols-3 gap-px overflow-hidden rounded-lg border">
+                                <div className="bg-card px-3 py-2 text-center">
+                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                                        {t('stock_count_sum_progress')}
+                                    </div>
+                                    <div className="mt-0.5 font-mono text-sm font-semibold">
+                                        {countSummary.counted}
+                                        <span className="text-muted-foreground">/{countSummary.total}</span>
+                                    </div>
+                                </div>
+                                <div className="bg-card px-3 py-2 text-center">
+                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                                        {t('stock_count_sum_discrepancies')}
+                                    </div>
+                                    <div
+                                        className={cn(
+                                            'mt-0.5 font-mono text-sm font-semibold',
+                                            countSummary.discrepancies > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+                                        )}
+                                    >
+                                        {countSummary.discrepancies}
+                                    </div>
+                                </div>
+                                <div className="bg-card px-3 py-2 text-center">
+                                    <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                                        {t('stock_count_sum_net')}
+                                    </div>
+                                    <div
+                                        className={cn(
+                                            'mt-0.5 font-mono text-sm font-semibold',
+                                            countSummary.net > 0
+                                                ? 'text-emerald-600'
+                                                : countSummary.net < 0
+                                                  ? 'text-destructive'
+                                                  : 'text-muted-foreground',
+                                        )}
+                                    >
+                                        {countSummary.net > 0 ? `+${countSummary.net}` : countSummary.net}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="max-h-[60vh] overflow-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="bg-card sticky top-0">
-                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                            <th className="px-3 py-2">{t('stock_item')}</th>
-                                            <th className="px-3 py-2 text-right">{t('stock_count_system')}</th>
-                                            <th className="px-3 py-2 text-right">{t('stock_count_counted')}</th>
-                                            <th className="px-3 py-2 text-right">{t('stock_count_variance')}</th>
+                                    <thead className="bg-muted/40 sticky top-0 z-10 backdrop-blur">
+                                        <tr className="border-border text-muted-foreground border-b text-left text-[11px] font-semibold tracking-wide uppercase">
+                                            <th className="w-full px-3 py-2">{t('stock_item')}</th>
+                                            <th className="w-24 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_system')}</th>
+                                            <th className="w-28 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_counted')}</th>
+                                            <th className="w-28 px-3 py-2 text-right whitespace-nowrap">{t('stock_count_variance')}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {(session.lines ?? []).map((l) => {
                                             const entered = entries[l.id] ?? '';
-                                            const variance = isDraft ? (entered.trim() === '' ? null : (parseInt(entered, 10) || 0) - l.system_qty) : l.variance;
+                                            const variance = isDraft
+                                                ? entered.trim() === ''
+                                                    ? null
+                                                    : (parseInt(entered, 10) || 0) - l.system_qty
+                                                : l.variance;
                                             return (
-                                                <tr key={l.id} className="border-border/60 border-b last:border-0">
+                                                <tr
+                                                    key={l.id}
+                                                    className={cn(
+                                                        'border-border/60 border-b transition-colors last:border-0',
+                                                        variance !== null && variance !== 0
+                                                            ? variance > 0
+                                                                ? 'bg-emerald-50/50 dark:bg-emerald-950/20'
+                                                                : 'bg-red-50/40 dark:bg-red-950/20'
+                                                            : 'hover:bg-muted/30',
+                                                    )}
+                                                >
                                                     <td className="px-3 py-2">
-                                                        <div className="font-mono text-xs">{l.sku}</div>
-                                                        <div className="text-muted-foreground truncate text-xs">{l.name}</div>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* State dot: hollow = uncounted, green = over, red = short, grey = matched. */}
+                                                            <span
+                                                                className={cn(
+                                                                    'h-1.5 w-1.5 shrink-0 rounded-full',
+                                                                    variance === null
+                                                                        ? 'border-muted-foreground/40 border'
+                                                                        : variance > 0
+                                                                          ? 'bg-emerald-500'
+                                                                          : variance < 0
+                                                                            ? 'bg-destructive'
+                                                                            : 'bg-muted-foreground/40',
+                                                                )}
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <div className="font-mono text-xs font-medium">{l.sku}</div>
+                                                                <div className="text-muted-foreground truncate text-xs">{l.name}</div>
+                                                            </div>
+                                                        </div>
                                                     </td>
-                                                    <td className="px-3 py-2 text-right font-mono">{l.system_qty}</td>
+                                                    <td className="text-muted-foreground px-3 py-2 text-right font-mono tabular-nums">{l.system_qty}</td>
                                                     <td className="px-3 py-2 text-right">
                                                         {isDraft ? (
                                                             <Input
                                                                 inputMode="numeric"
                                                                 value={entered}
-                                                                onChange={(e) => setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))}
-                                                                className="ml-auto h-8 w-20 text-right font-mono"
+                                                                placeholder="0"
+                                                                onChange={(e) =>
+                                                                    setEntries((p) => ({ ...p, [l.id]: e.target.value.replace(/[^\d]/g, '') }))
+                                                                }
+                                                                className={cn(
+                                                                    'ml-auto h-8 w-20 text-right font-mono tabular-nums',
+                                                                    variance !== null && variance !== 0 && 'border-primary/50',
+                                                                )}
                                                             />
                                                         ) : (
-                                                            <span className="font-mono">{l.counted_qty ?? '—'}</span>
+                                                            <span className="font-mono tabular-nums">{l.counted_qty ?? '—'}</span>
                                                         )}
                                                     </td>
                                                     <td className="px-3 py-2 text-right">
@@ -1330,12 +1766,12 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         ) : (
                                                             <span
                                                                 className={cn(
-                                                                    'font-mono font-semibold',
+                                                                    'inline-flex min-w-[2.75rem] justify-center rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums',
                                                                     variance > 0
-                                                                        ? 'text-emerald-600'
+                                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
                                                                         : variance < 0
-                                                                          ? 'text-destructive'
-                                                                          : 'text-muted-foreground',
+                                                                          ? 'text-destructive bg-red-100 dark:bg-red-950/40'
+                                                                          : 'text-muted-foreground bg-muted',
                                                                 )}
                                                             >
                                                                 {variance > 0 ? `+${variance}` : variance}
@@ -1348,21 +1784,220 @@ function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     </tbody>
                                 </table>
                             </div>
-                            {isDraft && can('audit') && (
-                                <DialogFooter>
-                                    <Button variant="outline" onClick={() => save.mutate({ id: session.id, counts: countsPayload() }, { onError })}>
-                                        {t('stock_count_save')}
-                                    </Button>
-                                    <Button disabled={!anyCounted || commit.isPending} onClick={() => commit.mutate(session.id, { onError })}>
-                                        <Check className="h-3.5 w-3.5" />
-                                        {t('stock_count_commit')}
-                                    </Button>
-                                </DialogFooter>
+                            {(isDraft || committedFlash) && can('audit') && (
+                                <>
+                                    {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
+                                    <div className="border-border space-y-2.5 rounded-lg border p-3">
+                                        <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                                            {t('stock_count_mode_label')}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {(['auto', 'manual'] as const).map((m) => {
+                                                const active = mode === m;
+                                                const disabled = m === 'manual' && hasSerial;
+                                                const Icon = m === 'auto' ? Zap : FileText;
+                                                return (
+                                                    <button
+                                                        key={m}
+                                                        type="button"
+                                                        disabled={disabled}
+                                                        onClick={() => !disabled && setMode(m)}
+                                                        aria-pressed={active}
+                                                        className={cn(
+                                                            'flex items-center justify-center gap-2 rounded-md border px-3 py-2.5 text-sm font-semibold transition',
+                                                            disabled
+                                                                ? 'border-border text-muted-foreground/40 cursor-not-allowed'
+                                                                : active
+                                                                  ? m === 'manual'
+                                                                      ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-950/30 dark:text-amber-400'
+                                                                      : 'border-primary bg-primary/10 text-primary'
+                                                                  : 'border-border text-muted-foreground hover:bg-muted/50',
+                                                        )}
+                                                    >
+                                                        <Icon className="h-4 w-4" />
+                                                        {t(m === 'auto' ? 'stock_count_mode_auto_name' : 'stock_count_mode_manual_name')}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {hasSerial && (
+                                            <div className="text-muted-foreground text-[11px]">{t('stock_count_serial_only_auto')}</div>
+                                        )}
+                                        {/* Hint stays mounted so selecting Manual never shifts the layout. */}
+                                        <div
+                                            className={cn(
+                                                'flex items-start gap-2 text-[11px] leading-snug transition-colors',
+                                                mode === 'manual' ? 'text-amber-700 dark:text-amber-400' : 'text-muted-foreground',
+                                            )}
+                                        >
+                                            {mode === 'manual' ? (
+                                                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" />
+                                            ) : (
+                                                <Zap className="mt-px h-3.5 w-3.5 shrink-0" />
+                                            )}
+                                            <span>{mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}</span>
+                                        </div>
+                                    </div>
+                                    <DialogFooter className="sm:justify-between">
+                                        <Button
+                                            variant="outline"
+                                            disabled={savingDraft || committing}
+                                            onClick={async () => {
+                                                setSavingDraft(true);
+                                                try {
+                                                    await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                } catch (e) {
+                                                    onError(e);
+                                                } finally {
+                                                    setSavingDraft(false);
+                                                }
+                                            }}
+                                        >
+                                            {savingDraft && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                                            {t('stock_count_save')}
+                                        </Button>
+                                        <Button
+                                            disabled={!anyCounted || savingDraft || committing || committedFlash}
+                                            onClick={async () => {
+                                                // Confirm once more — message reflects the chosen mode's effect on stock.
+                                                const res = await Swal.fire({
+                                                    title: t('stock_count_commit_confirm'),
+                                                    text: `${session.reference} — ${mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}`,
+                                                    icon: mode === 'manual' ? 'warning' : 'question',
+                                                    showCancelButton: true,
+                                                    confirmButtonText: t('stock_count_commit'),
+                                                    cancelButtonText: t('stock_count_back'),
+                                                    confirmButtonColor: mode === 'manual' ? '#d97706' : '#16a34a',
+                                                    cancelButtonColor: '#6b7280',
+                                                    reverseButtons: true,
+                                                    customClass: {
+                                                        popup: '!rounded-xl !shadow-xl',
+                                                        confirmButton: '!rounded-lg !font-medium',
+                                                        cancelButton: '!rounded-lg !font-medium',
+                                                    },
+                                                    // Re-enable pointer events blocked by the parent Radix dialog.
+                                                    didOpen: () => {
+                                                        const container = Swal.getContainer();
+                                                        if (container) {
+                                                            container.style.pointerEvents = 'auto';
+                                                        }
+                                                    },
+                                                });
+                                                if (!res.isConfirmed) {
+                                                    return;
+                                                }
+
+                                                // Serialized lines that came up short must have their missing units ticked first.
+                                                const shorts: SerialCheckItem[] = (session.lines ?? [])
+                                                    .filter((l) => l.track_serial)
+                                                    .map((l) => {
+                                                        const entered = entries[l.id] ?? '';
+                                                        const variance = entered.trim() === '' ? 0 : (parseInt(entered, 10) || 0) - l.system_qty;
+                                                        return { l, variance };
+                                                    })
+                                                    .filter((x) => x.variance < 0)
+                                                    .map((x) => ({
+                                                        stock_item_id: x.l.stock_item_id,
+                                                        sku: x.l.sku,
+                                                        name: x.l.name,
+                                                        need: -x.variance,
+                                                        serials: x.l.serials ?? [],
+                                                    }));
+
+                                                if (shorts.length === 0) {
+                                                    await runCommit({});
+                                                    return;
+                                                }
+                                                setMissingByItem({});
+                                                setSerialCheck(shorts);
+                                            }}
+                                        >
+                                            {committing ? (
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            ) : committedFlash ? (
+                                                <Check className="h-3.5 w-3.5" />
+                                            ) : null}
+                                            {committedFlash ? t('stock_count_committed') : t('stock_count_commit')}
+                                        </Button>
+                                    </DialogFooter>
+                                </>
                             )}
                         </>
                     ) : (
-                        <div className="text-muted-foreground py-12 text-center text-sm">…</div>
+                        <>
+                            {/* Radix requires a DialogTitle even while the session loads. */}
+                            <DialogHeader>
+                                <DialogTitle className="text-base font-semibold">{t('stock_count_sheet_title')}</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex items-center justify-center py-16">
+                                <div className="border-muted-foreground/30 border-t-primary h-6 w-6 animate-spin rounded-full border-2" />
+                            </div>
+                        </>
                     )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Serial verification — tick the not-found units before an Auto commit adjusts stock. */}
+            <Dialog open={serialCheck !== null} onOpenChange={(o) => !o && setSerialCheck(null)}>
+                <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>{t('stock_count_serial_verify_title')}</DialogTitle>
+                    </DialogHeader>
+                    <div className="text-muted-foreground text-xs">{t('stock_count_serial_verify_hint')}</div>
+                    <div className="max-h-[60vh] space-y-3 overflow-auto">
+                        {(serialCheck ?? []).map((it) => {
+                            const ticked = missingByItem[it.stock_item_id] ?? [];
+                            const ok = ticked.length === it.need;
+                            return (
+                                <div key={it.stock_item_id} className="border-border rounded-lg border p-3">
+                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                        <div className="min-w-0">
+                                            <div className="font-mono text-xs font-medium">{it.sku}</div>
+                                            <div className="text-muted-foreground truncate text-xs">{it.name}</div>
+                                        </div>
+                                        <span className={cn('shrink-0 text-[11px] font-semibold', ok ? 'text-emerald-600' : 'text-amber-600')}>
+                                            {t('stock_count_serial_tick_n').replace('{n}', String(it.need))} ({ticked.length}/{it.need})
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        {it.serials.map((s) => {
+                                            const checked = ticked.includes(s.id);
+                                            return (
+                                                <button
+                                                    key={s.id}
+                                                    type="button"
+                                                    onClick={() => toggleSerial(it.stock_item_id, s.id)}
+                                                    className={cn(
+                                                        'flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-xs transition',
+                                                        checked ? 'border-destructive bg-red-50 dark:bg-red-950/20' : 'border-border hover:bg-muted/40',
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                                            checked ? 'bg-destructive border-destructive text-white' : 'border-input',
+                                                        )}
+                                                    >
+                                                        {checked && <Check className="h-3 w-3" />}
+                                                    </span>
+                                                    <span className="font-mono">{s.serial}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setSerialCheck(null)}>
+                            {t('stock_count_back')}
+                        </Button>
+                        <Button disabled={!serialCheckOk || committing} onClick={() => runCommit(missingByItem)}>
+                            {committing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                            {t('stock_count_commit')}
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
@@ -1454,7 +2089,11 @@ function DashboardTab({
                                                 <div className="min-w-0 flex-1 py-0.5">
                                                     <div className="truncate text-sm font-medium">{it.name}</div>
                                                     <div className="text-muted-foreground font-mono text-[11px]">
-                                                        {it.sku} · {it.warehouse || '—'}
+                                                        {it.sku} ·{' '}
+                                                        {(it.balances ?? [])
+                                                            .filter((b) => b.qty > 0)
+                                                            .map((b) => b.warehouse)
+                                                            .join(', ') || '—'}
                                                     </div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
