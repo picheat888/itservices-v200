@@ -44,6 +44,25 @@ class StockReturnTest extends TestCase
         return $item->fresh();
     }
 
+    public function test_return_movement_detail_lists_the_returned_serials(): void
+    {
+        $this->actingAs($this->super());
+        $item = $this->serializedWithOneIssued();
+        $snA = StockItemSerial::where('serial', 'SN-A')->value('id');
+
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snA],
+        ])->assertCreated();
+
+        $returnId = StockMovement::where('type', 'return')->value('id');
+
+        // The movement-detail dialog reads this endpoint to list serials.
+        $this->getJson("/api/stock-movements/{$returnId}/serials")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonFragment(['SN-A']);
+    }
+
     public function test_serialized_return_brings_issued_serial_back_in_stock(): void
     {
         $this->actingAs($this->super());
