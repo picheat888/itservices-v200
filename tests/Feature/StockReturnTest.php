@@ -126,4 +126,66 @@ class StockReturnTest extends TestCase
             StockLot::where('stock_item_id', $item->id)->where('stock_movement_id', $returnId)->where('unit_cost', 30)->exists()
         );
     }
+
+    public function test_serialized_return_of_costless_receive_values_at_pre_return_average(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'UPS-3', 'name' => 'UPS', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
+        ]);
+        // Receive SN-A,SN-B,SN-C with cost 90 each (avg 90). Issue SN-A, then return it.
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-A', 'SN-B', 'SN-C'], 'to_label' => 'Main', 'unit_cost' => 90,
+        ])->assertCreated();
+        // Now there are 3 units valued at 90 each (avg 90). Issue SN-A, then return it.
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'X', 'qty' => 1, 'reason' => 'use', 'status' => 'approved',
+        ]);
+        $snA = StockItemSerial::where('serial', 'SN-A')->value('id');
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill", ['serial_ids' => [$snA]])->assertOk();
+
+        // SN-A's receive movement HAD a cost (90), so this returns at 90 via the original-cost path.
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snA],
+        ])->assertCreated();
+
+        $returnId = StockMovement::where('type', 'return')->value('id');
+        // Lot reopened at the original receive cost 90 (not a stale-denominator value).
+        $this->assertTrue(
+            StockLot::where('stock_item_id', $item->id)->where('stock_movement_id', $returnId)->where('unit_cost', 90)->exists()
+        );
+    }
+
+    public function test_serialized_return_with_null_original_cost_uses_pre_return_average(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'UPS-4', 'name' => 'UPS', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
+        ]);
+        // Two serialized receives: one costless (SN-N, unit_cost null), one costed (SN-C @ 100).
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-N'], 'to_label' => 'Main',
+        ])->assertCreated();
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-C'], 'to_label' => 'Main', 'unit_cost' => 100,
+        ])->assertCreated();
+        // Stock value = 0 (SN-N lot) + 100 (SN-C lot) = 100 over 2 units → avg 50.
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'requester_name' => 'X', 'qty' => 1, 'reason' => 'use', 'status' => 'approved',
+        ]);
+        $snN = StockItemSerial::where('serial', 'SN-N')->value('id');
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill", ['serial_ids' => [$snN]])->assertOk();
+        // After issuing SN-N (the costless one, FIFO consumes the 0-cost lot first), 1 unit @100 remains → avg 100.
+        // Return SN-N: its original cost is null → fallback must be the PRE-return average (100), not post-increment.
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snN],
+        ])->assertCreated();
+        $returnId = StockMovement::where('type', 'return')->value('id');
+        // Pre-return avg is 100 (1 unit @100). Post-increment would wrongly give 100/2 = 50.
+        $this->assertTrue(
+            StockLot::where('stock_item_id', $item->id)->where('stock_movement_id', $returnId)->where('unit_cost', 100)->exists()
+        );
+    }
 }
