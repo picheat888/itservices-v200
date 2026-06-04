@@ -7,16 +7,24 @@ use App\Http\Resources\StockMovementResource;
 use App\Models\AuditLog;
 use App\Models\StockItem;
 use App\Models\StockItemSerial;
+use App\Models\StockItemSerialEvent;
 use App\Models\StockMovement;
 use App\Services\StockBalanceService;
 use App\Services\StockLotService;
 use App\Support\DocNumber;
+use App\Support\DocumentName;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Picqer\Barcode\Renderers\HtmlRenderer;
+use Picqer\Barcode\Types\TypeCode128;
+use Symfony\Component\HttpFoundation\HeaderUtils;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StockMovementController extends Controller
 {
@@ -54,6 +62,86 @@ class StockMovementController extends Controller
         return response()->json([
             'data' => StockMovementResource::collection($movements),
             'meta' => ['total' => $movements->count()],
+        ]);
+    }
+
+    /**
+     * Serial codes tied to a movement (for the detail dialog), sourced from the serial-event
+     * log. Events link primarily by stock_movement_id (receive/transfer/issue all set it now);
+     * a shared reference is only a legacy fallback for older events that predate that link —
+     * scoped to events with no movement id so it never bleeds serials across split movements
+     * that share the same request reference.
+     */
+    public function serials(Request $request, StockMovement $movement): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.view'), 403);
+
+        return response()->json(['data' => $this->serialCodesFor($movement)]);
+    }
+
+    /**
+     * The serial codes attached to a movement, ordered. Shared by the detail dialog
+     * (serials) and the printable label sheet (labelsPdf).
+     *
+     * @return Collection<int, string>
+     */
+    private function serialCodesFor(StockMovement $movement): Collection
+    {
+        $serialIds = StockItemSerialEvent::query()
+            ->where('stock_item_id', $movement->stock_item_id)
+            ->where(function ($q) use ($movement) {
+                $q->where('stock_movement_id', $movement->id);
+                if ($movement->reference) {
+                    $q->orWhere(function ($legacy) use ($movement) {
+                        $legacy->whereNull('stock_movement_id')->where('reference', $movement->reference);
+                    });
+                }
+            })
+            ->pluck('stock_item_serial_id')
+            ->unique();
+
+        return StockItemSerial::whereIn('id', $serialIds)->orderBy('serial')->pluck('serial')->values();
+    }
+
+    /**
+     * Stream an A4 sheet of 50 × 25 mm serial-number stickers for one movement, each
+     * carrying a real (scannable) Code 128 barcode. Rendered server-side with dompdf so
+     * the output is identical everywhere and immune to browser print settings — the
+     * barcode bars are HTML elements dompdf always renders (no "background graphics" toggle).
+     */
+    public function labelsPdf(Request $request, StockMovement $movement): StreamedResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.view'), 403);
+
+        $movement->loadMissing('item');
+        $serials = $this->serialCodesFor($movement);
+
+        // One Code 128 barcode per serial, rendered as HTML (no GD needed). Render at a
+        // FIXED width so the bars scale to fill the sticker's inner width (~47 mm ≈ 177 px
+        // at 96 dpi) regardless of how many characters the serial has — short serials no
+        // longer leave the label looking half-empty.
+        $type = new TypeCode128;
+        $renderer = new HtmlRenderer;
+        $labels = $serials->map(fn (string $serial) => [
+            'serial' => $serial,
+            'barcode' => $renderer->render($type->getBarcode($serial), 177, 30),
+        ])->all();
+
+        $pdf = Pdf::loadView('pdf.serial-labels', [
+            'item' => $movement->item,
+            'labels' => $labels,
+            'warehouse' => $movement->to_label ?: $movement->from_label,
+            'date' => $movement->moved_at?->format('Y-m-d'),
+        ])->setPaper('a4', 'portrait');
+
+        $bytes = $pdf->output();
+        $filename = DocumentName::make('SerialLabels', [$movement->item?->sku]);
+
+        return new StreamedResponse(function () use ($bytes) {
+            echo $bytes;
+        }, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition('inline', $filename, 'serial-labels.pdf'),
         ]);
     }
 
@@ -158,6 +246,7 @@ class StockMovementController extends Controller
             $qty = match (true) {
                 $serials !== [] => count($serials),
                 $isTransfer && $item->track_serial => count($serialIds),
+                $type === 'return' && $item->track_serial && $serialIds !== [] => count($serialIds),
                 default => (int) ($data['qty'] ?? 0),
             };
 
@@ -192,9 +281,18 @@ class StockMovementController extends Controller
                 // Stock- and cost-neutral: only the per-warehouse balance (and serial location) move.
                 $this->balances->move($item, (string) $fromWh, (string) $toWh, $qty);
                 if ($item->track_serial && $serialIds !== []) {
-                    StockItemSerial::whereIn('id', $serialIds)
-                        ->where('stock_item_id', $item->id)
-                        ->update(['warehouse' => $toWh]);
+                    $moved = StockItemSerial::whereIn('id', $serialIds)->where('stock_item_id', $item->id)->get();
+                    StockItemSerial::whereIn('id', $moved->pluck('id'))->update(['warehouse' => $toWh]);
+                    foreach ($moved as $row) {
+                        StockItemSerialEvent::log($row, 'transferred', [
+                            'stock_movement_id' => $movement->id,
+                            'from_label' => (string) $fromWh,
+                            'to_label' => (string) $toWh,
+                            'user_id' => $userId,
+                            'recorded_by' => $recordedBy,
+                            'occurred_at' => $movement->moved_at,
+                        ]);
+                    }
                 }
                 $item->last_move_at = $movement->moved_at->toDateString();
                 $item->save();
@@ -204,19 +302,24 @@ class StockMovementController extends Controller
                 $item->save();
 
                 if ($inbound) {
-                    // Resolve the destination warehouse once; fall back to the item's home
-                    // warehouse so balances and serials always agree and never land at ''.
-                    $inboundWarehouse = $toWh ?: ($item->warehouse ?: 'Unassigned');
+                    // Resolve the destination warehouse once; default to 'Unassigned'
+                    // (never '') when the caller didn't pick one, so balances and serials agree.
+                    $inboundWarehouse = $toWh ?: 'Unassigned';
                     $this->balances->add($item, $inboundWarehouse, $qty);
-                    $this->lotService->addLot($item, $qty, $unitCost, $movement->id, $movement->moved_at);
+
+                    if ($type === 'return' && $item->track_serial && $serialIds !== []) {
+                        $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $fromWh);
+                    } else {
+                        $this->lotService->addLot($item, $qty, $unitCost, $movement->id, $movement->moved_at);
+                    }
                 } else {
                     $this->balances->remove($item, (string) $fromWh, $qty);
                     $this->lotService->consume($item, $qty);
                 }
 
-                // Register each received unit's serial against the SKU.
+                // Register each received unit's serial against the SKU + log a history event.
                 foreach ($serials as $serial) {
-                    StockItemSerial::create([
+                    $row = StockItemSerial::create([
                         'stock_item_id' => $item->id,
                         'stock_movement_id' => $movement->id,
                         'serial' => $serial,
@@ -225,6 +328,14 @@ class StockMovementController extends Controller
                         'reference' => $data['reference'] ?? null,
                         'received_at' => $movement->moved_at,
                     ]);
+                    StockItemSerialEvent::log($row, 'received', [
+                        'stock_movement_id' => $movement->id,
+                        'reference' => $data['reference'] ?? null,
+                        'warehouse' => $inboundWarehouse,
+                        'user_id' => $userId,
+                        'recorded_by' => $recordedBy,
+                        'occurred_at' => $movement->moved_at,
+                    ]);
                 }
             }
 
@@ -232,5 +343,47 @@ class StockMovementController extends Controller
 
             return $movement;
         });
+    }
+
+    /**
+     * Bring previously-issued serials back into stock: flip them to in_stock in the
+     * destination warehouse, reopen FIFO lots at each unit's original receive cost
+     * (null cost falls back to average cost inside addLot), and log a 'returned' event
+     * per serial linked to the return movement.
+     *
+     * @param  array<int>  $serialIds
+     */
+    private function returnSerials(StockItem $item, array $serialIds, string $warehouse, StockMovement $movement, ?string $recordedBy, ?int $userId, ?string $fromLabel): void
+    {
+        $serials = StockItemSerial::with('movement')
+            ->whereIn('id', $serialIds)
+            ->where('stock_item_id', $item->id)
+            ->where('status', 'issued')
+            ->get();
+
+        StockItemSerial::whereIn('id', $serials->pluck('id'))->update([
+            'status' => 'in_stock',
+            'warehouse' => $warehouse,
+        ]);
+
+        // Reopen one FIFO lot per distinct original receive cost. The serial's
+        // stock_movement_id still points at its receive movement (transfers never change it).
+        $serials->groupBy(fn (StockItemSerial $s) => $s->movement?->unit_cost)
+            ->each(function ($group) use ($item, $movement) {
+                $cost = $group->first()->movement?->unit_cost;
+                $this->lotService->addLot($item, $group->count(), $cost !== null ? (float) $cost : null, $movement->id, $movement->moved_at);
+            });
+
+        foreach ($serials as $row) {
+            StockItemSerialEvent::log($row, 'returned', [
+                'stock_movement_id' => $movement->id,
+                'reference' => $movement->reference,
+                'warehouse' => $warehouse,
+                'from_label' => $fromLabel,
+                'user_id' => $userId,
+                'recorded_by' => $recordedBy,
+                'occurred_at' => $movement->moved_at,
+            ]);
+        }
     }
 }
