@@ -7,6 +7,7 @@ use App\Models\StockItemSerial;
 use App\Models\StockMovement;
 use App\Models\StockRequest;
 use App\Models\User;
+use App\Support\DocNumber;
 use Illuminate\Database\Seeder;
 
 class StockSeeder extends Seeder
@@ -64,14 +65,18 @@ class StockSeeder extends Seeder
                 'current_stock' => $current,
                 'min_stock' => $min,
                 'max_stock' => $max,
-                'warehouse' => $warehouse,
-                'supplier' => $supplier,
                 'warranty' => $warranty,
                 'last_move_at' => $lastMove,
             ]);
 
             $skuMap[$sku] = $item->id;
             $costMap[$sku] = $cost;
+
+            // Warehouse is warehouse-aware now: park the on-hand quantity as a
+            // per-warehouse balance (the SKU itself no longer stores a warehouse).
+            if ($current > 0) {
+                $item->balances()->updateOrCreate(['warehouse' => $warehouse], ['qty' => $current]);
+            }
 
             // Seed one FIFO lot holding the on-hand quantity at the row's cost,
             // so stock value matches and lots stay consistent with current_stock.
@@ -210,6 +215,8 @@ class StockSeeder extends Seeder
 
             StockMovement::create([
                 'stock_item_id' => $skuMap[$sku],
+                // Running document number per type+year (RCV-2026-001, ...), as the app assigns.
+                'doc_no' => DocNumber::next($type, (int) substr($movedAt, 0, 4)),
                 'type' => $type,
                 'qty' => $qty,
                 // Receives carry the lot unit cost; other movement types don't.
