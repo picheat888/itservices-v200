@@ -170,6 +170,7 @@ class StockMovementController extends Controller
 
         $item = StockItem::findOrFail($data['stock_item_id']);
         $serials = $this->validateSerials($data, $item);
+        $this->validateReturnSerials($data, $item);
 
         $movement = $this->record($data, $request->user()?->name, $request->user()?->id, $serials);
 
@@ -219,6 +220,37 @@ class StockMovementController extends Controller
         }
 
         return $serials->all();
+    }
+
+    /**
+     * For a serialized return, every chosen serial must belong to the item and be
+     * currently issued (you can only return what is out). No-op otherwise.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function validateReturnSerials(array $data, StockItem $item): void
+    {
+        if ($data['type'] !== 'return' || ! $item->track_serial) {
+            return;
+        }
+
+        $ids = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
+        if ($ids === []) {
+            throw ValidationException::withMessages([
+                'serial_ids' => 'This item is serialized — select the issued serial(s) to return.',
+            ]);
+        }
+
+        $issued = StockItemSerial::whereIn('id', $ids)
+            ->where('stock_item_id', $item->id)
+            ->where('status', 'issued')
+            ->count();
+
+        if ($issued !== count($ids)) {
+            throw ValidationException::withMessages([
+                'serial_ids' => 'Each selected serial must belong to this item and be currently issued.',
+            ]);
+        }
     }
 
     /**
