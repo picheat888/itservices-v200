@@ -329,6 +329,11 @@ class StockMovementController extends Controller
                 $item->last_move_at = $movement->moved_at->toDateString();
                 $item->save();
             } else {
+                // Resolve the inbound lot cost BEFORE changing current_stock: a null-cost
+                // (qty-only return) lot must value at the average of the stock that existed
+                // *before* this movement, not the inflated post-increment denominator.
+                $inboundLotCost = $inbound ? ($unitCost ?? $item->avgCost()) : null;
+
                 $item->current_stock += $movement->delta();
                 $item->last_move_at = $movement->moved_at->toDateString();
                 $item->save();
@@ -342,7 +347,7 @@ class StockMovementController extends Controller
                     if ($type === 'return' && $item->track_serial && $serialIds !== []) {
                         $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $fromWh);
                     } else {
-                        $this->lotService->addLot($item, $qty, $unitCost, $movement->id, $movement->moved_at);
+                        $this->lotService->addLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
                     }
                 } else {
                     $this->balances->remove($item, (string) $fromWh, $qty);

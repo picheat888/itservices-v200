@@ -101,4 +101,29 @@ class StockReturnTest extends TestCase
             'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snA],
         ])->assertForbidden();
     }
+
+    public function test_qty_only_return_adds_stock_at_average_cost(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'CBL-1', 'name' => 'Cable', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => false,
+        ]);
+        // Receive 10 @ 30 → avg cost 30.
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 10, 'unit_cost' => 30, 'to_label' => 'Main',
+        ])->assertCreated();
+
+        // Return 2 back into stock (qty-only).
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'Main', 'from_label' => 'Somchai',
+        ])->assertCreated();
+
+        $this->assertSame(12, $item->fresh()->current_stock);
+        // The return opened a lot at the average cost (30), not 0.
+        $returnId = StockMovement::where('type', 'return')->value('id');
+        $this->assertTrue(
+            StockLot::where('stock_item_id', $item->id)->where('stock_movement_id', $returnId)->where('unit_cost', 30)->exists()
+        );
+    }
 }
