@@ -291,9 +291,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     type: 'return',
                     stock_item_id: selected.id,
                     qty: returnSerialIds.size,
-                    from_label: from.trim() || undefined,
                     to_label: to.trim() || undefined,
-                    reference: reference.trim() || undefined,
                     notes: notes.trim() || undefined,
                     serial_ids: [...returnSerialIds],
                 });
@@ -656,26 +654,29 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         </div>
                     )}
 
-                    {/* Reference + From — shown for receive/return/issue only, not transfer */}
-                    {!isTransfer && (
-                        <>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Field label={t('stock_reference')}>
-                                    <Input
-                                        value={reference}
-                                        onChange={(e) => setReference(e.target.value)}
-                                        placeholder="PO-2026-118 / REQ-12"
-                                        className="font-mono"
-                                    />
-                                </Field>
-                                <Field label={kind === 'receive' ? t('stock_supplier') : t('stock_from')}>
-                                    {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
-                                </Field>
-                            </div>
-                            <Field label={t('stock_to')}>
-                                {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
+                    {/* Reference + From — receive/issue only (transfer has its own block;
+                        return drops them — it only needs the destination warehouse). */}
+                    {!isTransfer && !isReturn && (
+                        <div className="grid grid-cols-2 gap-3">
+                            <Field label={t('stock_reference')}>
+                                <Input
+                                    value={reference}
+                                    onChange={(e) => setReference(e.target.value)}
+                                    placeholder="PO-2026-118 / REQ-12"
+                                    className="font-mono"
+                                />
                             </Field>
-                        </>
+                            <Field label={kind === 'receive' ? t('stock_supplier') : t('stock_from')}>
+                                {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
+                            </Field>
+                        </div>
+                    )}
+
+                    {/* Destination warehouse — every non-transfer movement (receive/issue/return). */}
+                    {!isTransfer && (
+                        <Field label={t('stock_to')}>
+                            {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
+                        </Field>
                     )}
 
                     {/* Receive captures the per-lot unit cost (optional) for FIFO valuation. */}
