@@ -31,7 +31,7 @@ gates everything and drives the sidebar icon.
 matrix renderer must special-case Stock the same way Administration is already
 special-cased via `ADMIN_GROUPS`.
 
-## Permission key model (16 keys)
+## Permission key model (15 keys)
 
 Catalog `stock` becomes (flat list, used for validation + super = all):
 
@@ -86,7 +86,7 @@ stock.module
 - **Cascade (client):** turning a parent off forces children off and locks them;
   turning a child on implies its ancestors (keeps draft state honest). Master off →
   whole panel dims and locks.
-- **Counts:** header tally `active / 16`, counting only keys whose ancestors are all on.
+- **Counts:** header tally `active / 15`, counting only keys whose ancestors are all on.
 
 The matrix renders this from a Stock-specific tree config in
 `resources/js/pages/permissions/index.tsx` (sibling to `ADMIN_GROUPS`), reading the
