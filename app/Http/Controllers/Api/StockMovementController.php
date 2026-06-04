@@ -345,7 +345,7 @@ class StockMovementController extends Controller
                     $this->balances->add($item, $inboundWarehouse, $qty);
 
                     if ($type === 'return' && $item->track_serial && $serialIds !== []) {
-                        $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $fromWh);
+                        $this->returnSerials($item, $serialIds, $inboundWarehouse, $movement, $recordedBy, $userId, $fromWh, $inboundLotCost);
                     } else {
                         $this->lotService->addLot($item, $qty, $inboundLotCost, $movement->id, $movement->moved_at);
                     }
@@ -384,13 +384,17 @@ class StockMovementController extends Controller
 
     /**
      * Bring previously-issued serials back into stock: flip them to in_stock in the
-     * destination warehouse, reopen FIFO lots at each unit's original receive cost
-     * (null cost falls back to average cost inside addLot), and log a 'returned' event
-     * per serial linked to the return movement.
+     * destination warehouse, reopen FIFO lots at each unit's original receive cost,
+     * and log a 'returned' event per serial linked to the return movement.
+     *
+     * When a serial's original receive movement had a NULL unit_cost (qty-only receive),
+     * $fallbackCost is used instead of letting addLot recompute avgCost() on the
+     * already-incremented item — $fallbackCost must be the pre-movement average captured
+     * by the caller before current_stock was incremented.
      *
      * @param  array<int>  $serialIds
      */
-    private function returnSerials(StockItem $item, array $serialIds, string $warehouse, StockMovement $movement, ?string $recordedBy, ?int $userId, ?string $fromLabel): void
+    private function returnSerials(StockItem $item, array $serialIds, string $warehouse, StockMovement $movement, ?string $recordedBy, ?int $userId, ?string $fromLabel, ?float $fallbackCost = null): void
     {
         $serials = StockItemSerial::with('movement')
             ->whereIn('id', $serialIds)
@@ -405,10 +409,13 @@ class StockMovementController extends Controller
 
         // Reopen one FIFO lot per distinct original receive cost. The serial's
         // stock_movement_id still points at its receive movement (transfers never change it).
+        // When the original cost is null, use $fallbackCost (pre-increment average) so we
+        // never call avgCost() on the already-incremented item's denominator.
         $serials->groupBy(fn (StockItemSerial $s) => $s->movement?->unit_cost)
-            ->each(function ($group) use ($item, $movement) {
+            ->each(function ($group) use ($item, $movement, $fallbackCost) {
                 $cost = $group->first()->movement?->unit_cost;
-                $this->lotService->addLot($item, $group->count(), $cost !== null ? (float) $cost : null, $movement->id, $movement->moved_at);
+                $lotCost = $cost !== null ? (float) $cost : $fallbackCost;
+                $this->lotService->addLot($item, $group->count(), $lotCost, $movement->id, $movement->moved_at);
             });
 
         foreach ($serials as $row) {
