@@ -72,4 +72,33 @@ class StockReturnTest extends TestCase
             StockLot::where('stock_item_id', $item->id)->where('stock_movement_id', $returnId)->where('unit_cost', 250)->exists()
         );
     }
+
+    public function test_return_rejects_a_serial_that_is_not_issued(): void
+    {
+        $this->actingAs($this->super());
+        $item = StockItem::create([
+            'sku' => 'UPS-2', 'name' => 'UPS', 'unit' => 'pcs',
+            'current_stock' => 0, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
+        ]);
+        // SN-X is received and still in_stock (never issued) → cannot be "returned".
+        $this->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'serials' => ['SN-X'], 'to_label' => 'Main',
+        ])->assertCreated();
+        $snX = StockItemSerial::where('serial', 'SN-X')->value('id');
+
+        $this->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snX],
+        ])->assertStatus(422)->assertJsonValidationErrors('serial_ids');
+    }
+
+    public function test_return_requires_stock_return_permission(): void
+    {
+        $item = $this->serializedWithOneIssued(); // set up as super inside helper
+        $snA = StockItemSerial::where('serial', 'SN-A')->value('id');
+
+        $user = User::factory()->create(['role' => 'admin']); // no seeded perms
+        $this->actingAs($user)->postJson('/api/stock-movements', [
+            'type' => 'return', 'stock_item_id' => $item->id, 'to_label' => 'Main', 'serial_ids' => [$snA],
+        ])->assertForbidden();
+    }
 }
