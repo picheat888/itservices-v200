@@ -2,8 +2,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { Field } from '@/components/shared/field';
 import { useEmailTemplates, useEmailTemplateMutations } from '@/hooks/use-email-templates';
@@ -269,7 +267,7 @@ export default function EmailTemplatesPage() {
                 )}
             </Card>
 
-            <EditorDrawer
+            <EditorDialog
                 template={editing}
                 onClose={() => setEditing(null)}
                 onSave={(payload) => editing && update.mutate({ id: editing.id, payload }, { onSuccess: () => setEditing(null) })}
@@ -283,11 +281,13 @@ export default function EmailTemplatesPage() {
 }
 
 /**
- * Combined editor: live preview on the left, edit form on the right. The preview
- * renders the unsaved content through the real email layout (debounced) so the two
- * panes always agree and match what recipients receive.
+ * Combined editor as a centered dialog (~75% of the viewport, rounded): a title
+ * bar, a sub-header with the template name + enable toggle, then a split body with
+ * the live preview on the left and the edit form on the right. The preview renders
+ * the unsaved content through the real email layout (debounced) so the two panes
+ * always agree and match what recipients receive.
  */
-function EditorDrawer({
+function EditorDialog({
     template,
     onClose,
     onSave,
@@ -343,39 +343,58 @@ function EditorDrawer({
     const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
 
     return (
-        <Sheet open={!!template} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-[1080px]">
+        <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent
+                aria-describedby={undefined}
+                className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
+            >
                 {template && (
                     <>
-                        <SheetHeader className="border-border border-b px-6 py-4">
-                            <div className="flex items-center gap-2.5">
-                                <SheetTitle>{template.name}</SheetTitle>
+                        {/* Row 1 — title (the close X is rendered by DialogContent) */}
+                        <DialogHeader className="border-border space-y-0 border-b px-6 py-3.5 pr-14 text-left">
+                            <DialogTitle className="text-base">{t('email_edit_preview')}</DialogTitle>
+                        </DialogHeader>
+
+                        {/* Row 2 — template name + cadence + enable toggle */}
+                        <div className="border-border flex items-center justify-between gap-3 border-b px-6 py-3">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                                <span className="truncate font-semibold">{name || template.name}</span>
                                 <span
                                     className={cn(
-                                        'rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
+                                        'shrink-0 rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
                                         template.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
                                     )}
                                 >
                                     {t(template.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
                                 </span>
+                                <span className="text-muted-foreground hidden truncate font-mono text-xs sm:inline">{template.key}</span>
                             </div>
-                            <SheetDescription className="font-mono text-xs">{template.key}</SheetDescription>
-                        </SheetHeader>
+                            <label className="flex shrink-0 items-center gap-2 text-sm">
+                                <span className="text-muted-foreground">{t('email_enabled')}</span>
+                                <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                            </label>
+                        </div>
 
-                        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+                        {/* Column header bar — Preview | Edit */}
+                        <div className="border-border text-muted-foreground grid grid-cols-2 border-b text-[11px] font-semibold tracking-wide uppercase">
+                            <div className="border-border flex items-center justify-between border-r px-5 py-2.5">
+                                <span>{t('email_preview')}</span>
+                                {rendering && (
+                                    <span className="flex items-center gap-1 text-[10px] normal-case">
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="px-5 py-2.5">{t('edit')}</div>
+                        </div>
+
+                        {/* Body — two columns */}
+                        <div className="grid min-h-0 flex-1 grid-cols-2">
                             {/* Left — live preview, framed like an email client */}
-                            <div className="bg-muted/30 border-border flex min-h-0 flex-1 flex-col border-b lg:border-r lg:border-b-0">
-                                <div className="border-border flex items-center justify-between border-b px-5 py-3">
-                                    <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{t('email_preview')}</div>
-                                    {rendering && (
-                                        <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
-                                            <Loader2 className="h-3 w-3 animate-spin" />
-                                            {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex-1 overflow-y-auto p-5">
-                                    <div className="border-border mx-auto max-w-[640px] overflow-hidden rounded-xl border bg-white shadow-sm">
+                            <div className="bg-muted/30 border-border flex min-h-0 flex-col border-r">
+                                <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                                    <div className="border-border mx-auto flex h-full max-w-[640px] flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
                                         <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
                                             <div>
                                                 <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
@@ -388,7 +407,7 @@ function EditorDrawer({
                                             <div className="text-foreground w-full truncate font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
                                         </div>
                                         {previewHtml ? (
-                                            <iframe title="email-preview" srcDoc={previewHtml} className="block h-[560px] w-full border-0 bg-white" />
+                                            <iframe title="email-preview" srcDoc={previewHtml} className="block w-full flex-1 border-0 bg-white" />
                                         ) : (
                                             <div className="space-y-3 p-6">
                                                 <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
@@ -401,8 +420,8 @@ function EditorDrawer({
                             </div>
 
                             {/* Right — edit form */}
-                            <div className="flex w-full shrink-0 flex-col lg:w-[440px]">
-                                <div className="flex-1 space-y-4 overflow-y-auto p-5">
+                            <div className="flex min-h-0 flex-col">
+                                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
                                     <Field label={t('email_template')}>
                                         <Input value={name} onChange={(e) => setName(e.target.value)} />
                                     </Field>
@@ -432,30 +451,28 @@ function EditorDrawer({
                                             <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
                                         </div>
                                     )}
-
-                                    <label className="flex items-center gap-2 text-sm">
-                                        <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
-                                        {t('email_enabled')}
-                                    </label>
                                 </div>
+                            </div>
+                        </div>
 
-                                <SheetFooter className="border-border flex-row gap-2 border-t p-4">
-                                    <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
-                                    <Button variant="outline" onClick={() => onTest(template.id)} disabled={testing}>
-                                        <Send className="h-4 w-4" />
-                                        {t('email_test')}
-                                    </Button>
-                                    <Button className="flex-1" onClick={() => onSave({ name, subject, body_html: body, enabled })} disabled={saving}>
-                                        <Check className="h-4 w-4" />
-                                        {t('email_save')}
-                                    </Button>
-                                </SheetFooter>
+                        {/* Footer — Send Test (left) · Cancel / Save (right) */}
+                        <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
+                            <Button variant="outline" onClick={() => onTest(template.id)} disabled={testing}>
+                                <Send className="h-4 w-4" />
+                                {t('email_test')}
+                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
+                                <Button onClick={() => onSave({ name, subject, body_html: body, enabled })} disabled={saving}>
+                                    <Check className="h-4 w-4" />
+                                    {t('email_save')}
+                                </Button>
                             </div>
                         </div>
                     </>
                 )}
-            </SheetContent>
-        </Sheet>
+            </DialogContent>
+        </Dialog>
     );
 }
 
