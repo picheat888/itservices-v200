@@ -518,12 +518,14 @@ function EditorDialog({
                                         <Input value={name} onChange={(e) => setName(e.target.value)} />
                                     </Field>
                                     <Field label={t('email_subject')}>
-                                        {/* Same overlay highlight as the Body, single-line (sync horizontal scroll). */}
-                                        <div className="relative">
+                                        {/* Same overlay highlight as the Body, single-line (sync horizontal scroll).
+                                            Background + border live on the wrapper so the transparent input on top
+                                            doesn't hide the coloured layer behind it. */}
+                                        <div className="border-input bg-background ring-offset-background focus-within:ring-ring relative h-10 rounded-md border focus-within:ring-2 focus-within:ring-offset-2">
                                             <div
                                                 ref={subjectHlRef}
                                                 aria-hidden="true"
-                                                className="text-foreground pointer-events-none absolute inset-0 flex items-center overflow-hidden rounded-md border border-transparent px-3 text-base whitespace-pre md:text-sm"
+                                                className="text-foreground pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 text-base whitespace-pre md:text-sm"
                                                 dangerouslySetInnerHTML={{ __html: highlightHtml(subject) }}
                                             />
                                             <input
@@ -534,7 +536,7 @@ function EditorDialog({
                                                     if (h) h.scrollLeft = e.currentTarget.scrollLeft;
                                                 }}
                                                 spellCheck={false}
-                                                className="caret-foreground border-input bg-background ring-offset-background focus-visible:ring-ring relative flex h-10 w-full rounded-md border px-3 py-2 text-base text-transparent outline-none focus-visible:ring-2 focus-visible:ring-offset-2 md:text-sm"
+                                                className="caret-foreground absolute inset-0 h-full w-full bg-transparent px-3 text-base text-transparent outline-none md:text-sm"
                                             />
                                         </div>
                                     </Field>
