@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\StockAlertLog;
 use App\Models\StockCount;
 use App\Models\StockItem;
 use App\Models\StockRequest;
@@ -47,6 +48,24 @@ class StockNotificationCommandTest extends TestCase
         Notification::assertSentTo($module, StockAlertNotification::class);
         Notification::assertSentTo($approver, StockRequestNotification::class);
         Notification::assertSentTo($counter, StockCountDraftNotification::class);
+    }
+
+    public function test_force_clears_the_per_day_alert_dedup(): void
+    {
+        Notification::fake();
+        $this->userWithPerm('stock.module');
+        $item = StockItem::create(['sku' => 'F-OUT', 'name' => 'Out', 'unit' => 'unit', 'min_stock' => 5, 'max_stock' => 50, 'current_stock' => 0]);
+
+        $log = new StockAlertLog;
+        $log->stock_item_id = $item->id;
+        $log->alert_type = 'out';
+        $log->last_alerted_on = now()->toDateString();
+        $log->save();
+
+        $this->artisan('stock:send-notifications', ['--force' => true])->assertExitCode(0);
+
+        // --force wipes the dedup ledger so the alert is treated as fresh again.
+        $this->assertSame(0, StockAlertLog::count());
     }
 
     public function test_daily_run_emails_one_alert_digest_per_module_holder_not_per_item(): void
