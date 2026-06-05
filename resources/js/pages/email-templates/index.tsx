@@ -11,7 +11,7 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { Bold, Check, CornerDownLeft, Italic, Link2, List, Loader2, Mail, MoreVertical, Pilcrow, Plus, Search, Send } from 'lucide-react';
+import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, MoreVertical, PenLine, Pilcrow, Plus, Save, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Swal from 'sweetalert2';
 
@@ -320,9 +320,9 @@ export default function EmailTemplatesPage() {
             <EditorDialog
                 template={editing}
                 onClose={() => setEditing(null)}
-                onSave={(payload) => editing && update.mutate({ id: editing.id, payload }, { onSuccess: () => setEditing(null) })}
+                onSave={(payload) => (editing ? update.mutateAsync({ id: editing.id, payload }) : Promise.resolve())}
                 saving={update.isPending}
-                onTest={(id) => test.mutate(id)}
+                onTest={(id) => test.mutateAsync(id)}
                 testing={test.isPending}
             />
             <CreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
@@ -347,9 +347,9 @@ function EditorDialog({
 }: {
     template: EmailTemplate | null;
     onClose: () => void;
-    onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => void;
+    onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => Promise<unknown>;
     saving: boolean;
-    onTest: (id: number) => void;
+    onTest: (id: number) => Promise<unknown>;
     testing: boolean;
 }) {
     const t = useT();
@@ -363,6 +363,11 @@ function EditorDialog({
     const [enabled, setEnabled] = useState(true);
     const [previewHtml, setPreviewHtml] = useState('');
     const [rendering, setRendering] = useState(false);
+    // Saved/sent values to diff against (the Save button is disabled until something
+    // changes) plus short-lived success flags for the button check marks.
+    const [base, setBase] = useState({ name: '', subject: '', body: '', enabled: true });
+    const [savedOk, setSavedOk] = useState(false);
+    const [sentOk, setSentOk] = useState(false);
     const bodyRef = useRef<HTMLTextAreaElement>(null);
     const highlightRef = useRef<HTMLDivElement>(null);
     const subjectHlRef = useRef<HTMLDivElement>(null);
@@ -415,7 +420,10 @@ function EditorDialog({
             setSubject(template.subject);
             setBody(template.body_html);
             setEnabled(template.enabled);
+            setBase({ name: template.name, subject: template.subject, body: template.body_html, enabled: template.enabled });
             setPreviewHtml('');
+            setSavedOk(false);
+            setSentOk(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
@@ -435,6 +443,32 @@ function EditorDialog({
     }, [template, name, subject, body]);
 
     const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+    const dirty = name !== base.name || subject !== base.subject || body !== base.body || enabled !== base.enabled;
+
+    // Save: persist, flash a check, and reset the dirty baseline so the button greys out again.
+    const handleSave = async () => {
+        if (!template || !dirty || saving) return;
+        try {
+            await onSave({ name, subject, body_html: body, enabled });
+            setBase({ name, subject, body, enabled });
+            setSavedOk(true);
+            window.setTimeout(() => setSavedOk(false), 1600);
+        } catch {
+            Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
+        }
+    };
+
+    // Send test: fire the synchronous test send, flash a check on success.
+    const handleTest = async () => {
+        if (!template || testing) return;
+        try {
+            await onTest(template.id);
+            setSentOk(true);
+            window.setTimeout(() => setSentOk(false), 1600);
+        } catch {
+            Swal.fire({ icon: 'error', title: t('email_test_failed'), confirmButtonColor: '#2563eb' });
+        }
+    };
 
     return (
         <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
@@ -474,7 +508,10 @@ function EditorDialog({
                         {/* Column header bar — Preview | Edit */}
                         <div className="border-border text-muted-foreground grid grid-cols-2 border-b text-[11px] font-semibold tracking-wide uppercase">
                             <div className="border-border flex items-center justify-between border-r px-5 py-2.5">
-                                <span>{t('email_preview')}</span>
+                                <span className="flex items-center gap-1.5">
+                                    <Eye className="h-3.5 w-3.5" />
+                                    {t('email_preview')}
+                                </span>
                                 {rendering && (
                                     <span className="flex items-center gap-1 text-[10px] normal-case">
                                         <Loader2 className="h-3 w-3 animate-spin" />
@@ -482,7 +519,10 @@ function EditorDialog({
                                     </span>
                                 )}
                             </div>
-                            <div className="px-5 py-2.5">{t('edit')}</div>
+                            <div className="flex items-center gap-1.5 px-5 py-2.5">
+                                <PenLine className="h-3.5 w-3.5" />
+                                {t('edit')}
+                            </div>
                         </div>
 
                         {/* Body — two columns */}
@@ -625,15 +665,24 @@ function EditorDialog({
 
                         {/* Footer — Send Test (left) · Cancel / Save (right) */}
                         <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
-                            <Button variant="outline" onClick={() => onTest(template.id)} disabled={testing}>
-                                <Send className="h-4 w-4" />
-                                {t('email_test')}
+                            <Button
+                                variant="outline"
+                                onClick={handleTest}
+                                disabled={testing}
+                                className={cn(sentOk && 'border-emerald-500 text-emerald-600')}
+                            >
+                                {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check className="text-emerald-600" /> : <Send />}
+                                {sentOk ? t('email_sent') : t('email_test')}
                             </Button>
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
-                                <Button onClick={() => onSave({ name, subject, body_html: body, enabled })} disabled={saving}>
-                                    <Check className="h-4 w-4" />
-                                    {t('email_save')}
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={!dirty || saving}
+                                    className={cn(savedOk && 'bg-emerald-600 hover:bg-emerald-600')}
+                                >
+                                    {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
+                                    {savedOk ? t('email_saved') : t('email_save')}
                                 </Button>
                             </div>
                         </div>
