@@ -5,31 +5,53 @@
         ->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))
         ->take(2)
         ->implode('') ?: 'IT';
+    // Hidden preheader (inbox preview line). Falls back to the eyebrow/brand.
+    $preheader = $eyebrow ? "{$brandName} — {$eyebrow}" : $brandName;
 @endphp
 <!doctype html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
     <title>{{ $subjectLine ?? $brandName }}</title>
+    <!--[if mso]>
+    <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+    <![endif]-->
+    <style>
+        /* Modern clients only — Outlook ignores <style>; the layout below stands on
+           inline styles + table attributes so it stays intact there too. */
+        body { margin: 0; padding: 0; width: 100% !important; }
+        a { text-decoration: none; }
+        @media only screen and (max-width: 620px) {
+            .container { width: 100% !important; }
+            .px { padding-left: 22px !important; padding-right: 22px !important; }
+        }
+    </style>
 </head>
-<body style="margin:0;padding:0;background:#eef2f7;-webkit-font-smoothing:antialiased;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;">
+<body style="margin:0;padding:0;background-color:#eef2f7;">
+    {{-- Hidden preheader --}}
+    <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#eef2f7;opacity:0;">{{ $preheader }}</div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eef2f7" style="background-color:#eef2f7;">
         <tr>
-            <td align="center" style="padding:32px 16px;">
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2a44;">
+            <td align="center" style="padding:32px 12px;">
+
+                <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+                <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
                     {{-- Brand header --}}
                     <tr>
-                        <td style="padding:4px 8px 18px;">
-                            <table role="presentation" cellpadding="0" cellspacing="0">
+                        <td style="padding:2px 8px 16px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
-                                    <td style="width:34px;height:34px;background:#2563eb;border-radius:9px;color:#ffffff;font-weight:800;font-size:16px;text-align:center;line-height:34px;">{{ $initials }}</td>
-                                    <td style="padding-left:10px;">
-                                        <div style="font-size:15px;font-weight:700;color:#0f172a;">{{ $brandName }}</div>
+                                    <td width="36" height="36" bgcolor="#2563eb" align="center" valign="middle" style="width:36px;height:36px;background-color:#2563eb;border-radius:9px;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:bold;mso-line-height-rule:exactly;line-height:36px;">{{ $initials }}</td>
+                                    <td style="padding-left:10px;font-family:'Segoe UI',Arial,sans-serif;">
+                                        <div style="font-size:15px;font-weight:bold;color:#0f172a;">{{ $brandName }}</div>
                                         @if (!empty($eyebrow))
-                                            <div style="font-size:11px;color:#64748b;margin-top:1px;">{{ $eyebrow }}</div>
+                                            <div style="font-size:11px;color:#64748b;">📦 {{ $eyebrow }}</div>
                                         @endif
                                     </td>
                                 </tr>
@@ -37,31 +59,50 @@
                         </td>
                     </tr>
 
-                    {{-- Content card --}}
+                    {{-- Content card (border for Outlook; radius/shadow for modern) --}}
                     <tr>
-                        <td style="background:#ffffff;border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 12px 30px -16px rgba(15,23,42,.18);">
-                            <div style="height:4px;background:#2563eb;border-radius:16px 16px 0 0;font-size:0;line-height:0;">&nbsp;</div>
-                            <div style="padding:28px 34px 6px;font-size:15px;line-height:1.62;color:#334155;">
-                                {!! $bodyHtml !!}
-                            </div>
+                        <td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:14px;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td bgcolor="#2563eb" height="4" style="background-color:#2563eb;height:4px;line-height:4px;font-size:4px;border-radius:14px 14px 0 0;">&nbsp;</td>
+                                </tr>
+                                <tr>
+                                    <td class="px" style="padding:26px 34px 6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#334155;mso-line-height-rule:exactly;">
+                                        {!! $bodyHtml !!}
+                                    </td>
+                                </tr>
 
-                            @if (!empty($actionUrl))
-                                <div style="padding:8px 34px 30px;">
-                                    <a href="{{ $actionUrl }}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:14.5px;font-weight:600;padding:13px 26px;border-radius:10px;">{{ $actionLabel ?? 'Open in portal' }} &nbsp;&rarr;</a>
-                                    <div style="font-size:12px;color:#94a3b8;margin-top:12px;">&#128274; You'll be asked to <span style="color:#64748b;font-weight:600;">sign in</span> to view this in the portal.</div>
-                                </div>
-                            @endif
+                                @if (!empty($actionUrl))
+                                    <tr>
+                                        <td class="px" style="padding:6px 34px 28px;">
+                                            {{-- Bulletproof button: VML for Outlook, styled anchor elsewhere --}}
+                                            <!--[if mso]>
+                                            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ $actionUrl }}" style="height:44px;v-text-anchor:middle;width:260px;" arcsize="23%" stroke="f" fillcolor="#2563eb">
+                                            <w:anchorlock/>
+                                            <center style="color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:14px;font-weight:bold;">{{ $actionLabel ?? 'Open in portal' }} &rarr;</center>
+                                            </v:roundrect>
+                                            <![endif]-->
+                                            <!--[if !mso]><!-->
+                                            <a href="{{ $actionUrl }}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:14.5px;font-weight:bold;line-height:1;padding:14px 26px;border-radius:10px;">{{ $actionLabel ?? 'Open in portal' }} &nbsp;&rarr;</a>
+                                            <!--<![endif]-->
+                                            <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#94a3b8;padding-top:13px;">🔒 You'll be asked to <span style="color:#64748b;font-weight:bold;">sign in</span> to view this in the portal.</div>
+                                        </td>
+                                    </tr>
+                                @endif
+                            </table>
                         </td>
                     </tr>
 
                     {{-- Footer --}}
                     <tr>
-                        <td style="padding:22px 12px 4px;text-align:center;">
-                            <div style="font-size:11.5px;color:#94a3b8;line-height:1.6;">{{ $brandName }} &middot; This is an automated message — please do not reply.</div>
+                        <td align="center" style="padding:20px 12px 4px;font-family:'Segoe UI',Arial,sans-serif;">
+                            <div style="font-size:11.5px;color:#94a3b8;line-height:18px;">{{ $brandName }} &middot; Automated message — please do not reply.</div>
                         </td>
                     </tr>
 
                 </table>
+                <!--[if mso]></td></tr></table><![endif]-->
+
             </td>
         </tr>
     </table>
