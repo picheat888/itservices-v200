@@ -9,6 +9,7 @@ use App\Models\StockItem;
 use App\Models\StockRequest;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
+use App\Notifications\StockRequestNotification;
 use App\Services\StockNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -77,5 +78,33 @@ class StockNotificationServiceTest extends TestCase
         $item->update(['current_stock' => 20]); // back to normal
         $svc->alert($item);
         $this->assertSame(0, StockAlertLog::where('stock_item_id', $item->id)->count());
+    }
+
+    public function test_request_created_bells_approvers(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'RQ-1', 'name' => 'Rq', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        $req = StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 2, 'reason' => 'r', 'status' => 'pending']);
+
+        app(StockNotificationService::class)->requestCreated($req);
+
+        Notification::assertSentTo($approver, StockRequestNotification::class);
+        Notification::assertNotSentTo($owner, StockRequestNotification::class);
+    }
+
+    public function test_request_responded_bells_only_the_owner(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'RS-1', 'name' => 'Rs', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        $req = StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => 'approved']);
+
+        app(StockNotificationService::class)->requestResponded($req, 'approved');
+
+        Notification::assertSentTo($owner, StockRequestNotification::class);
+        Notification::assertNotSentTo($approver, StockRequestNotification::class);
     }
 }
