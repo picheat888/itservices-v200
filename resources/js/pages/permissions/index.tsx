@@ -1,5 +1,6 @@
 import { GroupRoleModal } from '@/components/permissions/group-role-modal';
 import { RoleModal } from '@/components/permissions/role-modal';
+import { StockPermissionTree } from '@/components/permissions/stock-permission-tree';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
@@ -287,6 +288,13 @@ function RolesTab() {
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         {groups.map((group) => {
+                                            if (group.module === 'stock') {
+                                                return (
+                                                    <div key={group.module} className="md:col-span-2">
+                                                        <StockPermissionTree draft={draft} setDraft={setDraft} isSuper={role.is_super} lang={lang} />
+                                                    </div>
+                                                );
+                                            }
                                             const moduleOn = group.keys.filter(isOn).length;
                                             return (
                                                 <div key={group.module} className="border-border rounded-lg border p-3.5">
