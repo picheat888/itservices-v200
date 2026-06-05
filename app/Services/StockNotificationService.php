@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Models\StockAlertLog;
+use App\Models\StockCount;
 use App\Models\StockItem;
 use App\Models\StockRequest;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
+use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
@@ -171,5 +173,39 @@ class StockNotificationService
             'stock.name' => $request->item?->name,
             'stock.qty' => $request->qty,
         ];
+    }
+
+    /**
+     * Daily nag: bell (overwrite) + email approvers while a request is unfulfilled.
+     * Called by the daily scheduler for every request still in a pending/approved state.
+     */
+    public function requestWaiting(StockRequest $request): void
+    {
+        $recipients = $this->recipients('stock.approve');
+
+        $this->sendBell(
+            $recipients,
+            new StockRequestNotification($request, 'waiting'),
+            StockRequestNotification::class,
+            ['stock_request_id' => $request->id, 'subtype' => 'waiting'],
+        );
+
+        $this->emailEach($recipients, 'stock.request_approval_needed', $this->requestVars($request));
+    }
+
+    /**
+     * Daily reminder: bell-only (overwrite) to view_count holders while a count is draft.
+     * No email — purely an in-app nudge to submit the open count session.
+     */
+    public function countDraft(StockCount $count): void
+    {
+        $recipients = $this->recipients('stock.view_count');
+
+        $this->sendBell(
+            $recipients,
+            new StockCountDraftNotification($count),
+            StockCountDraftNotification::class,
+            ['stock_count_id' => $count->id],
+        );
     }
 }
