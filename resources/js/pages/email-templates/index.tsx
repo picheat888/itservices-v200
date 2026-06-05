@@ -13,7 +13,7 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { Check, Mail, MoreVertical, Plus, Search, Send } from 'lucide-react';
+import { Check, Loader2, Mail, MoreVertical, Plus, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -312,14 +312,16 @@ function EditorDrawer({
     const [body, setBody] = useState('');
     const [enabled, setEnabled] = useState(true);
     const [previewHtml, setPreviewHtml] = useState('');
+    const [rendering, setRendering] = useState(false);
 
-    // Sync the form when a different template is opened.
+    // Sync the form when a different template is opened (and clear the stale preview).
     useEffect(() => {
         if (template) {
             setName(template.name);
             setSubject(template.subject);
             setBody(template.body_html);
             setEnabled(template.enabled);
+            setPreviewHtml('');
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
@@ -327,8 +329,13 @@ function EditorDrawer({
     // Debounced live preview through the real email layout (sample data + inert CTA).
     useEffect(() => {
         if (!template) return;
+        setRendering(true);
         const id = window.setTimeout(() => {
-            emailTemplateApi.renderPreview({ name, subject, body_html: body }).then(setPreviewHtml).catch(() => {});
+            emailTemplateApi
+                .renderPreview({ name, subject, body_html: body })
+                .then(setPreviewHtml)
+                .catch(() => {})
+                .finally(() => setRendering(false));
         }, 400);
         return () => window.clearTimeout(id);
     }, [template, name, subject, body]);
@@ -341,19 +348,55 @@ function EditorDrawer({
                 {template && (
                     <>
                         <SheetHeader className="border-border border-b px-6 py-4">
-                            <SheetTitle>{template.name}</SheetTitle>
+                            <div className="flex items-center gap-2.5">
+                                <SheetTitle>{template.name}</SheetTitle>
+                                <span
+                                    className={cn(
+                                        'rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
+                                        template.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
+                                    )}
+                                >
+                                    {t(template.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
+                                </span>
+                            </div>
                             <SheetDescription className="font-mono text-xs">{template.key}</SheetDescription>
                         </SheetHeader>
 
                         <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-                            {/* Left — live preview */}
+                            {/* Left — live preview, framed like an email client */}
                             <div className="bg-muted/30 border-border flex min-h-0 flex-1 flex-col border-b lg:border-r lg:border-b-0">
-                                <div className="border-border border-b px-5 py-3">
+                                <div className="border-border flex items-center justify-between border-b px-5 py-3">
                                     <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{t('email_preview')}</div>
-                                    <div className="mt-1 truncate text-sm font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
+                                    {rendering && (
+                                        <span className="text-muted-foreground flex items-center gap-1 text-[10px]">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex-1 overflow-hidden p-4">
-                                    <iframe title="email-preview" srcDoc={previewHtml} className="border-border h-full min-h-[560px] w-full rounded-lg border bg-white" />
+                                <div className="flex-1 overflow-y-auto p-5">
+                                    <div className="border-border mx-auto max-w-[640px] overflow-hidden rounded-xl border bg-white shadow-sm">
+                                        <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
+                                            <div>
+                                                <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
+                                                <span className="font-mono">no-reply@{(brand || 'inaba').toLowerCase().replace(/\s+/g, '')}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
+                                                <span className="font-mono">{'{{user.email}}'}</span>
+                                            </div>
+                                            <div className="text-foreground w-full truncate font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
+                                        </div>
+                                        {previewHtml ? (
+                                            <iframe title="email-preview" srcDoc={previewHtml} className="block h-[560px] w-full border-0 bg-white" />
+                                        ) : (
+                                            <div className="space-y-3 p-6">
+                                                <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
+                                                <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
+                                                <div className="bg-muted h-28 w-full animate-pulse rounded" />
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -370,7 +413,7 @@ function EditorDrawer({
                                         <textarea
                                             value={body}
                                             onChange={(e) => setBody(e.target.value)}
-                                            rows={10}
+                                            rows={12}
                                             className="focus:border-brand border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-xs outline-none"
                                         />
                                     </Field>
