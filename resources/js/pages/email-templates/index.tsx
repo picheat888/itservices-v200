@@ -203,13 +203,10 @@ export default function EmailTemplatesPage() {
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={sendPageTest} disabled={pageTesting}>
-                        {pageTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        {pageTesting && <Loader2 className="h-4 w-4 animate-spin" />}
                         {t('email_test')}
                     </Button>
-                    <Button onClick={() => setCreateOpen(true)}>
-                        <Plus className="h-4 w-4" />
-                        {t('email_new')}
-                    </Button>
+                    <Button onClick={() => setCreateOpen(true)}>{t('email_new')}</Button>
                 </div>
             </div>
 
