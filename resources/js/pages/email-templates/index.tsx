@@ -9,7 +9,7 @@ import { Field } from '@/components/shared/field';
 import { useEmailTemplates, useEmailTemplateMutations } from '@/hooks/use-email-templates';
 import { useSettings } from '@/hooks/use-settings';
 import { settingsApi } from '@/services/settingsApi';
-import type { EmailTemplate } from '@/services/emailTemplateApi';
+import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateApi';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -342,6 +342,7 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [enabled, setEnabled] = useState(true);
+    const [previewHtml, setPreviewHtml] = useState('');
 
     // Sync local form when a different template is opened.
     useEffect(() => {
@@ -353,6 +354,16 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
+
+    // Live preview: render the unsaved content through the real email layout (debounced),
+    // so what you edit matches the Preview / what recipients receive.
+    useEffect(() => {
+        if (!template) return;
+        const id = window.setTimeout(() => {
+            emailTemplateApi.renderPreview({ name, subject, body_html: body }).then(setPreviewHtml).catch(() => {});
+        }, 400);
+        return () => window.clearTimeout(id);
+    }, [template, name, subject, body]);
 
     return (
         <Sheet open={!!template} onOpenChange={(o) => !o && onClose()}>
@@ -383,6 +394,16 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
                                 <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
                                 {t('email_enabled')}
                             </label>
+
+                            {/* Live preview — same branded layout as the sent email, with sample values. */}
+                            <div>
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('email_preview')}</div>
+                                <iframe
+                                    title="live-preview"
+                                    srcDoc={previewHtml}
+                                    className="block h-[460px] w-full rounded-lg border border-border bg-white"
+                                />
+                            </div>
                         </div>
 
                         <SheetFooter className="flex-row gap-2">

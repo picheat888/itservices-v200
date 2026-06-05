@@ -40,4 +40,23 @@ class EmailTemplatePreviewTest extends TestCase
         $this->assertStringNotContainsString('{{items}}', $html);
         $this->assertStringNotContainsString('{{count}}', $html);
     }
+
+    public function test_render_preview_renders_unsaved_draft_content(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
+        $admin = User::factory()->create(['role' => 'super']);
+
+        $res = $this->actingAs($admin)->post('/api/email-templates/render-preview', [
+            'name' => 'Draft Eyebrow',
+            'subject' => 'Subject {{count}}',
+            'body_html' => '<p>Hi {{user.first_name}},</p>{{items}}',
+        ]);
+
+        $res->assertOk();
+        $html = $res->getContent();
+
+        $this->assertStringContainsString('Draft Eyebrow', $html);  // eyebrow from unsaved name
+        $this->assertStringContainsString('Open in portal', $html); // CTA present
+        $this->assertStringNotContainsString('{{items}}', $html);   // placeholders filled
+    }
 }
