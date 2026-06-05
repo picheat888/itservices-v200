@@ -33,6 +33,31 @@ class StockPermissionGatingTest extends TestCase
         return User::factory()->create(['role' => 'super']);
     }
 
+    /** Create a non-super user holding exactly the given permissions. */
+    private function userWith(array $permissions): User
+    {
+        $role = Role::create(['key' => 'gate_'.uniqid(), 'name' => 'Gate Test', 'is_system' => false]);
+        foreach ($permissions as $p) {
+            RolePermission::create(['role_id' => $role->id, 'permission' => $p, 'allowed' => true]);
+        }
+
+        return User::factory()->create(['role' => $role->key]);
+    }
+
+    /**
+     * The dashboard summary endpoint must be gated by stock.view_dashboard,
+     * not the generic stock.view — a user who can see stock items but has no
+     * view_dashboard permission must receive 403.
+     */
+    public function test_summary_requires_view_dashboard(): void
+    {
+        $blocked = $this->userWith(['stock.module', 'stock.view']);          // items view, no dashboard
+        $allowed = $this->userWith(['stock.module', 'stock.view_dashboard']);
+
+        $this->actingAs($blocked)->getJson('/api/stock-items/summary')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/stock-items/summary')->assertOk();
+    }
+
     /**
      * Saving a set that includes stock.fulfill (child of stock.view_request) but
      * omits stock.view_request must persist stock.receive (whose parent stock.view
