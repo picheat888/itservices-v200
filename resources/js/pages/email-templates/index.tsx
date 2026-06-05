@@ -51,12 +51,11 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Colour-codes the Body HTML for the editor overlay: {{variables}} in violet,
- * HTML tags in sky-blue, everything else as plain text. All user content is
- * HTML-escaped — the returned string is safe to inject. A trailing newline keeps
- * the overlay's height in step with the textarea.
+ * Colour-codes HTML for the editor overlays: {{variables}} in violet, HTML tags
+ * in sky-blue, everything else as plain text. All user content is HTML-escaped —
+ * the returned string is safe to inject (only our own <span> wrappers are markup).
  */
-function highlightBody(src: string): string {
+function highlightHtml(src: string): string {
     const re = /(<\/?[a-zA-Z][^>]*>)|(\{\{[\w.]+\}\})/g;
     let out = '';
     let last = 0;
@@ -71,7 +70,12 @@ function highlightBody(src: string): string {
         last = re.lastIndex;
     }
     out += escapeHtml(src.slice(last));
-    return out + '\n';
+    return out;
+}
+
+// Body overlay needs a trailing newline so its height tracks the textarea's.
+function highlightBody(src: string): string {
+    return highlightHtml(src) + '\n';
 }
 
 function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
@@ -359,6 +363,7 @@ function EditorDialog({
     const [rendering, setRendering] = useState(false);
     const bodyRef = useRef<HTMLTextAreaElement>(null);
     const highlightRef = useRef<HTMLDivElement>(null);
+    const subjectHlRef = useRef<HTMLDivElement>(null);
 
     // Quick-tools core: replace the Body textarea's current selection with the text
     // built from it, then restore focus with the caret/selection at the given offsets
@@ -513,7 +518,25 @@ function EditorDialog({
                                         <Input value={name} onChange={(e) => setName(e.target.value)} />
                                     </Field>
                                     <Field label={t('email_subject')}>
-                                        <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+                                        {/* Same overlay highlight as the Body, single-line (sync horizontal scroll). */}
+                                        <div className="relative">
+                                            <div
+                                                ref={subjectHlRef}
+                                                aria-hidden="true"
+                                                className="text-foreground pointer-events-none absolute inset-0 flex items-center overflow-hidden rounded-md border border-transparent px-3 text-base whitespace-pre md:text-sm"
+                                                dangerouslySetInnerHTML={{ __html: highlightHtml(subject) }}
+                                            />
+                                            <input
+                                                value={subject}
+                                                onChange={(e) => setSubject(e.target.value)}
+                                                onScroll={(e) => {
+                                                    const h = subjectHlRef.current;
+                                                    if (h) h.scrollLeft = e.currentTarget.scrollLeft;
+                                                }}
+                                                spellCheck={false}
+                                                className="caret-foreground border-input bg-background ring-offset-background focus-visible:ring-ring relative flex h-10 w-full rounded-md border px-3 py-2 text-base text-transparent outline-none focus-visible:ring-2 focus-visible:ring-offset-2 md:text-sm"
+                                            />
+                                        </div>
                                     </Field>
                                     <Field label={t('email_body')}>
                                         <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
