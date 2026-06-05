@@ -405,6 +405,7 @@ export default function StockPage() {
                             summary={summary}
                             t={t}
                             kpis={kpis}
+                            canEvents={can('view_events')}
                             onSelectWarehouse={(w) => {
                                 // Jump to the Items tab showing only the chosen warehouse.
                                 setSearch('');
