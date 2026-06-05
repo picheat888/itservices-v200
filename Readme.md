@@ -469,7 +469,7 @@ npm run build
 | 8 | **Transfer Stock** | ✅ Phase-10 | เป็น movement ชนิด `transfer` (RBAC stock.transfer) |
 | 9 | **Dashboard / Report** | 🟡 บางส่วน | Dashboard: KPI (SKU/มูลค่า/ต่ำกว่า Min/Overstock), Stock by warehouse, Stock by category, Min/Max alerts · Export/Report ยังไม่ทำ |
 | 10 | **Audit / Stock Count** | ⏳ รอเฟสถัดไป | แท็บ placeholder ในหน้า Stock |
-| 11 | **RBAC Permission** | ✅ เสร็จ | module `stock` 11 สิทธิ์ บังคับใช้จริงที่ controller ทุกตัว (view/request/approve/fulfill/receive/transfer/return/manage_items/delete live) · หน้า Permissions แสดง stock ในกลุ่ม Workspace · manage_warehouse/audit ยัง coming soon |
+| 11 | **RBAC Permission** | ✅ เสร็จ | module `stock` ปรับเป็น **tree 15 สิทธิ์**: master `stock.module` (คุม sidebar icon) → View ต่อแท็บ (`view_dashboard`/`view`/`view_request`/`view_count`/`view_events`) → Management children (manage_items/receive/return/transfer · request/approve/fulfill · count · events) · หน้า Permissions แสดง Stock เป็นการ์ด tree (master→view→management, cascade ปิด+ล็อกลูก) · เซฟผ่าน `Permissions::normalizeStock()` บังคับลำดับชั้นฝั่ง server · controller re-gate read endpoint ตามแท็บ (summary→view_dashboard, requests→view_request, movements→view_events, serials→events, count list→view_count / actions→count) · migration grant key ใหม่ให้ role เดิมกันสิทธิ์หาย · (เลิกใช้ manage_warehouse/audit/delete) |
 | 12 | **Notification** (email + bell) | ⏳ รอเฟสถัดไป | ใช้โครง Notification เดิม (เหมือน contract expiry) ยังไม่ผูก event ของ stock (low-stock / request submitted / approved / fulfilled) |
 
 ### Backend (Phase-9 เสร็จ)
