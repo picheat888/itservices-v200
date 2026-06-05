@@ -295,7 +295,6 @@ export interface Category {
     name: string;
     name_th?: string | null;
     description?: string | null;
-    track_serial?: boolean;
 }
 
 export interface Vendor {
@@ -320,12 +319,6 @@ export interface Unit {
     description?: string | null;
 }
 
-export interface StockStatus {
-    id: number;
-    name: string;
-    description?: string | null;
-}
-
 export interface WarrantyType {
     id: number;
     name: string;
@@ -339,7 +332,7 @@ export interface StockBalance {
     qty: number;
 }
 
-export type StockSerialStatus = 'in_stock' | 'issued' | 'returned' | 'retired';
+export type StockSerialStatus = 'in_stock' | 'issued' | 'returned' | 'retired' | 'adjusted';
 
 export interface StockItemSerial {
     id: number;
@@ -357,6 +350,13 @@ export interface StockLot {
     qty_remaining: number;
     value: number;
     received_at: string | null;
+    /** Receive-movement details (null for seeded lots without a movement). */
+    doc_no?: string | null;
+    reference?: string | null;
+    warehouse?: string | null;
+    supplier?: string | null;
+    recorded_by?: string | null;
+    notes?: string | null;
 }
 
 export interface StockItem {
@@ -373,13 +373,13 @@ export interface StockItem {
     current_stock: number;
     min_stock: number;
     max_stock: number;
-    warehouse: string | null;
-    supplier: string | null;
     warranty: string | null;
     last_move_at: string | null;
     days_since_move: number | null;
     status: StockItemStatus;
     total_value: number;
+    /** Qty committed by approved-but-unfulfilled requests (list endpoint). */
+    reserved?: number;
     /** Per-unit serials — only present on the single-item (show) response. */
     serials?: StockItemSerial[];
     /** FIFO cost lots — only present on the single-item (show) response. */
@@ -390,7 +390,37 @@ export interface StockItem {
 
 export type StockMovementType = 'receive' | 'issue' | 'return' | 'transfer' | 'adjust_up' | 'adjust_down';
 
+export interface SerialEvent {
+    event: 'received' | 'issued' | 'adjusted' | 'transferred' | 'returned';
+    occurred_at: string | null;
+    doc_no: string | null;
+    reference: string | null;
+    recorded_by: string | null;
+    from_label: string | null;
+    to_label: string | null;
+}
+
+export interface StockItemHistory {
+    item: { id: number; sku: string; name: string; current_stock: number; track_serial: boolean };
+    movements: {
+        id: number;
+        doc_no: string | null;
+        type: StockMovementType;
+        qty: number;
+        unit_cost: number | null;
+        from_label: string | null;
+        to_label: string | null;
+        reference: string | null;
+        recorded_by: string | null;
+        notes: string | null;
+        moved_at: string | null;
+    }[];
+    lots: { unit_cost: number; qty_received: number; qty_remaining: number; received_at: string | null; doc_no: string | null; serials: string[] }[];
+    serials: { serial: string; status: StockSerialStatus; warehouse: string | null; events: SerialEvent[] }[];
+}
+
 export type StockCountStatus = 'draft' | 'committed' | 'canceled';
+export type StockCountAdjustMode = 'auto' | 'manual';
 
 export interface StockCountLine {
     id: number;
@@ -400,6 +430,8 @@ export interface StockCountLine {
     system_qty: number;
     counted_qty: number | null;
     variance: number | null;
+    track_serial: boolean;
+    serials?: { id: number; serial: string }[];
 }
 
 export interface StockCount {
@@ -408,6 +440,7 @@ export interface StockCount {
     warehouse: string | null;
     category: string | null;
     status: StockCountStatus;
+    adjust_mode: StockCountAdjustMode | null;
     note: string | null;
     counted_by?: string | null;
     committed_at: string | null;
@@ -438,6 +471,7 @@ export type StockRequestStatus = 'pending' | 'approved' | 'fulfilled' | 'rejecte
 
 export interface StockRequest {
     id: number;
+    reference: string | null;
     stock_item_id: number;
     sku: string | null;
     item_name: string | null;

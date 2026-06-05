@@ -1,4 +1,4 @@
-import type { ApiEnvelope, StockCount, StockItem, StockMovement, StockMovementType, StockRequest, StockSummary } from '@/types';
+import type { ApiEnvelope, StockCount, StockCountAdjustMode, StockItem, StockItemHistory, StockMovement, StockMovementType, StockRequest, StockSummary } from '@/types';
 import { ensureCsrf, http } from './http';
 
 export interface StockMovementPayload {
@@ -34,8 +34,6 @@ export interface StockItemPayload {
     unit: string;
     min_stock: number;
     max_stock: number;
-    warehouse?: string | null;
-    supplier?: string | null;
     warranty?: string | null;
 }
 
@@ -57,6 +55,7 @@ export const stockApi = {
     summary: () => http.get<StockSummary>('/stock-items/summary').then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<StockItem>>(`/stock-items/${id}`).then((r) => r.data.data),
     existingSerials: () => http.get<ApiEnvelope<string[]>>('/stock-items/serials').then((r) => r.data.data),
+    history: (id: number) => http.get<ApiEnvelope<StockItemHistory>>(`/stock-items/${id}/history`).then((r) => r.data.data),
     create: (payload: StockItemPayload) => mutate<StockItem>('post', '/stock-items', payload),
     update: (id: number, payload: StockItemPayload) => mutate<StockItem>('put', `/stock-items/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/stock-items/${id}`),
@@ -64,6 +63,7 @@ export const stockApi = {
 
 export const stockMovementApi = {
     list: (params: { type?: string }) => http.get<ApiEnvelope<StockMovement[]>>('/stock-movements', { params }).then((r) => r.data.data),
+    serials: (id: number) => http.get<ApiEnvelope<string[]>>(`/stock-movements/${id}/serials`).then((r) => r.data.data),
     create: (payload: StockMovementPayload) => mutate<StockMovement>('post', '/stock-movements', payload),
 };
 
@@ -72,7 +72,8 @@ export const stockRequestApi = {
     create: (payload: StockRequestPayload) => mutate<StockRequest>('post', '/stock-requests', payload),
     approve: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/approve`),
     reject: (id: number) => mutate<StockRequest>('post', `/stock-requests/${id}/reject`),
-    fulfill: (id: number, body?: { serial_ids?: number[]; from_warehouse?: string }) => mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
+    fulfill: (id: number, body?: { serial_ids?: number[]; allocations?: { warehouse: string; qty: number }[]; from_warehouse?: string }) =>
+        mutate<StockRequest>('post', `/stock-requests/${id}/fulfill`, body),
 };
 
 export const stockCountApi = {
@@ -81,6 +82,7 @@ export const stockCountApi = {
     open: (body: { warehouse?: string | null; category?: string | null; note?: string | null; stock_item_ids?: number[] }) =>
         mutate<StockCount>('post', '/stock-counts', body),
     saveCounts: (id: number, counts: Record<number, number | null>) => mutate<StockCount>('put', `/stock-counts/${id}`, { counts }),
-    commit: (id: number) => mutate<StockCount>('post', `/stock-counts/${id}/commit`, {}),
+    commit: (id: number, mode: StockCountAdjustMode = 'auto', missingSerials?: Record<number, number[]>) =>
+        mutate<StockCount>('post', `/stock-counts/${id}/commit`, { mode, missing_serials: missingSerials ?? {} }),
     cancel: (id: number) => mutate<void>('delete', `/stock-counts/${id}`),
 };

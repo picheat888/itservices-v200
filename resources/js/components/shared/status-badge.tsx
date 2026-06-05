@@ -11,7 +11,18 @@ const tones: Record<Tone, string> = {
     gray: 'bg-muted text-muted-foreground',
 };
 
-export function StatusBadge({ tone = 'gray', color, children }: { tone?: Tone; color?: string; children: React.ReactNode }) {
+export function StatusBadge({
+    tone = 'gray',
+    color,
+    dot = true,
+    children,
+}: {
+    tone?: Tone;
+    color?: string;
+    /** Leading dot indicator; set false when the badge already has its own icon. */
+    dot?: boolean;
+    children: React.ReactNode;
+}) {
     // A custom hex (e.g. from Settings -> Assets) overrides the named tone:
     // tinted background + solid text/dot, matching the design's badge style.
     if (color) {
@@ -20,7 +31,7 @@ export function StatusBadge({ tone = 'gray', color, children }: { tone?: Tone; c
                 className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium"
                 style={{ backgroundColor: `${color}22`, color }}
             >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+                {dot && <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />}
                 {children}
             </span>
         );
@@ -28,7 +39,7 @@ export function StatusBadge({ tone = 'gray', color, children }: { tone?: Tone; c
 
     return (
         <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', tones[tone])}>
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {dot && <span className="h-1.5 w-1.5 rounded-full bg-current" />}
             {children}
         </span>
     );

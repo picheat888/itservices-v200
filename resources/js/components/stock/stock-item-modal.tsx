@@ -4,10 +4,12 @@ import { SerialToggle } from '@/components/shared/serial-toggle';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { SearchableSelect } from '@/components/shared/searchable-select';
-import { useAssetModels, useBrands, useCategories, useUnits, useVendors, useWarehouses, useWarrantyTypes } from '@/hooks/use-master-data';
+import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/hooks/use-master-data';
 import { useStockItemMutations } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { StockItemPayload } from '@/services/stockApi';
 import type { StockItem } from '@/types';
 import { useEffect, useState } from 'react';
@@ -26,8 +28,6 @@ const empty: StockItemPayload = {
     unit: 'unit',
     min_stock: 0,
     max_stock: 0,
-    warehouse: '',
-    supplier: '',
     warranty: '',
 };
 
@@ -45,8 +45,6 @@ function itemToForm(item: StockItem): StockItemPayload {
         unit: item.unit,
         min_stock: item.min_stock,
         max_stock: item.max_stock,
-        warehouse: item.warehouse ?? '',
-        supplier: item.supplier ?? '',
         warranty: item.warranty ?? '',
     };
 }
@@ -59,39 +57,51 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const t = useT();
     const { create, update } = useStockItemMutations();
     const { data: categories = [] } = useCategories();
-    const { data: warehouses = [] } = useWarehouses();
     const { data: units = [] } = useUnits();
-    const { data: vendors = [] } = useVendors();
     const { data: warranties = [] } = useWarrantyTypes();
     const { data: brands = [] } = useBrands();
     const { data: models = [] } = useAssetModels();
     const [form, setForm] = useState<StockItemPayload>(empty);
+    // When on, the item name is generated from Brand + Model instead of typed.
+    const [autoName, setAutoName] = useState(false);
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (!open) return;
         setForm(item ? itemToForm(item) : empty);
+        setAutoName(false);
     }, [open, item]);
+
+    // Auto item name = "Brand Model" (whichever parts exist). Kept in sync while
+    // the Auto switch is on; turning it off leaves the last value editable.
+    const autoItemName = [form.brand, form.model].filter(Boolean).join(' ').trim();
+    useEffect(() => {
+        if (autoName) {
+            setForm((f) => ({ ...f, name: autoItemName }));
+        }
+    }, [autoName, autoItemName]);
 
     // When editing, the Save button stays disabled until something actually changes.
     const isDirty = !item || JSON.stringify(form) !== JSON.stringify(itemToForm(item));
-    const isValid = !!form.sku.trim() && !!form.name.trim();
+    // SKU is auto-generated on create; everything else below is required.
+    const isValid =
+        !!form.name.trim() &&
+        !!form.category?.trim() &&
+        !!form.brand?.trim() &&
+        !!form.model?.trim() &&
+        !!form.warranty?.trim() &&
+        // Max must be at least Min.
+        Number(form.max_stock) >= Number(form.min_stock);
 
     const set = <K extends keyof StockItemPayload>(k: K, v: StockItemPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
-
-    // Picking a category seeds the serial-tracking default from that category.
-    // For an existing item we never silently flip the saved choice.
-    const onCategoryChange = (v: string) => {
-        const cat = categories.find((c) => c.name === v);
-        setForm((f) => ({ ...f, category: v, track_serial: item ? f.track_serial : !!cat?.track_serial }));
-    };
 
     // Models are scoped to the chosen brand; with no brand picked, show them all.
     const selectedBrand = brands.find((b) => b.name === form.brand);
     const modelOptions = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
 
     const submit = async () => {
-        if (!form.sku.trim() || !form.name.trim()) return;
+        // SKU is auto-generated on create, so only the name is required (matches `isValid`).
+        if (!form.name.trim() || (item && !form.sku.trim())) return;
         // Editing an existing item asks for confirmation before saving changes.
         if (item) {
             const result = await Swal.fire({
@@ -154,23 +164,44 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <DialogTitle>{item ? t('stock_edit_item') : t('stock_new_item')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                    <Field label="SKU" required>
+                    {/* SKU is system-generated (SKU-#######); always read-only —
+                        a placeholder hint stands in until the server assigns it. */}
+                    <Field label="SKU" required={!!item}>
+                        <Input value={form.sku} disabled placeholder={t('stock_sku_auto')} className="font-mono" />
+                    </Field>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                            <Label>
+                                {t('stock_item_name')}
+                                <span className="text-destructive ml-0.5">*</span>
+                            </Label>
+                            {/* Small switch: build the name automatically from Brand + Model. */}
+                            <button
+                                type="button"
+                                onClick={() => setAutoName((v) => !v)}
+                                aria-pressed={autoName}
+                                title={t('stock_item_name_auto_hint')}
+                                className="text-muted-foreground flex items-center gap-1.5 text-xs"
+                            >
+                                <span className="font-medium">{t('stock_item_name_auto')}</span>
+                                <span className={cn('relative h-4 w-7 shrink-0 rounded-full transition-colors', autoName ? 'bg-brand' : 'bg-muted-foreground/30')}>
+                                    <span className={cn('absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all', autoName ? 'left-[14px]' : 'left-0.5')} />
+                                </span>
+                            </button>
+                        </div>
                         <Input
-                            value={form.sku}
-                            onChange={(e) => set('sku', e.target.value)}
-                            disabled={!!item}
-                            placeholder="SK-NB-003"
-                            className="font-mono"
+                            value={form.name}
+                            onChange={(e) => set('name', e.target.value)}
+                            disabled={autoName}
+                            placeholder={autoName ? t('stock_item_name_auto_hint') : undefined}
+                            autoFocus
                         />
-                    </Field>
-                    <Field label={t('stock_item_name')} required>
-                        <Input value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus />
-                    </Field>
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_category')}>
+                        <Field label={t('stock_category')} required>
                             <SearchableSelect
                                 value={form.category ?? ''}
-                                onChange={onCategoryChange}
+                                onChange={(v) => set('category', v)}
                                 placeholder="—"
                                 options={categories.map((c) => ({ value: c.name, label: c.name, search: c.name }))}
                             />
@@ -186,7 +217,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     </div>
                     <SerialToggle value={form.track_serial ?? false} onChange={(v) => set('track_serial', v)} confirmOnEnable />
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_brand')}>
+                        <Field label={t('stock_brand')} required>
                             <SearchableSelect
                                 value={form.brand ?? ''}
                                 onChange={(v) => setForm((f) => ({ ...f, brand: v, model: '' }))}
@@ -194,7 +225,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                                 options={brands.map((b) => ({ value: b.name, label: b.name, search: b.name }))}
                             />
                         </Field>
-                        <Field label={t('stock_model')}>
+                        <Field label={t('stock_model')} required>
                             <SearchableSelect
                                 value={form.model ?? ''}
                                 onChange={(v) => set('model', v)}
@@ -205,31 +236,28 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <Field label="Min">
-                            <Input type="number" value={form.min_stock} onChange={(e) => set('min_stock', +e.target.value)} className="font-mono" />
+                            <Input
+                                type="number"
+                                min={0}
+                                value={form.min_stock}
+                                onChange={(e) => set('min_stock', Math.max(0, +e.target.value))}
+                                className="font-mono"
+                            />
                         </Field>
                         <Field label="Max">
-                            <Input type="number" value={form.max_stock} onChange={(e) => set('max_stock', +e.target.value)} className="font-mono" />
-                        </Field>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('stock_warehouse')}>
-                            <SearchableSelect
-                                value={form.warehouse ?? ''}
-                                onChange={(v) => set('warehouse', v)}
-                                placeholder="—"
-                                options={warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
-                            />
-                        </Field>
-                        <Field label={t('stock_supplier')}>
-                            <SearchableSelect
-                                value={form.supplier ?? ''}
-                                onChange={(v) => set('supplier', v)}
-                                placeholder="—"
-                                options={vendors.map((v) => ({ value: v.name, label: v.name, search: v.name }))}
+                            <Input
+                                type="number"
+                                min={0}
+                                value={form.max_stock}
+                                onChange={(e) => set('max_stock', Math.max(0, +e.target.value))}
+                                className="font-mono"
                             />
                         </Field>
                     </div>
-                    <Field label={t('stock_warranty')}>
+                    {Number(form.max_stock) < Number(form.min_stock) && (
+                        <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>
+                    )}
+                    <Field label={t('stock_warranty')} required>
                         <SearchableSelect
                             value={form.warranty ?? ''}
                             onChange={(v) => set('warranty', v)}

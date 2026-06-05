@@ -24,6 +24,8 @@ export function SearchableSelect({
     const t = useT();
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
+    // Open upward when the trigger sits too close to the viewport bottom.
+    const [dropUp, setDropUp] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -34,21 +36,48 @@ export function SearchableSelect({
         return () => window.removeEventListener('mousedown', h);
     }, []);
 
+    // Decide the open direction at click time: if there isn't room below for the
+    // menu (e.g. the last field in a dialog) and there's more room above, drop up
+    // so the list never spills past the screen edge.
+    const toggle = () => {
+        setOpen((o) => {
+            const next = !o;
+            if (next && ref.current) {
+                const rect = ref.current.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const MENU_MAX = 300; // search box + max-h-56 list + padding
+                setDropUp(spaceBelow < MENU_MAX && rect.top > spaceBelow);
+            }
+            return next;
+        });
+    };
+
     const selected = options.find((o) => o.value === value);
     const filtered = q ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
 
     return (
-        <div ref={ref} className="relative">
+        <div ref={ref} className="relative min-w-0">
             <button
                 type="button"
-                onClick={() => setOpen((o) => !o)}
-                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                onClick={toggle}
+                className="flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-                <span className={cn('truncate', !selected && 'text-muted-foreground')}>{selected ? selected.label : placeholder ?? t('select_placeholder')}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                    {/* Label truncates; the sub (e.g. on-hand qty) stays pinned so it never gets cut. */}
+                    <span className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
+                        {selected ? selected.label : placeholder ?? t('select_placeholder')}
+                    </span>
+                    {selected?.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{selected.sub}</span>}
+                </span>
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
             </button>
             {open && (
-                <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover shadow-md">
+                <div
+                    className={cn(
+                        'absolute z-50 w-full overflow-hidden rounded-md border border-border bg-popover shadow-md',
+                        dropUp ? 'bottom-full mb-1' : 'top-full mt-1',
+                    )}
+                >
                     <div className="border-b border-border p-2">
                         <input
                             autoFocus
@@ -74,8 +103,8 @@ export function SearchableSelect({
                                     o.value === value && 'bg-accent/60',
                                 )}
                             >
-                                <span className="truncate">{o.label}</span>
-                                {o.sub && <span className="ml-auto shrink-0 font-mono text-xs text-muted-foreground">{o.sub}</span>}
+                                <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                                {o.sub && <span className="shrink-0 font-mono text-xs text-muted-foreground">{o.sub}</span>}
                             </button>
                         ))}
                     </div>

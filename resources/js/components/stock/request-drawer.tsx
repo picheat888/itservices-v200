@@ -1,11 +1,13 @@
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { SearchableSelect } from '@/components/shared/searchable-select';
 import { useStockItems, useStockRequestActions } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
+import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -17,20 +19,31 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
     const { submit } = useStockRequestActions();
     const { data: items = [] } = useStockItems({});
     const [sku, setSku] = useState('');
-    const [qty, setQty] = useState(1);
+    // Keep the raw text so the field can be cleared/retyped freely; derive the number.
+    const [qtyInput, setQtyInput] = useState('1');
+    const qty = parseInt(qtyInput, 10) || 0;
     const [reason, setReason] = useState('');
 
     useEffect(() => {
         if (!open) return;
         const first = items[0];
         setSku(first ? String(first.id) : '');
-        setQty(1);
+        setQtyInput('1');
         setReason('');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open]);
 
+    // Available-to-request = on-hand − reserved (approved-but-unfulfilled requests),
+    // so two approvals can't over-commit the same stock.
+    const selected = items.find((i) => String(i.id) === sku);
+    const onHand = selected?.current_stock ?? 0;
+    const reserved = selected?.reserved ?? 0;
+    const available = Math.max(0, onHand - reserved);
+    const over = qty > available;
+    const canSubmit = !!sku && qty >= 1 && !!reason.trim() && !over;
+
     const send = async () => {
-        if (!sku || qty < 1 || !reason.trim()) return;
+        if (!canSubmit) return;
         try {
             await submit.mutateAsync({ stock_item_id: Number(sku), qty, reason: reason.trim() });
             setTimeout(onClose, CLOSE_DELAY_MS);
@@ -53,21 +66,45 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             placeholder="—"
                             options={items.map((i) => ({
                                 value: String(i.id),
-                                label: `${i.sku} — ${i.name} (${i.current_stock})`,
+                                label: `${i.sku} — ${i.name}`,
+                                sub: `(${i.current_stock})`,
                                 search: `${i.sku} ${i.name}`,
                             }))}
                         />
                     </Field>
                     <Field label={t('stock_qty')} required>
-                        <Input type="number" min={1} value={qty} onChange={(e) => setQty(+e.target.value)} className="font-mono" />
+                        <Input
+                            type="number"
+                            min={1}
+                            max={available || undefined}
+                            value={qtyInput}
+                            onChange={(e) => setQtyInput(e.target.value)}
+                            className="font-mono"
+                            aria-invalid={over}
+                        />
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                            <span className="text-muted-foreground">
+                                {t('stock_available')}:{' '}
+                                <b className={cn('font-mono', available > 0 ? 'text-emerald-600' : 'text-destructive')}>{available}</b>{' '}
+                                {selected?.unit}
+                            </span>
+                            {over && (
+                                <span className="text-destructive flex items-center gap-1 font-medium">
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                    {t('stock_request_over')} ({available})
+                                </span>
+                            )}
+                        </div>
                     </Field>
                     <Field label={t('stock_reason')} required>
                         <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('stock_reason_ph')} />
                     </Field>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose} disabled={submit.isPending}>{t('cancel')}</Button>
-                    <SaveButton loading={submit.isPending} onClick={send} disabled={!sku || qty < 1 || !reason.trim()}>
+                    <Button variant="outline" onClick={onClose} disabled={submit.isPending}>
+                        {t('cancel')}
+                    </Button>
+                    <SaveButton loading={submit.isPending} onClick={send} disabled={!canSubmit}>
                         {t('stock_submit')}
                     </SaveButton>
                 </DialogFooter>

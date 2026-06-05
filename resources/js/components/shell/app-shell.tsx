@@ -9,6 +9,7 @@ import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { NotificationToaster } from './notification-toaster';
 import { NotificationsDropdown } from './notifications-dropdown';
 import { ProfileDrawer } from './profile-drawer';
 import { Sidebar } from './sidebar';
@@ -46,6 +47,9 @@ export function AppShell() {
             </div>
 
             <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
+
+            {/* Bottom-right pop-up for newly-arrived notifications. */}
+            <NotificationToaster />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
             {user?.password_expired && <ChangePasswordDialog />}

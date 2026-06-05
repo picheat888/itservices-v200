@@ -112,7 +112,7 @@ function Pager({
  */
 export function StockItemDetailModal({ itemId, onClose }: { itemId: number | null; onClose: () => void }) {
     const t = useT();
-    const { symbol } = useCurrency();
+    const { symbol, format } = useCurrency();
     const { data: item, isLoading } = useStockItem(itemId);
     const open = itemId !== null;
 
@@ -129,7 +129,8 @@ export function StockItemDetailModal({ itemId, onClose }: { itemId: number | nul
 
     const balances = useMemo(() => (item?.balances ?? []).filter((b) => b.qty > 0), [item]);
 
-    const lots = item?.lots ?? [];
+    // Only show lots that still have stock on hand; fully-consumed lots (remaining 0) are hidden.
+    const lots = (item?.lots ?? []).filter((l) => l.qty_remaining > 0);
     const lotPageCount = Math.max(1, Math.ceil(lots.length / LOTS_PER_PAGE));
     const pagedLots = lots.slice(lotPage * LOTS_PER_PAGE, lotPage * LOTS_PER_PAGE + LOTS_PER_PAGE);
 
@@ -202,7 +203,7 @@ export function StockItemDetailModal({ itemId, onClose }: { itemId: number | nul
                                 value={
                                     <>
                                         <span className="text-muted-foreground text-sm">{symbol}</span>
-                                        {item.total_value.toLocaleString()}
+                                        {item.total_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </>
                                 }
                             />
@@ -211,7 +212,7 @@ export function StockItemDetailModal({ itemId, onClose }: { itemId: number | nul
                                 value={
                                     <>
                                         <span className="text-muted-foreground text-sm">{symbol}</span>
-                                        {item.cost.toLocaleString()}
+                                        {item.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </>
                                 }
                             />
@@ -253,14 +254,14 @@ export function StockItemDetailModal({ itemId, onClose }: { itemId: number | nul
 
                         {/* FIFO cost lots — paged 10 per page */}
                         <div>
-                            <SectionLabel right={`${symbol}${item.total_value.toLocaleString()}`}>{t('stock_lots_title')}</SectionLabel>
+                            <SectionLabel right={format(item.total_value)}>{t('stock_lots_title')}</SectionLabel>
                             {lots.length > 0 ? (
                                 <div className="border-border overflow-hidden rounded-lg border">
                                     <table className="w-full text-sm">
                                         <thead className="bg-muted/40">
                                             <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] uppercase">
-                                                <th className="px-3 py-2 font-medium">{t('stock_serial_received')}</th>
                                                 <th className="px-3 py-2 font-medium">{t('stock_hist_receive_no')}</th>
+                                                <th className="px-3 py-2 font-medium">{t('stock_date')}</th>
                                                 <th className="px-3 py-2 text-right font-medium">{t('stock_unit_cost')}</th>
                                                 <th className="px-3 py-2 text-right font-medium">{t('stock_lot_remaining')}</th>
                                                 <th className="px-3 py-2 text-right font-medium">{t('stock_lot_value')}</th>
@@ -279,27 +280,23 @@ export function StockItemDetailModal({ itemId, onClose }: { itemId: number | nul
                                                                 expanded ? 'bg-accent/30 border-transparent' : 'border-border/60',
                                                             )}
                                                         >
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                            <td className="px-3 py-1.5 font-mono text-xs">
                                                                 <span className="inline-flex items-center gap-1.5">
                                                                     <ChevronDown
                                                                         className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
                                                                     />
-                                                                    {l.received_at?.slice(0, 10) ?? '—'}
+                                                                    {l.doc_no ?? '—'}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-3 py-1.5 font-mono text-xs">{l.doc_no ?? '—'}</td>
-                                                            <td className="px-3 py-1.5 text-right font-mono text-xs">
-                                                                {symbol}
-                                                                {l.unit_cost.toLocaleString()}
+                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                                {l.received_at?.slice(0, 10) ?? '—'}
                                                             </td>
+                                                            <td className="px-3 py-1.5 text-right font-mono text-xs">{format(l.unit_cost)}</td>
                                                             <td className="px-3 py-1.5 text-right font-mono">
                                                                 {l.qty_remaining}
                                                                 <span className="text-muted-foreground">/{l.qty_received}</span>
                                                             </td>
-                                                            <td className="px-3 py-1.5 text-right font-mono font-semibold">
-                                                                {symbol}
-                                                                {l.value.toLocaleString()}
-                                                            </td>
+                                                            <td className="px-3 py-1.5 text-right font-mono font-semibold">{format(l.value)}</td>
                                                         </tr>
                                                         {expanded && (
                                                             <tr className="border-border/60 border-b last:border-0">
