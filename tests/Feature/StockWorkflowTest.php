@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\StockBalance;
 use App\Models\StockItem;
+use App\Models\StockMovement;
 use App\Models\StockRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -120,11 +121,16 @@ class StockWorkflowTest extends TestCase
 
         $requester = $this->userWith(['stock.view', 'stock.request']);
 
-        $reqId = $this->actingAs($requester)
+        $created = $this->actingAs($requester)
             ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 4, 'reason' => 'New hire setup'])
             ->assertCreated()
             ->assertJsonPath('data.status', 'pending')
-            ->json('data.id');
+            ->json('data');
+        $reqId = $created['id'];
+        $reqRef = $created['reference'];
+
+        // Auto document number: REQ-<year>-<NNNN>.
+        $this->assertSame('REQ-'.now()->year.'-0001', $reqRef);
 
         $super = $this->superUser();
 
@@ -140,7 +146,7 @@ class StockWorkflowTest extends TestCase
 
         // Fulfillment issued 4 units and created an issue movement.
         $this->assertSame(6, $item->fresh()->current_stock);
-        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'issue', 'qty' => 4, 'reference' => "REQ-{$reqId}"]);
+        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'issue', 'qty' => 4, 'reference' => $reqRef]);
     }
 
     public function test_cannot_fulfill_request_that_is_not_approved(): void
@@ -177,11 +183,59 @@ class StockWorkflowTest extends TestCase
         $this->assertDatabaseHas('stock_movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'from_label' => 'WH-2']);
     }
 
+    public function test_fulfill_can_split_one_request_across_warehouses(): void
+    {
+        $this->actingAs($this->superUser());
+        $item = $this->item(0);
+        // Stock split: WH-1 has 3, WH-2 has 2 — neither alone covers a qty-5 request.
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-1'])->assertCreated();
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'WH-2'])->assertCreated();
+
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'user_id' => $this->superUser()->id,
+            'requester_name' => 'Tester', 'qty' => 5, 'reason' => 'x', 'status' => 'approved',
+        ]);
+
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill", [
+            'allocations' => [
+                ['warehouse' => 'WH-1', 'qty' => 3],
+                ['warehouse' => 'WH-2', 'qty' => 2],
+            ],
+        ])->assertOk()->assertJsonPath('data.status', 'fulfilled');
+
+        $this->assertSame(0, $item->fresh()->current_stock);
+        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-1'])->value('qty'));
+        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-2'])->value('qty'));
+        // One issue movement per source warehouse.
+        $this->assertSame(2, StockMovement::where(['stock_item_id' => $item->id, 'type' => 'issue'])->count());
+    }
+
+    public function test_fulfill_allocation_must_total_requested_qty(): void
+    {
+        $this->actingAs($this->superUser());
+        $item = $this->item(0);
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-1'])->assertCreated();
+        $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'WH-2'])->assertCreated();
+
+        $req = StockRequest::create([
+            'stock_item_id' => $item->id, 'user_id' => $this->superUser()->id,
+            'requester_name' => 'Tester', 'qty' => 5, 'reason' => 'x', 'status' => 'approved',
+        ]);
+
+        // Allocations total 4, not 5 → rejected, nothing deducted.
+        $this->postJson("/api/stock-requests/{$req->id}/fulfill", [
+            'allocations' => [['warehouse' => 'WH-1', 'qty' => 3], ['warehouse' => 'WH-2', 'qty' => 1]],
+        ])->assertStatus(422);
+
+        $this->assertSame(5, $item->fresh()->current_stock);
+        $this->assertSame('approved', $req->fresh()->status);
+    }
+
     public function test_requester_only_sees_own_requests(): void
     {
         $item = $this->item();
-        $a = $this->userWith(['stock.view', 'stock.request']);
-        $b = $this->userWith(['stock.view', 'stock.request']);
+        $a = $this->userWith(['stock.view', 'stock.view_request', 'stock.request']);
+        $b = $this->userWith(['stock.view', 'stock.view_request', 'stock.request']);
 
         StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $a->id, 'requester_name' => 'A', 'qty' => 1, 'reason' => 'r', 'status' => 'pending']);
         StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $b->id, 'requester_name' => 'B', 'qty' => 1, 'reason' => 'r', 'status' => 'pending']);
