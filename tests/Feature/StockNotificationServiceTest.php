@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\StockAlertLog;
+use App\Models\StockCount;
 use App\Models\StockItem;
 use App\Models\StockRequest;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
+use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use App\Services\StockNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,5 +108,33 @@ class StockNotificationServiceTest extends TestCase
 
         Notification::assertSentTo($owner, StockRequestNotification::class);
         Notification::assertNotSentTo($approver, StockRequestNotification::class);
+    }
+
+    public function test_request_waiting_bells_approvers(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'WT-1', 'name' => 'Wt', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 9]);
+        $req = StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $owner->id, 'requester_name' => $owner->name, 'qty' => 1, 'reason' => 'r', 'status' => 'pending']);
+
+        app(StockNotificationService::class)->requestWaiting($req);
+
+        Notification::assertSentTo($approver, StockRequestNotification::class);
+    }
+
+    public function test_count_draft_is_bell_only_to_view_count_holders(): void
+    {
+        Notification::fake();
+        $counter = $this->userWithPerm('stock.view_count');
+        $count = StockCount::create([
+            'reference' => 'CNT-TEST-'.uniqid(),
+            'status' => 'draft',
+            'counted_by' => $counter->id,
+        ]);
+
+        app(StockNotificationService::class)->countDraft($count);
+
+        Notification::assertSentTo($counter, StockCountDraftNotification::class);
     }
 }
