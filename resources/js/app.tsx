@@ -14,6 +14,7 @@ import LoginPage from '@/pages/login';
 import PermissionsPage from '@/pages/permissions';
 import PlaceholderPage from '@/pages/placeholder';
 import SettingsPage from '@/pages/settings';
+import ItemHistoryPage from '@/pages/stock/item-history';
 import StockPage from '@/pages/stock';
 import TicketsPage from '@/pages/tickets';
 import type { Role } from '@/types';
@@ -78,7 +79,7 @@ function App() {
                         <Route
                             path="stock"
                             element={
-                                <RequirePermission anyOf={['stock.view']}>
+                                <RequirePermission anyOf={['stock.module']}>
                                     <StockPage />
                                 </RequirePermission>
                             }
@@ -119,6 +120,14 @@ function App() {
                             />
                         ))}
                     </Route>
+                    <Route
+                        path="stock/items/:id/history"
+                        element={
+                            <RequirePermission anyOf={['stock.view']}>
+                                <ItemHistoryPage />
+                            </RequirePermission>
+                        }
+                    />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
