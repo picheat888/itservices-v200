@@ -67,7 +67,7 @@ class RolePermissionController extends Controller
             'permissions.*' => [Rule::in(Permissions::all())],
         ]);
 
-        $granted = $data['permissions'];
+        $granted = Permissions::normalizeStock($data['permissions']);
 
         // Snapshot current permissions before overwriting to compute the diff.
         $before = RolePermission::where('role_id', $roleId)->where('allowed', true)->pluck('permission')->all();
