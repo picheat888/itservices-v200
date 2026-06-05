@@ -138,6 +138,36 @@ class EmailTemplateController extends Controller
     }
 
     /**
+     * Live preview of UNSAVED edit-drawer content: renders the supplied subject/body
+     * through the branded layout with sample data + an inert Quick link, so the Edit
+     * screen shows exactly what the Preview / recipient will see as you type.
+     */
+    public function renderPreview(Request $request): Response
+    {
+        $this->gate($request);
+
+        $data = $request->validate([
+            'name' => ['nullable', 'string', 'max:150'],
+            'subject' => ['nullable', 'string', 'max:255'],
+            'body_html' => ['nullable', 'string'],
+        ]);
+
+        $vars = $this->sampleVars($request);
+
+        $html = view('emails.templated', [
+            'subjectLine' => $this->service->render($data['subject'] ?? '', $vars),
+            'bodyHtml' => $this->service->render($data['body_html'] ?? '', $vars),
+            'eyebrow' => $data['name'] ?? null,
+            'actionUrl' => rtrim((string) config('app.url'), '/').'/',
+            'actionLabel' => 'Open in portal',
+            'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+            'preview' => true,
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html');
+    }
+
+    /**
      * Realistic sample values for previews / test sends, covering the placeholders
      * used across all modules (including stock digest {{items}} / {{count}}).
      *

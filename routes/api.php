@@ -72,6 +72,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('email-templates/{emailTemplate}', [EmailTemplateController::class, 'update'])->name('api.email-templates.update');
     Route::post('email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'test'])->name('api.email-templates.test');
     Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
+    Route::post('email-templates/render-preview', [EmailTemplateController::class, 'renderPreview'])->name('api.email-templates.render-preview');
 
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');

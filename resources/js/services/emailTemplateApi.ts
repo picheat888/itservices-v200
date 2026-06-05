@@ -60,4 +60,11 @@ export const emailTemplateApi = {
         const { data } = await http.post<{ sent: boolean }>(`/email-templates/${id}/test`);
         return data;
     },
+
+    // Renders unsaved edit-drawer content through the real email layout (HTML string).
+    renderPreview: async (payload: { name?: string; subject?: string; body_html?: string }): Promise<string> => {
+        await ensureCsrf();
+        const { data } = await http.post('/email-templates/render-preview', payload, { responseType: 'text' });
+        return data as string;
+    },
 };
