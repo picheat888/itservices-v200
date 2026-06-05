@@ -23,18 +23,21 @@ class EmailNotificationService
     public function __construct(private readonly MailConfigService $mailConfig) {}
 
     /**
-     * Relative public-disk path of the uploaded brand logo to embed in sent emails
-     * (as a CID inline attachment), or null to fall back to the text tile. SVG is
-     * skipped — email clients don't render it.
+     * Absolute filesystem path of the logo to embed in sent emails (as a CID inline
+     * attachment): the admin-uploaded brand logo if usable, otherwise the bundled
+     * default PNG (public/logo.png). Returns null when neither exists, so the layout
+     * falls back to the text tile. SVG is skipped — email clients don't render it.
      */
-    public function brandLogoPath(): ?string
+    public function brandLogoFile(): ?string
     {
-        $path = AppSetting::get('logo_path');
-        if (! $path || Str::endsWith(strtolower($path), '.svg')) {
-            return null;
+        $custom = AppSetting::get('logo_path');
+        if ($custom && ! Str::endsWith(strtolower($custom), '.svg') && Storage::disk('public')->exists($custom)) {
+            return Storage::disk('public')->path($custom);
         }
 
-        return Storage::disk('public')->exists($path) ? $path : null;
+        $default = public_path('logo.png');
+
+        return is_file($default) ? $default : null;
     }
 
     /**
@@ -43,14 +46,12 @@ class EmailNotificationService
      */
     public function brandLogoDataUri(): ?string
     {
-        $path = $this->brandLogoPath();
-        if (! $path) {
+        $file = $this->brandLogoFile();
+        if (! $file) {
             return null;
         }
 
-        $disk = Storage::disk('public');
-
-        return 'data:'.$disk->mimeType($path).';base64,'.base64_encode($disk->get($path));
+        return 'data:image/png;base64,'.base64_encode((string) file_get_contents($file));
     }
 
     /** Substitutes {{variables}} in a string from the given map. */
@@ -106,7 +107,7 @@ class EmailNotificationService
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoPath()));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile()));
             $status = 'sent';
             $error = null;
         } catch (\Throwable $e) {

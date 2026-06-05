@@ -21,7 +21,7 @@ class TemplatedMail extends Mailable
         public ?string $actionUrl = null,
         public ?string $actionLabel = null,
         public ?string $brand = null,
-        public ?string $logoPath = null,
+        public ?string $logoFile = null,
     ) {}
 
     public function envelope(): Envelope
@@ -38,7 +38,7 @@ class TemplatedMail extends Mailable
             'actionUrl' => $this->actionUrl,
             'actionLabel' => $this->actionLabel,
             'brand' => $this->brand,
-            'logoPath' => $this->logoPath,
+            'logoFile' => $this->logoFile,
         ]);
     }
 }
