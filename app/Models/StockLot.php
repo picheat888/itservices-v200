@@ -27,4 +27,10 @@ class StockLot extends Model
     {
         return $this->belongsTo(StockItem::class, 'stock_item_id');
     }
+
+    /** The receive movement this lot was created from (PO, supplier, warehouse, who). */
+    public function movement(): BelongsTo
+    {
+        return $this->belongsTo(StockMovement::class, 'stock_movement_id');
+    }
 }

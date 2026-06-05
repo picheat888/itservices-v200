@@ -11,13 +11,13 @@ use Illuminate\Console\Command;
  */
 class SendContractExpiryAlerts extends Command
 {
-    protected $signature = 'contracts:send-expiry-alerts';
+    protected $signature = 'contracts:send-expiry-alerts {--force : Re-fire today\'s in-app bell even if already sent (testing)}';
 
     protected $description = 'Send expiry alerts for contracts crossing a reminder threshold';
 
     public function handle(ContractExpiryAlertService $service): int
     {
-        $count = $service->run();
+        $count = $service->run((bool) $this->option('force'));
         $this->info("Contract expiry alerts sent: {$count}");
 
         return self::SUCCESS;

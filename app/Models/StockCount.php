@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StockCountAdjustMode;
 use App\Enums\StockCountStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,19 +10,32 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockCount extends Model
 {
-    protected $fillable = ['reference', 'warehouse', 'category', 'status', 'note', 'counted_by', 'committed_at'];
+    protected $fillable = ['reference', 'warehouse', 'category', 'status', 'adjust_mode', 'note', 'counted_by', 'committed_at'];
 
     protected function casts(): array
     {
-        return ['status' => StockCountStatus::class, 'committed_at' => 'datetime'];
+        return [
+            'status' => StockCountStatus::class,
+            'adjust_mode' => StockCountAdjustMode::class,
+            'committed_at' => 'datetime',
+        ];
     }
 
-    /** Auto-assign SC-#### when no reference was supplied. */
+    /**
+     * Auto-assign SC-<YEAR>-<NNN> when no reference was supplied, counted per year.
+     * Reads the max existing reference for the year to determine the next sequence.
+     */
     protected static function booted(): void
     {
         static::creating(function (StockCount $count) {
             if (blank($count->reference)) {
-                $count->reference = 'SC-'.((static::max('id') ?? 1000) + 1);
+                $year = now()->year;
+                $last = static::where('reference', 'like', "SC-{$year}-%")
+                    ->orderByDesc('reference')
+                    ->lockForUpdate()
+                    ->value('reference');
+                $seq = $last ? ((int) substr($last, -3)) + 1 : 1;
+                $count->reference = sprintf('SC-%d-%03d', $year, $seq);
             }
         });
     }

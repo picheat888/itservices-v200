@@ -10,7 +10,7 @@ class StockItem extends Model
     protected $fillable = [
         'sku', 'name', 'serial', 'track_serial', 'category', 'brand', 'model', 'unit',
         'cost', 'current_stock', 'min_stock', 'max_stock',
-        'warehouse', 'supplier', 'warranty', 'last_move_at',
+        'warranty', 'last_move_at',
     ];
 
     /**
@@ -28,6 +28,23 @@ class StockItem extends Model
     /** Days with no movement before an item is considered "dead stock". */
     public const DEAD_STOCK_DAYS = 90;
 
+    /**
+     * Next auto-generated SKU in the form "SKU-#######" (7-digit, zero-padded,
+     * running number). Only SKUs already matching this exact pattern feed the
+     * sequence, so manually-entered legacy codes never block or collide with it.
+     * Computed in PHP (not SQL) to stay portable across MySQL and SQLite.
+     */
+    public static function nextSku(): string
+    {
+        $seq = static::query()
+            ->where('sku', 'like', 'SKU-%')
+            ->pluck('sku')
+            ->map(fn (string $sku): int => preg_match('/^SKU-(\d{7})$/', $sku, $m) ? (int) $m[1] : 0)
+            ->max() ?? 0;
+
+        return 'SKU-'.str_pad((string) ($seq + 1), 7, '0', STR_PAD_LEFT);
+    }
+
     /** @return HasMany<StockMovement, $this> */
     public function movements(): HasMany
     {
@@ -44,6 +61,12 @@ class StockItem extends Model
     public function lots(): HasMany
     {
         return $this->hasMany(StockLot::class);
+    }
+
+    /** @return HasMany<StockRequest, $this> */
+    public function requests(): HasMany
+    {
+        return $this->hasMany(StockRequest::class);
     }
 
     /** @return HasMany<StockBalance, $this> */

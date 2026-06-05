@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockItemSerial extends Model
 {
@@ -22,6 +23,12 @@ class StockItemSerial extends Model
     public function movement(): BelongsTo
     {
         return $this->belongsTo(StockMovement::class, 'stock_movement_id');
+    }
+
+    /** @return HasMany<StockItemSerialEvent, $this> */
+    public function events(): HasMany
+    {
+        return $this->hasMany(StockItemSerialEvent::class)->orderBy('occurred_at');
     }
 
     protected function casts(): array

@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\AssetModel;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\StockStatus;
 use App\Models\Unit;
 use App\Models\Vendor;
 use App\Models\Warehouse;
@@ -72,8 +71,14 @@ class MasterDataSeeder extends Seeder
 
         foreach ($models as $m) {
             $brand = $brandMap[$m['brand']] ?? null;
+            // Store the bare model name — the brand is its own column (brand_id),
+            // so strip a leading brand prefix from the demo list ("Dell Latitude
+            // 5540" → "Latitude 5540") to avoid redundant "Dell Dell …" displays.
+            $name = str_starts_with($m['name'], $m['brand'].' ')
+                ? substr($m['name'], strlen($m['brand']) + 1)
+                : $m['name'];
             AssetModel::updateOrCreate(
-                ['name' => $m['name']],
+                ['name' => $name],
                 ['brand_id' => $brand?->id, 'description' => $m['description']],
             );
         }
@@ -108,7 +113,7 @@ class MasterDataSeeder extends Seeder
         foreach ($categories as $c) {
             Category::updateOrCreate(
                 ['name' => $c['name']],
-                ['description' => $c['description'], 'track_serial' => $c['serial']],
+                ['description' => $c['description']],
             );
         }
 
@@ -255,18 +260,6 @@ class MasterDataSeeder extends Seeder
         ];
         foreach ($units as $u) {
             Unit::updateOrCreate(['name' => $u['name']], ['description' => $u['description']]);
-        }
-
-        // ── Stock statuses (item condition — Stock module) ────────────────────────
-        $stockStatuses = [
-            ['name' => 'New', 'description' => 'ของใหม่ ยังไม่เปิดใช้งาน'],
-            ['name' => 'Used', 'description' => 'ผ่านการใช้งานแล้ว'],
-            ['name' => 'Refurbished', 'description' => 'ปรับสภาพใหม่'],
-            ['name' => 'Damaged', 'description' => 'ชำรุด รอซ่อม/ตัดจำหน่าย'],
-            ['name' => 'Reserved', 'description' => 'จองไว้สำหรับงาน/โครงการ'],
-        ];
-        foreach ($stockStatuses as $s) {
-            StockStatus::updateOrCreate(['name' => $s['name']], ['description' => $s['description']]);
         }
 
         // ── Warranty types (Stock module) ─────────────────────────────────────────
