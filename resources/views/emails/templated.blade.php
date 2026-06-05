@@ -20,12 +20,12 @@
         return '<p style="margin:0;"'.$attrs.'>';
     }, (string) ($bodyHtml ?? ''));
 
-    // Logo source: a CID inline attachment when actually sending ($message is present),
-    // or a base64 data URI for the in-app preview (browser iframe). Falls back to the
-    // text tile when neither is available.
+    // Logo source: a CID inline attachment when actually sending ($message is present,
+    // $logoFile is an absolute path), or a base64 data URI for the in-app preview
+    // (browser iframe). Falls back to the text tile when neither is available.
     $logoSrc = null;
-    if (isset($message) && ! empty($logoPath ?? null)) {
-        $logoSrc = $message->embed(\Illuminate\Support\Facades\Storage::disk('public')->path($logoPath));
+    if (isset($message) && ! empty($logoFile ?? null)) {
+        $logoSrc = $message->embed($logoFile);
     } elseif (! empty($logoData ?? null)) {
         $logoSrc = $logoData;
     }
