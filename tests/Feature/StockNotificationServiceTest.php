@@ -123,6 +123,23 @@ class StockNotificationServiceTest extends TestCase
         Notification::assertSentTo($approver, StockRequestNotification::class);
     }
 
+    public function test_receiving_over_max_fires_a_realtime_overstock_alert(): void
+    {
+        Notification::fake();
+        $watcher = $this->userWithPerm('stock.module');
+        $mover = $this->userWithPerm('stock.module');
+        RolePermission::create(['role_id' => $mover->role_id, 'permission' => 'stock.receive', 'allowed' => true]);
+
+        $item = StockItem::create(['sku' => 'OV-1', 'name' => 'Ov', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 10, 'current_stock' => 0]);
+
+        // Receive 50 → on-hand 50 > max 10 → overstock → realtime alert to module holders.
+        $this->actingAs($mover)->postJson('/api/stock-movements', [
+            'type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 50,
+        ])->assertCreated();
+
+        Notification::assertSentTo($watcher, StockAlertNotification::class);
+    }
+
     public function test_count_draft_is_bell_only_to_view_count_holders(): void
     {
         Notification::fake();

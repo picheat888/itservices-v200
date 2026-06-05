@@ -11,6 +11,7 @@ use App\Models\StockMovement;
 use App\Models\StockRequest;
 use App\Services\StockBalanceService;
 use App\Services\StockLotService;
+use App\Services\StockNotificationService;
 use App\Services\StockSerialService;
 use App\Support\DocNumber;
 use Illuminate\Http\JsonResponse;
@@ -207,6 +208,9 @@ class StockRequestController extends Controller
 
             $stockRequest->update(['status' => 'fulfilled', 'fulfilled_at' => now()]);
         });
+
+        // Fire a real-time stock-level alert now that on-hand has been decremented.
+        app(StockNotificationService::class)->alert(StockItem::find($stockRequest->stock_item_id));
 
         AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}");
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\StockCountResource;
 use App\Models\StockCount;
 use App\Services\StockCountService;
+use App\Services\StockNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -102,6 +103,13 @@ class StockCountController extends Controller
         }
 
         $count = $this->service->commit($stockCount, $request->user(), $mode, $missing);
+
+        // Fire real-time stock-level alerts for every item whose on-hand was adjusted.
+        foreach ($count->lines()->with('item')->get() as $line) {
+            if ($line->item) {
+                app(StockNotificationService::class)->alert($line->item->fresh());
+            }
+        }
 
         return (new StockCountResource($count->load(['countedBy', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
