@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
+use App\Models\RolePermission;
 use App\Models\StockAlertLog;
 use App\Models\StockItem;
 use App\Models\StockRequest;
 use App\Models\User;
+use App\Notifications\StockAlertNotification;
+use App\Services\StockNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class StockNotificationServiceTest extends TestCase
@@ -35,5 +40,42 @@ class StockNotificationServiceTest extends TestCase
         ]);
 
         $this->assertSame($user->id, $req->user->id);
+    }
+
+    /** Grant a fresh non-super user a single permission. */
+    private function userWithPerm(string $permission): User
+    {
+        $role = Role::create(['key' => 'nrole_'.uniqid(), 'name' => 'N', 'is_system' => false]);
+        RolePermission::create(['role_id' => $role->id, 'permission' => $permission, 'allowed' => true]);
+
+        return User::factory()->create(['role_id' => $role->id, 'email' => 'r'.uniqid().'@x.test']);
+    }
+
+    public function test_alert_bells_module_holders_for_a_low_item(): void
+    {
+        Notification::fake();
+        $recipient = $this->userWithPerm('stock.module');
+        $item = StockItem::create(['sku' => 'LOW-1', 'name' => 'Low', 'unit' => 'unit', 'min_stock' => 5, 'max_stock' => 50, 'current_stock' => 0]);
+
+        app(StockNotificationService::class)->alert($item);
+
+        Notification::assertSentTo($recipient, StockAlertNotification::class);
+        $this->assertDatabaseHas('stock_alert_logs', ['stock_item_id' => $item->id]);
+    }
+
+    public function test_alert_dedupes_same_day_and_clears_when_normal(): void
+    {
+        Notification::fake();
+        $this->userWithPerm('stock.module');
+        $item = StockItem::create(['sku' => 'D-1', 'name' => 'D', 'unit' => 'unit', 'min_stock' => 5, 'max_stock' => 50, 'current_stock' => 0]);
+        $svc = app(StockNotificationService::class);
+
+        $svc->alert($item);
+        $svc->alert($item); // same day → no duplicate ledger row
+        $this->assertSame(1, StockAlertLog::where('stock_item_id', $item->id)->count());
+
+        $item->update(['current_stock' => 20]); // back to normal
+        $svc->alert($item);
+        $this->assertSame(0, StockAlertLog::where('stock_item_id', $item->id)->count());
     }
 }
