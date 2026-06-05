@@ -22,8 +22,6 @@ import {
     useBrands,
     useCategories,
     useCategoryMutations,
-    useStockStatuses,
-    useStockStatusMutations,
     useUnitMutations,
     useUnits,
     useVendorMutations,
@@ -327,7 +325,7 @@ function DisplayTab() {
 
 // ─── Master Data Tab ─────────────────────────────────────────────────────────
 
-type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'stock-statuses' | 'warranty-types';
+type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types';
 
 /**
  * MasterDataTab — top-level container with sub-tab navigation.
@@ -346,7 +344,6 @@ function MasterDataTab() {
         { id: 'warehouses', label: t('md_warehouses') },
         { id: 'locations', label: t('set_locations') },
         { id: 'units', label: t('md_units') },
-        { id: 'stock-statuses', label: t('md_stock_statuses') },
         { id: 'warranty-types', label: t('md_warranty_types') },
     ];
 
@@ -379,7 +376,6 @@ function MasterDataTab() {
             {tab === 'warehouses' && <WarehousesList />}
             {tab === 'locations' && <LocationsList />}
             {tab === 'units' && <UnitsList />}
-            {tab === 'stock-statuses' && <StockStatusesList />}
             {tab === 'warranty-types' && <WarrantyTypesList />}
         </div>
     );
@@ -861,23 +857,6 @@ function UnitsList() {
             editLabel={t('md_edit_unit')}
             nameLabel={t('md_unit_name')}
             addButtonLabel={t('md_add_unit')}
-        />
-    );
-}
-
-/** Stock statuses lookup (Stock module master data). */
-function StockStatusesList() {
-    const t = useT();
-    const { data: statuses = [] } = useStockStatuses();
-    const mutations = useStockStatusMutations();
-    return (
-        <LookupSection
-            rows={statuses}
-            mutations={mutations}
-            addLabel={t('md_add_stock_status')}
-            editLabel={t('md_edit_stock_status')}
-            nameLabel={t('md_stock_status_name')}
-            addButtonLabel={t('md_add_stock_status')}
         />
     );
 }
@@ -1513,7 +1492,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; l
         setSaved(false);
         setPendingReset(false);
         if (!f) return;
-        if (!['image/png', 'image/svg+xml'].includes(f.type)) {
+        if (f.type !== 'image/png') {
             setError(t('set_logo_bad_type'));
             return;
         }
@@ -1567,7 +1546,7 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; l
                             <input
                                 ref={inputRef}
                                 type="file"
-                                accept="image/png,image/svg+xml"
+                                accept="image/png"
                                 className="hidden"
                                 onChange={(e) => pick(e.target.files?.[0])}
                             />
