@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\RolePermission;
+use App\Models\StockItem;
+use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -70,6 +72,57 @@ class StockPermissionGatingTest extends TestCase
 
         $this->actingAs($blocked)->getJson('/api/stock-requests')->assertForbidden();
         $this->actingAs($allowed)->getJson('/api/stock-requests')->assertOk();
+    }
+
+    /**
+     * The movement log endpoint must be gated by stock.view_events, not the generic
+     * stock.view — a user who can view items but has no view_events permission must
+     * receive 403.
+     */
+    public function test_movement_log_requires_view_events(): void
+    {
+        $blocked = $this->userWith(['stock.module', 'stock.view']);
+        $allowed = $this->userWith(['stock.module', 'stock.view_events']);
+
+        $this->actingAs($blocked)->getJson('/api/stock-movements')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/stock-movements')->assertOk();
+    }
+
+    /**
+     * A user who can record movements (receive) must be allowed to print serial
+     * sticker labels for a movement even without the stock.events permission.
+     */
+    public function test_labels_pdf_allowed_for_a_receiver_without_events(): void
+    {
+        $receiver = $this->userWith(['stock.module', 'stock.view', 'stock.receive']);
+        $movement = $this->makeMovement();
+
+        // Not forbidden — a receiver may print labels even without stock.events.
+        $response = $this->actingAs($receiver)->get("/api/stock-movements/{$movement->id}/labels/pdf");
+        $this->assertNotSame(403, $response->getStatusCode());
+    }
+
+    /**
+     * Create the minimal valid StockItem + StockMovement rows for route-model-binding
+     * tests. Columns required (NOT NULL, no default): stock_items.sku, stock_items.name;
+     * stock_movements.type, stock_movements.stock_item_id, stock_movements.qty,
+     * stock_movements.moved_at.  doc_no has a unique constraint so we generate a
+     * unique value rather than leaving it null.
+     */
+    private function makeMovement(): StockMovement
+    {
+        $item = StockItem::create([
+            'sku' => 'TEST-'.uniqid(),
+            'name' => 'Test Item',
+        ]);
+
+        return StockMovement::create([
+            'doc_no' => 'RCV-TEST-'.uniqid(),
+            'type' => 'receive',
+            'stock_item_id' => $item->id,
+            'qty' => 1,
+            'moved_at' => now(),
+        ]);
     }
 
     /**
