@@ -200,3 +200,86 @@
     --row-px: 1.125rem;
     --gap: 1.5rem;
 }
+
+/* ── Notification toast (bottom-right pop-up) ────────────────────────────────
+   Progress-ring variant: card slides in from the right, the ring around the icon
+   depletes over the 6s auto-dismiss window (paused on hover), then slides out. */
+@keyframes toast-enter {
+    from {
+        transform: translateX(120%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+@keyframes toast-leave {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+        max-height: 7rem;
+    }
+    to {
+        transform: translateX(120%);
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: -0.75rem;
+    }
+}
+@keyframes toast-ring-deplete {
+    from {
+        stroke-dashoffset: 0;
+    }
+    to {
+        stroke-dashoffset: 113; /* ≈ circumference of r=18 ring */
+    }
+}
+
+.toast-enter {
+    animation: toast-enter 0.42s cubic-bezier(0.21, 1.02, 0.42, 1) both;
+}
+.toast-leave {
+    animation: toast-leave 0.3s ease forwards;
+}
+.toast-ring-fg {
+    stroke-dasharray: 113;
+    animation: toast-ring-deplete 6s linear forwards;
+}
+/* Pause the countdown (ring + the JS dismiss timer is paused in parallel) while hovered. */
+.toast-card:hover .toast-ring-fg {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast-enter,
+    .toast-leave {
+        animation-duration: 0.01ms;
+    }
+    .toast-ring-fg {
+        animation: none;
+    }
+}
+
+/* ── Print: A4 portrait reports (e.g. SKU history) ───────────────────────── */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 14mm;
+    }
+
+    /* Always print on white with black text, regardless of the on-screen theme. */
+    html,
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    /* Repeat table headers on every printed page; keep rows from splitting. */
+    thead {
+        display: table-header-group;
+    }
+    tr {
+        break-inside: avoid;
+    }
+}

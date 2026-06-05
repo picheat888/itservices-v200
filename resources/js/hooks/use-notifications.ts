@@ -7,8 +7,13 @@ export function useNotifications() {
     return useQuery({
         queryKey: KEY,
         queryFn: notificationApi.list,
-        staleTime: 60_000,
-        refetchInterval: 60_000,
+        // Near-realtime without WebSockets: poll often (even in a background tab) and
+        // refetch the moment the tab regains focus — so new alerts surface within seconds
+        // of a job/command running, no manual reload needed.
+        staleTime: 10_000,
+        refetchInterval: 15_000,
+        refetchIntervalInBackground: true,
+        refetchOnWindowFocus: true,
     });
 }
 

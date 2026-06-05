@@ -1,4 +1,4 @@
-import type { ApiEnvelope, AssetModel, Brand, Category, StockStatus, Unit, Vendor, Warehouse, WarrantyType } from '@/types';
+import type { ApiEnvelope, AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/types';
 import { ensureCsrf, http } from './http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -25,9 +25,8 @@ export const assetModelApi = {
 
 export const categoryApi = {
     list: () => http.get<ApiEnvelope<Category[]>>('/categories').then((r) => r.data.data),
-    create: (payload: { name: string; name_th?: string; description?: string; track_serial?: boolean }) =>
-        mutate<Category>('post', '/categories', payload),
-    update: (id: number, payload: { name: string; name_th?: string; description?: string; track_serial?: boolean }) =>
+    create: (payload: { name: string; name_th?: string; description?: string }) => mutate<Category>('post', '/categories', payload),
+    update: (id: number, payload: { name: string; name_th?: string; description?: string }) =>
         mutate<Category>('put', `/categories/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/categories/${id}`),
 };
@@ -56,13 +55,6 @@ export const unitApi = {
     create: (payload: { name: string; description?: string }) => mutate<Unit>('post', '/units', payload),
     update: (id: number, payload: { name: string; description?: string }) => mutate<Unit>('put', `/units/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/units/${id}`),
-};
-
-export const stockStatusApi = {
-    list: () => http.get<ApiEnvelope<StockStatus[]>>('/stock-statuses').then((r) => r.data.data),
-    create: (payload: { name: string; description?: string }) => mutate<StockStatus>('post', '/stock-statuses', payload),
-    update: (id: number, payload: { name: string; description?: string }) => mutate<StockStatus>('put', `/stock-statuses/${id}`, payload),
-    remove: (id: number) => mutate<void>('delete', `/stock-statuses/${id}`),
 };
 
 export const warrantyTypeApi = {

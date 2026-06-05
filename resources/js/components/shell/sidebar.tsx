@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth, useLogout } from '@/hooks/use-auth';
 import { useSettings } from '@/hooks/use-settings';
+import { useStockSidebarBadge } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { navGroups } from '@/lib/nav';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,9 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const iconsOnly = sidebar === 'icons';
 
     const perms = user?.permissions ?? [];
+    // "Needs attention" counts shown as a sidebar badge, keyed by nav item id.
+    const stockBadge = useStockSidebarBadge(perms.includes('stock.view'));
+    const badges: Record<string, number> = { stock: stockBadge };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
         if (i.permission) return perms.includes(i.permission);
@@ -73,6 +77,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                         <div className="space-y-0.5">
                             {group.items.map((item) => {
                                 const Icon = item.icon;
+                                const badge = badges[item.id] ?? 0;
                                 return (
                                     <NavLink
                                         key={item.id}
@@ -81,7 +86,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                         title={t(item.label)}
                                         className={({ isActive }) =>
                                             cn(
-                                                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
+                                                'relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
                                                 iconsOnly && 'justify-center px-0',
                                                 isActive && 'bg-brand/15 font-semibold text-brand hover:bg-brand/15',
                                             )
@@ -89,6 +94,15 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                     >
                                         <Icon className="h-[18px] w-[18px] shrink-0" />
                                         {!iconsOnly && <span className="truncate">{t(item.label)}</span>}
+                                        {badge > 0 &&
+                                            (iconsOnly ? (
+                                                // Collapsed rail: just a dot so it doesn't crowd the icon.
+                                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                                            ) : (
+                                                <span className="ml-auto shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
+                                                    {badge}
+                                                </span>
+                                            ))}
                                     </NavLink>
                                 );
                             })}

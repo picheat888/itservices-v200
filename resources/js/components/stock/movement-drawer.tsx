@@ -237,11 +237,13 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         isTransfer && !!selected && !!from && !!to && !sameWarehouse && (transferIsSerial ? transferSerialValid : transferQtyValid);
 
     const returnSerialValid = returnIsSerial && returnSerialIds.size > 0 && !!to;
+    // Receive requires a reference (PO/doc), supplier, destination warehouse and unit cost.
+    const receiveValid = !isReceive || (!!reference.trim() && !!from.trim() && !!to.trim() && unitCost.trim() !== '');
     const canSubmit = isTransfer
         ? canSubmitTransfer
         : returnIsSerial
           ? returnSerialValid
-          : !!selected && (isSerial ? serialValid : qty >= 1);
+          : !!selected && (isSerial ? serialValid : qty >= 1) && receiveValid;
 
     // Always give the action button a full label (never an empty/shrunk button).
     // Serial modes append the selected/valid count.
@@ -420,7 +422,8 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             placeholder="—"
                             options={items.map((i) => ({
                                 value: String(i.id),
-                                label: `${i.sku} — ${i.name} (${i.current_stock})${i.track_serial ? ' · S/N' : ''}`,
+                                label: `${i.sku} — ${i.name}`,
+                                sub: `(${i.current_stock})`,
                                 search: `${i.sku} ${i.name}`,
                             }))}
                         />
@@ -658,7 +661,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         return drops them — it only needs the destination warehouse). */}
                     {!isTransfer && !isReturn && (
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label={t('stock_reference')}>
+                            <Field label={t('stock_reference')} required={isReceive}>
                                 <Input
                                     value={reference}
                                     onChange={(e) => setReference(e.target.value)}
@@ -666,7 +669,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                     className="font-mono"
                                 />
                             </Field>
-                            <Field label={kind === 'receive' ? t('stock_supplier') : t('stock_from')}>
+                            <Field label={kind === 'receive' ? t('stock_supplier') : t('stock_from')} required={isReceive}>
                                 {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
                             </Field>
                         </div>
@@ -674,14 +677,14 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
                     {/* Destination warehouse — every non-transfer movement (receive/issue/return). */}
                     {!isTransfer && (
-                        <Field label={t('stock_to')}>
+                        <Field label={t('stock_to')} required={isReceive}>
                             {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
                         </Field>
                     )}
 
-                    {/* Receive captures the per-lot unit cost (optional) for FIFO valuation. */}
+                    {/* Receive captures the per-lot unit cost (required) for FIFO valuation. */}
                     {selected && isReceive && (
-                        <Field label={t('stock_unit_cost')}>
+                        <Field label={t('stock_unit_cost')} required>
                             <Input
                                 type="text"
                                 inputMode="decimal"
