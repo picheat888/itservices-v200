@@ -21,9 +21,15 @@ import Swal from 'sweetalert2';
 const SAMPLE_VARS: Record<string, string> = {
     'user.first_name': 'Kanya',
     'user.email': 'kanya@inaba.co.th',
+    count: '3',
+    'stock.sku': 'SKU-1042',
+    'stock.name': 'USB-C Docking Station',
+    'stock.qty': '2',
     'ticket.id': 'TKT-2856',
     'ticket.subject': 'Printer not responding',
     'contract.vendor': 'Acme Co.',
+    'contract.days_remaining': '30',
+    'contract.days_overdue': '5',
     'reference.id': 'REF-0001',
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
@@ -296,9 +302,13 @@ function PreviewDrawer({ template, onClose, onTest, testing }: { template: Email
                                 <div className="border-b border-border px-4 py-3 text-sm font-semibold">
                                     [{brand}] {render(template.subject, SAMPLE_VARS)}
                                 </div>
-                                <div
-                                    className="bg-background px-5 py-5 text-sm leading-relaxed [&_p]:mb-3"
-                                    dangerouslySetInnerHTML={{ __html: render(template.body_html, SAMPLE_VARS) }}
+                                {/* Server-rendered through the real email layout (emails.templated) so
+                                    the preview matches what recipients get — wrapper, eyebrow, CTA. */}
+                                <iframe
+                                    title="email-preview"
+                                    src={`/api/email-templates/${template.id}/preview`}
+                                    className="block w-full border-0 bg-white"
+                                    style={{ height: 560 }}
                                 />
                             </div>
 

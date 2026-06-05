@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\EmailTemplateResource;
+use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\EmailLog;
 use App\Models\EmailTemplate;
 use App\Services\EmailNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class EmailTemplateController extends Controller
 {
@@ -91,21 +93,81 @@ class EmailTemplateController extends Controller
             return response()->json(['message' => 'Your account has no email address.'], 422);
         }
 
-        $vars = [
-            'user.first_name' => explode(' ', (string) $request->user()->name)[0] ?? 'there',
-            'user.email' => $to,
-            'ticket.id' => 'TKT-0001',
-            'ticket.subject' => 'Sample ticket',
-            'contract.vendor' => 'Sample Vendor',
-            'reference.id' => 'REF-0001',
-            'employee.name' => 'Sample Employee',
-            'employee.code' => 'EMP-0001',
-        ];
-
+        $vars = $this->sampleVars($request);
         $subject = $this->service->render($emailTemplate->subject, $vars);
         $html = $this->service->render($emailTemplate->body_html, $vars);
-        $ok = $this->service->deliver($to, $subject, $html, $emailTemplate->key);
+
+        // Match the real send: branded wrapper + eyebrow + a sample Quick link.
+        $ok = $this->service->deliver(
+            $to,
+            $subject,
+            $html,
+            $emailTemplate->key,
+            rtrim((string) config('app.url'), '/').'/',
+            'Open in portal',
+            $emailTemplate->name,
+        );
 
         return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok], $ok ? 200 : 502);
+    }
+
+    /**
+     * Renders the template inside the real branded email layout (emails.templated)
+     * with sample data, so the in-app preview matches exactly what recipients get —
+     * wrapper, eyebrow, and a sample Quick link button. Returns raw HTML for an iframe.
+     */
+    public function preview(Request $request, EmailTemplate $emailTemplate): Response
+    {
+        $this->gate($request);
+
+        $vars = $this->sampleVars($request);
+        $subject = $this->service->render($emailTemplate->subject, $vars);
+        $body = $this->service->render($emailTemplate->body_html, $vars);
+
+        $html = view('emails.templated', [
+            'subjectLine' => $subject,
+            'bodyHtml' => $body,
+            'eyebrow' => $emailTemplate->name,
+            'actionUrl' => rtrim((string) config('app.url'), '/').'/',
+            'actionLabel' => 'Open in portal',
+            'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html');
+    }
+
+    /**
+     * Realistic sample values for previews / test sends, covering the placeholders
+     * used across all modules (including stock digest {{items}} / {{count}}).
+     *
+     * @return array<string, mixed>
+     */
+    private function sampleVars(Request $request): array
+    {
+        $name = (string) ($request->user()->name ?? 'Kanya Phakdee');
+
+        return [
+            'user.first_name' => explode(' ', $name)[0] ?: 'there',
+            'user.email' => $request->user()->email ?? 'user@example.com',
+            'count' => 3,
+            'items' => '<ul>'
+                .'<li><strong>SKU-1042</strong> — USB-C Docking Station · Below minimum (on hand: 2)</li>'
+                .'<li><strong>SKU-0387</strong> — 24-inch Monitor · Out of stock (on hand: 0)</li>'
+                .'<li><strong>REQ-2026-0042</strong> — Wireless Mouse ×5 · pending (by Somchai)</li>'
+                .'</ul>',
+            'stock.sku' => 'SKU-1042',
+            'stock.name' => 'USB-C Docking Station',
+            'stock.qty' => 2,
+            'ticket.id' => 'TKT-2856',
+            'ticket.subject' => 'Printer not responding',
+            'contract.vendor' => 'Acme Co.',
+            'contract.name' => 'Annual support',
+            'contract.code' => 'CT-2026-014',
+            'contract.days_remaining' => 30,
+            'contract.days_overdue' => 5,
+            'reference.id' => 'REF-0001',
+            'employee.name' => 'Somchai Suksawat',
+            'employee.code' => 'EMP-1042',
+        ];
     }
 }

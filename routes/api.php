@@ -22,7 +22,6 @@ use App\Http\Controllers\Api\StockCountController;
 use App\Http\Controllers\Api\StockItemController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StockRequestController;
-use App\Http\Controllers\Api\StockStatusController;
 use App\Http\Controllers\Api\TicketAttachmentController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UnitController;
@@ -72,6 +71,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('email-templates', [EmailTemplateController::class, 'store'])->name('api.email-templates.store');
     Route::put('email-templates/{emailTemplate}', [EmailTemplateController::class, 'update'])->name('api.email-templates.update');
     Route::post('email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'test'])->name('api.email-templates.test');
+    Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
 
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
@@ -92,7 +92,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('vendors', [VendorController::class, 'index'])->name('api.vendors.index');
     Route::get('warehouses', [WarehouseController::class, 'index'])->name('api.warehouses.index');
     Route::get('units', [UnitController::class, 'index'])->name('api.units.index');
-    Route::get('stock-statuses', [StockStatusController::class, 'index'])->name('api.stock-statuses.index');
     Route::get('warranty-types', [WarrantyTypeController::class, 'index'])->name('api.warranty-types.index');
     Route::get('locations', [LocationController::class, 'index'])->name('api.locations.index');
 
@@ -103,7 +102,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         Route::apiResource('vendors', VendorController::class)->except(['show', 'index']);
         Route::apiResource('warehouses', WarehouseController::class)->except(['show', 'index']);
         Route::apiResource('units', UnitController::class)->except(['show', 'index']);
-        Route::apiResource('stock-statuses', StockStatusController::class)->except(['show', 'index']);
         Route::apiResource('warranty-types', WarrantyTypeController::class)->except(['show', 'index']);
         Route::apiResource('locations', LocationController::class)->except(['show', 'index']);
     });
@@ -142,8 +140,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     // Stock / Inventory module
     Route::get('stock-items/summary', [StockItemController::class, 'summary'])->name('api.stock-items.summary');
     Route::get('stock-items/serials', [StockItemController::class, 'serials'])->name('api.stock-items.serials');
+    Route::get('stock-items/{stockItem}/history', [StockItemController::class, 'history'])->name('api.stock-items.history');
+    Route::get('stock-items/{stockItem}/history/pdf', [StockItemController::class, 'historyPdf'])->name('api.stock-items.history-pdf');
     Route::apiResource('stock-items', StockItemController::class);
     Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
+    Route::get('stock-movements/{movement}/serials', [StockMovementController::class, 'serials'])->name('api.stock-movements.serials');
+    Route::get('stock-movements/{movement}/labels/pdf', [StockMovementController::class, 'labelsPdf'])->name('api.stock-movements.labels-pdf');
     Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');
     Route::get('stock-requests', [StockRequestController::class, 'index'])->name('api.stock-requests.index');
     Route::post('stock-requests', [StockRequestController::class, 'store'])->name('api.stock-requests.store');
