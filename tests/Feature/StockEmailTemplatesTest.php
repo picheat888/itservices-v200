@@ -17,7 +17,7 @@ class StockEmailTemplatesTest extends TestCase
             'stock.overstock_alert' => 'Stock - Overstock alert',
             'stock.out_of_stock' => 'Stock - Out of stock alert',
             'stock.request_created' => 'Stock - New Request',
-            'stock.request_approval_needed' => 'Stock - waiting approval',
+            'stock.request_approval_needed' => 'Stock - waiting approve & fulfill',
             'stock.request_approved' => 'Stock - Respond to the request (Approved)',
             'stock.request_rejected' => 'Stock - Respond to the request (Rejected)',
             'stock.request_fulfilled' => 'Stock - Respond to the request (fulfilled)',
