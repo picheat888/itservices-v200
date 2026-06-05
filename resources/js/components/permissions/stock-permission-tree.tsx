@@ -119,11 +119,11 @@ export function StockPermissionTree({
                 </div>
             </div>
 
-            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
+            <div className={cn('px-3.5 py-1 transition-opacity md:columns-2 md:gap-x-6', !masterOn && 'opacity-40')}>
                 {GROUPS.map((group) => {
                     const viewOn = has(group.view) && masterOn;
                     return (
-                        <div key={group.view} className="py-0.5">
+                        <div key={group.view} className="break-inside-avoid py-0.5">
                             <div className="flex min-h-[34px] items-center gap-2">
                                 <span className="text-sm font-medium">{label(group.view, lang)}</span>
                                 <span className="ml-auto flex items-center gap-2">
