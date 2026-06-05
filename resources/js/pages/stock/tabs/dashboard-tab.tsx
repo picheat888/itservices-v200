@@ -69,9 +69,10 @@ export function DashboardTab({
                 </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                        <style>{stockConsoleStyles}</style>
-
+                    <style>{stockConsoleStyles}</style>
+                    {/* One grid holds every panel so a hidden card (e.g. Recent movements
+                        when the user lacks view_events) lets the rest reflow up to fill it. */}
+                    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
                         {/* Action queue — reorder card with left severity accents */}
                         <Card className="overflow-hidden p-0">
                             <div className="border-border flex items-center justify-between border-b px-5 py-3">
@@ -186,9 +187,7 @@ export function DashboardTab({
                                 )}
                             </Card>
                         )}
-                    </div>
 
-                    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         {/* By warehouse */}
                         <Card className="overflow-hidden p-0">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3">
