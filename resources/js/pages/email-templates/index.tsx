@@ -13,8 +13,7 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Check, Mail, MoreVertical, Plus, Search, Send, SquarePen } from 'lucide-react';
+import { Check, Mail, MoreVertical, Plus, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -253,23 +252,13 @@ export default function EmailTemplatesPage() {
                                         </td>
                                         <td className="px-4 py-2.5">
                                             <div className="flex justify-end">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <button title={t('actions')} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => setEditing(tp)}>
-                                                            <SquarePen className="h-4 w-4" />
-                                                            {t('email_edit_preview')}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => test.mutate(tp.id)}>
-                                                            <Send className="h-4 w-4" />
-                                                            {t('email_test')}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                <button
+                                                    onClick={() => setEditing(tp)}
+                                                    title={t('email_edit_preview')}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+                                                >
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
