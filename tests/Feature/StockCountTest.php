@@ -20,7 +20,11 @@ class StockCountTest extends TestCase
 
     private function item(string $sku, int $stock, string $wh = 'Main'): StockItem
     {
-        return StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100, 'warehouse' => $wh]);
+        $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100]);
+        // Warehouse scoping is balance-based now — park the stock in the given warehouse.
+        $item->balances()->create(['warehouse' => $wh, 'qty' => $stock]);
+
+        return $item;
     }
 
     public function test_open_snapshots_a_line_per_matching_item(): void
@@ -95,13 +99,77 @@ class StockCountTest extends TestCase
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422);
     }
 
-    public function test_requires_stock_audit_permission(): void
+    public function test_manual_commit_is_report_only(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $lineId = $count['lines'][0]['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 4]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'committed')
+            ->assertJsonPath('data.adjust_mode', 'manual');
+
+        // Report only: stock untouched, no movements recorded.
+        $this->assertSame(10, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::count());
+    }
+
+    public function test_auto_commit_persists_mode_and_adjusts(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $lineId = $count['lines'][0]['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 7]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'auto'])
+            ->assertOk()
+            ->assertJsonPath('data.adjust_mode', 'auto');
+
+        $this->assertSame(7, $item->fresh()->current_stock);
+        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 3]);
+    }
+
+    public function test_commit_without_mode_defaults_to_auto(): void
+    {
+        $item = $this->item('A-1', 10);
+        $this->actingAs($this->super());
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $lineId = $count['lines'][0]['id'];
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 8]])->assertOk();
+
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertOk()
+            ->assertJsonPath('data.adjust_mode', 'auto');
+
+        $this->assertSame(8, $item->fresh()->current_stock);
+    }
+
+    public function test_reference_auto_numbers_per_year(): void
+    {
+        $this->item('A-1', 5);
+        $this->actingAs($this->super());
+        $year = now()->year;
+
+        $first = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data.reference');
+        $second = $this->postJson('/api/stock-counts', [])->assertCreated()->json('data.reference');
+
+        $this->assertSame("SC-{$year}-001", $first);
+        $this->assertSame("SC-{$year}-002", $second);
+    }
+
+    public function test_requires_stock_count_permission(): void
     {
         $this->item('A-1', 10);
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
         $this->actingAs($user)->postJson('/api/stock-counts', [])->assertForbidden();
 
-        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'stock.audit', 'allowed' => true]);
+        foreach (['stock.module', 'stock.view_count', 'stock.count'] as $p) {
+            RolePermission::create(['role_id' => $user->role_id, 'permission' => $p, 'allowed' => true]);
+        }
         $this->actingAs($user)->postJson('/api/stock-counts', [])->assertCreated();
     }
 }
