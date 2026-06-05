@@ -257,7 +257,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             header: '',
             align: 'right',
             render: (s) =>
-                s.status === 'draft' && can('count') ? (
+                s.status === 'draft' && can('view_count') ? (
                     <button
                         // Cancel a draft session — confirm first, and stop the row's open-on-click.
                         onClick={async (e) => {
@@ -295,7 +295,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <div className="text-muted-foreground text-sm">{t('stock_counting_system')}</div>
-                {can('count') && (
+                {can('view_count') && (
                     <Button onClick={() => setCreating(true)}>
                         <ClipboardList className="h-4 w-4" />
                         {t('stock_count_action')}
@@ -592,7 +592,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                     </tbody>
                                 </table>
                             </div>
-                            {(isDraft || committedFlash) && can('count') && (
+                            {(isDraft || committedFlash) && can('view_count') && (
                                 <>
                                     {/* Commit mode — segmented choice with a fixed contextual hint (no layout jump). */}
                                     <div className="border-border space-y-2.5 rounded-lg border p-3">

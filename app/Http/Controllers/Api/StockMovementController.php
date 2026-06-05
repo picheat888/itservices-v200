@@ -74,7 +74,7 @@ class StockMovementController extends Controller
      */
     public function serials(Request $request, StockMovement $movement): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.events'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
 
         return response()->json(['data' => $this->serialCodesFor($movement)]);
     }
@@ -113,7 +113,7 @@ class StockMovementController extends Controller
     {
         $user = $request->user();
         abort_unless((bool) (
-            $user?->hasPermission('stock.events')
+            $user?->hasPermission('stock.view_events')
             || $user?->hasPermission('stock.receive')
             || $user?->hasPermission('stock.return')
             || $user?->hasPermission('stock.transfer')
