@@ -131,6 +131,7 @@ class EmailTemplateController extends Controller
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+            'logoUrl' => $this->service->brandLogoUrl(),
             'preview' => true,
         ])->render();
 
@@ -161,6 +162,7 @@ class EmailTemplateController extends Controller
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+            'logoUrl' => $this->service->brandLogoUrl(),
             'preview' => true,
         ])->render();
 

@@ -9,6 +9,8 @@ use App\Models\EmailLog;
 use App\Models\EmailTemplate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Central send path for system emails. Event-driven sends are queued (per
@@ -19,6 +21,23 @@ use Illuminate\Support\Facades\Mail;
 class EmailNotificationService
 {
     public function __construct(private readonly MailConfigService $mailConfig) {}
+
+    /**
+     * Absolute URL of the uploaded brand logo for use in emails, or null to fall
+     * back to the text tile. SVG is skipped — email clients don't render it; only
+     * raster formats (png/jpg) are used.
+     */
+    public function brandLogoUrl(): ?string
+    {
+        $path = AppSetting::get('logo_path');
+        if (! $path || Str::endsWith(strtolower($path), '.svg')) {
+            return null;
+        }
+
+        $url = Storage::disk('public')->url($path);
+
+        return Str::startsWith($url, ['http://', 'https://']) ? $url : url($url);
+    }
 
     /** Substitutes {{variables}} in a string from the given map. */
     public function render(string $text, array $vars): string
@@ -73,7 +92,7 @@ class EmailNotificationService
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoUrl()));
             $status = 'sent';
             $error = null;
         } catch (\Throwable $e) {

@@ -59,7 +59,11 @@
                         <td style="padding:2px 8px 16px;">
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
-                                    <td width="36" height="36" bgcolor="#2563eb" align="center" valign="middle" style="width:36px;height:36px;background-color:#2563eb;border-radius:9px;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:bold;mso-line-height-rule:exactly;line-height:36px;">{{ $initials }}</td>
+                                    @if (!empty($logoUrl))
+                                        <td valign="middle" style="padding:0;"><img src="{{ $logoUrl }}" alt="{{ $brandName }}" height="36" style="display:block;height:36px;max-height:36px;width:auto;border:0;border-radius:9px;" /></td>
+                                    @else
+                                        <td width="36" height="36" bgcolor="#2563eb" align="center" valign="middle" style="width:36px;height:36px;background-color:#2563eb;border-radius:9px;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:bold;mso-line-height-rule:exactly;line-height:36px;">{{ $initials }}</td>
+                                    @endif
                                     <td style="padding-left:10px;font-family:'Segoe UI',Arial,sans-serif;">
                                         <div style="font-size:15px;font-weight:bold;color:#0f172a;">{{ $brandName }}</div>
                                         @if (!empty($eyebrow))
