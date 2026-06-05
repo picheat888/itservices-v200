@@ -126,18 +126,17 @@ class StockPermissionGatingTest extends TestCase
     }
 
     /**
-     * The count-list endpoint must be gated by stock.view_count, and the
-     * open-count endpoint must be gated by stock.count — a viewer without
-     * stock.count must receive 403 on POST, 200 on GET.
+     * Counting is a single permission: stock.view_count gates both listing and
+     * opening a count. A user without it is forbidden from both; with it, both work.
      */
-    public function test_count_list_requires_view_count_and_open_requires_count(): void
+    public function test_counting_is_gated_by_view_count(): void
     {
-        $viewer = $this->userWith(['stock.module', 'stock.view_count']);
-        $manager = $this->userWith(['stock.module', 'stock.view_count', 'stock.count']);
+        $blocked = $this->userWith(['stock.module']);                       // no view_count
+        $allowed = $this->userWith(['stock.module', 'stock.view_count']);
 
-        $this->actingAs($viewer)->getJson('/api/stock-counts')->assertOk();               // list = view_count
-        $this->actingAs($viewer)->postJson('/api/stock-counts', [])->assertForbidden();   // open needs count
-        $this->actingAs($manager)->postJson('/api/stock-counts', [])->assertCreated();
+        $this->actingAs($blocked)->getJson('/api/stock-counts')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/stock-counts')->assertOk();           // list
+        $this->actingAs($allowed)->postJson('/api/stock-counts', [])->assertCreated(); // open — same key
     }
 
     /**

@@ -9,8 +9,8 @@ const GROUPS: { view: string; children: string[] }[] = [
     { view: 'stock.view_dashboard', children: [] },
     { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
     { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: ['stock.count'] },
-    { view: 'stock.view_events', children: ['stock.events'] },
+    { view: 'stock.view_count', children: [] },
+    { view: 'stock.view_events', children: [] },
 ];
 const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 

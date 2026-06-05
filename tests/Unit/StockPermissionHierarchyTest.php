@@ -7,7 +7,7 @@ use Tests\TestCase;
 
 class StockPermissionHierarchyTest extends TestCase
 {
-    public function test_catalog_exposes_the_15_stock_keys(): void
+    public function test_catalog_exposes_the_13_stock_keys(): void
     {
         $expected = [
             'stock.module',
@@ -15,13 +15,16 @@ class StockPermissionHierarchyTest extends TestCase
             'stock.view_count', 'stock.view_events',
             'stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer',
             'stock.request', 'stock.approve', 'stock.fulfill',
-            'stock.count', 'stock.events',
         ];
         foreach ($expected as $key) {
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
         $stockKeys = array_filter(Permissions::all(), fn ($k) => str_starts_with($k, 'stock.'));
-        $this->assertCount(15, $stockKeys);
+        $this->assertCount(13, $stockKeys);
+
+        // Counting and Event collapsed to a single switch each — no separate action key.
+        $this->assertNotContains('stock.count', Permissions::all());
+        $this->assertNotContains('stock.events', Permissions::all());
     }
 
     public function test_normalize_drops_child_when_its_view_is_off(): void

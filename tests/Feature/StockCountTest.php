@@ -167,7 +167,7 @@ class StockCountTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
         $this->actingAs($user)->postJson('/api/stock-counts', [])->assertForbidden();
 
-        foreach (['stock.module', 'stock.view_count', 'stock.count'] as $p) {
+        foreach (['stock.module', 'stock.view_count'] as $p) {
             RolePermission::create(['role_id' => $user->role_id, 'permission' => $p, 'allowed' => true]);
         }
         $this->actingAs($user)->postJson('/api/stock-counts', [])->assertCreated();

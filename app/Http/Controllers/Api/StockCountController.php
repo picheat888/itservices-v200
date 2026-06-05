@@ -20,10 +20,13 @@ class StockCountController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('stock.view_count'), 403);
     }
 
-    /** Mutating a count session (open / save / commit / cancel). */
+    /**
+     * Mutating a count session (open / save / commit / cancel). Counting is a single
+     * permission now, so the same key gates both reading and mutating.
+     */
     private function gateManage(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.count'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_count'), 403);
     }
 
     public function index(Request $request): JsonResponse

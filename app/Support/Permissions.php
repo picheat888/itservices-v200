@@ -23,7 +23,6 @@ class Permissions
                 'view_dashboard', 'view', 'view_request', 'view_count', 'view_events',
                 'manage_items', 'receive', 'return', 'transfer',
                 'request', 'approve', 'fulfill',
-                'count', 'events',
             ],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
@@ -98,8 +97,8 @@ class Permissions
                 'stock.view_dashboard' => [],
                 'stock.view' => ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'],
                 'stock.view_request' => ['stock.request', 'stock.approve', 'stock.fulfill'],
-                'stock.view_count' => ['stock.count'],
-                'stock.view_events' => ['stock.events'],
+                'stock.view_count' => [],
+                'stock.view_events' => [],
             ],
         ];
     }
