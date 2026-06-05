@@ -30,3 +30,7 @@ try {
 Schedule::command('contracts:send-expiry-alerts')
     ->dailyAt('08:00')
     ->timezone($appTimezone);
+
+Schedule::command('stock:send-notifications')
+    ->dailyAt('08:05')
+    ->timezone($appTimezone);
