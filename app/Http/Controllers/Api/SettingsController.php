@@ -140,8 +140,8 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
-            // SVG mime is image/svg+xml; png covers raster. Max 2MB per the design.
-            'logo' => ['required', 'file', 'mimes:png,svg,svg+xml', 'max:2048'],
+            // PNG only — the logo is also used in emails, where SVG doesn't render.
+            'logo' => ['required', 'file', 'mimes:png', 'max:2048'],
         ]);
 
         // Replace any previous logo so we don't accumulate orphans.
