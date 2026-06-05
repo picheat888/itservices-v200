@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\StockRequestResource;
 use App\Models\AuditLog;
 use App\Models\StockItem;
+use App\Models\StockItemSerial;
 use App\Models\StockMovement;
 use App\Models\StockRequest;
 use App\Services\StockBalanceService;
@@ -32,7 +33,7 @@ class StockRequestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        abort_unless((bool) $user?->hasPermission('stock.view'), 403);
+        abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
         $query = StockRequest::with('item')->latest();
 
@@ -114,10 +115,16 @@ class StockRequestController extends Controller
         abort_unless((bool) $user?->hasPermission('stock.fulfill'), 403);
         $this->assertStatus($stockRequest, 'approved');
 
-        // Serialized items require the exact serials being issued to be chosen.
+        // A request can be issued across several source warehouses at once:
+        //  - serialized items: derive the per-warehouse split from the chosen serials;
+        //  - quantity items: an explicit `allocations` list, or the legacy single
+        //    `from_warehouse` (whole qty from one warehouse).
         $data = $request->validate([
             'serial_ids' => ['array'],
             'serial_ids.*' => ['integer'],
+            'allocations' => ['array'],
+            'allocations.*.warehouse' => ['required_with:allocations', 'string', 'max:120'],
+            'allocations.*.qty' => ['required_with:allocations', 'integer', 'min:1'],
             'from_warehouse' => ['nullable', 'string', 'max:120'],
         ]);
 
@@ -125,40 +132,78 @@ class StockRequestController extends Controller
             /** @var StockItem $item */
             $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
 
-            // Resolve the source warehouse: use the caller's choice, falling back to the
-            // item's home warehouse, and finally 'Unassigned' for unconfigured items.
-            $fromWarehouse = $data['from_warehouse'] ?? ($item->warehouse ?: 'Unassigned');
-
             if ($item->current_stock < $stockRequest->qty) {
                 throw ValidationException::withMessages([
                     'qty' => "Not enough stock: {$item->current_stock} available.",
                 ]);
             }
 
-            StockMovement::create([
-                'doc_no' => DocNumber::next('issue', (int) now()->year),
-                'type' => 'issue',
-                'stock_item_id' => $item->id,
-                'qty' => $stockRequest->qty,
-                'from_label' => $fromWarehouse,
-                'to_label' => $stockRequest->requester_name,
-                'reference' => "REQ-{$stockRequest->id}",
-                'recorded_by' => $user->name,
-                'user_id' => $user->id,
-                'moved_at' => now(),
-            ]);
+            // Build the per-warehouse allocation map (warehouse => qty).
+            $serials = collect();
+            if ($item->track_serial) {
+                $serials = StockItemSerial::where('stock_item_id', $item->id)
+                    ->where('status', 'in_stock')
+                    ->whereIn('id', $data['serial_ids'] ?? [])
+                    ->get();
+                if ($serials->count() !== $stockRequest->qty) {
+                    throw ValidationException::withMessages([
+                        'serial_ids' => "Select exactly {$stockRequest->qty} in-stock serial(s) to issue.",
+                    ]);
+                }
+                $allocation = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse ?: 'Unassigned')->map->count();
+            } elseif (! empty($data['allocations'])) {
+                $allocation = collect($data['allocations'])
+                    ->groupBy('warehouse')
+                    ->map(fn ($rows) => (int) collect($rows)->sum('qty'));
+            } else {
+                // Legacy single-warehouse path.
+                $allocation = collect([(($data['from_warehouse'] ?? null) ?: 'Unassigned') => $stockRequest->qty]);
+            }
 
-            // Per-warehouse guard + cached total + FIFO + serials.
-            $this->balances->remove($item, $fromWarehouse, $stockRequest->qty);
+            if ((int) $allocation->sum() !== $stockRequest->qty) {
+                throw ValidationException::withMessages([
+                    'allocations' => "Allocation across warehouses must total {$stockRequest->qty}.",
+                ]);
+            }
+
+            $reference = $stockRequest->reference ?? "REQ-{$stockRequest->id}";
+
+            // Group the chosen serials by their source warehouse so each issue movement
+            // can claim — and link its events to — exactly the serials drawn from it.
+            $serialsByWarehouse = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse ?: 'Unassigned');
+
+            // One issue movement + per-warehouse balance deduction per source warehouse.
+            foreach ($allocation as $warehouse => $qty) {
+                if ($qty <= 0) {
+                    continue;
+                }
+                $movement = StockMovement::create([
+                    'doc_no' => DocNumber::next('issue', (int) now()->year),
+                    'type' => 'issue',
+                    'stock_item_id' => $item->id,
+                    'qty' => $qty,
+                    'from_label' => (string) $warehouse,
+                    'to_label' => $stockRequest->requester_name,
+                    'reference' => $reference,
+                    'recorded_by' => $user->name,
+                    'user_id' => $user->id,
+                    'moved_at' => now(),
+                ]);
+                $this->balances->remove($item, (string) $warehouse, (int) $qty);
+
+                // Serialized: mark this warehouse's serials issued and link their events to
+                // THIS movement, so the movement-detail dialog lists them reliably.
+                if ($item->track_serial) {
+                    $whSerialIds = $serialsByWarehouse->get($warehouse, collect())->pluck('id')->all();
+                    $this->serialService->issue($item, $whSerialIds, $user, $movement, $reference);
+                }
+            }
+
+            // Cached total + FIFO happen once for the whole request.
             $item->current_stock -= $stockRequest->qty;
             $item->last_move_at = now()->toDateString();
             $item->save();
-
-            // Draw the issued units down the FIFO lots.
             $this->lotService->consume($item, $stockRequest->qty);
-
-            // Retire the chosen serials from stock (no-op for quantity-only items).
-            $this->serialService->issue($item, $data['serial_ids'] ?? [], $stockRequest->qty);
 
             $stockRequest->update(['status' => 'fulfilled', 'fulfilled_at' => now()]);
         });
