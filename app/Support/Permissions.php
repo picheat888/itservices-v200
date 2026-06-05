@@ -62,7 +62,8 @@ class Permissions
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
                 'assets.view', 'assets.register', 'assets.transfer', 'assets.retire', 'assets.edit',
                 'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.renew', 'contracts.alerts',
-                'stock.view', 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
+                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
+                'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
                 'employees.view', 'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
                 'system.manage_permissions', 'system.manage_roles', 'system.manage_groups',
@@ -72,12 +73,14 @@ class Permissions
             'hr' => [
                 'employees.view', 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
                 'tickets.create', 'requests.submit',
-                'stock.view', 'stock.request',
+                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
+                'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
                 'tickets.create', 'requests.submit', 'employees.edit_own',
-                'stock.view', 'stock.request',
+                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
+                'stock.request',
             ],
         ];
     }
