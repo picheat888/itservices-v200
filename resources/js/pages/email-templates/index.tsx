@@ -212,6 +212,7 @@ export default function EmailTemplatesPage() {
                                     <th className="px-4 py-2.5">ID</th>
                                     <th className="px-4 py-2.5">{t('email_template')}</th>
                                     <th className="px-4 py-2.5">{t('email_trigger')}</th>
+                                    <th className="px-4 py-2.5">{t('email_type')}</th>
                                     <th className="px-4 py-2.5">{t('email_last_sent')}</th>
                                     <th className="px-4 py-2.5">{t('email_enabled')}</th>
                                     <th className="px-4 py-2.5 text-right">{t('actions')}</th>
@@ -224,6 +225,16 @@ export default function EmailTemplatesPage() {
                                         <td className="px-4 py-2.5 font-medium">{tp.name}</td>
                                         <td className="px-4 py-2.5">
                                             <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{tp.key}</span>
+                                        </td>
+                                        <td className="px-4 py-2.5">
+                                            <span
+                                                className={cn(
+                                                    'rounded-md px-2 py-0.5 text-[11px] font-semibold',
+                                                    tp.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
+                                                )}
+                                            >
+                                                {t(tp.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                                             {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
