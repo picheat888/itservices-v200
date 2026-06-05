@@ -187,10 +187,17 @@ class StockNotificationService
      * items to stock.module holders, one summary of all open requests to approvers.
      * Counting stays a bell-only nudge. Real-time per-item alert emails are unaffected.
      *
+     * @param  bool  $force  Clear the per-day alert dedup ledger first, so every
+     *                       alerting item is treated as fresh again (testing). Bells
+     *                       and the digest already refresh on every run regardless.
      * @return array{alerts:int, waiting:int, drafts:int}
      */
-    public function run(): array
+    public function run(bool $force = false): array
     {
+        if ($force) {
+            StockAlertLog::query()->delete();
+        }
+
         // Alerts — refresh each alerting item's bell (no per-item email); clear normals.
         $alertItems = collect();
         StockItem::query()->each(function (StockItem $item) use ($alertItems) {
