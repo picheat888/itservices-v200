@@ -38,6 +38,7 @@ class StockFifoCostingTest extends TestCase
         $this->actingAs($this->super())
             ->postJson('/api/stock-items', [
                 'sku' => 'SK-NEW-1', 'name' => 'Fresh', 'unit' => 'unit', 'min_stock' => 1, 'max_stock' => 10,
+                'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
                 // even if a client sends these, they must be ignored now
                 'current_stock' => 99, 'cost' => 555,
             ])

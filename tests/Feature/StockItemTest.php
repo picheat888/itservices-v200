@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\StockItem;
+use App\Models\StockLot;
+use App\Models\StockRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,7 +33,6 @@ class StockItemTest extends TestCase
             'current_stock' => 5,
             'min_stock' => 2,
             'max_stock' => 10,
-            'warehouse' => 'WH-HQ',
             'category' => 'Cable',
             'last_move_at' => now(),
         ], $overrides));
@@ -82,28 +83,153 @@ class StockItemTest extends TestCase
 
     public function test_super_can_create_stock_item(): void
     {
-        // A new SKU starts empty — stock and cost are no longer set here, they
-        // arrive via Receive (per-lot). So it's created with 0 on-hand ("out").
+        // The SKU is now generated server-side (SKU-#######); any sku sent by the
+        // client is ignored. A new SKU starts empty — stock and cost are no longer
+        // set here, they arrive via Receive (per-lot). So it's created "out".
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
-                'sku' => 'SK-NEW-001',
                 'name' => 'New SSD',
                 'unit' => 'drive',
+                'category' => 'Cable',
+                'brand' => 'Acme',
+                'model' => 'M1',
+                'warranty' => '1y',
                 'min_stock' => 2,
                 'max_stock' => 12,
             ])
             ->assertCreated()
-            ->assertJsonPath('data.sku', 'SK-NEW-001')
+            ->assertJsonPath('data.sku', 'SKU-0000001')
             ->assertJsonPath('data.current_stock', 0)
             ->assertJsonPath('data.status', 'out');
 
-        $this->assertDatabaseHas('stock_items', ['sku' => 'SK-NEW-001', 'current_stock' => 0]);
+        $this->assertDatabaseHas('stock_items', ['sku' => 'SKU-0000001', 'current_stock' => 0]);
+    }
+
+    public function test_new_sku_is_auto_generated_and_sequential(): void
+    {
+        $super = $this->superUser();
+
+        $first = $this->actingAs($super)
+            ->postJson('/api/stock-items', ['name' => 'Item A', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->assertCreated()->json('data.sku');
+        $second = $this->actingAs($super)
+            ->postJson('/api/stock-items', ['name' => 'Item B', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->assertCreated()->json('data.sku');
+
+        $this->assertSame('SKU-0000001', $first);
+        $this->assertSame('SKU-0000002', $second);
+    }
+
+    public function test_auto_sku_ignores_manually_entered_codes(): void
+    {
+        // A legacy/manual SKU that doesn't match the SKU-####### pattern must not
+        // feed the running sequence, so the first auto SKU is still SKU-0000001.
+        $this->makeItem(['sku' => 'SK-NB-099']);
+
+        $sku = $this->actingAs($this->superUser())
+            ->postJson('/api/stock-items', ['name' => 'Item', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->assertCreated()->json('data.sku');
+
+        $this->assertSame('SKU-0000001', $sku);
+    }
+
+    public function test_index_reports_reserved_from_approved_requests_only(): void
+    {
+        $item = $this->makeItem(['current_stock' => 10]);
+        // Approved counts toward reserved; pending does not (it isn't committed yet).
+        StockRequest::create(['stock_item_id' => $item->id, 'requester_name' => 'A', 'qty' => 3, 'reason' => 'x', 'status' => 'approved']);
+        StockRequest::create(['stock_item_id' => $item->id, 'requester_name' => 'B', 'qty' => 5, 'reason' => 'y', 'status' => 'pending']);
+
+        $this->actingAs($this->superUser())
+            ->getJson('/api/stock-items')
+            ->assertOk()
+            ->assertJsonPath('data.0.reserved', 3);
+    }
+
+    public function test_create_requires_category_brand_model_warranty(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-items', ['name' => 'X', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 5])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['category', 'brand', 'model', 'warranty']);
+    }
+
+    public function test_create_rejects_negative_min_max(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-items', [
+                'name' => 'X', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
+                'min_stock' => -1, 'max_stock' => -2,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['min_stock', 'max_stock']);
+    }
+
+    public function test_create_rejects_max_less_than_min(): void
+    {
+        $this->actingAs($this->superUser())
+            ->postJson('/api/stock-items', [
+                'name' => 'X', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
+                'min_stock' => 10, 'max_stock' => 5,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['max_stock']);
     }
 
     public function test_user_without_manage_items_cannot_create(): void
     {
         $this->actingAs($this->regularUser())
             ->postJson('/api/stock-items', ['sku' => 'SK-X', 'name' => 'X', 'unit' => 'unit', 'cost' => 1, 'current_stock' => 0, 'min_stock' => 0, 'max_stock' => 1])
+            ->assertForbidden();
+    }
+
+    public function test_super_can_delete_empty_zero_value_item(): void
+    {
+        $item = $this->makeItem(['current_stock' => 0]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/stock-items/{$item->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing('stock_items', ['id' => $item->id]);
+    }
+
+    public function test_cannot_delete_item_that_still_has_stock(): void
+    {
+        $item = $this->makeItem(['current_stock' => 5]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/stock-items/{$item->id}")
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('stock_items', ['id' => $item->id]);
+    }
+
+    public function test_cannot_delete_item_that_still_has_value(): void
+    {
+        // Zero on-hand but an open FIFO lot still carries value → not deletable.
+        $item = $this->makeItem(['current_stock' => 0]);
+        StockLot::create([
+            'stock_item_id' => $item->id,
+            'unit_cost' => 100,
+            'qty_received' => 2,
+            'qty_remaining' => 2,
+            'received_at' => now(),
+        ]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/stock-items/{$item->id}")
+            ->assertStatus(422);
+
+        $this->assertDatabaseHas('stock_items', ['id' => $item->id]);
+    }
+
+    public function test_user_without_delete_permission_cannot_delete(): void
+    {
+        $item = $this->makeItem(['current_stock' => 0]);
+
+        $this->actingAs($this->regularUser())
+            ->deleteJson("/api/stock-items/{$item->id}")
             ->assertForbidden();
     }
 }
