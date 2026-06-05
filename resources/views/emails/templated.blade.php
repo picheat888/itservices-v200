@@ -19,6 +19,16 @@
 
         return '<p style="margin:0;"'.$attrs.'>';
     }, (string) ($bodyHtml ?? ''));
+
+    // Logo source: a CID inline attachment when actually sending ($message is present),
+    // or a base64 data URI for the in-app preview (browser iframe). Falls back to the
+    // text tile when neither is available.
+    $logoSrc = null;
+    if (isset($message) && ! empty($logoPath ?? null)) {
+        $logoSrc = $message->embed(\Illuminate\Support\Facades\Storage::disk('public')->path($logoPath));
+    } elseif (! empty($logoData ?? null)) {
+        $logoSrc = $logoData;
+    }
 @endphp
 <!doctype html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -59,8 +69,8 @@
                         <td style="padding:2px 8px 16px;">
                             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
-                                    @if (!empty($logoUrl))
-                                        <td valign="middle" style="padding:0;"><img src="{{ $logoUrl }}" alt="{{ $brandName }}" height="36" style="display:block;height:36px;max-height:36px;width:auto;border:0;border-radius:9px;" /></td>
+                                    @if (!empty($logoSrc))
+                                        <td valign="middle" style="padding:0;"><img src="{{ $logoSrc }}" alt="{{ $brandName }}" height="36" style="display:block;height:36px;max-height:36px;width:auto;border:0;border-radius:9px;" /></td>
                                     @else
                                         <td width="36" height="36" bgcolor="#2563eb" align="center" valign="middle" style="width:36px;height:36px;background-color:#2563eb;border-radius:9px;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:15px;font-weight:bold;mso-line-height-rule:exactly;line-height:36px;">{{ $initials }}</td>
                                     @endif
