@@ -449,19 +449,21 @@ function EditorDialog({
                             <DialogTitle className="text-base">{t('email_edit_preview')}</DialogTitle>
                         </DialogHeader>
 
-                        {/* Row 2 — template name + cadence + enable toggle */}
+                        {/* Row 2 — template name + cadence (key on its own line) + enable toggle */}
                         <div className="border-border flex items-center justify-between gap-3 border-b px-6 py-3">
-                            <div className="flex min-w-0 items-center gap-2.5">
-                                <span className="truncate font-semibold">{name || template.name}</span>
-                                <span
-                                    className={cn(
-                                        'shrink-0 rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
-                                        template.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
-                                    )}
-                                >
-                                    {t(template.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
-                                </span>
-                                <span className="text-muted-foreground hidden truncate font-mono text-xs sm:inline">{template.key}</span>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="truncate font-semibold">{name || template.name}</span>
+                                    <span
+                                        className={cn(
+                                            'shrink-0 rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
+                                            template.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
+                                        )}
+                                    >
+                                        {t(template.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
+                                    </span>
+                                </div>
+                                <div className="text-muted-foreground truncate font-mono text-xs">{template.key}</div>
                             </div>
                             <label className="flex shrink-0 items-center gap-2 text-sm">
                                 <span className="text-muted-foreground">{t('email_enabled')}</span>
