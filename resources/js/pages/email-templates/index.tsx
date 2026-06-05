@@ -39,6 +39,13 @@ const AVAILABLE_VARS = [
     '{{user.first_name}}', '{{user.email}}', '{{ticket.id}}', '{{ticket.subject}}', '{{contract.vendor}}', '{{reference.id}}',
 ];
 
+// Short notes for the "magic" placeholders that aren't a simple field — shown
+// beside the variable chips in the Edit drawer so a short body doesn't look broken.
+const VAR_NOTE: Record<string, { en: string; th: string }> = {
+    items: { en: 'auto-generated list', th: 'ลิสต์อัตโนมัติ' },
+    count: { en: 'number', th: 'จำนวน' },
+};
+
 function render(text: string, vars: Record<string, string>): string {
     return text.replace(/\{\{([\w.]+)\}\}/g, (_m, k) => vars[k] ?? `{{${k}}}`);
 }
@@ -338,6 +345,7 @@ function PreviewDrawer({ template, onClose, onTest, testing }: { template: Email
 
 function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemplate | null; onClose: () => void; onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => void; saving: boolean }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const [name, setName] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
@@ -390,6 +398,28 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
                                     className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus:border-brand"
                                 />
                             </Field>
+
+                            {/* Variables used by THIS template — clarifies that a short body (e.g. one
+                                relying on {{items}}) is complete; values fill in at send (see preview). */}
+                            {(() => {
+                                const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+                                if (tokens.length === 0) return null;
+                                return (
+                                    <div>
+                                        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('email_variables')}</div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {tokens.map((tk) => (
+                                                <span key={tk} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs">
+                                                    {`{{${tk}}}`}
+                                                    {VAR_NOTE[tk] && <span className="text-[10px] text-muted-foreground">· {VAR_NOTE[tk][lang]}</span>}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <p className="mt-1.5 text-[11px] text-muted-foreground">{t('email_var_hint')}</p>
+                                    </div>
+                                );
+                            })()}
+
                             <label className="flex items-center gap-2 text-sm">
                                 <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
                                 {t('email_enabled')}
