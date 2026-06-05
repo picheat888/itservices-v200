@@ -44,6 +44,36 @@ function render(text: string, vars: Record<string, string>): string {
     return text.replace(/\{\{([\w.]+)\}\}/g, (_m, k) => vars[k] ?? `{{${k}}}`);
 }
 
+// Escapes text so it renders literally inside the highlight overlay (which uses
+// innerHTML); only our own <span> wrappers are real markup.
+function escapeHtml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Colour-codes the Body HTML for the editor overlay: {{variables}} in violet,
+ * HTML tags in sky-blue, everything else as plain text. All user content is
+ * HTML-escaped — the returned string is safe to inject. A trailing newline keeps
+ * the overlay's height in step with the textarea.
+ */
+function highlightBody(src: string): string {
+    const re = /(<\/?[a-zA-Z][^>]*>)|(\{\{[\w.]+\}\})/g;
+    let out = '';
+    let last = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src)) !== null) {
+        out += escapeHtml(src.slice(last, m.index));
+        if (m[1]) {
+            out += `<span class="text-sky-600 dark:text-sky-400">${escapeHtml(m[1])}</span>`;
+        } else {
+            out += `<span class="font-semibold text-violet-600 dark:text-violet-400">${escapeHtml(m[2])}</span>`;
+        }
+        last = re.lastIndex;
+    }
+    out += escapeHtml(src.slice(last));
+    return out + '\n';
+}
+
 function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
     if (!iso) return neverLabel;
     const diff = Date.now() - new Date(iso).getTime();
@@ -328,6 +358,7 @@ function EditorDialog({
     const [previewHtml, setPreviewHtml] = useState('');
     const [rendering, setRendering] = useState(false);
     const bodyRef = useRef<HTMLTextAreaElement>(null);
+    const highlightRef = useRef<HTMLDivElement>(null);
 
     // Quick-tools core: replace the Body textarea's current selection with the text
     // built from it, then restore focus with the caret/selection at the given offsets
@@ -511,13 +542,31 @@ function EditorDialog({
                                                     ))}
                                                 </select>
                                             </div>
-                                            <textarea
-                                                ref={bodyRef}
-                                                value={body}
-                                                onChange={(e) => setBody(e.target.value)}
-                                                rows={12}
-                                                className="block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs outline-none"
-                                            />
+                                            {/* Syntax highlight: a coloured layer sits under a transparent
+                                                textarea; both share identical metrics and scroll together. */}
+                                            <div className="relative">
+                                                <div
+                                                    ref={highlightRef}
+                                                    aria-hidden="true"
+                                                    className="text-foreground pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap"
+                                                    dangerouslySetInnerHTML={{ __html: highlightBody(body) }}
+                                                />
+                                                <textarea
+                                                    ref={bodyRef}
+                                                    value={body}
+                                                    onChange={(e) => setBody(e.target.value)}
+                                                    onScroll={(e) => {
+                                                        const h = highlightRef.current;
+                                                        if (h) {
+                                                            h.scrollTop = e.currentTarget.scrollTop;
+                                                            h.scrollLeft = e.currentTarget.scrollLeft;
+                                                        }
+                                                    }}
+                                                    spellCheck={false}
+                                                    rows={12}
+                                                    className="caret-foreground relative block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
+                                                />
+                                            </div>
                                         </div>
                                     </Field>
 
