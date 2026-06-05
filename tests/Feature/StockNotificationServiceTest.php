@@ -140,6 +140,24 @@ class StockNotificationServiceTest extends TestCase
         Notification::assertSentTo($watcher, StockAlertNotification::class);
     }
 
+    public function test_workflow_actions_fire_request_notifications(): void
+    {
+        Notification::fake();
+        $approver = $this->userWithPerm('stock.approve');
+        $owner = $this->userWithPerm('stock.request');
+        $item = StockItem::create(['sku' => 'WF-1', 'name' => 'Wf', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 10]);
+
+        // Owner submits → approvers get a bell
+        $res = $this->actingAs($owner)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 1, 'reason' => 'need']);
+        $res->assertCreated();
+        $reqId = $res->json('data.id');
+        Notification::assertSentTo($approver, StockRequestNotification::class);
+
+        // Approve → owner gets a bell
+        $this->actingAs($approver)->postJson("/api/stock-requests/{$reqId}/approve")->assertOk();
+        Notification::assertSentTo($owner, StockRequestNotification::class);
+    }
+
     public function test_count_draft_is_bell_only_to_view_count_holders(): void
     {
         Notification::fake();
