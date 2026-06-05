@@ -13,10 +13,10 @@ type Translate = (key: string) => string;
 /** Maps a notification's data.type to the owning module tab id. */
 export function moduleOf(type: string): string {
     if (type.startsWith('ticket')) return 'tickets';
+    if (type.startsWith('stock')) return 'stock';
     if (type.startsWith('request')) return 'requests';
     if (type.startsWith('asset')) return 'assets';
     if (type.startsWith('contract')) return 'contracts';
-    if (type.startsWith('stock')) return 'stock';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -57,7 +57,7 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
 export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
     if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
-    if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku} ×${n.data.qty}`;
+    if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return `#${n.data.stock_count_id}`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
