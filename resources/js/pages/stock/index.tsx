@@ -19,6 +19,7 @@ import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/type
 import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, Boxes, Plus, RotateCcw, Search, Send, SquarePen, Trash2, X } from 'lucide-react';
 import type React from 'react';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuditTab } from './tabs/counting-tab';
 import { DashboardTab } from './tabs/dashboard-tab';
@@ -163,7 +164,13 @@ export default function StockPage() {
     const can = (p: string) => role === 'super' || perms.includes(`stock.${p}`);
     const canManage = can('manage_items');
 
-    const [tab, setTab] = useState<'dashboard' | 'items' | 'movements' | 'requests' | 'audit'>('dashboard');
+    const [searchParams] = useSearchParams();
+    const initialTab = (['dashboard', 'items', 'movements', 'requests', 'audit'] as const).includes(
+        searchParams.get('tab') as never,
+    )
+        ? (searchParams.get('tab') as 'dashboard' | 'items' | 'movements' | 'requests' | 'audit')
+        : 'dashboard';
+    const [tab, setTab] = useState<'dashboard' | 'items' | 'movements' | 'requests' | 'audit'>(initialTab);
     const [search, setSearch] = useState('');
     const [cat, setCat] = useState('all');
     const [wh, setWh] = useState('all');
