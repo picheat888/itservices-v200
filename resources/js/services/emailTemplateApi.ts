@@ -8,6 +8,7 @@ export interface EmailTemplate {
     subject: string;
     body_html: string;
     enabled: boolean;
+    cadence: 'realtime' | 'daily';
     last_sent_at: string | null;
 }
 

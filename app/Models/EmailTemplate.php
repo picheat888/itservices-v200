@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 class EmailTemplate extends Model
 {
     protected $fillable = [
-        'key', 'name', 'subject', 'body_html', 'enabled', 'last_sent_at',
+        'key', 'name', 'subject', 'body_html', 'enabled', 'cadence', 'last_sent_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'enabled'      => 'boolean',
+            'enabled' => 'boolean',
             'last_sent_at' => 'datetime',
         ];
     }

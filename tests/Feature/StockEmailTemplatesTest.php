@@ -27,4 +27,15 @@ class StockEmailTemplatesTest extends TestCase
             $this->assertDatabaseHas('email_templates', ['key' => $key, 'name' => $name]);
         }
     }
+
+    public function test_templates_carry_a_cadence_flag(): void
+    {
+        // Scheduled (daily sweep) templates.
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.alert_digest', 'cadence' => 'daily']);
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.request_approval_needed', 'cadence' => 'daily']);
+
+        // Event-driven (real-time) templates.
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.low_alert', 'cadence' => 'realtime']);
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.request_created', 'cadence' => 'realtime']);
+    }
 }
