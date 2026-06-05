@@ -2,7 +2,7 @@ import { http } from './http';
 
 export interface NotificationData {
     type: string;
-    subtype: 'credentials_required' | 'offboarding' | 'expiry';
+    subtype?: string;
     // Employee notifications
     employee_id?: number;
     employee_name?: string;
@@ -13,6 +13,16 @@ export interface NotificationData {
     contract_vendor?: string;
     contract_name?: string;
     days_remaining?: number;
+    // Stock alert notifications (stock_alert)
+    stock_item_id?: number;
+    sku?: string;
+    name?: string;
+    qty?: number;
+    // Stock request notifications (stock_request)
+    stock_request_id?: number;
+    reference?: string;
+    // Stock count notifications (stock_count)
+    stock_count_id?: number;
 }
 
 export interface AppNotification {
