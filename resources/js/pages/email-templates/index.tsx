@@ -40,6 +40,9 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
     count: { en: 'number', th: 'จำนวน' },
 };
 
+// localStorage key for the page's remembered list filters (search + module tab).
+const FILTER_KEY = 'email-templates.filters';
+
 function render(text: string, vars: Record<string, string>): string {
     return text.replace(/\{\{([\w.]+)\}\}/g, (_m, k) => vars[k] ?? `{{${k}}}`);
 }
@@ -147,11 +150,24 @@ export default function EmailTemplatesPage() {
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test } = useEmailTemplateMutations();
-    const [search, setSearch] = useState('');
-    const [module, setModule] = useState('');
+    // Restore the last-used filters so a reload lands on the same view.
+    const savedFilters = useMemo<{ search?: string; module?: string }>(() => {
+        try {
+            return JSON.parse(localStorage.getItem(FILTER_KEY) || '{}');
+        } catch {
+            return {};
+        }
+    }, []);
+    const [search, setSearch] = useState(savedFilters.search ?? '');
+    const [module, setModule] = useState(savedFilters.module ?? '');
     const [editing, setEditing] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [pageTesting, setPageTesting] = useState(false);
+
+    // Remember search + module across reloads.
+    useEffect(() => {
+        localStorage.setItem(FILTER_KEY, JSON.stringify({ search, module }));
+    }, [search, module]);
 
     const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
