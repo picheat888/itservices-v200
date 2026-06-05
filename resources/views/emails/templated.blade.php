@@ -9,6 +9,16 @@
     $preheader = $eyebrow ? "{$brandName} — {$eyebrow}" : $brandName;
     // In the in-app preview the CTA is illustrative only — render it inert.
     $isPreview = $preview ?? false;
+    // Strip default paragraph spacing (inline, so Outlook honours it too) — authors
+    // control line breaks with <br> instead of relying on the <p> margin.
+    $bodyHtml = preg_replace_callback('/<p(\s[^>]*)?>/i', function ($m) {
+        $attrs = $m[1] ?? '';
+        if (stripos($attrs, 'style=') !== false) {
+            return preg_replace('/style\s*=\s*([\'"])/i', 'style=$1margin:0;', '<p'.$attrs.'>', 1);
+        }
+
+        return '<p style="margin:0;"'.$attrs.'>';
+    }, (string) ($bodyHtml ?? ''));
 @endphp
 <!doctype html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
