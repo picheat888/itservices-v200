@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendTemplatedEmail;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\StockCount;
@@ -11,8 +12,10 @@ use App\Models\User;
 use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
+use App\Services\StockNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class StockNotificationCommandTest extends TestCase
@@ -44,5 +47,29 @@ class StockNotificationCommandTest extends TestCase
         Notification::assertSentTo($module, StockAlertNotification::class);
         Notification::assertSentTo($approver, StockRequestNotification::class);
         Notification::assertSentTo($counter, StockCountDraftNotification::class);
+    }
+
+    public function test_daily_run_emails_one_alert_digest_per_module_holder_not_per_item(): void
+    {
+        Notification::fake();
+        Queue::fake();
+
+        // Two module holders, two alerting items.
+        $this->userWithPerm('stock.module');
+        $this->userWithPerm('stock.module');
+        StockItem::create(['sku' => 'DG-OUT', 'name' => 'Out', 'unit' => 'unit', 'min_stock' => 5, 'max_stock' => 50, 'current_stock' => 0]);
+        StockItem::create(['sku' => 'DG-OVER', 'name' => 'Over', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 10, 'current_stock' => 99]);
+
+        app(StockNotificationService::class)->run();
+
+        // Exactly one digest per holder (2), NOT one per item-per-holder (would be 4).
+        Queue::assertPushed(SendTemplatedEmail::class, 2);
+        Queue::assertPushed(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => $job->templateKey === 'stock.alert_digest');
+
+        // The daily run must NOT send the per-item alert templates (those are real-time only).
+        Queue::assertNotPushed(
+            SendTemplatedEmail::class,
+            fn (SendTemplatedEmail $job) => in_array($job->templateKey, ['stock.out_of_stock', 'stock.low_alert', 'stock.overstock_alert'], true),
+        );
     }
 }

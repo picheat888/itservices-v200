@@ -176,46 +176,109 @@ class StockNotificationService
     }
 
     /**
-     * Daily sweep: re-fire alerts for items still out of range (and clear those back
-     * to normal), nag approvers on unfulfilled requests, and remind on draft counts.
+     * Daily sweep. Bells stay per-item (overwritten so they re-surface unread), but
+     * the email channel is a single DIGEST per recipient: one summary of all alerting
+     * items to stock.module holders, one summary of all open requests to approvers.
+     * Counting stays a bell-only nudge. Real-time per-item alert emails are unaffected.
      *
      * @return array{alerts:int, waiting:int, drafts:int}
      */
     public function run(): array
     {
-        $alerts = 0;
-        StockItem::query()->each(function (StockItem $item) use (&$alerts) {
-            if ($this->alertType($item) !== null) {
-                $alerts++;
+        // Alerts — refresh each alerting item's bell (no per-item email); clear normals.
+        $alertItems = collect();
+        StockItem::query()->each(function (StockItem $item) use ($alertItems) {
+            $type = $this->alertType($item);
+            if ($type === null) {
+                StockAlertLog::where('stock_item_id', $item->id)->delete();
+
+                return;
             }
-            $this->alert($item);
+            $this->alertBell($item, $type);
+            $alertItems->push(['item' => $item, 'type' => $type]);
         });
+        if ($alertItems->isNotEmpty()) {
+            $this->emailEach($this->recipients('stock.module'), 'stock.alert_digest', [
+                'count' => $alertItems->count(),
+                'items' => $this->buildAlertRows($alertItems),
+            ]);
+        }
 
-        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->get();
-        $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r->load('item')));
+        // Waiting — refresh each request's bell (no per-item email), then one digest.
+        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->with('item')->get();
+        $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r));
+        if ($waiting->isNotEmpty()) {
+            $this->emailEach($this->recipients('stock.approve'), 'stock.request_approval_needed', [
+                'count' => $waiting->count(),
+                'items' => $this->buildRequestRows($waiting),
+            ]);
+        }
 
+        // Counting — bell-only reminder per draft session.
         $drafts = StockCount::where('status', 'draft')->get();
         $drafts->each(fn (StockCount $c) => $this->countDraft($c));
 
-        return ['alerts' => $alerts, 'waiting' => $waiting->count(), 'drafts' => $drafts->count()];
+        return ['alerts' => $alertItems->count(), 'waiting' => $waiting->count(), 'drafts' => $drafts->count()];
+    }
+
+    /** Bell-only alert refresh (no email) for the daily digest path. */
+    private function alertBell(StockItem $item, string $type): void
+    {
+        $this->sendBell(
+            $this->recipients('stock.module'),
+            new StockAlertNotification($item, $type),
+            StockAlertNotification::class,
+            ['stock_item_id' => $item->id],
+        );
     }
 
     /**
-     * Daily nag: bell (overwrite) + email approvers while a request is unfulfilled.
-     * Called by the daily scheduler for every request still in a pending/approved state.
+     * Build the alert digest's item list (HTML), grouped line-per-item.
+     *
+     * @param  Collection<int, array{item: StockItem, type: string}>  $rows
+     */
+    private function buildAlertRows(Collection $rows): string
+    {
+        $labels = ['out' => 'Out of stock', 'low' => 'Below minimum', 'over' => 'Overstock'];
+
+        $items = $rows->map(function (array $row) use ($labels) {
+            $item = $row['item'];
+            $label = $labels[$row['type']] ?? $row['type'];
+
+            return '<li><strong>'.e($item->sku).'</strong> — '.e($item->name)
+                .' · '.$label.' (on hand: '.(int) $item->current_stock.')</li>';
+        })->implode('');
+
+        return '<ul>'.$items.'</ul>';
+    }
+
+    /**
+     * Build the waiting digest's request list (HTML).
+     *
+     * @param  Collection<int, StockRequest>  $requests
+     */
+    private function buildRequestRows(Collection $requests): string
+    {
+        $items = $requests->map(function (StockRequest $r) {
+            return '<li><strong>'.e($r->reference).'</strong> — '.e($r->item?->name ?? '')
+                .' ×'.(int) $r->qty.' · '.e($r->status).' (by '.e($r->requester_name).')</li>';
+        })->implode('');
+
+        return '<ul>'.$items.'</ul>';
+    }
+
+    /**
+     * Daily nag: bell-only (overwrite) to approvers while a request is unfulfilled.
+     * The summary email is sent once per run by run() (digest), not here.
      */
     public function requestWaiting(StockRequest $request): void
     {
-        $recipients = $this->recipients('stock.approve');
-
         $this->sendBell(
-            $recipients,
+            $this->recipients('stock.approve'),
             new StockRequestNotification($request, 'waiting'),
             StockRequestNotification::class,
             ['stock_request_id' => $request->id, 'subtype' => 'waiting'],
         );
-
-        $this->emailEach($recipients, 'stock.request_approval_needed', $this->requestVars($request));
     }
 
     /**
