@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { TableSkeleton } from '@/components/shared/skeletons';
 import { Field } from '@/components/shared/field';
@@ -92,10 +92,13 @@ function relativeTime(iso: string | null, lang: string, neverLabel: string): str
     return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
+function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label?: string }) {
     return (
         <button
             type="button"
+            role="switch"
+            aria-checked={on}
+            aria-label={label}
             onClick={onClick}
             className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', on ? 'bg-brand' : 'bg-muted')}
         >
@@ -148,6 +151,7 @@ export default function EmailTemplatesPage() {
     const [module, setModule] = useState('');
     const [editing, setEditing] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
+    const [pageTesting, setPageTesting] = useState(false);
 
     const templates = useMemo(() => data?.data ?? [], [data]);
     const stats = data?.stats;
@@ -173,6 +177,7 @@ export default function EmailTemplatesPage() {
     const toggle = (tp: EmailTemplate) => update.mutate({ id: tp.id, payload: { enabled: !tp.enabled } });
 
     const sendPageTest = async () => {
+        setPageTesting(true);
         try {
             const res = await settingsApi.testMail();
             await Swal.fire({
@@ -184,6 +189,8 @@ export default function EmailTemplatesPage() {
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
             await Swal.fire({ icon: 'error', title: msg ?? t('email_test_failed'), confirmButtonColor: '#2563eb' });
+        } finally {
+            setPageTesting(false);
         }
     };
 
@@ -195,8 +202,8 @@ export default function EmailTemplatesPage() {
                     <p className="text-sm text-muted-foreground">{t('email_sub')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={sendPageTest}>
-                        <Send className="h-4 w-4" />
+                    <Button variant="outline" onClick={sendPageTest} disabled={pageTesting}>
+                        {pageTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         {t('email_test')}
                     </Button>
                     <Button onClick={() => setCreateOpen(true)}>
@@ -260,6 +267,14 @@ export default function EmailTemplatesPage() {
 
                 {isLoading ? (
                     <div className="p-4"><TableSkeleton rows={8} cols={6} /></div>
+                ) : rows.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                        <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
+                            <Mail className="h-6 w-6" />
+                        </span>
+                        <div className="font-medium">{t('email_empty_title')}</div>
+                        <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
@@ -330,6 +345,235 @@ export default function EmailTemplatesPage() {
     );
 }
 
+// Debounced render of the unsaved content through the real email layout, so the
+// preview matches what recipients get. Disabled (skipped) when `enabled` is false.
+function useLivePreview(enabled: boolean, name: string, subject: string, body: string) {
+    const [previewHtml, setPreviewHtml] = useState('');
+    const [rendering, setRendering] = useState(false);
+    useEffect(() => {
+        if (!enabled) return;
+        setRendering(true);
+        const id = window.setTimeout(() => {
+            emailTemplateApi
+                .renderPreview({ name, subject, body_html: body })
+                .then(setPreviewHtml)
+                .catch(() => {})
+                .finally(() => setRendering(false));
+        }, 400);
+        return () => window.clearTimeout(id);
+    }, [enabled, name, subject, body]);
+    return { previewHtml, rendering, setPreviewHtml };
+}
+
+// Single-line subject input with {{variable}} / tag highlighting (transparent input
+// over an escaped colour layer; horizontal scroll synced).
+function SubjectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    const hlRef = useRef<HTMLDivElement>(null);
+    return (
+        <div className="border-input bg-background ring-offset-background focus-within:ring-ring relative h-10 rounded-md border focus-within:ring-2 focus-within:ring-offset-2">
+            <div
+                ref={hlRef}
+                aria-hidden="true"
+                className="text-foreground pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 text-base whitespace-pre md:text-sm"
+                dangerouslySetInnerHTML={{ __html: highlightHtml(value) }}
+            />
+            <input
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                onScroll={(e) => {
+                    const h = hlRef.current;
+                    if (h) h.scrollLeft = e.currentTarget.scrollLeft;
+                }}
+                spellCheck={false}
+                className="caret-foreground absolute inset-0 h-full w-full bg-transparent px-3 text-base text-transparent outline-none md:text-sm"
+            />
+        </div>
+    );
+}
+
+/**
+ * Body HTML editor: a quick-tools toolbar + syntax-highlighted textarea + clickable
+ * variable chips. Tools insert HTML at the caret or wrap the selection. `extraText`
+ * (e.g. the subject) folds its variables into the chip list too.
+ */
+function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChange: (v: string) => void; extraText?: string }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const ref = useRef<HTMLTextAreaElement>(null);
+    const hlRef = useRef<HTMLDivElement>(null);
+
+    const editBody = (build: (selected: string) => { text: string; selStart: number; selEnd: number }) => {
+        const el = ref.current;
+        const start = el ? el.selectionStart : value.length;
+        const end = el ? el.selectionEnd : value.length;
+        const { text, selStart, selEnd } = build(value.slice(start, end));
+        onChange(value.slice(0, start) + text + value.slice(end));
+        const a = start + selStart;
+        const b = start + selEnd;
+        requestAnimationFrame(() => {
+            const node = ref.current;
+            if (node) {
+                node.focus();
+                node.setSelectionRange(a, b);
+            }
+        });
+    };
+    const wrap = (before: string, after: string) =>
+        editBody((sel) => ({ text: before + sel + after, selStart: before.length, selEnd: before.length + sel.length }));
+    const insert = (text: string) => editBody(() => ({ text, selStart: text.length, selEnd: text.length }));
+    const insertVar = (key: string) => insert(`{{${key}}}`);
+    const insertLink = () =>
+        editBody((sel) => {
+            const text = `<a href="">${sel || 'link text'}</a>`;
+            return { text, selStart: 9, selEnd: 9 };
+        });
+    const insertList = () =>
+        editBody((sel) => {
+            const lines = sel ? sel.split('\n').filter((l) => l.trim() !== '') : [''];
+            const text = `<ul>\n${lines.map((l) => `  <li>${l}</li>`).join('\n')}\n</ul>`;
+            const pos = text.indexOf('</li>');
+            return { text, selStart: pos, selEnd: pos };
+        });
+
+    const tokens = Array.from(new Set(Array.from(`${extraText} ${value}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+
+    return (
+        <>
+            <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
+                {/* Quick tools — insert HTML at the caret / around the selection */}
+                <div className="border-border bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
+                    <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}><Bold className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}><Italic className="h-3.5 w-3.5" /></ToolBtn>
+                    <span className="bg-border mx-1 h-4 w-px" />
+                    <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}><CornerDownLeft className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}><Pilcrow className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Bullet list" onClick={insertList}><List className="h-3.5 w-3.5" /></ToolBtn>
+                    <span className="bg-border mx-1 h-4 w-px" />
+                    <ToolBtn title="Link" onClick={insertLink}><Link2 className="h-3.5 w-3.5" /></ToolBtn>
+                    <select
+                        value=""
+                        onChange={(e) => {
+                            if (e.target.value) insertVar(e.target.value);
+                            e.currentTarget.value = '';
+                        }}
+                        title={t('email_insert_var')}
+                        className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
+                    >
+                        <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
+                        {Object.keys(SAMPLE_VARS).map((k) => (
+                            <option key={k} value={k}>{`{{${k}}}`}</option>
+                        ))}
+                    </select>
+                </div>
+                {/* Syntax highlight: a coloured layer under a transparent, scroll-synced textarea. */}
+                <div className="relative">
+                    <div
+                        ref={hlRef}
+                        aria-hidden="true"
+                        className="text-foreground pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap"
+                        dangerouslySetInnerHTML={{ __html: highlightBody(value) }}
+                    />
+                    <textarea
+                        ref={ref}
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                        onScroll={(e) => {
+                            const h = hlRef.current;
+                            if (h) {
+                                h.scrollTop = e.currentTarget.scrollTop;
+                                h.scrollLeft = e.currentTarget.scrollLeft;
+                            }
+                        }}
+                        spellCheck={false}
+                        rows={12}
+                        className="caret-foreground relative block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
+                    />
+                </div>
+            </div>
+
+            {tokens.length > 0 && (
+                <div className="mt-3">
+                    <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                        {tokens.map((tk) => (
+                            <button
+                                key={tk}
+                                type="button"
+                                onClick={() => insertVar(tk)}
+                                title={t('email_insert_var')}
+                                className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors"
+                            >
+                                {`{{${tk}}}`}
+                                {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
+                </div>
+            )}
+        </>
+    );
+}
+
+// Live email preview framed like an inbox message (from/to/subject + rendered body).
+function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: string; previewHtml: string }) {
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="bg-muted/30 border-border flex min-h-0 flex-col border-r">
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                <div className="border-border mx-auto flex h-full max-w-[640px] flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+                    <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
+                        <div>
+                            <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
+                            <span className="font-mono">no-reply@{(brand || 'inaba').toLowerCase().replace(/\s+/g, '')}</span>
+                        </div>
+                        <div>
+                            <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
+                            <span className="font-mono">{'{{user.email}}'}</span>
+                        </div>
+                        <div className="text-foreground w-full truncate font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
+                    </div>
+                    {previewHtml ? (
+                        <iframe title="email-preview" srcDoc={previewHtml} className="block w-full flex-1 border-0 bg-white" />
+                    ) : (
+                        <div className="space-y-3 p-6">
+                            <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
+                            <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
+                            <div className="bg-muted h-28 w-full animate-pulse rounded" />
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Preview | Edit column-header strip shared by both dialogs.
+function PaneHeaders({ rendering }: { rendering: boolean }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <div className="border-border text-muted-foreground grid grid-cols-2 border-b text-[11px] font-semibold tracking-wide uppercase">
+            <div className="border-border flex items-center justify-between border-r px-5 py-2.5">
+                <span className="flex items-center gap-1.5">
+                    <Eye className="h-3.5 w-3.5" />
+                    {t('email_preview')}
+                </span>
+                {rendering && (
+                    <span className="flex items-center gap-1 text-[10px] normal-case">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
+                    </span>
+                )}
+            </div>
+            <div className="flex items-center gap-1.5 px-5 py-2.5">
+                <PenLine className="h-3.5 w-3.5" />
+                {t('edit')}
+            </div>
+        </div>
+    );
+}
+
 /**
  * Combined editor as a centered dialog (~75% of the viewport, rounded): a title
  * bar, a sub-header with the template name + enable toggle, then a split body with
@@ -353,7 +597,6 @@ function EditorDialog({
     testing: boolean;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { data: settings } = useSettings();
     const brand = settings?.brand_name || 'Inaba IT';
 
@@ -361,57 +604,13 @@ function EditorDialog({
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [enabled, setEnabled] = useState(true);
-    const [previewHtml, setPreviewHtml] = useState('');
-    const [rendering, setRendering] = useState(false);
     // Saved/sent values to diff against (the Save button is disabled until something
     // changes) plus short-lived success flags for the button check marks.
     const [base, setBase] = useState({ name: '', subject: '', body: '', enabled: true });
     const [savedOk, setSavedOk] = useState(false);
     const [sentOk, setSentOk] = useState(false);
-    const bodyRef = useRef<HTMLTextAreaElement>(null);
-    const highlightRef = useRef<HTMLDivElement>(null);
-    const subjectHlRef = useRef<HTMLDivElement>(null);
 
-    // Quick-tools core: replace the Body textarea's current selection with the text
-    // built from it, then restore focus with the caret/selection at the given offsets
-    // (relative to the start of the inserted text).
-    const editBody = (build: (selected: string) => { text: string; selStart: number; selEnd: number }) => {
-        const el = bodyRef.current;
-        const start = el ? el.selectionStart : body.length;
-        const end = el ? el.selectionEnd : body.length;
-        const { text, selStart, selEnd } = build(body.slice(start, end));
-        setBody(body.slice(0, start) + text + body.slice(end));
-        const a = start + selStart;
-        const b = start + selEnd;
-        requestAnimationFrame(() => {
-            const node = bodyRef.current;
-            if (node) {
-                node.focus();
-                node.setSelectionRange(a, b);
-            }
-        });
-    };
-
-    // Wrap the selection in before/after tags (caret between them when nothing is selected).
-    const wrap = (before: string, after: string) =>
-        editBody((sel) => ({ text: before + sel + after, selStart: before.length, selEnd: before.length + sel.length }));
-    // Insert literal text at the caret.
-    const insert = (text: string) => editBody(() => ({ text, selStart: text.length, selEnd: text.length }));
-    const insertVar = (key: string) => insert(`{{${key}}}`);
-    // Link: wrap selection in an anchor and drop the caret inside the empty href.
-    const insertLink = () =>
-        editBody((sel) => {
-            const text = `<a href="">${sel || 'link text'}</a>`;
-            return { text, selStart: 9, selEnd: 9 };
-        });
-    // Bullet list: one <li> per selected line (or a single empty item).
-    const insertList = () =>
-        editBody((sel) => {
-            const lines = sel ? sel.split('\n').filter((l) => l.trim() !== '') : [''];
-            const text = `<ul>\n${lines.map((l) => `  <li>${l}</li>`).join('\n')}\n</ul>`;
-            const pos = text.indexOf('</li>');
-            return { text, selStart: pos, selEnd: pos };
-        });
+    const { previewHtml, rendering, setPreviewHtml } = useLivePreview(!!template, name, subject, body);
 
     // Sync the form when a different template is opened (and clear the stale preview).
     useEffect(() => {
@@ -428,21 +627,6 @@ function EditorDialog({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
 
-    // Debounced live preview through the real email layout (sample data + inert CTA).
-    useEffect(() => {
-        if (!template) return;
-        setRendering(true);
-        const id = window.setTimeout(() => {
-            emailTemplateApi
-                .renderPreview({ name, subject, body_html: body })
-                .then(setPreviewHtml)
-                .catch(() => {})
-                .finally(() => setRendering(false));
-        }, 400);
-        return () => window.clearTimeout(id);
-    }, [template, name, subject, body]);
-
-    const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
     const dirty = name !== base.name || subject !== base.subject || body !== base.body || enabled !== base.enabled;
 
     // Save: persist, flash a check, and reset the dirty baseline so the button greys out again.
@@ -470,10 +654,51 @@ function EditorDialog({
         }
     };
 
+    // Confirm before discarding unsaved edits (X / Esc / click-outside / Cancel).
+    const requestClose = async () => {
+        if (dirty) {
+            const r = await Swal.fire({
+                icon: 'warning',
+                title: t('email_discard_title'),
+                text: t('email_discard_text'),
+                showCancelButton: true,
+                confirmButtonText: t('email_discard_confirm'),
+                cancelButtonText: t('cancel'),
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#64748b',
+                customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            });
+            if (!r.isConfirmed) return;
+        }
+        onClose();
+    };
+
+    // Ctrl/⌘+S saves without leaving the editor.
+    useEffect(() => {
+        if (!template) return;
+        const onKey = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                handleSave();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [template, dirty, saving, name, subject, body, enabled]);
+
     return (
-        <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!template} onOpenChange={(o) => !o && requestClose()}>
             <DialogContent
                 aria-describedby={undefined}
+                onEscapeKeyDown={(e) => {
+                    e.preventDefault();
+                    requestClose();
+                }}
+                onInteractOutside={(e) => {
+                    e.preventDefault();
+                    requestClose();
+                }}
                 className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
             >
                 {template && (
@@ -505,55 +730,11 @@ function EditorDialog({
                             </label>
                         </div>
 
-                        {/* Column header bar — Preview | Edit */}
-                        <div className="border-border text-muted-foreground grid grid-cols-2 border-b text-[11px] font-semibold tracking-wide uppercase">
-                            <div className="border-border flex items-center justify-between border-r px-5 py-2.5">
-                                <span className="flex items-center gap-1.5">
-                                    <Eye className="h-3.5 w-3.5" />
-                                    {t('email_preview')}
-                                </span>
-                                {rendering && (
-                                    <span className="flex items-center gap-1 text-[10px] normal-case">
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                        {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-1.5 px-5 py-2.5">
-                                <PenLine className="h-3.5 w-3.5" />
-                                {t('edit')}
-                            </div>
-                        </div>
+                        <PaneHeaders rendering={rendering} />
 
                         {/* Body — two columns */}
                         <div className="grid min-h-0 flex-1 grid-cols-2">
-                            {/* Left — live preview, framed like an email client */}
-                            <div className="bg-muted/30 border-border flex min-h-0 flex-col border-r">
-                                <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                                    <div className="border-border mx-auto flex h-full max-w-[640px] flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
-                                        <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
-                                            <div>
-                                                <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
-                                                <span className="font-mono">no-reply@{(brand || 'inaba').toLowerCase().replace(/\s+/g, '')}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
-                                                <span className="font-mono">{'{{user.email}}'}</span>
-                                            </div>
-                                            <div className="text-foreground w-full truncate font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
-                                        </div>
-                                        {previewHtml ? (
-                                            <iframe title="email-preview" srcDoc={previewHtml} className="block w-full flex-1 border-0 bg-white" />
-                                        ) : (
-                                            <div className="space-y-3 p-6">
-                                                <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
-                                                <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
-                                                <div className="bg-muted h-28 w-full animate-pulse rounded" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            <PreviewPane brand={brand} subject={subject} previewHtml={previewHtml} />
 
                             {/* Right — edit form */}
                             <div className="flex min-h-0 flex-col">
@@ -562,115 +743,23 @@ function EditorDialog({
                                         <Input value={name} onChange={(e) => setName(e.target.value)} />
                                     </Field>
                                     <Field label={t('email_subject')}>
-                                        {/* Same overlay highlight as the Body, single-line (sync horizontal scroll).
-                                            Background + border live on the wrapper so the transparent input on top
-                                            doesn't hide the coloured layer behind it. */}
-                                        <div className="border-input bg-background ring-offset-background focus-within:ring-ring relative h-10 rounded-md border focus-within:ring-2 focus-within:ring-offset-2">
-                                            <div
-                                                ref={subjectHlRef}
-                                                aria-hidden="true"
-                                                className="text-foreground pointer-events-none absolute inset-0 flex items-center overflow-hidden px-3 text-base whitespace-pre md:text-sm"
-                                                dangerouslySetInnerHTML={{ __html: highlightHtml(subject) }}
-                                            />
-                                            <input
-                                                value={subject}
-                                                onChange={(e) => setSubject(e.target.value)}
-                                                onScroll={(e) => {
-                                                    const h = subjectHlRef.current;
-                                                    if (h) h.scrollLeft = e.currentTarget.scrollLeft;
-                                                }}
-                                                spellCheck={false}
-                                                className="caret-foreground absolute inset-0 h-full w-full bg-transparent px-3 text-base text-transparent outline-none md:text-sm"
-                                            />
-                                        </div>
+                                        <SubjectField value={subject} onChange={setSubject} />
                                     </Field>
                                     <Field label={t('email_body')}>
-                                        <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
-                                            {/* Quick tools — insert HTML at the caret / around the selection */}
-                                            <div className="border-border bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
-                                                <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}><Bold className="h-3.5 w-3.5" /></ToolBtn>
-                                                <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}><Italic className="h-3.5 w-3.5" /></ToolBtn>
-                                                <span className="bg-border mx-1 h-4 w-px" />
-                                                <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}><CornerDownLeft className="h-3.5 w-3.5" /></ToolBtn>
-                                                <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}><Pilcrow className="h-3.5 w-3.5" /></ToolBtn>
-                                                <ToolBtn title="Bullet list" onClick={insertList}><List className="h-3.5 w-3.5" /></ToolBtn>
-                                                <span className="bg-border mx-1 h-4 w-px" />
-                                                <ToolBtn title="Link" onClick={insertLink}><Link2 className="h-3.5 w-3.5" /></ToolBtn>
-                                                <select
-                                                    value=""
-                                                    onChange={(e) => {
-                                                        if (e.target.value) insertVar(e.target.value);
-                                                        e.currentTarget.value = '';
-                                                    }}
-                                                    title={t('email_insert_var')}
-                                                    className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
-                                                >
-                                                    <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
-                                                    {Object.keys(SAMPLE_VARS).map((k) => (
-                                                        <option key={k} value={k}>{`{{${k}}}`}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            {/* Syntax highlight: a coloured layer sits under a transparent
-                                                textarea; both share identical metrics and scroll together. */}
-                                            <div className="relative">
-                                                <div
-                                                    ref={highlightRef}
-                                                    aria-hidden="true"
-                                                    className="text-foreground pointer-events-none absolute inset-0 overflow-hidden px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap"
-                                                    dangerouslySetInnerHTML={{ __html: highlightBody(body) }}
-                                                />
-                                                <textarea
-                                                    ref={bodyRef}
-                                                    value={body}
-                                                    onChange={(e) => setBody(e.target.value)}
-                                                    onScroll={(e) => {
-                                                        const h = highlightRef.current;
-                                                        if (h) {
-                                                            h.scrollTop = e.currentTarget.scrollTop;
-                                                            h.scrollLeft = e.currentTarget.scrollLeft;
-                                                        }
-                                                    }}
-                                                    spellCheck={false}
-                                                    rows={12}
-                                                    className="caret-foreground relative block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
-                                                />
-                                            </div>
-                                        </div>
+                                        <BodyEditor value={body} onChange={setBody} extraText={subject} />
                                     </Field>
-
-                                    {tokens.length > 0 && (
-                                        <div>
-                                            <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {tokens.map((tk) => (
-                                                    <button
-                                                        key={tk}
-                                                        type="button"
-                                                        onClick={() => insertVar(tk)}
-                                                        title={t('email_insert_var')}
-                                                        className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors"
-                                                    >
-                                                        {`{{${tk}}}`}
-                                                        {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Footer — Send Test (left) · Cancel / Save (right) */}
                         <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
-                            <Button variant="outline" onClick={handleTest} disabled={testing}>
+                            <Button variant="outline" onClick={handleTest} disabled={testing} title={t('email_test_hint')}>
                                 {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
                                 {sentOk ? t('email_sent') : t('email_test')}
                             </Button>
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
+                                <Button variant="outline" onClick={requestClose}>{t('cancel')}</Button>
                                 <Button onClick={handleSave} disabled={!dirty || saving}>
                                     {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
                                     {savedOk ? t('email_saved') : t('email_save')}
@@ -692,6 +781,9 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('<p>Hi {{user.first_name}},</p>\n<p></p>');
     const [error, setError] = useState('');
+    const { data: settings } = useSettings();
+    const brand = settings?.brand_name || 'Inaba IT';
+    const { previewHtml, rendering } = useLivePreview(open, name, subject, body);
 
     const reset = () => { setKey(''); setName(''); setSubject(''); setBody('<p>Hi {{user.first_name}},</p>\n<p></p>'); setError(''); };
 
@@ -710,32 +802,46 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
 
     return (
         <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
-            <DialogContent className="max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>{t('email_create')}</DialogTitle>
+            <DialogContent
+                aria-describedby={undefined}
+                className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
+            >
+                <DialogHeader className="border-border space-y-0 border-b px-6 py-3.5 pr-14 text-left">
+                    <DialogTitle className="text-base">{t('email_create')}</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-3 py-1">
-                    <Field label={t('email_key')}>
-                        <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="ticket.escalated" className="font-mono" />
-                    </Field>
-                    <Field label={t('email_template')}>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} />
-                    </Field>
-                    <Field label={t('email_subject')}>
-                        <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-                    </Field>
-                    <Field label={t('email_body')}>
-                        <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={6} className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus:border-brand" />
-                    </Field>
-                    {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+
+                <PaneHeaders rendering={rendering} />
+
+                {/* Body — live preview (left) · new-template form (right) */}
+                <div className="grid min-h-0 flex-1 grid-cols-2">
+                    <PreviewPane brand={brand} subject={subject} previewHtml={previewHtml} />
+
+                    <div className="flex min-h-0 flex-col">
+                        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+                            <Field label={t('email_key')}>
+                                <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="ticket.escalated" className="font-mono" />
+                            </Field>
+                            <Field label={t('email_template')}>
+                                <Input value={name} onChange={(e) => setName(e.target.value)} />
+                            </Field>
+                            <Field label={t('email_subject')}>
+                                <SubjectField value={subject} onChange={setSubject} />
+                            </Field>
+                            <Field label={t('email_body')}>
+                                <BodyEditor value={body} onChange={setBody} extraText={subject} />
+                            </Field>
+                            {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+                        </div>
+                    </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => { reset(); onClose(); }}>{t('cancel')}</Button>
+
+                <div className="border-border flex items-center justify-end gap-2 border-t px-6 py-3">
+                    <Button variant="outline" onClick={() => { reset(); onClose(); }}>{t('cancel')}</Button>
                     <Button onClick={submit} disabled={create.isPending}>
-                        <Plus className="h-4 w-4" />
+                        {create.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
                         {t('email_create')}
                     </Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );
