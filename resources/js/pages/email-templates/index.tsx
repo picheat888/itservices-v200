@@ -13,7 +13,8 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { Check, Eye, Mail, Plus, Search, Send, SquarePen } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Check, Mail, MoreVertical, Plus, Search, Send, SquarePen } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -34,10 +35,6 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
 };
-
-const AVAILABLE_VARS = [
-    '{{user.first_name}}', '{{user.email}}', '{{ticket.id}}', '{{ticket.subject}}', '{{contract.vendor}}', '{{reference.id}}',
-];
 
 // Short notes for the "magic" placeholders that aren't a simple field — shown
 // beside the variable chips in the Edit drawer so a short body doesn't look broken.
@@ -102,8 +99,7 @@ export default function EmailTemplatesPage() {
     const { update, test } = useEmailTemplateMutations();
     const [search, setSearch] = useState('');
     const [module, setModule] = useState('');
-    const [preview, setPreview] = useState<EmailTemplate | null>(null);
-    const [edit, setEdit] = useState<EmailTemplate | null>(null);
+    const [editing, setEditing] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
 
     const templates = useMemo(() => data?.data ?? [], [data]);
@@ -256,13 +252,24 @@ export default function EmailTemplatesPage() {
                                             <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
                                         </td>
                                         <td className="px-4 py-2.5">
-                                            <div className="flex justify-end gap-1">
-                                                <button onClick={() => setPreview(tp)} title={t('email_preview')} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                                <button onClick={() => setEdit(tp)} title={t('edit')} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
-                                                    <SquarePen className="h-4 w-4" />
-                                                </button>
+                                            <div className="flex justify-end">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button title={t('actions')} className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => setEditing(tp)}>
+                                                            <SquarePen className="h-4 w-4" />
+                                                            {t('email_edit_preview')}
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => test.mutate(tp.id)}>
+                                                            <Send className="h-4 w-4" />
+                                                            {t('email_test')}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </td>
                                     </tr>
@@ -273,86 +280,51 @@ export default function EmailTemplatesPage() {
                 )}
             </Card>
 
-            <PreviewDrawer template={preview} onClose={() => setPreview(null)} onTest={(id) => test.mutate(id)} testing={test.isPending} />
-            <EditDrawer
-                template={edit}
-                onClose={() => setEdit(null)}
-                onSave={(payload) => edit && update.mutate({ id: edit.id, payload }, { onSuccess: () => setEdit(null) })}
+            <EditorDrawer
+                template={editing}
+                onClose={() => setEditing(null)}
+                onSave={(payload) => editing && update.mutate({ id: editing.id, payload }, { onSuccess: () => setEditing(null) })}
                 saving={update.isPending}
+                onTest={(id) => test.mutate(id)}
+                testing={test.isPending}
             />
             <CreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
         </div>
     );
 }
 
-function PreviewDrawer({ template, onClose, onTest, testing }: { template: EmailTemplate | null; onClose: () => void; onTest: (id: number) => void; testing: boolean }) {
+/**
+ * Combined editor: live preview on the left, edit form on the right. The preview
+ * renders the unsaved content through the real email layout (debounced) so the two
+ * panes always agree and match what recipients receive.
+ */
+function EditorDrawer({
+    template,
+    onClose,
+    onSave,
+    saving,
+    onTest,
+    testing,
+}: {
+    template: EmailTemplate | null;
+    onClose: () => void;
+    onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => void;
+    saving: boolean;
+    onTest: (id: number) => void;
+    testing: boolean;
+}) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { data: settings } = useSettings();
     const brand = settings?.brand_name || 'Inaba IT';
 
-    return (
-        <Sheet open={!!template} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent side="right" className="w-[620px] sm:max-w-[620px]">
-                {template && (
-                    <>
-                        <SheetHeader>
-                            <SheetTitle>{template.name}</SheetTitle>
-                            <SheetDescription>{t('email_trigger')}: {template.key}</SheetDescription>
-                        </SheetHeader>
-
-                        <div className="mt-6 space-y-4">
-                            <div className="overflow-hidden rounded-lg border border-border bg-muted/40">
-                                <div className="flex gap-6 border-b border-border px-4 py-3 text-xs">
-                                    <div><span className="text-muted-foreground">From: </span><span className="font-mono">noreply@example.com</span></div>
-                                    <div><span className="text-muted-foreground">To: </span><span className="font-mono">{'{{user.email}}'}</span></div>
-                                </div>
-                                <div className="border-b border-border px-4 py-3 text-sm font-semibold">
-                                    [{brand}] {render(template.subject, SAMPLE_VARS)}
-                                </div>
-                                {/* Server-rendered through the real email layout (emails.templated) so
-                                    the preview matches what recipients get — wrapper, eyebrow, CTA. */}
-                                <iframe
-                                    title="email-preview"
-                                    src={`/api/email-templates/${template.id}/preview`}
-                                    className="block w-full border-0 bg-white"
-                                    style={{ height: 560 }}
-                                />
-                            </div>
-
-                            <div>
-                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('email_variables')}</div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {AVAILABLE_VARS.map((v) => (
-                                        <span key={v} className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{v}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        <SheetFooter className="mt-6 flex-row gap-2">
-                            <Button variant="outline" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
-                            <Button className="flex-1" onClick={() => onTest(template.id)} disabled={testing}>
-                                <Send className="h-4 w-4" />
-                                {t('email_test')}
-                            </Button>
-                        </SheetFooter>
-                    </>
-                )}
-            </SheetContent>
-        </Sheet>
-    );
-}
-
-function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemplate | null; onClose: () => void; onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => void; saving: boolean }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const [name, setName] = useState('');
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [enabled, setEnabled] = useState(true);
     const [previewHtml, setPreviewHtml] = useState('');
 
-    // Sync local form when a different template is opened.
+    // Sync the form when a different template is opened.
     useEffect(() => {
         if (template) {
             setName(template.name);
@@ -363,8 +335,7 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [template?.id]);
 
-    // Live preview: render the unsaved content through the real email layout (debounced),
-    // so what you edit matches the Preview / what recipients receive.
+    // Debounced live preview through the real email layout (sample data + inert CTA).
     useEffect(() => {
         if (!template) return;
         const id = window.setTimeout(() => {
@@ -373,76 +344,82 @@ function EditDrawer({ template, onClose, onSave, saving }: { template: EmailTemp
         return () => window.clearTimeout(id);
     }, [template, name, subject, body]);
 
+    const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+
     return (
         <Sheet open={!!template} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent side="right" className="flex w-[620px] flex-col sm:max-w-[620px]">
+            <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-[1080px]">
                 {template && (
                     <>
-                        <SheetHeader>
-                            <SheetTitle>{t('edit')}: {template.name}</SheetTitle>
-                            <SheetDescription>{template.key}</SheetDescription>
+                        <SheetHeader className="border-border border-b px-6 py-4">
+                            <SheetTitle>{template.name}</SheetTitle>
+                            <SheetDescription className="font-mono text-xs">{template.key}</SheetDescription>
                         </SheetHeader>
 
-                        <div className="mt-6 flex-1 space-y-4 overflow-y-auto px-1">
-                            <Field label={t('email_template')}>
-                                <Input value={name} onChange={(e) => setName(e.target.value)} />
-                            </Field>
-                            <Field label={t('email_subject')}>
-                                <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-                            </Field>
-                            <Field label={t('email_body')}>
-                                <textarea
-                                    value={body}
-                                    onChange={(e) => setBody(e.target.value)}
-                                    rows={10}
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs outline-none focus:border-brand"
-                                />
-                            </Field>
+                        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+                            {/* Left — live preview */}
+                            <div className="bg-muted/30 border-border flex min-h-0 flex-1 flex-col border-b lg:border-r lg:border-b-0">
+                                <div className="border-border border-b px-5 py-3">
+                                    <div className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{t('email_preview')}</div>
+                                    <div className="mt-1 truncate text-sm font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
+                                </div>
+                                <div className="flex-1 overflow-hidden p-4">
+                                    <iframe title="email-preview" srcDoc={previewHtml} className="border-border h-full min-h-[560px] w-full rounded-lg border bg-white" />
+                                </div>
+                            </div>
 
-                            {/* Variables used by THIS template — clarifies that a short body (e.g. one
-                                relying on {{items}}) is complete; values fill in at send (see preview). */}
-                            {(() => {
-                                const tokens = Array.from(new Set(Array.from(`${subject} ${body}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
-                                if (tokens.length === 0) return null;
-                                return (
-                                    <div>
-                                        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('email_variables')}</div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {tokens.map((tk) => (
-                                                <span key={tk} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-xs">
-                                                    {`{{${tk}}}`}
-                                                    {VAR_NOTE[tk] && <span className="text-[10px] text-muted-foreground">· {VAR_NOTE[tk][lang]}</span>}
-                                                </span>
-                                            ))}
+                            {/* Right — edit form */}
+                            <div className="flex w-full shrink-0 flex-col lg:w-[440px]">
+                                <div className="flex-1 space-y-4 overflow-y-auto p-5">
+                                    <Field label={t('email_template')}>
+                                        <Input value={name} onChange={(e) => setName(e.target.value)} />
+                                    </Field>
+                                    <Field label={t('email_subject')}>
+                                        <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+                                    </Field>
+                                    <Field label={t('email_body')}>
+                                        <textarea
+                                            value={body}
+                                            onChange={(e) => setBody(e.target.value)}
+                                            rows={10}
+                                            className="focus:border-brand border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-xs outline-none"
+                                        />
+                                    </Field>
+
+                                    {tokens.length > 0 && (
+                                        <div>
+                                            <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {tokens.map((tk) => (
+                                                    <span key={tk} className="bg-muted inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs">
+                                                        {`{{${tk}}}`}
+                                                        {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
                                         </div>
-                                        <p className="mt-1.5 text-[11px] text-muted-foreground">{t('email_var_hint')}</p>
-                                    </div>
-                                );
-                            })()}
+                                    )}
 
-                            <label className="flex items-center gap-2 text-sm">
-                                <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
-                                {t('email_enabled')}
-                            </label>
+                                    <label className="flex items-center gap-2 text-sm">
+                                        <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                                        {t('email_enabled')}
+                                    </label>
+                                </div>
 
-                            {/* Live preview — same branded layout as the sent email, with sample values. */}
-                            <div>
-                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('email_preview')}</div>
-                                <iframe
-                                    title="live-preview"
-                                    srcDoc={previewHtml}
-                                    className="block h-[460px] w-full rounded-lg border border-border bg-white"
-                                />
+                                <SheetFooter className="border-border flex-row gap-2 border-t p-4">
+                                    <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
+                                    <Button variant="outline" onClick={() => onTest(template.id)} disabled={testing}>
+                                        <Send className="h-4 w-4" />
+                                        {t('email_test')}
+                                    </Button>
+                                    <Button className="flex-1" onClick={() => onSave({ name, subject, body_html: body, enabled })} disabled={saving}>
+                                        <Check className="h-4 w-4" />
+                                        {t('email_save')}
+                                    </Button>
+                                </SheetFooter>
                             </div>
                         </div>
-
-                        <SheetFooter className="flex-row gap-2">
-                            <Button variant="outline" className="flex-1" onClick={onClose}>{t('cancel')}</Button>
-                            <Button className="flex-1" onClick={() => onSave({ name, subject, body_html: body, enabled })} disabled={saving}>
-                                <Check className="h-4 w-4" />
-                                {t('email_save')}
-                            </Button>
-                        </SheetFooter>
                     </>
                 )}
             </SheetContent>
