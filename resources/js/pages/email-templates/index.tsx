@@ -11,8 +11,8 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { Check, Loader2, Mail, MoreVertical, Plus, Search, Send } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Bold, Check, CornerDownLeft, Italic, Link2, List, Loader2, Mail, MoreVertical, Pilcrow, Plus, Search, Send } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Swal from 'sweetalert2';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
@@ -71,6 +71,20 @@ function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
             >
                 {on && <Check className="h-2.5 w-2.5 text-brand" />}
             </span>
+        </button>
+    );
+}
+
+// Single quick-tool button in the Body editor toolbar (icon + tooltip).
+function ToolBtn({ title, onClick, children }: { title: string; onClick: () => void; children: ReactNode }) {
+    return (
+        <button
+            type="button"
+            title={title}
+            onClick={onClick}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-7 w-7 items-center justify-center rounded transition-colors"
+        >
+            {children}
         </button>
     );
 }
@@ -313,6 +327,48 @@ function EditorDialog({
     const [enabled, setEnabled] = useState(true);
     const [previewHtml, setPreviewHtml] = useState('');
     const [rendering, setRendering] = useState(false);
+    const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+    // Quick-tools core: replace the Body textarea's current selection with the text
+    // built from it, then restore focus with the caret/selection at the given offsets
+    // (relative to the start of the inserted text).
+    const editBody = (build: (selected: string) => { text: string; selStart: number; selEnd: number }) => {
+        const el = bodyRef.current;
+        const start = el ? el.selectionStart : body.length;
+        const end = el ? el.selectionEnd : body.length;
+        const { text, selStart, selEnd } = build(body.slice(start, end));
+        setBody(body.slice(0, start) + text + body.slice(end));
+        const a = start + selStart;
+        const b = start + selEnd;
+        requestAnimationFrame(() => {
+            const node = bodyRef.current;
+            if (node) {
+                node.focus();
+                node.setSelectionRange(a, b);
+            }
+        });
+    };
+
+    // Wrap the selection in before/after tags (caret between them when nothing is selected).
+    const wrap = (before: string, after: string) =>
+        editBody((sel) => ({ text: before + sel + after, selStart: before.length, selEnd: before.length + sel.length }));
+    // Insert literal text at the caret.
+    const insert = (text: string) => editBody(() => ({ text, selStart: text.length, selEnd: text.length }));
+    const insertVar = (key: string) => insert(`{{${key}}}`);
+    // Link: wrap selection in an anchor and drop the caret inside the empty href.
+    const insertLink = () =>
+        editBody((sel) => {
+            const text = `<a href="">${sel || 'link text'}</a>`;
+            return { text, selStart: 9, selEnd: 9 };
+        });
+    // Bullet list: one <li> per selected line (or a single empty item).
+    const insertList = () =>
+        editBody((sel) => {
+            const lines = sel ? sel.split('\n').filter((l) => l.trim() !== '') : [''];
+            const text = `<ul>\n${lines.map((l) => `  <li>${l}</li>`).join('\n')}\n</ul>`;
+            const pos = text.indexOf('</li>');
+            return { text, selStart: pos, selEnd: pos };
+        });
 
     // Sync the form when a different template is opened (and clear the stale preview).
     useEffect(() => {
@@ -429,12 +485,40 @@ function EditorDialog({
                                         <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
                                     </Field>
                                     <Field label={t('email_body')}>
-                                        <textarea
-                                            value={body}
-                                            onChange={(e) => setBody(e.target.value)}
-                                            rows={12}
-                                            className="focus:border-brand border-input bg-background w-full rounded-md border px-3 py-2 font-mono text-xs outline-none"
-                                        />
+                                        <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
+                                            {/* Quick tools — insert HTML at the caret / around the selection */}
+                                            <div className="border-border bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
+                                                <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}><Bold className="h-3.5 w-3.5" /></ToolBtn>
+                                                <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}><Italic className="h-3.5 w-3.5" /></ToolBtn>
+                                                <span className="bg-border mx-1 h-4 w-px" />
+                                                <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}><CornerDownLeft className="h-3.5 w-3.5" /></ToolBtn>
+                                                <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}><Pilcrow className="h-3.5 w-3.5" /></ToolBtn>
+                                                <ToolBtn title="Bullet list" onClick={insertList}><List className="h-3.5 w-3.5" /></ToolBtn>
+                                                <span className="bg-border mx-1 h-4 w-px" />
+                                                <ToolBtn title="Link" onClick={insertLink}><Link2 className="h-3.5 w-3.5" /></ToolBtn>
+                                                <select
+                                                    value=""
+                                                    onChange={(e) => {
+                                                        if (e.target.value) insertVar(e.target.value);
+                                                        e.currentTarget.value = '';
+                                                    }}
+                                                    title={t('email_insert_var')}
+                                                    className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
+                                                >
+                                                    <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
+                                                    {Object.keys(SAMPLE_VARS).map((k) => (
+                                                        <option key={k} value={k}>{`{{${k}}}`}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <textarea
+                                                ref={bodyRef}
+                                                value={body}
+                                                onChange={(e) => setBody(e.target.value)}
+                                                rows={12}
+                                                className="block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs outline-none"
+                                            />
+                                        </div>
                                     </Field>
 
                                     {tokens.length > 0 && (
@@ -442,10 +526,16 @@ function EditorDialog({
                                             <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
                                             <div className="flex flex-wrap gap-1.5">
                                                 {tokens.map((tk) => (
-                                                    <span key={tk} className="bg-muted inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs">
+                                                    <button
+                                                        key={tk}
+                                                        type="button"
+                                                        onClick={() => insertVar(tk)}
+                                                        title={t('email_insert_var')}
+                                                        className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-xs transition-colors"
+                                                    >
                                                         {`{{${tk}}}`}
                                                         {VAR_NOTE[tk] && <span className="text-muted-foreground text-[10px]">· {VAR_NOTE[tk][lang]}</span>}
-                                                    </span>
+                                                    </button>
                                                 ))}
                                             </div>
                                             <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
