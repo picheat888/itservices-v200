@@ -74,7 +74,7 @@ export function DashboardTab({
                         when the user lacks view_events) lets the rest reflow up to fill it. */}
                     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
                         {/* Action queue — reorder card with left severity accents */}
-                        <Card className="overflow-hidden p-0">
+                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center justify-between border-b px-5 py-3">
                                 <div className="flex items-center gap-2">
                                     <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -87,12 +87,12 @@ export function DashboardTab({
                                 )}
                             </div>
                             {reorderItems.length === 0 ? (
-                                <div className="text-muted-foreground flex flex-col items-center gap-2 py-12 text-center text-sm">
+                                <div className="text-muted-foreground flex min-h-0 flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm">
                                     <Check className="h-6 w-6 text-emerald-500" />
                                     {t('stock_all_stocked')}
                                 </div>
                             ) : (
-                                <div className="divide-border/60 divide-y">
+                                <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto">
                                     {reorderItems.slice(0, 6).map((it, i) => {
                                         const out = it.current_stock === 0;
                                         return (
@@ -129,7 +129,7 @@ export function DashboardTab({
 
                         {/* Recent movements — only shown when the user has stock.view_events */}
                         {canEvents && (
-                            <Card className="overflow-hidden p-0">
+                            <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                                 <div className="border-border flex items-center justify-between border-b px-5 py-3">
                                     <div className="flex items-center gap-2.5">
                                         <span className="relative flex h-2 w-2">
@@ -141,9 +141,9 @@ export function DashboardTab({
                                     <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
                                 </div>
                                 {movements.length === 0 ? (
-                                    <div className="text-muted-foreground py-12 text-center text-sm">{t('stock_no_moves')}</div>
+                                    <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">{t('stock_no_moves')}</div>
                                 ) : (
-                                    <div className="p-1.5">
+                                    <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
                                         {movements.slice(0, 6).map((m, i) => {
                                             const meta = MV_META[m.type];
                                             const MIcon = meta.icon;
@@ -189,12 +189,12 @@ export function DashboardTab({
                         )}
 
                         {/* By warehouse */}
-                        <Card className="overflow-hidden p-0">
+                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3">
                                 <Warehouse className="text-brand h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_warehouse')}</span>
                             </div>
-                            <div className="divide-border/60 divide-y">
+                            <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto">
                                 {summary.by_warehouse.map((w, i) => (
                                     <button
                                         type="button"
@@ -228,12 +228,12 @@ export function DashboardTab({
                         </Card>
 
                         {/* By category */}
-                        <Card className="overflow-hidden p-0">
+                        <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3">
                                 <Layers className="text-brand h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_category')}</span>
                             </div>
-                            <div className="space-y-3.5 p-4">
+                            <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
                                 {summary.by_category.map((c, i) => (
                                     <button
                                         type="button"
