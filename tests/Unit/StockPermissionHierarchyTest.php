@@ -40,4 +40,16 @@ class StockPermissionHierarchyTest extends TestCase
         $this->assertNotContains('stock.receive', $out);
         $this->assertContains('tickets.create', $out); // non-stock untouched
     }
+
+    public function test_default_grants_are_hierarchy_consistent(): void
+    {
+        foreach (Permissions::defaults() as $role => $granted) {
+            $normalized = Permissions::normalizeStock($granted);
+            $stockBefore = array_values(array_filter($granted, fn ($k) => str_starts_with($k, 'stock.')));
+            $stockAfter = array_values(array_filter($normalized, fn ($k) => str_starts_with($k, 'stock.')));
+            sort($stockBefore);
+            sort($stockAfter);
+            $this->assertSame($stockBefore, $stockAfter, "default grants for {$role} are not hierarchy-consistent");
+        }
+    }
 }
