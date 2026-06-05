@@ -58,7 +58,7 @@ export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
     if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
-    if (n.data.type === 'stock_count') return `#${n.data.stock_count_id}`;
+    if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
