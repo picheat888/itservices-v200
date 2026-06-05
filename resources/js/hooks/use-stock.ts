@@ -8,6 +8,7 @@ import {
     type StockRequestPayload,
 } from '@/services/stockApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { StockCountAdjustMode } from '@/types';
 
 const ITEMS = ['stock-items'] as const;
 const SUMMARY = ['stock-summary'] as const;
@@ -26,7 +27,7 @@ interface StockItemFilters {
 export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey: [...ITEMS, filters], queryFn: () => stockApi.list(filters) });
 
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
-export const useStockSummary = () => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary });
+export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled });
 
 /** Every serial known to the system — used to flag duplicates while receiving. */
 export const useExistingSerials = () => useQuery({ queryKey: [...ITEMS, 'serials'], queryFn: stockApi.existingSerials });
@@ -34,6 +35,10 @@ export const useExistingSerials = () => useQuery({ queryKey: [...ITEMS, 'serials
 /** A single stock item with its per-unit serials (for the detail view). */
 export const useStockItem = (id: number | null) =>
     useQuery({ queryKey: [...ITEMS, 'detail', id], queryFn: () => stockApi.get(id as number), enabled: id !== null });
+
+/** Full movement + serial-event history for one SKU (timeline / print view). */
+export const useStockItemHistory = (id: number | null) =>
+    useQuery({ queryKey: ['stock-item-history', id], queryFn: () => stockApi.history(id as number), enabled: id !== null });
 
 /** Create/update/delete mutations; invalidate both list and summary. */
 export function useStockItemMutations() {
@@ -50,9 +55,13 @@ export function useStockItemMutations() {
     };
 }
 
-/** Movement log, optionally filtered by type. */
-export const useStockMovements = (type?: string) =>
-    useQuery({ queryKey: [...MOVEMENTS, type ?? 'all'], queryFn: () => stockMovementApi.list({ type }) });
+/** Movement log, optionally filtered by type. Pass enabled=false to skip the fetch (e.g. when the caller lacks view_events permission). */
+export const useStockMovements = (type?: string, enabled = true) =>
+    useQuery({ queryKey: [...MOVEMENTS, type ?? 'all'], queryFn: () => stockMovementApi.list({ type }), enabled });
+
+/** Serial codes tied to a single movement (for the movement detail dialog). */
+export const useMovementSerials = (id: number | null) =>
+    useQuery({ queryKey: [...MOVEMENTS, 'serials', id], queryFn: () => stockMovementApi.serials(id as number), enabled: id !== null });
 
 /** Record a movement; refresh movements, items and summary (stock changed). */
 export function useRecordMovement() {
@@ -68,7 +77,24 @@ export function useRecordMovement() {
 }
 
 /** Stock requests visible to the current user. */
-export const useStockRequests = () => useQuery({ queryKey: REQUESTS, queryFn: stockRequestApi.list });
+export const useStockRequests = (enabled = true) => useQuery({ queryKey: REQUESTS, queryFn: stockRequestApi.list, enabled });
+
+/**
+ * Combined "needs attention" count for the Stock sidebar badge: min/max alerts
+ * (out + low + over + dead) + outstanding requests (pending/approved) + draft
+ * count sessions. Pass enabled=false to skip the queries for users without stock access.
+ */
+export function useStockSidebarBadge(enabled = true): number {
+    const { data: summary } = useStockSummary(enabled);
+    const { data: requests = [] } = useStockRequests(enabled);
+    const { data: counts = [] } = useStockCounts(enabled);
+
+    const alerts = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
+    const openRequests = requests.filter((r) => r.status === 'pending' || r.status === 'approved').length;
+    const draftCounts = counts.filter((s) => s.status === 'draft').length;
+
+    return alerts + openRequests + draftCounts;
+}
 
 /** Request workflow mutations (submit / approve / reject / fulfill). */
 export function useStockRequestActions() {
@@ -84,8 +110,8 @@ export function useStockRequestActions() {
         approve: useMutation({ mutationFn: (id: number) => stockRequestApi.approve(id), onSuccess: inv }),
         reject: useMutation({ mutationFn: (id: number) => stockRequestApi.reject(id), onSuccess: inv }),
         fulfill: useMutation({
-            mutationFn: (v: { id: number; serialIds?: number[]; fromWarehouse?: string }) =>
-                stockRequestApi.fulfill(v.id, { serial_ids: v.serialIds, from_warehouse: v.fromWarehouse }),
+            mutationFn: (v: { id: number; serialIds?: number[]; allocations?: { warehouse: string; qty: number }[] }) =>
+                stockRequestApi.fulfill(v.id, { serial_ids: v.serialIds, allocations: v.allocations }),
             onSuccess: inv,
         }),
     };
@@ -117,7 +143,11 @@ export function useStockCountMutations() {
             mutationFn: (v: { id: number; counts: Record<number, number | null> }) => stockCountApi.saveCounts(v.id, v.counts),
             onSuccess: inv,
         }),
-        commit: useMutation({ mutationFn: (id: number) => stockCountApi.commit(id), onSuccess: inv }),
+        commit: useMutation({
+            mutationFn: (v: { id: number; mode: StockCountAdjustMode; missingSerials?: Record<number, number[]> }) =>
+                stockCountApi.commit(v.id, v.mode, v.missingSerials),
+            onSuccess: inv,
+        }),
         cancel: useMutation({ mutationFn: (id: number) => stockCountApi.cancel(id), onSuccess: inv }),
     };
 }
