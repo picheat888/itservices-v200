@@ -290,9 +290,13 @@ function RolesTab() {
                                         {groups.map((group) => {
                                             if (group.module === 'stock') {
                                                 return (
-                                                    <div key={group.module} className="md:col-span-2">
-                                                        <StockPermissionTree draft={draft} setDraft={setDraft} isSuper={role.is_super} lang={lang} />
-                                                    </div>
+                                                    <StockPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
                                                 );
                                             }
                                             const moduleOn = group.keys.filter(isOn).length;
