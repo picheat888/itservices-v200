@@ -18,7 +18,13 @@ class Permissions
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => ['view', 'register', 'transfer', 'retire', 'edit'],
             'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts'],
-            'stock' => ['view', 'request', 'approve', 'fulfill', 'receive', 'transfer', 'return', 'manage_items', 'manage_warehouse', 'audit', 'delete'],
+            'stock' => [
+                'module',
+                'view_dashboard', 'view', 'view_request', 'view_count', 'view_events',
+                'manage_items', 'receive', 'return', 'transfer',
+                'request', 'approve', 'fulfill',
+                'count', 'events',
+            ],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
             'settings' => ['company', 'branding', 'display', 'masterdata', 'email', 'sla', 'assets', 'workflows', 'security'],
@@ -74,5 +80,52 @@ class Permissions
                 'stock.view', 'stock.request',
             ],
         ];
+    }
+
+    /**
+     * Stock permission tree used for client cascade and server normalization.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function stockHierarchy(): array
+    {
+        return [
+            'master' => 'stock.module',
+            'groups' => [
+                'stock.view_dashboard' => [],
+                'stock.view' => ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'],
+                'stock.view_request' => ['stock.request', 'stock.approve', 'stock.fulfill'],
+                'stock.view_count' => ['stock.count'],
+                'stock.view_events' => ['stock.events'],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the stock hierarchy on a granted set: a management child requires its
+     * group's view key; every view key requires the master. Non-stock keys pass
+     * through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeStock(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::stockHierarchy();
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'stock.')));
+        }
+
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
     }
 }
