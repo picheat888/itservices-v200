@@ -176,6 +176,31 @@ class StockNotificationService
     }
 
     /**
+     * Daily sweep: re-fire alerts for items still out of range (and clear those back
+     * to normal), nag approvers on unfulfilled requests, and remind on draft counts.
+     *
+     * @return array{alerts:int, waiting:int, drafts:int}
+     */
+    public function run(): array
+    {
+        $alerts = 0;
+        StockItem::query()->each(function (StockItem $item) use (&$alerts) {
+            if ($this->alertType($item) !== null) {
+                $alerts++;
+            }
+            $this->alert($item);
+        });
+
+        $waiting = StockRequest::whereNotIn('status', ['fulfilled', 'rejected', 'cancelled'])->get();
+        $waiting->each(fn (StockRequest $r) => $this->requestWaiting($r->load('item')));
+
+        $drafts = StockCount::where('status', 'draft')->get();
+        $drafts->each(fn (StockCount $c) => $this->countDraft($c));
+
+        return ['alerts' => $alerts, 'waiting' => $waiting->count(), 'drafts' => $drafts->count()];
+    }
+
+    /**
      * Daily nag: bell (overwrite) + email approvers while a request is unfulfilled.
      * Called by the daily scheduler for every request still in a pending/approved state.
      */
