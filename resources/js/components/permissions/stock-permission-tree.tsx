@@ -5,12 +5,14 @@ import { Check, Lock } from 'lucide-react';
 
 // Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
 const MASTER = 'stock.module';
-const GROUPS: { view: string; children: string[] }[] = [
+// `chip: false` hides the "View" tag — used for single-switch groups (Counting,
+// Event) that gate their whole feature rather than a view/management split.
+const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'stock.view_dashboard', children: [] },
     { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
     { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: [] },
-    { view: 'stock.view_events', children: [] },
+    { view: 'stock.view_count', children: [], chip: false },
+    { view: 'stock.view_events', children: [], chip: false },
 ];
 const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
@@ -127,9 +129,11 @@ export function StockPermissionTree({
                             <div className="flex min-h-[34px] items-center gap-2">
                                 <span className="text-sm font-medium">{label(group.view, lang)}</span>
                                 <span className="ml-auto flex items-center gap-2">
-                                    <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                        {lang === 'th' ? 'ดู' : 'View'}
-                                    </span>
+                                    {group.chip !== false && (
+                                        <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
+                                            {lang === 'th' ? 'ดู' : 'View'}
+                                        </span>
+                                    )}
                                     <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
                                 </span>
                             </div>
