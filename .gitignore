@@ -23,3 +23,15 @@ Homestead.json
 Homestead.yaml
 npm-debug.log
 yarn-error.log
+
+# Local tooling / agent config
+/.agents
+/.claude
+/skills-lock.json
+
+# Generated artifacts & design scratch
+/export
+/public/design-previews
+
+# Office temp lock files
+~$*
