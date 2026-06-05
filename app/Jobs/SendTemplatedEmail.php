@@ -22,10 +22,21 @@ class SendTemplatedEmail implements ShouldQueue
         public string $subject,
         public string $html,
         public ?string $templateKey = null,
+        public ?string $actionUrl = null,
+        public ?string $actionLabel = null,
+        public ?string $eyebrow = null,
     ) {}
 
     public function handle(EmailNotificationService $service): void
     {
-        $service->deliver($this->toEmail, $this->subject, $this->html, $this->templateKey);
+        $service->deliver(
+            $this->toEmail,
+            $this->subject,
+            $this->html,
+            $this->templateKey,
+            $this->actionUrl,
+            $this->actionLabel,
+            $this->eyebrow,
+        );
     }
 }

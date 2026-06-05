@@ -6,7 +6,7 @@ import { useDocumentTitle } from '@/hooks/use-document-title';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 export default function LoginPage() {
     const t = useT();
@@ -19,7 +19,13 @@ export default function LoginPage() {
     const [loginId, setLoginId] = useState('super@inaba.co.th');
     const [password, setPassword] = useState('password');
 
-    if (!isLoading && isAuthenticated) return <Navigate to="/" replace />;
+    // Bounce back to the page the user was headed for (set by ProtectedRoute when a
+    // Quick link / deep URL was opened while signed out), else the dashboard.
+    const location = useLocation();
+    const from = (location.state as { from?: { pathname?: string; search?: string } } | null)?.from;
+    const target = from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/';
+
+    if (!isLoading && isAuthenticated) return <Navigate to={target} replace />;
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();

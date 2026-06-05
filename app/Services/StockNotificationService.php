@@ -75,7 +75,7 @@ class StockNotificationService
             'stock.sku' => $item->sku,
             'stock.name' => $item->name,
             'stock.qty' => $item->current_stock,
-        ]);
+        ], $this->stockUrl('items'), 'View stock items');
 
         $log->last_alerted_on = $today;
         $log->save();
@@ -118,7 +118,7 @@ class StockNotificationService
      * @param  Collection<int, User>  $recipients
      * @param  array<string, mixed>  $vars
      */
-    private function emailEach(Collection $recipients, string $templateKey, array $vars): void
+    private function emailEach(Collection $recipients, string $templateKey, array $vars, ?string $actionUrl = null, ?string $actionLabel = null): void
     {
         foreach ($recipients as $recipient) {
             if (! $recipient->email) {
@@ -126,8 +126,14 @@ class StockNotificationService
             }
             $this->email->sendTemplate($templateKey, $recipient->email, $vars + [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
-            ]);
+            ], $actionUrl, $actionLabel);
         }
+    }
+
+    /** Absolute SPA deep link to a Stock tab. The SPA gates it behind login. */
+    private function stockUrl(string $tab): string
+    {
+        return rtrim((string) config('app.url'), '/')."/stock?tab={$tab}";
     }
 
     /** Bell + email the approvers that a new request was submitted (one-shot). */
@@ -137,7 +143,7 @@ class StockNotificationService
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new StockRequestNotification($request, 'created'));
         }
-        $this->emailEach($recipients, 'stock.request_created', $this->requestVars($request));
+        $this->emailEach($recipients, 'stock.request_created', $this->requestVars($request), $this->stockUrl('requests'), 'Review requests');
     }
 
     /**
@@ -157,7 +163,7 @@ class StockNotificationService
         if ($owner->email) {
             $this->email->sendTemplate("stock.request_{$outcome}", $owner->email, $this->requestVars($request) + [
                 'user.first_name' => explode(' ', (string) $owner->name)[0] ?: 'there',
-            ]);
+            ], $this->stockUrl('requests'), 'View my request');
         }
     }
 
@@ -201,7 +207,7 @@ class StockNotificationService
             $this->emailEach($this->recipients('stock.module'), 'stock.alert_digest', [
                 'count' => $alertItems->count(),
                 'items' => $this->buildAlertRows($alertItems),
-            ]);
+            ], $this->stockUrl('items'), 'View stock items');
         }
 
         // Waiting — refresh each request's bell (no per-item email), then one digest.
@@ -211,7 +217,7 @@ class StockNotificationService
             $this->emailEach($this->recipients('stock.approve'), 'stock.request_approval_needed', [
                 'count' => $waiting->count(),
                 'items' => $this->buildRequestRows($waiting),
-            ]);
+            ], $this->stockUrl('requests'), 'Review requests');
         }
 
         // Counting — bell-only reminder per draft session.
