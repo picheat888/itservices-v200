@@ -7,6 +7,8 @@
         ->implode('') ?: 'IT';
     // Hidden preheader (inbox preview line). Falls back to the eyebrow/brand.
     $preheader = $eyebrow ? "{$brandName} — {$eyebrow}" : $brandName;
+    // In the in-app preview the CTA is illustrative only — render it inert.
+    $isPreview = $preview ?? false;
 @endphp
 <!doctype html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -83,9 +85,9 @@
                                             </v:roundrect>
                                             <![endif]-->
                                             <!--[if !mso]><!-->
-                                            <a href="{{ $actionUrl }}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:14.5px;font-weight:bold;line-height:1;padding:14px 26px;border-radius:10px;">{{ $actionLabel ?? 'Open in portal' }} &nbsp;&rarr;</a>
+                                            <a href="{{ $isPreview ? '#' : $actionUrl }}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:14.5px;font-weight:bold;line-height:1;padding:14px 26px;border-radius:10px;{{ $isPreview ? 'pointer-events:none;cursor:default;' : '' }}">{{ $actionLabel ?? 'Open in portal' }} &nbsp;&rarr;</a>
                                             <!--<![endif]-->
-                                            <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#94a3b8;padding-top:13px;">🔒 You'll be asked to <span style="color:#64748b;font-weight:bold;">sign in</span> to view this in the portal.</div>
+                                            <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#94a3b8;padding-top:13px;">🔒 @if ($isPreview) Sample only — in a real email this opens the portal (sign in required). @else You'll be asked to <span style="color:#64748b;font-weight:bold;">sign in</span> to view this in the portal. @endif</div>
                                         </td>
                                     </tr>
                                 @endif
