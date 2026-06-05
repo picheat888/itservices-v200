@@ -131,6 +131,7 @@ class EmailTemplateController extends Controller
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+            'preview' => true,
         ])->render();
 
         return response($html)->header('Content-Type', 'text/html');
