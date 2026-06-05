@@ -1,8 +1,9 @@
 import { useAuth } from '@/hooks/use-auth';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 export function ProtectedRoute() {
     const { isAuthenticated, isLoading } = useAuth();
+    const location = useLocation();
 
     if (isLoading) {
         return (
@@ -13,7 +14,9 @@ export function ProtectedRoute() {
     }
 
     if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+        // Remember where the user was headed (e.g. an email Quick link) so login can
+        // bounce them back there instead of always landing on the dashboard.
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     return <Outlet />;

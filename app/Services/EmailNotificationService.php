@@ -24,7 +24,7 @@ class EmailNotificationService
     public function render(string $text, array $vars): string
     {
         foreach ($vars as $key => $value) {
-            $text = str_replace('{{' . $key . '}}', (string) $value, $text);
+            $text = str_replace('{{'.$key.'}}', (string) $value, $text);
         }
 
         return $text;
@@ -36,7 +36,7 @@ class EmailNotificationService
      *
      * @param  array<string, mixed>  $vars
      */
-    public function sendTemplate(string $key, string $toEmail, array $vars = []): void
+    public function sendTemplate(string $key, string $toEmail, array $vars = [], ?string $actionUrl = null, ?string $actionLabel = null): void
     {
         $template = EmailTemplate::where('key', $key)->where('enabled', true)->first();
 
@@ -45,9 +45,10 @@ class EmailNotificationService
         }
 
         $subject = $this->render($template->subject, $vars);
-        $html    = $this->render($template->body_html, $vars);
+        $html = $this->render($template->body_html, $vars);
 
-        SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key);
+        // The template name doubles as the email's "eyebrow" category label.
+        SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key, $actionUrl, $actionLabel, $template->name);
     }
 
     /** Sends a one-off test email synchronously; returns true on success. */
@@ -55,7 +56,7 @@ class EmailNotificationService
     {
         $subject = 'Test email';
         $html = '<p>This is a test email from your IT Service Desk.</p>'
-            . '<p style="color:#64748b">If you received this, your SMTP settings are working.</p>';
+            .'<p style="color:#64748b">If you received this, your SMTP settings are working.</p>';
 
         return $this->deliver($toEmail, $subject, $html, null);
     }
@@ -64,29 +65,29 @@ class EmailNotificationService
      * Core send: applies DB SMTP config, sends the mailable, logs the result,
      * and bumps the template's last_sent_at. Returns true on success.
      */
-    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey): bool
+    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null): bool
     {
-        $brand   = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
+        $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = "[{$brand}] {$subject}";
 
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand));
             $status = 'sent';
-            $error  = null;
+            $error = null;
         } catch (\Throwable $e) {
             $status = 'failed';
-            $error  = $e->getMessage();
+            $error = $e->getMessage();
             Log::warning('Email send failed', ['to' => $toEmail, 'error' => $error]);
         }
 
         EmailLog::create([
             'template_key' => $templateKey,
-            'to_email'     => $toEmail,
-            'subject'      => $subject,
-            'status'       => $status,
-            'error'        => $error,
+            'to_email' => $toEmail,
+            'subject' => $subject,
+            'status' => $status,
+            'error' => $error,
         ]);
 
         if ($status === 'sent' && $templateKey) {
