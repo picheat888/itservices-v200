@@ -73,6 +73,7 @@ class StockRequestController extends Controller
         ]);
 
         AuditLog::record('Submitted stock request', "#{$stockRequest->id} ×{$data['qty']}");
+        app(StockNotificationService::class)->requestCreated($stockRequest->load('item'));
 
         return (new StockRequestResource($stockRequest->load('item')))->response()->setStatusCode(201);
     }
@@ -89,6 +90,7 @@ class StockRequestController extends Controller
             'approved_at' => now(),
         ]);
         AuditLog::record('Approved stock request', "#{$stockRequest->id}");
+        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'approved');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -105,6 +107,7 @@ class StockRequestController extends Controller
             'rejected_at' => now(),
         ]);
         AuditLog::record('Rejected stock request', "#{$stockRequest->id}");
+        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'rejected');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
@@ -213,6 +216,7 @@ class StockRequestController extends Controller
         app(StockNotificationService::class)->alert(StockItem::find($stockRequest->stock_item_id));
 
         AuditLog::record('Fulfilled stock request', "#{$stockRequest->id} ×{$stockRequest->qty}");
+        app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'fulfilled');
 
         return (new StockRequestResource($stockRequest->load('item')))->response();
     }
