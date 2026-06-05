@@ -17,6 +17,7 @@ class StockCountResource extends JsonResource
             'warehouse' => $this->warehouse,
             'category' => $this->category,
             'status' => $this->status?->value,
+            'adjust_mode' => $this->adjust_mode?->value,
             'note' => $this->note,
             'counted_by' => $this->whenLoaded('countedBy', fn () => $this->countedBy?->name),
             'committed_at' => $this->committed_at?->toIso8601String(),
@@ -29,6 +30,11 @@ class StockCountResource extends JsonResource
                 'system_qty' => $l->system_qty,
                 'counted_qty' => $l->counted_qty,
                 'variance' => $l->variance(),
+                'track_serial' => (bool) $l->item?->track_serial,
+                // Only present once the in-stock serials are eager-loaded (the show endpoint).
+                'serials' => $l->item && $l->item->relationLoaded('serials')
+                    ? $l->item->serials->map(fn ($s) => ['id' => $s->id, 'serial' => $s->serial])->values()
+                    : [],
             ])),
             'line_count' => $this->whenLoaded('lines', fn () => $this->lines->count()),
             'counted_lines' => $this->whenLoaded('lines', fn () => $this->lines->whereNotNull('counted_qty')->count()),

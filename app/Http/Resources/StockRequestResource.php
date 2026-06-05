@@ -18,6 +18,7 @@ class StockRequestResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'reference' => $this->reference,
             'stock_item_id' => $this->stock_item_id,
             'sku' => $this->whenLoaded('item', fn () => $this->item?->sku),
             'item_name' => $this->whenLoaded('item', fn () => $this->item?->name),

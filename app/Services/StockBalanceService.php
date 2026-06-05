@@ -56,12 +56,13 @@ class StockBalanceService
         $this->add($item, $to, $qty);
     }
 
-    /** Backfill: collapse an item's current_stock into a single balance row (its home warehouse). */
+    /** Backfill: collapse an item's current_stock into a single 'Unassigned'
+     *  balance row. SKUs no longer carry a home warehouse, so stock with no known
+     *  location parks under 'Unassigned' until a movement places it. */
     public function rebuildFor(StockItem $item): void
     {
-        $warehouse = $item->warehouse ?: 'Unassigned';
         StockBalance::updateOrCreate(
-            ['stock_item_id' => $item->id, 'warehouse' => $warehouse],
+            ['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'],
             ['qty' => $item->current_stock],
         );
     }

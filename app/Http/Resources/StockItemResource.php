@@ -31,13 +31,14 @@ class StockItemResource extends JsonResource
             'current_stock' => $this->current_stock,
             'min_stock' => $this->min_stock,
             'max_stock' => $this->max_stock,
-            'warehouse' => $this->warehouse,
-            'supplier' => $this->supplier,
             'warranty' => $this->warranty,
             'last_move_at' => $this->last_move_at?->toDateString(),
             'days_since_move' => $this->daysSinceLastMove(),
             'status' => $this->status(),
             'total_value' => $this->stockValue(),
+            // Qty committed by approved-but-unfulfilled requests (present on the list
+            // endpoint via withSum). available-to-request = current_stock − reserved.
+            'reserved' => (int) ($this->reserved_qty ?? 0),
             // Per-unit serials are only attached when the relation is eager-loaded
             // (i.e. on the show endpoint), so list/summary payloads stay lean.
             'serials' => $this->whenLoaded('serials', fn () => $this->serials->map(fn ($s) => [
@@ -61,6 +62,14 @@ class StockItemResource extends JsonResource
                 'qty_remaining' => $l->qty_remaining,
                 'value' => round($l->qty_remaining * (float) $l->unit_cost, 2),
                 'received_at' => $l->received_at?->toDateTimeString(),
+                // Receive-movement details for the per-lot drill-down (null for
+                // seeded lots that were created without a movement).
+                'doc_no' => $l->movement?->doc_no,
+                'reference' => $l->movement?->reference,
+                'warehouse' => $l->movement?->to_label,
+                'supplier' => $l->movement?->from_label,
+                'recorded_by' => $l->movement?->recorded_by,
+                'notes' => $l->movement?->notes,
             ])),
         ];
     }

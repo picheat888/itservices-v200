@@ -35,9 +35,10 @@ class ContractExpiryAlertService
     /**
      * Evaluate all contracts and fire any due bell/email alerts.
      *
+     * @param  bool  $force  Re-fire the in-app bell even if today's was already sent (testing).
      * @return int number of contracts that fired a bell on this run
      */
-    public function run(): int
+    public function run(bool $force = false): int
     {
         $recipients = User::all()->filter(
             fn (User $u) => $u->hasPermission('contracts.alerts')
@@ -60,7 +61,7 @@ class ContractExpiryAlertService
         foreach ($contracts as $contract) {
             $days = $contract->daysRemaining();
 
-            if ($this->fireDailyBell($contract, $days, $recipients)) {
+            if ($this->fireDailyBell($contract, $days, $recipients, $force)) {
                 $belled++;
             }
 
@@ -87,9 +88,10 @@ class ContractExpiryAlertService
      * Sends the in-app bell to all recipients at most once per calendar day.
      *
      * @param  Collection<int, User>  $recipients
+     * @param  bool  $force  Skip the once-per-day guard (testing).
      * @return bool whether a bell was sent on this run
      */
-    private function fireDailyBell(Contract $contract, int $days, Collection $recipients): bool
+    private function fireDailyBell(Contract $contract, int $days, Collection $recipients, bool $force = false): bool
     {
         $today = now()->toDateString();
 
@@ -97,7 +99,7 @@ class ContractExpiryAlertService
             ->whereDate('bell_date', $today)
             ->exists();
 
-        if ($alreadyBelledToday) {
+        if ($alreadyBelledToday && ! $force) {
             return false;
         }
 
@@ -110,7 +112,9 @@ class ContractExpiryAlertService
         $this->clearBellNotifications($contract, $recipients);
 
         Notification::send($recipients, new ContractExpiryNotification($contract, $days));
-        ContractBellLog::create(['contract_id' => $contract->id, 'bell_date' => $today]);
+        // firstOrCreate (not create) so a --force resend on the same day re-fires the bell
+        // without violating the one-row-per-(contract, day) unique constraint.
+        ContractBellLog::firstOrCreate(['contract_id' => $contract->id, 'bell_date' => $today]);
 
         return true;
     }
