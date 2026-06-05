@@ -46,7 +46,7 @@ class StockMovementController extends Controller
     /** Paginated movement log, newest first, optionally filtered by type. */
     public function index(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.view'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
 
         $query = StockMovement::with('item')->orderByDesc('moved_at');
 
@@ -74,7 +74,7 @@ class StockMovementController extends Controller
      */
     public function serials(Request $request, StockMovement $movement): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.view'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.events'), 403);
 
         return response()->json(['data' => $this->serialCodesFor($movement)]);
     }
@@ -111,7 +111,13 @@ class StockMovementController extends Controller
      */
     public function labelsPdf(Request $request, StockMovement $movement): StreamedResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.view'), 403);
+        $user = $request->user();
+        abort_unless((bool) (
+            $user?->hasPermission('stock.events')
+            || $user?->hasPermission('stock.receive')
+            || $user?->hasPermission('stock.return')
+            || $user?->hasPermission('stock.transfer')
+        ), 403);
 
         $movement->loadMissing('item');
         $serials = $this->serialCodesFor($movement);
