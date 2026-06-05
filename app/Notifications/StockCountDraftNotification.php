@@ -23,6 +23,7 @@ class StockCountDraftNotification extends Notification
             'type' => 'stock_count',
             'subtype' => 'draft',
             'stock_count_id' => $this->count->id,
+            'reference' => $this->count->reference,
         ];
     }
 }

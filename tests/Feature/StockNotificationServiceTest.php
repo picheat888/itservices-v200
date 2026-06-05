@@ -170,6 +170,12 @@ class StockNotificationServiceTest extends TestCase
 
         app(StockNotificationService::class)->countDraft($count);
 
-        Notification::assertSentTo($counter, StockCountDraftNotification::class);
+        // The bell carries the count's document number (reference), not just its id,
+        // so the dropdown can show "SC-2026-006" rather than "#15".
+        Notification::assertSentTo($counter, StockCountDraftNotification::class, function ($notification) use ($counter, $count) {
+            $data = $notification->toDatabase($counter);
+
+            return $data['stock_count_id'] === $count->id && $data['reference'] === $count->reference;
+        });
     }
 }
