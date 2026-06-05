@@ -65,7 +65,9 @@ function highlightHtml(src: string): string {
         if (m[1]) {
             out += `<span class="text-sky-600 dark:text-sky-400">${escapeHtml(m[1])}</span>`;
         } else {
-            out += `<span class="font-semibold text-violet-600 dark:text-violet-400">${escapeHtml(m[2])}</span>`;
+            // No bold/padding — anything that changes glyph width would drift the caret
+            // (which is laid out by the textarea, not this overlay) out of alignment.
+            out += `<span class="rounded bg-violet-500/10 text-violet-600 dark:text-violet-400">${escapeHtml(m[2])}</span>`;
         }
         last = re.lastIndex;
     }
