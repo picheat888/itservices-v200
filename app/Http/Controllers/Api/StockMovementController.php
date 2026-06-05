@@ -11,6 +11,7 @@ use App\Models\StockItemSerialEvent;
 use App\Models\StockMovement;
 use App\Services\StockBalanceService;
 use App\Services\StockLotService;
+use App\Services\StockNotificationService;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -179,6 +180,9 @@ class StockMovementController extends Controller
         $this->validateReturnSerials($data, $item);
 
         $movement = $this->record($data, $request->user()?->name, $request->user()?->id, $serials);
+
+        // Fire a real-time stock-level alert now that on-hand has changed.
+        app(StockNotificationService::class)->alert($item->fresh());
 
         return (new StockMovementResource($movement->load('item')))->response()->setStatusCode(201);
     }
