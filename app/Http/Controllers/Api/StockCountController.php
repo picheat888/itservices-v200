@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\StockCountAdjustMode;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StockCountResource;
 use App\Models\StockCount;
@@ -13,14 +14,21 @@ class StockCountController extends Controller
 {
     public function __construct(private readonly StockCountService $service) {}
 
-    private function gate(Request $request): void
+    /** Read access to count sessions (list / show). */
+    private function gateView(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('stock.audit'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('stock.view_count'), 403);
+    }
+
+    /** Mutating a count session (open / save / commit / cancel). */
+    private function gateManage(Request $request): void
+    {
+        abort_unless((bool) $request->user()?->hasPermission('stock.count'), 403);
     }
 
     public function index(Request $request): JsonResponse
     {
-        $this->gate($request);
+        $this->gateView($request);
         $counts = StockCount::with(['countedBy', 'lines'])->latest('id')->limit(100)->get();
 
         return response()->json(['data' => StockCountResource::collection($counts)]);
@@ -28,7 +36,7 @@ class StockCountController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $this->gate($request);
+        $this->gateManage($request);
         $data = $request->validate([
             'warehouse' => ['nullable', 'string', 'max:120'],
             'category' => ['nullable', 'string', 'max:120'],
@@ -45,14 +53,17 @@ class StockCountController extends Controller
 
     public function show(Request $request, StockCount $stockCount): JsonResponse
     {
-        $this->gate($request);
+        $this->gateView($request);
 
-        return (new StockCountResource($stockCount->load(['countedBy', 'lines.item'])))->response();
+        return (new StockCountResource($stockCount->load([
+            'countedBy',
+            'lines.item.serials' => fn ($q) => $q->where('status', 'in_stock'),
+        ])))->response();
     }
 
     public function update(Request $request, StockCount $stockCount): JsonResponse
     {
-        $this->gate($request);
+        $this->gateManage($request);
         $data = $request->validate([
             'counts' => ['required', 'array'],
             'counts.*' => ['nullable', 'integer', 'min:0'],
@@ -72,8 +83,22 @@ class StockCountController extends Controller
 
     public function commit(Request $request, StockCount $stockCount): JsonResponse
     {
-        $this->gate($request);
-        $count = $this->service->commit($stockCount, $request->user());
+        $this->gateManage($request);
+        $data = $request->validate([
+            'mode' => ['nullable', 'in:auto,manual'],
+            'missing_serials' => ['array'],
+            'missing_serials.*' => ['array'],
+            'missing_serials.*.*' => ['integer'],
+        ]);
+        $mode = StockCountAdjustMode::from($data['mode'] ?? 'auto');
+
+        // keys arrive as strings (stock-item ids) from JSON; cast to int.
+        $missing = [];
+        foreach ($data['missing_serials'] ?? [] as $itemId => $ids) {
+            $missing[(int) $itemId] = array_map('intval', $ids);
+        }
+
+        $count = $this->service->commit($stockCount, $request->user(), $mode, $missing);
 
         return (new StockCountResource($count->load(['countedBy', 'lines.item'])))
             ->additional(['message' => 'success'])->response();
@@ -81,7 +106,7 @@ class StockCountController extends Controller
 
     public function destroy(Request $request, StockCount $stockCount): JsonResponse
     {
-        $this->gate($request);
+        $this->gateManage($request);
         $this->service->cancel($stockCount);
 
         return response()->json(['message' => 'success']);

@@ -126,6 +126,21 @@ class StockPermissionGatingTest extends TestCase
     }
 
     /**
+     * The count-list endpoint must be gated by stock.view_count, and the
+     * open-count endpoint must be gated by stock.count — a viewer without
+     * stock.count must receive 403 on POST, 200 on GET.
+     */
+    public function test_count_list_requires_view_count_and_open_requires_count(): void
+    {
+        $viewer = $this->userWith(['stock.module', 'stock.view_count']);
+        $manager = $this->userWith(['stock.module', 'stock.view_count', 'stock.count']);
+
+        $this->actingAs($viewer)->getJson('/api/stock-counts')->assertOk();               // list = view_count
+        $this->actingAs($viewer)->postJson('/api/stock-counts', [])->assertForbidden();   // open needs count
+        $this->actingAs($manager)->postJson('/api/stock-counts', [])->assertCreated();
+    }
+
+    /**
      * Saving a set that includes stock.fulfill (child of stock.view_request) but
      * omits stock.view_request must persist stock.receive (whose parent stock.view
      * IS present) while dropping stock.fulfill.
