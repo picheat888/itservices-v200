@@ -665,22 +665,13 @@ function EditorDialog({
 
                         {/* Footer — Send Test (left) · Cancel / Save (right) */}
                         <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
-                            <Button
-                                variant="outline"
-                                onClick={handleTest}
-                                disabled={testing}
-                                className={cn(sentOk && 'border-emerald-500 text-emerald-600')}
-                            >
-                                {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check className="text-emerald-600" /> : <Send />}
+                            <Button variant="outline" onClick={handleTest} disabled={testing}>
+                                {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
                                 {sentOk ? t('email_sent') : t('email_test')}
                             </Button>
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={onClose}>{t('cancel')}</Button>
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={!dirty || saving}
-                                    className={cn(savedOk && 'bg-emerald-600 hover:bg-emerald-600')}
-                                >
+                                <Button onClick={handleSave} disabled={!dirty || saving}>
                                     {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
                                     {savedOk ? t('email_saved') : t('email_save')}
                                 </Button>
