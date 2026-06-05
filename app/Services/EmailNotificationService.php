@@ -23,20 +23,34 @@ class EmailNotificationService
     public function __construct(private readonly MailConfigService $mailConfig) {}
 
     /**
-     * Absolute URL of the uploaded brand logo for use in emails, or null to fall
-     * back to the text tile. SVG is skipped — email clients don't render it; only
-     * raster formats (png/jpg) are used.
+     * Relative public-disk path of the uploaded brand logo to embed in sent emails
+     * (as a CID inline attachment), or null to fall back to the text tile. SVG is
+     * skipped — email clients don't render it.
      */
-    public function brandLogoUrl(): ?string
+    public function brandLogoPath(): ?string
     {
         $path = AppSetting::get('logo_path');
         if (! $path || Str::endsWith(strtolower($path), '.svg')) {
             return null;
         }
 
-        $url = Storage::disk('public')->url($path);
+        return Storage::disk('public')->exists($path) ? $path : null;
+    }
 
-        return Str::startsWith($url, ['http://', 'https://']) ? $url : url($url);
+    /**
+     * The brand logo as a base64 data URI — used by the in-app preview (a browser
+     * iframe) where CID attachments don't resolve. Null when no usable logo.
+     */
+    public function brandLogoDataUri(): ?string
+    {
+        $path = $this->brandLogoPath();
+        if (! $path) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+
+        return 'data:'.$disk->mimeType($path).';base64,'.base64_encode($disk->get($path));
     }
 
     /** Substitutes {{variables}} in a string from the given map. */
@@ -92,7 +106,7 @@ class EmailNotificationService
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoUrl()));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoPath()));
             $status = 'sent';
             $error = null;
         } catch (\Throwable $e) {
