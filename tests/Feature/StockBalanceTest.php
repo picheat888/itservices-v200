@@ -19,7 +19,7 @@ class StockBalanceTest extends TestCase
         return StockItem::create([
             'sku' => 'SK-BAL-'.fake()->unique()->numerify('###'),
             'name' => 'Balance item', 'unit' => 'unit', 'cost' => 0,
-            'current_stock' => $stock, 'min_stock' => 0, 'max_stock' => 0, 'warehouse' => 'WH-A',
+            'current_stock' => $stock, 'min_stock' => 0, 'max_stock' => 0,
         ]);
     }
 
@@ -101,6 +101,7 @@ class StockBalanceTest extends TestCase
 
         $svc->rebuildFor($item);
 
-        $this->assertSame(12, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        // SKUs no longer carry a home warehouse → backfilled stock parks under 'Unassigned'.
+        $this->assertSame(12, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'])->value('qty'));
     }
 }

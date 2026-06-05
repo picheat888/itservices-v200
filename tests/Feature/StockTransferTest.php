@@ -25,7 +25,7 @@ class StockTransferTest extends TestCase
             'sku' => 'SK-TR-'.fake()->unique()->numerify('###'),
             'name' => 'Transfer item', 'unit' => 'unit', 'cost' => 0,
             'current_stock' => $stock, 'min_stock' => 0, 'max_stock' => 0,
-            'warehouse' => 'WH-A', 'track_serial' => $serial,
+            'track_serial' => $serial,
         ]);
     }
 
@@ -102,14 +102,14 @@ class StockTransferTest extends TestCase
             ->assertJsonValidationErrors(['from_label', 'to_label']);
     }
 
-    public function test_receive_without_warehouse_falls_back_to_item_home(): void
+    public function test_receive_without_warehouse_lands_in_unassigned(): void
     {
         $this->actingAs($this->super());
-        $item = $this->item(); // warehouse WH-A
+        $item = $this->item();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 4])->assertCreated();
 
-        // Balance lands at the item's home warehouse, never an empty string.
-        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        // With no SKU-level home warehouse, an unspecified destination parks under 'Unassigned' (never '').
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'])->value('qty'));
         $this->assertSame(0, StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => ''])->count());
     }
 }
