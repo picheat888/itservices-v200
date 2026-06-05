@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\StockAlertLog;
 use App\Models\StockItem;
+use App\Models\StockRequest;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
+use App\Notifications\StockRequestNotification;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -124,5 +126,50 @@ class StockNotificationService
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
             ]);
         }
+    }
+
+    /** Bell + email the approvers that a new request was submitted (one-shot). */
+    public function requestCreated(StockRequest $request): void
+    {
+        $recipients = $this->recipients('stock.approve');
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new StockRequestNotification($request, 'created'));
+        }
+        $this->emailEach($recipients, 'stock.request_created', $this->requestVars($request));
+    }
+
+    /**
+     * Bell + email the request owner with the outcome.
+     *
+     * @param  string  $outcome  approved | rejected | fulfilled
+     */
+    public function requestResponded(StockRequest $request, string $outcome): void
+    {
+        $owner = $request->user;
+        if (! $owner) {
+            return;
+        }
+
+        Notification::send($owner, new StockRequestNotification($request, $outcome));
+
+        if ($owner->email) {
+            $this->email->sendTemplate("stock.request_{$outcome}", $owner->email, $this->requestVars($request) + [
+                'user.first_name' => explode(' ', (string) $owner->name)[0] ?: 'there',
+            ]);
+        }
+    }
+
+    /**
+     * Shared template variables for a request.
+     *
+     * @return array<string, mixed>
+     */
+    private function requestVars(StockRequest $request): array
+    {
+        return [
+            'stock.sku' => $request->item?->sku,
+            'stock.name' => $request->item?->name,
+            'stock.qty' => $request->qty,
+        ];
     }
 }
