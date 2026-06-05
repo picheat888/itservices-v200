@@ -59,6 +59,20 @@ class StockPermissionGatingTest extends TestCase
     }
 
     /**
+     * The request-list endpoint must be gated by stock.view_request, not the
+     * generic stock.view — a user who can view items but has no view_request
+     * permission must receive 403.
+     */
+    public function test_request_list_requires_view_request(): void
+    {
+        $blocked = $this->userWith(['stock.module', 'stock.view']);
+        $allowed = $this->userWith(['stock.module', 'stock.view_request']);
+
+        $this->actingAs($blocked)->getJson('/api/stock-requests')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/stock-requests')->assertOk();
+    }
+
+    /**
      * Saving a set that includes stock.fulfill (child of stock.view_request) but
      * omits stock.view_request must persist stock.receive (whose parent stock.view
      * IS present) while dropping stock.fulfill.
