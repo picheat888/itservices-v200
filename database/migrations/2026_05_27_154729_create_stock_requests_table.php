@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('stock_requests', function (Blueprint $table) {
             $table->id();
+            $table->string('reference', 30)->nullable()->unique();
             $table->foreignId('stock_item_id')->constrained('stock_items')->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('requester_name', 160);
-            $table->string('dept', 160)->nullable();
             $table->integer('qty');
             $table->text('reason');
             $table->enum('status', ['pending', 'approved', 'fulfilled', 'rejected'])->default('pending');

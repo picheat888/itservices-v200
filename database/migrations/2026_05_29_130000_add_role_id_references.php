@@ -2,36 +2,28 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Wire up the cross-table references that could not be declared on the
+     * users / role_permissions create migrations (those tables are created
+     * before employees and roles exist):
+     *  - users.employee_id  → employees (SET NULL), one account per employee
+     *  - users.role_id      → roles (RESTRICT, don't orphan a user's role)
+     *  - role_permissions.role_id → roles (CASCADE, permissions belong to the role)
+     *    plus the (role_id, permission) uniqueness.
+     */
     public function up(): void
     {
-        // users.role_id — RESTRICT (don't orphan a user's role)
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('role_id')->nullable()->after('role')->constrained('roles')->restrictOnDelete();
-        });
-        // group_roles.role_id — RESTRICT, stays nullable (a group may have no role)
-        Schema::table('group_roles', function (Blueprint $table) {
-            $table->foreignId('role_id')->nullable()->after('role')->constrained('roles')->restrictOnDelete();
-        });
-        // role_permissions.role_id — CASCADE (permissions belong to the role)
-        Schema::table('role_permissions', function (Blueprint $table) {
-            $table->foreignId('role_id')->nullable()->after('role')->constrained('roles')->cascadeOnDelete();
+            $table->foreignId('employee_id')->nullable()->unique()->constrained()->nullOnDelete();
+            $table->foreignId('role_id')->nullable()->constrained('roles')->restrictOnDelete();
         });
 
-        // Backfill from the existing string key. Query-builder form so it works on
-        // both MySQL (prod) and sqlite (tests). No orphans exist (verified).
-        foreach (DB::table('roles')->get(['id', 'key']) as $role) {
-            foreach (['users', 'group_roles', 'role_permissions'] as $t) {
-                DB::table($t)->where('role', $role->key)->update(['role_id' => $role->id]);
-            }
-        }
-
-        // Swap role_permissions uniqueness from (role, permission) to (role_id, permission).
         Schema::table('role_permissions', function (Blueprint $table) {
+            $table->foreignId('role_id')->nullable()->constrained('roles')->cascadeOnDelete();
             $table->unique(['role_id', 'permission'], 'role_permissions_role_id_permission_unique');
         });
     }
@@ -42,11 +34,9 @@ return new class extends Migration
             $table->dropUnique('role_permissions_role_id_permission_unique');
             $table->dropConstrainedForeignId('role_id');
         });
-        Schema::table('group_roles', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('role_id');
-        });
         Schema::table('users', function (Blueprint $table) {
             $table->dropConstrainedForeignId('role_id');
+            $table->dropConstrainedForeignId('employee_id');
         });
     }
 };

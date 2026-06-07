@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('warehouse')->nullable();     // filter the session was opened for
             $table->string('category')->nullable();
             $table->string('status')->default('draft');  // draft | committed | canceled
+            $table->string('adjust_mode')->nullable();   // how counted differences are posted
             $table->text('note')->nullable();
             $table->foreignId('counted_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('committed_at')->nullable();

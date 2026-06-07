@@ -61,8 +61,8 @@ class GroupRoleMembershipTest extends TestCase
 
     public function test_move_updates_the_linked_user_role(): void
     {
-        $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th']);
         $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
         $allStaff->employees()->attach($emp->id);
@@ -104,8 +104,8 @@ class GroupRoleMembershipTest extends TestCase
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         AppSetting::put('default_employee_group_id', (string) $default->id);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
-        $user = User::factory()->create(['role' => 'admin', 'email' => 'joe@inaba.co.th']);
         $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $user = User::factory()->create(['role' => 'admin', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $itTeam->employees()->attach($emp->id);
 
         $this->actingAs($this->super())
@@ -117,12 +117,55 @@ class GroupRoleMembershipTest extends TestCase
         $this->assertSame('user', $user->fresh()->role?->key);
     }
 
+    /**
+     * Mirrors a real provisioned account: the login User is linked to its Employee
+     * via the users.employee_id FK, the User email differs from the Employee contact
+     * email, and the Employee has no username. Moving INTO a group must still carry
+     * the role across — resolved through the FK, not email.
+     */
+    public function test_move_into_group_follows_role_via_employee_fk(): void
+    {
+        $emp = Employee::create(['name' => 'Kanya', 'email' => 'kanya@inaba.co.th']);
+        $user = User::factory()->create(['role' => 'user', 'username' => 'it', 'email' => 'it@inaba.co.th', 'employee_id' => $emp->id]);
+        $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
+        $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+        $allStaff->employees()->attach($emp->id);
+
+        $this->actingAs($this->super())
+            ->putJson("/api/group-roles/{$itTeam->id}", ['name' => 'IT Team', 'role' => 'admin', 'employee_ids' => [$emp->id]])
+            ->assertOk();
+
+        $this->assertSame('admin', $user->fresh()->role?->key);
+    }
+
+    /**
+     * Same FK-linked account, but the move-OUT / fallback path. Regression guard for
+     * the bug where setUserRole() matched on the Employee email first: since the User
+     * email differs from the Employee email, the role failed to follow and stayed
+     * stuck. It must now fall back to the default group's role via the employee_id FK.
+     */
+    public function test_move_out_to_default_follows_role_via_employee_fk(): void
+    {
+        $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
+        AppSetting::put('default_employee_group_id', (string) $default->id);
+        $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
+        $emp = Employee::create(['name' => 'Kanya', 'email' => 'kanya@inaba.co.th']);
+        $user = User::factory()->create(['role' => 'admin', 'username' => 'it', 'email' => 'it@inaba.co.th', 'employee_id' => $emp->id]);
+        $itTeam->employees()->attach($emp->id);
+
+        $this->actingAs($this->super())
+            ->putJson("/api/group-roles/{$itTeam->id}", ['name' => 'IT Team', 'role' => 'admin', 'employee_ids' => []])
+            ->assertOk();
+
+        $this->assertSame('user', $user->fresh()->role?->key);
+    }
+
     public function test_removing_from_the_default_group_leaves_the_employee_groupless(): void
     {
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         AppSetting::put('default_employee_group_id', (string) $default->id);
-        $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th']);
         $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $default->employees()->attach($emp->id);
 
         $this->actingAs($this->super())

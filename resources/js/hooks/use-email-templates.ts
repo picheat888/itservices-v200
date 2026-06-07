@@ -25,5 +25,13 @@ export function useEmailTemplateMutations() {
             mutationFn: (id: number) => emailTemplateApi.test(id),
             onSuccess: invalidate,
         }),
+        reset: useMutation({
+            mutationFn: (id: number) => emailTemplateApi.reset(id),
+            onSuccess: invalidate,
+        }),
+        resetAll: useMutation({
+            mutationFn: () => emailTemplateApi.resetAll(),
+            onSuccess: invalidate,
+        }),
     };
 }

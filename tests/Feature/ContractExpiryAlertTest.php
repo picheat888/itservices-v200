@@ -11,6 +11,7 @@ use App\Models\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Services\ContractExpiryAlertService;
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
@@ -19,6 +20,13 @@ use Tests\TestCase;
 class ContractExpiryAlertTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Contract alert templates now live in EmailTemplateSeeder (no longer seeded by migration).
+        $this->seed(EmailTemplateSeeder::class);
+    }
 
     /** Grants a permission to a role (resolved to role_id), creating the role if needed. */
     private function grant(string $roleKey, string $permission): void

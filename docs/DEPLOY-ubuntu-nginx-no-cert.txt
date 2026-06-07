@@ -1,0 +1,228 @@
+================================================================================
+ IT SERVICE DESK - DEPLOY ขึ้น UBUNTU + NGINX (แบบ HTTP / ไม่ใช้ Cert)
+================================================================================
+ Stack: Laravel 12 + React/Vite + Sanctum cookie SPA + MySQL
+        Database driver (session/cache/queue) + Scheduler 2 งาน + DomPDF
+ เหมาะกับ : ใช้งานภายในองค์กร (LAN / intranet) เท่านั้น
+ สมมติ    : Ubuntu 22.04/24.04, deploy ที่ /var/www/itservices, เข้าผ่าน IP หรือโดเมน
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ 1. ติดตั้ง PACKAGE ที่จำเป็น
+--------------------------------------------------------------------------------
+
+sudo apt update && sudo apt upgrade -y
+
+# Nginx + MySQL
+sudo apt install -y nginx mysql-server
+
+# PHP 8.2 + extensions (DomPDF ต้องใช้ gd, mbstring, dom)
+sudo apt install -y php8.2-fpm php8.2-cli php8.2-mysql php8.2-mbstring \
+  php8.2-xml php8.2-curl php8.2-zip php8.2-gd php8.2-bcmath php8.2-intl
+
+# Composer
+sudo apt install -y composer
+
+# Node.js 20 (สำหรับ build React/Vite)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+
+--------------------------------------------------------------------------------
+ 2. ตั้งค่า MYSQL
+--------------------------------------------------------------------------------
+
+sudo mysql
+
+  -- ใน mysql prompt:
+  CREATE DATABASE itservices CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  CREATE USER 'itservices'@'localhost' IDENTIFIED BY 'รหัสผ่านที่แข็งแรง';
+  GRANT ALL PRIVILEGES ON itservices.* TO 'itservices'@'localhost';
+  FLUSH PRIVILEGES;
+  EXIT;
+
+
+--------------------------------------------------------------------------------
+ 3. เอาโค้ดขึ้น SERVER
+--------------------------------------------------------------------------------
+
+sudo mkdir -p /var/www/itservices
+sudo chown -R $USER:$USER /var/www/itservices
+
+git clone <repo-url> /var/www/itservices
+cd /var/www/itservices
+
+
+--------------------------------------------------------------------------------
+ 4. ตั้งค่า .env
+--------------------------------------------------------------------------------
+
+cp .env.example .env
+nano .env
+
+  # ----- แก้ค่าสำคัญ -----
+  APP_NAME="IT Service Desk"
+  APP_ENV=production
+  APP_DEBUG=false
+  APP_URL=http://your-domain-or-ip          # << ใส่ IP หรือโดเมนจริง
+
+  APP_LOCALE=th
+  APP_TIMEZONE=UTC
+
+  # --- Database (MySQL) ---
+  DB_CONNECTION=mysql
+  DB_HOST=127.0.0.1
+  DB_PORT=3306
+  DB_DATABASE=itservices
+  DB_USERNAME=itservices
+  DB_PASSWORD=รหัสผ่านที่ตั้งไว้
+
+  # --- Session / Sanctum SPA บน HTTP ---
+  SESSION_DRIVER=database
+  SESSION_DOMAIN=your-domain-or-ip          # ใส่ host เดียวกับ APP_URL (IP ล้วน -> ใส่ null)
+  SESSION_SECURE_COOKIE=false               # << ต้อง false เพราะไม่มี HTTPS
+  SANCTUM_STATEFUL_DOMAINS=your-domain-or-ip
+
+  QUEUE_CONNECTION=database
+  CACHE_STORE=database
+
+  # Mail: โปรเจกต์อ่านค่าจาก table mail_settings เป็นหลัก
+  # .env เป็นแค่ fallback -- ตั้งค่าจริงผ่านหน้า Settings
+  MAIL_MAILER=log
+
+  *** หมายเหตุ: ถ้าเข้าด้วย IP ล้วน ให้ SESSION_DOMAIN=null ปลอดภัยกว่า ***
+
+
+--------------------------------------------------------------------------------
+ 5. ติดตั้ง DEPENDENCIES + BUILD FRONTEND
+--------------------------------------------------------------------------------
+
+cd /var/www/itservices
+
+composer install --no-dev --optimize-autoloader
+php artisan key:generate
+
+npm ci
+npm run build
+
+php artisan migrate --force      # ครั้งแรก เพิ่ม --seed ได้ถ้าต้องการ master data
+php artisan storage:link
+php artisan optimize              # cache config/route/view
+
+
+--------------------------------------------------------------------------------
+ 6. ตั้ง PERMISSION ให้ www-data
+--------------------------------------------------------------------------------
+
+sudo chown -R www-data:www-data /var/www/itservices
+sudo find /var/www/itservices -type d -exec chmod 755 {} \;
+sudo find /var/www/itservices -type f -exec chmod 644 {} \;
+sudo chmod -R 775 /var/www/itservices/storage /var/www/itservices/bootstrap/cache
+
+
+--------------------------------------------------------------------------------
+ 7. ตั้งค่า NGINX
+--------------------------------------------------------------------------------
+
+sudo nano /etc/nginx/sites-available/itservices
+
+  # ----- เนื้อหาไฟล์ -----
+  server {
+      listen 80;
+      server_name your-domain-or-ip;          # ใส่ IP/โดเมน หรือ _ เพื่อรับทุก host
+
+      root /var/www/itservices/public;
+      index index.php;
+
+      charset utf-8;
+      client_max_body_size 50M;                # เผื่อ upload ไฟล์ใหญ่
+
+      location / {
+          try_files $uri $uri/ /index.php?$query_string;
+      }
+
+      location ~ \.php$ {
+          fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+          fastcgi_index index.php;
+          fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+          include fastcgi_params;
+      }
+
+      location ~ /\.(?!well-known).* {
+          deny all;
+      }
+
+      location = /favicon.ico { access_log off; log_not_found off; }
+      location = /robots.txt  { access_log off; log_not_found off; }
+  }
+
+# เปิดใช้งาน + reload
+sudo ln -s /etc/nginx/sites-available/itservices /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
+
+
+--------------------------------------------------------------------------------
+ 8. QUEUE WORKER (ส่งอีเมล/แจ้งเตือนผ่าน queue)
+--------------------------------------------------------------------------------
+
+sudo nano /etc/systemd/system/itservices-queue.service
+
+  # ----- เนื้อหาไฟล์ -----
+  [Unit]
+  Description=IT Service Desk Queue Worker
+  After=network.target mysql.service
+
+  [Service]
+  User=www-data
+  Group=www-data
+  Restart=always
+  ExecStart=/usr/bin/php /var/www/itservices/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+  WorkingDirectory=/var/www/itservices
+
+  [Install]
+  WantedBy=multi-user.target
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now itservices-queue
+sudo systemctl status itservices-queue
+
+
+--------------------------------------------------------------------------------
+ 9. SCHEDULER (contracts:send-expiry-alerts 08:00, stock:send-notifications 08:05)
+--------------------------------------------------------------------------------
+
+sudo crontab -u www-data -e
+
+  # เพิ่มบรรทัดนี้:
+  * * * * * cd /var/www/itservices && php artisan schedule:run >> /dev/null 2>&1
+
+
+================================================================================
+ อัปเดตโค้ดครั้งถัดไป
+================================================================================
+
+cd /var/www/itservices
+git pull
+composer install --no-dev --optimize-autoloader
+npm ci && npm run build
+php artisan migrate --force
+php artisan optimize:clear && php artisan optimize
+sudo systemctl restart itservices-queue
+
+
+================================================================================
+ ข้อควรระวัง (deploy แบบไม่มี cert)
+================================================================================
+
+ 1. Sanctum cookie SPA จะใช้ได้บน HTTP เฉพาะเมื่อ SESSION_SECURE_COOKIE=false
+    -> ถ้าลืมตั้ง จะ login ไม่ติด (browser ไม่ยอมส่ง cookie แบบ secure ผ่าน HTTP)
+
+ 2. รหัสผ่าน/cookie วิ่งแบบไม่เข้ารหัส -> เหมาะกับใช้ภายในองค์กร (LAN) เท่านั้น
+    ถ้าต้องออกอินเทอร์เน็ต ให้ใช้คู่มือแบบมี Cert (DEPLOY-ubuntu-nginx-with-cert.txt)
+
+ 3. ถ้าจะเพิ่ม cert ภายหลัง: เปลี่ยน SESSION_SECURE_COOKIE=true,
+    APP_URL=https://... แล้วรัน php artisan optimize:clear
+================================================================================

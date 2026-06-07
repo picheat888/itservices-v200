@@ -1,17 +1,5 @@
 import type { NavGroup } from '@/types';
-import {
-    Box,
-    FileText,
-    Inbox,
-    LayoutDashboard,
-    LineChart,
-    Mail,
-    Settings,
-    Shield,
-    Ticket,
-    Users,
-    Warehouse,
-} from 'lucide-react';
+import { Box, FileText, Inbox, LayoutDashboard, LineChart, Mail, Settings, Shield, Ticket, Users, Warehouse } from 'lucide-react';
 
 // Nav definition. `label` holds an i18n key resolved at render time.
 export const navGroups: NavGroup[] = [
@@ -36,10 +24,22 @@ export const navGroups: NavGroup[] = [
             { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: ['super', 'admin', 'hr'] },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-templates', icon: Mail, permission: 'system.configure_notifications' },
-            { id: 'settings', label: 'settings', to: '/settings', icon: Settings, anyOf: [
-                'settings.company', 'settings.branding', 'settings.display', 'settings.masterdata',
-                'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security',
-            ] },
+            {
+                id: 'settings',
+                label: 'settings',
+                to: '/settings',
+                icon: Settings,
+                anyOf: [
+                    'settings.company',
+                    'settings.system',
+                    'settings.masterdata',
+                    'settings.email',
+                    'settings.sla',
+                    'settings.assets',
+                    'settings.workflows',
+                    'settings.security',
+                ],
+            },
         ],
     },
 ];

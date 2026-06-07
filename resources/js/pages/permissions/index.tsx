@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { useDateTime } from '@/hooks/use-settings';
 import {
     useAuditLogs,
     useGroupRoleMutations,
@@ -19,12 +18,29 @@ import {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from '@/hooks/use-permissions';
+import { useDateTime } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
 import { cn } from '@/lib/utils';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
-import { ArrowLeftRight, Briefcase, Check, ChevronLeft, ChevronRight, Eye, LogIn, Pencil, Plus, Save, Search, Shield, Trash2, Users, X } from 'lucide-react';
+import {
+    ArrowLeftRight,
+    Briefcase,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    LogIn,
+    Pencil,
+    Plus,
+    Save,
+    Search,
+    Shield,
+    Trash2,
+    Users,
+    X,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 
@@ -85,7 +101,19 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
     { module: 'email_templates', keys: ['system.configure_notifications', 'email.edit', 'email.enable', 'email.create', 'email.test'] },
-    { module: 'settings', keys: ['settings.company', 'settings.branding', 'settings.display', 'settings.masterdata', 'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security'] },
+    {
+        module: 'settings',
+        keys: [
+            'settings.company',
+            'settings.system',
+            'settings.masterdata',
+            'settings.email',
+            'settings.sla',
+            'settings.assets',
+            'settings.workflows',
+            'settings.security',
+        ],
+    },
     { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
 
@@ -585,8 +613,7 @@ function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: stri
     const changeEntries = Object.entries(details.changes ?? {});
 
     // Render a diff value (null/'' shown as a muted dash).
-    const diffValue = (v: unknown) =>
-        v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : String(v);
+    const diffValue = (v: unknown) => (v === null || v === undefined || v === '' ? <span className="text-muted-foreground">—</span> : String(v));
 
     return (
         <div className="space-y-3 px-5 py-3">
@@ -840,7 +867,12 @@ function AuditTab() {
                                         >
                                             <td className="px-5 py-3">
                                                 <div className="flex items-start gap-2.5">
-                                                    <span className={cn('mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg', AUDIT_TONE[am.tone])}>
+                                                    <span
+                                                        className={cn(
+                                                            'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                                                            AUDIT_TONE[am.tone],
+                                                        )}
+                                                    >
                                                         <AIcon className="h-4 w-4" />
                                                     </span>
                                                     <div className="min-w-0">
@@ -858,7 +890,10 @@ function AuditTab() {
                                                 </div>
                                             </td>
                                             <td className="text-muted-foreground px-5 py-3">{l.target ?? '—'}</td>
-                                            <td className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap" title={fmtDateTime(l.created_at)}>
+                                            <td
+                                                className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap"
+                                                title={fmtDateTime(l.created_at)}
+                                            >
                                                 {auditAgo(l.created_at, lang)}
                                             </td>
                                             <td className="px-5 py-3">
@@ -884,9 +919,9 @@ function AuditTab() {
                                                 </td>
                                             </tr>
                                         )}
-                                </>
-                            );
-                        })}
+                                    </>
+                                );
+                            })}
                     </tbody>
                 </table>
             </div>

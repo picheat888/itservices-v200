@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('sku', 60)->unique();
             $table->string('name', 200);
             $table->string('serial', 120)->nullable();
+            $table->boolean('track_serial')->default(false);
             $table->string('category', 120)->nullable();
             $table->string('brand', 120)->nullable();
             $table->string('model', 120)->nullable();
@@ -24,8 +25,6 @@ return new class extends Migration
             $table->integer('current_stock')->default(0);
             $table->integer('min_stock')->default(0);
             $table->integer('max_stock')->default(0);
-            $table->string('warehouse', 120)->nullable();
-            $table->string('supplier', 200)->nullable();
             $table->string('warranty', 120)->nullable();
             $table->date('last_move_at')->nullable();
             $table->timestamps();

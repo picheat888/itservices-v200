@@ -11,13 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // role_id (FK to roles) and the (role_id, permission) unique index are
+        // added later in the role-reference migration — roles is created after
+        // this table, so the FK cannot be declared here.
         Schema::create('role_permissions', function (Blueprint $table) {
             $table->id();
-            $table->string('role');
             $table->string('permission');
             $table->boolean('allowed')->default(false);
             $table->timestamps();
-            $table->unique(['role', 'permission']);
+            $table->index('allowed', 'rp_allowed_idx'); // WHERE allowed = true
         });
     }
 

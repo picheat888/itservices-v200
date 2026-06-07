@@ -14,6 +14,7 @@ use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
 use App\Services\StockNotificationService;
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
@@ -22,6 +23,13 @@ use Tests\TestCase;
 class StockNotificationCommandTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Stock notification templates now live in EmailTemplateSeeder (no longer seeded by migration).
+        $this->seed(EmailTemplateSeeder::class);
+    }
 
     private function userWithPerm(string $permission): User
     {

@@ -38,7 +38,7 @@ class DemoUpsReceiveSeeder extends Seeder
 
         $balances = app(StockBalanceService::class);
         $lots = app(StockLotService::class);
-        $userId = User::where('email', 'it@inaba.co.th')->value('id');
+        $userId = User::where('email', 'it@abcd.co.th')->value('id');
 
         // [po, warehouse, qty, unit_cost, supplier, moved_at]
         $batches = [

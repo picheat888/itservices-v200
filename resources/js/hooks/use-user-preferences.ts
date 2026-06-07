@@ -18,10 +18,18 @@ export function useUserPreferences() {
     useEffect(() => {
         if (user?.preferences && appliedFor.current !== user.id) {
             const p = user.preferences;
+            const { loginPrefsTouched: touched, dark: curDark, lang: curLang } = useUiStore.getState();
+
+            // Normally the account's saved preferences win on sign-in. But for any
+            // field the user deliberately changed on the login screen, keep that
+            // choice instead — the sync effect below then pushes it up to their
+            // account. Untouched fields (and sidebar, which login can't change)
+            // always come from the account.
             useUiStore.setState({
-                dark: p.dark,
-                lang: p.lang,
+                dark: touched.dark ? curDark : p.dark,
+                lang: touched.lang ? curLang : p.lang,
                 sidebar: p.sidebar,
+                loginPrefsTouched: { dark: false, lang: false },
             });
             appliedFor.current = user.id;
         }

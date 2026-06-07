@@ -17,7 +17,9 @@ return new class extends Migration
             $table->string('user_name')->nullable();
             $table->string('action');
             $table->string('target')->nullable();
+            $table->json('details')->nullable();
             $table->timestamps();
+            $table->index('created_at', 'audit_created_at_idx'); // ORDER BY created_at DESC
         });
     }
 

@@ -19,14 +19,20 @@ return new class extends Migration
             $table->string('code')->unique();                 // CT-YYYY-NNN
             $table->string('vendor');
             $table->string('name');
+            $table->string('title')->nullable();
             $table->string('type')->default('software');      // ContractType enum value
             $table->date('start_date');
             $table->date('end_date');
             $table->decimal('value', 15, 2)->default(0);
             $table->string('billing_cycle')->default('yearly'); // monthly|quarterly|yearly
             $table->boolean('auto_renew')->default(false);
-            $table->foreignId('owner_id')->nullable()->constrained('employees')->nullOnDelete();
+            $table->timestamp('cancelled_at')->nullable();
+            // Expiry-reminder thresholds (days before end_date).
+            $table->boolean('notify_150')->default(false);
+            $table->boolean('notify_120')->default(false);
+            $table->boolean('notify_90')->default(false);
             $table->boolean('notify_60')->default(true);
+            $table->boolean('notify_45')->default(false);
             $table->boolean('notify_30')->default(true);
             $table->boolean('notify_7')->default(true);
             $table->text('notes')->nullable();

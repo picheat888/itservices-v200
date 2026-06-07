@@ -1,5 +1,6 @@
 import '../css/app.css';
 
+import { AppErrorScreen } from '@/components/app-error-screen';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RequirePermission } from '@/components/auth/require-permission';
 import { AppShell } from '@/components/shell/app-shell';
@@ -14,8 +15,8 @@ import LoginPage from '@/pages/login';
 import PermissionsPage from '@/pages/permissions';
 import PlaceholderPage from '@/pages/placeholder';
 import SettingsPage from '@/pages/settings';
-import ItemHistoryPage from '@/pages/stock/item-history';
 import StockPage from '@/pages/stock';
+import ItemHistoryPage from '@/pages/stock/item-history';
 import TicketsPage from '@/pages/tickets';
 import type { Role } from '@/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -103,7 +104,18 @@ function App() {
                         <Route
                             path="settings"
                             element={
-                                <RequirePermission anyOf={['settings.company', 'settings.branding', 'settings.display', 'settings.masterdata', 'settings.email', 'settings.sla', 'settings.assets', 'settings.workflows', 'settings.security']}>
+                                <RequirePermission
+                                    anyOf={[
+                                        'settings.company',
+                                        'settings.system',
+                                        'settings.masterdata',
+                                        'settings.email',
+                                        'settings.sla',
+                                        'settings.assets',
+                                        'settings.workflows',
+                                        'settings.security',
+                                    ]}
+                                >
                                     <SettingsPage />
                                 </RequirePermission>
                             }
@@ -138,5 +150,6 @@ function App() {
 createRoot(document.getElementById('app')!).render(
     <QueryClientProvider client={queryClient}>
         <App />
+        <AppErrorScreen />
     </QueryClientProvider>,
 );

@@ -1,4 +1,5 @@
 import { Label } from '@/components/ui/label';
+import { AlertCircle } from 'lucide-react';
 
 export function Field({
     label,
@@ -17,10 +18,17 @@ export function Field({
         <div className="space-y-1.5">
             <Label>
                 {label}
-                {required && <span className="ml-0.5 text-destructive">*</span>}
+                {required && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             {children}
-            {error ? <p className="text-xs text-destructive">{error}</p> : help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
+            {error ? (
+                <p className="text-destructive flex items-center gap-1.5 text-xs">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    {error}
+                </p>
+            ) : help ? (
+                <p className="text-muted-foreground text-xs">{help}</p>
+            ) : null}
         </div>
     );
 }

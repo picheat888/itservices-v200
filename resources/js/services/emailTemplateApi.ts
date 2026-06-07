@@ -10,6 +10,8 @@ export interface EmailTemplate {
     enabled: boolean;
     cadence: 'realtime' | 'daily';
     last_sent_at: string | null;
+    is_standard: boolean; // has a standard definition (can be reset)
+    is_modified: boolean; // differs from its standard definition
 }
 
 export interface EmailTemplateStats {
@@ -58,6 +60,20 @@ export const emailTemplateApi = {
     test: async (id: number): Promise<{ sent: boolean }> => {
         await ensureCsrf();
         const { data } = await http.post<{ sent: boolean }>(`/email-templates/${id}/test`);
+        return data;
+    },
+
+    // Restores one template to its standard definition.
+    reset: async (id: number) => {
+        await ensureCsrf();
+        const { data } = await http.post(`/email-templates/${id}/reset`);
+        return data;
+    },
+
+    // Restores every standard template to its standard definition.
+    resetAll: async (): Promise<{ reset: number }> => {
+        await ensureCsrf();
+        const { data } = await http.post<{ reset: number }>('/email-templates/reset-all');
         return data;
     },
 

@@ -11,14 +11,14 @@ import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateAp
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, MoreVertical, PenLine, Pilcrow, Plus, Save, Search, Send } from 'lucide-react';
+import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, MoreVertical, PenLine, Pilcrow, Plus, RotateCcw, Save, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Swal from 'sweetalert2';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 const SAMPLE_VARS: Record<string, string> = {
-    'user.first_name': 'Kanya',
-    'user.email': 'kanya@inaba.co.th',
+    'user.first_name': 'Thanapon',
+    'user.email': 'thanapon@abcd.co.th',
     count: '3',
     'stock.sku': 'SKU-1042',
     'stock.name': 'USB-C Docking Station',
@@ -149,7 +149,7 @@ export default function EmailTemplatesPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
-    const { update, test } = useEmailTemplateMutations();
+    const { update, test, reset, resetAll } = useEmailTemplateMutations();
     // Restore the last-used filters so a reload lands on the same view.
     const savedFilters = useMemo<{ search?: string; module?: string }>(() => {
         try {
@@ -192,6 +192,32 @@ export default function EmailTemplatesPage() {
 
     const toggle = (tp: EmailTemplate) => update.mutate({ id: tp.id, payload: { enabled: !tp.enabled } });
 
+    // Whether any standard template currently differs from its standard (drives the
+    // visibility of the page-level "Reset all" button).
+    const anyModified = useMemo(() => templates.some((tp) => tp.is_modified), [templates]);
+
+    // Reset every standard template back to its standard content (after confirming).
+    const resetAllToStandard = async () => {
+        const r = await Swal.fire({
+            icon: 'warning',
+            title: t('email_reset_all_title'),
+            text: t('email_reset_all_text'),
+            showCancelButton: true,
+            confirmButtonText: t('email_reset_confirm'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+        });
+        if (!r.isConfirmed) return;
+        try {
+            await resetAll.mutateAsync();
+            await Swal.fire({ icon: 'success', title: t('email_reset_all_done'), confirmButtonColor: '#2563eb', customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium' } });
+        } catch {
+            await Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
+        }
+    };
+
     const sendPageTest = async () => {
         setPageTesting(true);
         try {
@@ -218,6 +244,12 @@ export default function EmailTemplatesPage() {
                     <p className="text-sm text-muted-foreground">{t('email_sub')}</p>
                 </div>
                 <div className="flex gap-2">
+                    {anyModified && (
+                        <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending} title={t('email_reset_all')}>
+                            {resetAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                            {t('email_reset_all')}
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={sendPageTest} disabled={pageTesting}>
                         {pageTesting && <Loader2 className="h-4 w-4 animate-spin" />}
                         {t('email_test')}
@@ -306,7 +338,16 @@ export default function EmailTemplatesPage() {
                                 {rows.map((tp) => (
                                     <tr key={tp.id} className="border-b border-border/60 last:border-0 hover:bg-accent/40">
                                         <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{tp.code}</td>
-                                        <td className="px-4 py-2.5 font-medium">{tp.name}</td>
+                                        <td className="px-4 py-2.5 font-medium">
+                                            <span className="flex items-center gap-2">
+                                                {tp.name}
+                                                {tp.is_modified && (
+                                                    <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                                                        {t('email_modified')}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-2.5">
                                             <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{tp.key}</span>
                                         </td>
@@ -352,6 +393,8 @@ export default function EmailTemplatesPage() {
                 saving={update.isPending}
                 onTest={(id) => test.mutateAsync(id)}
                 testing={test.isPending}
+                onReset={(id) => reset.mutateAsync(id)}
+                resetting={reset.isPending}
             />
             <CreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
         </div>
@@ -538,7 +581,7 @@ function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: 
                     <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
                         <div>
                             <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
-                            <span className="font-mono">no-reply@{(brand || 'inaba').toLowerCase().replace(/\s+/g, '')}</span>
+                            <span className="font-mono">no-reply@{(brand || 'abcd').toLowerCase().replace(/\s+/g, '')}</span>
                         </div>
                         <div>
                             <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
@@ -601,6 +644,8 @@ function EditorDialog({
     saving,
     onTest,
     testing,
+    onReset,
+    resetting,
 }: {
     template: EmailTemplate | null;
     onClose: () => void;
@@ -608,10 +653,12 @@ function EditorDialog({
     saving: boolean;
     onTest: (id: number) => Promise<unknown>;
     testing: boolean;
+    onReset: (id: number) => Promise<unknown>;
+    resetting: boolean;
 }) {
     const t = useT();
     const { data: settings } = useSettings();
-    const brand = settings?.brand_name || 'Inaba IT';
+    const brand = settings?.brand_name || 'ABCD IT';
 
     const [name, setName] = useState('');
     const [subject, setSubject] = useState('');
@@ -622,6 +669,7 @@ function EditorDialog({
     const [base, setBase] = useState({ name: '', subject: '', body: '', enabled: true });
     const [savedOk, setSavedOk] = useState(false);
     const [sentOk, setSentOk] = useState(false);
+    const [resetOk, setResetOk] = useState(false);
 
     const { previewHtml, rendering, setPreviewHtml } = useLivePreview(!!template, name, subject, body);
 
@@ -664,6 +712,40 @@ function EditorDialog({
             window.setTimeout(() => setSentOk(false), 1600);
         } catch {
             Swal.fire({ icon: 'error', title: t('email_test_failed'), confirmButtonColor: '#2563eb' });
+        }
+    };
+
+    // Reset this template to its standard content (after confirming). The API returns
+    // the refreshed row, so sync the form + baseline to it without reopening the dialog.
+    const handleReset = async () => {
+        if (!template || resetting) return;
+        const r = await Swal.fire({
+            icon: 'warning',
+            title: t('email_reset_title'),
+            text: t('email_reset_text'),
+            showCancelButton: true,
+            confirmButtonText: t('email_reset_confirm'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#64748b',
+            customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+        });
+        if (!r.isConfirmed) return;
+        try {
+            const res = (await onReset(template.id)) as { data?: EmailTemplate } | undefined;
+            const next = res?.data;
+            if (next) {
+                setName(next.name);
+                setSubject(next.subject);
+                setBody(next.body_html);
+                setEnabled(next.enabled);
+                setBase({ name: next.name, subject: next.subject, body: next.body_html, enabled: next.enabled });
+                setPreviewHtml('');
+            }
+            setResetOk(true);
+            window.setTimeout(() => setResetOk(false), 1600);
+        } catch {
+            Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
         }
     };
 
@@ -767,10 +849,18 @@ function EditorDialog({
 
                         {/* Footer — Send Test (left) · Cancel / Save (right) */}
                         <div className="border-border flex items-center justify-between gap-2 border-t px-6 py-3">
-                            <Button variant="outline" onClick={handleTest} disabled={testing} title={t('email_test_hint')}>
-                                {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
-                                {sentOk ? t('email_sent') : t('email_test')}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={handleTest} disabled={testing} title={t('email_test_hint')}>
+                                    {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
+                                    {sentOk ? t('email_sent') : t('email_test')}
+                                </Button>
+                                {template.is_standard && (
+                                    <Button variant="outline" onClick={handleReset} disabled={resetting} title={t('email_reset_hint')}>
+                                        {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
+                                        {resetOk ? t('email_reset_done') : t('email_reset')}
+                                    </Button>
+                                )}
+                            </div>
                             <div className="flex gap-2">
                                 <Button variant="outline" onClick={requestClose}>{t('cancel')}</Button>
                                 <Button onClick={handleSave} disabled={!dirty || saving}>
@@ -795,7 +885,7 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     const [body, setBody] = useState('<p>Hi {{user.first_name}},</p>\n<p></p>');
     const [error, setError] = useState('');
     const { data: settings } = useSettings();
-    const brand = settings?.brand_name || 'Inaba IT';
+    const brand = settings?.brand_name || 'ABCD IT';
     const { previewHtml, rendering } = useLivePreview(open, name, subject, body);
 
     const reset = () => { setKey(''); setName(''); setSubject(''); setBody('<p>Hi {{user.first_name}},</p>\n<p></p>'); setError(''); };
