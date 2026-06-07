@@ -1,3 +1,4 @@
+import { NoAccess } from '@/components/auth/require-permission';
 import { BrandModal } from '@/components/settings/brand-modal';
 import { CategoryModal } from '@/components/settings/category-modal';
 import { LocationModal } from '@/components/settings/location-modal';
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/hooks/use-auth';
 import {
     useAssetModelMutations,
     useAssetModels,
@@ -32,7 +34,6 @@ import {
     useWarrantyTypes,
 } from '@/hooks/use-master-data';
 import { useLocationMutations, useLocations } from '@/hooks/use-org';
-import { useAuth } from '@/hooks/use-auth';
 import {
     useResetLogo,
     useSettings,
@@ -47,12 +48,12 @@ import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
-import { NoAccess } from '@/components/auth/require-permission';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+    AlertCircle,
     Box,
     Boxes,
     Building2,
@@ -65,6 +66,7 @@ import {
     Plus,
     Send,
     Shield,
+    SlidersHorizontal,
     Sparkles,
     Ticket,
     Trash2,
@@ -75,7 +77,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
-type Section = 'display' | 'company' | 'branding' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'security';
+type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'security';
 
 const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 
@@ -98,7 +100,7 @@ const emptyForm: SettingsForm = {
     timezone: 'Asia/Bangkok',
 };
 
-const VALID_SECTIONS: Section[] = ['display', 'company', 'branding', 'master-data', 'email', 'tickets', 'assets', 'workflow', 'security'];
+const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'assets', 'workflow', 'security'];
 
 function sectionFromHash(): Section {
     const s = window.location.hash.replace('#', '') as Section;
@@ -149,10 +151,21 @@ export default function SettingsPage() {
         timezone: form.timezone,
     });
 
+    // Save is enabled only once a company field actually differs from what was loaded.
+    const companyDirty =
+        !!data &&
+        (form.company_name !== data.company_name ||
+            form.legal_name !== data.legal_name ||
+            form.tax_id !== data.tax_id ||
+            form.industry !== data.industry ||
+            form.address !== data.address ||
+            form.country !== data.country ||
+            form.currency !== data.currency ||
+            form.timezone !== data.timezone);
+
     const allNav: { id: Section; label: string; icon: typeof Building2; perm: string }[] = [
         { id: 'company', label: t('set_company'), icon: Building2, perm: 'settings.company' },
-        { id: 'branding', label: t('set_branding'), icon: Sparkles, perm: 'settings.branding' },
-        { id: 'display', label: t('set_display'), icon: MonitorCog, perm: 'settings.display' },
+        { id: 'system', label: t('set_system'), icon: SlidersHorizontal, perm: 'settings.system' },
         { id: 'master-data', label: t('set_master_data'), icon: Boxes, perm: 'settings.masterdata' },
         { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
@@ -168,7 +181,7 @@ export default function SettingsPage() {
     const activeSection = nav.some((n) => n.id === section) ? section : nav[0].id;
 
     return (
-        <div className="space-y-6">
+        <div className="settings-page space-y-6">
             <div>
                 <h1 className="text-2xl font-bold">{t('settings')}</h1>
                 <p className="text-muted-foreground text-sm">{t('settings_sub')}</p>
@@ -195,24 +208,30 @@ export default function SettingsPage() {
                 </nav>
 
                 <div className="p-6">
-                    {activeSection === 'display' && <DisplayTab />}
+                    {activeSection === 'system' && <SystemTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
                     {activeSection === 'company' && (
-                        <CompanyTab form={form} set={set} onSave={() => update.mutate(companyPayload())} saving={update.isPending} saved={update.isSuccess} />
+                        <CompanyTab
+                            form={form}
+                            set={set}
+                            onSave={() => update.mutate(companyPayload())}
+                            saving={update.isPending}
+                            saved={update.isSuccess}
+                            dirty={companyDirty}
+                        />
                     )}
-                    {activeSection === 'branding' && <BrandingTab form={form} set={set} logoUrl={data?.logo_url ?? null} />}
                     {activeSection === 'master-data' && <MasterDataTab />}
                     {activeSection === 'email' && <EmailTab />}
                     {activeSection === 'assets' && <AssetsTab />}
                     {activeSection === 'tickets' && <TicketsTab />}
                     {activeSection === 'security' && <SecurityTab />}
-                    {!['display', 'company', 'branding', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(activeSection) && <ComingSoon />}
+                    {!['system', 'company', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(activeSection) && <ComingSoon />}
                 </div>
             </Card>
         </div>
     );
 }
 
-function DisplayTab() {
+function DisplayTab({ embedded = false }: { embedded?: boolean }) {
     const t = useT();
     const storeAccent = useUiStore((s) => s.accent);
     const storeDensity = useUiStore((s) => s.density);
@@ -247,78 +266,86 @@ function DisplayTab() {
         { value: 'cozy', label: t('density_cozy') },
     ];
 
+    const body = (
+        <div className="space-y-6">
+            <div className="space-y-2">
+                <div className="text-sm font-medium">{t('set_theme_color')}</div>
+                <div className="flex gap-2">
+                    {ACCENTS.map((c) => (
+                        <button
+                            key={c}
+                            onClick={() => {
+                                setAccent(c);
+                                touch();
+                            }}
+                            className={cn(
+                                'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
+                                accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
+                            )}
+                            style={{ background: resolveBrand(c, dark) }}
+                            aria-label={c}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="text-sm font-medium">{t('tweaks_density')}</div>
+                <div className="bg-muted flex gap-1 rounded-lg p-1">
+                    {densityOpts.map((o) => (
+                        <button
+                            key={o.value}
+                            onClick={() => {
+                                setDensity(o.value);
+                                touch();
+                            }}
+                            className={cn(
+                                'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                                density === o.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            {o.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <div className="text-sm font-medium">
+                    {t('tweaks_radius')} · {radius}px
+                </div>
+                <input
+                    type="range"
+                    min={0}
+                    max={20}
+                    value={radius}
+                    onChange={(e) => {
+                        setRadius(Number(e.target.value));
+                        touch();
+                    }}
+                    className="accent-brand w-full"
+                />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+                <SaveButton onClick={save} loading={updateDisplay.isPending} success={saved} disabled={!dirty}>
+                    {t('save')}
+                </SaveButton>
+            </div>
+        </div>
+    );
+
+    if (embedded) {
+        return body;
+    }
+
     return (
         <div className="max-w-xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_display')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_display_desc')}</p>
             </div>
-            <div className="space-y-6">
-                <div className="space-y-2">
-                    <div className="text-sm font-medium">{t('set_theme_color')}</div>
-                    <div className="flex gap-2">
-                        {ACCENTS.map((c) => (
-                            <button
-                                key={c}
-                                onClick={() => {
-                                    setAccent(c);
-                                    touch();
-                                }}
-                                className={cn(
-                                    'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
-                                    accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
-                                )}
-                                style={{ background: resolveBrand(c, dark) }}
-                                aria-label={c}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="text-sm font-medium">{t('tweaks_density')}</div>
-                    <div className="bg-muted flex gap-1 rounded-lg p-1">
-                        {densityOpts.map((o) => (
-                            <button
-                                key={o.value}
-                                onClick={() => {
-                                    setDensity(o.value);
-                                    touch();
-                                }}
-                                className={cn(
-                                    'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-                                    density === o.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {o.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="text-sm font-medium">
-                        {t('tweaks_radius')} · {radius}px
-                    </div>
-                    <input
-                        type="range"
-                        min={0}
-                        max={20}
-                        value={radius}
-                        onChange={(e) => {
-                            setRadius(Number(e.target.value));
-                            touch();
-                        }}
-                        className="accent-brand w-full"
-                    />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                    <SaveButton onClick={save} loading={updateDisplay.isPending} success={saved} disabled={!dirty}>
-                        {t('save')}
-                    </SaveButton>
-                </div>
-            </div>
+            {body}
         </div>
     );
 }
@@ -907,6 +934,8 @@ function EmailTab() {
     });
     const [hasPassword, setHasPassword] = useState(false);
     const [saved, setSaved] = useState(false);
+    type MailErrorKey = 'host' | 'port' | 'username' | 'password' | 'from_address' | 'from_name';
+    const [errors, setErrors] = useState<Partial<Record<MailErrorKey, string>>>({});
 
     useEffect(() => {
         if (!data) return;
@@ -949,7 +978,48 @@ function EmailTab() {
     const set = <K extends keyof MailSettingsPayload>(k: K, v: MailSettingsPayload[K]) => {
         setForm((f) => ({ ...f, [k]: v }));
         setSaved(false);
+        if (errors[k as MailErrorKey]) setErrors((e) => ({ ...e, [k]: undefined }));
     };
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // All SMTP fields are required + format-checked. Password is required only on
+    // first setup; once one is stored, a blank field keeps the existing password.
+    const handleSave = () => {
+        const next: Partial<Record<MailErrorKey, string>> = {};
+        if (!form.host?.trim()) next.host = t('set_err_required');
+        if (form.port == null || `${form.port}`.trim() === '') {
+            next.port = t('set_err_required');
+        } else if (!Number.isInteger(form.port) || form.port < 1 || form.port > 65535) {
+            next.port = t('set_email_err_port');
+        }
+        if (!form.username?.trim()) next.username = t('set_err_required');
+        if (!hasPassword && !form.password?.trim()) next.password = t('set_err_required');
+        if (!form.from_address?.trim()) {
+            next.from_address = t('set_err_required');
+        } else if (!EMAIL_RE.test(form.from_address.trim())) {
+            next.from_address = t('set_email_err_address');
+        }
+        if (!form.from_name?.trim()) next.from_name = t('set_err_required');
+
+        setErrors(next);
+        if (Object.keys(next).length > 0) return;
+        update.mutate(form);
+    };
+
+    const errorClass = (k: MailErrorKey) => (errors[k] ? 'border-destructive focus-visible:ring-destructive' : '');
+
+    // Save is enabled only after a field changes. A blank password means "keep
+    // the current one" (not a change); typing any password counts as dirty.
+    const dirty =
+        !!data &&
+        (form.host !== (data.host ?? '') ||
+            form.port !== (data.port ?? 587) ||
+            form.username !== (data.username ?? '') ||
+            (form.encryption ?? null) !== (data.encryption ?? null) ||
+            form.from_address !== (data.from_address ?? '') ||
+            form.from_name !== (data.from_name ?? '') ||
+            (form.password ?? '') !== '');
 
     return (
         <div className="max-w-xl">
@@ -960,42 +1030,52 @@ function EmailTab() {
 
             <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
-                    <Field label={t('set_email_host')}>
+                    <Field label={t('set_email_host')} required error={errors.host}>
                         <Input
                             value={form.host ?? ''}
                             onChange={(e) => set('host', e.target.value)}
                             placeholder="smtp.example.com"
-                            className="font-mono"
+                            aria-invalid={!!errors.host}
+                            className={cn('font-mono', errorClass('host'))}
                         />
                     </Field>
-                    <Field label={t('set_email_port')}>
+                    <Field label={t('set_email_port')} required error={errors.port}>
                         <Input
                             type="number"
                             value={form.port ?? ''}
                             onChange={(e) => set('port', e.target.value ? Number(e.target.value) : null)}
                             placeholder="587"
-                            className="font-mono"
+                            aria-invalid={!!errors.port}
+                            className={cn('font-mono', errorClass('port'))}
                         />
                     </Field>
                 </div>
 
-                <Field label={t('set_email_username')}>
+                <Field label={t('set_email_username')} required error={errors.username}>
                     <Input
                         value={form.username ?? ''}
                         onChange={(e) => set('username', e.target.value)}
-                        className="font-mono"
+                        className={cn('font-mono', errorClass('username'))}
                         autoComplete="off"
-                        placeholder="Username"
+                        placeholder="user@example.com"
+                        aria-invalid={!!errors.username}
                     />
                 </Field>
 
-                <Field label={t('set_email_password')} help={hasPassword ? t('set_email_password_hint') : undefined}>
+                <Field
+                    label={t('set_email_password')}
+                    required={!hasPassword}
+                    error={errors.password}
+                    help={hasPassword ? t('set_email_password_hint') : undefined}
+                >
                     <Input
                         type="password"
                         value={form.password ?? ''}
                         onChange={(e) => set('password', e.target.value)}
-                        placeholder={hasPassword ? '••••••••' : ''}
+                        placeholder={hasPassword ? '••••••••' : t('set_email_password_ph')}
                         autoComplete="new-password"
+                        aria-invalid={!!errors.password}
+                        className={cn(errorClass('password'))}
                     />
                 </Field>
 
@@ -1013,21 +1093,28 @@ function EmailTab() {
                 </Field>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <Field label={t('set_email_from_address')}>
+                    <Field label={t('set_email_from_address')} required error={errors.from_address}>
                         <Input
                             value={form.from_address ?? ''}
                             onChange={(e) => set('from_address', e.target.value)}
                             placeholder="noreply@example.com"
-                            className="font-mono"
+                            aria-invalid={!!errors.from_address}
+                            className={cn('font-mono', errorClass('from_address'))}
                         />
                     </Field>
-                    <Field label={t('set_email_from_name')}>
-                        <Input value={form.from_name ?? ''} onChange={(e) => set('from_name', e.target.value)} placeholder="IT Service Desk" />
+                    <Field label={t('set_email_from_name')} required error={errors.from_name}>
+                        <Input
+                            value={form.from_name ?? ''}
+                            onChange={(e) => set('from_name', e.target.value)}
+                            placeholder="IT Service Desk"
+                            aria-invalid={!!errors.from_name}
+                            className={cn(errorClass('from_name'))}
+                        />
                     </Field>
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">
-                    <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved}>
+                    <SaveButton onClick={handleSave} loading={update.isPending} success={saved} disabled={!dirty}>
                         {t('save')}
                     </SaveButton>
                     <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending}>
@@ -1068,6 +1155,10 @@ function SecurityTab() {
         setSaved(false);
     };
 
+    // Save is enabled only once a policy value differs from what was loaded.
+    const dirty =
+        !!data && (form.session_timeout_minutes !== data.session_timeout_minutes || form.password_expiry_days !== data.password_expiry_days);
+
     return (
         <div className="max-w-xl">
             <div className="mb-5">
@@ -1097,7 +1188,7 @@ function SecurityTab() {
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-5">
-                <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved}>
+                <SaveButton onClick={() => update.mutate(form)} loading={update.isPending} success={saved} disabled={!dirty}>
                     {t('save')}
                 </SaveButton>
             </div>
@@ -1183,11 +1274,11 @@ interface SetFn {
     <K extends keyof SettingsForm>(k: K, v: SettingsForm[K]): void;
 }
 
-function SaveRow({ onSave, saving, saved }: { onSave: () => void; saving: boolean; saved: boolean }) {
+function SaveRow({ onSave, saving, saved, disabled }: { onSave: () => void; saving: boolean; saved: boolean; disabled?: boolean }) {
     const t = useT();
     return (
         <div className="flex items-center justify-end gap-3 pt-2">
-            <SaveButton onClick={onSave} loading={saving} success={saved}>
+            <SaveButton onClick={onSave} loading={saving} success={saved} disabled={disabled}>
                 {t('save')}
             </SaveButton>
         </div>
@@ -1298,6 +1389,7 @@ function TicketsTab() {
     const stored = data?.ticket_sla;
     const [draft, setDraft] = useState<Record<string, { response: number; resolve: number }>>({});
     const [saved, setSaved] = useState(false);
+    const [errors, setErrors] = useState<Record<string, { response?: string; resolve?: string }>>({});
 
     useEffect(() => {
         if (stored) setDraft(stored);
@@ -1309,6 +1401,33 @@ function TicketsTab() {
     const setField = (p: TicketPriority, key: 'response' | 'resolve', value: number) => {
         setDraft((d) => ({ ...d, [p]: { ...d[p], [key]: value } }));
         setSaved(false);
+        if (errors[p]?.[key]) setErrors((e) => ({ ...e, [p]: { ...e[p], [key]: undefined } }));
+    };
+
+    // First response is in minutes (1–10080), resolution in hours (1–8760), and
+    // the resolution must be at least the first-response target (compared in minutes).
+    const handleSave = () => {
+        const next: Record<string, { response?: string; resolve?: string }> = {};
+        for (const p of SLA_PRIORITIES) {
+            const row = draft[p];
+            const response = row?.response ?? 0;
+            const resolve = row?.resolve ?? 0;
+            const rowErr: { response?: string; resolve?: string } = {};
+
+            if (!Number.isInteger(response) || response < 1 || response > 10080) {
+                rowErr.response = t('set_sla_err_response');
+            }
+            if (!Number.isInteger(resolve) || resolve < 1 || resolve > 8760) {
+                rowErr.resolve = t('set_sla_err_resolve');
+            } else if (response >= 1 && resolve * 60 < response) {
+                rowErr.resolve = t('set_sla_err_order');
+            }
+            if (rowErr.response || rowErr.resolve) next[p] = rowErr;
+        }
+
+        setErrors(next);
+        if (Object.keys(next).length > 0) return;
+        update.mutate({ ticket_sla: draft }, { onSuccess: () => setSaved(true) });
     };
 
     return (
@@ -1333,29 +1452,49 @@ function TicketsTab() {
                                 <td className="px-3 py-3">
                                     <TicketPriorityBadge priority={p} t={t} />
                                 </td>
-                                <td className="px-3 py-3">
+                                <td className="px-3 py-3 align-top">
                                     <div className="flex items-center gap-2">
                                         <Input
                                             type="number"
                                             min={1}
-                                            value={draft[p]?.response ?? ''}
-                                            onChange={(e) => setField(p, 'response', Math.max(1, Number(e.target.value)))}
-                                            className="h-9 w-24 font-mono"
+                                            value={Number.isFinite(draft[p]?.response) ? draft[p]?.response : ''}
+                                            onChange={(e) => setField(p, 'response', e.target.valueAsNumber)}
+                                            aria-invalid={!!errors[p]?.response}
+                                            className={cn(
+                                                'h-9 w-24 font-mono',
+                                                errors[p]?.response && 'border-destructive focus-visible:ring-destructive',
+                                            )}
                                         />
                                         <span className="text-muted-foreground text-xs">{t('set_sla_minutes')}</span>
                                     </div>
+                                    {errors[p]?.response && (
+                                        <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            {errors[p]?.response}
+                                        </p>
+                                    )}
                                 </td>
-                                <td className="px-3 py-3">
+                                <td className="px-3 py-3 align-top">
                                     <div className="flex items-center gap-2">
                                         <Input
                                             type="number"
                                             min={1}
-                                            value={draft[p]?.resolve ?? ''}
-                                            onChange={(e) => setField(p, 'resolve', Math.max(1, Number(e.target.value)))}
-                                            className="h-9 w-24 font-mono"
+                                            value={Number.isFinite(draft[p]?.resolve) ? draft[p]?.resolve : ''}
+                                            onChange={(e) => setField(p, 'resolve', e.target.valueAsNumber)}
+                                            aria-invalid={!!errors[p]?.resolve}
+                                            className={cn(
+                                                'h-9 w-24 font-mono',
+                                                errors[p]?.resolve && 'border-destructive focus-visible:ring-destructive',
+                                            )}
                                         />
                                         <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
                                     </div>
+                                    {errors[p]?.resolve && (
+                                        <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            {errors[p]?.resolve}
+                                        </p>
+                                    )}
                                 </td>
                             </tr>
                         ))}
@@ -1369,12 +1508,7 @@ function TicketsTab() {
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-5">
-                <SaveButton
-                    onClick={() => update.mutate({ ticket_sla: draft }, { onSuccess: () => setSaved(true) })}
-                    loading={update.isPending}
-                    success={saved}
-                    disabled={!dirty}
-                >
+                <SaveButton onClick={handleSave} loading={update.isPending} success={saved} disabled={!dirty}>
                     {t('save')}
                 </SaveButton>
             </div>
@@ -1388,14 +1522,45 @@ function CompanyTab({
     onSave,
     saving,
     saved,
+    dirty,
 }: {
     form: SettingsForm;
     set: SetFn;
     onSave: () => void;
     saving: boolean;
     saved: boolean;
+    dirty: boolean;
 }) {
     const t = useT();
+
+    // Client-side validation (UX only — Laravel re-validates on PUT /settings/company).
+    // The 5 core company fields are required; Tax ID must be exactly 13 digits.
+    type CompanyErrorKey = 'company_name' | 'legal_name' | 'tax_id' | 'industry' | 'address';
+    const [errors, setErrors] = useState<Partial<Record<CompanyErrorKey, string>>>({});
+
+    const clearErr = (k: CompanyErrorKey) => {
+        if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined }));
+    };
+
+    const handleSave = () => {
+        const next: Partial<Record<CompanyErrorKey, string>> = {};
+        if (!form.company_name.trim()) next.company_name = t('set_err_required');
+        if (!form.legal_name.trim()) next.legal_name = t('set_err_required');
+        if (!form.tax_id.trim()) {
+            next.tax_id = t('set_err_required');
+        } else if (!/^\d{13}$/.test(form.tax_id.trim())) {
+            next.tax_id = t('set_err_tax_id');
+        }
+        if (!form.industry.trim()) next.industry = t('set_err_required');
+        if (!form.address.trim()) next.address = t('set_err_required');
+
+        setErrors(next);
+        if (Object.keys(next).length > 0) return;
+        onSave();
+    };
+
+    const errorClass = (k: CompanyErrorKey) => (errors[k] ? 'border-destructive focus-visible:ring-destructive' : '');
+
     return (
         <div className="max-w-3xl">
             <div className="mb-5">
@@ -1404,28 +1569,70 @@ function CompanyTab({
             </div>
             <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_company_name')}>
-                        <Input value={form.company_name} onChange={(e) => set('company_name', e.target.value)} placeholder="Acme Co., Ltd." />
+                    <Field label={t('set_company_name')} required error={errors.company_name}>
+                        <Input
+                            value={form.company_name}
+                            aria-invalid={!!errors.company_name}
+                            className={cn(errorClass('company_name'))}
+                            onChange={(e) => {
+                                set('company_name', e.target.value);
+                                clearErr('company_name');
+                            }}
+                            placeholder="Acme Co., Ltd."
+                        />
                     </Field>
-                    <Field label={t('set_legal_name')}>
-                        <Input value={form.legal_name} onChange={(e) => set('legal_name', e.target.value)} placeholder="บริษัท แอคมี จำกัด" />
+                    <Field label={t('set_legal_name')} required error={errors.legal_name}>
+                        <Input
+                            value={form.legal_name}
+                            aria-invalid={!!errors.legal_name}
+                            className={cn(errorClass('legal_name'))}
+                            onChange={(e) => {
+                                set('legal_name', e.target.value);
+                                clearErr('legal_name');
+                            }}
+                            placeholder="บริษัท แอคมี จำกัด"
+                        />
                     </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_tax_id')}>
+                    <Field label={t('set_tax_id')} required error={errors.tax_id}>
                         <Input
-                            className="font-mono"
+                            className={cn('font-mono', errorClass('tax_id'))}
                             value={form.tax_id}
-                            onChange={(e) => set('tax_id', e.target.value)}
+                            aria-invalid={!!errors.tax_id}
+                            inputMode="numeric"
+                            maxLength={13}
+                            onChange={(e) => {
+                                set('tax_id', e.target.value);
+                                clearErr('tax_id');
+                            }}
                             placeholder="0000000000000"
                         />
                     </Field>
-                    <Field label={t('set_industry')}>
-                        <Input value={form.industry} onChange={(e) => set('industry', e.target.value)} placeholder="Manufacturing" />
+                    <Field label={t('set_industry')} required error={errors.industry}>
+                        <Input
+                            value={form.industry}
+                            aria-invalid={!!errors.industry}
+                            className={cn(errorClass('industry'))}
+                            onChange={(e) => {
+                                set('industry', e.target.value);
+                                clearErr('industry');
+                            }}
+                            placeholder="Manufacturing"
+                        />
                     </Field>
                 </div>
-                <Field label={t('set_address')}>
-                    <Input value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="123 Main Street, City, Country" />
+                <Field label={t('set_address')} required error={errors.address}>
+                    <Input
+                        value={form.address}
+                        aria-invalid={!!errors.address}
+                        className={cn(errorClass('address'))}
+                        onChange={(e) => {
+                            set('address', e.target.value);
+                            clearErr('address');
+                        }}
+                        placeholder="123 Main Street, City, Country"
+                    />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
                     <Field label={t('set_country')}>
@@ -1454,13 +1661,52 @@ function CompanyTab({
                         placeholder="Select timezone…"
                     />
                 </Field>
-                <SaveRow onSave={onSave} saving={saving} saved={saved} />
+                <SaveRow onSave={handleSave} saving={saving} saved={saved} disabled={!dirty} />
             </div>
         </div>
     );
 }
 
-function BrandingTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; logoUrl: string | null }) {
+/** Icon-chip + title + description header used for each section inside System. */
+function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles; title: string; desc: string }) {
+    return (
+        <div className="mb-5 flex items-start gap-3">
+            <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <Icon className="h-5 w-5" />
+            </div>
+            <div>
+                <h2 className="text-lg font-semibold">{title}</h2>
+                <p className="text-muted-foreground text-sm">{desc}</p>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Settings → System: Branding and Display grouped on one page as two stacked
+ * sections separated by a divider. Reuses BrandingTab/DisplayTab in `embedded`
+ * mode (each keeps its own Save button and endpoint).
+ */
+function SystemTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; logoUrl: string | null }) {
+    const t = useT();
+    return (
+        <div className="max-w-2xl space-y-8">
+            <section>
+                <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
+                <BrandingTab form={form} set={set} logoUrl={logoUrl} embedded />
+            </section>
+
+            <div className="border-border border-t" />
+
+            <section>
+                <SystemSectionHead icon={MonitorCog} title={t('set_display')} desc={t('set_display_desc')} />
+                <DisplayTab embedded />
+            </section>
+        </div>
+    );
+}
+
+function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsForm; set: SetFn; logoUrl: string | null; embedded?: boolean }) {
     const t = useT();
     const update = useUpdateBranding();
     const uploadLogo = useUploadLogo();
@@ -1521,67 +1767,69 @@ function BrandingTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; l
     // Show reset button only when there is something to reset (logo exists or file selected) and reset not already pending.
     const showReset = (logoUrl || file) && !pendingReset;
 
+    const body = (
+        <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+                <Field label={t('set_brand_name')}>
+                    <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder="ABCD IT" />
+                </Field>
+                <Field label={t('set_brand_sub')}>
+                    <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder="Service Desk" />
+                </Field>
+            </div>
+
+            <Field label={t('set_logo')} error={error ?? undefined}>
+                <div className="flex items-center gap-4">
+                    <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
+                        <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
+                    </div>
+                    <div>
+                        <input ref={inputRef} type="file" accept="image/png" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={() => inputRef.current?.click()}>
+                                <Upload className="h-4 w-4" />
+                                {t('set_logo_upload')}
+                            </Button>
+                            {showReset && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-muted-foreground hover:text-destructive text-xs"
+                                    onClick={() => {
+                                        setFile(null);
+                                        setPendingReset(true);
+                                        setSaved(false);
+                                        if (inputRef.current) inputRef.current.value = '';
+                                    }}
+                                >
+                                    {t('reset_default')}
+                                </Button>
+                            )}
+                        </div>
+                        <p className="text-muted-foreground mt-2 text-xs">{t('set_logo_help')}</p>
+                    </div>
+                </div>
+            </Field>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+                <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim()}>
+                    {t('save')}
+                </SaveButton>
+            </div>
+        </div>
+    );
+
+    if (embedded) {
+        return body;
+    }
+
     return (
         <div className="max-w-2xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_branding')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_branding_desc')}</p>
             </div>
-            <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                    <Field label={t('set_brand_name')}>
-                        <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder="Inaba IT" />
-                    </Field>
-                    <Field label={t('set_brand_sub')}>
-                        <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder="Service Desk" />
-                    </Field>
-                </div>
-
-                <Field label={t('set_logo')} error={error ?? undefined}>
-                    <div className="flex items-center gap-4">
-                        <div className="border-border bg-muted/30 flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border">
-                            <img src={previewUrl} alt="logo" className="h-full w-full object-contain" />
-                        </div>
-                        <div>
-                            <input
-                                ref={inputRef}
-                                type="file"
-                                accept="image/png"
-                                className="hidden"
-                                onChange={(e) => pick(e.target.files?.[0])}
-                            />
-                            <div className="flex items-center gap-2">
-                                <Button variant="outline" onClick={() => inputRef.current?.click()}>
-                                    <Upload className="h-4 w-4" />
-                                    {t('set_logo_upload')}
-                                </Button>
-                                {showReset && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-muted-foreground hover:text-destructive text-xs"
-                                        onClick={() => {
-                                            setFile(null);
-                                            setPendingReset(true);
-                                            setSaved(false);
-                                            if (inputRef.current) inputRef.current.value = '';
-                                        }}
-                                    >
-                                        {t('reset_default')}
-                                    </Button>
-                                )}
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs">{t('set_logo_help')}</p>
-                        </div>
-                    </div>
-                </Field>
-
-                <div className="flex items-center justify-end gap-3 pt-2">
-                    <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim()}>
-                        {t('save')}
-                    </SaveButton>
-                </div>
-            </div>
+            {body}
         </div>
     );
 }

@@ -19,6 +19,12 @@ class GroupRoleController extends Controller
     /**
      * Sets User.role to the group's role for all employees in the group.
      *
+     * Login accounts are linked to their employee via the users.employee_id FK
+     * (set when an admin provisions the account), so we resolve them by that FK,
+     * with username as a fallback for any account not yet linked. Email is NOT
+     * used — it is a contact field, not the login identifier, and demo accounts
+     * deliberately carry a User email that differs from the Employee email.
+     *
      * @param  array<int>  $newEmployeeIds
      */
     private function syncUserRoles(GroupRole $group, array $newEmployeeIds): void
@@ -27,23 +33,31 @@ class GroupRoleController extends Controller
             return;
         }
 
-        $emails = Employee::whereIn('id', $newEmployeeIds)->pluck('email')->filter();
         $usernames = Employee::whereIn('id', $newEmployeeIds)->pluck('username')->filter();
-        User::where(function ($q) use ($emails, $usernames) {
-            $q->whereIn('email', $emails)->orWhereIn('username', $usernames);
+
+        User::where(function ($q) use ($newEmployeeIds, $usernames) {
+            $q->whereIn('employee_id', $newEmployeeIds)
+                ->orWhereIn('username', $usernames);
         })->update(['role_id' => $group->role_id]);
     }
 
-    /** Sets the login account's role for an employee (matched by email or username). */
+    /**
+     * Sets the login account's role for a single employee. Resolves the account by
+     * the users.employee_id FK first, then by username as a fallback — the same
+     * matching the bulk syncUserRoles() uses, so the role follows the employee on
+     * move-out/fallback. Email is intentionally not matched (login is by username).
+     */
     private function setUserRole(Employee $employee, ?string $roleKey): void
     {
         $roleId = Role::where('key', $roleKey ?: 'user')->value('id');
 
-        if ($employee->email) {
-            User::where('email', $employee->email)->update(['role_id' => $roleId]);
-        } elseif ($employee->username) {
-            User::where('username', $employee->username)->update(['role_id' => $roleId]);
-        }
+        User::where(function ($q) use ($employee) {
+            $q->where('employee_id', $employee->id);
+
+            if ($employee->username) {
+                $q->orWhere('username', $employee->username);
+            }
+        })->update(['role_id' => $roleId]);
     }
 
     /**

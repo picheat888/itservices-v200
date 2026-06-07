@@ -48,7 +48,8 @@ class EmployeeService
     /**
      * Creates a login account for an employee, using a manually chosen
      * username & password. Called by a permitted user from the Employee list.
-     * The employee's email (if any) is also set so they can log in with either.
+     * Login is by username; the employee's email is mirrored onto the account
+     * only as a contact field (it is not a login identifier).
      */
     public function createUserWithCredentials(Employee $employee, string $username, string $password): User
     {

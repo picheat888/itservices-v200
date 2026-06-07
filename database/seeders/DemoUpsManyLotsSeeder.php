@@ -37,7 +37,7 @@ class DemoUpsManyLotsSeeder extends Seeder
 
         $balances = app(StockBalanceService::class);
         $lots = app(StockLotService::class);
-        $userId = User::where('email', 'it@inaba.co.th')->value('id');
+        $userId = User::where('email', 'it@abcd.co.th')->value('id');
 
         $warehouses = ['คลังกลาง IT', 'ห้อง Server Room', 'คลังโรงงาน 2'];
         $suppliers = ['JIB Computer Group', 'Synnex Thailand', 'Advice IT', 'SiS Distribution'];

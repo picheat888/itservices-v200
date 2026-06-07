@@ -54,7 +54,7 @@ class SettingsSectionPermissionsTest extends TestCase
 
     public function test_granted_user_can_update_branding(): void
     {
-        $this->actingAs($this->userWith('settings.branding'))
+        $this->actingAs($this->userWith('settings.system'))
             ->putJson('/api/settings/branding', ['brand_name' => 'Inaba IT', 'brand_sub' => 'Desk'])
             ->assertOk()
             ->assertJsonPath('data.brand_name', 'Inaba IT');
@@ -78,7 +78,7 @@ class SettingsSectionPermissionsTest extends TestCase
 
     public function test_granted_user_can_update_display(): void
     {
-        $this->actingAs($this->userWith('settings.display'))
+        $this->actingAs($this->userWith('settings.system'))
             ->putJson('/api/settings/display', ['theme_accent' => '#123456', 'theme_density' => 'compact', 'theme_radius' => 12])
             ->assertOk()
             ->assertJsonPath('data.theme_accent', '#123456')
@@ -87,7 +87,7 @@ class SettingsSectionPermissionsTest extends TestCase
 
     public function test_display_rejects_invalid_accent(): void
     {
-        $this->actingAs($this->userWith('settings.display'))
+        $this->actingAs($this->userWith('settings.system'))
             ->putJson('/api/settings/display', ['theme_accent' => 'blue'])
             ->assertStatus(422)->assertJsonValidationErrors('theme_accent');
     }

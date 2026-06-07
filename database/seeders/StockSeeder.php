@@ -150,7 +150,7 @@ class StockSeeder extends Seeder
             return;
         }
 
-        $itUser = User::where('email', 'it@inaba.co.th')->value('id');
+        $itUser = User::where('email', 'it@abcd.co.th')->value('id');
 
         // [sku, type, qty, from, to, reference, recorded_by, notes, moved_at]
         $movements = [
@@ -242,8 +242,8 @@ class StockSeeder extends Seeder
             return;
         }
 
-        $userUser = User::where('email', 'user@inaba.co.th')->value('id');
-        $hrUser = User::where('email', 'hr@inaba.co.th')->value('id');
+        $userUser = User::where('email', 'user@abcd.co.th')->value('id');
+        $hrUser = User::where('email', 'hr@abcd.co.th')->value('id');
 
         // [sku, user_id, requester_name, qty, reason, status, approver, approved_at, fulfilled_at, rejected_at]
         $requests = [

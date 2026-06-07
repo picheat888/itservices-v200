@@ -200,7 +200,7 @@ class StockItemController extends Controller
             'history' => $history,
             'view' => $view,
             'logo' => $logo,
-            'company' => AppSetting::get('company_name', 'Thai Inaba Foods Co., Ltd.'),
+            'company' => AppSetting::get('company_name', 'ABCD Electric Company'),
             'legalName' => AppSetting::get('legal_name'),
             'address' => AppSetting::get('address'),
             'taxId' => AppSetting::get('tax_id'),

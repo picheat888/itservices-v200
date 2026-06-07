@@ -9,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\EmailLog;
 use App\Models\EmailTemplate;
 use App\Services\EmailNotificationService;
+use App\Support\EmailTemplates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -81,6 +82,55 @@ class EmailTemplateController extends Controller
         AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
 
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
+    }
+
+    /** Restores one template to its standard definition. 422 if it has no standard. */
+    public function reset(Request $request, EmailTemplate $emailTemplate): JsonResponse
+    {
+        $this->gate($request);
+
+        $standard = EmailTemplates::find($emailTemplate->key);
+        if ($standard === null) {
+            return response()->json(['message' => 'This template has no standard to reset to.'], 422);
+        }
+
+        $before = $emailTemplate->getOriginal();
+        $emailTemplate->update([
+            'name' => $standard['name'],
+            'subject' => $standard['subject'],
+            'body_html' => $standard['body_html'],
+            'enabled' => $standard['enabled'],
+            'cadence' => $standard['cadence'],
+        ]);
+        AuditLog::record('Reset email template to standard', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
+
+        return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
+    }
+
+    /** Restores every standard template to its standard definition in one pass. */
+    public function resetAll(Request $request): JsonResponse
+    {
+        $this->gate($request);
+
+        $count = 0;
+        foreach (EmailTemplates::all() as $standard) {
+            $template = EmailTemplate::where('key', $standard['key'])->first();
+            if ($template === null) {
+                continue;
+            }
+
+            $template->update([
+                'name' => $standard['name'],
+                'subject' => $standard['subject'],
+                'body_html' => $standard['body_html'],
+                'enabled' => $standard['enabled'],
+                'cadence' => $standard['cadence'],
+            ]);
+            $count++;
+        }
+        AuditLog::record('Reset all email templates to standard', "{$count} template(s)");
+
+        return response()->json(['message' => 'success', 'reset' => $count]);
     }
 
     /** Sends a test render of one template to the current user (synchronous). */

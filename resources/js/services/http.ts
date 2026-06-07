@@ -1,3 +1,4 @@
+import { useAppErrorStore } from '@/stores/app-error';
 import axios from 'axios';
 
 // Same-origin SPA: Laravel serves the app and the API, so cookies flow
@@ -20,9 +21,25 @@ export const http = axios.create({
 http.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error?.response?.status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
+        const status = error?.response?.status as number | undefined;
+
+        if (status === 401 && error.response.data?.message === 'session_expired' && !window.location.pathname.startsWith('/login')) {
             window.location.href = '/login?reason=session_expired';
+            return Promise.reject(error);
         }
+
+        // Surface the otherwise-silent system/transient failures as a full-screen
+        // error. 422 (validation) and 401/403 are left for callers/route guards.
+        const showError = useAppErrorStore.getState().show;
+        if (!error.response) {
+            showError('network');
+        } else if (status === 429) {
+            const retry = Number(error.response.headers?.['retry-after']);
+            showError('rate-limit', Number.isFinite(retry) && retry > 0 ? retry : null);
+        } else if (status !== undefined && status >= 500) {
+            showError('server');
+        }
+
         return Promise.reject(error);
     },
 );

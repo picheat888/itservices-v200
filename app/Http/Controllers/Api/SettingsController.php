@@ -12,6 +12,7 @@ use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
@@ -19,11 +20,11 @@ class SettingsController extends Controller
     private array $defaults = [
         'brand_name' => '',          // falls back to config('app.name')
         'brand_sub' => 'Service Desk',
-        'company_name' => 'Thai Inaba Foods Co., Ltd.',
-        'legal_name' => 'บริษัท ไทย อินาบะ ฟู้ดส์ จำกัด',
-        'tax_id' => '',
-        'industry' => 'Food manufacturing',
-        'address' => '',
+        'company_name' => 'ABCD Electric Company',
+        'legal_name' => 'บริษัท เอบีซีดี อิเล็กทริก จำกัด',
+        'tax_id' => '0105540087000',
+        'industry' => 'Electronics manufacturing',
+        'address' => '99/9 หมู่ 5 นิคมอุตสาหกรรมอมตะซิตี้ ต.ดอนหัวฬอ อ.เมืองชลบุรี จ.ชลบุรี 20000',
         'country' => 'Thailand',
         'currency' => 'THB',
         'timezone' => 'Asia/Bangkok',
@@ -58,10 +59,10 @@ class SettingsController extends Controller
     {
         $data = $request->validate([
             'company_name' => ['sometimes', 'required', 'string', 'max:150'],
-            'legal_name' => ['sometimes', 'nullable', 'string', 'max:150'],
-            'tax_id' => ['sometimes', 'nullable', 'string', 'max:50'],
-            'industry' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'legal_name' => ['sometimes', 'required', 'string', 'max:150'],
+            'tax_id' => ['sometimes', 'required', 'digits:13'],
+            'industry' => ['sometimes', 'required', 'string', 'max:100'],
+            'address' => ['sometimes', 'required', 'string', 'max:255'],
             'country' => ['sometimes', 'nullable', 'string', 'max:100'],
             'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
             'timezone' => ['sometimes', 'nullable', 'string', 'max:60'],
@@ -108,11 +109,24 @@ class SettingsController extends Controller
     /** Per-priority ticket SLA targets (Settings -> Ticket & SLA). Gated by permission:settings.sla. */
     public function updateSla(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'ticket_sla' => ['required', 'array'],
             'ticket_sla.*.response' => ['required', 'integer', 'min:1', 'max:10080'],
             'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
         ]);
+
+        // Resolution (hours) must be at least the first-response target (minutes).
+        $validator->after(function ($v) use ($request) {
+            foreach ((array) $request->input('ticket_sla', []) as $priority => $row) {
+                $response = (int) ($row['response'] ?? 0);
+                $resolve = (int) ($row['resolve'] ?? 0);
+                if ($response > 0 && $resolve > 0 && $resolve * 60 < $response) {
+                    $v->errors()->add("ticket_sla.{$priority}.resolve", 'Resolution must be at least the first-response target.');
+                }
+            }
+        });
+
+        $data = $validator->validate();
 
         AppSetting::put('ticket_sla', json_encode($data['ticket_sla']));
         AuditLog::record('Updated SLA settings', 'ticket_sla');
@@ -227,17 +241,20 @@ class SettingsController extends Controller
     /** Updates the SMTP settings. A blank password leaves the stored one intact. */
     public function updateMailSettings(Request $request): JsonResponse
     {
-        $data = $request->validate([
-            'host' => ['nullable', 'string', 'max:255'],
-            'port' => ['nullable', 'integer', 'min:1', 'max:65535'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'password' => ['nullable', 'string', 'max:255'],
-            'encryption' => ['nullable', 'in:tls,ssl'],
-            'from_address' => ['nullable', 'email', 'max:255'],
-            'from_name' => ['nullable', 'string', 'max:255'],
-        ]);
-
         $s = MailSetting::current();
+        // Password is required only on first setup; once one is stored, leaving the
+        // field blank keeps the existing password.
+        $hasPassword = filled($s->password);
+
+        $data = $request->validate([
+            'host' => ['required', 'string', 'max:255'],
+            'port' => ['required', 'integer', 'min:1', 'max:65535'],
+            'username' => ['required', 'string', 'max:255'],
+            'password' => [$hasPassword ? 'nullable' : 'required', 'string', 'max:255'],
+            'encryption' => ['nullable', 'in:tls,ssl'],
+            'from_address' => ['required', 'email', 'max:255'],
+            'from_name' => ['required', 'string', 'max:255'],
+        ]);
 
         // Only overwrite the password when a new one is provided.
         if (($data['password'] ?? '') === '') {

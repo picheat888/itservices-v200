@@ -15,12 +15,8 @@ return new class extends Migration
             $table->foreignId('group_role_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
             $table->primary(['group_role_id', 'employee_id']);
-        });
-
-        Schema::create('group_role_department', function (Blueprint $table) {
-            $table->foreignId('group_role_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('department_id')->constrained()->cascadeOnDelete();
-            $table->primary(['group_role_id', 'department_id']);
+            // An employee belongs to at most one group role.
+            $table->unique('employee_id');
         });
     }
 
@@ -30,6 +26,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('group_role_employee');
-        Schema::dropIfExists('group_role_department');
     }
 };

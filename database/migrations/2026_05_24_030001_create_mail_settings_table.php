@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -26,11 +25,8 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // Seed the single editable row so the Settings form always has a target.
-        DB::table('mail_settings')->insert([
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // The single editable row (id=1) is seeded by MailSettingSeeder so the
+        // Settings form always has a target.
     }
 
     public function down(): void

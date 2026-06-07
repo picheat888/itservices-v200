@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('group_roles', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('role')->nullable();
+            $table->foreignId('role_id')->nullable()->constrained('roles')->restrictOnDelete();
             $table->timestamps();
         });
     }

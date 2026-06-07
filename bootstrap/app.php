@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
+        // Apply the standard 'api' rate limiter (60/min) to every API route.
+        $middleware->api(append: ['throttle:api']);
         $middleware->alias([
             'permission' => EnsurePermission::class,
         ]);

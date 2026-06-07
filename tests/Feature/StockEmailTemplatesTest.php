@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -9,6 +10,13 @@ use Tests\TestCase;
 class StockEmailTemplatesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Standard templates now live in EmailTemplateSeeder (no longer seeded by migration).
+        $this->seed(EmailTemplateSeeder::class);
+    }
 
     public function test_stock_templates_cover_the_eight_topics(): void
     {

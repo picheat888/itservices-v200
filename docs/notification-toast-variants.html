@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Notification Toast — 5 แบบ (อิงธีมระบบ)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    /* ──────────────────────────────────────────────────────────
+       Theme tokens copied verbatim from resources/css/app.css so the
+       mockups read exactly like the running app (light + dark).
+    ────────────────────────────────────────────────────────── */
+    :root, [data-theme='light'] {
+        --brand: #2563eb;
+        --brand-foreground: #ffffff;
+        --background: hsl(0, 0%, 100%);
+        --foreground: hsl(222, 30%, 12%);
+        --card: hsl(0, 0%, 100%);
+        --popover: hsl(0, 0%, 100%);
+        --muted: hsl(210, 20%, 96%);
+        --muted-foreground: hsl(215, 16%, 47%);
+        --accent: hsl(210, 24%, 95%);
+        --border: hsl(214, 20%, 90%);
+        --shadow: 0 18px 40px -20px rgba(15, 23, 42, .35), 0 2px 6px rgba(15, 23, 42, .06);
+        --page: hsl(210, 24%, 96%);
+    }
+    [data-theme='dark'] {
+        --brand: #3b82f6;
+        --brand-foreground: #ffffff;
+        --background: hsl(222, 24%, 10%);
+        --foreground: hsl(210, 20%, 96%);
+        --card: hsl(222, 24%, 12%);
+        --popover: hsl(222, 24%, 12%);
+        --muted: hsl(217, 19%, 15%);
+        --muted-foreground: hsl(215, 15%, 65%);
+        --accent: hsl(217, 19%, 18%);
+        --border: hsl(217, 19%, 22%);
+        --shadow: 0 18px 44px -18px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+        --page: hsl(222, 24%, 8%);
+    }
+
+    /* Per-type accents — same hues the bell already uses
+       (contract/stock = amber, expired/offboarding = red, new = emerald, brand = blue). */
+    .t-stock    { --accent-c: #f59e0b; }
+    .t-contract { --accent-c: #ef4444; }
+    .t-request  { --accent-c: var(--brand); }
+    .t-success  { --accent-c: #10b981; }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+            radial-gradient(70% 60% at 85% -10%, color-mix(in srgb, var(--brand) 10%, transparent), transparent 70%),
+            var(--page);
+        color: var(--foreground);
+        font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+        padding: 40px 24px 120px;
+        transition: background .25s, color .25s;
+    }
+
+    header.top {
+        max-width: 1080px;
+        margin: 0 auto 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+    header.top h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+    header.top p { margin: 4px 0 0; font-size: 13px; color: var(--muted-foreground); }
+
+    .toggle {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        background: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+    .toggle button {
+        font: inherit; font-size: 13px; font-weight: 500;
+        padding: 6px 14px; border: 0; border-radius: 7px;
+        background: transparent; color: var(--muted-foreground); cursor: pointer;
+    }
+    .toggle button.on { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+    /* showcase grid */
+    .grid {
+        max-width: 1080px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+        gap: 20px;
+    }
+    .demo {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .demo .head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .demo .head .no {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 11px; font-weight: 600;
+        color: var(--brand);
+        background: color-mix(in srgb, var(--brand) 12%, transparent);
+        padding: 2px 8px; border-radius: 6px;
+    }
+    .demo .head .name { font-size: 14px; font-weight: 600; }
+    .demo .desc { font-size: 12px; color: var(--muted-foreground); line-height: 1.5; margin-top: -6px; }
+    .demo .stage {
+        background: var(--page);
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        padding: 18px 16px;
+        display: grid; place-items: center;
+    }
+    .demo .fire {
+        align-self: flex-start;
+        font: inherit; font-size: 12.5px; font-weight: 600;
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 7px 13px;
+        border: 1px solid var(--border); border-radius: 9px;
+        background: var(--card); color: var(--foreground); cursor: pointer;
+        transition: background .15s, transform .12s;
+    }
+    .demo .fire:hover { background: var(--accent); transform: translateY(-1px); }
+    .demo .fire svg { width: 14px; height: 14px; color: var(--brand); }
+
+    /* ══════════════════════════════════════════════════════════
+       SHARED toast bits
+    ══════════════════════════════════════════════════════════ */
+    .toast { width: 300px; max-width: 100%; }
+    .toast .chip { display: grid; place-items: center; flex: none; }
+    .toast .chip svg { width: 20px; height: 20px; }
+    .toast .title { font-size: 13.5px; font-weight: 600; line-height: 1.3; color: var(--foreground); }
+    .toast .msg { font-size: 12px; line-height: 1.45; color: var(--muted-foreground); margin-top: 2px; }
+    .toast .code {
+        font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
+        color: var(--accent-c);
+        background: color-mix(in srgb, var(--accent-c) 14%, transparent);
+        padding: 1px 6px; border-radius: 5px;
+    }
+    .toast .time { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted-foreground); }
+    .toast .close {
+        flex: none; width: 22px; height: 22px; display: grid; place-items: center;
+        border: 0; border-radius: 6px; background: transparent;
+        color: var(--muted-foreground); cursor: pointer; transition: background .15s, color .15s;
+    }
+    .toast .close:hover { background: var(--accent); color: var(--foreground); }
+    .toast .close svg { width: 14px; height: 14px; }
+    .toast .body { min-width: 0; flex: 1; }
+
+    /* ── แบบ 1: Clean Line ─ การ์ดขาว + แถบสีซ้าย + progress บาง ───── */
+    .v1 {
+        position: relative; display: flex; gap: 11px;
+        padding: 13px 12px 13px 15px;
+        background: var(--popover); border: 1px solid var(--border);
+        border-radius: 13px; box-shadow: var(--shadow); overflow: hidden;
+    }
+    .v1::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent-c); }
+    .v1 .chip { width: 34px; height: 34px; border-radius: 9px; background: color-mix(in srgb, var(--accent-c) 16%, transparent); color: var(--accent-c); }
+    .v1 .meta { margin-top: 7px; display: flex; align-items: center; gap: 8px; }
+    .v1 .progress { position: absolute; left: 0; bottom: 0; height: 2.5px; width: 100%; transform-origin: left; background: var(--accent-c); opacity: .85; }
+
+    /* ── แบบ 2: Soft Tint ─ พื้นการ์ดไล่สีตามชนิด ไม่มีแถบ ─────────── */
+    .v2 {
+        position: relative; display: flex; gap: 12px; padding: 14px;
+        border-radius: 14px; box-shadow: var(--shadow); overflow: hidden;
+        background:
+            linear-gradient(180deg, color-mix(in srgb, var(--accent-c) 9%, var(--popover)), var(--popover));
+        border: 1px solid color-mix(in srgb, var(--accent-c) 28%, var(--border));
+    }
+    .v2 .chip { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-c); color: #fff; box-shadow: 0 4px 10px -3px color-mix(in srgb, var(--accent-c) 70%, transparent); }
+    .v2 .meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+
+    /* ── แบบ 3: Progress Ring ─ วงแหวนนับถอยหลังรอบ icon ──────────── */
+    .v3 {
+        position: relative; display: flex; gap: 13px; align-items: center; padding: 13px 14px;
+        background: var(--popover); border: 1px solid var(--border);
+        border-radius: 14px; box-shadow: var(--shadow);
+    }
+    .v3 .ring { position: relative; width: 42px; height: 42px; flex: none; }
+    .v3 .ring svg.track { position: absolute; inset: 0; transform: rotate(-90deg); }
+    .v3 .ring .glyph { position: absolute; inset: 0; display: grid; place-items: center; color: var(--accent-c); }
+    .v3 .ring .glyph svg { width: 18px; height: 18px; }
+
+    /* ── แบบ 4: Compact Pill ─ บรรทัดเดียว เล็กสุด สำหรับเด้งถี่ ─────── */
+    .v4 {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 9px 12px 9px 11px;
+        background: var(--popover); border: 1px solid var(--border);
+        border-radius: 999px; box-shadow: var(--shadow); max-width: 100%;
+    }
+    .v4 .chip { width: 26px; height: 26px; border-radius: 50%; background: color-mix(in srgb, var(--accent-c) 16%, transparent); color: var(--accent-c); }
+    .v4 .chip svg { width: 15px; height: 15px; }
+    .v4 .body { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; overflow: hidden; }
+    .v4 .title { font-size: 12.5px; }
+    .v4 .msg { margin-top: 0; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── แบบ 5: Accent Header ─ แถบหัวสีระบุโมดูล + เนื้อหาด้านล่าง ──── */
+    .v5 {
+        position: relative; width: 300px; border-radius: 14px; overflow: hidden;
+        background: var(--popover); border: 1px solid var(--border); box-shadow: var(--shadow);
+    }
+    .v5 .bar {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        padding: 7px 12px; background: var(--accent-c); color: #fff;
+    }
+    .v5 .bar .lbl { display: flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+    .v5 .bar .lbl svg { width: 15px; height: 15px; }
+    .v5 .bar .close { color: #fff; opacity: .85; }
+    .v5 .bar .close:hover { background: rgba(255,255,255,.18); color: #fff; }
+    .v5 .content { padding: 12px 14px 13px; }
+    .v5 .meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+    .v5 .progress { height: 2.5px; width: 100%; transform-origin: left; background: var(--accent-c); opacity: .7; }
+
+    /* ══════════════════════════════════════════════════════════
+       Live stack + entrance/exit motion (applies to fired toasts)
+    ══════════════════════════════════════════════════════════ */
+    .toast-stack {
+        position: fixed; right: 22px; bottom: 22px; z-index: 9999;
+        display: flex; flex-direction: column; align-items: flex-end; gap: 12px;
+        width: 320px; max-width: calc(100vw - 32px); pointer-events: none;
+    }
+    .toast-stack > * { pointer-events: auto; }
+    .live { animation: toast-in .42s cubic-bezier(.21,1.02,.42,1) both; }
+    .live.leaving { animation: toast-out .3s ease forwards; }
+    .live .progress { animation: progress var(--life,6s) linear forwards; }
+    .live:hover .progress { animation-play-state: paused; }
+    .live .ring .fg { animation: ring var(--life,6s) linear forwards; }
+    .live:hover .ring .fg { animation-play-state: paused; }
+
+    @keyframes toast-in { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toast-out { from { transform: translateX(0); opacity: 1; max-height: 200px; } to { transform: translateX(120%); opacity: 0; max-height: 0; margin-bottom: -12px; } }
+    @keyframes progress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+    @keyframes ring { to { stroke-dashoffset: 113; } }
+    @media (prefers-reduced-motion: reduce) {
+        .live { animation-duration: .01ms; }
+        .live .progress, .live .ring .fg { animation: none; }
+    }
+</style>
+</head>
+<body>
+    <header class="top">
+        <div>
+            <h1>Notification Toast — 5 แบบ</h1>
+            <p>เด้งมุมขวาล่างเมื่อมีแจ้งเตือนใหม่ · อิงสีจากธีมระบบ · กด “ลองเด้ง” เพื่อดู animation จริง</p>
+        </div>
+        <div class="toggle">
+            <button id="lt" class="on" onclick="setTheme('light')">Light</button>
+            <button id="dk" onclick="setTheme('dark')">Dark</button>
+        </div>
+    </header>
+
+    <div class="grid" id="grid"></div>
+    <div class="toast-stack" id="stack" aria-live="polite"></div>
+
+    <script>
+        /* lucide-style inline icons keyed by notification type */
+        const ICON = {
+            stock:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9 12 3l9 6v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 21V12h6v9"/></svg>',
+            contract: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>',
+            request:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="m9 14 2 2 4-4"/></svg>',
+            success:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" opacity=".35"/><path d="m8 12 2.5 2.5L16 9"/></svg>',
+        };
+        const X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+        /* sample event used in every variant so they compare fairly */
+        const SAMPLE = {
+            type: 'stock',
+            module: 'Stock',
+            title: 'สต็อกต่ำกว่าขั้นต่ำ',
+            msg: 'APC Back-UPS BX1100C เหลือ 2 ชิ้น',
+            code: 'SK-UPS-001',
+            time: 'เมื่อสักครู่',
+        };
+
+        /* ── markup builders per variant (return inner HTML of .toast) ── */
+        const TPL = {
+            1: (d) => `<div class="v1">
+                <span class="chip">${ICON[d.type]}</span>
+                <div class="body">
+                    <div class="title">${d.title}</div>
+                    <div class="msg">${d.msg}</div>
+                    <div class="meta"><span class="code">${d.code}</span><span class="time">${d.time}</span></div>
+                </div>
+                <button class="close" aria-label="ปิด">${X}</button>
+                <span class="progress"></span></div>`,
+
+            2: (d) => `<div class="v2">
+                <span class="chip">${ICON[d.type]}</span>
+                <div class="body">
+                    <div class="title">${d.title}</div>
+                    <div class="msg">${d.msg}</div>
+                    <div class="meta"><span class="code">${d.code}</span><span class="time">${d.time}</span></div>
+                </div>
+                <button class="close" aria-label="ปิด">${X}</button></div>`,
+
+            3: (d) => `<div class="v3">
+                <span class="ring">
+                    <svg class="track" width="42" height="42" viewBox="0 0 42 42">
+                        <circle cx="21" cy="21" r="18" fill="none" stroke="color-mix(in srgb, var(--accent-c) 18%, transparent)" stroke-width="3"/>
+                        <circle class="fg" cx="21" cy="21" r="18" fill="none" stroke="var(--accent-c)" stroke-width="3"
+                                stroke-linecap="round" stroke-dasharray="113" stroke-dashoffset="0"/>
+                    </svg>
+                    <span class="glyph">${ICON[d.type]}</span>
+                </span>
+                <div class="body">
+                    <div class="title">${d.title}</div>
+                    <div class="msg">${d.msg} · <span class="code">${d.code}</span></div>
+                </div>
+                <button class="close" aria-label="ปิด">${X}</button></div>`,
+
+            4: (d) => `<div class="v4">
+                <span class="chip">${ICON[d.type]}</span>
+                <div class="body"><span class="title">${d.title}</span><span class="msg">${d.code}</span></div>
+                <button class="close" aria-label="ปิด">${X}</button></div>`,
+
+            5: (d) => `<div class="v5">
+                <div class="bar">
+                    <span class="lbl">${ICON[d.type]} ${d.module}</span>
+                    <button class="close" aria-label="ปิด">${X}</button>
+                </div>
+                <div class="content">
+                    <div class="title">${d.title}</div>
+                    <div class="msg">${d.msg}</div>
+                    <div class="meta"><span class="code">${d.code}</span><span class="time">${d.time}</span></div>
+                </div>
+                <span class="progress"></span></div>`,
+        };
+
+        const VARIANTS = [
+            { no: 1, name: 'Clean Line',     desc: 'การ์ดขาว + แถบสีซ้ายตามชนิด + progress bar บาง — เรียบ สแกนง่าย ใกล้เคียงกระดิ่งเดิมที่สุด' },
+            { no: 2, name: 'Soft Tint',      desc: 'พื้นการ์ดไล่เฉดสีตามชนิด + ไอคอนวงกลมทึบ — อบอุ่น เด่น เห็นประเภทไว' },
+            { no: 3, name: 'Progress Ring',  desc: 'วงแหวนนับถอยหลังล้อมไอคอน — บอกเวลาที่เหลือก่อนหายแบบเนียน กะทัดรัด' },
+            { no: 4, name: 'Compact Pill',   desc: 'แคปซูลบรรทัดเดียว เล็กสุด — เหมาะเวลาเด้งถี่ ไม่รบกวนสายตา' },
+            { no: 5, name: 'Accent Header',  desc: 'แถบหัวสีระบุชื่อโมดูล + เนื้อหาด้านล่าง — เป็นทางการ จัดกลุ่มชัด' },
+        ];
+
+        /* render static showcase cards */
+        const grid = document.getElementById('grid');
+        grid.innerHTML = VARIANTS.map((v) => `
+            <div class="demo">
+                <div class="head"><span class="name">${v.name}</span><span class="no">แบบ ${v.no}</span></div>
+                <div class="desc">${v.desc}</div>
+                <div class="stage"><div class="toast t-${SAMPLE.type}">${TPL[v.no](SAMPLE)}</div></div>
+                <button class="fire" onclick="fire(${v.no})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    ลองเด้ง
+                </button>
+            </div>`).join('');
+
+        /* fire a real bottom-right toast for the chosen variant */
+        const LIFE = 6000;
+        const stack = document.getElementById('stack');
+        function fire(no) {
+            const wrap = document.createElement('div');
+            wrap.className = `toast live t-${SAMPLE.type}`;
+            wrap.style.setProperty('--life', LIFE + 'ms');
+            wrap.innerHTML = TPL[no](SAMPLE);
+            stack.prepend(wrap);
+
+            const close = () => {
+                if (wrap.classList.contains('leaving')) return;
+                wrap.classList.add('leaving');
+                wrap.addEventListener('animationend', () => wrap.remove(), { once: true });
+            };
+            wrap.querySelector('.close').addEventListener('click', close);
+
+            /* auto-dismiss, paused on hover (keeps the CSS bar/ring in sync) */
+            let remaining = LIFE, startedAt = Date.now(), timer = setTimeout(close, remaining);
+            wrap.addEventListener('mouseenter', () => { clearTimeout(timer); remaining -= Date.now() - startedAt; });
+            wrap.addEventListener('mouseleave', () => { startedAt = Date.now(); timer = setTimeout(close, remaining); });
+        }
+
+        function setTheme(mode) {
+            document.documentElement.dataset.theme = mode;
+            document.getElementById('lt').classList.toggle('on', mode === 'light');
+            document.getElementById('dk').classList.toggle('on', mode === 'dark');
+        }
+    </script>
+</body>
+</html>

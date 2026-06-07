@@ -16,17 +16,20 @@ return new class extends Migration
             $table->string('code')->unique();
             $table->string('name');
             $table->string('name_th')->nullable();
+            $table->string('photo_path')->nullable();
             $table->foreignId('department_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('position_id')->nullable()->constrained()->nullOnDelete();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
-            $table->string('login_method')->default('email'); // email | userpass
             $table->string('username')->nullable();
             $table->date('joined_at')->nullable();
             $table->string('status')->default('active'); // active | resigned
             $table->string('resign_reason')->nullable();
             $table->date('last_day')->nullable();
             $table->timestamps();
+            // Search by name, filter by status.
+            $table->index('name', 'emp_name_idx');
+            $table->index('status', 'emp_status_idx');
         });
     }
 

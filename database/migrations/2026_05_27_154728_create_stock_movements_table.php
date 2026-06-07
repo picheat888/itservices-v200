@@ -13,9 +13,11 @@ return new class extends Migration
     {
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
-            $table->enum('type', ['receive', 'issue', 'return', 'transfer']);
+            $table->string('doc_no', 30)->nullable()->unique();
+            $table->enum('type', ['receive', 'issue', 'return', 'transfer', 'adjust_up', 'adjust_down']);
             $table->foreignId('stock_item_id')->constrained('stock_items')->cascadeOnDelete();
             $table->integer('qty');
+            $table->decimal('unit_cost', 12, 2)->nullable();
             $table->string('from_label', 200)->nullable();
             $table->string('to_label', 200)->nullable();
             $table->string('reference', 100)->nullable();

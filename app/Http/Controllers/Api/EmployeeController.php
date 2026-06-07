@@ -124,7 +124,7 @@ class EmployeeController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
         $headers = ['code', 'name', 'name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
-        $sample = ['', 'John Doe', 'จอห์น โด', 'john.doe@inaba.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
+        $sample = ['', 'John Doe', 'จอห์น โด', 'john.doe@abcd.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');

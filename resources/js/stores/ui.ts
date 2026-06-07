@@ -28,10 +28,16 @@ interface UiState {
     accent: string;
     logoUrl: string | null;
     assetStatusColors: AssetStatusColors;
+    // Transient (not persisted): which prefs the user deliberately changed on
+    // the login screen. Those fields win over the account's saved preference
+    // after sign-in (and are then pushed up). Tracked per-field so changing
+    // language doesn't clobber the saved theme, and vice-versa.
+    loginPrefsTouched: { dark: boolean; lang: boolean };
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
     toggleLang: () => void;
+    markLoginPref: (key: 'dark' | 'lang') => void;
     setDensity: (density: Density) => void;
     setRadius: (radius: number) => void;
     setSidebar: (sidebar: SidebarStyle) => void;
@@ -55,10 +61,12 @@ export const useUiStore = create<UiState>()(
             accent: '#2563eb',
             logoUrl: null,
             assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
+            loginPrefsTouched: { dark: false, lang: false },
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
             toggleLang: () => set((s) => ({ lang: s.lang === 'en' ? 'th' : 'en' })),
+            markLoginPref: (key) => set((s) => ({ loginPrefsTouched: { ...s.loginPrefsTouched, [key]: true } })),
             setDensity: (density) => set({ density }),
             setRadius: (radius) => set({ radius }),
             setSidebar: (sidebar) => set({ sidebar }),

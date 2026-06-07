@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name', 120);
-            $table->enum('type', ['asset', 'contract', 'stock']);
+            $table->string('name_th', 120)->nullable();
             $table->string('description', 255)->nullable();
             $table->timestamps();
         });

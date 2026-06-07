@@ -45,17 +45,17 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
-        ->middleware('permission:settings.branding')->name('api.settings.branding');
+        ->middleware('permission:settings.system')->name('api.settings.branding');
     Route::put('settings/display', [SettingsController::class, 'updateDisplay'])
-        ->middleware('permission:settings.display')->name('api.settings.display');
+        ->middleware('permission:settings.system')->name('api.settings.display');
     Route::put('settings/assets', [SettingsController::class, 'updateAssets'])
         ->middleware('permission:settings.assets')->name('api.settings.assets');
     Route::put('settings/sla', [SettingsController::class, 'updateSla'])
         ->middleware('permission:settings.sla')->name('api.settings.sla');
     Route::post('settings/logo', [SettingsController::class, 'uploadLogo'])
-        ->middleware('permission:settings.branding')->name('api.settings.logo');
+        ->middleware('permission:settings.system')->name('api.settings.logo');
     Route::delete('settings/logo', [SettingsController::class, 'deleteLogo'])
-        ->middleware('permission:settings.branding')->name('api.settings.logo.delete');
+        ->middleware('permission:settings.system')->name('api.settings.logo.delete');
     Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
@@ -73,6 +73,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'test'])->name('api.email-templates.test');
     Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
     Route::post('email-templates/render-preview', [EmailTemplateController::class, 'renderPreview'])->name('api.email-templates.render-preview');
+    Route::post('email-templates/reset-all', [EmailTemplateController::class, 'resetAll'])->name('api.email-templates.reset-all');
+    Route::post('email-templates/{emailTemplate}/reset', [EmailTemplateController::class, 'reset'])->name('api.email-templates.reset');
 
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');

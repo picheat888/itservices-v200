@@ -26,7 +26,7 @@ class Permissions
             ],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
-            'settings' => ['company', 'branding', 'display', 'masterdata', 'email', 'sla', 'assets', 'workflows', 'security'],
+            'settings' => ['company', 'system', 'masterdata', 'email', 'sla', 'assets', 'workflows', 'security'],
         ];
     }
 

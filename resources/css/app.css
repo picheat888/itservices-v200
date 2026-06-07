@@ -8,7 +8,8 @@
 
 @theme {
     --font-sans:
-        'Manrope', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        'Manrope', 'Noto Sans Thai', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
     --color-brand: var(--brand);
@@ -259,6 +260,45 @@
     .toast-ring-fg {
         animation: none;
     }
+}
+
+/* ── Login: shake the error banner on an invalid sign-in attempt ─────────────── */
+@keyframes shake {
+    10%,
+    90% {
+        transform: translateX(-1px);
+    }
+    20%,
+    80% {
+        transform: translateX(2px);
+    }
+    30%,
+    50%,
+    70% {
+        transform: translateX(-4px);
+    }
+    40%,
+    60% {
+        transform: translateX(4px);
+    }
+}
+.animate-shake {
+    animation: shake 0.4s both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .animate-shake {
+        animation-duration: 0.01ms;
+    }
+}
+
+/* ── Settings: keep every placeholder in the sans UI font ────────────────────
+   Some Settings inputs use `font-mono` for the typed value (host, port, tax id…),
+   which would also render their placeholder in mono. Force all placeholders to the
+   sans font so they match the rest (e.g. the Email password field). Typed values
+   keep their own font. */
+.settings-page input::placeholder,
+.settings-page textarea::placeholder {
+    font-family: var(--font-sans);
 }
 
 /* ── Print: A4 portrait reports (e.g. SKU history) ───────────────────────── */

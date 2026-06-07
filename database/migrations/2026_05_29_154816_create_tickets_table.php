@@ -31,6 +31,7 @@ return new class extends Migration
             $table->text('take_note')->nullable();          // IT staff's initial notes when taking the case
             $table->text('resolution')->nullable();         // resolution / cancellation detail
             $table->timestamp('resolved_at')->nullable();
+            $table->timestamp('responded_at')->nullable();
 
             $table->timestamps();
 

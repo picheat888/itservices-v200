@@ -11,7 +11,7 @@ class SettingsPermissionsTest extends TestCase
     public function test_settings_module_exposes_expected_keys(): void
     {
         $expected = [
-            'settings.company', 'settings.branding', 'settings.display',
+            'settings.company', 'settings.system',
             'settings.masterdata', 'settings.email', 'settings.sla',
             'settings.assets', 'settings.workflows', 'settings.security',
         ];
@@ -20,8 +20,12 @@ class SettingsPermissionsTest extends TestCase
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
 
+        // Branding & Display were consolidated into the single settings.system key.
+        $this->assertNotContains('settings.branding', Permissions::all());
+        $this->assertNotContains('settings.display', Permissions::all());
+
         $settingsKeys = array_filter(Permissions::all(), fn ($key) => str_starts_with($key, 'settings.'));
-        $this->assertCount(9, $settingsKeys);
+        $this->assertCount(8, $settingsKeys);
     }
 
     public function test_legacy_edit_settings_key_is_removed(): void

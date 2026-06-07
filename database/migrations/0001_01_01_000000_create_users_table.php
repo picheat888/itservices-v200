@@ -11,12 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // employee_id and role_id (FKs to employees / roles) are added later in
+        // the role-and-employee references migration — those tables are created
+        // after this one, so the FKs cannot be declared here.
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email')->nullable()->unique();   // null for username-only accounts
+            $table->string('username')->nullable()->unique();
+            $table->json('preferences')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->timestamp('password_changed_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
