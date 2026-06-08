@@ -85,8 +85,8 @@ export function usePositionMutations() {
     const qc = useQueryClient();
     const invalidate = () => qc.invalidateQueries({ queryKey: POS });
     return {
-        create: useMutation({ mutationFn: (p: { title: string }) => positionApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; title: string }) => positionApi.update(v.id, { title: v.title }), onSuccess: invalidate }),
+        create: useMutation({ mutationFn: (p: { title: string; level: number }) => positionApi.create(p), onSuccess: invalidate }),
+        update: useMutation({ mutationFn: (v: { id: number; title: string; level: number }) => positionApi.update(v.id, { title: v.title, level: v.level }), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => positionApi.remove(id), onSuccess: invalidate }),
     };
 }

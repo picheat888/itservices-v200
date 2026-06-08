@@ -11,15 +11,19 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
     const t = useT();
     const { create, update } = usePositionMutations();
     const [title, setTitle] = useState('');
+    const [level, setLevel] = useState(1);
 
     useEffect(() => {
-        if (open) setTitle(position?.title ?? '');
+        if (open) {
+            setTitle(position?.title ?? '');
+            setLevel(position?.level ?? 1);
+        }
     }, [open, position]);
 
     const submit = async () => {
         if (!title.trim()) return;
-        if (position) await update.mutateAsync({ id: position.id, title });
-        else await create.mutateAsync({ title });
+        if (position) await update.mutateAsync({ id: position.id, title, level });
+        else await create.mutateAsync({ title, level });
         onClose();
     };
 
@@ -31,6 +35,15 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                 </DialogHeader>
                 <Field label={t('pos_title')}>
                     <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="QA Lead" />
+                </Field>
+                <Field label={t('pos_level')}>
+                    <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={level}
+                        onChange={(e) => setLevel(Math.max(1, Number(e.target.value) || 1))}
+                    />
                 </Field>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
