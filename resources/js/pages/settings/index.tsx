@@ -48,7 +48,7 @@ import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
-import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
+import { settingsApi, type ApprovalSettings, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -71,13 +71,12 @@ import {
     Ticket,
     Trash2,
     Upload,
-    Workflow,
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 
-type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'workflow' | 'security';
+type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'security';
 
 const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 
@@ -100,7 +99,7 @@ const emptyForm: SettingsForm = {
     timezone: 'Asia/Bangkok',
 };
 
-const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'assets', 'workflow', 'security'];
+const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'assets', 'security'];
 
 function sectionFromHash(): Section {
     const s = window.location.hash.replace('#', '') as Section;
@@ -170,7 +169,6 @@ export default function SettingsPage() {
         { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
         { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
-        { id: 'workflow', label: t('set_workflow'), icon: Workflow, perm: 'settings.workflows' },
         { id: 'security', label: t('set_security'), icon: Shield, perm: 'settings.security' },
     ];
     const nav = allNav.filter((n) => user?.role === 'super' || can(n.perm));
@@ -381,6 +379,8 @@ function MasterDataTab() {
                 <p className="text-muted-foreground text-sm">{t('set_master_data_desc')}</p>
             </div>
 
+            <ApprovalCard />
+
             <div className="mb-5 flex flex-wrap gap-1 border-b pb-3">
                 {tabs.map((tb) => (
                     <button
@@ -404,6 +404,63 @@ function MasterDataTab() {
             {tab === 'locations' && <LocationsList />}
             {tab === 'units' && <UnitsList />}
             {tab === 'warranty-types' && <WarrantyTypesList />}
+        </div>
+    );
+}
+
+const APPROVAL_KEY = ['approval-settings'] as const;
+
+/**
+ * ApprovalCard — sets the VP ceiling level that ends an approval chain. Lives at
+ * the top of Master Data (gated by settings.masterdata); saving is enabled only
+ * once the value differs from what was loaded.
+ */
+function ApprovalCard() {
+    const t = useT();
+    const qc = useQueryClient();
+    const { data } = useQuery({ queryKey: APPROVAL_KEY, queryFn: settingsApi.getApproval });
+
+    const [level, setLevel] = useState(1);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        if (data) setLevel(data.approval_ceiling_level);
+    }, [data]);
+
+    const update = useMutation({
+        mutationFn: (payload: ApprovalSettings) => settingsApi.updateApproval(payload),
+        onSuccess: (d) => {
+            qc.setQueryData(APPROVAL_KEY, d);
+            setSaved(true);
+        },
+    });
+
+    const dirty = !!data && level !== data.approval_ceiling_level;
+
+    return (
+        <div className="mb-5 max-w-xl rounded-lg border border-border p-4">
+            <div className="mb-3">
+                <h3 className="text-sm font-semibold">{t('set_approval_ceiling')}</h3>
+                <p className="text-muted-foreground text-xs">{t('set_approval_ceiling_help')}</p>
+            </div>
+            <div className="flex items-end gap-3">
+                <Field label={t('pos_level')}>
+                    <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        value={level}
+                        onChange={(e) => {
+                            setLevel(Math.max(1, Number(e.target.value) || 1));
+                            setSaved(false);
+                        }}
+                        className="w-28"
+                    />
+                </Field>
+                <SaveButton onClick={() => update.mutate({ approval_ceiling_level: level })} loading={update.isPending} success={saved} disabled={!dirty}>
+                    {t('save')}
+                </SaveButton>
+            </div>
         </div>
     );
 }
@@ -1667,13 +1724,11 @@ function CompanyTab({
     );
 }
 
-/** Icon-chip + title + description header used for each section inside System. */
+/** Section header used inside System: a bare brand-tinted icon (no chip) beside the title + description. */
 function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles; title: string; desc: string }) {
     return (
-        <div className="mb-5 flex items-start gap-3">
-            <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                <Icon className="h-5 w-5" />
-            </div>
+        <div className="mb-5 flex items-start gap-2.5">
+            <Icon className="text-brand mt-0.5 h-5 w-5 shrink-0" strokeWidth={1.75} />
             <div>
                 <h2 className="text-lg font-semibold">{title}</h2>
                 <p className="text-muted-foreground text-sm">{desc}</p>
