@@ -60,6 +60,7 @@ class DatabaseSeeder extends Seeder
         $this->call(MailSettingSeeder::class);
         $this->call(EmailTemplateSeeder::class);
         $this->call(OrgSeeder::class);
+        $this->call(ApprovalChainDemoSeeder::class);
         $this->call(AvatarDemoSeeder::class);
         $this->call(ContractSeeder::class);
         $this->call(MasterDataSeeder::class);
