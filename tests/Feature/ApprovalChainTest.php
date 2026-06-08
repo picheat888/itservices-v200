@@ -2,9 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AppSetting;
 use App\Models\Employee;
 use App\Models\Position;
-use App\Models\User;
+use App\Services\ApprovalChainService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -28,5 +29,59 @@ class ApprovalChainTest extends TestCase
         $this->assertTrue($boss->subordinates->contains($staff));
         $this->assertTrue($boss->isAncestorOf($staff->fresh()));
         $this->assertFalse($staff->isAncestorOf($boss->fresh()));
+    }
+
+    private function positionAt(int $level): Position
+    {
+        return Position::create(['title' => "L{$level}", 'level' => $level]);
+    }
+
+    public function test_chain_climbs_managers_and_stops_at_the_ceiling(): void
+    {
+        // Levels: staff 1 -> supervisor 2 -> manager 3 -> vp 4 -> ceo 5
+        $ceo = Employee::create(['name' => 'CEO', 'position_id' => $this->positionAt(5)->id]);
+        $vp = Employee::create(['name' => 'VP', 'position_id' => $this->positionAt(4)->id, 'manager_id' => $ceo->id]);
+        $mgr = Employee::create(['name' => 'Mgr', 'position_id' => $this->positionAt(3)->id, 'manager_id' => $vp->id]);
+        $sup = Employee::create(['name' => 'Sup', 'position_id' => $this->positionAt(2)->id, 'manager_id' => $mgr->id]);
+        $staff = Employee::create(['name' => 'Staff', 'position_id' => $this->positionAt(1)->id, 'manager_id' => $sup->id]);
+
+        // Ceiling = 4 (VP). Chain stops at VP, CEO excluded.
+        AppSetting::put('approval_ceiling_level', '4');
+
+        $chain = app(ApprovalChainService::class)->chainFor($staff);
+
+        $this->assertSame(['Sup', 'Mgr', 'VP'], $chain->pluck('name')->all());
+    }
+
+    public function test_chain_is_empty_when_no_manager(): void
+    {
+        $solo = Employee::create(['name' => 'Solo', 'position_id' => $this->positionAt(1)->id]);
+
+        $this->assertCount(0, app(ApprovalChainService::class)->chainFor($solo));
+    }
+
+    public function test_manager_without_level_does_not_stop_the_climb(): void
+    {
+        AppSetting::put('approval_ceiling_level', '4');
+        $vp = Employee::create(['name' => 'VP', 'position_id' => $this->positionAt(4)->id]);
+        $mid = Employee::create(['name' => 'Mid', 'manager_id' => $vp->id]); // no position -> level 0
+        $staff = Employee::create(['name' => 'Staff', 'manager_id' => $mid->id]);
+
+        $chain = app(ApprovalChainService::class)->chainFor($staff);
+
+        $this->assertSame(['Mid', 'VP'], $chain->pluck('name')->all());
+    }
+
+    public function test_chain_terminates_on_a_cycle(): void
+    {
+        AppSetting::put('approval_ceiling_level', '9');
+        $a = Employee::create(['name' => 'A']);
+        $b = Employee::create(['name' => 'B', 'manager_id' => $a->id]);
+        $a->update(['manager_id' => $b->id]); // A <-> B loop
+
+        $chain = app(ApprovalChainService::class)->chainFor($a);
+
+        // Climbs B then A(self repeat) -> stops; never infinite-loops.
+        $this->assertSame(['B'], $chain->pluck('name')->all());
     }
 }
