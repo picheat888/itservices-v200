@@ -31,6 +31,7 @@ class EmployeeResource extends JsonResource
             'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
             'department_id' => $this->department_id,
             'position_id' => $this->position_id,
+            'manager_id' => $this->manager_id,
             'department' => $this->whenLoaded('department', fn () => $this->department?->name),
             'department_th' => $this->whenLoaded('department', fn () => $this->department?->name_th),
             'position' => $this->whenLoaded('position', fn () => $this->position?->title),

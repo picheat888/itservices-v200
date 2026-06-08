@@ -31,6 +31,7 @@ export interface EmployeePayload {
     name_th?: string | null;
     department_id?: number | null;
     position_id?: number | null;
+    manager_id?: number | null;
     email?: string | null;
     username?: string | null;
     phone?: string | null;
