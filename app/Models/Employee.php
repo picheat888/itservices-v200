@@ -6,13 +6,14 @@ use App\Enums\EmployeeStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
 {
     protected $fillable = [
         'code', 'name', 'name_th', 'photo_path', 'department_id', 'position_id',
-        'email', 'phone', 'username',
+        'manager_id', 'email', 'phone', 'username',
         'joined_at', 'status', 'resign_reason', 'last_day',
     ];
 
@@ -69,5 +70,37 @@ class Employee extends Model
     public function position(): BelongsTo
     {
         return $this->belongsTo(Position::class);
+    }
+
+    /** This employee's direct manager (null at the top of the tree). */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'manager_id');
+    }
+
+    /** Employees who report directly to this one. */
+    public function subordinates(): HasMany
+    {
+        return $this->hasMany(Employee::class, 'manager_id');
+    }
+
+    /**
+     * True when $other sits somewhere below this employee in the reporting tree
+     * (used to reject a manager assignment that would create a cycle). Walks up
+     * from $other; a repeat id ends the walk defensively.
+     */
+    public function isAncestorOf(Employee $other): bool
+    {
+        $seen = [];
+        $current = $other->manager;
+        while ($current !== null && ! in_array($current->id, $seen, true)) {
+            if ($current->id === $this->id) {
+                return true;
+            }
+            $seen[] = $current->id;
+            $current = $current->manager;
+        }
+
+        return false;
     }
 }
