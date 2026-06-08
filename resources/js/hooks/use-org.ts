@@ -18,6 +18,15 @@ export const useEmployee = (id: number | null) =>
         enabled: id != null,
     });
 
+/** The employee's approval chain (direct manager first, up to the VP ceiling). */
+export function useApprovalChain(id: number | null) {
+    return useQuery({
+        queryKey: ['approval-chain', id],
+        queryFn: () => employeeApi.approvalChain(id as number),
+        enabled: id !== null,
+    });
+}
+
 /** Paginated directory query — search and department filter are server-side. */
 export const useEmployeeDirectory = (params: { page: number; per_page: number; search: string; department_id: string; status: string }) =>
     useQuery({
