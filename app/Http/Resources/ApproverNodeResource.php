@@ -6,6 +6,7 @@ use App\Enums\EmployeeStatus;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin Employee */
 class ApproverNodeResource extends JsonResource
@@ -20,6 +21,7 @@ class ApproverNodeResource extends JsonResource
             'code' => $this->code,
             'name' => $this->name,
             'name_th' => $this->name_th,
+            'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
             'position' => $this->position?->title,
             'level' => $this->position?->level,
             'department' => $this->department?->name,
