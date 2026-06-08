@@ -104,8 +104,10 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 .map((e) => ({
                     value: String(e.id),
                     label: lang === 'th' ? e.name_th ?? e.name : e.name,
+                    hint: e.position ?? undefined,
+                    avatar: e.photo_url,
                     sub: e.code,
-                    search: `${e.name} ${e.name_th ?? ''} ${e.code}`,
+                    search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.position ?? ''}`,
                 })),
         [employees, employee, lang],
     );
@@ -333,8 +335,13 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                     </SelectContent>
                                 </Select>
                             </Field>
-                            <Field label={t('emp_manager')}>
-                                <SearchableSelect value={form.managerId} onChange={(v) => set('managerId', v)} options={managerOptions} />
+                            <Field label={t('emp_manager')} help={t('emp_manager_help')}>
+                                <SearchableSelect
+                                    value={form.managerId}
+                                    onChange={(v) => set('managerId', v)}
+                                    options={managerOptions}
+                                    clearable
+                                />
                             </Field>
                             <div className="grid grid-cols-2 gap-3">
                                 <Field label={t('emp_start_date')} required error={errors.joinedAt}>

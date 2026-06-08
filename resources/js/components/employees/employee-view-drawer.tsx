@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useApprovalChain } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { ChevronUp, KeyRound, ShieldAlert, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
+import { ChevronDown, Crown, KeyRound, ShieldAlert, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -124,30 +125,88 @@ export function EmployeeViewDrawer({
                             </div>
 
                             <div>
-                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('emp_approval_chain')}</div>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('emp_approval_chain')}</div>
+                                    {approvalChain.length > 0 && (
+                                        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                            {approvalChain.length} {t('approval_step')}
+                                        </span>
+                                    )}
+                                </div>
                                 {approvalChain.length === 0 ? (
-                                    <div className="rounded-lg bg-muted/50 py-6 text-center text-sm text-muted-foreground">{t('emp_no_approver')}</div>
+                                    <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 text-center text-sm text-muted-foreground">
+                                        {t('emp_no_approver')}
+                                    </div>
                                 ) : (
-                                    <div className="space-y-1.5">
-                                        {approvalChain.map((node, i) => (
-                                            <div key={node.id} className="flex items-center gap-2">
-                                                {i > 0 && <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                                                {i === 0 && <span className="w-3.5 shrink-0" />}
-                                                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="truncate text-sm font-medium">
-                                                            {lang === 'th' ? node.name_th ?? node.name : node.name}
-                                                        </div>
-                                                        <div className="truncate text-xs text-muted-foreground">{node.position || '—'}</div>
-                                                    </div>
-                                                    {node.status === 'resigned' && (
-                                                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
-                                                            {t('resigned')}
+                                    <div>
+                                        {approvalChain.map((node, i) => {
+                                            const isFinal = i === approvalChain.length - 1;
+                                            const resigned = node.status === 'resigned';
+                                            return (
+                                                <div key={node.id}>
+                                                    <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                                        <span>
+                                                            {t('approval_step')} {i + 1}
                                                         </span>
+                                                        {isFinal && <span className="text-brand">· {t('approval_final')}</span>}
+                                                    </div>
+                                                    <div
+                                                        className={cn(
+                                                            'flex items-center gap-3 rounded-xl border px-3 py-2.5',
+                                                            isFinal ? 'border-brand/40 bg-brand/5' : 'border-border bg-card',
+                                                            resigned && 'opacity-70',
+                                                        )}
+                                                    >
+                                                        <div className="relative shrink-0">
+                                                            <Avatar className="h-9 w-9">
+                                                                {node.photo_url && <AvatarImage src={node.photo_url} alt="" />}
+                                                                <AvatarFallback
+                                                                    className={cn('text-xs font-semibold', isFinal ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground')}
+                                                                >
+                                                                    {initials(node.name)}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <span
+                                                                className={cn(
+                                                                    'absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold ring-2 ring-background',
+                                                                    isFinal ? 'bg-brand text-white' : 'bg-muted-foreground/80 text-background',
+                                                                )}
+                                                            >
+                                                                {i + 1}
+                                                            </span>
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="truncate text-sm font-medium">
+                                                                    {lang === 'th' ? node.name_th ?? node.name : node.name}
+                                                                </span>
+                                                                {resigned && (
+                                                                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+                                                                        {t('resigned')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                                                <span className="truncate">{node.position || '—'}</span>
+                                                                {node.level != null && (
+                                                                    <span className="shrink-0 rounded bg-muted px-1 py-0.5 font-mono text-[10px]">L{node.level}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        {isFinal && (
+                                                            <span className="flex shrink-0 items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                                                                <Crown className="h-3 w-3" /> VP
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {!isFinal && (
+                                                        <div className="flex justify-center py-1">
+                                                            <ChevronDown className="h-4 w-4 text-muted-foreground/50" />
+                                                        </div>
                                                     )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

@@ -61,6 +61,7 @@ export interface ApproverNode {
     code: string;
     name: string;
     name_th: string | null;
+    photo_url: string | null;
     position: string | null;
     level: number | null;
     department: string | null;

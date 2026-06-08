@@ -97,6 +97,7 @@ class ApprovalChainTest extends TestCase
         $this->getJson("/api/employees/{$staff->id}/approval-chain")
             ->assertOk()
             ->assertJsonPath('data.0.name', 'Mgr')
+            ->assertJsonPath('data.0.photo_url', null)
             ->assertJsonPath('data.1.name', 'VP');
     }
 
