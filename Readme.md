@@ -3,7 +3,7 @@
 ระบบ **IT Service Desk** สำหรับจัดการงาน IT ภายในองค์กร (Inaba Foods)
 พัฒนาด้วย **Laravel 12 + React 19 (SPA) + TypeScript + Tailwind CSS v4**
 
-> สถานะปัจจุบัน: **ถึง Phase-11** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups + Stock/Inventory (Items + Min/Max alerts + Dashboard + RBAC + Movements + Request workflow) + **Assets Management (Inventory + Dashboard + Transfer/Accept/Return + Bulk + Asset→Stock + Contract link)**
+> สถานะปัจจุบัน: **ถึง Phase-11** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups + Stock/Inventory (Items + Min/Max alerts + Dashboard + RBAC + Movements + Request workflow) + **Assets Management (Inventory + Dashboard + Transfer/Accept/Return + Bulk + Asset→Stock + Contract link)** + Org Approval Chain (foundation: manager tree → VP ceiling)
 
 ---
 
@@ -629,6 +629,40 @@ npm run build
 - รัน `php artisan migrate` — สร้าง `stock_balances` + column `doc_no` + backfill (ปลอดภัยกับข้อมูลจริง ไม่ reset)
 - หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
 - หมายเหตุ: per-warehouse cost (มูลค่าแยกคลัง) ยังไม่ทำ — FIFO เป็นระดับ SKU; min/max reorder ยังคิดจากยอดรวม
+
+---
+
+## Org Approval Chain (Foundation) — สายอนุมัติตามผังบังคับบัญชา
+
+> spec: `docs/superpowers/specs/2026-06-08-org-approval-chain-design.md` · plan: `docs/superpowers/plans/2026-06-08-org-approval-chain.md`
+
+วางรากฐานการคำนวณ **สายอนุมัติ** ของพนักงานโดยไต่ตามผังบังคับบัญชา (manager reporting tree) แล้วหยุดที่เพดานระดับ VP — เป็นฐานสำหรับ Request Workflow (โมดูล 3) ในอนาคต ยังไม่ทำผังองค์กร (org-chart) ซึ่งเลื่อนไปเฟสถัดไป
+
+### แนวทาง (Approach A — manager tree เป็น source of truth เดียว)
+- `employees.manager_id` (self-FK, nullable, `nullOnDelete`) เป็นต้นไม้รายงานตัวเดียว · `positions.level` (1–20) ใช้เป็น**ตัวทดสอบเพดาน VP เท่านั้น**
+- `ApprovalChainService::chainFor()` ไต่ `manager_id` จากผู้ยื่น เก็บหัวหน้าทีละชั้น (หัวหน้าตรงก่อน) จนถึงคนแรกที่ `position.level ≥ เพดาน` หรือถึงรากต้นไม้ — มี **guard กันวน (cycle)** ด้วย seen-set ขณะไต่
+- เพดานปรับได้ที่ Settings → Master Data (`approval_ceiling_level` ใน `app_settings`, default = ระดับสูงสุดที่มีอยู่); หัวหน้าที่ไม่มีตำแหน่ง (level 0) ไม่หยุดการไต่
+
+### Backend
+- Migrations: `add_level_to_positions_table`, `add_manager_id_to_employees_table` (ปลอดภัยกับข้อมูลจริง — เพิ่ม column nullable, ไม่ reset)
+- Models: `Position.level` (fillable) · `Employee` — `manager()`/`subordinates()` relations + `isAncestorOf()` (กันวนตอนตั้งหัวหน้า)
+- Service: `ApprovalChainService` (`chainFor` + `ceilingLevel`)
+- Validation: `StoreEmployeeRequest` — `manager_id` (exists) + `withValidator` ปฏิเสธ self / descendant (กัน loop)
+- API: `GET /employees/{employee}/approval-chain` (`ApproverNodeResource`, gate `employees.view`) · `GET|PUT /settings/approval` (PUT gate `settings.masterdata`)
+- Resources: `EmployeeResource`/`PositionResource` เปิดเผย `manager_id`/`level`
+- Tests: `tests/Feature/ApprovalChainTest.php` (11 ผ่าน — climb/ceiling/no-manager/no-level/cycle/endpoint auth+permission/approval setting) · `tests/Feature/EmployeeApiTest.php` (3 ผ่าน — self/descendant/valid manager)
+
+### Frontend
+- types: `Position.level`, `Employee.manager_id`, `ApproverNode`
+- Position modal: เพิ่มช่อง **Level** (1–20) · Add/Edit Employee: เพิ่มช่อง **หัวหน้า** (SearchableSelect, ตัดตัวเองออก — descendant กันที่ server)
+- Employee view drawer: ส่วน **สายอนุมัติ** แสดงหัวหน้าตามลำดับ (ลูกศรขึ้น) + ป้าย "ลาออก" ถ้าหัวหน้าลาออก · ว่าง = "ไม่มีผู้อนุมัติเหนือกว่า"
+- Settings → Master Data: การ์ด **ระดับสูงสุดของสายอนุมัติ** (numeric + SaveButton) · `useApprovalChain` hook
+
+### หมายเหตุการติดตั้ง
+- รัน `php artisan migrate` เพื่อเพิ่ม `positions.level` + `employees.manager_id` (ปลอดภัยกับข้อมูลจริง)
+- `manager_id` เป็น**ข้อมูลปฏิบัติการ** — admin กรอกเองผ่านช่องหัวหน้า (seeder ไม่แตะ) · หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
+
+**ตรวจสอบ**: `php artisan test` ApprovalChainTest 11 + EmployeeApiTest 3 ผ่าน · related suites (MasterData/SettingsPermissions/SettingsSection/EmployeeAccountLink) 60 ผ่าน · `tsc --noEmit` ✅ · `eslint` ✅ · `npm run build` ✅ · `vendor/bin/pint` ✅
 
 ---
 
