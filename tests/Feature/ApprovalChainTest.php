@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AppSetting;
 use App\Models\Employee;
 use App\Models\Position;
+use App\Models\User;
 use App\Services\ApprovalChainService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -83,5 +84,32 @@ class ApprovalChainTest extends TestCase
 
         // Climbs B then A(self repeat) -> stops; never infinite-loops.
         $this->assertSame(['B'], $chain->pluck('name')->all());
+    }
+
+    public function test_endpoint_returns_the_chain_ordered(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        AppSetting::put('approval_ceiling_level', '4');
+        $vp = Employee::create(['name' => 'VP', 'position_id' => $this->positionAt(4)->id]);
+        $mgr = Employee::create(['name' => 'Mgr', 'position_id' => $this->positionAt(3)->id, 'manager_id' => $vp->id]);
+        $staff = Employee::create(['name' => 'Staff', 'position_id' => $this->positionAt(1)->id, 'manager_id' => $mgr->id]);
+
+        $this->getJson("/api/employees/{$staff->id}/approval-chain")
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Mgr')
+            ->assertJsonPath('data.1.name', 'VP');
+    }
+
+    public function test_endpoint_requires_authentication(): void
+    {
+        $staff = Employee::create(['name' => 'Staff']);
+        $this->getJson("/api/employees/{$staff->id}/approval-chain")->assertUnauthorized();
+    }
+
+    public function test_endpoint_requires_employees_view_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $staff = Employee::create(['name' => 'Staff']);
+        $this->getJson("/api/employees/{$staff->id}/approval-chain")->assertForbidden();
     }
 }

@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
+use App\Http\Resources\ApproverNodeResource;
 use App\Http\Resources\EmployeeResource;
 use App\Models\AuditLog;
 use App\Models\Employee;
 use App\Models\User;
+use App\Services\ApprovalChainService;
 use App\Services\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -218,6 +220,17 @@ class EmployeeController extends Controller
     public function show(Employee $employee): JsonResponse
     {
         return (new EmployeeResource($employee->load(['department', 'position'])))->response();
+    }
+
+    /** Returns the employee's approval chain (direct manager first, up to the VP ceiling). */
+    public function approvalChain(Request $request, Employee $employee, ApprovalChainService $chain): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        // chainFor() already eager-loads each approver's position + department.
+        $approvers = $chain->chainFor($employee);
+
+        return ApproverNodeResource::collection($approvers)->additional(['message' => 'success'])->response();
     }
 
     public function update(StoreEmployeeRequest $request, Employee $employee): JsonResponse
