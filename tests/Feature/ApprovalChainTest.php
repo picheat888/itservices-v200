@@ -112,4 +112,21 @@ class ApprovalChainTest extends TestCase
         $staff = Employee::create(['name' => 'Staff']);
         $this->getJson("/api/employees/{$staff->id}/approval-chain")->assertForbidden();
     }
+
+    public function test_updates_approval_ceiling_level(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->putJson('/api/settings/approval', ['approval_ceiling_level' => 4])
+            ->assertOk()
+            ->assertJsonPath('data.approval_ceiling_level', 4);
+
+        $this->assertSame('4', AppSetting::get('approval_ceiling_level'));
+    }
+
+    public function test_approval_ceiling_requires_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->putJson('/api/settings/approval', ['approval_ceiling_level' => 4])->assertForbidden();
+    }
 }
