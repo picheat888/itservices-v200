@@ -2,10 +2,11 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useApprovalChain } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { KeyRound, ShieldAlert, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
+import { ChevronUp, KeyRound, ShieldAlert, ShieldCheck, SquarePen, UserCheck, UserMinus } from 'lucide-react';
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -51,6 +52,7 @@ export function EmployeeViewDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { data: approvalChain = [] } = useApprovalChain(employee?.id ?? null);
 
     const showCredentials = canSetCredentials && employee && !employee.has_account && employee.status !== 'resigned';
 
@@ -119,6 +121,35 @@ export function EmployeeViewDrawer({
                             <div>
                                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('assigned_assets')}</div>
                                 <div className="rounded-lg bg-muted/50 py-6 text-center text-sm text-muted-foreground">{t('no_assigned_assets')}</div>
+                            </div>
+
+                            <div>
+                                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('emp_approval_chain')}</div>
+                                {approvalChain.length === 0 ? (
+                                    <div className="rounded-lg bg-muted/50 py-6 text-center text-sm text-muted-foreground">{t('emp_no_approver')}</div>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        {approvalChain.map((node, i) => (
+                                            <div key={node.id} className="flex items-center gap-2">
+                                                {i > 0 && <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                                                {i === 0 && <span className="w-3.5 shrink-0" />}
+                                                <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="truncate text-sm font-medium">
+                                                            {lang === 'th' ? node.name_th ?? node.name : node.name}
+                                                        </div>
+                                                        <div className="truncate text-xs text-muted-foreground">{node.position || '—'}</div>
+                                                    </div>
+                                                    {node.status === 'resigned' && (
+                                                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+                                                            {t('resigned')}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Action buttons */}
