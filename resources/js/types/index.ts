@@ -46,7 +46,6 @@ export interface Department {
     name: string;
     name_th: string | null;
     head: string | null;
-    location: string | null;
     count?: number;
 }
 
@@ -54,6 +53,18 @@ export interface Position {
     id: number;
     code: string;
     title: string;
+    level: number;
+}
+
+export interface ApproverNode {
+    id: number;
+    code: string;
+    name: string;
+    name_th: string | null;
+    position: string | null;
+    level: number | null;
+    department: string | null;
+    status: string;
 }
 
 export interface LocationItem {
@@ -69,6 +80,7 @@ export interface Employee {
     photo_url: string | null;
     department_id: number | null;
     position_id: number | null;
+    manager_id: number | null;
     department: string | null;
     department_th: string | null;
     position: string | null;
