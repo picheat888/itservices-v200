@@ -1,11 +1,12 @@
 import { Field } from '@/components/shared/field';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PhotoCropDialog } from './photo-crop-dialog';
-import { useDepartments, useEmployeeMutations, usePositions } from '@/hooks/use-org';
+import { useDepartments, useEmployeeMutations, useEmployees, usePositions } from '@/hooks/use-org';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ const empty = {
     code: '',
     departmentId: '',
     positionId: '',
+    managerId: '',
     joinedAt: '',
     services: [] as string[],
     onboardingNote: '',
@@ -47,6 +49,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
+    const { data: employees = [] } = useEmployees();
     const { create, update } = useEmployeeMutations();
     const { data: settings } = useSettings();
     const isEdit = !!employee;
@@ -77,6 +80,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 code: employee.code ?? '',
                 departmentId: employee.department_id ? String(employee.department_id) : '',
                 positionId: employee.position_id ? String(employee.position_id) : '',
+                managerId: employee.manager_id ? String(employee.manager_id) : '',
                 joinedAt: employee.joined_at ?? '',
                 services: [],
                 onboardingNote: '',
@@ -90,6 +94,21 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     useEffect(() => () => { if (photo && photoUrl) URL.revokeObjectURL(photoUrl); }, [photo, photoUrl]);
 
     const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+    // Manager candidates: the whole directory minus the employee being edited
+    // (server-side validation rejects any descendant that would form a loop).
+    const managerOptions = useMemo(
+        () =>
+            employees
+                .filter((e) => e.id !== employee?.id)
+                .map((e) => ({
+                    value: String(e.id),
+                    label: lang === 'th' ? e.name_th ?? e.name : e.name,
+                    sub: e.code,
+                    search: `${e.name} ${e.name_th ?? ''} ${e.code}`,
+                })),
+        [employees, employee, lang],
+    );
 
     const validateStep = (s: number) => {
         const e: Record<string, string> = {};
@@ -118,6 +137,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             name_th: nameTh || null,
             department_id: form.departmentId ? Number(form.departmentId) : null,
             position_id: form.positionId ? Number(form.positionId) : null,
+            manager_id: form.managerId ? Number(form.managerId) : null,
             email: form.email || null,
             username: null,
             phone: form.phone || null,
@@ -312,6 +332,9 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </Field>
+                            <Field label={t('emp_manager')}>
+                                <SearchableSelect value={form.managerId} onChange={(v) => set('managerId', v)} options={managerOptions} />
                             </Field>
                             <div className="grid grid-cols-2 gap-3">
                                 <Field label={t('emp_start_date')} required error={errors.joinedAt}>
