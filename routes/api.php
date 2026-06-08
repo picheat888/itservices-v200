@@ -84,6 +84,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');
     Route::post('employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name('api.employees.reset-password');
     Route::post('employees/{employee}/credentials', [EmployeeController::class, 'credentials'])->name('api.employees.credentials');
+    Route::get('employees/{employee}/approval-chain', [EmployeeController::class, 'approvalChain'])->name('api.employees.approval-chain');
     Route::apiResource('employees', EmployeeController::class);
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');

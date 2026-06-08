@@ -25,7 +25,7 @@ class ApprovalChainService
         $current = $employee;
 
         while (true) {
-            $manager = $current->manager()->with('position')->first();
+            $manager = $current->manager()->with(['position', 'department'])->first();
             if ($manager === null || in_array($manager->id, $seen, true)) {
                 break;
             }
