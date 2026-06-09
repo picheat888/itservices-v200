@@ -2,7 +2,7 @@ import { useT } from '@/lib/i18n';
 import type { OrgDir } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { Maximize2, Search, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface OrgStats {
     total: number;
@@ -49,6 +49,8 @@ export function OrgChartToolbar({
     onFit: () => void;
 }) {
     const t = useT();
+    // Which suggestion the keyboard has highlighted (clamped to the list length on render).
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const q = query.trim().toLowerCase();
     const suggestions = useMemo(() => {
@@ -57,6 +59,7 @@ export function OrgChartToolbar({
         }
         return people.filter((p) => `${p.label} ${p.code} ${p.dept}`.toLowerCase().includes(q)).slice(0, 6);
     }, [q, people]);
+    const active = suggestions.length ? Math.min(activeIndex, suggestions.length - 1) : 0;
 
     const stat = (num: number, label: string) => (
         <div className="flex flex-col items-center justify-center px-4">
@@ -83,11 +86,28 @@ export function OrgChartToolbar({
                         <Search className="h-3.5 w-3.5 text-muted-foreground" />
                         <input
                             value={query}
-                            onChange={(e) => onQueryChange(e.target.value)}
+                            onChange={(e) => {
+                                onQueryChange(e.target.value);
+                                setActiveIndex(0);
+                            }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && suggestions.length > 0) {
+                                if (suggestions.length === 0) {
+                                    if (e.key === 'Escape') {
+                                        onQueryChange('');
+                                    }
+                                    return;
+                                }
+                                if (e.key === 'ArrowDown') {
                                     e.preventDefault();
-                                    onPick(suggestions[0].id);
+                                    setActiveIndex((i) => Math.min(i + 1, suggestions.length - 1));
+                                } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault();
+                                    setActiveIndex((i) => Math.max(i - 1, 0));
+                                } else if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    onPick(suggestions[active].id);
+                                } else if (e.key === 'Escape') {
+                                    onQueryChange('');
                                 }
                             }}
                             placeholder={t('org_search_placeholder')}
@@ -102,7 +122,7 @@ export function OrgChartToolbar({
 
                     {suggestions.length > 0 && (
                         <ul className="absolute left-0 top-full z-20 mt-1 max-h-72 w-64 overflow-auto rounded-lg border border-border bg-card py-1 shadow-lg">
-                            {suggestions.map((p) => (
+                            {suggestions.map((p, i) => (
                                 <li key={p.id}>
                                     <button
                                         type="button"
@@ -111,7 +131,8 @@ export function OrgChartToolbar({
                                             e.preventDefault();
                                             onPick(p.id);
                                         }}
-                                        className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-accent"
+                                        onMouseEnter={() => setActiveIndex(i)}
+                                        className={cn('flex w-full items-center gap-2 px-3 py-1.5 text-left', i === active ? 'bg-accent' : 'hover:bg-accent')}
                                     >
                                         <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
                                         <span className="truncate text-[12.5px] font-medium text-foreground">{p.label}</span>
