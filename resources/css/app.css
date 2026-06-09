@@ -331,6 +331,20 @@
     }
 }
 
+/* ── Org chart: glide node positions on layout change ─────────────────────────
+   When a branch collapses/expands or the direction flips, nodes move to new
+   layout positions. Animating their transform makes the cards glide in sync
+   with the viewport (fit) animation instead of teleporting. Panning moves the
+   viewport — not node transforms — so this never lags during drag. */
+.react-flow__node {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+    .react-flow__node {
+        transition: none;
+    }
+}
+
 /* ── SweetAlert2 above Radix dialogs ─────────────────────────────────────── */
 /* Radix modal dialogs (Sheet/Dialog) set pointer-events:none on <body> and only
    re-enable it inside their own content. SweetAlert is portalled to <body>, so
