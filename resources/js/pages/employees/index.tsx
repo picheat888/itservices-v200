@@ -5,6 +5,7 @@ import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
 import { PositionModal } from '@/components/employees/position-modal';
 import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
+import { SectionsTab } from '@/components/employees/sections-tab';
 import { PositionLevelPreview } from '@/components/employees/position-level-preview';
 import { ResignModal } from '@/components/employees/resign-modal';
 import { ResetPasswordModal } from '@/components/employees/reset-password-modal';
@@ -28,7 +29,7 @@ import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound,
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'orgchart'] as const;
+const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 /** Read the initial tab from the URL (?tab=) so a reload stays on the same tab. */
@@ -119,6 +120,7 @@ export default function EmployeesPage() {
         { id: 'directory', label: t('sub_directory'), count: summary?.total },
         { id: 'departments', label: t('sub_departments') },
         { id: 'positions', label: t('sub_positions') },
+        { id: 'sections', label: t('sub_sections') },
         { id: 'orgchart', label: t('sub_org_chart') },
     ];
 
@@ -309,6 +311,8 @@ export default function EmployeesPage() {
                     </div>
                 </div>
             )}
+
+            {tab === 'sections' && <SectionsTab canManage={canManageOrg} />}
 
             {tab === 'orgchart' && <OrgChartTab />}
                 </div>
