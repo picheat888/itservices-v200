@@ -57,20 +57,24 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                 </div>
             </div>
 
-            <div className="mt-[11px] flex items-center justify-between">
-                <span
-                    className="rounded-md px-2 py-0.5 font-mono text-[10.5px] font-semibold tracking-wide"
-                    style={{
-                        color: d.color,
-                        backgroundColor: `color-mix(in oklch, ${d.color} 14%, var(--card))`,
-                    }}
-                >
-                    {d.department_code ?? d.department ?? '—'}
-                </span>
+            <div className="mt-[11px] flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                        title={d.department ?? undefined}
+                        className="shrink-0 rounded-md px-2 py-0.5 font-mono text-[10.5px] font-semibold tracking-wide"
+                        style={{
+                            color: d.color,
+                            backgroundColor: `color-mix(in oklch, ${d.color} 14%, var(--card))`,
+                        }}
+                    >
+                        {d.department_code ?? d.department ?? '—'}
+                    </span>
+                    {d.level != null && <span className="shrink-0 font-mono text-[10.5px] font-medium text-muted-foreground">Lv {d.level}</span>}
+                </div>
                 {d.reports_count > 0 ? (
-                    <span className="font-mono text-[11px] font-semibold text-foreground/75">{d.reports_count} ↳</span>
+                    <span className="shrink-0 font-mono text-[11px] font-semibold text-foreground/75">{d.reports_count} ↳</span>
                 ) : (
-                    <span className="font-mono text-[11px] font-medium text-muted-foreground/80">IC</span>
+                    <span className="shrink-0 font-mono text-[11px] font-medium text-muted-foreground/80">IC</span>
                 )}
             </div>
 
