@@ -4,16 +4,16 @@
 
 ## Goal
 
-Replace the demo org data with the user's real structure: 11 departments, 26 sections, a 14-rung position ladder (1 = smallest, 14 = largest), and ~30 demo employees wired into a single reporting tree topped by one company-wide VP — so the approval chain (climb `manager_id` to the VP ceiling) is demonstrable across all 14 levels. Also widen the position-level cap from 10 → 14 in the app.
+Replace the demo org data with the user's real structure: 11 departments, 26 sections, a 14-rung position ladder (1 = smallest, 14 = largest), and ~30 demo employees wired into a single reporting tree topped by one company-wide VP. The approval chain now simply climbs `manager_id` from any employee up to that VP (no position-level ceiling) — demonstrable across the full ladder. Also widen the position-level cap from 10 → 14 (a display attribute only).
 
 ## Decisions
 
 | Topic | Decision |
 |-------|----------|
-| Position level cap | 10 → **14** (`StorePositionRequest` max, and the level-picker buttons) |
-| Approval ceiling | `approval_ceiling_level = 14` (Vice President) |
+| Approval chain logic | **Changed** — climb `manager_id` from the employee up to the root, collecting every manager. `position.level` is NOT used; missing intermediate ranks are simply skipped (whoever the actual manager is, is the next link). |
+| Approval ceiling | **Removed entirely** — the `approval_ceiling_level` setting, its Settings UI card, its endpoints, and the level-based stop in `ApprovalChainService` are all deleted. The chain ends naturally at the root (VP, `manager_id` = null). |
+| Position level | Kept as a **display/ordering attribute only** (1–14 on the node card); no longer drives the chain. Cap widened 10 → 14 (`StorePositionRequest` max + level-picker buttons). |
 | VP affiliation | VP has **no department / no section** (`department_id` & `section_id` = null), `manager_id` = null — top of the tree |
-| Chain | Each employee → their head via `manager_id`; climbs to the VP. No logic change (`ApprovalChainService` already does this) |
 | Employee demo | **Rich set (~30)**: one full L1→L14 ladder in Production + breadth across the other departments |
 | Apply | `php artisan migrate:fresh --seed` (wipes + reseeds; demo data, reset is intended) |
 | Department `code` | already renamed to `tag` (prior work) — seeders use `tag` |
@@ -89,21 +89,32 @@ Covers all 11 departments, most sections, and a complete 1→14 ladder (EMP-0014
 
 ## Architecture / files
 
+**Approval chain logic (changed) + ceiling removal:**
+- **`ApprovalChainService`**: simplify `chainFor()` to climb `manager_id` from the employee to the root, collecting each manager (keep the cycle/seen-set guard). Delete `ceilingLevel()` and all `position.level` / `approval_ceiling_level` references.
+- **`SettingsController`**: remove `approval()` + `updateApproval()` (and the `approvalPayload()` helper).
+- **`routes/api.php`**: remove `GET|PUT settings/approval`.
+- **Settings UI** (`resources/js/pages/settings/index.tsx` + `resources/js/services/settingsApi.ts`): remove the "Approval ceiling" card, `getApproval`/`updateApproval`, the `ApprovalSettings` type, and its query.
+- **i18n** (`resources/js/lib/i18n.ts`): remove `set_approval*` keys (the ceiling card's labels).
+- **`AppSetting`**: no migration needed — `approval_ceiling_level` is a row in the existing key/value `app_settings` table; it simply stops being written/read (a stale row is harmless, and a fresh seed won't create it).
+
+**Position level cap 10 → 14 (display attribute):**
 - **`StorePositionRequest`**: `'level' => [..., 'max:14']` (was 10).
 - **`position-modal.tsx`**: level buttons `Array.from({ length: 14 })` (was 10).
-- **`OrgSeeder`** (rewrite): seed the 11 departments (by `tag`), 14 positions (`code` P-01…P-14 + `level`), 26 sections (per department), and the ~30 employees above with `department_id`/`section_id`/`position_id`/`manager_id`. Keep it idempotent by `tag`/`code` where practical, but a fresh seed is the supported path.
-- **`ApprovalChainDemoSeeder`** (remove): the manager tree + position levels are now wired directly in `OrgSeeder`, and `OrgSeeder` sets `approval_ceiling_level = 14`. Delete `ApprovalChainDemoSeeder` and remove its call from `DatabaseSeeder` so there is a single source of the demo org.
-- **No change** to `ApprovalChainService`, the org chart, or the section/department features.
+
+**Demo seeder rewrite:**
+- **`OrgSeeder`** (rewrite): seed the 11 departments (by `tag`), 14 positions (`code` P-01…P-14 + `level` 1–14), 26 sections (per department), and the ~30 employees above with `department_id`/`section_id`/`position_id`/`manager_id` forming the VP-topped tree. A fresh seed is the supported path.
+- **`ApprovalChainDemoSeeder`** (remove): manager tree + levels are wired directly in `OrgSeeder`; there is no ceiling to set. Delete the file and its call in `DatabaseSeeder`.
+- **No change** to the org chart or the section/department features.
 
 ## Testing
 
-- `ApprovalChainTest` (existing) uses `positionAt(level)` up to 5 — still valid under max 14; must keep passing.
-- Add/keep a check that the level cap is 14: a `StorePositionRequest`-level test (or assert via the positions API) that level 14 is accepted and 15 rejected.
+- **`ApprovalChainTest` (rewrite):** delete the ceiling-based tests (`*_stops_at_the_ceiling`, `*_without_level_does_not_stop_the_climb`, `*_updates_approval_ceiling_level`, `*_approval_ceiling_requires_permission`, and any test hitting `/settings/approval`). Keep/adjust: chain climbs through every manager up to the root (e.g. staff → leader → supervisor → manager → VP returns all four, regardless of levels); empty chain when no manager; cycle-safe (no infinite loop). The endpoint `GET /employees/{id}/approval-chain` and its auth/permission tests stay.
+- **Position level cap:** assert via the positions API (or `StorePositionRequest`) that level 14 is accepted and 15 rejected.
 - **Cross-seeder smoke (important):** `php artisan migrate:fresh --seed` must complete cleanly — the other demo seeders (Avatar/Contract/MasterData/Stock/Asset/Ticket/Mail/EmailTemplate) must not depend on removed employee codes or old department tags. Verify and adjust any that reference specific old codes (`EMP-104x`) or old dept tags (`IT`, `PRD`, …).
 - Frontend: `tsc --noEmit` + `npm run build`.
 
 ## Out of scope
 
 - Org-chart visual changes (already done; works off `manager_id`).
-- Any approval-chain logic change (already climbs to the configured ceiling).
 - Real (non-demo) data migration — this replaces demo data only.
+- Dropping the `positions.level` column — level stays as a display/ordering attribute, just unused by the chain.
