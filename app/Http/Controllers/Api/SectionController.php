@@ -35,7 +35,7 @@ class SectionController extends Controller
         $section = Section::create($request->validated());
         AuditLog::record('Created section', $section->name);
 
-        return (new SectionResource($section->load('department')))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     /**
@@ -47,7 +47,7 @@ class SectionController extends Controller
         $section->update($request->validated());
         AuditLog::record('Updated section', $section->name, AuditLog::changes($before, $section));
 
-        return (new SectionResource($section->load('department')))->additional(['message' => 'success'])->response();
+        return (new SectionResource($section->load('department')->loadCount('employees')))->additional(['message' => 'success'])->response();
     }
 
     /**
