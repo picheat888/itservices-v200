@@ -13,9 +13,9 @@ interface OrgStats {
 /** Lightweight person record for the search suggestion list. */
 export interface OrgPerson {
     id: number;
-    label: string;
+    nameEn: string;
+    nameTh: string | null;
     code: string;
-    dept: string;
     color: string;
     /** Lowercased haystack across both languages + code/title/dept (UI-language independent). */
     search: string;
@@ -73,13 +73,7 @@ export function OrgChartToolbar({
     return (
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
             {/* Stats */}
-            <div className="flex items-stretch">
-                {stat(stats.total, t('org_total'))}
-                <span className="my-1 w-px bg-border" />
-                {stat(stats.levels, t('org_levels'))}
-                <span className="my-1 w-px bg-border" />
-                {stat(stats.managers, t('org_managers'))}
-            </div>
+            <div className="flex items-stretch">{stat(stats.total, t('org_total'))}</div>
 
             <div className="ml-auto flex flex-wrap items-center gap-2">
                 {/* Search with suggestion dropdown */}
@@ -137,8 +131,11 @@ export function OrgChartToolbar({
                                         className={cn('flex w-full items-center gap-2 px-3 py-1.5 text-left', i === active ? 'bg-accent' : 'hover:bg-accent')}
                                     >
                                         <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color }} />
-                                        <span className="truncate text-[12.5px] font-medium text-foreground">{p.label}</span>
-                                        <span className="ml-auto shrink-0 font-mono text-[10.5px] text-muted-foreground">{p.code}</span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="truncate text-[12.5px] font-medium text-foreground">{p.nameEn}</div>
+                                            {p.nameTh && <div className="truncate text-[11px] text-muted-foreground">{p.nameTh}</div>}
+                                        </div>
+                                        <span className="shrink-0 self-center font-mono text-[10.5px] text-muted-foreground">{p.code}</span>
                                     </button>
                                 </li>
                             ))}
