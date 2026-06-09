@@ -25,10 +25,17 @@ import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
 import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound, Layers, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-type Tab = 'dashboard' | 'directory' | 'positions' | 'departments' | 'orgchart';
+const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'orgchart'] as const;
+type Tab = (typeof TAB_IDS)[number];
+
+/** Read the initial tab from the URL (?tab=) so a reload stays on the same tab. */
+function initialTab(): Tab {
+    const p = new URLSearchParams(window.location.search).get('tab');
+    return (TAB_IDS as readonly string[]).includes(p ?? '') ? (p as Tab) : 'dashboard';
+}
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -49,7 +56,7 @@ export default function EmployeesPage() {
     const canCancelResign = perms.includes('employees.cancel_resign') || role === 'super';
     const canSetCredentials = perms.includes('employees.set_credentials') || role === 'super';
 
-    const [tab, setTab] = useState<Tab>('dashboard');
+    const [tab, setTab] = useState<Tab>(initialTab);
     const { data: summary } = useEmployeeSummary();
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
@@ -81,6 +88,22 @@ export default function EmployeesPage() {
     useEffect(() => {
         if (highlightId) setTab('directory');
     }, [highlightId]);
+
+    // Switch tab and remember it in the URL (?tab=) so a reload stays put.
+    const changeTab = useCallback(
+        (next: Tab) => {
+            setTab(next);
+            setSearchParams(
+                (prev) => {
+                    const sp = new URLSearchParams(prev);
+                    sp.set('tab', next);
+                    return sp;
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
 
     useEffect(() => {
         if (highlighted) {
@@ -163,7 +186,7 @@ export default function EmployeesPage() {
                     {tabs.map((tb) => (
                         <button
                             key={tb.id}
-                            onClick={() => setTab(tb.id)}
+                            onClick={() => changeTab(tb.id)}
                             className={cn(
                                 '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
                                 tab === tb.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
