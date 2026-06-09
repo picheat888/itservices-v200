@@ -2,7 +2,7 @@ import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor, layoutGraph, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
 import type { OrgChartNode } from '@/types';
-import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
+import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OrgChartToolbar } from './org-chart-toolbar';
@@ -96,13 +96,17 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         return { rfNodes: layoutGraph(nodes, flowEdges, dir), rfEdges: flowEdges };
     }, [data, visibleIds, edges, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
 
-    // Fit the whole tree, then nudge the view up so the chart sits higher than dead-centre.
+    // Fit the whole tree in one smooth motion, sitting a bit higher than dead-centre.
+    // Trick: pad extra space onto the bottom of the bounds so centring that taller
+    // box lifts the real content upward — a single animation, no two-step jump.
     const runFit = useCallback(() => {
-        rf.fitView({ padding: 0.16, duration: 320 });
-        window.setTimeout(() => {
-            const vp = rf.getViewport();
-            rf.setViewport({ x: vp.x, y: vp.y - 60, zoom: vp.zoom }, { duration: 180 });
-        }, 340);
+        const nodes = rf.getNodes();
+        if (nodes.length === 0) {
+            return;
+        }
+        const b = getNodesBounds(nodes);
+        const lifted = { x: b.x, y: b.y, width: b.width, height: b.height + Math.max(90, b.height * 0.28) };
+        rf.fitBounds(lifted, { padding: 0.12, duration: 360 });
     }, [rf]);
 
     // Refit when the visible structure or orientation changes.
