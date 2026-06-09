@@ -196,9 +196,9 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         proOptions={{ hideAttribution: true }}
                     >
                         <Background gap={22} size={1.4} color="var(--oc-dot)" />
-                        <Controls showInteractive={false} position="bottom-left" />
+                        <Controls showInteractive={false} position="bottom-right" />
                         <MiniMap
-                            position="bottom-right"
+                            position="bottom-left"
                             pannable
                             zoomable
                             nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
