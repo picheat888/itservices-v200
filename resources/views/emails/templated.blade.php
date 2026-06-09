@@ -87,10 +87,10 @@
 
                     {{-- Content card (border for Outlook; radius/shadow for modern) --}}
                     <tr>
-                        <td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:14px;">
+                        <td bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                                 <tr>
-                                    <td bgcolor="#2563eb" height="4" style="background-color:#2563eb;height:4px;line-height:4px;font-size:4px;border-radius:14px 14px 0 0;">&nbsp;</td>
+                                    <td bgcolor="#2563eb" height="10" style="background-color:#2563eb;height:10px;line-height:10px;font-size:10px;border-radius:14px 14px 0 0;">&nbsp;</td>
                                 </tr>
                                 <tr>
                                     <td class="px" style="padding:26px 34px 6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:23px;color:#334155;mso-line-height-rule:exactly;">
