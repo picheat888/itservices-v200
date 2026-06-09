@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Resources\ApproverNodeResource;
 use App\Http\Resources\EmployeeResource;
+use App\Http\Resources\OrgChartNodeResource;
 use App\Models\AuditLog;
 use App\Models\Employee;
 use App\Models\User;
@@ -220,6 +222,25 @@ class EmployeeController extends Controller
     public function show(Employee $employee): JsonResponse
     {
         return (new EmployeeResource($employee->load(['department', 'position'])))->response();
+    }
+
+    /**
+     * Returns active employees as a flat list of org-chart nodes (resigned
+     * excluded). The frontend assembles the reporting forest from manager_id;
+     * reports_count is the number of active direct reports.
+     */
+    public function orgChart(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        $employees = Employee::query()
+            ->where('status', EmployeeStatus::Active)
+            ->with(['position', 'department'])
+            ->withCount(['subordinates as reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)])
+            ->orderBy('name')
+            ->get();
+
+        return OrgChartNodeResource::collection($employees)->additional(['message' => 'success'])->response();
     }
 
     /** Returns the employee's approval chain (direct manager first, up to the VP ceiling). */
