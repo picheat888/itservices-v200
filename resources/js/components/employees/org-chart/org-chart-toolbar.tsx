@@ -17,6 +17,8 @@ export interface OrgPerson {
     code: string;
     dept: string;
     color: string;
+    /** Lowercased haystack across both languages + code/title/dept (UI-language independent). */
+    search: string;
 }
 
 /**
@@ -57,7 +59,7 @@ export function OrgChartToolbar({
         if (!q) {
             return [];
         }
-        return people.filter((p) => `${p.label} ${p.code} ${p.dept}`.toLowerCase().includes(q)).slice(0, 6);
+        return people.filter((p) => p.search.includes(q)).slice(0, 6);
     }, [q, people]);
     const active = suggestions.length ? Math.min(activeIndex, suggestions.length - 1) : 0;
 
