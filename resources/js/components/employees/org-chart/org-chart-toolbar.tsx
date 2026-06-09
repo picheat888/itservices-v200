@@ -84,6 +84,12 @@ export function OrgChartToolbar({
                         <input
                             value={query}
                             onChange={(e) => onQueryChange(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && suggestions.length > 0) {
+                                    e.preventDefault();
+                                    onPick(suggestions[0].id);
+                                }
+                            }}
                             placeholder={t('org_search_placeholder')}
                             className="w-44 min-w-0 border-none bg-transparent text-[12.5px] text-foreground outline-none placeholder:text-muted-foreground"
                         />

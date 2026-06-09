@@ -120,7 +120,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         (id: number) => {
             setSelectedId(id);
             setQuery('');
-            rf.fitView({ nodes: [{ id: String(id) }], duration: 500, maxZoom: 1.3, padding: 0.4 });
+            // Zoom right in on the picked person (1.6 = the chart's max zoom).
+            rf.fitView({ nodes: [{ id: String(id) }], duration: 520, minZoom: 1.6, maxZoom: 1.6, padding: 0.5 });
         },
         [rf],
     );
