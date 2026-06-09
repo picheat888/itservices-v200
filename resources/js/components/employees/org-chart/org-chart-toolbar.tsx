@@ -123,7 +123,7 @@ export function OrgChartToolbar({
                     </div>
 
                     {suggestions.length > 0 && (
-                        <ul className="absolute left-0 top-full z-20 mt-1 max-h-72 w-64 overflow-auto rounded-lg border border-border bg-card py-1 shadow-lg">
+                        <ul className="absolute left-0 top-full z-20 mt-1 max-h-72 w-full overflow-auto rounded-lg border border-border bg-card py-1 shadow-lg">
                             {suggestions.map((p, i) => (
                                 <li key={p.id}>
                                     <button
