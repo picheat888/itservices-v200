@@ -75,6 +75,7 @@ export interface OrgChartNode {
     title: string | null;
     level: number | null;
     department: string | null;
+    department_code: string | null;
     photo_url: string | null;
     manager_id: number | null;
     reports_count: number;

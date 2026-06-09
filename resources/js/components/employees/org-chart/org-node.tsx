@@ -3,7 +3,6 @@ import type { OrgFlowNode, OrgNodeData } from '@/lib/org-tree';
 import { NODE_W } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 
 /** Initials fallback when an employee has no photo. */
 function initials(name: string): string {
@@ -16,63 +15,83 @@ function initials(name: string): string {
 }
 
 /**
- * One person card in the org chart. Top handle receives the edge from the
- * manager; bottom handle feeds edges to reports. The report-count pill is the
- * collapse/expand toggle. Single click focuses; double click is reserved for
- * the future per-person Details view.
+ * One person card in the org chart, styled to the approved design: a
+ * department-coloured accent bar + avatar, name/title, and a foot row with the
+ * department code pill and either a "{n} ↳" report count or an "IC" badge for
+ * individual contributors. Managers get a floating +/– collapse toggle. Handles
+ * follow the chart direction so connectors enter/leave the right edges.
  */
 export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     const d = data as OrgNodeData;
+    const vertical = d.dir === 'TB';
+    const targetPos = vertical ? Position.Top : Position.Left;
+    const sourcePos = vertical ? Position.Bottom : Position.Right;
 
     return (
         <div
             className={cn(
-                'rounded-xl border bg-card p-3 shadow-sm transition-shadow hover:shadow-md',
-                d.highlighted ? 'border-brand ring-2 ring-brand/40' : 'border-border',
+                'relative cursor-pointer rounded-[13px] border bg-card pt-[13px] pr-[15px] pb-3 pl-[18px] shadow-md transition-all duration-150 hover:-translate-y-px hover:shadow-lg',
+                d.selected ? 'border-brand ring-[3px] ring-brand/20' : 'border-border',
+                d.isRoot && !d.selected && 'shadow-lg ring-1 ring-input',
+                d.dimmed && 'opacity-30 saturate-[.55]',
             )}
             style={{ width: NODE_W }}
             onClick={() => d.onFocus(d.id)}
         >
-            <Handle type="target" position={Position.Top} className="!bg-border" />
+            <Handle type="target" position={targetPos} className="!h-1.5 !w-1.5 !border-0 !bg-transparent !opacity-0" />
 
-            <div className="flex items-center gap-2.5">
-                <div className="relative shrink-0">
-                    <Avatar className="h-10 w-10">
-                        {d.photo_url && <AvatarImage src={d.photo_url} alt={d.name} />}
-                        <AvatarFallback className="bg-brand/10 text-brand text-xs font-semibold">{initials(d.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-emerald-500" />
-                </div>
+            {/* Department accent bar */}
+            <span aria-hidden className="absolute inset-y-0 left-0 w-[5px] rounded-l-[13px]" style={{ backgroundColor: d.color }} />
+
+            <div className="flex items-center gap-[11px]">
+                <Avatar className="h-[38px] w-[38px] shrink-0 ring-2 ring-inset ring-white/20" style={{ backgroundColor: d.color }}>
+                    {d.photo_url && <AvatarImage src={d.photo_url} alt={d.name} />}
+                    <AvatarFallback className="bg-transparent text-[13px] font-bold text-white">{initials(d.name)}</AvatarFallback>
+                </Avatar>
                 <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold leading-tight">
+                    <div className={cn('truncate font-bold leading-tight tracking-tight text-foreground', d.isRoot ? 'text-[15px]' : 'text-sm')}>
                         {d.name}
                         {d.name_th && <span className="ml-1 font-normal text-muted-foreground">· {d.name_th}</span>}
                     </div>
-                    <div className="truncate text-xs text-muted-foreground">{d.title ?? '—'}</div>
+                    <div className="truncate text-[11.5px] text-muted-foreground">{d.title ?? '—'}</div>
                 </div>
             </div>
 
-            <div className="mt-2.5 flex items-center justify-between border-t border-border pt-2 text-[11px] text-muted-foreground">
-                <span className="truncate">
-                    {d.department ?? '—'}
-                    {d.level != null && <span className="ml-1 font-mono">· Lv {d.level}</span>}
+            <div className="mt-[11px] flex items-center justify-between">
+                <span
+                    className="rounded-md px-2 py-0.5 font-mono text-[10.5px] font-semibold tracking-wide"
+                    style={{
+                        color: d.color,
+                        backgroundColor: `color-mix(in oklch, ${d.color} 14%, var(--card))`,
+                    }}
+                >
+                    {d.department_code ?? d.department ?? '—'}
                 </span>
-                {d.hasReports && (
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            d.onToggle(d.id);
-                        }}
-                        className="ml-2 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand/10 px-2 py-0.5 font-mono font-semibold text-brand hover:bg-brand/20"
-                    >
-                        {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                        {d.reports_count}
-                    </button>
+                {d.reports_count > 0 ? (
+                    <span className="font-mono text-[11px] font-semibold text-foreground/75">{d.reports_count} ↳</span>
+                ) : (
+                    <span className="font-mono text-[11px] font-medium text-muted-foreground/80">IC</span>
                 )}
             </div>
 
-            <Handle type="source" position={Position.Bottom} className="!bg-border" />
+            {d.hasReports && (
+                <button
+                    type="button"
+                    title={d.collapsed ? 'Expand' : 'Collapse'}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        d.onToggle(d.id);
+                    }}
+                    className={cn(
+                        'absolute -bottom-[11px] left-1/2 z-10 grid h-[22px] min-w-[22px] -translate-x-1/2 place-items-center rounded-full border bg-card px-2 font-mono text-[11px] font-bold shadow-sm transition-colors',
+                        d.collapsed ? 'border-brand text-brand' : 'border-input text-muted-foreground hover:border-brand hover:bg-brand/10 hover:text-brand',
+                    )}
+                >
+                    {d.collapsed ? `+${d.reports_count}` : '–'}
+                </button>
+            )}
+
+            <Handle type="source" position={sourcePos} className="!h-1.5 !w-1.5 !border-0 !bg-transparent !opacity-0" />
         </div>
     );
 }

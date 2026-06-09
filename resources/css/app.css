@@ -87,6 +87,10 @@
     --brand: #2563eb;
     --brand-foreground: #ffffff;
 
+    /* Org chart canvas — connector + dotted background */
+    --oc-edge: #c2cdda;
+    --oc-dot: #dde4ee;
+
     /* Density tokens — driven by [data-density] */
     --row-py: 0.625rem;
     --row-px: 0.875rem;
@@ -131,6 +135,9 @@
 .dark {
     --brand: #3b82f6;
     --brand-foreground: #ffffff;
+
+    --oc-edge: #33425f;
+    --oc-dot: #2b3a55;
 
     --background: hsl(222, 24%, 10%);
     --content: hsl(222, 28%, 7%);
@@ -322,4 +329,12 @@
     tr {
         break-inside: avoid;
     }
+}
+
+/* ── SweetAlert2 above Radix dialogs ─────────────────────────────────────── */
+/* Radix modal dialogs (Sheet/Dialog) set pointer-events:none on <body> and only
+   re-enable it inside their own content. SweetAlert is portalled to <body>, so
+   without this override its buttons are unclickable while a drawer is open. */
+.swal2-container {
+    pointer-events: auto;
 }
