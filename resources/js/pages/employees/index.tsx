@@ -4,6 +4,8 @@ import { DepartmentMembersDrawer } from '@/components/employees/department-membe
 import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
 import { PositionModal } from '@/components/employees/position-modal';
+import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
+import { PositionLevelPreview } from '@/components/employees/position-level-preview';
 import { ResignModal } from '@/components/employees/resign-modal';
 import { ResetPasswordModal } from '@/components/employees/reset-password-modal';
 import { SetCredentialsModal } from '@/components/employees/set-credentials-modal';
@@ -22,11 +24,11 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
+import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound, Layers, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-type Tab = 'dashboard' | 'directory' | 'positions' | 'departments';
+type Tab = 'dashboard' | 'directory' | 'positions' | 'departments' | 'orgchart';
 
 function initials(name: string) {
     return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -61,6 +63,7 @@ export default function EmployeesPage() {
     const [credEmp, setCredEmp] = useState<Employee | null>(null);
     const [editPos, setEditPos] = useState<Position | null>(null);
     const [posModalOpen, setPosModalOpen] = useState(false);
+    const [posPreviewOpen, setPosPreviewOpen] = useState(false);
     const [editDept, setEditDept] = useState<Department | null>(null);
     const [deptModalOpen, setDeptModalOpen] = useState(false);
     const [viewDept, setViewDept] = useState<Department | null>(null);
@@ -93,6 +96,7 @@ export default function EmployeesPage() {
         { id: 'directory', label: t('sub_directory'), count: summary?.total },
         { id: 'departments', label: t('sub_departments') },
         { id: 'positions', label: t('sub_positions') },
+        { id: 'orgchart', label: t('sub_org_chart') },
     ];
 
     const posColumns: Column<Position>[] = [
@@ -196,19 +200,25 @@ export default function EmployeesPage() {
 
             {tab === 'positions' && (
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                         <span className="text-sm text-muted-foreground">{t('pos_all_org')}</span>
-                        {canManageOrg && (
-                            <Button
-                                onClick={() => {
-                                    setEditPos(null);
-                                    setPosModalOpen(true);
-                                }}
-                            >
-                                <Plus className="h-4 w-4" />
-                                {t('add_position')}
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" onClick={() => setPosPreviewOpen(true)}>
+                                <Layers className="h-4 w-4" />
+                                {t('pos_level_preview')}
                             </Button>
-                        )}
+                            {canManageOrg && (
+                                <Button
+                                    onClick={() => {
+                                        setEditPos(null);
+                                        setPosModalOpen(true);
+                                    }}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    {t('add_position')}
+                                </Button>
+                            )}
+                        </div>
                     </div>
                     <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} />
                 </div>
@@ -265,12 +275,7 @@ export default function EmployeesPage() {
                                 <button onClick={() => setViewDept(d)} className="mt-3 block text-left text-base font-semibold hover:text-brand">
                                     {lang === 'th' ? d.name_th ?? d.name : d.name}
                                 </button>
-                                <div className="text-xs text-muted-foreground">{d.location}</div>
                                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
-                                    <span className="text-muted-foreground">{t('dept_head')}</span>
-                                    <span className="font-medium">{d.head ?? '—'}</span>
-                                </div>
-                                <div className="mt-1.5 flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">{t('dept_members')}</span>
                                     <button onClick={() => setViewDept(d)} className="font-mono font-semibold text-brand">
                                         {d.count ?? 0}
@@ -281,6 +286,8 @@ export default function EmployeesPage() {
                     </div>
                 </div>
             )}
+
+            {tab === 'orgchart' && <OrgChartTab />}
                 </div>
             </Card>
 
@@ -335,6 +342,7 @@ export default function EmployeesPage() {
                 onClose={() => setCredEmp(null)}
             />
             <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} />
+            <PositionLevelPreview open={posPreviewOpen} onClose={() => setPosPreviewOpen(false)} positions={positions} />
             <DepartmentModal open={deptModalOpen} onClose={() => setDeptModalOpen(false)} department={editDept} />
             <DepartmentMembersDrawer department={viewDept} onClose={() => setViewDept(null)} />
         </div>
