@@ -48,6 +48,15 @@ export interface Department {
     count?: number;
 }
 
+export interface Section {
+    id: number;
+    department_id: number;
+    name: string;
+    name_th: string | null;
+    department?: string;
+    members_count?: number;
+}
+
 export interface Position {
     id: number;
     code: string;
@@ -97,6 +106,9 @@ export interface Employee {
     manager_id: number | null;
     department: string | null;
     department_th: string | null;
+    section_id: number | null;
+    section: string | null;
+    section_th?: string | null;
     position: string | null;
     email: string | null;
     phone: string | null;
