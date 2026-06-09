@@ -31,7 +31,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
     return (
         <div
             className={cn(
-                'relative cursor-pointer rounded-[13px] border bg-card pt-[13px] pr-[15px] pb-3 pl-[18px] shadow-md transition-all duration-150 hover:-translate-y-px hover:shadow-lg',
+                'relative cursor-pointer overflow-hidden rounded-[13px] border bg-card pt-[13px] pr-[15px] pb-3 pl-[18px] shadow-md transition-all duration-150 hover:-translate-y-px hover:shadow-lg',
                 d.selected ? 'border-brand ring-[3px] ring-brand/20' : 'border-border',
                 d.isRoot && !d.selected && 'shadow-lg ring-1 ring-input',
                 d.dimmed && 'opacity-30 saturate-[.55]',
@@ -41,8 +41,8 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
         >
             <Handle type="target" position={targetPos} className="!h-1.5 !w-1.5 !border-0 !bg-transparent !opacity-0" />
 
-            {/* Department accent bar */}
-            <span aria-hidden className="absolute inset-y-0 left-0 w-[5px] rounded-l-[13px]" style={{ backgroundColor: d.color }} />
+            {/* Department accent bar — parent's overflow-hidden clips it to the card's rounded corners */}
+            <span aria-hidden className="absolute inset-y-0 left-0 w-[5px]" style={{ backgroundColor: d.color }} />
 
             <div className="flex items-center gap-[11px]">
                 <Avatar className="h-[38px] w-[38px] shrink-0 ring-2 ring-inset ring-white/20" style={{ backgroundColor: d.color }}>
