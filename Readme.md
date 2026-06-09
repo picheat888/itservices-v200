@@ -3,7 +3,7 @@
 ระบบ **IT Service Desk** สำหรับจัดการงาน IT ภายในองค์กร (Inaba Foods)
 พัฒนาด้วย **Laravel 12 + React 19 (SPA) + TypeScript + Tailwind CSS v4**
 
-> สถานะปัจจุบัน: **ถึง Phase-11** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups + Stock/Inventory (Items + Min/Max alerts + Dashboard + RBAC + Movements + Request workflow) + **Assets Management (Inventory + Dashboard + Transfer/Accept/Return + Bulk + Asset→Stock + Contract link)** + Org Approval Chain (foundation: manager tree → VP ceiling)
+> สถานะปัจจุบัน: **ถึง Phase-11** — Foundation + Employee + Settings + Permission (+ Admin protection) + Email + Contract & Rental (+ expiry alerts) + Master Data lookups + Stock/Inventory (Items + Min/Max alerts + Dashboard + RBAC + Movements + Request workflow) + **Assets Management (Inventory + Dashboard + Transfer/Accept/Return + Bulk + Asset→Stock + Contract link)** + Org Approval Chain (foundation: manager tree → VP ceiling) + Org Chart tab
 
 ---
 
@@ -642,6 +642,7 @@ npm run build
 - `employees.manager_id` (self-FK, nullable, `nullOnDelete`) เป็นต้นไม้รายงานตัวเดียว · `positions.level` (1–20) ใช้เป็น**ตัวทดสอบเพดาน VP เท่านั้น**
 - `ApprovalChainService::chainFor()` ไต่ `manager_id` จากผู้ยื่น เก็บหัวหน้าทีละชั้น (หัวหน้าตรงก่อน) จนถึงคนแรกที่ `position.level ≥ เพดาน` หรือถึงรากต้นไม้ — มี **guard กันวน (cycle)** ด้วย seen-set ขณะไต่
 - เพดานปรับได้ที่ Settings → Master Data (`approval_ceiling_level` ใน `app_settings`, default = ระดับสูงสุดที่มีอยู่); หัวหน้าที่ไม่มีตำแหน่ง (level 0) ไม่หยุดการไต่
+- **ลบฟิลด์ `departments.head` (Supervisor แบบ text) ออกแล้ว** (migration `drop_head_from_departments`) — เดิมเป็นแค่ป้ายแสดงผล ไม่เชื่อมกับ approval chain ทำให้ซ้ำซ้อน/สับสน; หัวหน้าทั้งหมดมาจาก `manager_id` แหล่งเดียว (ลบจาก Model/Resource/Request/Seeder + Department modal/การ์ด/types/i18n; test `DepartmentApiTest` คุมไว้)
 
 ### Backend
 - Migrations: `add_level_to_positions_table`, `add_manager_id_to_employees_table` (ปลอดภัยกับข้อมูลจริง — เพิ่ม column nullable, ไม่ reset)
@@ -663,6 +664,20 @@ npm run build
 - `manager_id` เป็น**ข้อมูลปฏิบัติการ** — admin กรอกเองผ่านช่องหัวหน้า (seeder ไม่แตะ) · หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
 
 **ตรวจสอบ**: `php artisan test` ApprovalChainTest 11 + EmployeeApiTest 3 ผ่าน · related suites (MasterData/SettingsPermissions/SettingsSection/EmployeeAccountLink) 60 ผ่าน · `tsc --noEmit` ✅ · `eslint` ✅ · `npm run build` ✅ · `vendor/bin/pint` ✅
+
+---
+
+## Org Chart (ผังองค์กร) — แท็บผังองค์กรแบบโต้ตอบ
+
+> spec: `docs/superpowers/specs/2026-06-09-org-chart-tab-design.md` · plan: `docs/superpowers/plans/2026-06-09-org-chart-tab.md`
+
+- แท็บใหม่ในหน้า Employees แสดงผังบังคับบัญชาจาก `employees.manager_id` แบบ **forest** (คนไม่มีหัวหน้า = ต้นไม้แยก), ซ่อนคนลาออกเสมอ
+- สร้างด้วย **React Flow (`@xyflow/react`) + `@dagrejs/dagre`** (layout บนลงล่าง) · node การ์ดละเอียด (รูป/ชื่อ EN+TH/ตำแหน่ง/แผนก/level/จำนวนลูกน้อง)
+- โต้ตอบ: scroll = zoom · ลาก = pan · คลิกการ์ด = โฟกัส/center · ป้ายจำนวนลูกน้อง = ยุบ/ขยายกิ่ง · ค้นหา = กระโดด+ไฮไลต์ · มี MiniMap + Controls
+- **Backend**: `GET /api/employees/org-chart` (gate `employees.view`, ตัด resigned, นับ `reports_count` เฉพาะลูกน้อง active) · `OrgChartNodeResource`
+- **Frontend**: `lib/org-tree.ts` (helper บริสุทธิ์ — forest / prune / dagre layout + cycle guard) · `components/employees/org-chart/*` (tab, node, toolbar) · `useOrgChart`
+- มุมมองโฟกัสรายคน (Design B) ถูก note ไว้สำหรับหน้า Details ในอนาคต (ดับเบิลคลิก node)
+- **ตรวจสอบ**: `OrgChartTest` 5 ผ่าน · `tsc` ✅ · `npm run build` ✅
 
 ---
 
