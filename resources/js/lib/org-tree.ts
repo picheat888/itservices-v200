@@ -1,6 +1,6 @@
 import type { OrgChartNode } from '@/types';
 import * as dagre from '@dagrejs/dagre';
-import type { Edge, Node } from '@xyflow/react';
+import type { Node } from '@xyflow/react';
 
 /** Fixed node box used for both rendering and dagre layout. */
 export const NODE_W = 244;
@@ -130,20 +130,28 @@ export function nodesWithReports(nodes: OrgChartNode[]): Set<number> {
 }
 
 /**
- * Position React Flow nodes with a dagre tree layout. `dir` controls the flow
- * direction: 'TB' (top-down, default) or 'LR' (left-to-right).
+ * Compute stable dagre positions for a set of nodes, keyed by numeric id.
+ * Lay out the FULL tree once (pass every id + every parent→child edge) so node
+ * positions stay fixed — collapsing a branch then just hides nodes and leaves a
+ * gap instead of re-packing the siblings left/right. `dir`: 'TB' or 'LR'.
  */
-export function layoutGraph(rfNodes: OrgFlowNode[], rfEdges: Edge[], dir: OrgDir = 'TB'): OrgFlowNode[] {
+export function layoutPositions(
+    ids: number[],
+    edges: { source: number; target: number }[],
+    dir: OrgDir = 'TB',
+): Map<number, { x: number; y: number }> {
     const g = new dagre.graphlib.Graph();
     g.setGraph({ rankdir: dir, nodesep: dir === 'TB' ? 36 : 24, ranksep: dir === 'TB' ? 84 : 110 });
     g.setDefaultEdgeLabel(() => ({}));
 
-    rfNodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
-    rfEdges.forEach((e) => g.setEdge(e.source, e.target));
+    ids.forEach((id) => g.setNode(String(id), { width: NODE_W, height: NODE_H }));
+    edges.forEach((e) => g.setEdge(String(e.source), String(e.target)));
     dagre.layout(g);
 
-    return rfNodes.map((n) => {
-        const p = g.node(n.id);
-        return { ...n, position: { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 } };
+    const positions = new Map<number, { x: number; y: number }>();
+    ids.forEach((id) => {
+        const p = g.node(String(id));
+        positions.set(id, { x: p.x - NODE_W / 2, y: p.y - NODE_H / 2 });
     });
+    return positions;
 }
