@@ -27,6 +27,11 @@ export function useApprovalChain(id: number | null) {
     });
 }
 
+/** Fetches the full org chart tree (all employees with manager relationships). */
+export function useOrgChart() {
+    return useQuery({ queryKey: ['org-chart'], queryFn: employeeApi.orgChart });
+}
+
 /** Paginated directory query — search and department filter are server-side. */
 export const useEmployeeDirectory = (params: { page: number; per_page: number; search: string; department_id: string; status: string }) =>
     useQuery({

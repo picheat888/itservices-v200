@@ -45,7 +45,6 @@ export interface Department {
     code: string;
     name: string;
     name_th: string | null;
-    head: string | null;
     count?: number;
 }
 
@@ -66,6 +65,19 @@ export interface ApproverNode {
     level: number | null;
     department: string | null;
     status: string;
+}
+
+export interface OrgChartNode {
+    id: number;
+    code: string;
+    name: string;
+    name_th: string | null;
+    title: string | null;
+    level: number | null;
+    department: string | null;
+    photo_url: string | null;
+    manager_id: number | null;
+    reports_count: number;
 }
 
 export interface LocationItem {
