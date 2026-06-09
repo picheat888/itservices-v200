@@ -63,6 +63,9 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 id: String(n.id),
                 type: 'orgNode',
                 position: { x: 0, y: 0 },
+                // Explicit dims so the MiniMap can draw each node's rect (it doesn't rely on DOM measurement).
+                width: NODE_W,
+                height: NODE_H,
                 data: {
                     ...n,
                     collapsed: collapsed.has(n.id),
