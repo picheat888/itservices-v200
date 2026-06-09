@@ -158,6 +158,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 code: n.code,
                 dept: n.department_code ?? n.department ?? '',
                 color: deptColor(n.department_code),
+                // Always searchable across both languages + code/title/dept, regardless of UI language.
+                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
             })),
         [data, lang],
     );
