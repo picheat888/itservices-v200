@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Employee extends Model
 {
     protected $fillable = [
-        'code', 'name', 'name_th', 'photo_path', 'department_id', 'position_id',
+        'code', 'name', 'name_th', 'photo_path', 'department_id', 'section_id', 'position_id',
         'manager_id', 'email', 'phone', 'username',
         'joined_at', 'status', 'resign_reason', 'last_day',
     ];
@@ -65,6 +65,12 @@ class Employee extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /** The section (หน่วยงาน) this employee belongs to, or null if unassigned. */
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
     }
 
     public function position(): BelongsTo
