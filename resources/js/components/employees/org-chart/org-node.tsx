@@ -3,6 +3,7 @@ import type { OrgFlowNode, OrgNodeData } from '@/lib/org-tree';
 import { NODE_W } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 /** Initials fallback when an employee has no photo. */
 function initials(name: string): string {
@@ -71,29 +72,23 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     </span>
                     {d.level != null && <span className="shrink-0 font-mono text-[10.5px] font-medium text-muted-foreground">Lv {d.level}</span>}
                 </div>
-                {d.reports_count > 0 ? (
-                    <span className="shrink-0 font-mono text-[11px] font-semibold text-foreground/75">{d.reports_count} ↳</span>
+                {d.hasReports ? (
+                    <button
+                        type="button"
+                        title={d.collapsed ? 'Expand' : 'Collapse'}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            d.onToggle(d.id);
+                        }}
+                        className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-brand/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-brand transition-colors hover:bg-brand/20"
+                    >
+                        {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        {d.reports_count}
+                    </button>
                 ) : (
                     <span className="shrink-0 font-mono text-[11px] font-medium text-muted-foreground/80">IC</span>
                 )}
             </div>
-
-            {d.hasReports && (
-                <button
-                    type="button"
-                    title={d.collapsed ? 'Expand' : 'Collapse'}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        d.onToggle(d.id);
-                    }}
-                    className={cn(
-                        'absolute -bottom-[11px] left-1/2 z-10 grid h-[22px] min-w-[22px] -translate-x-1/2 place-items-center rounded-full border bg-card px-2 font-mono text-[11px] font-bold shadow-sm transition-colors',
-                        d.collapsed ? 'border-brand text-brand' : 'border-input text-muted-foreground hover:border-brand hover:bg-brand/10 hover:text-brand',
-                    )}
-                >
-                    {d.collapsed ? `+${d.reports_count}` : '–'}
-                </button>
-            )}
 
             <Handle type="source" position={sourcePos} className="!h-1.5 !w-1.5 !border-0 !bg-transparent !opacity-0" />
         </div>
