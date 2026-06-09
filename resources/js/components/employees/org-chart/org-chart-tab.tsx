@@ -109,7 +109,9 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         rf.fitBounds(lifted, { padding: 0.12, duration: 360 });
     }, [rf]);
 
-    // Refit when the visible structure or orientation changes.
+    // Refit only when the orientation flips — NOT on every single collapse, which
+    // would yank the camera around. Individual node collapses keep the current view
+    // (cards glide via CSS); collapse-all and the Fit button refit explicitly.
     useEffect(() => {
         if (fitTimer.current) {
             clearTimeout(fitTimer.current);
@@ -120,12 +122,14 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 clearTimeout(fitTimer.current);
             }
         };
-    }, [dir, collapsed, runFit]);
+    }, [dir, runFit]);
 
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
-    }, [withReports]);
+        // Big structural change → refit after the new layout is in place.
+        window.setTimeout(runFit, 90);
+    }, [withReports, runFit]);
 
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
