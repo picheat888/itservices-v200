@@ -11,7 +11,7 @@ import {
     type OrgNodeData,
 } from '@/lib/org-tree';
 import type { OrgChartNode } from '@/types';
-import { Background, Controls, MiniMap, Panel, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
+import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { OrgChartToolbar } from './org-chart-toolbar';
@@ -123,18 +123,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
 
     const fit = useCallback(() => rf.fitView({ padding: 0.16, duration: 320 }), [rf]);
 
-    // Distinct department legend (code → colour), in first-seen order.
-    const legend = useMemo(() => {
-        const seen: { code: string; color: string }[] = [];
-        for (const n of data) {
-            const code = n.department_code ?? n.department;
-            if (code && !seen.some((s) => s.code === code)) {
-                seen.push({ code, color: deptColor(n.department_code) });
-            }
-        }
-        return seen;
-    }, [data]);
-
     return (
         <div className="flex h-[74vh] flex-col overflow-hidden rounded-lg border border-border">
             <OrgChartToolbar
@@ -171,19 +159,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         nodeStrokeWidth={0}
                         style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
                     />
-                    {legend.length > 1 && (
-                        <Panel
-                            position="top-center"
-                            className="!m-2 flex max-w-[620px] flex-wrap items-center gap-3 rounded-lg border border-border bg-card/90 px-3 py-1.5 backdrop-blur"
-                        >
-                            {legend.map((d) => (
-                                <span key={d.code} className="flex items-center gap-1.5">
-                                    <i className="h-2.5 w-2.5 rounded-[3px]" style={{ background: d.color }} />
-                                    <span className="font-mono text-[10.5px] font-semibold tracking-wide text-muted-foreground">{d.code}</span>
-                                </span>
-                            ))}
-                        </Panel>
-                    )}
                 </ReactFlow>
             </div>
         </div>
