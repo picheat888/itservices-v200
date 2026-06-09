@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
-    protected $fillable = ['code', 'name', 'name_th', 'head', 'location'];
+    protected $fillable = ['code', 'name', 'name_th'];
 
     protected static function booted(): void
     {
@@ -27,5 +27,11 @@ class Department extends Model
     public function employees(): HasMany
     {
         return $this->hasMany(Employee::class);
+    }
+
+    /** Sections (หน่วยงาน) belonging to this department. */
+    public function sections(): HasMany
+    {
+        return $this->hasMany(Section::class);
     }
 }
