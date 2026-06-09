@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Employee;
+use App\Models\Section;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -37,6 +38,7 @@ class StoreEmployeeRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'name_th' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'exists:departments,id'],
+            'section_id' => ['nullable', 'exists:sections,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
             'manager_id' => ['nullable', 'exists:employees,id'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -56,6 +58,15 @@ class StoreEmployeeRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $v) {
+            // Validate that the chosen section belongs to the same department as the employee.
+            $sectionId = $this->input('section_id');
+            if (filled($sectionId)) {
+                $section = Section::find($sectionId);
+                if ($section && (int) $section->department_id !== (int) $this->input('department_id')) {
+                    $v->errors()->add('section_id', 'The selected section is not in the chosen department.');
+                }
+            }
+
             $employee = $this->route('employee');
             $managerId = $this->input('manager_id');
             if (! $employee || blank($managerId)) {
