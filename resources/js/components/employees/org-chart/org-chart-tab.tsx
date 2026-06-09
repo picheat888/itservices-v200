@@ -144,7 +144,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 }
                 const x = node.position.x + (node.measured?.width ?? NODE_W) / 2;
                 const y = node.position.y + (node.measured?.height ?? NODE_H) / 2;
-                rf.setCenter(x, y, { zoom: 4, duration: 520 });
+                rf.setCenter(x, y, { zoom: 2.2, duration: 520 });
             }, 90);
         },
         [data, rf],
@@ -189,7 +189,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         fitView
                         fitViewOptions={{ padding: 0.16 }}
                         minZoom={0.28}
-                        maxZoom={4}
+                        maxZoom={2.5}
                         nodesDraggable={false}
                         nodesConnectable={false}
                         onPaneClick={() => setSelectedId(null)}
