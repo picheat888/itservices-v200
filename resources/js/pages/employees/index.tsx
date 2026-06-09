@@ -269,7 +269,7 @@ export default function EmployeesPage() {
                         {departments.map((d) => (
                             <Card key={d.id} className="p-4">
                                 <div className="flex items-start justify-between">
-                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{d.code}</span>
+                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{d.tag}</span>
                                     <div className="flex gap-1">
                                         <button onClick={() => setViewDept(d)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent">
                                             <Eye className="h-3.5 w-3.5" />
@@ -658,7 +658,7 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
                         {departments.map((d) => (
                             <div key={d.id} className="flex items-center justify-between py-2.5">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px]">{d.code}</span>
+                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
                                     <span className="text-sm">{lang === 'th' ? d.name_th ?? d.name : d.name}</span>
                                 </div>
                                 <span className="font-mono text-sm font-semibold">{d.count ?? 0}</span>

@@ -16,19 +16,19 @@ class OrgSeeder extends Seeder
     public function run(): void
     {
         $departments = [
-            ['code' => 'PRD', 'name' => 'Production', 'name_th' => 'ฝ่ายผลิต', 'head' => 'Krittin A.', 'location' => 'Plant 1 — Amata City Chonburi'],
-            ['code' => 'QA', 'name' => 'Quality Assurance', 'name_th' => 'ฝ่ายประกันคุณภาพ', 'head' => 'Suwanna P.', 'location' => 'Plant 1 — QA Lab'],
-            ['code' => 'OPS', 'name' => 'Operations', 'name_th' => 'ฝ่ายปฏิบัติการ', 'head' => 'Decha T.', 'location' => 'HQ Bangkok'],
-            ['code' => 'FIN', 'name' => 'Finance', 'name_th' => 'ฝ่ายการเงิน', 'head' => 'Nattaya P.', 'location' => 'HQ Bangkok'],
-            ['code' => 'LOG', 'name' => 'Logistics', 'name_th' => 'ฝ่ายโลจิสติกส์', 'head' => 'Manat B.', 'location' => 'Warehouse — Laem Chabang'],
-            ['code' => 'HR', 'name' => 'Human Resources', 'name_th' => 'ฝ่ายทรัพยากรบุคคล', 'head' => 'Siriporn C.', 'location' => 'HQ Bangkok'],
-            ['code' => 'IT', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ', 'head' => 'Krit S.', 'location' => 'HQ Bangkok'],
-            ['code' => 'SAL', 'name' => 'Sales', 'name_th' => 'ฝ่ายขาย', 'head' => 'Apinya R.', 'location' => 'HQ Bangkok'],
-            ['code' => 'ENG', 'name' => 'Engineering', 'name_th' => 'ฝ่ายวิศวกรรม', 'head' => 'Worawut K.', 'location' => 'Plant 1 — Amata City Chonburi'],
-            ['code' => 'RND', 'name' => 'R&D', 'name_th' => 'ฝ่ายวิจัยและพัฒนา', 'head' => 'Pichaya S.', 'location' => 'HQ Bangkok'],
+            ['tag' => 'PRD', 'name' => 'Production', 'name_th' => 'ฝ่ายผลิต'],
+            ['tag' => 'QA', 'name' => 'Quality Assurance', 'name_th' => 'ฝ่ายประกันคุณภาพ'],
+            ['tag' => 'OPS', 'name' => 'Operations', 'name_th' => 'ฝ่ายปฏิบัติการ'],
+            ['tag' => 'FIN', 'name' => 'Finance', 'name_th' => 'ฝ่ายการเงิน'],
+            ['tag' => 'LOG', 'name' => 'Logistics', 'name_th' => 'ฝ่ายโลจิสติกส์'],
+            ['tag' => 'HR', 'name' => 'Human Resources', 'name_th' => 'ฝ่ายทรัพยากรบุคคล'],
+            ['tag' => 'IT', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ'],
+            ['tag' => 'SAL', 'name' => 'Sales', 'name_th' => 'ฝ่ายขาย'],
+            ['tag' => 'ENG', 'name' => 'Engineering', 'name_th' => 'ฝ่ายวิศวกรรม'],
+            ['tag' => 'RND', 'name' => 'R&D', 'name_th' => 'ฝ่ายวิจัยและพัฒนา'],
         ];
         foreach ($departments as $d) {
-            Department::updateOrCreate(['code' => $d['code']], $d);
+            Department::updateOrCreate(['tag' => $d['tag']], $d);
         }
 
         $positions = [
@@ -49,7 +49,7 @@ class OrgSeeder extends Seeder
             Location::firstOrCreate(['name' => $name]);
         }
 
-        $deptId = Department::pluck('id', 'code');
+        $deptId = Department::pluck('id', 'tag');
         $posId = Position::pluck('id', 'title');
 
         $employees = [
@@ -147,13 +147,13 @@ class OrgSeeder extends Seeder
         $assigned = array_merge($assigned, $adminIds);
 
         // HR Team: HR-department employees not already placed.
-        $hrIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'HR'))
+        $hrIds = Employee::whereHas('department', fn ($q) => $q->where('tag', 'HR'))
             ->whereNotIn('id', $assigned)->pluck('id')->all();
         $hrTeam?->employees()->sync($hrIds);
         $assigned = array_merge($assigned, $hrIds);
 
         // IT Team: IT-department employees not already placed.
-        $itIds = Employee::whereHas('department', fn ($q) => $q->where('code', 'IT'))
+        $itIds = Employee::whereHas('department', fn ($q) => $q->where('tag', 'IT'))
             ->whereNotIn('id', $assigned)->pluck('id')->all();
         $itTeam?->employees()->sync($itIds);
         $assigned = array_merge($assigned, $itIds);

@@ -7,7 +7,7 @@ import { useT } from '@/lib/i18n';
 import type { Department } from '@/types';
 import { useEffect, useState } from 'react';
 
-const empty = { name: '', name_th: '', code: '' };
+const empty = { name: '', name_th: '', tag: '' };
 
 export function DepartmentModal({ open, onClose, department }: { open: boolean; onClose: () => void; department: Department | null }) {
     const t = useT();
@@ -20,7 +20,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
             setError(null);
             setForm(
                 department
-                    ? { name: department.name, name_th: department.name_th ?? '', code: department.code ?? '' }
+                    ? { name: department.name, name_th: department.name_th ?? '', tag: department.tag ?? '' }
                     : empty,
             );
         }
@@ -33,14 +33,14 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
         setError(null);
         // Blank code → omit it so the backend auto-generates one (its existing
         // behaviour); a typed code is sent through as a custom badge.
-        const payload = { name: form.name.trim(), name_th: form.name_th.trim() || null, code: form.code.trim() || undefined };
+        const payload = { name: form.name.trim(), name_th: form.name_th.trim() || null, tag: form.tag.trim() || undefined };
         try {
             if (department) await update.mutateAsync({ id: department.id, payload });
             else await create.mutateAsync(payload);
             onClose();
         } catch (e) {
             const res = (e as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response;
-            setError(res?.data?.errors?.code?.[0] ?? res?.data?.message ?? 'Save failed');
+            setError(res?.data?.errors?.tag?.[0] ?? res?.data?.message ?? 'Save failed');
         }
     };
 
@@ -61,8 +61,8 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                     </div>
                     <Field label={t('dept_code')} error={error ?? undefined}>
                         <Input
-                            value={form.code}
-                            onChange={(e) => set('code', e.target.value.toUpperCase())}
+                            value={form.tag}
+                            onChange={(e) => set('tag', e.target.value.toUpperCase())}
                             placeholder={t('dept_code_auto')}
                             className="font-mono uppercase"
                             maxLength={50}

@@ -34,8 +34,8 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
             departments.map((d) => ({
                 value: String(d.id),
                 label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
-                sub: d.code,
-                search: `${d.name} ${d.name_th ?? ''} ${d.code}`,
+                sub: d.tag,
+                search: `${d.name} ${d.name_th ?? ''} ${d.tag}`,
             })),
         [departments, lang],
     );
