@@ -1,7 +1,6 @@
 import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor, layoutGraph, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
-import { useUiStore } from '@/stores/ui';
 import type { OrgChartNode } from '@/types';
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -13,7 +12,6 @@ const nodeTypes = { orgNode: OrgNode };
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [dir, setDir] = useState<OrgDir>('TB');
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -154,14 +152,14 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         () =>
             data.map((n) => ({
                 id: n.id,
-                label: lang === 'th' ? (n.name_th ?? n.name) : n.name,
+                nameEn: n.name,
+                nameTh: n.name_th,
                 code: n.code,
-                dept: n.department_code ?? n.department ?? '',
                 color: deptColor(n.department_code),
                 // Always searchable across both languages + code/title/dept, regardless of UI language.
                 search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
             })),
-        [data, lang],
+        [data],
     );
 
     return (
