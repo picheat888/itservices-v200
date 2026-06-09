@@ -1,6 +1,7 @@
 import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor, layoutGraph, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
+import { useUiStore } from '@/stores/ui';
 import type { OrgChartNode } from '@/types';
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -12,6 +13,7 @@ const nodeTypes = { orgNode: OrgNode };
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [dir, setDir] = useState<OrgDir>('TB');
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -113,6 +115,28 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
 
     const fit = useCallback(() => rf.fitView({ padding: 0.16, duration: 320 }), [rf]);
 
+    // Jump to + highlight a person picked from the search suggestions.
+    const focusPerson = useCallback(
+        (id: number) => {
+            setSelectedId(id);
+            setQuery('');
+            rf.fitView({ nodes: [{ id: String(id) }], duration: 500, maxZoom: 1.3, padding: 0.4 });
+        },
+        [rf],
+    );
+
+    const people = useMemo(
+        () =>
+            data.map((n) => ({
+                id: n.id,
+                label: lang === 'th' ? (n.name_th ?? n.name) : n.name,
+                code: n.code,
+                dept: n.department_code ?? n.department ?? '',
+                color: deptColor(n.department_code),
+            })),
+        [data, lang],
+    );
+
     return (
         <div className="space-y-3">
             <div>
@@ -124,6 +148,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     stats={{ total: visibleIds.size, levels, managers: withReports.size }}
                     query={query}
                     onQueryChange={setQuery}
+                    people={people}
+                    onPick={focusPerson}
                     dir={dir}
                     onDirChange={setDir}
                     anyCollapsed={anyCollapsed}
