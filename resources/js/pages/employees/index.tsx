@@ -118,9 +118,9 @@ export default function EmployeesPage() {
     const tabs: { id: Tab; label: string; count?: number }[] = [
         { id: 'dashboard', label: t('sub_dashboard') },
         { id: 'directory', label: t('sub_directory'), count: summary?.total },
+        { id: 'sections', label: t('sub_sections') },
         { id: 'departments', label: t('sub_departments') },
         { id: 'positions', label: t('sub_positions') },
-        { id: 'sections', label: t('sub_sections') },
         { id: 'orgchart', label: t('sub_org_chart') },
     ];
 
