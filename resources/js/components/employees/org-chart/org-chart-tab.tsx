@@ -1,6 +1,6 @@
 import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import { deptColor, layoutGraph, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
+import { deptColor, layoutPositions, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
 import type { OrgChartNode } from '@/types';
 import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -18,19 +18,20 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const [query, setQuery] = useState('');
     const rf = useReactFlow();
     const fitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Anchoring: keep the just-toggled node fixed so collapsing a branch doesn't
-    // reshuffle the whole tree across the canvas. posRef = last rendered positions;
-    // anchorRef = the node id being toggled; offsetRef = translation applied to the
-    // raw dagre layout to hold the anchor in place (persists until the next reset).
-    const posRef = useRef<Map<string, { x: number; y: number }>>(new Map());
-    const anchorRef = useRef<string | null>(null);
-    const offsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     const withReports = useMemo(() => nodesWithReports(data), [data]);
     const roots = useMemo(() => rootIds(data), [data]);
 
+    // Lay out the FULL tree once per data/direction so positions are stable: a node
+    // keeps its spot no matter what's collapsed. Collapsing just hides a subtree and
+    // leaves its reserved gap — siblings never re-pack left/right.
+    const fullPositions = useMemo(() => {
+        const ids = data.map((n) => n.id);
+        const allEdges = visibleGraph(data, new Set<number>()).edges;
+        return layoutPositions(ids, allEdges, dir);
+    }, [data, dir]);
+
     const toggle = useCallback((id: number) => {
-        anchorRef.current = String(id);
         setCollapsed((prev) => {
             const next = new Set(prev);
             if (next.has(id)) {
@@ -70,7 +71,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             .map((n) => ({
                 id: String(n.id),
                 type: 'orgNode',
-                position: { x: 0, y: 0 },
+                position: fullPositions.get(n.id) ?? { x: 0, y: 0 },
                 // Explicit dims so the MiniMap can draw each node's rect (it doesn't rely on DOM measurement).
                 width: NODE_W,
                 height: NODE_H,
@@ -101,32 +102,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             };
         });
 
-        let positioned = layoutGraph(nodes, flowEdges, dir);
-
-        // If a node was just toggled, recompute the offset so that node stays exactly
-        // where it was on screen; the rest of the tree re-flows around it.
-        const anchorId = anchorRef.current;
-        if (anchorId) {
-            const prevFinal = posRef.current.get(anchorId);
-            const rawNow = positioned.find((n) => n.id === anchorId)?.position;
-            if (prevFinal && rawNow) {
-                offsetRef.current = { x: prevFinal.x - rawNow.x, y: prevFinal.y - rawNow.y };
-            }
-            anchorRef.current = null;
-        }
-
-        const off = offsetRef.current;
-        if (off.x !== 0 || off.y !== 0) {
-            positioned = positioned.map((n) => ({ ...n, position: { x: n.position.x + off.x, y: n.position.y + off.y } }));
-        }
-
-        // Remember the final positions for the next anchor calculation.
-        const map = new Map<string, { x: number; y: number }>();
-        positioned.forEach((n) => map.set(n.id, n.position));
-        posRef.current = map;
-
-        return { rfNodes: positioned, rfEdges: flowEdges };
-    }, [data, visibleIds, edges, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
+        return { rfNodes: nodes, rfEdges: flowEdges };
+    }, [data, visibleIds, edges, fullPositions, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
 
     // Fit the whole tree in one smooth motion, sitting a bit higher than dead-centre.
     // Trick: pad extra space onto the bottom of the bounds so centring that taller
@@ -156,15 +133,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         };
     }, [dir, runFit]);
 
-    // Flip direction — drop any anchor offset so the new orientation lays out + fits cleanly.
-    const changeDir = useCallback((d: OrgDir) => {
-        offsetRef.current = { x: 0, y: 0 };
-        setDir(d);
-    }, []);
-
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
-        offsetRef.current = { x: 0, y: 0 };
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
         // Big structural change → refit after the new layout is in place.
         window.setTimeout(runFit, 90);
@@ -173,7 +143,6 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
         (id: number) => {
-            offsetRef.current = { x: 0, y: 0 };
             // Expand any collapsed ancestors so the target is actually rendered.
             const byId = new Map(data.map((n) => [n.id, n]));
             const ancestors = new Set<number>();
@@ -234,7 +203,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     people={people}
                     onPick={focusPerson}
                     dir={dir}
-                    onDirChange={changeDir}
+                    onDirChange={setDir}
                     anyCollapsed={anyCollapsed}
                     onToggleAll={toggleAll}
                     onFit={runFit}
