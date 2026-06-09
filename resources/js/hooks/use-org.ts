@@ -1,4 +1,4 @@
-import { departmentApi, employeeApi, locationApi, positionApi, type EmployeePayload } from '@/services/orgApi';
+import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '@/services/orgApi';
 import type { Department, Position } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -112,6 +112,27 @@ export function useDepartmentMutations() {
         create: useMutation({ mutationFn: (p: Partial<Department>) => departmentApi.create(p), onSuccess: invalidate }),
         update: useMutation({ mutationFn: (v: { id: number; payload: Partial<Department> }) => departmentApi.update(v.id, v.payload), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => departmentApi.remove(id), onSuccess: invalidate }),
+    };
+}
+
+export function useSections(departmentId?: number | null) {
+    return useQuery({
+        queryKey: ['sections', departmentId ?? 'all'],
+        queryFn: () => sectionApi.list(departmentId),
+    });
+}
+
+export function useSectionMutations() {
+    const qc = useQueryClient();
+    const invalidate = () => {
+        qc.invalidateQueries({ queryKey: ['sections'] });
+        qc.invalidateQueries({ queryKey: EMP });
+        qc.invalidateQueries({ queryKey: ['employees-directory'] });
+    };
+    return {
+        create: useMutation({ mutationFn: (p: { department_id: number; name: string; name_th?: string | null }) => sectionApi.create(p), onSuccess: invalidate }),
+        update: useMutation({ mutationFn: (v: { id: number; payload: { department_id: number; name: string; name_th?: string | null } }) => sectionApi.update(v.id, v.payload), onSuccess: invalidate }),
+        remove: useMutation({ mutationFn: (id: number) => sectionApi.remove(id), onSuccess: invalidate }),
     };
 }
 
