@@ -42,7 +42,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
             <Handle type="target" position={targetPos} className="!h-1.5 !w-1.5 !border-0 !bg-transparent !opacity-0" />
 
             {/* Department accent bar — parent's overflow-hidden clips it to the card's rounded corners */}
-            <span aria-hidden className="absolute inset-y-0 left-0 w-[5px]" style={{ backgroundColor: d.color }} />
+            <span aria-hidden className="absolute inset-y-0 left-0 w-[10px]" style={{ backgroundColor: d.color }} />
 
             <div className="flex items-center gap-[11px]">
                 <Avatar className="h-[38px] w-[38px] shrink-0 ring-2 ring-inset ring-white/20" style={{ backgroundColor: d.color }}>
