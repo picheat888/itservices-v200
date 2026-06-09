@@ -49,8 +49,15 @@ export function visibleGraph(
     const index = buildChildrenIndex(nodes);
     const visibleIds = new Set<number>();
     const edges: { source: number; target: number }[] = [];
+    const seen = new Set<number>();
 
+    // `seen` guards against malformed manager_id data forming a cycle, which
+    // would otherwise recurse forever and hang the browser.
     const walk = (n: OrgChartNode) => {
+        if (seen.has(n.id)) {
+            return;
+        }
+        seen.add(n.id);
         visibleIds.add(n.id);
         if (collapsed.has(n.id)) {
             return;
@@ -60,7 +67,7 @@ export function visibleGraph(
             walk(child);
         }
     };
-    (index.get(null) ?? []).forEach(walk);
+    (index.get(null) ?? []).forEach((root) => walk(root));
 
     return { visibleIds, edges };
 }
