@@ -1,4 +1,4 @@
-import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position } from '@/types';
+import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/types';
 import { ensureCsrf, http } from './http';
 
 export interface EmployeeSummary {
@@ -31,6 +31,7 @@ export interface EmployeePayload {
     name_th?: string | null;
     department_id?: number | null;
     position_id?: number | null;
+    section_id?: number | null;
     manager_id?: number | null;
     email?: string | null;
     username?: string | null;
@@ -111,6 +112,16 @@ export const departmentApi = {
     create: (payload: Partial<Department>) => mutate<Department>('post', '/departments', payload),
     update: (id: number, payload: Partial<Department>) => mutate<Department>('put', `/departments/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/departments/${id}`),
+};
+
+export const sectionApi = {
+    list: (departmentId?: number | null) =>
+        http
+            .get<ApiEnvelope<Section[]>>('/sections', { params: departmentId ? { department_id: departmentId } : {} })
+            .then((r) => r.data.data),
+    create: (payload: { department_id: number; name: string; name_th?: string | null }) => mutate<Section>('post', '/sections', payload),
+    update: (id: number, payload: { department_id: number; name: string; name_th?: string | null }) => mutate<Section>('put', `/sections/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/sections/${id}`),
 };
 
 export const positionApi = {
