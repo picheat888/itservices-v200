@@ -168,7 +168,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 <h2 className="text-foreground text-base font-semibold">{t('org_heading')}</h2>
                 <p className="text-muted-foreground mt-0.5 text-xs">{t('org_subtitle')}</p>
             </div>
-            <div className="border-border flex h-[70vh] flex-col overflow-hidden rounded-lg border">
+            <div className="border-border flex h-[65vh] flex-col overflow-hidden rounded-lg border">
                 <OrgChartToolbar
                     stats={{ total: visibleIds.size, levels, managers: withReports.size }}
                     query={query}
