@@ -1,6 +1,6 @@
 import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import { deptColor, layoutGraph, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
+import { deptColor, layoutGraph, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
 import { useUiStore } from '@/stores/ui';
 import type { OrgChartNode } from '@/types';
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
@@ -118,12 +118,36 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
         (id: number) => {
+            // Expand any collapsed ancestors so the target is actually rendered.
+            const byId = new Map(data.map((n) => [n.id, n]));
+            const ancestors = new Set<number>();
+            let cur = byId.get(id)?.manager_id ?? null;
+            while (cur != null && byId.has(cur) && !ancestors.has(cur)) {
+                ancestors.add(cur);
+                cur = byId.get(cur)?.manager_id ?? null;
+            }
+            setCollapsed((prev) => {
+                if (![...ancestors].some((a) => prev.has(a))) {
+                    return prev;
+                }
+                const next = new Set(prev);
+                ancestors.forEach((a) => next.delete(a));
+                return next;
+            });
             setSelectedId(id);
             setQuery('');
-            // Zoom right in on the picked person (1.6 = the chart's max zoom).
-            rf.fitView({ nodes: [{ id: String(id) }], duration: 520, minZoom: 1.6, maxZoom: 1.6, padding: 0.5 });
+            // Defer so the node is laid out (esp. after expanding), then zoom right in (x4).
+            setTimeout(() => {
+                const node = rf.getNode(String(id));
+                if (!node) {
+                    return;
+                }
+                const x = node.position.x + (node.measured?.width ?? NODE_W) / 2;
+                const y = node.position.y + (node.measured?.height ?? NODE_H) / 2;
+                rf.setCenter(x, y, { zoom: 4, duration: 520 });
+            }, 90);
         },
-        [rf],
+        [data, rf],
     );
 
     const people = useMemo(
@@ -165,7 +189,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         fitView
                         fitViewOptions={{ padding: 0.16 }}
                         minZoom={0.28}
-                        maxZoom={1.6}
+                        maxZoom={4}
                         nodesDraggable={false}
                         nodesConnectable={false}
                         onPaneClick={() => setSelectedId(null)}
