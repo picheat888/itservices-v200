@@ -34,6 +34,20 @@ class OrgChartTest extends TestCase
         $this->assertSame(5, $boss_row['level']);
     }
 
+    public function test_leaf_employee_has_null_position_department_and_zero_reports(): void
+    {
+        $this->actingAs($this->super());
+        Employee::create(['name' => 'Lone Worker']); // no position, no department, no reports
+
+        $row = $this->getJson('/api/employees/org-chart')->assertOk()->json('data.0');
+
+        $this->assertSame('Lone Worker', $row['name']);
+        $this->assertNull($row['title']);
+        $this->assertNull($row['department']);
+        $this->assertNull($row['level']);
+        $this->assertSame(0, $row['reports_count']);
+    }
+
     public function test_excludes_resigned_employees(): void
     {
         $this->actingAs($this->super());
