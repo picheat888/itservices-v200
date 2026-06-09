@@ -1,15 +1,6 @@
 import { useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import {
-    deptColor,
-    layoutGraph,
-    nodesWithReports,
-    rootIds,
-    visibleGraph,
-    type OrgDir,
-    type OrgFlowNode,
-    type OrgNodeData,
-} from '@/lib/org-tree';
+import { deptColor, layoutGraph, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '@/lib/org-tree';
 import type { OrgChartNode } from '@/types';
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -20,6 +11,7 @@ import { OrgNode } from './org-node';
 const nodeTypes = { orgNode: OrgNode };
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
+    const t = useT();
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
     const [dir, setDir] = useState<OrgDir>('TB');
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -94,9 +86,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 target: String(e.target),
                 type: 'smoothstep',
                 zIndex: hot ? 5 : 0,
-                style: hot
-                    ? { stroke: 'var(--brand)', strokeWidth: 2.4 }
-                    : { stroke: 'var(--oc-edge)', strokeWidth: 1.6, opacity: dim ? 0.12 : 1 },
+                style: hot ? { stroke: 'var(--brand)', strokeWidth: 2.4 } : { stroke: 'var(--oc-edge)', strokeWidth: 1.6, opacity: dim ? 0.12 : 1 },
             };
         });
 
@@ -124,42 +114,48 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const fit = useCallback(() => rf.fitView({ padding: 0.16, duration: 320 }), [rf]);
 
     return (
-        <div className="flex h-[74vh] flex-col overflow-hidden rounded-lg border border-border">
-            <OrgChartToolbar
-                stats={{ total: visibleIds.size, levels, managers: withReports.size }}
-                query={query}
-                onQueryChange={setQuery}
-                dir={dir}
-                onDirChange={setDir}
-                anyCollapsed={anyCollapsed}
-                onToggleAll={toggleAll}
-                onFit={fit}
-            />
-            <div className="min-h-0 flex-1 bg-background">
-                <ReactFlow
-                    nodes={rfNodes}
-                    edges={rfEdges}
-                    nodeTypes={nodeTypes}
-                    fitView
-                    fitViewOptions={{ padding: 0.16 }}
-                    minZoom={0.28}
-                    maxZoom={1.6}
-                    nodesDraggable={false}
-                    nodesConnectable={false}
-                    onPaneClick={() => setSelectedId(null)}
-                    proOptions={{ hideAttribution: true }}
-                >
-                    <Background gap={22} size={1.4} color="var(--oc-dot)" />
-                    <Controls showInteractive={false} position="bottom-right" />
-                    <MiniMap
-                        position="bottom-left"
-                        pannable
-                        zoomable
-                        nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
-                        nodeStrokeWidth={0}
-                        style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
-                    />
-                </ReactFlow>
+        <div className="space-y-3">
+            <div>
+                <h2 className="text-foreground text-base font-semibold">{t('org_heading')}</h2>
+                <p className="text-muted-foreground mt-0.5 text-xs">{t('org_subtitle')}</p>
+            </div>
+            <div className="border-border flex h-[70vh] flex-col overflow-hidden rounded-lg border">
+                <OrgChartToolbar
+                    stats={{ total: visibleIds.size, levels, managers: withReports.size }}
+                    query={query}
+                    onQueryChange={setQuery}
+                    dir={dir}
+                    onDirChange={setDir}
+                    anyCollapsed={anyCollapsed}
+                    onToggleAll={toggleAll}
+                    onFit={fit}
+                />
+                <div className="bg-background min-h-0 flex-1">
+                    <ReactFlow
+                        nodes={rfNodes}
+                        edges={rfEdges}
+                        nodeTypes={nodeTypes}
+                        fitView
+                        fitViewOptions={{ padding: 0.16 }}
+                        minZoom={0.28}
+                        maxZoom={1.6}
+                        nodesDraggable={false}
+                        nodesConnectable={false}
+                        onPaneClick={() => setSelectedId(null)}
+                        proOptions={{ hideAttribution: true }}
+                    >
+                        <Background gap={22} size={1.4} color="var(--oc-dot)" />
+                        <Controls showInteractive={false} position="bottom-right" />
+                        <MiniMap
+                            position="bottom-left"
+                            pannable
+                            zoomable
+                            nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
+                            nodeStrokeWidth={0}
+                            style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
+                        />
+                    </ReactFlow>
+                </div>
             </div>
         </div>
     );
@@ -171,10 +167,10 @@ export function OrgChartTab() {
     const { data = [], isLoading } = useOrgChart();
 
     if (isLoading) {
-        return <div className="py-16 text-center text-sm text-muted-foreground">{t('loading')}</div>;
+        return <div className="text-muted-foreground py-16 text-center text-sm">{t('loading')}</div>;
     }
     if (data.length === 0) {
-        return <div className="py-16 text-center text-sm text-muted-foreground">{t('pos_empty')}</div>;
+        return <div className="text-muted-foreground py-16 text-center text-sm">{t('pos_empty')}</div>;
     }
 
     return (
