@@ -96,25 +96,32 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         return { rfNodes: layoutGraph(nodes, flowEdges, dir), rfEdges: flowEdges };
     }, [data, visibleIds, edges, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
 
+    // Fit the whole tree, then nudge the view up so the chart sits higher than dead-centre.
+    const runFit = useCallback(() => {
+        rf.fitView({ padding: 0.16, duration: 320 });
+        window.setTimeout(() => {
+            const vp = rf.getViewport();
+            rf.setViewport({ x: vp.x, y: vp.y - 60, zoom: vp.zoom }, { duration: 180 });
+        }, 340);
+    }, [rf]);
+
     // Refit when the visible structure or orientation changes.
     useEffect(() => {
         if (fitTimer.current) {
             clearTimeout(fitTimer.current);
         }
-        fitTimer.current = setTimeout(() => rf.fitView({ padding: 0.16, duration: 320 }), 60);
+        fitTimer.current = setTimeout(runFit, 60);
         return () => {
             if (fitTimer.current) {
                 clearTimeout(fitTimer.current);
             }
         };
-    }, [dir, collapsed, rf]);
+    }, [dir, collapsed, runFit]);
 
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
     }, [withReports]);
-
-    const fit = useCallback(() => rf.fitView({ padding: 0.16, duration: 320 }), [rf]);
 
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
@@ -182,7 +189,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     onDirChange={setDir}
                     anyCollapsed={anyCollapsed}
                     onToggleAll={toggleAll}
-                    onFit={fit}
+                    onFit={runFit}
                 />
                 <div className="bg-background min-h-0 flex-1">
                     <ReactFlow
