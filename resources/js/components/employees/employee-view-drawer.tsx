@@ -98,6 +98,7 @@ export function EmployeeViewDrawer({
                             <div className="grid grid-cols-2 gap-4">
                                 <Row label={t('position')} value={employee.position} />
                                 <Row label={t('department')} value={lang === 'th' ? employee.department_th ?? employee.department : employee.department} />
+                                <Row label={t('emp_section')} value={lang === 'th' ? (employee.section_th ?? employee.section) : employee.section} />
                                 <Row label={t('emp_employee_id')} value={employee.code} mono />
                                 <Row label={t('emp_phone')} value={employee.phone} mono />
                                 <Row label={t('joined')} value={employee.joined_at} mono />

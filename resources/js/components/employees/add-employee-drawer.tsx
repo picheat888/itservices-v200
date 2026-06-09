@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { PhotoCropDialog } from './photo-crop-dialog';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions } from '@/hooks/use-org';
+import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ const empty = {
     phone: '',
     code: '',
     departmentId: '',
+    sectionId: '',
     positionId: '',
     managerId: '',
     joinedAt: '',
@@ -55,6 +56,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const isEdit = !!employee;
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(empty);
+    const { data: sections = [] } = useSections(form.departmentId ? Number(form.departmentId) : null);
     const [photo, setPhoto] = useState<File | null>(null);
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 phone: employee.phone ?? '',
                 code: employee.code ?? '',
                 departmentId: employee.department_id ? String(employee.department_id) : '',
+                sectionId: employee.section_id ? String(employee.section_id) : '',
                 positionId: employee.position_id ? String(employee.position_id) : '',
                 managerId: employee.manager_id ? String(employee.manager_id) : '',
                 joinedAt: employee.joined_at ?? '',
@@ -94,6 +97,9 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     useEffect(() => () => { if (photo && photoUrl) URL.revokeObjectURL(photoUrl); }, [photo, photoUrl]);
 
     const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+    /** When department changes, clear the section so stale options don't persist. */
+    const setDepartment = (v: string) => setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
 
     // Manager candidates: the whole directory minus the employee being edited
     // (server-side validation rejects any descendant that would form a loop).
@@ -138,6 +144,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             code: form.code.trim() || undefined,
             name_th: nameTh || null,
             department_id: form.departmentId ? Number(form.departmentId) : null,
+            section_id: form.sectionId ? Number(form.sectionId) : null,
             position_id: form.positionId ? Number(form.positionId) : null,
             manager_id: form.managerId ? Number(form.managerId) : null,
             email: form.email || null,
@@ -308,7 +315,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                     {step === 2 && (
                         <>
                             <Field label={t('department')} required error={errors.departmentId}>
-                                <Select value={form.departmentId} onValueChange={(v) => set('departmentId', v)}>
+                                <Select value={form.departmentId} onValueChange={setDepartment}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="—" />
                                     </SelectTrigger>
@@ -320,6 +327,18 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                         ))}
                                     </SelectContent>
                                 </Select>
+                            </Field>
+                            <Field label={t('emp_section')}>
+                                <SearchableSelect
+                                    value={form.sectionId}
+                                    onChange={(v) => set('sectionId', v)}
+                                    options={sections.map((s) => ({
+                                        value: String(s.id),
+                                        label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
+                                        search: `${s.name} ${s.name_th ?? ''}`,
+                                    }))}
+                                    clearable
+                                />
                             </Field>
                             <Field label={t('position')} required error={errors.positionId}>
                                 <Select value={form.positionId} onValueChange={(v) => set('positionId', v)}>
