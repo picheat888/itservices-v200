@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
+use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\StockCountController;
 use App\Http\Controllers\Api\StockItemController;
@@ -93,6 +94,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
     Route::apiResource('departments', DepartmentController::class)->except(['show']);
+    Route::apiResource('sections', SectionController::class)->only(['index', 'store', 'update', 'destroy']);
     // Master Data — reads open (consumed by Asset/Contract/Stock forms); writes gated by settings.masterdata.
     Route::get('brands', [BrandController::class, 'index'])->name('api.brands.index');
     Route::get('asset-models', [AssetModelController::class, 'index'])->name('api.asset-models.index');
