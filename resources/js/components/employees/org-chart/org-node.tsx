@@ -72,7 +72,7 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     </span>
                     {d.level != null && <span className="shrink-0 font-mono text-[10.5px] font-medium text-muted-foreground">Lv {d.level}</span>}
                 </div>
-                {d.hasReports ? (
+                {d.hasReports && (
                     <button
                         type="button"
                         title={d.collapsed ? 'Expand' : 'Collapse'}
@@ -85,8 +85,6 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                         {d.collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                         {d.reports_count}
                     </button>
-                ) : (
-                    <span className="shrink-0 font-mono text-[11px] font-medium text-muted-foreground/80">IC</span>
                 )}
             </div>
 
