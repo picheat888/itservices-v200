@@ -1,7 +1,7 @@
 import { useT } from '@/lib/i18n';
 import type { OrgDir } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
-import { Maximize2, Search, X } from 'lucide-react';
+import { Columns3, FoldVertical, Maximize2, Rows3, Search, UnfoldVertical, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 interface OrgStats {
@@ -151,10 +151,11 @@ export function OrgChartToolbar({
                             type="button"
                             onClick={() => onDirChange(d)}
                             className={cn(
-                                'rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
+                                'inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
                                 dir === d ? 'bg-card text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
+                            {d === 'TB' ? <Rows3 className="h-3.5 w-3.5" /> : <Columns3 className="h-3.5 w-3.5" />}
                             {d === 'TB' ? t('org_layout_vertical') : t('org_layout_horizontal')}
                         </button>
                     ))}
@@ -163,8 +164,9 @@ export function OrgChartToolbar({
                 <button
                     type="button"
                     onClick={onToggleAll}
-                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
                 >
+                    {anyCollapsed ? <UnfoldVertical className="h-3.5 w-3.5" /> : <FoldVertical className="h-3.5 w-3.5" />}
                     {anyCollapsed ? t('org_expand_all') : t('org_collapse_all')}
                 </button>
                 <button
