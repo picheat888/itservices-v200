@@ -332,11 +332,15 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                 <SearchableSelect
                                     value={form.sectionId}
                                     onChange={(v) => set('sectionId', v)}
-                                    options={sections.map((s) => ({
-                                        value: String(s.id),
-                                        label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
-                                        search: `${s.name} ${s.name_th ?? ''}`,
-                                    }))}
+                                    options={
+                                        form.departmentId
+                                            ? sections.map((s) => ({
+                                                  value: String(s.id),
+                                                  label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
+                                                  search: `${s.name} ${s.name_th ?? ''}`,
+                                              }))
+                                            : []
+                                    }
                                     clearable
                                 />
                             </Field>
