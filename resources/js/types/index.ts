@@ -42,7 +42,7 @@ export type EmployeeStatus = 'active' | 'resigned';
 
 export interface Department {
     id: number;
-    code: string;
+    tag: string;
     name: string;
     name_th: string | null;
     count?: number;

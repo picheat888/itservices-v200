@@ -7,19 +7,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
-    protected $fillable = ['code', 'name', 'name_th'];
+    protected $fillable = ['tag', 'name', 'name_th'];
 
     protected static function booted(): void
     {
         static::creating(function (Department $department) {
-            if (blank($department->code)) {
+            if (blank($department->tag)) {
                 $base = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $department->name ?? 'DEPT'), 0, 4)) ?: 'DEPT';
-                $code = $base;
+                $tag = $base;
                 $i = 1;
-                while (static::where('code', $code)->exists()) {
-                    $code = $base.$i++;
+                while (static::where('tag', $tag)->exists()) {
+                    $tag = $base.$i++;
                 }
-                $department->code = $code;
+                $department->tag = $tag;
             }
         });
     }

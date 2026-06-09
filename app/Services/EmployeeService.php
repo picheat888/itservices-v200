@@ -123,7 +123,7 @@ class EmployeeService
      */
     public function importRows(array $rows): array
     {
-        $deptByCode = Department::pluck('id', 'code');
+        $deptByTag = Department::pluck('id', 'tag');
         $posByCode = Position::pluck('id', 'code');
         $existingCodes = Employee::pluck('code')->flip();
         $existingEmails = Employee::whereNotNull('email')->pluck('email')
@@ -174,7 +174,7 @@ class EmployeeService
 
             $deptId = null;
             if ($deptCode !== '') {
-                $deptId = $deptByCode[$deptCode] ?? null;
+                $deptId = $deptByTag[$deptCode] ?? null;
                 if (! $deptId) {
                     $rowErr[] = "department code '{$deptCode}' ไม่พบ";
                 }

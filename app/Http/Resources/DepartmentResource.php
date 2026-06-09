@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Department */
+/** @mixin Department */
 class DepartmentResource extends JsonResource
 {
     /**
@@ -15,11 +16,9 @@ class DepartmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'code' => $this->code,
+            'tag' => $this->tag,
             'name' => $this->name,
             'name_th' => $this->name_th,
-            'head' => $this->head,
-            'location' => $this->location,
             'count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
         ];
     }

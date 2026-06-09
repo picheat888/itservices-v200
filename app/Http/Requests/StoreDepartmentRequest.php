@@ -22,9 +22,7 @@ class StoreDepartmentRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'name_th' => ['nullable', 'string', 'max:255'],
-            'head' => ['nullable', 'string', 'max:255'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'code' => ['nullable', 'string', 'max:50', Rule::unique('departments', 'code')->ignore($departmentId)],
+            'tag' => ['nullable', 'string', 'max:50', Rule::unique('departments', 'tag')->ignore($departmentId)],
         ];
     }
 }
