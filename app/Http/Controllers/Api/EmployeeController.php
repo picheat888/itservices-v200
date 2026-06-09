@@ -50,7 +50,7 @@ class EmployeeController extends Controller
     public function index(Request $request): JsonResponse
     {
         // Resigned sink to the bottom; within active, no-account first; then by name.
-        $query = Employee::with(['department', 'position', 'user'])
+        $query = Employee::with(['department', 'position', 'section', 'user'])
             ->orderByRaw("status = 'resigned'")
             ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
             ->orderBy('name');
@@ -107,7 +107,7 @@ class EmployeeController extends Controller
     {
         $total = Employee::count();
         $newHires = Employee::where('joined_at', '>=', '2023-01-01')->count();
-        $recent = Employee::with(['department', 'position'])
+        $recent = Employee::with(['department', 'position', 'section'])
             ->orderByDesc('joined_at')
             ->limit(5)
             ->get();
@@ -216,12 +216,12 @@ class EmployeeController extends Controller
         $employee = $this->service->create($this->handlePhoto($request, $request->validated()), $request->user());
         AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
 
-        return (new EmployeeResource($employee))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     public function show(Employee $employee): JsonResponse
     {
-        return (new EmployeeResource($employee->load(['department', 'position'])))->response();
+        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->response();
     }
 
     /**
@@ -267,7 +267,7 @@ class EmployeeController extends Controller
         $employee = $this->service->update($employee, $this->handlePhoto($request, $request->validated(), $employee->photo_path));
         AuditLog::record('Updated employee', "{$employee->name} ({$employee->code})", AuditLog::changes($before, $employee));
 
-        return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
+        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response();
     }
 
     public function destroy(Request $request, Employee $employee): JsonResponse
