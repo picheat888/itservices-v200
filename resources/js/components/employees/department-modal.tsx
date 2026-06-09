@@ -67,6 +67,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                             className="font-mono uppercase"
                             maxLength={50}
                         />
+                        {!error && <p className="mt-1 text-xs text-muted-foreground">{t('dept_code_hint')}</p>}
                     </Field>
                 </div>
                 <DialogFooter>
