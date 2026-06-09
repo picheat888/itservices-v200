@@ -196,14 +196,14 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         proOptions={{ hideAttribution: true }}
                     >
                         <Background gap={22} size={1.4} color="var(--oc-dot)" />
-                        <Controls showInteractive={false} position="bottom-right" />
+                        <Controls showInteractive={false} position="bottom-left" />
                         <MiniMap
-                            position="bottom-left"
+                            position="bottom-right"
                             pannable
                             zoomable
                             nodeColor={(n) => (n.data as OrgNodeData)?.color ?? 'var(--brand)'}
                             nodeStrokeWidth={0}
-                            style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
+                            style={{ width: 180, height: 130, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8 }}
                         />
                     </ReactFlow>
                 </div>
