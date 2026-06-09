@@ -1,52 +1,47 @@
 import { Field } from '@/components/shared/field';
-import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useDepartmentMutations, useEmployees, useLocations } from '@/hooks/use-org';
+import { useDepartmentMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import { useUiStore } from '@/stores/ui';
 import type { Department } from '@/types';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const empty = { name: '', name_th: '', head: '', location: '' };
+const empty = { name: '', name_th: '', code: '' };
 
 export function DepartmentModal({ open, onClose, department }: { open: boolean; onClose: () => void; department: Department | null }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { create, update } = useDepartmentMutations();
-    const { data: employees = [] } = useEmployees();
-    const { data: locations = [] } = useLocations();
     const [form, setForm] = useState(empty);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (open)
+        if (open) {
+            setError(null);
             setForm(
                 department
-                    ? { name: department.name, name_th: department.name_th ?? '', head: department.head ?? '', location: department.location ?? '' }
+                    ? { name: department.name, name_th: department.name_th ?? '', code: department.code ?? '' }
                     : empty,
             );
+        }
     }, [open, department]);
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-    const employeeOptions = useMemo(
-        () =>
-            employees.map((e) => ({
-                value: lang === 'th' ? e.name_th ?? e.name : e.name,
-                label: lang === 'th' ? e.name_th ?? e.name : e.name,
-                sub: e.code,
-                search: `${e.name} ${e.name_th ?? ''} ${e.code}`,
-            })),
-        [employees, lang],
-    );
-
     const submit = async () => {
         if (!form.name.trim()) return;
-        if (department) await update.mutateAsync({ id: department.id, payload: form });
-        else await create.mutateAsync(form);
-        onClose();
+        setError(null);
+        // Blank code → omit it so the backend auto-generates one (its existing
+        // behaviour); a typed code is sent through as a custom badge.
+        const payload = { name: form.name.trim(), name_th: form.name_th.trim() || null, code: form.code.trim() || undefined };
+        try {
+            if (department) await update.mutateAsync({ id: department.id, payload });
+            else await create.mutateAsync(payload);
+            onClose();
+        } catch (e) {
+            const res = (e as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response;
+            setError(res?.data?.errors?.code?.[0] ?? res?.data?.message ?? 'Save failed');
+        }
     };
 
     return (
@@ -64,22 +59,14 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                             <Input value={form.name_th} onChange={(e) => set('name_th', e.target.value)} placeholder="ฝ่ายการเงิน" />
                         </Field>
                     </div>
-                    <Field label={t('dept_head')}>
-                        <SearchableSelect value={form.head} onChange={(v) => set('head', v)} options={employeeOptions} />
-                    </Field>
-                    <Field label={t('dept_location')}>
-                        <Select value={form.location || undefined} onValueChange={(v) => set('location', v)}>
-                            <SelectTrigger>
-                                <SelectValue placeholder={t('select_placeholder')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {locations.map((loc) => (
-                                    <SelectItem key={loc.id} value={loc.name}>
-                                        {loc.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <Field label={t('dept_code')} error={error ?? undefined}>
+                        <Input
+                            value={form.code}
+                            onChange={(e) => set('code', e.target.value.toUpperCase())}
+                            placeholder={t('dept_code_auto')}
+                            className="font-mono uppercase"
+                            maxLength={50}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>
