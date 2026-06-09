@@ -18,11 +18,19 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const [query, setQuery] = useState('');
     const rf = useReactFlow();
     const fitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Anchoring: keep the just-toggled node fixed so collapsing a branch doesn't
+    // reshuffle the whole tree across the canvas. posRef = last rendered positions;
+    // anchorRef = the node id being toggled; offsetRef = translation applied to the
+    // raw dagre layout to hold the anchor in place (persists until the next reset).
+    const posRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+    const anchorRef = useRef<string | null>(null);
+    const offsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
     const withReports = useMemo(() => nodesWithReports(data), [data]);
     const roots = useMemo(() => rootIds(data), [data]);
 
     const toggle = useCallback((id: number) => {
+        anchorRef.current = String(id);
         setCollapsed((prev) => {
             const next = new Set(prev);
             if (next.has(id)) {
@@ -93,7 +101,31 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             };
         });
 
-        return { rfNodes: layoutGraph(nodes, flowEdges, dir), rfEdges: flowEdges };
+        let positioned = layoutGraph(nodes, flowEdges, dir);
+
+        // If a node was just toggled, recompute the offset so that node stays exactly
+        // where it was on screen; the rest of the tree re-flows around it.
+        const anchorId = anchorRef.current;
+        if (anchorId) {
+            const prevFinal = posRef.current.get(anchorId);
+            const rawNow = positioned.find((n) => n.id === anchorId)?.position;
+            if (prevFinal && rawNow) {
+                offsetRef.current = { x: prevFinal.x - rawNow.x, y: prevFinal.y - rawNow.y };
+            }
+            anchorRef.current = null;
+        }
+
+        const off = offsetRef.current;
+        if (off.x !== 0 || off.y !== 0) {
+            positioned = positioned.map((n) => ({ ...n, position: { x: n.position.x + off.x, y: n.position.y + off.y } }));
+        }
+
+        // Remember the final positions for the next anchor calculation.
+        const map = new Map<string, { x: number; y: number }>();
+        positioned.forEach((n) => map.set(n.id, n.position));
+        posRef.current = map;
+
+        return { rfNodes: positioned, rfEdges: flowEdges };
     }, [data, visibleIds, edges, collapsed, withReports, roots, selectedId, matchSet, dir, toggle, select]);
 
     // Fit the whole tree in one smooth motion, sitting a bit higher than dead-centre.
@@ -124,8 +156,15 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         };
     }, [dir, runFit]);
 
+    // Flip direction — drop any anchor offset so the new orientation lays out + fits cleanly.
+    const changeDir = useCallback((d: OrgDir) => {
+        offsetRef.current = { x: 0, y: 0 };
+        setDir(d);
+    }, []);
+
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
+        offsetRef.current = { x: 0, y: 0 };
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
         // Big structural change → refit after the new layout is in place.
         window.setTimeout(runFit, 90);
@@ -134,6 +173,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
         (id: number) => {
+            offsetRef.current = { x: 0, y: 0 };
             // Expand any collapsed ancestors so the target is actually rendered.
             const byId = new Map(data.map((n) => [n.id, n]));
             const ancestors = new Set<number>();
@@ -194,7 +234,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     people={people}
                     onPick={focusPerson}
                     dir={dir}
-                    onDirChange={setDir}
+                    onDirChange={changeDir}
                     anyCollapsed={anyCollapsed}
                     onToggleAll={toggleAll}
                     onFit={runFit}
