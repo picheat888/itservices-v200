@@ -1,56 +1,109 @@
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
 import { useT } from '@/lib/i18n';
-import { useUiStore } from '@/stores/ui';
-import type { OrgChartNode } from '@/types';
-import { FoldVertical, UnfoldVertical } from 'lucide-react';
-import { useMemo } from 'react';
+import type { OrgDir } from '@/lib/org-tree';
+import { cn } from '@/lib/utils';
+import { Maximize2, Search, X } from 'lucide-react';
+
+interface OrgStats {
+    total: number;
+    levels: number;
+    managers: number;
+}
 
 /**
- * Org chart toolbar: search a person to jump+center on them, and a single
- * collapse-all / expand-all toggle. Zoom and fit live in React Flow's Controls.
+ * Org chart toolbar — stats (visible / levels / managers) on the left; on the
+ * right a search box (dims non-matching cards), a vertical/horizontal layout
+ * toggle, a collapse/expand-all button, and a fit-to-screen button. Purely
+ * presentational; all state lives in the canvas.
  */
 export function OrgChartToolbar({
-    nodes,
-    allCollapsed,
-    onJump,
+    stats,
+    query,
+    onQueryChange,
+    dir,
+    onDirChange,
+    anyCollapsed,
     onToggleAll,
+    onFit,
 }: {
-    nodes: OrgChartNode[];
-    allCollapsed: boolean;
-    onJump: (id: number) => void;
+    stats: OrgStats;
+    query: string;
+    onQueryChange: (q: string) => void;
+    dir: OrgDir;
+    onDirChange: (d: OrgDir) => void;
+    anyCollapsed: boolean;
     onToggleAll: () => void;
+    onFit: () => void;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
 
-    const options = useMemo(
-        () =>
-            nodes.map((n) => ({
-                value: String(n.id),
-                label: lang === 'th' ? (n.name_th ?? n.name) : n.name,
-                hint: n.title ?? undefined,
-                sub: n.code,
-                avatar: n.photo_url,
-                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''}`,
-            })),
-        [nodes, lang],
+    const stat = (num: number, label: string) => (
+        <div className="flex flex-col items-center justify-center px-4">
+            <span className="font-mono text-lg font-extrabold leading-none tracking-tight text-foreground">{num}</span>
+            <span className="mt-0.5 text-[9.5px] uppercase tracking-wider text-muted-foreground">{label}</span>
+        </div>
     );
 
     return (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
-            <div className="w-64 max-w-full">
-                <SearchableSelect
-                    value=""
-                    onChange={(v) => v && onJump(Number(v))}
-                    options={options}
-                    placeholder={t('org_search_placeholder')}
-                />
+        <div className="flex flex-wrap items-center gap-3 border-b border-border p-3">
+            {/* Stats */}
+            <div className="flex items-stretch">
+                {stat(stats.total, t('org_total'))}
+                <span className="my-1 w-px bg-border" />
+                {stat(stats.levels, t('org_levels'))}
+                <span className="my-1 w-px bg-border" />
+                {stat(stats.managers, t('org_managers'))}
             </div>
-            <Button variant="outline" onClick={onToggleAll}>
-                {allCollapsed ? <UnfoldVertical className="h-4 w-4" /> : <FoldVertical className="h-4 w-4" />}
-                {allCollapsed ? t('org_expand_all') : t('org_collapse_all')}
-            </Button>
+
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+                {/* Search (dims non-matches) */}
+                <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 focus-within:border-brand">
+                    <Search className="h-3.5 w-3.5 text-muted-foreground" />
+                    <input
+                        value={query}
+                        onChange={(e) => onQueryChange(e.target.value)}
+                        placeholder={t('org_search_placeholder')}
+                        className="w-40 min-w-0 border-none bg-transparent text-[12.5px] text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    {query && (
+                        <button type="button" onClick={() => onQueryChange('')} className="text-muted-foreground hover:text-foreground">
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Layout direction */}
+                <div className="inline-flex gap-0.5 rounded-lg bg-accent p-0.5">
+                    {(['TB', 'LR'] as const).map((d) => (
+                        <button
+                            key={d}
+                            type="button"
+                            onClick={() => onDirChange(d)}
+                            className={cn(
+                                'rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
+                                dir === d ? 'bg-card text-brand shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            {d === 'TB' ? t('org_layout_vertical') : t('org_layout_horizontal')}
+                        </button>
+                    ))}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onToggleAll}
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                >
+                    {anyCollapsed ? t('org_expand_all') : t('org_collapse_all')}
+                </button>
+                <button
+                    type="button"
+                    onClick={onFit}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                    {t('org_fit')}
+                </button>
+            </div>
         </div>
     );
 }
