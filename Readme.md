@@ -632,38 +632,46 @@ npm run build
 
 ---
 
-## Org Approval Chain (Foundation) — สายอนุมัติตามผังบังคับบัญชา
+## Org Approval Chain — สายอนุมัติตามผังบังคับบัญชา (manager walk to root)
 
 > spec: `docs/superpowers/specs/2026-06-08-org-approval-chain-design.md` · plan: `docs/superpowers/plans/2026-06-08-org-approval-chain.md`
+> demo org redesign plan: `docs/superpowers/plans/2026-06-10-org-demo-data-14-levels.md` · spec: `docs/superpowers/specs/2026-06-10-org-demo-data-14-levels-design.md`
 
-วางรากฐานการคำนวณ **สายอนุมัติ** ของพนักงานโดยไต่ตามผังบังคับบัญชา (manager reporting tree) แล้วหยุดที่เพดานระดับ VP — เป็นฐานสำหรับ Request Workflow (โมดูล 3) ในอนาคต ยังไม่ทำผังองค์กร (org-chart) ซึ่งเลื่อนไปเฟสถัดไป
+วางรากฐานการคำนวณ **สายอนุมัติ** ของพนักงานโดยไต่ตามผังบังคับบัญชา (manager reporting tree) จากพนักงานขึ้นไปถึงรากต้นไม้ (VP) — เป็นฐานสำหรับ Request Workflow (โมดูล 3) ในอนาคต
 
-### แนวทาง (Approach A — manager tree เป็น source of truth เดียว)
-- `employees.manager_id` (self-FK, nullable, `nullOnDelete`) เป็นต้นไม้รายงานตัวเดียว · `positions.level` (1–20) ใช้เป็น**ตัวทดสอบเพดาน VP เท่านั้น**
-- `ApprovalChainService::chainFor()` ไต่ `manager_id` จากผู้ยื่น เก็บหัวหน้าทีละชั้น (หัวหน้าตรงก่อน) จนถึงคนแรกที่ `position.level ≥ เพดาน` หรือถึงรากต้นไม้ — มี **guard กันวน (cycle)** ด้วย seen-set ขณะไต่
-- เพดานปรับได้ที่ Settings → Master Data (`approval_ceiling_level` ใน `app_settings`, default = ระดับสูงสุดที่มีอยู่); หัวหน้าที่ไม่มีตำแหน่ง (level 0) ไม่หยุดการไต่
-- **ลบฟิลด์ `departments.head` (Supervisor แบบ text) ออกแล้ว** (migration `drop_head_from_departments`) — เดิมเป็นแค่ป้ายแสดงผล ไม่เชื่อมกับ approval chain ทำให้ซ้ำซ้อน/สับสน; หัวหน้าทั้งหมดมาจาก `manager_id` แหล่งเดียว (ลบจาก Model/Resource/Request/Seeder + Department modal/การ์ด/types/i18n; test `DepartmentApiTest` คุมไว้)
+### แนวทาง (manager tree เป็น source of truth เดียว)
+- `employees.manager_id` (self-FK, nullable, `nullOnDelete`) เป็นต้นไม้รายงานตัวเดียว
+- `ApprovalChainService::chainFor()` ไต่ `manager_id` จากผู้ยื่น **ขึ้นจนถึงรากต้นไม้** (คนที่ `manager_id = null`) เก็บทุกหัวหน้าตามลำดับ (หัวหน้าตรงก่อน) — **ไม่มีเพดาน level** ระดับกลางที่ขาดหายข้ามไปเฉยๆ มี **guard กันวน (cycle)** ด้วย seen-set
+- `positions.level` (1–14) ใช้เป็น**ลำดับตำแหน่งแสดงผลเท่านั้น** ไม่มีผลต่อการหยุดสายอนุมัติ
+- **ลบ `approval_ceiling_level` setting และ UI card / endpoint `GET|PUT /settings/approval` ออกแล้ว** — ไม่มีเพดานระดับอีกต่อไป; chain หยุดที่รากต้นไม้เสมอ
+- **ลบฟิลด์ `departments.head` (Supervisor แบบ text) ออกแล้ว** (migration `drop_head_from_departments`) — หัวหน้าทั้งหมดมาจาก `manager_id` แหล่งเดียว
 
 ### Backend
 - Migrations: `add_level_to_positions_table`, `add_manager_id_to_employees_table` (ปลอดภัยกับข้อมูลจริง — เพิ่ม column nullable, ไม่ reset)
-- Models: `Position.level` (fillable) · `Employee` — `manager()`/`subordinates()` relations + `isAncestorOf()` (กันวนตอนตั้งหัวหน้า)
-- Service: `ApprovalChainService` (`chainFor` + `ceilingLevel`)
-- Validation: `StoreEmployeeRequest` — `manager_id` (exists) + `withValidator` ปฏิเสธ self / descendant (กัน loop)
-- API: `GET /employees/{employee}/approval-chain` (`ApproverNodeResource`, gate `employees.view`) · `GET|PUT /settings/approval` (PUT gate `settings.masterdata`)
+- Models: `Position.level` (fillable, max=14) · `Employee` — `manager()`/`subordinates()` relations + `isAncestorOf()` (กันวนตอนตั้งหัวหน้า)
+- Service: `ApprovalChainService::chainFor()` — walk `manager_id` to root; ไม่มี `ceilingLevel` แล้ว
+- Validation: `StoreEmployeeRequest` — `manager_id` (exists) + `withValidator` ปฏิเสธ self / descendant (กัน loop) · `positions.level` max=14
+- API: `GET /employees/{employee}/approval-chain` (`ApproverNodeResource`, gate `employees.view`)
 - Resources: `EmployeeResource`/`PositionResource` เปิดเผย `manager_id`/`level`
-- Tests: `tests/Feature/ApprovalChainTest.php` (11 ผ่าน — climb/ceiling/no-manager/no-level/cycle/endpoint auth+permission/approval setting) · `tests/Feature/EmployeeApiTest.php` (3 ผ่าน — self/descendant/valid manager)
+- Tests: `tests/Feature/ApprovalChainTest.php` (9 ผ่าน — climb-to-root/no-manager/cycle/endpoint auth+permission/level-cap-14) · `tests/Feature/EmployeeApiTest.php` (3 ผ่าน — self/descendant/valid manager) · `tests/Feature/ApprovalChainDemoSeederTest.php` (4 ผ่าน — OrgSeeder 14 levels/VP at root/chain-to-VP/idempotent)
 
 ### Frontend
 - types: `Position.level`, `Employee.manager_id`, `ApproverNode`
-- Position modal: เพิ่มช่อง **Level** (1–20) · Add/Edit Employee: เพิ่มช่อง **หัวหน้า** (SearchableSelect, ตัดตัวเองออก — descendant กันที่ server)
+- Position modal: ช่อง **Level** (1–14) · Add/Edit Employee: ช่อง **หัวหน้า** (SearchableSelect, ตัดตัวเองออก — descendant กันที่ server)
 - Employee view drawer: ส่วน **สายอนุมัติ** แสดงหัวหน้าตามลำดับ (ลูกศรขึ้น) + ป้าย "ลาออก" ถ้าหัวหน้าลาออก · ว่าง = "ไม่มีผู้อนุมัติเหนือกว่า"
-- Settings → Master Data: การ์ด **ระดับสูงสุดของสายอนุมัติ** (numeric + SaveButton) · `useApprovalChain` hook
+- Settings → Master Data: **ลบ** การ์ด "ระดับสูงสุดของสายอนุมัติ" ออกแล้ว (ไม่มีเพดานอีกต่อไป)
+
+### ข้อมูล Demo (`OrgSeeder`) — 11 แผนก / 26 หน่วยงาน / 14 ตำแหน่ง / 30 พนักงาน
+- **14 ตำแหน่ง** level 1 (Subcontract) → 14 (Vice President) — ใช้เป็นลำดับแสดงผล ไม่เป็นเพดาน
+- **ต้นไม้ต้นเดียว**: EMP-0001 (VP) ที่ราก → EMP-0002 (Director/PD) → … → EMP-0014 (Subcontract/PD) ครบ 14 ระดับ + สาขา Corporate Director (EMP-0015) → managers ของ 10 แผนกที่เหลือ + staff ย่อย
+- `OrgSeeder` เป็น idempotent (`updateOrCreate`) — รันซ้ำได้ปลอดภัย
 
 ### หมายเหตุการติดตั้ง
 - รัน `php artisan migrate` เพื่อเพิ่ม `positions.level` + `employees.manager_id` (ปลอดภัยกับข้อมูลจริง)
-- `manager_id` เป็น**ข้อมูลปฏิบัติการ** — admin กรอกเองผ่านช่องหัวหน้า (seeder ไม่แตะ) · หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
+- `manager_id` เป็น**ข้อมูลปฏิบัติการ** — กรอกผ่านช่องหัวหน้าใน Add/Edit Employee; `OrgSeeder` wire ให้อัตโนมัติสำหรับ demo
+- หลังแก้ frontend ต้อง `npm run build` (หรือ `npm run dev`)
 
-**ตรวจสอบ**: `php artisan test` ApprovalChainTest 11 + EmployeeApiTest 3 ผ่าน · related suites (MasterData/SettingsPermissions/SettingsSection/EmployeeAccountLink) 60 ผ่าน · `tsc --noEmit` ✅ · `eslint` ✅ · `npm run build` ✅ · `vendor/bin/pint` ✅
+**ตรวจสอบ**: `php artisan test --compact` 426 ผ่าน · `tsc --noEmit` ✅ · `npm run build` ✅ · `vendor/bin/pint` ✅
 
 ---
 
