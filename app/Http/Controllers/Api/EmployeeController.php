@@ -243,7 +243,7 @@ class EmployeeController extends Controller
         return OrgChartNodeResource::collection($employees)->additional(['message' => 'success'])->response();
     }
 
-    /** Returns the employee's approval chain (direct manager first, up to the VP ceiling). */
+    /** Returns the employee's approval chain (direct manager first, up to the root of the reporting tree). */
     public function approvalChain(Request $request, Employee $employee, ApprovalChainService $chain): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);

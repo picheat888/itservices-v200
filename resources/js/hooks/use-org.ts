@@ -18,7 +18,7 @@ export const useEmployee = (id: number | null) =>
         enabled: id != null,
     });
 
-/** The employee's approval chain (direct manager first, up to the VP ceiling). */
+/** The employee's approval chain (direct manager first, up to the root of the reporting tree). */
 export function useApprovalChain(id: number | null) {
     return useQuery({
         queryKey: ['approval-chain', id],
