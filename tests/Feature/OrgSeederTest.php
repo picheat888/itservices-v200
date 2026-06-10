@@ -15,7 +15,7 @@ use Tests\TestCase;
  * These tests replace the old ApprovalChainDemoSeeder tests — that
  * seeder was merged into OrgSeeder in the 11/26/14/30 demo rewrite.
  */
-class ApprovalChainDemoSeederTest extends TestCase
+class OrgSeederTest extends TestCase
 {
     use RefreshDatabase;
 
