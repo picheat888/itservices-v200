@@ -21,7 +21,7 @@ class StorePositionRequest extends FormRequest
 
         return [
             'title' => ['required', 'string', 'max:255'],
-            'level' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'level' => ['nullable', 'integer', 'min:1', 'max:14'],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('positions', 'code')->ignore($positionId)],
         ];
     }
