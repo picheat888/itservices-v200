@@ -2,6 +2,7 @@ import { Field } from '@/components/shared/field';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -10,9 +11,10 @@ import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSe
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function splitName(full: string | null | undefined): [string, string] {
@@ -53,6 +55,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const { data: employees = [] } = useEmployees();
     const { create, update } = useEmployeeMutations();
     const { data: settings } = useSettings();
+    const pushToast = useToastStore((s) => s.push);
     const isEdit = !!employee;
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(empty);
@@ -61,6 +64,9 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    // Set when the server rejects the chosen manager because it would form a
+    // reporting-tree loop — surfaced as a blocking warning dialog.
+    const [managerLoop, setManagerLoop] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -69,6 +75,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         setCropSrc(null);
         setPhotoError(null);
         setErrors({});
+        setManagerLoop(false);
         if (employee) {
             const [fn, ln] = splitName(employee.name);
             const [fnTh, lnTh] = splitName(employee.name_th);
@@ -153,9 +160,25 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             joined_at: form.joinedAt || null,
             photo: photo ?? null,
         };
-        if (employee) await update.mutateAsync({ id: employee.id, payload });
-        else await create.mutateAsync(payload);
-        onClose();
+        try {
+            if (employee) await update.mutateAsync({ id: employee.id, payload });
+            else await create.mutateAsync(payload);
+            onClose();
+        } catch (err) {
+            // 422 validation: a manager_id error means the pick would loop the
+            // reporting tree — show the warning dialog and send the user back to
+            // the work-info step to fix it. Any other field error → a toast so
+            // the save never fails silently.
+            const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
+            if (fieldErrors?.manager_id) {
+                setManagerLoop(true);
+                setStep(2);
+            } else if (fieldErrors) {
+                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'));
+            } else {
+                throw err;
+            }
+        }
     };
 
     const onPhoto = (file?: File) => {
@@ -177,6 +200,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const photoInitials = `${form.firstName[0] ?? ''}${form.lastName[0] ?? ''}`.toUpperCase();
 
     return (
+        <>
         <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
             <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
                 {cropSrc && (
@@ -477,5 +501,24 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 </SheetFooter>
             </SheetContent>
         </Sheet>
+
+        {/* Manager would create a reporting-tree loop — block the save with a warning. */}
+        <Dialog open={managerLoop} onOpenChange={(o) => { if (!o) setManagerLoop(false); }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="h-5 w-5" />
+                        </span>
+                        <DialogTitle>{t('emp_manager_loop_title')}</DialogTitle>
+                    </div>
+                    <DialogDescription className="pt-2 leading-relaxed">{t('emp_manager_loop_body')}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button onClick={() => setManagerLoop(false)}>{t('emp_understood')}</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
