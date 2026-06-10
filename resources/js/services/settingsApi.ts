@@ -59,11 +59,6 @@ export interface SecuritySettings {
     password_expiry_days: number;
 }
 
-// Approval policy — the VP ceiling level that ends an approval chain.
-export interface ApprovalSettings {
-    approval_ceiling_level: number;
-}
-
 export interface MailSettingsData {
     host: string | null;
     port: number | null;
@@ -136,14 +131,6 @@ export const settingsApi = {
     updateSecurity: async (payload: SecuritySettings) => {
         await ensureCsrf();
         const { data } = await http.put<ApiEnvelope<SecuritySettings>>('/settings/security', payload);
-        return data.data;
-    },
-
-    getApproval: () => http.get<ApiEnvelope<ApprovalSettings>>('/settings/approval').then((r) => r.data.data),
-
-    updateApproval: async (payload: ApprovalSettings) => {
-        await ensureCsrf();
-        const { data } = await http.put<ApiEnvelope<ApprovalSettings>>('/settings/approval', payload);
         return data.data;
     },
 
