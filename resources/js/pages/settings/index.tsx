@@ -48,7 +48,7 @@ import { resolveBrand } from '@/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
-import { settingsApi, type ApprovalSettings, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
+import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -379,8 +379,6 @@ function MasterDataTab() {
                 <p className="text-muted-foreground text-sm">{t('set_master_data_desc')}</p>
             </div>
 
-            <ApprovalCard />
-
             <div className="mb-5 flex flex-wrap gap-1 border-b pb-3">
                 {tabs.map((tb) => (
                     <button
@@ -404,63 +402,6 @@ function MasterDataTab() {
             {tab === 'locations' && <LocationsList />}
             {tab === 'units' && <UnitsList />}
             {tab === 'warranty-types' && <WarrantyTypesList />}
-        </div>
-    );
-}
-
-const APPROVAL_KEY = ['approval-settings'] as const;
-
-/**
- * ApprovalCard — sets the VP ceiling level that ends an approval chain. Lives at
- * the top of Master Data (gated by settings.masterdata); saving is enabled only
- * once the value differs from what was loaded.
- */
-function ApprovalCard() {
-    const t = useT();
-    const qc = useQueryClient();
-    const { data } = useQuery({ queryKey: APPROVAL_KEY, queryFn: settingsApi.getApproval });
-
-    const [level, setLevel] = useState(1);
-    const [saved, setSaved] = useState(false);
-
-    useEffect(() => {
-        if (data) setLevel(data.approval_ceiling_level);
-    }, [data]);
-
-    const update = useMutation({
-        mutationFn: (payload: ApprovalSettings) => settingsApi.updateApproval(payload),
-        onSuccess: (d) => {
-            qc.setQueryData(APPROVAL_KEY, d);
-            setSaved(true);
-        },
-    });
-
-    const dirty = !!data && level !== data.approval_ceiling_level;
-
-    return (
-        <div className="mb-5 max-w-xl rounded-lg border border-border p-4">
-            <div className="mb-3">
-                <h3 className="text-sm font-semibold">{t('set_approval_ceiling')}</h3>
-                <p className="text-muted-foreground text-xs">{t('set_approval_ceiling_help')}</p>
-            </div>
-            <div className="flex items-end gap-3">
-                <Field label={t('pos_level')}>
-                    <Input
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={level}
-                        onChange={(e) => {
-                            setLevel(Math.max(1, Number(e.target.value) || 1));
-                            setSaved(false);
-                        }}
-                        className="w-28"
-                    />
-                </Field>
-                <SaveButton onClick={() => update.mutate({ approval_ceiling_level: level })} loading={update.isPending} success={saved} disabled={!dirty}>
-                    {t('save')}
-                </SaveButton>
-            </div>
         </div>
     );
 }
