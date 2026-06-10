@@ -90,7 +90,7 @@ class OrgSeeder extends Seeder
         // ── Employees: one VP-topped tree. dept/section null for VP & Corporate
         //    Director. 'mgr' = the code this person reports to (null = top). ────
         $employees = [
-            // PD full ladder L14 -> L1
+            // VP (L14) then PD full ladder L13 -> L1
             ['code' => 'EMP-0001', 'name' => 'Somchai Wattana', 'name_th' => 'สมชาย วัฒนา', 'dept' => null, 'section' => null, 'pos' => 'Vice President', 'mgr' => null],
             ['code' => 'EMP-0002', 'name' => 'Prasert Mongkol', 'name_th' => 'ประเสริฐ มงคล', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Director', 'mgr' => 'EMP-0001'],
             ['code' => 'EMP-0003', 'name' => 'Anan Srisuk', 'name_th' => 'อนันต์ ศรีสุข', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Senior Manager', 'mgr' => 'EMP-0002'],
