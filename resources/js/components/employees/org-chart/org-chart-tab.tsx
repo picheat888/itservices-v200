@@ -10,6 +10,16 @@ import { OrgNode } from './org-node';
 
 const nodeTypes = { orgNode: OrgNode };
 
+// Zoom bounds for the canvas + our custom wheel zoom. minZoom is low so deep
+// trees fit; maxZoom matches the search "zoom right in" target.
+const MIN_ZOOM = 0.08;
+const MAX_ZOOM = 2.5;
+// Wheel-zoom sensitivity. React Flow's own d3 wheel step only gets its ×10
+// boost on macOS, so on Windows a touchpad zooms painfully slowly. We zoom
+// ourselves with an exponential factor (~2–3× the default snappiness); raise
+// this to zoom faster per gesture, lower it to make it gentler.
+const ZOOM_SENSITIVITY = 0.003;
+
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
     const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
@@ -18,6 +28,37 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const [query, setQuery] = useState('');
     const rf = useReactFlow();
     const fitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const paneRef = useRef<HTMLDivElement | null>(null);
+
+    // Custom wheel zoom (see ZOOM_SENSITIVITY). React Flow's built-in scroll/
+    // pinch zoom is disabled below so the two don't fight; we zoom toward the
+    // cursor and cover real range from a small touchpad gesture. A native
+    // non-passive listener is required to preventDefault the browser page zoom.
+    useEffect(() => {
+        const el = paneRef.current;
+        if (!el) {
+            return;
+        }
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const { x, y, zoom } = rf.getViewport();
+            // Normalise line-mode deltas (Firefox) to roughly pixel scale.
+            const delta = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+            const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * Math.exp(-delta * ZOOM_SENSITIVITY)));
+            if (next === zoom) {
+                return;
+            }
+            // Keep the point under the cursor fixed while zooming.
+            const rect = el.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const fx = (px - x) / zoom;
+            const fy = (py - y) / zoom;
+            rf.setViewport({ x: px - fx * next, y: py - fy * next, zoom: next });
+        };
+        el.addEventListener('wheel', onWheel, { passive: false });
+        return () => el.removeEventListener('wheel', onWheel);
+    }, [rf]);
 
     const withReports = useMemo(() => nodesWithReports(data), [data]);
     const roots = useMemo(() => rootIds(data), [data]);
@@ -208,15 +249,17 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                     onToggleAll={toggleAll}
                     onFit={runFit}
                 />
-                <div className="bg-background min-h-0 flex-1">
+                <div ref={paneRef} className="bg-background min-h-0 flex-1">
                     <ReactFlow
                         nodes={rfNodes}
                         edges={rfEdges}
                         nodeTypes={nodeTypes}
                         fitView
                         fitViewOptions={{ padding: 0.16 }}
-                        minZoom={0.08}
-                        maxZoom={2.5}
+                        minZoom={MIN_ZOOM}
+                        maxZoom={MAX_ZOOM}
+                        zoomOnScroll={false}
+                        zoomOnPinch={false}
                         nodesDraggable={false}
                         nodesConnectable={false}
                         onPaneClick={() => setSelectedId(null)}
