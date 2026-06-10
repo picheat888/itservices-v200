@@ -215,7 +215,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         nodeTypes={nodeTypes}
                         fitView
                         fitViewOptions={{ padding: 0.16 }}
-                        minZoom={0.28}
+                        minZoom={0.08}
                         maxZoom={2.5}
                         nodesDraggable={false}
                         nodesConnectable={false}
