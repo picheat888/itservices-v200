@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\MailSetting;
-use App\Models\Position;
 use App\Models\Role;
 use App\Services\EmailNotificationService;
 use App\Support\TicketSla;
@@ -217,35 +216,6 @@ class SettingsController extends Controller
         return [
             'session_timeout_minutes' => (int) AppSetting::get('session_timeout_minutes', '0'),
             'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
-        ];
-    }
-
-    /** Approval policy (the VP ceiling level). Readable by any authenticated user. */
-    public function approval(Request $request): JsonResponse
-    {
-        return response()->json(['data' => $this->approvalPayload(), 'message' => 'success']);
-    }
-
-    /** Updates the approval ceiling level. Gated by route middleware permission:settings.masterdata. */
-    public function updateApproval(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'approval_ceiling_level' => ['required', 'integer', 'min:1', 'max:20'],
-        ]);
-
-        AppSetting::put('approval_ceiling_level', (string) $data['approval_ceiling_level']);
-        AuditLog::record('Updated approval settings', 'approval_ceiling_level');
-
-        return $this->approval($request);
-    }
-
-    /**
-     * @return array{approval_ceiling_level: int}
-     */
-    private function approvalPayload(): array
-    {
-        return [
-            'approval_ceiling_level' => (int) AppSetting::get('approval_ceiling_level', (string) (Position::max('level') ?? 1)),
         ];
     }
 

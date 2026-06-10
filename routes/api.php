@@ -60,9 +60,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('settings/security', [SettingsController::class, 'security'])->name('api.settings.security');
     Route::put('settings/security', [SettingsController::class, 'updateSecurity'])
         ->middleware('permission:settings.security')->name('api.settings.security.update');
-    Route::get('settings/approval', [SettingsController::class, 'approval'])->name('api.settings.approval');
-    Route::put('settings/approval', [SettingsController::class, 'updateApproval'])
-        ->middleware('permission:settings.masterdata')->name('api.settings.approval.update');
     Route::get('settings/mail', [SettingsController::class, 'mailSettings'])
         ->middleware('permission:settings.email')->name('api.settings.mail');
     Route::put('settings/mail', [SettingsController::class, 'updateMailSettings'])
