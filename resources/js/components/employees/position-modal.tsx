@@ -37,13 +37,20 @@ export function PositionModal({ open, onClose, position }: { open: boolean; onCl
                     <Input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="QA Lead" />
                 </Field>
                 <Field label={t('pos_level')}>
-                    <Input
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={level}
-                        onChange={(e) => setLevel(Math.max(1, Number(e.target.value) || 1))}
-                    />
+                    <div className="flex flex-wrap gap-1.5">
+                        {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+                            <button
+                                key={n}
+                                type="button"
+                                onClick={() => setLevel(n)}
+                                className={`flex h-9 w-9 items-center justify-center rounded-md border text-sm font-medium transition-colors ${
+                                    level === n ? 'border-brand bg-brand/5 text-brand' : 'border-border hover:bg-accent'
+                                }`}
+                            >
+                                {n}
+                            </button>
+                        ))}
+                    </div>
                 </Field>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>

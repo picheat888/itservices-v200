@@ -94,4 +94,16 @@ class ApprovalChainTest extends TestCase
         $staff = Employee::create(['name' => 'Staff']);
         $this->getJson("/api/employees/{$staff->id}/approval-chain")->assertForbidden();
     }
+
+    public function test_position_level_accepts_14_and_rejects_15(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        $this->postJson('/api/positions', ['title' => 'Vice President', 'level' => 14])
+            ->assertStatus(201);
+
+        $this->postJson('/api/positions', ['title' => 'Too High', 'level' => 15])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('level');
+    }
 }
