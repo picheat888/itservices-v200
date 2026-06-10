@@ -8,6 +8,7 @@ use App\Models\Employee;
 use App\Models\GroupRole;
 use App\Models\Location;
 use App\Models\Position;
+use App\Models\Section;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -15,95 +16,152 @@ class OrgSeeder extends Seeder
 {
     public function run(): void
     {
+        // ── Departments (tag => name / name_th) ──────────────────────────────
         $departments = [
-            ['tag' => 'PRD', 'name' => 'Production', 'name_th' => 'ฝ่ายผลิต'],
-            ['tag' => 'QA', 'name' => 'Quality Assurance', 'name_th' => 'ฝ่ายประกันคุณภาพ'],
-            ['tag' => 'OPS', 'name' => 'Operations', 'name_th' => 'ฝ่ายปฏิบัติการ'],
-            ['tag' => 'FIN', 'name' => 'Finance', 'name_th' => 'ฝ่ายการเงิน'],
-            ['tag' => 'LOG', 'name' => 'Logistics', 'name_th' => 'ฝ่ายโลจิสติกส์'],
+            ['tag' => 'Mn', 'name' => 'Maintenance', 'name_th' => 'ฝ่ายซ่อมบำรุง'],
+            ['tag' => 'Lg', 'name' => 'Logistic', 'name_th' => 'ฝ่ายโลจิสติกส์'],
+            ['tag' => 'It', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ'],
+            ['tag' => 'Sales', 'name' => 'Sales', 'name_th' => 'ฝ่ายขาย'],
+            ['tag' => 'Acc', 'name' => 'Accounting', 'name_th' => 'ฝ่ายบัญชี'],
+            ['tag' => 'PD', 'name' => 'Production', 'name_th' => 'ฝ่ายผลิต'],
+            ['tag' => 'SE', 'name' => 'Safety', 'name_th' => 'ฝ่ายความปลอดภัย'],
+            ['tag' => 'GA', 'name' => 'General Affairs', 'name_th' => 'ฝ่ายธุรการ'],
             ['tag' => 'HR', 'name' => 'Human Resources', 'name_th' => 'ฝ่ายทรัพยากรบุคคล'],
-            ['tag' => 'IT', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ'],
-            ['tag' => 'SAL', 'name' => 'Sales', 'name_th' => 'ฝ่ายขาย'],
-            ['tag' => 'ENG', 'name' => 'Engineering', 'name_th' => 'ฝ่ายวิศวกรรม'],
-            ['tag' => 'RND', 'name' => 'R&D', 'name_th' => 'ฝ่ายวิจัยและพัฒนา'],
+            ['tag' => 'QC', 'name' => 'Quality Control', 'name_th' => 'ฝ่ายควบคุมคุณภาพ'],
+            ['tag' => 'PU', 'name' => 'Purchasing', 'name_th' => 'ฝ่ายจัดซื้อ'],
         ];
         foreach ($departments as $d) {
             Department::updateOrCreate(['tag' => $d['tag']], $d);
         }
+        $deptId = Department::pluck('id', 'tag');
 
+        // ── Positions (code => [level, title]) — 1 smallest .. 14 largest ────
         $positions = [
-            'P-001' => 'Plant Manager', 'P-002' => 'SMT Operator', 'P-003' => 'QA Lead',
-            'P-004' => 'QC Technician', 'P-005' => 'Operations Director', 'P-006' => 'Senior Accountant',
-            'P-007' => 'Warehouse Supervisor', 'P-008' => 'HR Manager', 'P-009' => 'IT Manager',
-            'P-010' => 'Network Engineer', 'P-011' => 'Sales Manager', 'P-012' => 'Equipment Engineer',
+            'P-01' => [1, 'Subcontract'],
+            'P-02' => [2, 'Staff/Officer'],
+            'P-03' => [3, 'Head of Shift'],
+            'P-04' => [4, 'Head of Line'],
+            'P-05' => [5, 'Sub-Leader'],
+            'P-06' => [6, 'Leader'],
+            'P-07' => [7, 'Asst. Supervisor'],
+            'P-08' => [8, 'Supervisor'],
+            'P-09' => [9, 'Senior Supervisor'],
+            'P-10' => [10, 'Asst. Manager'],
+            'P-11' => [11, 'Manager'],
+            'P-12' => [12, 'Senior Manager'],
+            'P-13' => [13, 'Director'],
+            'P-14' => [14, 'Vice President'],
         ];
-        foreach ($positions as $code => $title) {
-            Position::updateOrCreate(['code' => $code], ['title' => $title]);
+        foreach ($positions as $code => [$level, $title]) {
+            Position::updateOrCreate(['code' => $code], ['title' => $title, 'level' => $level]);
+        }
+        $posId = Position::pluck('id', 'title');
+
+        // ── Sections (department tag => [names]) ─────────────────────────────
+        $sections = [
+            'It' => ['Network & Security', 'Support', 'System analyst'],
+            'QC' => ['Quality Control', 'Quality Assurance', 'Research and Development'],
+            'PD' => ['Machine Operation', 'Retrot', 'Packing', 'Filling', 'Raw material', 'Stock', 'Loading', 'Warehouse', 'Forklift'],
+            'PU' => ['Purchasing'],
+            'HR' => ['Payroll', 'Recruitment', 'Training'],
+            'GA' => ['General Affairs'],
+            'Acc' => ['Accounting'],
+            'Sales' => ['Sales'],
+            'Lg' => ['Logistic'],
+            'Mn' => ['Maintenance'],
+            'SE' => ['Environment', 'Occupational Safety & Health'],
+        ];
+        $sectionId = []; // "tag::name" => id
+        foreach ($sections as $tag => $names) {
+            foreach ($names as $name) {
+                $section = Section::updateOrCreate(
+                    ['department_id' => $deptId[$tag], 'name' => $name],
+                    ['name_th' => null],
+                );
+                $sectionId["{$tag}::{$name}"] = $section->id;
+            }
         }
 
-        $locations = [
-            'HQ Bangkok — Floor 3', 'HQ Bangkok — Floor 5', 'Plant 1 — Samut Sakhon',
-            'Plant 1 — QA Lab', 'Warehouse — Bang Phli', 'Datacenter — Rack 2',
-        ];
-        foreach ($locations as $name) {
+        // ── Locations (unchanged generic demo set) ───────────────────────────
+        foreach (['HQ — Floor 3', 'HQ — Floor 5', 'Plant 1', 'Plant 1 — QA Lab', 'Warehouse', 'Datacenter'] as $name) {
             Location::firstOrCreate(['name' => $name]);
         }
 
-        $deptId = Department::pluck('id', 'tag');
-        $posId = Position::pluck('id', 'title');
-
+        // ── Employees: one VP-topped tree. dept/section null for VP & Corporate
+        //    Director. 'mgr' = the code this person reports to (null = top). ────
         $employees = [
-            ['code' => 'EMP-1042', 'name' => 'Krittin Adisai', 'name_th' => 'กฤตติน อดิศัย', 'dept' => 'PRD', 'pos' => 'Plant Manager', 'email' => 'krittin@abcd.co.th', 'phone' => '+66 81 234 5678', 'joined_at' => '2018-03-12'],
-            ['code' => 'EMP-1108', 'name' => 'Suwanna Pongrat', 'name_th' => 'สุวรรณา พงศ์รัตน์', 'dept' => 'QA', 'pos' => 'QA Lead', 'email' => 'suwanna@abcd.co.th', 'phone' => '+66 81 555 8123', 'joined_at' => '2019-06-01'],
-            ['code' => 'EMP-1213', 'name' => 'Decha Tularak', 'name_th' => 'เดชา ตุลารักษ์', 'dept' => 'OPS', 'pos' => 'Operations Director', 'email' => 'decha@abcd.co.th', 'phone' => '+66 82 111 4422', 'joined_at' => '2016-01-15'],
-            ['code' => 'EMP-1305', 'name' => 'Nattaya Phimsen', 'name_th' => 'ณัฐญา พิมพ์เสน', 'dept' => 'FIN', 'pos' => 'Senior Accountant', 'email' => 'nattaya@abcd.co.th', 'phone' => '+66 89 232 9912', 'joined_at' => '2020-09-21'],
-            ['code' => 'EMP-1422', 'name' => 'Manat Boonyarit', 'name_th' => 'มานัส บุญยฤทธิ์', 'dept' => 'LOG', 'pos' => 'Warehouse Supervisor', 'email' => 'manat@abcd.co.th', 'phone' => '+66 86 778 0011', 'joined_at' => '2017-11-04'],
-            ['code' => 'EMP-1509', 'name' => 'Siriporn Chaiyo', 'name_th' => 'ศิริพร ชัยโย', 'dept' => 'HR', 'pos' => 'HR Manager', 'email' => 'siriporn@abcd.co.th', 'phone' => '+66 81 901 4488', 'joined_at' => '2015-04-18'],
-            ['code' => 'EMP-1617', 'name' => 'Krit Saengthong', 'name_th' => 'กฤต แสงทอง', 'dept' => 'IT', 'pos' => 'IT Manager', 'email' => 'krit@abcd.co.th', 'phone' => '+66 88 234 5511', 'joined_at' => '2014-07-22'],
-            ['code' => 'EMP-1718', 'name' => 'Thanapon Inthawong', 'name_th' => 'ธนพล อินทวงศ์', 'dept' => 'IT', 'pos' => 'Network Engineer', 'email' => 'thanapon@abcd.co.th', 'phone' => '+66 84 119 2245', 'joined_at' => '2021-02-08'],
-            ['code' => 'EMP-1834', 'name' => 'Pongsak Charoen', 'name_th' => 'พงศักดิ์ เจริญ', 'dept' => 'PRD', 'pos' => 'SMT Operator', 'email' => 'pongsak@abcd.co.th', 'phone' => '+66 81 332 8821', 'joined_at' => '2022-05-16'],
-            ['code' => 'EMP-1901', 'name' => 'Apinya Rattana', 'name_th' => 'อภิญญา รัตนา', 'dept' => 'SAL', 'pos' => 'Sales Manager', 'email' => 'apinya@abcd.co.th', 'phone' => '+66 87 220 5544', 'joined_at' => '2019-08-30'],
-            ['code' => 'EMP-2003', 'name' => 'Worawut Kittisak', 'name_th' => 'วรวุฒิ กิตติศักดิ์', 'dept' => 'ENG', 'pos' => 'Equipment Engineer', 'email' => 'worawut@abcd.co.th', 'phone' => '+66 89 442 1187', 'joined_at' => '2020-01-12'],
-            ['code' => 'EMP-2115', 'name' => 'Pimchada Sutthi', 'name_th' => 'พิมพ์ชฎา สุทธิ', 'dept' => 'QA', 'pos' => 'QC Technician', 'email' => 'pimchada@abcd.co.th', 'phone' => '+66 81 559 7723', 'joined_at' => '2023-03-04'],
-            // Resigned demo employees — used to exercise the cancel-resignation flow.
-            ['code' => 'EMP-2208', 'name' => 'Prayut Thongchai', 'name_th' => 'ประยุทธ ทองชัย', 'dept' => 'PRD', 'pos' => 'SMT Operator', 'email' => 'prayut@abcd.co.th', 'phone' => '+66 81 447 9920', 'joined_at' => '2019-10-01', 'status' => 'resigned', 'resign_reason' => 'ย้ายไปทำงานต่างจังหวัด', 'last_day' => '2026-04-30'],
-            ['code' => 'EMP-2301', 'name' => 'Waraporn Sri', 'name_th' => 'วราพร ศรี', 'dept' => 'SAL', 'pos' => 'Sales Manager', 'email' => 'waraporn@abcd.co.th', 'phone' => '+66 86 552 1130', 'joined_at' => '2018-06-15', 'status' => 'resigned', 'resign_reason' => 'เกษียณอายุ', 'last_day' => '2026-03-31'],
+            // PD full ladder L14 -> L1
+            ['code' => 'EMP-0001', 'name' => 'Somchai Wattana', 'name_th' => 'สมชาย วัฒนา', 'dept' => null, 'section' => null, 'pos' => 'Vice President', 'mgr' => null],
+            ['code' => 'EMP-0002', 'name' => 'Prasert Mongkol', 'name_th' => 'ประเสริฐ มงคล', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Director', 'mgr' => 'EMP-0001'],
+            ['code' => 'EMP-0003', 'name' => 'Anan Srisuk', 'name_th' => 'อนันต์ ศรีสุข', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Senior Manager', 'mgr' => 'EMP-0002'],
+            ['code' => 'EMP-0004', 'name' => 'Wirat Chaiyo', 'name_th' => 'วิรัช ชัยโย', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Manager', 'mgr' => 'EMP-0003'],
+            ['code' => 'EMP-0005', 'name' => 'Kasem Boonma', 'name_th' => 'เกษม บุญมา', 'dept' => 'PD', 'section' => 'Packing', 'pos' => 'Asst. Manager', 'mgr' => 'EMP-0004'],
+            ['code' => 'EMP-0006', 'name' => 'Narong Dee', 'name_th' => 'ณรงค์ ดี', 'dept' => 'PD', 'section' => 'Packing', 'pos' => 'Senior Supervisor', 'mgr' => 'EMP-0005'],
+            ['code' => 'EMP-0007', 'name' => 'Suchart Pimpa', 'name_th' => 'สุชาติ พิมพา', 'dept' => 'PD', 'section' => 'Filling', 'pos' => 'Supervisor', 'mgr' => 'EMP-0006'],
+            ['code' => 'EMP-0008', 'name' => 'Adisak Rung', 'name_th' => 'อดิศักดิ์ รุ่ง', 'dept' => 'PD', 'section' => 'Filling', 'pos' => 'Asst. Supervisor', 'mgr' => 'EMP-0007'],
+            ['code' => 'EMP-0009', 'name' => 'Manop Klin', 'name_th' => 'มานพ กลิ่น', 'dept' => 'PD', 'section' => 'Retrot', 'pos' => 'Leader', 'mgr' => 'EMP-0008'],
+            ['code' => 'EMP-0010', 'name' => 'Decha Pol', 'name_th' => 'เดชา พล', 'dept' => 'PD', 'section' => 'Retrot', 'pos' => 'Sub-Leader', 'mgr' => 'EMP-0009'],
+            ['code' => 'EMP-0011', 'name' => 'Chai Thong', 'name_th' => 'ชัย ทอง', 'dept' => 'PD', 'section' => 'Raw material', 'pos' => 'Head of Line', 'mgr' => 'EMP-0010'],
+            ['code' => 'EMP-0012', 'name' => 'Wichai Saito', 'name_th' => 'วิชัย สายโต', 'dept' => 'PD', 'section' => 'Stock', 'pos' => 'Head of Shift', 'mgr' => 'EMP-0011'],
+            ['code' => 'EMP-0013', 'name' => 'Nattapong Inta', 'name_th' => 'ณัฐพงษ์ อินตา', 'dept' => 'PD', 'section' => 'Loading', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0012'],
+            ['code' => 'EMP-0014', 'name' => 'Somkid Jan', 'name_th' => 'สมคิด จันทร์', 'dept' => 'PD', 'section' => 'Warehouse', 'pos' => 'Subcontract', 'mgr' => 'EMP-0013'],
+            // Corporate Director + one manager per remaining department
+            ['code' => 'EMP-0015', 'name' => 'Wanchai Rung', 'name_th' => 'วันชัย รุ่งเรือง', 'dept' => null, 'section' => null, 'pos' => 'Director', 'mgr' => 'EMP-0001'],
+            ['code' => 'EMP-0016', 'name' => 'Krit Saengthong', 'name_th' => 'กฤต แสงทอง', 'dept' => 'It', 'section' => 'Network & Security', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0017', 'name' => 'Suwanna Pongrat', 'name_th' => 'สุวรรณา พงศ์รัตน์', 'dept' => 'QC', 'section' => 'Quality Control', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0018', 'name' => 'Siriporn Chaiyo', 'name_th' => 'ศิริพร ชัยโย', 'dept' => 'HR', 'section' => 'Payroll', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0019', 'name' => 'Nattaya Phimsen', 'name_th' => 'ณัฐญา พิมพ์เสน', 'dept' => 'Acc', 'section' => 'Accounting', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0020', 'name' => 'Apinya Rattana', 'name_th' => 'อภิญญา รัตนา', 'dept' => 'Sales', 'section' => 'Sales', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0021', 'name' => 'Manat Boonyarit', 'name_th' => 'มานัส บุญยฤทธิ์', 'dept' => 'Lg', 'section' => 'Logistic', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0022', 'name' => 'Worawut Kittisak', 'name_th' => 'วรวุฒิ กิตติศักดิ์', 'dept' => 'Mn', 'section' => 'Maintenance', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0023', 'name' => 'Pichai Thaweesup', 'name_th' => 'พิชัย ทวีทรัพย์', 'dept' => 'PU', 'section' => 'Purchasing', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0024', 'name' => 'Ratana Klinpratum', 'name_th' => 'รัตนา กลิ่นประทุม', 'dept' => 'GA', 'section' => 'General Affairs', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            ['code' => 'EMP-0025', 'name' => 'Surasak Munkong', 'name_th' => 'สุรศักดิ์ มั่นคง', 'dept' => 'SE', 'section' => 'Occupational Safety & Health', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
+            // A few staff under managers (more depth + section coverage)
+            ['code' => 'EMP-0026', 'name' => 'Thanapon Inthawong', 'name_th' => 'ธนพล อินทวงศ์', 'dept' => 'It', 'section' => 'Support', 'pos' => 'Supervisor', 'mgr' => 'EMP-0016'],
+            ['code' => 'EMP-0027', 'name' => 'Kanya Phakdee', 'name_th' => 'กัญญา ภักดี', 'dept' => 'It', 'section' => 'System analyst', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0026'],
+            ['code' => 'EMP-0028', 'name' => 'Pimchada Sutthi', 'name_th' => 'พิมพ์ชฎา สุทธิ', 'dept' => 'QC', 'section' => 'Quality Assurance', 'pos' => 'Leader', 'mgr' => 'EMP-0017'],
+            ['code' => 'EMP-0029', 'name' => 'Yuki Tanaka', 'name_th' => 'ยูกิ ทานากะ', 'dept' => 'QC', 'section' => 'Research and Development', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0028'],
+            ['code' => 'EMP-0030', 'name' => 'Waraporn Sri', 'name_th' => 'วราพร ศรี', 'dept' => 'HR', 'section' => 'Recruitment', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0018'],
         ];
 
-        foreach ($employees as $e) {
+        // Pass 1: create/update each employee (no manager yet).
+        foreach ($employees as $i => $e) {
+            $email = 'emp'.str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT).'@abcd.co.th';
             Employee::updateOrCreate(
                 ['code' => $e['code']],
                 [
                     'name' => $e['name'],
                     'name_th' => $e['name_th'],
-                    'department_id' => $deptId[$e['dept']] ?? null,
+                    'department_id' => $e['dept'] ? ($deptId[$e['dept']] ?? null) : null,
+                    'section_id' => $e['section'] ? ($sectionId["{$e['dept']}::{$e['section']}"] ?? null) : null,
                     'position_id' => $posId[$e['pos']] ?? null,
-                    'email' => $e['email'],
-                    'phone' => $e['phone'],
-                    'joined_at' => $e['joined_at'],
-                    'status' => $e['status'] ?? 'active',
-                    'resign_reason' => $e['resign_reason'] ?? null,
-                    'last_day' => $e['last_day'] ?? null,
+                    'email' => $email,
+                    'status' => 'active',
                 ],
             );
+        }
+
+        // Pass 2: wire manager_id by code.
+        $idByCode = Employee::pluck('id', 'code');
+        foreach ($employees as $e) {
+            if ($e['mgr'] && isset($idByCode[$e['code']], $idByCode[$e['mgr']])) {
+                Employee::where('code', $e['code'])->update(['manager_id' => $idByCode[$e['mgr']]]);
+            }
         }
 
         $this->linkDemoAccounts();
         $this->seedGroupRoles();
     }
 
-    /**
-     * Links the four demo login users to their matching employee records via the
-     * users.employee_id FK. Sets the employee's username for display purposes and
-     * points the User row back to the correct Employee, so has_account resolves true.
-     */
+    /** Link the four demo logins to employee records (username + users.employee_id). */
     private function linkDemoAccounts(): void
     {
         $links = [
-            'EMP-1617' => 'super', // Wichai Suwannarat
-            'EMP-1718' => 'it',    // Kanya Phakdee
-            'EMP-1509' => 'hr',    // Ratana Klinprathum
-            'EMP-1305' => 'user',  // Pimchanok Wongwai
+            'EMP-0001' => 'super', // Vice President
+            'EMP-0016' => 'it',    // IT Manager
+            'EMP-0018' => 'hr',    // HR Manager
+            'EMP-0030' => 'user',  // HR staff
         ];
         foreach ($links as $code => $username) {
             $employee = Employee::where('code', $code)->first();
@@ -115,11 +173,7 @@ class OrgSeeder extends Seeder
         }
     }
 
-    /**
-     * Seeds the demo Role Groups, assigns active employees to the default
-     * "All Staff" group, and records that group as the system default used
-     * when a new employee's login account is later provisioned.
-     */
+    /** Seed demo role groups and assign employees (Administrator > HR > IT > All Staff). */
     private function seedGroupRoles(): void
     {
         $groups = [
@@ -137,33 +191,26 @@ class OrgSeeder extends Seeder
         $itTeam = GroupRole::where('name', 'IT Team')->first();
         $hrTeam = GroupRole::where('name', 'HR Team')->first();
 
-        // Each employee belongs to exactly one group; assign by priority so the
-        // sets stay disjoint: Administrator > HR Team > IT Team > All Staff.
         $assigned = [];
 
-        // Administrator: the super demo account's employee (username 'super').
         $adminIds = Employee::where('username', 'super')->pluck('id')->all();
         $admin?->employees()->sync($adminIds);
         $assigned = array_merge($assigned, $adminIds);
 
-        // HR Team: HR-department employees not already placed.
         $hrIds = Employee::whereHas('department', fn ($q) => $q->where('tag', 'HR'))
             ->whereNotIn('id', $assigned)->pluck('id')->all();
         $hrTeam?->employees()->sync($hrIds);
         $assigned = array_merge($assigned, $hrIds);
 
-        // IT Team: IT-department employees not already placed.
-        $itIds = Employee::whereHas('department', fn ($q) => $q->where('tag', 'IT'))
+        $itIds = Employee::whereHas('department', fn ($q) => $q->where('tag', 'It'))
             ->whereNotIn('id', $assigned)->pluck('id')->all();
         $itTeam?->employees()->sync($itIds);
         $assigned = array_merge($assigned, $itIds);
 
-        // All Staff (default): every remaining active employee.
         $restIds = Employee::where('status', 'active')
             ->whereNotIn('id', $assigned)->pluck('id')->all();
         $allStaff?->employees()->sync($restIds);
 
-        // Record the default group used to resolve role keys for new accounts.
         if ($allStaff) {
             AppSetting::put('default_employee_group_id', (string) $allStaff->id);
         }
