@@ -26,7 +26,7 @@ class Permissions
             ],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
-            'settings' => ['company', 'system', 'masterdata', 'email', 'sla', 'assets', 'workflows', 'security'],
+            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'assets', 'security'],
         ];
     }
 
@@ -129,5 +129,28 @@ class Permissions
         }
 
         return array_keys($set);
+    }
+
+    /**
+     * Master key gating the Settings module (and its sidebar entry). The
+     * per-section keys (settings.company, …) require it — like stock.module.
+     */
+    public const SETTINGS_MASTER = 'settings.access';
+
+    /**
+     * Enforce the settings gate: with the master off, every per-section key is
+     * dropped (a section can't be granted without access to the module). Non-
+     * settings keys pass through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeSettings(array $granted): array
+    {
+        if (in_array(self::SETTINGS_MASTER, $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'settings.')));
     }
 }

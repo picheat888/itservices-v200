@@ -4,8 +4,10 @@ import { AppErrorScreen } from '@/components/app-error-screen';
 import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RequirePermission } from '@/components/auth/require-permission';
 import { AppShell } from '@/components/shell/app-shell';
+import { TransientToaster } from '@/components/shell/transient-toaster';
 import { useApplyTheme } from '@/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
+import { queryClient } from '@/lib/query-client';
 import AssetsPage from '@/pages/assets';
 import ContractsPage from '@/pages/contracts';
 import DashboardPage from '@/pages/dashboard';
@@ -19,13 +21,9 @@ import StockPage from '@/pages/stock';
 import ItemHistoryPage from '@/pages/stock/item-history';
 import TicketsPage from '@/pages/tickets';
 import type { Role } from '@/types';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-
-const queryClient = new QueryClient({
-    defaultOptions: { queries: { refetchOnWindowFocus: false } },
-});
 
 // Placeholder ("coming soon") modules and how their routes are gated. `requests`
 // uses a permission key; `reports` is role-gated (matching the sidebar nav).
@@ -104,18 +102,7 @@ function App() {
                         <Route
                             path="settings"
                             element={
-                                <RequirePermission
-                                    anyOf={[
-                                        'settings.company',
-                                        'settings.system',
-                                        'settings.masterdata',
-                                        'settings.email',
-                                        'settings.sla',
-                                        'settings.assets',
-                                        'settings.workflows',
-                                        'settings.security',
-                                    ]}
-                                >
+                                <RequirePermission anyOf={['settings.access']}>
                                     <SettingsPage />
                                 </RequirePermission>
                             }
@@ -151,5 +138,6 @@ createRoot(document.getElementById('app')!).render(
     <QueryClientProvider client={queryClient}>
         <App />
         <AppErrorScreen />
+        <TransientToaster />
     </QueryClientProvider>,
 );

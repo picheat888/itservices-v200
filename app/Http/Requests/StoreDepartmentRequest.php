@@ -12,6 +12,14 @@ class StoreDepartmentRequest extends FormRequest
         return (bool) $this->user()?->canManageOrg();
     }
 
+    /** Normalise tag to uppercase before validation so DB always stores consistent casing. */
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('tag')) {
+            $this->merge(['tag' => strtoupper($this->tag)]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

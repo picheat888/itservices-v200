@@ -1,4 +1,6 @@
+import { ME_KEY, queryClient } from '@/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
+import { useToastStore } from '@/stores/toast';
 import axios from 'axios';
 
 // Same-origin SPA: Laravel serves the app and the API, so cookies flow
@@ -35,7 +37,17 @@ http.interceptors.response.use(
             showError('network');
         } else if (status === 429) {
             const retry = Number(error.response.headers?.['retry-after']);
-            showError('rate-limit', Number.isFinite(retry) && retry > 0 ? retry : null);
+            const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;
+            // For a logged-in user mid-session a full-screen takeover is jarring —
+            // surface the throttle as a dismissable toast instead. Guests (or the
+            // login screen) still get the full-screen notice.
+            const loggedIn = !!queryClient.getQueryData(ME_KEY);
+            if (loggedIn) {
+                const detail = retryAfter ? ` Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : '';
+                useToastStore.getState().push(`Too many requests — please slow down for a moment.${detail}`);
+            } else {
+                showError('rate-limit', retryAfter);
+            }
         } else if (status !== undefined && status >= 500) {
             showError('server');
         }

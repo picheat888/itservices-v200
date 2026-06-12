@@ -5,7 +5,7 @@ import { useT } from '@/lib/i18n';
 import { navGroups } from '@/lib/nav';
 import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/types';
-import { Bell, Menu, Moon, Search, Sun } from 'lucide-react';
+import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface TopbarProps {
@@ -50,15 +50,6 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
             </div>
 
             <div className="flex-1" />
-
-            <div className="hidden w-80 items-center gap-2 rounded-md border border-transparent bg-muted px-3 py-2 text-muted-foreground transition-colors focus-within:border-brand focus-within:bg-background md:flex">
-                <Search className="h-4 w-4 shrink-0" />
-                <input
-                    placeholder={t('search_placeholder')}
-                    className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                />
-                <kbd className="rounded border border-border bg-background px-1.5 font-mono text-[10.5px] text-muted-foreground">⌘K</kbd>
-            </div>
 
             <button
                 onClick={toggleLang}

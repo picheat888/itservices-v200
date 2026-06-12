@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\AssetStatus;
+use App\Enums\ContractType;
 use App\Models\Contract;
 use App\Models\Vendor;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class ContractService
 {
@@ -137,10 +140,37 @@ class ContractService
      */
     public function toggleCancel(Contract $contract): Contract
     {
+        // Guard only the active → cancelled transition; reactivation is always allowed.
+        if ($contract->cancelled_at === null) {
+            $this->assertCancellable($contract);
+        }
+
         $contract->update([
             'cancelled_at' => $contract->cancelled_at === null ? Carbon::now() : null,
         ]);
 
         return $contract->fresh();
+    }
+
+    /**
+     * A Hardware contract can only be cancelled once every linked asset has been
+     * written off — otherwise leased hardware would be left tracked against a dead
+     * contract. Other contract types carry no such restriction.
+     *
+     * @throws ValidationException
+     */
+    private function assertCancellable(Contract $contract): void
+    {
+        if ($contract->type !== ContractType::Hardware) {
+            return;
+        }
+
+        $pending = $contract->assets()->where('status', '!=', AssetStatus::Writeoff->value)->count();
+
+        if ($pending > 0) {
+            throw ValidationException::withMessages([
+                'contract' => "All {$pending} linked asset(s) must be written off before this hardware contract can be cancelled.",
+            ]);
+        }
     }
 }

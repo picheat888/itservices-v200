@@ -26,14 +26,14 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Standard API throttle: 60 requests/minute, keyed per authenticated user
+     * Standard API throttle: 300 requests/minute, keyed per authenticated user
      * (so one heavy user can't starve others) and falling back to the client IP
      * for unauthenticated calls. Exceeding it returns HTTP 429.
      */
     private function configureRateLimiting(): void
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(300)->by($request->user()?->id ?: $request->ip());
         });
     }
 }
