@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ASSET_LINKABLE_CONTRACT_TYPES, type Contract } from '@/types';
 import { Ban, FileText, SquarePen } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 /** Asset status → StatusBadge tone for the linked-assets list. */
 const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
@@ -51,6 +52,49 @@ export function ContractDetailDrawer({
 
     if (!contract) return null;
 
+    const swalShell = { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' };
+
+    /**
+     * Cancel flow. Hardware contracts may only be cancelled once every linked
+     * asset is written off — otherwise warn and stop. All cancels then require a
+     * final confirmation. The backend enforces the same rule (422).
+     */
+    const handleCancel = async () => {
+        if (contract.type === 'hardware') {
+            const pending = contract.linked_assets.filter((a) => a.status !== 'writeoff');
+            if (pending.length > 0) {
+                await Swal.fire({
+                    icon: 'warning',
+                    title: lang === 'th' ? 'ยังยกเลิกสัญญาไม่ได้' : 'Cannot cancel yet',
+                    html:
+                        lang === 'th'
+                            ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน<br>ยังเหลืออีก <b>${pending.length}</b> รายการ`
+                            : `Every linked asset must be written off first.<br><b>${pending.length}</b> asset(s) still need write-off.`,
+                    confirmButtonText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
+                    confirmButtonColor: '#2563eb',
+                    customClass: { popup: swalShell.popup, confirmButton: swalShell.confirmButton },
+                });
+                return;
+            }
+        }
+
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: lang === 'th' ? 'ยืนยันยกเลิกสัญญา?' : 'Cancel this contract?',
+            html: `<b>${contract.name}</b><br><span style="font-size:0.85rem;color:#6b7280">${contract.code}</span>`,
+            showCancelButton: true,
+            confirmButtonText: t('contract_cancel'),
+            cancelButtonText: t('cancel'),
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#6b7280',
+            customClass: swalShell,
+            reverseButtons: true,
+        });
+        if (result.isConfirmed) {
+            cancel.mutate(contract.id, { onSuccess: onClose });
+        }
+    };
+
     const days = contract.days_remaining;
     const cancelled = contract.status === 'cancelled';
     const tone = cancelled ? 'gray' : contract.status === 'expired' ? 'red' : contract.in_reminder ? 'amber' : 'green';
@@ -65,7 +109,14 @@ export function ContractDetailDrawer({
             : 'Active';
 
     return (
-        <Sheet open={!!contract} onOpenChange={(o) => !o && onClose()}>
+        <Sheet
+            open={!!contract}
+            onOpenChange={(o) => {
+                // Ignore Radix's auto-close when a SweetAlert dialog steals focus —
+                // otherwise opening the cancel confirm closes this drawer underneath it.
+                if (!o && !Swal.isVisible()) onClose();
+            }}
+        >
             <SheetContent side="right" className="flex w-[620px] flex-col sm:max-w-[620px]">
                 <SheetHeader>
                     <SheetTitle>{contract.title || contract.name}</SheetTitle>
@@ -234,7 +285,7 @@ export function ContractDetailDrawer({
                         <Button
                             variant="destructive"
                             className="flex-1"
-                            onClick={() => cancel.mutate(contract.id, { onSuccess: onClose })}
+                            onClick={handleCancel}
                             disabled={cancel.isPending}
                         >
                             <Ban className="h-4 w-4" />

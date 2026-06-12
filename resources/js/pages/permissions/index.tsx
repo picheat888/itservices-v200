@@ -1,4 +1,5 @@
 import { GroupRoleModal } from '@/components/permissions/group-role-modal';
+import { ModulePermissionCard, type ModuleMaster } from '@/components/permissions/module-permission-card';
 import { RoleModal } from '@/components/permissions/role-modal';
 import { StockPermissionTree } from '@/components/permissions/stock-permission-tree';
 import { SearchableSelect } from '@/components/shared/searchable-select';
@@ -18,7 +19,9 @@ import {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from '@/hooks/use-permissions';
+import { useDepartments, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useDateTime } from '@/hooks/use-settings';
+import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '@/lib/audit-format';
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
 import { cn } from '@/lib/utils';
@@ -104,18 +107,32 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     {
         module: 'settings',
         keys: [
+            'settings.access',
             'settings.company',
             'settings.system',
             'settings.masterdata',
             'settings.email',
             'settings.sla',
             'settings.assets',
-            'settings.workflows',
             'settings.security',
         ],
     },
     { module: 'reports', keys: ['reports.view', 'reports.run', 'reports.export', 'reports.schedule', 'reports.custom'] },
 ];
+
+// Administration modules rendered with the richer Stock-style card (identity
+// band + master switch). Modules without an entry fall back to the plain list
+// card. `master` controls how the top switch behaves (see ModuleMaster).
+const ADMIN_CARD_META: Record<string, { subtitle: { en: string; th: string }; master: ModuleMaster }> = {
+    permissions: {
+        subtitle: { en: 'Gates the Permissions module and its sidebar entry', th: 'คุมโมดูล Permissions และเมนูใน sidebar' },
+        master: { mode: 'key', key: 'system.manage_permissions' },
+    },
+    settings: {
+        subtitle: { en: 'Gates the Settings module and its sidebar entry', th: 'คุมโมดูล Settings และเมนูใน sidebar' },
+        master: { mode: 'key', key: 'settings.access' },
+    },
+};
 
 function RolesTab() {
     const t = useT();
@@ -320,6 +337,22 @@ function RolesTab() {
                                                 return (
                                                     <StockPermissionTree
                                                         key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            const cardMeta = ADMIN_CARD_META[group.module];
+                                            if (cardMeta) {
+                                                return (
+                                                    <ModulePermissionCard
+                                                        key={group.module}
+                                                        module={group.module}
+                                                        keys={group.keys}
+                                                        subtitle={cardMeta.subtitle}
+                                                        master={cardMeta.master}
                                                         draft={draft}
                                                         setDraft={setDraft}
                                                         isSuper={role.is_super}
@@ -607,7 +640,7 @@ function GroupRolesTab() {
 }
 
 /** Renders the diff detail panel for a single audit entry. */
-function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: string }) {
+function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: string; lookups: AuditLookups }) {
     const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
     const changeEntries = Object.entries(details.changes ?? {});
@@ -621,10 +654,10 @@ function AuditDetailPanel({ details, lang }: { details: AuditDetails; lang: stri
                 <div className="space-y-1.5">
                     {changeEntries.map(([field, { from, to }]) => (
                         <div key={field} className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground w-32 shrink-0 truncate font-mono text-xs">{field}</span>
-                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{diffValue(from)}</span>
+                            <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{auditFieldLabel(field, lang as 'en' | 'th')}</span>
+                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{diffValue(resolveAuditValue(field, from, lookups))}</span>
                             <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">{diffValue(to)}</span>
+                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">{diffValue(resolveAuditValue(field, to, lookups))}</span>
                         </div>
                     ))}
                 </div>
@@ -757,6 +790,22 @@ function AuditTab() {
     const filters: AuditFilters = { q, category, user };
 
     const { data, isLoading } = useAuditLogs(page, pageSize, filters);
+
+    // Reference data to turn raw foreign-key ids in diffs into entity names.
+    const { data: positions = [] } = usePositions();
+    const { data: departments = [] } = useDepartments();
+    const { data: sections = [] } = useSections();
+    const { data: employees = [] } = useEmployees();
+    const lookups = useMemo<AuditLookups>(
+        () => ({
+            positions: new Map(positions.map((p) => [p.id, p.title])),
+            departments: new Map(departments.map((d) => [d.id, lang === 'th' ? d.name_th ?? d.name : d.name])),
+            sections: new Map(sections.map((s) => [s.id, lang === 'th' ? s.name_th ?? s.name : s.name])),
+            employees: new Map(employees.map((e) => [e.id, lang === 'th' ? e.name_th ?? e.name : e.name])),
+        }),
+        [positions, departments, sections, employees, lang],
+    );
+
     const logs = data?.data ?? [];
     const meta = data?.meta;
     const totalPages = meta?.last_page ?? 1;
@@ -915,7 +964,7 @@ function AuditTab() {
                                         {isExpanded && l.details && (
                                             <tr key={`${l.id}-detail`} className="border-border/60 bg-accent/20 border-b">
                                                 <td colSpan={5} className="py-0">
-                                                    <AuditDetailPanel details={l.details} lang={lang} />
+                                                    <AuditDetailPanel details={l.details} lang={lang} lookups={lookups} />
                                                 </td>
                                             </tr>
                                         )}

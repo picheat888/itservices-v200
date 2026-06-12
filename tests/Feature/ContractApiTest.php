@@ -191,6 +191,46 @@ class ContractApiTest extends TestCase
         $this->postJson("/api/contracts/{$contract->id}/cancel")->assertForbidden();
     }
 
+    public function test_hardware_contract_cannot_be_cancelled_while_a_linked_asset_is_not_written_off(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+        Asset::create(['tag' => 'RNT-LT-01', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('contract');
+
+        $this->assertNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_hardware_contract_cancels_once_every_linked_asset_is_written_off(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+        Asset::create(['tag' => 'RNT-LT-02', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'writeoff', 'source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+
+        $this->assertNotNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_non_hardware_contract_cancels_regardless_of_linked_assets(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create(['vendor' => 'X', 'name' => 'Service plan', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+        Asset::create(['tag' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled');
+    }
+
     public function test_renew_extends_the_contract_term(): void
     {
         $this->actingAs($this->super());

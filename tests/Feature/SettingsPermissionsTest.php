@@ -11,9 +11,9 @@ class SettingsPermissionsTest extends TestCase
     public function test_settings_module_exposes_expected_keys(): void
     {
         $expected = [
-            'settings.company', 'settings.system',
+            'settings.access', 'settings.company', 'settings.system',
             'settings.masterdata', 'settings.email', 'settings.sla',
-            'settings.assets', 'settings.workflows', 'settings.security',
+            'settings.assets', 'settings.security',
         ];
 
         foreach ($expected as $key) {
@@ -40,5 +40,23 @@ class SettingsPermissionsTest extends TestCase
                 $this->assertStringStartsNotWith('settings.', $key, "{$role} should not be granted {$key}");
             }
         }
+    }
+
+    /** Without the settings.access master, every per-section settings key is dropped. */
+    public function test_normalize_settings_drops_sections_when_master_is_off(): void
+    {
+        $normalized = Permissions::normalizeSettings(['settings.company', 'settings.email', 'tickets.create']);
+
+        $this->assertSame(['tickets.create'], array_values($normalized));
+    }
+
+    /** With the master on, the per-section keys are kept. */
+    public function test_normalize_settings_keeps_sections_when_master_is_on(): void
+    {
+        $granted = ['settings.access', 'settings.company', 'tickets.create'];
+
+        $normalized = Permissions::normalizeSettings($granted);
+
+        $this->assertEqualsCanonicalizing($granted, $normalized);
     }
 }

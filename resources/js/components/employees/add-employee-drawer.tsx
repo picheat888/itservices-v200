@@ -67,6 +67,9 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     // Set when the server rejects the chosen manager because it would form a
     // reporting-tree loop — surfaced as a blocking warning dialog.
     const [managerLoop, setManagerLoop] = useState(false);
+    // Set on edit when the position/department/manager assignment changed — shows
+    // a confirmation dialog summarising the move before the save is committed.
+    const [orgConfirm, setOrgConfirm] = useState(false);
 
     useEffect(() => {
         if (!open) return;
@@ -76,6 +79,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         setPhotoError(null);
         setErrors({});
         setManagerLoop(false);
+        setOrgConfirm(false);
         if (employee) {
             const [fn, ln] = splitName(employee.name);
             const [fnTh, lnTh] = splitName(employee.name_th);
@@ -125,6 +129,45 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         [employees, employee, lang],
     );
 
+    /** Human label for a position id (its title), or "(none)" when unset. */
+    const positionLabel = (id: string) => positions.find((p) => String(p.id) === id)?.title ?? t('emp_org_change_none');
+    /** Human label for a department id (language-aware name), or "(none)" when unset. */
+    const departmentLabel = (id: string) => {
+        const d = departments.find((x) => String(x.id) === id);
+        return d ? (lang === 'th' ? d.name_th ?? d.name : d.name) : t('emp_org_change_none');
+    };
+    /** Human label for a manager id (the employee's name), or "(none)" when unset. */
+    const managerLabel = (id: string) => {
+        const m = employees.find((e) => String(e.id) === id);
+        return m ? (lang === 'th' ? m.name_th ?? m.name : m.name) : t('emp_org_change_none');
+    };
+
+    // Org assignment as it stood when the drawer opened, used to diff against the form.
+    const origPositionId = employee?.position_id ? String(employee.position_id) : '';
+    const origDepartmentId = employee?.department_id ? String(employee.department_id) : '';
+    const origManagerId = employee?.manager_id ? String(employee.manager_id) : '';
+
+    // The position/department/manager moves to confirm — only computed when editing.
+    const orgChanges = employee
+        ? [
+              origPositionId !== form.positionId && {
+                  label: t('emp_org_change_position'),
+                  from: positionLabel(origPositionId),
+                  to: positionLabel(form.positionId),
+              },
+              origDepartmentId !== form.departmentId && {
+                  label: t('emp_org_change_department'),
+                  from: departmentLabel(origDepartmentId),
+                  to: departmentLabel(form.departmentId),
+              },
+              origManagerId !== form.managerId && {
+                  label: t('emp_org_change_manager'),
+                  from: managerLabel(origManagerId),
+                  to: managerLabel(form.managerId),
+              },
+          ].filter(Boolean as unknown as <T>(x: T | false) => x is T)
+        : [];
+
     const validateStep = (s: number) => {
         const e: Record<string, string> = {};
         if (s === 1) {
@@ -143,8 +186,22 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
 
     const next = () => { if (validateStep(step)) setStep((s) => s + 1); };
 
+    /**
+     * Save gate. On edit, if the employee is being moved (position/department/
+     * manager changed) we pause and ask for confirmation first; otherwise the
+     * save runs straight away.
+     */
     const submit = async () => {
         if (!validateStep(1) || !validateStep(2)) return;
+        if (employee && orgChanges.length > 0) {
+            setOrgConfirm(true);
+            return;
+        }
+        await persist();
+    };
+
+    /** Builds the payload and commits the create/update mutation. */
+    const persist = async () => {
         const nameTh = `${form.firstNameTh} ${form.lastNameTh}`.trim();
         const payload = {
             name: `${form.firstName} ${form.lastName}`.trim(),
@@ -163,14 +220,16 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         try {
             if (employee) await update.mutateAsync({ id: employee.id, payload });
             else await create.mutateAsync(payload);
+            setOrgConfirm(false);
             onClose();
         } catch (err) {
             // 422 validation: a manager_id error means the pick would loop the
-            // reporting tree — show the warning dialog and send the user back to
-            // the work-info step to fix it. Any other field error → a toast so
-            // the save never fails silently.
+            // reporting tree — close the confirm dialog, show the warning dialog
+            // and send the user back to the work-info step to fix it. Any other
+            // field error → a toast so the save never fails silently.
             const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
             if (fieldErrors?.manager_id) {
+                setOrgConfirm(false);
                 setManagerLoop(true);
                 setStep(2);
             } else if (fieldErrors) {
@@ -516,6 +575,44 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 </DialogHeader>
                 <DialogFooter>
                     <Button onClick={() => setManagerLoop(false)}>{t('emp_understood')}</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Confirm an employee's position/department/manager move before committing it. */}
+        <Dialog open={orgConfirm} onOpenChange={(o) => { if (!o) setOrgConfirm(false); }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <div className="flex items-center gap-2.5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/15 text-brand">
+                            <Briefcase className="h-5 w-5" />
+                        </span>
+                        <DialogTitle>{t('emp_org_change_title')}</DialogTitle>
+                    </div>
+                    <DialogDescription className="pt-2 leading-relaxed">{t('emp_org_change_desc')}</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-2.5">
+                    {orgChanges.map((c) => (
+                        <div key={c.label} className="rounded-lg border border-border p-3">
+                            <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{c.label}</div>
+                            <div className="flex items-center gap-2 text-sm">
+                                <span className="min-w-0 flex-1 truncate text-muted-foreground line-through">{c.from}</span>
+                                <ArrowRight className="h-4 w-4 shrink-0 text-brand" />
+                                <span className="min-w-0 flex-1 truncate font-medium text-foreground">{c.to}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setOrgConfirm(false)}>
+                        {t('cancel')}
+                    </Button>
+                    <Button onClick={persist} disabled={update.isPending}>
+                        <Check className="h-4 w-4" />
+                        {t('emp_org_confirm')}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

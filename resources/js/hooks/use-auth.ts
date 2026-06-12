@@ -1,8 +1,7 @@
+import { ME_KEY } from '@/lib/query-client';
 import { authApi, type LoginPayload } from '@/services/authApi';
 import type { User } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-const ME_KEY = ['auth', 'me'] as const;
 
 export function useAuth() {
     const query = useQuery<User | null>({

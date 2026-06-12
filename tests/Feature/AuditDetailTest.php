@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
+use App\Models\Department;
+use App\Models\Employee;
+use App\Models\Position;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -62,6 +65,46 @@ class AuditDetailTest extends TestCase
         $this->getJson('/api/audit-logs')
             ->assertOk()
             ->assertJsonPath('meta.users.0', 'Boss');
+    }
+
+    public function test_changes_helper_resolves_foreign_keys_to_labels(): void
+    {
+        $director = Position::create(['title' => 'Director', 'level' => 5]);
+        $manager = Position::create(['title' => 'Manager', 'level' => 4]);
+        $sales = Department::create(['name' => 'Sales', 'tag' => 'SALE']);
+        $boss = Employee::create(['name' => 'Big Boss']);
+        $emp = Employee::create(['name' => 'Worker', 'position_id' => $director->id]);
+
+        $before = $emp->getOriginal();
+        $emp->update(['position_id' => $manager->id, 'department_id' => $sales->id, 'manager_id' => $boss->id]);
+
+        $details = AuditLog::changes($before, $emp);
+
+        // Foreign-key ids are resolved to entity labels, not raw numbers.
+        $this->assertSame('Director', $details['changes']['position_id']['from']);
+        $this->assertSame('Manager', $details['changes']['position_id']['to']);
+        $this->assertSame('Sales', $details['changes']['department_id']['to']);
+        $this->assertSame('Big Boss', $details['changes']['manager_id']['to']);
+        // A null foreign key stays null (shown as a dash in the UI).
+        $this->assertNull($details['changes']['manager_id']['from']);
+        $this->assertNull($details['changes']['department_id']['from']);
+    }
+
+    public function test_employee_update_endpoint_records_resolved_org_labels(): void
+    {
+        $super = User::factory()->create(['role' => 'super']);
+        $director = Position::create(['title' => 'Director', 'level' => 5]);
+        $manager = Position::create(['title' => 'Manager', 'level' => 4]);
+        $emp = Employee::create(['name' => 'Worker', 'position_id' => $director->id]);
+
+        $this->actingAs($super)
+            ->putJson("/api/employees/{$emp->id}", ['name' => 'Worker', 'position_id' => $manager->id])
+            ->assertOk();
+
+        $log = AuditLog::where('action', 'Updated employee')->latest('id')->first();
+        $this->assertNotNull($log);
+        $this->assertSame('Director', $log->details['changes']['position_id']['from']);
+        $this->assertSame('Manager', $log->details['changes']['position_id']['to']);
     }
 
     public function test_role_update_endpoint_records_audit_details(): void

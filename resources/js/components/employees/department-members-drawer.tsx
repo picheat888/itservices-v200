@@ -26,7 +26,7 @@ export function DepartmentMembersDrawer({ department, onClose }: { department: D
                 <SheetHeader>
                     <SheetTitle>{department ? (lang === 'th' ? department.name_th ?? department.name : department.name) : ''}</SheetTitle>
                     <SheetDescription>
-                        {department?.location} · {members.length} {t('dept_members')}
+                        {members.length} {t('dept_members')}
                     </SheetDescription>
                 </SheetHeader>
 

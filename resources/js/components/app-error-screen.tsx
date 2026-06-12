@@ -24,13 +24,11 @@ const COPY: Record<AppErrorKind, { icon: ComponentType<{ className?: string }>; 
 
 /**
  * Renders nothing until the app-error store holds an error, then covers the whole
- * viewport with a clear message + Reload / Dismiss actions. Driven by the axios
- * interceptor (services/http.ts).
+ * viewport with a clear message + Reload action. Driven by the axios interceptor (services/http.ts).
  */
 export function AppErrorScreen() {
     const kind = useAppErrorStore((s) => s.kind);
     const retryAfter = useAppErrorStore((s) => s.retryAfter);
-    const clear = useAppErrorStore((s) => s.clear);
 
     if (!kind) return null;
 
@@ -47,15 +45,10 @@ export function AppErrorScreen() {
                 <p className="max-w-md text-sm text-muted-foreground">{message}</p>
                 {detail && <p className="text-sm font-medium text-foreground">{detail}</p>}
             </div>
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={clear}>
-                    Dismiss
-                </Button>
-                <Button onClick={() => window.location.reload()}>
-                    <RotateCw className="h-4 w-4" />
-                    Reload
-                </Button>
-            </div>
+            <Button onClick={() => window.location.reload()}>
+                <RotateCw className="h-4 w-4" />
+                Reload
+            </Button>
         </div>
     );
 }

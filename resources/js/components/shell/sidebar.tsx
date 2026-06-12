@@ -119,26 +119,47 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                 </div>
             )}
 
-            <div className="flex items-center gap-2 border-t border-sidebar-border p-3">
-                <button
-                    onClick={onProfile}
-                    title={t('profile')}
-                    className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent"
-                >
-                    <Avatar className="h-9 w-9 shrink-0">
-                        {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
-                        <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
-                            {initials(user?.name ?? 'IN')}
-                        </AvatarFallback>
-                    </Avatar>
-                    {!iconsOnly && (
+            {iconsOnly ? (
+                <div className="flex flex-col items-center gap-1 border-t border-sidebar-border px-2 py-3">
+                    <button
+                        onClick={onProfile}
+                        title={t('profile')}
+                        className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent"
+                    >
+                        <Avatar className="h-8 w-8 shrink-0">
+                            {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
+                            <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
+                                {initials(user?.name ?? 'IN')}
+                            </AvatarFallback>
+                        </Avatar>
+                    </button>
+                    <button
+                        onClick={() => logout.mutate()}
+                        title={t('profile_signout')}
+                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
+                    >
+                        <LogOut className="h-[18px] w-[18px]" />
+                    </button>
+                </div>
+            ) : (
+                <div className="flex items-center gap-2 border-t border-sidebar-border p-3">
+                    <button
+                        onClick={onProfile}
+                        title={t('profile')}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent"
+                    >
+                        <Avatar className="h-9 w-9 shrink-0">
+                            {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
+                            <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
+                                {initials(user?.name ?? 'IN')}
+                            </AvatarFallback>
+                        </Avatar>
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{user?.name}</div>
                             <div className="truncate text-xs text-muted-foreground">{user?.group_name ?? user?.role_label}</div>
                         </div>
-                    )}
-                </button>
-                {!iconsOnly && (
+                    </button>
                     <button
                         onClick={() => logout.mutate()}
                         title={t('profile_signout')}
@@ -147,8 +168,8 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     >
                         <LogOut className="h-[18px] w-[18px]" />
                     </button>
-                )}
-            </div>
+                </div>
+            )}
         </aside>
     );
 }
