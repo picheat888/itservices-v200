@@ -1,5 +1,6 @@
 import { Field } from '@/components/shared/field';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useRoleMutations } from '@/hooks/use-permissions';
@@ -9,13 +10,13 @@ import type { RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 const COLORS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 
 export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () => void; role: RoleRow | null }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const confirm = useConfirm();
     const { create, update } = useRoleMutations();
     const [name, setName] = useState('');
     const [color, setColor] = useState(COLORS[0]);
@@ -34,32 +35,18 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
         if (!name.trim()) return;
 
         if (role) {
-            // Capture values before closing to avoid Radix + Swal focus-trap conflict
+            // Capture values before closing to avoid a Radix focus-trap conflict
             const capturedName = name;
             const capturedColor = color;
 
             onClose();
 
-            const result = await Swal.fire({
+            await confirm({
+                variant: 'edit',
                 title: t('perm_change_props'),
-                text: capturedName,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: t('save'),
-                cancelButtonText: t('cancel'),
-                confirmButtonColor: '#2563eb',
-                cancelButtonColor: '#6b7280',
-                customClass: {
-                    popup: '!rounded-xl !shadow-xl',
-                    confirmButton: '!rounded-lg !font-medium',
-                    cancelButton: '!rounded-lg !font-medium',
-                },
-                reverseButtons: true,
+                entity: { name: capturedName },
+                action: () => update.mutateAsync({ key: role.value, name: capturedName, color: capturedColor }),
             });
-
-            if (result.isConfirmed) {
-                await update.mutateAsync({ key: role.value, name: capturedName, color: capturedColor });
-            }
         } else {
             await create.mutateAsync({ name, color });
             setSaved(true);
@@ -109,7 +96,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
                                     key={c}
                                     onClick={() => setColor(c)}
                                     className={cn(
-                                        'h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all',
+                                        'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
                                         color.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
                                     )}
                                     style={{ background: c }}

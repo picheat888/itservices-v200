@@ -56,6 +56,17 @@ class SectionController extends Controller
     public function destroy(Request $request, Section $section): JsonResponse
     {
         abort_unless((bool) $request->user()?->canManageOrg(), 403);
+
+        // A section can only be deleted once it's empty. The section_id FK is
+        // nullOnDelete, so deleting a populated section would silently unassign
+        // its employees — block it and tell the caller to move/remove them first.
+        if ($section->employees()->exists()) {
+            return response()->json([
+                'message' => 'section_has_employees',
+                'employees_count' => $section->employees()->count(),
+            ], 422);
+        }
+
         AuditLog::record('Deleted section', $section->name);
         $section->delete();
 

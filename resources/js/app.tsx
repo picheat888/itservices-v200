@@ -5,6 +5,7 @@ import { ProtectedRoute } from '@/components/auth/protected-route';
 import { RequirePermission } from '@/components/auth/require-permission';
 import { AppShell } from '@/components/shell/app-shell';
 import { TransientToaster } from '@/components/shell/transient-toaster';
+import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 import { useApplyTheme } from '@/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
 import { queryClient } from '@/lib/query-client';
@@ -136,8 +137,10 @@ function App() {
 
 createRoot(document.getElementById('app')!).render(
     <QueryClientProvider client={queryClient}>
-        <App />
-        <AppErrorScreen />
-        <TransientToaster />
+        <ConfirmProvider>
+            <App />
+            <AppErrorScreen />
+            <TransientToaster />
+        </ConfirmProvider>
     </QueryClientProvider>,
 );

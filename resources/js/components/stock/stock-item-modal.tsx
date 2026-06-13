@@ -1,19 +1,20 @@
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
+import { SearchableSelect } from '@/components/shared/searchable-select';
 import { SerialToggle } from '@/components/shared/serial-toggle';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SearchableSelect } from '@/components/shared/searchable-select';
 import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/hooks/use-master-data';
 import { useStockItemMutations } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { StockItemPayload } from '@/services/stockApi';
+import { useToastStore } from '@/stores/toast';
 import type { StockItem } from '@/types';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -55,6 +56,7 @@ function itemToForm(item: StockItem): StockItemPayload {
  */
 export function StockItemModal({ open, item, onClose }: { open: boolean; item?: StockItem | null; onClose: () => void }) {
     const t = useT();
+    const confirm = useConfirm();
     const { create, update } = useStockItemMutations();
     const { data: categories = [] } = useCategories();
     const { data: units = [] } = useUnits();
@@ -104,30 +106,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         if (!form.name.trim() || (item && !form.sku.trim())) return;
         // Editing an existing item asks for confirmation before saving changes.
         if (item) {
-            const result = await Swal.fire({
-                title: t('stock_edit_item'),
-                text: t('stock_edit_confirm'),
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: t('save'),
-                cancelButtonText: t('cancel'),
-                confirmButtonColor: '#2563eb',
-                cancelButtonColor: '#6b7280',
-                customClass: {
-                    popup: '!rounded-xl !shadow-xl',
-                    confirmButton: '!rounded-lg !font-medium',
-                    cancelButton: '!rounded-lg !font-medium',
-                },
-                reverseButtons: true,
-                // Re-enable pointer events blocked by the parent Radix dialog.
-                didOpen: () => {
-                    const container = Swal.getContainer();
-                    if (container) {
-                        container.style.pointerEvents = 'auto';
-                    }
-                },
-            });
-            if (!result.isConfirmed) {
+            if (!(await confirm({ variant: 'edit', title: t('stock_edit_item'), description: t('stock_edit_confirm') }))) {
                 return;
             }
         }
@@ -139,27 +118,13 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent
-                className="max-w-2xl"
-                // While the serial-tracking confirm (Swal) is open, don't let its
-                // Escape / backdrop click bubble up and close this modal too.
-                onEscapeKeyDown={(e) => {
-                    if (Swal.isVisible()) {
-                        e.preventDefault();
-                    }
-                }}
-                onInteractOutside={(e) => {
-                    if (Swal.isVisible()) {
-                        e.preventDefault();
-                    }
-                }}
-            >
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{item ? t('stock_edit_item') : t('stock_new_item')}</DialogTitle>
                 </DialogHeader>
@@ -184,8 +149,18 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                                 className="text-muted-foreground flex items-center gap-1.5 text-xs"
                             >
                                 <span className="font-medium">{t('stock_item_name_auto')}</span>
-                                <span className={cn('relative h-4 w-7 shrink-0 rounded-full transition-colors', autoName ? 'bg-brand' : 'bg-muted-foreground/30')}>
-                                    <span className={cn('absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all', autoName ? 'left-[14px]' : 'left-0.5')} />
+                                <span
+                                    className={cn(
+                                        'relative h-4 w-7 shrink-0 rounded-full transition-colors',
+                                        autoName ? 'bg-brand' : 'bg-muted-foreground/30',
+                                    )}
+                                >
+                                    <span
+                                        className={cn(
+                                            'absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all',
+                                            autoName ? 'left-[14px]' : 'left-0.5',
+                                        )}
+                                    />
                                 </span>
                             </button>
                         </div>
@@ -254,9 +229,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             />
                         </Field>
                     </div>
-                    {Number(form.max_stock) < Number(form.min_stock) && (
-                        <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>
-                    )}
+                    {Number(form.max_stock) < Number(form.min_stock) && <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>}
                     <Field label={t('stock_warranty')} required>
                         <SearchableSelect
                             value={form.warranty ?? ''}

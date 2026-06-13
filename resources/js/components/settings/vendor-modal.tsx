@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { useVendorMutations } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
+import { useToastStore } from '@/stores/toast';
 import type { Vendor } from '@/types';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -64,7 +64,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 

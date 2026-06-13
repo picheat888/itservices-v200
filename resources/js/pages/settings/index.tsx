@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { TicketPriorityBadge } from '@/components/tickets/ticket-meta';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
@@ -49,6 +50,7 @@ import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
 import { cn } from '@/lib/utils';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -74,7 +76,6 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
 
 type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'security';
 
@@ -457,6 +458,7 @@ function RowActions({
  */
 function BrandsList() {
     const t = useT();
+    const confirm = useConfirm();
     const { data: brands = [] } = useBrands();
     const { remove } = useBrandMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -480,9 +482,15 @@ function BrandsList() {
             render: (b) => (
                 <RowActions
                     onEdit={() => setEditBrand(b)}
-                    onDelete={() => {
-                        if (confirm(`${t('confirm_delete')} ${b.name}`)) remove.mutate(b.id);
-                    }}
+                    onDelete={() =>
+                        confirm({
+                            variant: 'danger',
+                            entity: { name: b.name },
+                            action: async () => {
+                                await remove.mutateAsync(b.id);
+                            },
+                        })
+                    }
                 />
             ),
         },
@@ -520,6 +528,7 @@ function BrandsList() {
  */
 function ModelsList() {
     const t = useT();
+    const confirm = useConfirm();
     const { data: models = [] } = useAssetModels();
     const { remove } = useAssetModelMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -555,9 +564,15 @@ function ModelsList() {
             render: (m) => (
                 <RowActions
                     onEdit={() => setEditModel(m)}
-                    onDelete={() => {
-                        if (confirm(`${t('confirm_delete')} ${m.name}`)) remove.mutate(m.id);
-                    }}
+                    onDelete={() =>
+                        confirm({
+                            variant: 'danger',
+                            entity: { name: m.name },
+                            action: async () => {
+                                await remove.mutateAsync(m.id);
+                            },
+                        })
+                    }
                 />
             ),
         },
@@ -595,6 +610,7 @@ function ModelsList() {
  */
 function CategoriesList() {
     const t = useT();
+    const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { data: categories = [] } = useCategories();
     const { remove } = useCategoryMutations();
@@ -622,9 +638,15 @@ function CategoriesList() {
             render: (c) => (
                 <RowActions
                     onEdit={() => setEditCategory(c)}
-                    onDelete={() => {
-                        if (confirm(`${t('confirm_delete')} ${c.name}`)) remove.mutate(c.id);
-                    }}
+                    onDelete={() =>
+                        confirm({
+                            variant: 'danger',
+                            entity: { name: c.name },
+                            action: async () => {
+                                await remove.mutateAsync(c.id);
+                            },
+                        })
+                    }
                 />
             ),
         },
@@ -662,6 +684,7 @@ function CategoriesList() {
  */
 function VendorsList() {
     const t = useT();
+    const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { data: vendors = [] } = useVendors();
     const { remove } = useVendorMutations();
@@ -707,9 +730,15 @@ function VendorsList() {
                         <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                        onClick={() => {
-                            if (confirm(`${t('confirm_delete')} ${v.name}`)) remove.mutate(v.id);
-                        }}
+                        onClick={() =>
+                            confirm({
+                                variant: 'danger',
+                                entity: { name: v.name },
+                                action: async () => {
+                                    await remove.mutateAsync(v.id);
+                                },
+                            })
+                        }
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -751,6 +780,7 @@ function VendorsList() {
  */
 function WarehousesList() {
     const t = useT();
+    const confirm = useConfirm();
     const { data: warehouses = [] } = useWarehouses();
     const { remove } = useWarehouseMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -774,9 +804,15 @@ function WarehousesList() {
             render: (w) => (
                 <RowActions
                     onEdit={() => setEditWarehouse(w)}
-                    onDelete={() => {
-                        if (confirm(`${t('confirm_delete')} ${w.name}`)) remove.mutate(w.id);
-                    }}
+                    onDelete={() =>
+                        confirm({
+                            variant: 'danger',
+                            entity: { name: w.name },
+                            action: async () => {
+                                await remove.mutateAsync(w.id);
+                            },
+                        })
+                    }
                 />
             ),
         },
@@ -812,6 +848,7 @@ function WarehousesList() {
 
 function LocationsList() {
     const t = useT();
+    const confirm = useConfirm();
     const { data: locations = [] } = useLocations();
     const { remove } = useLocationMutations();
     const [addOpen, setAddOpen] = useState(false);
@@ -835,9 +872,15 @@ function LocationsList() {
             render: (loc) => (
                 <RowActions
                     onEdit={() => setEditLocation(loc)}
-                    onDelete={() => {
-                        if (confirm(`${t('confirm_delete')} ${loc.name}`)) remove.mutate(loc.id);
-                    }}
+                    onDelete={() =>
+                        confirm({
+                            variant: 'danger',
+                            entity: { name: loc.name },
+                            action: async () => {
+                                await remove.mutateAsync(loc.id);
+                            },
+                        })
+                    }
                 />
             ),
         },
@@ -959,17 +1002,12 @@ function EmailTab() {
 
     const test = useMutation({
         mutationFn: () => settingsApi.testMail(),
-        onSuccess: async (res) => {
-            await Swal.fire({
-                icon: res.sent ? 'success' : 'error',
-                title: res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'),
-                confirmButtonColor: '#2563eb',
-                customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium' },
-            });
+        onSuccess: (res) => {
+            useToastStore.getState().push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error');
         },
-        onError: async (e: unknown) => {
+        onError: (e: unknown) => {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            await Swal.fire({ icon: 'error', title: msg ?? t('email_test_failed'), confirmButtonColor: '#2563eb' });
+            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error');
         },
     });
 

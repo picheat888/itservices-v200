@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { useLocationMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
+import { useToastStore } from '@/stores/toast';
 import type { LocationItem } from '@/types';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -40,7 +40,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
@@ -51,7 +51,13 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
                     <DialogTitle>{location ? t('edit_location') : t('add_location')}</DialogTitle>
                 </DialogHeader>
                 <Field label={t('set_locations')} required>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('add_location')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                    <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        autoFocus
+                        placeholder={t('add_location')}
+                        onKeyDown={(e) => e.key === 'Enter' && submit()}
+                    />
                 </Field>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={saving}>

@@ -6,10 +6,12 @@ import { SearchableSelect } from '@/components/shared/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
+import { useDepartments, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import {
     useAuditLogs,
     useGroupRoleMutations,
@@ -19,7 +21,6 @@ import {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from '@/hooks/use-permissions';
-import { useDepartments, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useDateTime } from '@/hooks/use-settings';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '@/lib/audit-format';
 import { useT } from '@/lib/i18n';
@@ -45,7 +46,6 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import Swal from 'sweetalert2';
 
 type Tab = 'roles' | 'groups' | 'audit';
 
@@ -137,6 +137,7 @@ const ADMIN_CARD_META: Record<string, { subtitle: { en: string; th: string }; ma
 function RolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const confirm = useConfirm();
     const { data, isLoading } = usePermissionMatrix();
     const update = useUpdateRolePermissions();
     const roleMut = useRoleMutations();
@@ -243,23 +244,11 @@ function RolesTab() {
                                     <button
                                         onClick={async (e) => {
                                             e.stopPropagation();
-                                            const result = await Swal.fire({
-                                                title: t('confirm_delete'),
-                                                text: r.label,
-                                                icon: 'warning',
-                                                showCancelButton: true,
-                                                confirmButtonText: t('delete'),
-                                                cancelButtonText: t('cancel'),
-                                                confirmButtonColor: '#ef4444',
-                                                cancelButtonColor: '#6b7280',
-                                                customClass: {
-                                                    popup: '!rounded-xl !shadow-xl',
-                                                    confirmButton: '!rounded-lg !font-medium',
-                                                    cancelButton: '!rounded-lg !font-medium',
-                                                },
-                                                reverseButtons: true,
+                                            await confirm({
+                                                variant: 'danger',
+                                                entity: { name: r.label },
+                                                action: () => roleMut.remove.mutateAsync(r.value),
                                             });
-                                            if (result.isConfirmed) roleMut.remove.mutate(r.value);
                                         }}
                                         className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
                                     >
@@ -283,25 +272,12 @@ function RolesTab() {
                             <Button
                                 disabled={!dirty || update.isPending}
                                 onClick={async () => {
-                                    const result = await Swal.fire({
+                                    await confirm({
+                                        variant: 'edit',
                                         title: t('perm_save'),
-                                        text: role.label,
-                                        icon: 'question',
-                                        showCancelButton: true,
-                                        confirmButtonText: t('save'),
-                                        cancelButtonText: t('cancel'),
-                                        confirmButtonColor: '#2563eb',
-                                        cancelButtonColor: '#6b7280',
-                                        customClass: {
-                                            popup: '!rounded-xl !shadow-xl',
-                                            confirmButton: '!rounded-lg !font-medium',
-                                            cancelButton: '!rounded-lg !font-medium',
-                                        },
-                                        reverseButtons: true,
+                                        entity: { name: role.label },
+                                        action: () => update.mutateAsync({ role: role.value, permissions: [...draft] }),
                                     });
-                                    if (result.isConfirmed) {
-                                        update.mutate({ role: role.value, permissions: [...draft] });
-                                    }
                                 }}
                             >
                                 <Save className="h-4 w-4" />
@@ -437,6 +413,7 @@ function RolesTab() {
 function GroupRolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const confirm = useConfirm();
     const { user } = useAuth();
     const isSuper = user?.role === 'super';
     const { data, isLoading } = useGroupRoles();
@@ -520,23 +497,7 @@ function GroupRolesTab() {
                                     </button>
                                     <button
                                         onClick={async () => {
-                                            const result = await Swal.fire({
-                                                title: t('confirm_delete'),
-                                                text: g.name,
-                                                icon: 'warning',
-                                                showCancelButton: true,
-                                                confirmButtonText: t('delete'),
-                                                cancelButtonText: t('cancel'),
-                                                confirmButtonColor: '#ef4444',
-                                                cancelButtonColor: '#6b7280',
-                                                customClass: {
-                                                    popup: '!rounded-xl !shadow-xl',
-                                                    confirmButton: '!rounded-lg !font-medium',
-                                                    cancelButton: '!rounded-lg !font-medium',
-                                                },
-                                                reverseButtons: true,
-                                            });
-                                            if (result.isConfirmed) remove.mutate(g.id);
+                                            await confirm({ variant: 'danger', entity: { name: g.name }, action: () => remove.mutateAsync(g.id) });
                                         }}
                                         disabled={adminLocked}
                                         title={adminLocked ? t('gr_admin_protected') : undefined}
@@ -603,28 +564,14 @@ function GroupRolesTab() {
 
                                 setDefaultDialog(false);
 
-                                const result = await Swal.fire({
+                                const ok = await confirm({
+                                    variant: 'edit',
                                     title: t('perm_default_group'),
-                                    html: groupToSet
-                                        ? `<span style="font-size:0.9rem"><strong>${groupName}</strong></span>`
-                                        : `<span style="font-size:0.9rem">${lang === 'th' ? 'ยกเลิกการตั้งค่า' : 'Clear default group'}</span>`,
-                                    icon: 'question',
-                                    showCancelButton: true,
-                                    confirmButtonText: t('save'),
-                                    cancelButtonText: t('cancel'),
-                                    confirmButtonColor: '#2563eb',
-                                    cancelButtonColor: '#6b7280',
-                                    customClass: {
-                                        popup: '!rounded-xl !shadow-xl',
-                                        confirmButton: '!rounded-lg !font-medium',
-                                        cancelButton: '!rounded-lg !font-medium',
-                                    },
-                                    reverseButtons: true,
+                                    entity: groupToSet ? { name: groupName } : { name: lang === 'th' ? 'ยกเลิกการตั้งค่า' : 'Clear default group' },
+                                    action: () => setDefaultGroup.mutateAsync(groupToSet),
                                 });
 
-                                if (result.isConfirmed) {
-                                    setDefaultGroup.mutate(groupToSet);
-                                } else {
+                                if (!ok) {
                                     setPendingDefault(groupToSet);
                                     setDefaultDialog(true);
                                 }
@@ -654,10 +601,16 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                 <div className="space-y-1.5">
                     {changeEntries.map(([field, { from, to }]) => (
                         <div key={field} className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{auditFieldLabel(field, lang as 'en' | 'th')}</span>
-                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">{diffValue(resolveAuditValue(field, from, lookups))}</span>
+                            <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">
+                                {auditFieldLabel(field, lang as 'en' | 'th')}
+                            </span>
+                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">
+                                {diffValue(resolveAuditValue(field, from, lookups))}
+                            </span>
                             <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">{diffValue(resolveAuditValue(field, to, lookups))}</span>
+                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">
+                                {diffValue(resolveAuditValue(field, to, lookups))}
+                            </span>
                         </div>
                     ))}
                 </div>
@@ -799,9 +752,9 @@ function AuditTab() {
     const lookups = useMemo<AuditLookups>(
         () => ({
             positions: new Map(positions.map((p) => [p.id, p.title])),
-            departments: new Map(departments.map((d) => [d.id, lang === 'th' ? d.name_th ?? d.name : d.name])),
-            sections: new Map(sections.map((s) => [s.id, lang === 'th' ? s.name_th ?? s.name : s.name])),
-            employees: new Map(employees.map((e) => [e.id, lang === 'th' ? e.name_th ?? e.name : e.name])),
+            departments: new Map(departments.map((d) => [d.id, lang === 'th' ? (d.name_th ?? d.name) : d.name])),
+            sections: new Map(sections.map((s) => [s.id, lang === 'th' ? (s.name_th ?? s.name) : s.name])),
+            employees: new Map(employees.map((e) => [e.id, lang === 'th' ? (e.name_th ?? e.name) : e.name])),
         }),
         [positions, departments, sections, employees, lang],
     );

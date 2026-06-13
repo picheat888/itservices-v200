@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirm Dialog Mockup — IT Services V2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== DESIGN TOKENS (mirrors resources/css/app.css) ===== */
+    :root {
+      --brand: #2563eb;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --fg: hsl(222,30%,12%);
+      --muted: hsl(210,20%,96%);
+      --muted-fg: hsl(215,16%,47%);
+      --border: hsl(214,20%,90%);
+      --destructive: hsl(0,72%,51%);
+      --amber: #d97706;
+      --radius: 0.625rem;
+      --overlay: rgba(2,6,23,.55);
+      --shadow: 0 10px 15px -3px rgba(15,23,42,.10), 0 4px 6px -4px rgba(15,23,42,.10);
+    }
+    [data-theme="dark"] {
+      --brand: #3b82f6;
+      --bg: hsl(222,24%,7%);
+      --card: hsl(222,24%,10%);
+      --fg: hsl(210,20%,96%);
+      --muted: hsl(217,19%,15%);
+      --muted-fg: hsl(215,15%,65%);
+      --border: hsl(217,19%,20%);
+      --destructive: hsl(0,72%,55%);
+      --amber: #f59e0b;
+      --overlay: rgba(0,0,0,.70);
+      --shadow: 0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -4px rgba(0,0,0,.4);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Manrope','Noto Sans Thai',system-ui,sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      transition: background .3s, color .3s;
+    }
+
+    /* ===== Page chrome ===== */
+    .page { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+    header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 8px; }
+    .title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
+    .subtitle { color: var(--muted-fg); margin: 8px 0 0; font-size: 15px; max-width: 620px; line-height: 1.6; }
+    .toolbar { display: flex; gap: 8px; }
+    .tbtn {
+      font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border);
+      background: var(--card); color: var(--fg); transition: all .15s;
+    }
+    .tbtn:hover { border-color: var(--brand); color: var(--brand); }
+    .tbtn svg { width: 15px; height: 15px; }
+
+    /* ===== Grid of mockup tiles ===== */
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 28px; margin-top: 36px; }
+    .tile { display: flex; flex-direction: column; gap: 12px; }
+    .tile-label {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted-fg);
+    }
+    .tile-label .pill {
+      font-size: 10px; padding: 2px 8px; border-radius: 999px; letter-spacing: .04em;
+      background: var(--muted); color: var(--muted-fg); text-transform: none; font-weight: 600;
+    }
+
+    /* The faux backdrop each dialog floats on */
+    .stage {
+      position: relative; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(120% 120% at 80% 0%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 60%),
+        var(--muted);
+      padding: 36px 28px;
+      min-height: 300px; display: grid; place-items: center;
+    }
+    .stage::before { content: ""; position: absolute; inset: 0; background: var(--overlay); }
+
+    /* ===== The dialog (faithful to confirm-dialog.tsx) ===== */
+    .dialog {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 420px;
+      background: var(--card); color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: flex; flex-direction: column; gap: 16px;
+      animation: pop .2s ease-out;
+    }
+    @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+    .d-head { display: flex; align-items: flex-start; gap: 14px; }
+
+    /* Minimal flat icon chip (no glow / no ring) */
+    .medallion { flex-shrink: 0; }
+    .medallion .glow { display: none; }
+    .medallion .badge {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: grid; place-items: center;
+    }
+    .medallion svg { width: 20px; height: 20px; }
+
+    .d-title { font-size: 18px; font-weight: 600; letter-spacing: -.01em; margin: 0; line-height: 1.3; }
+    .d-desc { font-size: 14px; color: var(--muted-fg); line-height: 1.55; margin: 6px 0 0; }
+    .d-text { min-width: 0; padding-top: 2px; }
+
+    /* Entity panel */
+    .entity {
+      border: 1px solid var(--border); border-radius: 10px;
+      background: color-mix(in srgb, var(--muted) 60%, transparent);
+      padding: 10px 14px;
+    }
+    .entity .name { font-size: 14px; font-weight: 600; }
+    .entity .sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted-fg); margin-top: 3px; }
+
+    /* Footer (reverse buttons: Cancel left, action right) */
+    .d-foot { display: flex; justify-content: flex-end; gap: 8px; }
+    .btn {
+      font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+      height: 40px; padding: 0 18px; border-radius: 9px; border: 1px solid transparent;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: filter .15s, background .15s;
+    }
+    .btn-outline { background: var(--card); border-color: var(--border); color: var(--fg); }
+    .btn-outline:hover { background: var(--muted); }
+    .btn-danger { background: var(--destructive); color: #fff; min-width: 96px; }
+    .btn-brand { background: var(--brand); color: #fff; min-width: 96px; }
+    .btn-amber { background: var(--amber); color: #fff; min-width: 96px; }
+    .btn:hover { filter: brightness(.94); }
+    .btn svg { width: 16px; height: 16px; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Variant color theming via data-variant */
+    [data-variant="danger"] { --vfg: var(--destructive); }
+    [data-variant="edit"]   { --vfg: var(--brand); }
+    [data-variant="warn"]   { --vfg: var(--amber); }
+    .medallion .badge { background: color-mix(in srgb, var(--vfg) 10%, transparent); color: var(--vfg); }
+
+    .note { margin-top: 48px; padding: 18px 20px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted-fg); font-size: 13.5px; line-height: 1.7; }
+    .note b { color: var(--fg); }
+    .note code, .summary code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--muted); padding: 2px 6px; border-radius: 5px; color: var(--fg); }
+
+    /* ===== Summary spec sheet ===== */
+    .summary { margin-top: 56px; }
+    .summary > h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; }
+    .summary > .lead { color: var(--muted-fg); font-size: 14px; margin: 0 0 22px; }
+    .spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .spec { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 16px 18px; }
+    .spec h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted-fg); margin: 0 0 12px; }
+    .spec ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; font-size: 13.5px; line-height: 1.5; }
+    .spec li { display: flex; gap: 9px; align-items: baseline; }
+    .spec li .k { flex-shrink: 0; }
+    .dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; transform: translateY(2px); }
+    .dot.red { background: var(--destructive); } .dot.blue { background: var(--brand); } .dot.amber { background: var(--amber); }
+    .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13.5px; }
+    .flow .pill2 { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; background: var(--card); white-space: nowrap; }
+    .flow .arrow { color: var(--muted-fg); }
+    .codeblock { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; background: var(--muted); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; white-space: pre; overflow-x: auto; color: var(--fg); }
+    .lang-th { display: none; }
+    [data-lang="th"] .lang-en { display: none; }
+    [data-lang="th"] .lang-th { display: inline; }
+  </style>
+</head>
+<body data-theme="light" data-lang="th">
+  <div class="page">
+    <header class="top">
+      <div>
+        <h1 class="title">Confirm Dialog</h1>
+        <p class="subtitle">
+          <span class="lang-th">Dialog ยืนยันการแก้ไข/ลบข้อมูล แบบ reuse ได้ — เข้าธีมแอป (Manrope + Noto Sans Thai, brand blue, dark mode, 2 ภาษา) ใช้แทน <code>window.confirm()</code> / <code>Swal</code> เดิม</span>
+          <span class="lang-en">A reusable edit/delete confirmation dialog — on-brand (Manrope + Noto Sans Thai, brand blue, dark mode, bilingual), replacing the old <code>window.confirm()</code> / <code>Swal</code> prompts.</span>
+        </p>
+      </div>
+      <div class="toolbar">
+        <button class="tbtn" id="langBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="lang-th">EN</span><span class="lang-en">ไทย</span>
+        </button>
+        <button class="tbtn" id="themeBtn" type="button">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+          <span class="lang-th">โหมดมืด</span><span class="lang-en">Dark</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- DANGER (delete) -->
+      <div class="tile">
+        <div class="tile-label"><span class="lang-th">ลบข้อมูล</span><span class="lang-en">Delete</span> <span class="pill">variant: danger</span></div>
+        <div class="stage">
+          <div class="dialog" data-variant="danger">
+            <div class="d-head">
+              <span class="medallion"><span class="glow"></span><span class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </span></span>
+              <div class="d-text">
+                <h2 class="d-title"><span class="lang-th">ลบข้อมูลนี้?</span><span class="lang-en">Delete this record?</span></h2>
+                <p class="d-desc"><span class="lang-th">การลบนี้ถาวรและไม่สามารถย้อนกลับได้</span><span class="lang-en">This action is permanent and cannot be undone.</span></p>
+              </div>
+            </div>
+            <div class="entity">
+              <div class="name">Network &amp; Security</div>
+              <div class="sub">IT · 12 members</div>
+            </div>
+            <div class="d-foot">
+              <button class="btn btn-outline"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+              <button class="btn btn-danger"><span class="lang-th">ลบ</span><span class="lang-en">Delete</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDIT (save changes) -->
+      <div class="tile">
+        <div class="tile-label"><span class="lang-th">ยืนยันการแก้ไข</span><span class="lang-en">Save changes</span> <span class="pill">variant: edit</span></div>
+        <div class="stage">
+          <div class="dialog" data-variant="edit">
+            <div class="d-head">
+              <span class="medallion"><span class="glow"></span><span class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              </span></span>
+              <div class="d-text">
+                <h2 class="d-title"><span class="lang-th">บันทึกการแก้ไขนี้?</span><span class="lang-en">Save these changes?</span></h2>
+                <p class="d-desc"><span class="lang-th">กรุณายืนยันก่อนบันทึกการเปลี่ยนแปลง</span><span class="lang-en">Please confirm before applying the update.</span></p>
+              </div>
+            </div>
+            <div class="entity">
+              <div class="name">Krit Saengthong</div>
+              <div class="sub">EMP-0001 · Vice President</div>
+            </div>
+            <div class="d-foot">
+              <button class="btn btn-outline"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+              <button class="btn btn-brand"><span class="lang-th">บันทึก</span><span class="lang-en">Save</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WARN -->
+      <div class="tile">
+        <div class="tile-label"><span class="lang-th">เตือนทั่วไป</span><span class="lang-en">Caution</span> <span class="pill">variant: warn</span></div>
+        <div class="stage">
+          <div class="dialog" data-variant="warn">
+            <div class="d-head">
+              <span class="medallion"><span class="glow"></span><span class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </span></span>
+              <div class="d-text">
+                <h2 class="d-title"><span class="lang-th">ยืนยันการทำรายการ?</span><span class="lang-en">Are you sure?</span></h2>
+                <p class="d-desc"><span class="lang-th">กรุณายืนยันเพื่อดำเนินการต่อ</span><span class="lang-en">Please confirm you want to continue.</span></p>
+              </div>
+            </div>
+            <div class="d-foot">
+              <button class="btn btn-outline"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+              <button class="btn btn-amber"><span class="lang-th">ยืนยัน</span><span class="lang-en">Confirm</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DANGER loading state -->
+      <div class="tile">
+        <div class="tile-label"><span class="lang-th">ขณะกำลังลบ</span><span class="lang-en">Loading state</span> <span class="pill">danger · busy</span></div>
+        <div class="stage">
+          <div class="dialog" data-variant="danger">
+            <div class="d-head">
+              <span class="medallion"><span class="glow"></span><span class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </span></span>
+              <div class="d-text">
+                <h2 class="d-title"><span class="lang-th">ลบข้อมูลนี้?</span><span class="lang-en">Delete this record?</span></h2>
+                <p class="d-desc"><span class="lang-th">การลบนี้ถาวรและไม่สามารถย้อนกลับได้</span><span class="lang-en">This action is permanent and cannot be undone.</span></p>
+              </div>
+            </div>
+            <div class="entity">
+              <div class="name">Network &amp; Security</div>
+              <div class="sub">IT · 12 members</div>
+            </div>
+            <div class="d-foot">
+              <button class="btn btn-outline" disabled style="opacity:.5"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+              <button class="btn btn-danger">
+                <svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                <span class="lang-th">กำลังลบ…</span><span class="lang-en">Deleting…</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DANGER success state (✓ flashes ~850ms before auto-close) -->
+      <div class="tile">
+        <div class="tile-label"><span class="lang-th">สำเร็จ (ก่อนปิดอัตโนมัติ)</span><span class="lang-en">Success state</span> <span class="pill">danger · done</span></div>
+        <div class="stage">
+          <div class="dialog" data-variant="danger">
+            <div class="d-head">
+              <span class="medallion"><span class="glow"></span><span class="badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </span></span>
+              <div class="d-text">
+                <h2 class="d-title"><span class="lang-th">ลบข้อมูลนี้?</span><span class="lang-en">Delete this record?</span></h2>
+                <p class="d-desc"><span class="lang-th">การลบนี้ถาวรและไม่สามารถย้อนกลับได้</span><span class="lang-en">This action is permanent and cannot be undone.</span></p>
+              </div>
+            </div>
+            <div class="entity">
+              <div class="name">Network &amp; Security</div>
+              <div class="sub">IT · 12 members</div>
+            </div>
+            <div class="d-foot">
+              <button class="btn btn-outline" disabled style="opacity:.5"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+              <button class="btn btn-danger">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span class="lang-th">ลบแล้ว</span><span class="lang-en">Deleted</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="lang-th">
+        <b>หมายเหตุดีไซน์ (minimal / Tailwind standard):</b> icon chip 40px แบนเรียบ tint ตาม variant (ไม่มี glow/ring) · เปิดด้วย fade + scale เบา ๆ · title 18px (<code>text-lg</code>) · panel ไฮไลต์ชื่อ record (name + รหัสแบบ mono) · ปุ่มเรียง <b>ยกเลิก → ยืนยัน</b> · variant <code>danger</code> โฟกัสปุ่มยกเลิกก่อน กัน Enter พลาดลบ · เงา <code>shadow-lg</code>
+      </span>
+      <span class="lang-en">
+        <b>Design notes (minimal / Tailwind standard):</b> flat 40px icon chip tinted per variant (no glow/ring) · soft fade + scale entrance · 18px title (<code>text-lg</code>) · entity panel (name + mono code) · buttons ordered <b>Cancel → Confirm</b> · <code>danger</code> focuses Cancel first so a stray Enter is safe · <code>shadow-lg</code>.
+      </span>
+    </div>
+
+    <!-- ===== SUMMARY / SPEC SHEET ===== -->
+    <section class="summary">
+      <h2>cd — Confirm Dialog</h2>
+      <p class="lead">
+        <span class="lang-th"><code>cd</code> = <b>C</b>onfirm <b>D</b>ialog · component ยืนยันการกระทำแบบ reuse ได้ตัวเดียวของแอป — ใช้แทน <code>window.confirm()</code> และ <code>Swal.fire()</code> เดิมทั้งหมด · ไฟล์จริง: <code>resources/js/components/ui/confirm-dialog.tsx</code></span>
+        <span class="lang-en"><code>cd</code> = <b>C</b>onfirm <b>D</b>ialog · the app's single reusable confirmation component — replaces all legacy <code>window.confirm()</code> and <code>Swal.fire()</code> calls · source: <code>resources/js/components/ui/confirm-dialog.tsx</code></span>
+      </p>
+
+      <div class="spec-grid">
+        <div class="spec">
+          <h3><span class="lang-th">3 Variant</span><span class="lang-en">3 variants</span></h3>
+          <ul>
+            <li><span class="dot red"></span><span><code>danger</code> — <span class="lang-th">ลบ / ทำลาย (แดง, ปุ่ม destructive, ไอคอน Trash)</span><span class="lang-en">delete / destructive (red, Trash icon)</span></span></li>
+            <li><span class="dot blue"></span><span><code>edit</code> — <span class="lang-th">บันทึก / อนุมัติ (น้ำเงิน brand, ไอคอน Pencil)</span><span class="lang-en">save / approve (brand blue, Pencil icon)</span></span></li>
+            <li><span class="dot amber"></span><span><code>warn</code> — <span class="lang-th">เตือน / ยกเลิก-ปฏิเสธ (เหลือง amber, ไอคอน Alert)</span><span class="lang-en">caution / cancel-reject (amber, Alert icon)</span></span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">ตัวเลือกหลัก (options)</span><span class="lang-en">Key options</span></h3>
+          <ul>
+            <li><span class="k"><code>variant</code></span><span class="lang-th">— โทนสี + ค่า default</span><span class="lang-en">— tone + default copy</span></li>
+            <li><span class="k"><code>entity</code></span><span class="lang-th">— panel ชื่อ record { name, sub }</span><span class="lang-en">— record panel { name, sub }</span></li>
+            <li><span class="k"><code>action</code></span><span class="lang-th">— ฟังก์ชัน async → โชว์ spinner+✓</span><span class="lang-en">— async fn → shows spinner+✓</span></li>
+            <li><span class="k"><code>hideCancel</code></span><span class="lang-th">— ปุ่มเดียว (notice)</span><span class="lang-en">— single button (notice)</span></li>
+            <li><span class="k"><code>title / description / confirmText</code></span><span class="lang-th">— override ข้อความ</span><span class="lang-en">— text overrides</span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">2 รูปแบบการเรียก</span><span class="lang-en">Two call styles</span></h3>
+          <ul>
+            <li><span class="lang-th"><b>action form</b> — ส่ง <code>action</code> ให้ dialog ถือ lifecycle เอง → ได้ spinner → ✓ → ปิดเอง (ใช้กับ delete/save/approve ที่ยิง mutation)</span><span class="lang-en"><b>action form</b> — pass <code>action</code>, dialog owns lifecycle → spinner → ✓ → auto-close (for delete/save/approve mutations)</span></li>
+            <li><span class="lang-th"><b>boolean form</b> — <code>await confirm()</code> คืน true/false แล้ว caller ทำต่อเอง (ใช้กับ gate ล้วน เช่น toggle/discard)</span><span class="lang-en"><b>boolean form</b> — <code>await confirm()</code> returns true/false; caller proceeds (for pure gates: toggle/discard)</span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">สถานะปุ่ม (action form)</span><span class="lang-en">Button states (action form)</span></h3>
+          <div class="flow">
+            <span class="pill2"><span class="lang-th">ยืนยัน</span><span class="lang-en">Confirm</span></span>
+            <span class="arrow">→</span>
+            <span class="pill2">⟳ <span class="lang-th">กำลังทำ…</span><span class="lang-en">working…</span></span>
+            <span class="arrow">→</span>
+            <span class="pill2">✓ <span class="lang-th">สำเร็จ</span><span class="lang-en">done</span></span>
+            <span class="arrow">→</span>
+            <span class="pill2"><span class="lang-th">ปิดเอง ~850ms</span><span class="lang-en">auto-close ~850ms</span></span>
+          </div>
+          <ul style="margin-top:12px">
+            <li><span class="lang-th">ระหว่างทำ ปิด dialog ไม่ได้ · ถ้า error → ค้างไว้ + โชว์ข้อความ error ในตัว</span><span class="lang-en">Locked while running · on error → stays open + shows built-in error</span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3>i18n keys</h3>
+          <ul>
+            <li><code>cd_delete_title / cd_delete_desc / cd_deleting / cd_deleted</code></li>
+            <li><code>cd_edit_title / cd_edit_desc</code> · <code>cd_confirm_title / cd_confirm_desc / cd_confirm</code></li>
+            <li><code>cd_done / cd_error</code> · <span class="lang-th">มีครบทั้ง EN + ไทย</span><span class="lang-en">defined for EN + TH</span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">ใช้แทนที่ (replaced)</span><span class="lang-en">Replaced across app</span></h3>
+          <ul>
+            <li><span class="lang-th">confirm ทั้งหมด: Settings, Employees, Permissions, Contracts, Stock, Email</span><span class="lang-en">All confirms: Settings, Employees, Permissions, Contracts, Stock, Email</span></li>
+            <li><span class="lang-th">error/success popup → toast (<code>useToastStore</code>)</span><span class="lang-en">error/success popups → toast (<code>useToastStore</code>)</span></li>
+            <li><span class="lang-th"><code>sweetalert2</code> ไม่ถูก import ในโค้ดแล้ว</span><span class="lang-en"><code>sweetalert2</code> no longer imported in code</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="codeblock" style="margin-top:18px"><span class="lang-th">// ลบ (โชว์ spinner → ✓ ในตัว)</span><span class="lang-en">// delete (built-in spinner → ✓)</span>
+const confirm = useConfirm();
+confirm({ variant: 'danger', entity: { name, sub: code },
+          action: () =&gt; remove.mutateAsync(id) });
+
+<span class="lang-th">// ยืนยันแบบ gate (รอ true/false)</span><span class="lang-en">// gate style (await true/false)</span>
+if (await confirm({ variant: 'edit', entity: { name } })) save();</div>
+    </section>
+  </div>
+
+  <script>
+    const root = document.body;
+    const themeBtn = document.getElementById('themeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const sun = 'M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4';
+    themeBtn.addEventListener('click', () => {
+      const dark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+      themeIcon.innerHTML = dark
+        ? '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'
+        : '<circle cx="12" cy="12" r="4"/>' + sun.split('M').filter(Boolean).map(s => '<path d="M'+s+'"/>').join('');
+    });
+    document.getElementById('langBtn').addEventListener('click', () => {
+      const th = root.getAttribute('data-lang') === 'th';
+      root.setAttribute('data-lang', th ? 'en' : 'th');
+      root.setAttribute('lang', th ? 'en' : 'th');
+    });
+  </script>
+</body>
+</html>

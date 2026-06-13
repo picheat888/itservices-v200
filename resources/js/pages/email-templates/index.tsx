@@ -1,19 +1,38 @@
+import { Field } from '@/components/shared/field';
+import { TableSkeleton } from '@/components/shared/skeletons';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { TableSkeleton } from '@/components/shared/skeletons';
-import { Field } from '@/components/shared/field';
-import { useEmailTemplates, useEmailTemplateMutations } from '@/hooks/use-email-templates';
+import { useEmailTemplateMutations, useEmailTemplates } from '@/hooks/use-email-templates';
 import { useSettings } from '@/hooks/use-settings';
-import { settingsApi } from '@/services/settingsApi';
-import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateApi';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { emailTemplateApi, type EmailTemplate } from '@/services/emailTemplateApi';
+import { settingsApi } from '@/services/settingsApi';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, MoreVertical, PenLine, Pilcrow, Plus, RotateCcw, Save, Search, Send } from 'lucide-react';
+import {
+    Bold,
+    Check,
+    CornerDownLeft,
+    Eye,
+    Italic,
+    Link2,
+    List,
+    Loader2,
+    Mail,
+    MoreVertical,
+    PenLine,
+    Pilcrow,
+    Plus,
+    RotateCcw,
+    Save,
+    Search,
+    Send,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import Swal from 'sweetalert2';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 const SAMPLE_VARS: Record<string, string> = {
@@ -111,7 +130,7 @@ function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; labe
                     on ? 'left-[1.125rem]' : 'left-0.5',
                 )}
             >
-                {on && <Check className="h-2.5 w-2.5 text-brand" />}
+                {on && <Check className="text-brand h-2.5 w-2.5" />}
             </span>
         </button>
     );
@@ -135,8 +154,8 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
     return (
         <Card className="p-5">
             <div className="flex items-start justify-between">
-                <div className="text-sm text-muted-foreground">{label}</div>
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                <div className="text-muted-foreground text-sm">{label}</div>
+                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
                     <Icon className="h-[18px] w-[18px]" />
                 </span>
             </div>
@@ -147,6 +166,7 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: string |
 
 export default function EmailTemplatesPage() {
     const t = useT();
+    const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { data, isLoading } = useEmailTemplates();
     const { update, test, reset, resetAll } = useEmailTemplateMutations();
@@ -198,39 +218,23 @@ export default function EmailTemplatesPage() {
 
     // Reset every standard template back to its standard content (after confirming).
     const resetAllToStandard = async () => {
-        const r = await Swal.fire({
-            icon: 'warning',
+        await confirm({
+            variant: 'warn',
             title: t('email_reset_all_title'),
-            text: t('email_reset_all_text'),
-            showCancelButton: true,
-            confirmButtonText: t('email_reset_confirm'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#64748b',
-            customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            description: t('email_reset_all_text'),
+            confirmText: t('email_reset_confirm'),
+            action: () => resetAll.mutateAsync(),
         });
-        if (!r.isConfirmed) return;
-        try {
-            await resetAll.mutateAsync();
-            await Swal.fire({ icon: 'success', title: t('email_reset_all_done'), confirmButtonColor: '#2563eb', customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium' } });
-        } catch {
-            await Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
-        }
     };
 
     const sendPageTest = async () => {
         setPageTesting(true);
         try {
             const res = await settingsApi.testMail();
-            await Swal.fire({
-                icon: res.sent ? 'success' : 'error',
-                title: res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'),
-                confirmButtonColor: '#2563eb',
-                customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium' },
-            });
+            useToastStore.getState().push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error');
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            await Swal.fire({ icon: 'error', title: msg ?? t('email_test_failed'), confirmButtonColor: '#2563eb' });
+            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error');
         } finally {
             setPageTesting(false);
         }
@@ -241,7 +245,7 @@ export default function EmailTemplatesPage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h1 className="text-2xl font-bold">{t('email_title')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('email_sub')}</p>
+                    <p className="text-muted-foreground text-sm">{t('email_sub')}</p>
                 </div>
                 <div className="flex gap-2">
                     {anyModified && (
@@ -266,19 +270,19 @@ export default function EmailTemplatesPage() {
             </div>
 
             <Card className="overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
+                <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
                     <div>
                         <div className="font-semibold">{t('email_templates')}</div>
-                        <div className="text-xs text-muted-foreground">{t('email_templates_sub')}</div>
+                        <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
                     </div>
                     <div className="relative w-full max-w-xs">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
                     </div>
                 </div>
 
                 {/* Module filter tabs */}
-                <div className="flex flex-wrap gap-1.5 border-b border-border px-4 py-2.5">
+                <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
                     <button
                         type="button"
                         onClick={() => setModule('')}
@@ -303,7 +307,9 @@ export default function EmailTemplatesPage() {
                             )}
                         >
                             {mod}
-                            <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === mod ? 'bg-white/20' : 'bg-background')}>
+                            <span
+                                className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === mod ? 'bg-white/20' : 'bg-background')}
+                            >
                                 {count}
                             </span>
                         </button>
@@ -311,7 +317,9 @@ export default function EmailTemplatesPage() {
                 </div>
 
                 {isLoading ? (
-                    <div className="p-4"><TableSkeleton rows={8} cols={6} /></div>
+                    <div className="p-4">
+                        <TableSkeleton rows={8} cols={6} />
+                    </div>
                 ) : rows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
                         <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
@@ -324,7 +332,7 @@ export default function EmailTemplatesPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-border text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                     <th className="px-4 py-2.5">ID</th>
                                     <th className="px-4 py-2.5">{t('email_template')}</th>
                                     <th className="px-4 py-2.5">{t('email_trigger')}</th>
@@ -336,8 +344,8 @@ export default function EmailTemplatesPage() {
                             </thead>
                             <tbody>
                                 {rows.map((tp) => (
-                                    <tr key={tp.id} className="border-b border-border/60 last:border-0 hover:bg-accent/40">
-                                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{tp.code}</td>
+                                    <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
+                                        <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
                                         <td className="px-4 py-2.5 font-medium">
                                             <span className="flex items-center gap-2">
                                                 {tp.name}
@@ -349,7 +357,7 @@ export default function EmailTemplatesPage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-2.5">
-                                            <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{tp.key}</span>
+                                            <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
                                         </td>
                                         <td className="px-4 py-2.5">
                                             <span
@@ -361,7 +369,7 @@ export default function EmailTemplatesPage() {
                                                 {t(tp.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                                        <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
                                             {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
                                         </td>
                                         <td className="px-4 py-2.5">
@@ -372,7 +380,7 @@ export default function EmailTemplatesPage() {
                                                 <button
                                                     onClick={() => setEditing(tp)}
                                                     title={t('email_edit_preview')}
-                                                    className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </button>
@@ -498,14 +506,26 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
             <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
                 {/* Quick tools — insert HTML at the caret / around the selection */}
                 <div className="border-border bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
-                    <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}><Bold className="h-3.5 w-3.5" /></ToolBtn>
-                    <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}><Italic className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}>
+                        <Bold className="h-3.5 w-3.5" />
+                    </ToolBtn>
+                    <ToolBtn title="Italic" onClick={() => wrap('<em>', '</em>')}>
+                        <Italic className="h-3.5 w-3.5" />
+                    </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
-                    <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}><CornerDownLeft className="h-3.5 w-3.5" /></ToolBtn>
-                    <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}><Pilcrow className="h-3.5 w-3.5" /></ToolBtn>
-                    <ToolBtn title="Bullet list" onClick={insertList}><List className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Line break (<br>)" onClick={() => insert('<br>\n')}>
+                        <CornerDownLeft className="h-3.5 w-3.5" />
+                    </ToolBtn>
+                    <ToolBtn title="Paragraph (<p>)" onClick={() => wrap('<p>', '</p>')}>
+                        <Pilcrow className="h-3.5 w-3.5" />
+                    </ToolBtn>
+                    <ToolBtn title="Bullet list" onClick={insertList}>
+                        <List className="h-3.5 w-3.5" />
+                    </ToolBtn>
                     <span className="bg-border mx-1 h-4 w-px" />
-                    <ToolBtn title="Link" onClick={insertLink}><Link2 className="h-3.5 w-3.5" /></ToolBtn>
+                    <ToolBtn title="Link" onClick={insertLink}>
+                        <Link2 className="h-3.5 w-3.5" />
+                    </ToolBtn>
                     <select
                         value=""
                         onChange={(e) => {
@@ -587,7 +607,9 @@ function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: 
                             <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
                             <span className="font-mono">{'{{user.email}}'}</span>
                         </div>
-                        <div className="text-foreground w-full truncate font-semibold">[{brand}] {render(subject, SAMPLE_VARS)}</div>
+                        <div className="text-foreground w-full truncate font-semibold">
+                            [{brand}] {render(subject, SAMPLE_VARS)}
+                        </div>
                     </div>
                     {previewHtml ? (
                         <iframe title="email-preview" srcDoc={previewHtml} className="block w-full flex-1 border-0 bg-white" />
@@ -657,6 +679,7 @@ function EditorDialog({
     resetting: boolean;
 }) {
     const t = useT();
+    const confirm = useConfirm();
     const { data: settings } = useSettings();
     const brand = settings?.brand_name || 'ABCD IT';
 
@@ -699,7 +722,7 @@ function EditorDialog({
             setSavedOk(true);
             window.setTimeout(() => setSavedOk(false), 1600);
         } catch {
-            Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
+            useToastStore.getState().push(t('cred_err_generic'), 'error');
         }
     };
 
@@ -711,7 +734,7 @@ function EditorDialog({
             setSentOk(true);
             window.setTimeout(() => setSentOk(false), 1600);
         } catch {
-            Swal.fire({ icon: 'error', title: t('email_test_failed'), confirmButtonColor: '#2563eb' });
+            useToastStore.getState().push(t('email_test_failed'), 'error');
         }
     };
 
@@ -719,51 +742,40 @@ function EditorDialog({
     // the refreshed row, so sync the form + baseline to it without reopening the dialog.
     const handleReset = async () => {
         if (!template || resetting) return;
-        const r = await Swal.fire({
-            icon: 'warning',
+        await confirm({
+            variant: 'warn',
             title: t('email_reset_title'),
-            text: t('email_reset_text'),
-            showCancelButton: true,
-            confirmButtonText: t('email_reset_confirm'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#dc2626',
-            cancelButtonColor: '#64748b',
-            customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
+            description: t('email_reset_text'),
+            confirmText: t('email_reset_confirm'),
+            action: async () => {
+                const res = (await onReset(template.id)) as { data?: EmailTemplate } | undefined;
+                const next = res?.data;
+                if (next) {
+                    setName(next.name);
+                    setSubject(next.subject);
+                    setBody(next.body_html);
+                    setEnabled(next.enabled);
+                    setBase({ name: next.name, subject: next.subject, body: next.body_html, enabled: next.enabled });
+                    setPreviewHtml('');
+                }
+                setResetOk(true);
+                window.setTimeout(() => setResetOk(false), 1600);
+            },
         });
-        if (!r.isConfirmed) return;
-        try {
-            const res = (await onReset(template.id)) as { data?: EmailTemplate } | undefined;
-            const next = res?.data;
-            if (next) {
-                setName(next.name);
-                setSubject(next.subject);
-                setBody(next.body_html);
-                setEnabled(next.enabled);
-                setBase({ name: next.name, subject: next.subject, body: next.body_html, enabled: next.enabled });
-                setPreviewHtml('');
-            }
-            setResetOk(true);
-            window.setTimeout(() => setResetOk(false), 1600);
-        } catch {
-            Swal.fire({ icon: 'error', title: t('cred_err_generic'), confirmButtonColor: '#2563eb' });
-        }
     };
 
     // Confirm before discarding unsaved edits (X / Esc / click-outside / Cancel).
     const requestClose = async () => {
         if (dirty) {
-            const r = await Swal.fire({
-                icon: 'warning',
-                title: t('email_discard_title'),
-                text: t('email_discard_text'),
-                showCancelButton: true,
-                confirmButtonText: t('email_discard_confirm'),
-                cancelButtonText: t('cancel'),
-                confirmButtonColor: '#dc2626',
-                cancelButtonColor: '#64748b',
-                customClass: { popup: '!rounded-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
-            });
-            if (!r.isConfirmed) return;
+            if (
+                !(await confirm({
+                    variant: 'warn',
+                    title: t('email_discard_title'),
+                    description: t('email_discard_text'),
+                    confirmText: t('email_discard_confirm'),
+                }))
+            )
+                return;
         }
         onClose();
     };
@@ -862,7 +874,9 @@ function EditorDialog({
                                 )}
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={requestClose}>{t('cancel')}</Button>
+                                <Button variant="outline" onClick={requestClose}>
+                                    {t('cancel')}
+                                </Button>
                                 <Button onClick={handleSave} disabled={!dirty || saving}>
                                     {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
                                     {savedOk ? t('email_saved') : t('email_save')}
@@ -888,11 +902,20 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     const brand = settings?.brand_name || 'ABCD IT';
     const { previewHtml, rendering } = useLivePreview(open, name, subject, body);
 
-    const reset = () => { setKey(''); setName(''); setSubject(''); setBody('<p>Hi {{user.first_name}},</p>\n<p></p>'); setError(''); };
+    const reset = () => {
+        setKey('');
+        setName('');
+        setSubject('');
+        setBody('<p>Hi {{user.first_name}},</p>\n<p></p>');
+        setError('');
+    };
 
     const submit = async () => {
         setError('');
-        if (!key.trim() || !name.trim() || !subject.trim()) { setError(t('emp_err_first')); return; }
+        if (!key.trim() || !name.trim() || !subject.trim()) {
+            setError(t('emp_err_first'));
+            return;
+        }
         try {
             await create.mutateAsync({ key: key.trim(), name: name.trim(), subject: subject.trim(), body_html: body, enabled: true });
             reset();
@@ -904,7 +927,15 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
     };
 
     return (
-        <Dialog open={open} onOpenChange={(o) => { if (!o) { reset(); onClose(); } }}>
+        <Dialog
+            open={open}
+            onOpenChange={(o) => {
+                if (!o) {
+                    reset();
+                    onClose();
+                }
+            }}
+        >
             <DialogContent
                 aria-describedby={undefined}
                 className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
@@ -933,13 +964,21 @@ function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void })
                             <Field label={t('email_body')}>
                                 <BodyEditor value={body} onChange={setBody} extraText={subject} />
                             </Field>
-                            {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+                            {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
                         </div>
                     </div>
                 </div>
 
                 <div className="border-border flex items-center justify-end gap-2 border-t px-6 py-3">
-                    <Button variant="outline" onClick={() => { reset(); onClose(); }}>{t('cancel')}</Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            reset();
+                            onClose();
+                        }}
+                    >
+                        {t('cancel')}
+                    </Button>
                     <Button onClick={submit} disabled={create.isPending}>
                         {create.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
                         {t('email_create')}

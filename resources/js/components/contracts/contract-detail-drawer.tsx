@@ -1,5 +1,6 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useContractMutations } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
@@ -7,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ASSET_LINKABLE_CONTRACT_TYPES, type Contract } from '@/types';
 import { Ban, FileText, SquarePen } from 'lucide-react';
-import Swal from 'sweetalert2';
 
 /** Asset status → StatusBadge tone for the linked-assets list. */
 const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
@@ -48,11 +48,10 @@ export function ContractDetailDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const confirm = useConfirm();
     const { cancel } = useContractMutations();
 
     if (!contract) return null;
-
-    const swalShell = { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' };
 
     /**
      * Cancel flow. Hardware contracts may only be cancelled once every linked
@@ -63,36 +62,30 @@ export function ContractDetailDrawer({
         if (contract.type === 'hardware') {
             const pending = contract.linked_assets.filter((a) => a.status !== 'writeoff');
             if (pending.length > 0) {
-                await Swal.fire({
-                    icon: 'warning',
+                await confirm({
+                    variant: 'warn',
+                    hideCancel: true,
                     title: lang === 'th' ? 'ยังยกเลิกสัญญาไม่ได้' : 'Cannot cancel yet',
-                    html:
+                    description:
                         lang === 'th'
-                            ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน<br>ยังเหลืออีก <b>${pending.length}</b> รายการ`
-                            : `Every linked asset must be written off first.<br><b>${pending.length}</b> asset(s) still need write-off.`,
-                    confirmButtonText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
-                    confirmButtonColor: '#2563eb',
-                    customClass: { popup: swalShell.popup, confirmButton: swalShell.confirmButton },
+                            ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก ${pending.length} รายการ`
+                            : `Every linked asset must be written off first. ${pending.length} asset(s) still need write-off.`,
+                    confirmText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
                 });
                 return;
             }
         }
 
-        const result = await Swal.fire({
-            icon: 'warning',
+        await confirm({
+            variant: 'danger',
             title: lang === 'th' ? 'ยืนยันยกเลิกสัญญา?' : 'Cancel this contract?',
-            html: `<b>${contract.name}</b><br><span style="font-size:0.85rem;color:#6b7280">${contract.code}</span>`,
-            showCancelButton: true,
-            confirmButtonText: t('contract_cancel'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            customClass: swalShell,
-            reverseButtons: true,
+            entity: { name: contract.name, sub: contract.code },
+            confirmText: t('contract_cancel'),
+            action: async () => {
+                await cancel.mutateAsync(contract.id);
+                onClose();
+            },
         });
-        if (result.isConfirmed) {
-            cancel.mutate(contract.id, { onSuccess: onClose });
-        }
     };
 
     const days = contract.days_remaining;
@@ -112,9 +105,7 @@ export function ContractDetailDrawer({
         <Sheet
             open={!!contract}
             onOpenChange={(o) => {
-                // Ignore Radix's auto-close when a SweetAlert dialog steals focus —
-                // otherwise opening the cancel confirm closes this drawer underneath it.
-                if (!o && !Swal.isVisible()) onClose();
+                if (!o) onClose();
             }}
         >
             <SheetContent side="right" className="flex w-[620px] flex-col sm:max-w-[620px]">
@@ -161,14 +152,10 @@ export function ContractDetailDrawer({
                         <KV
                             label={t('contract_reminder_threshold')}
                             value={
-                                contract.reminder_days
-                                    ? `${contract.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
-                                    : '—'
+                                contract.reminder_days ? `${contract.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}` : '—'
                             }
                         />
-                        {cancelled && contract.cancelled_at && (
-                            <KV label={t('contract_cancelled_on')} value={contract.cancelled_at} mono />
-                        )}
+                        {cancelled && contract.cancelled_at && <KV label={t('contract_cancelled_on')} value={contract.cancelled_at} mono />}
                         <KV label={t('contract_created')} value={contract.created_at ?? '—'} mono />
                         <KV label={t('contract_updated')} value={contract.updated_at ?? '—'} mono />
                     </div>
@@ -193,12 +180,11 @@ export function ContractDetailDrawer({
                                     key={n.d}
                                     className={cn(
                                         'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                                        n.on
-                                            ? 'border-brand/30 bg-brand/10 text-brand'
-                                            : 'border-border text-muted-foreground/40 line-through',
+                                        n.on ? 'border-brand/30 bg-brand/10 text-brand' : 'border-border text-muted-foreground/40 line-through',
                                     )}
                                 >
-                                    {n.d}{lang === 'th' ? ' วัน' : 'd'}
+                                    {n.d}
+                                    {lang === 'th' ? ' วัน' : 'd'}
                                 </span>
                             ))}
                         </div>
@@ -282,12 +268,7 @@ export function ContractDetailDrawer({
                         </Button>
                     )}
                     {canEdit && !cancelled && (
-                        <Button
-                            variant="destructive"
-                            className="flex-1"
-                            onClick={handleCancel}
-                            disabled={cancel.isPending}
-                        >
+                        <Button variant="destructive" className="flex-1" onClick={handleCancel} disabled={cancel.isPending}>
                             <Ban className="h-4 w-4" />
                             {t('contract_cancel')}
                         </Button>

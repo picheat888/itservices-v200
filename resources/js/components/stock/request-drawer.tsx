@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { useStockItems, useStockRequestActions } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -48,7 +48,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
             await submit.mutateAsync({ stock_item_id: Number(sku), qty, reason: reason.trim() });
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
