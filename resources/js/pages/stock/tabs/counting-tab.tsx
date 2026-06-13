@@ -2,20 +2,22 @@ import { Column, DataTable } from '@/components/shared/data-table';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useWarehouses } from '@/hooks/use-master-data';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import type { StockCountAdjustMode, StockItem } from '@/types';
 import { AlertTriangle, Check, ClipboardList, FileText, Loader2, Search, Trash2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
+    const confirm = useConfirm();
     const { data: sessions = [], isLoading: sessionsLoading } = useStockCounts(can('view_count'));
     const { open, save, commit, cancel } = useStockCountMutations();
     const { data: warehouses = [] } = useWarehouses();
@@ -72,18 +74,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: msg ?? 'Something went wrong.',
-            // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
-            didOpen: () => {
-                const container = Swal.getContainer();
-                if (container) {
-                    container.style.pointerEvents = 'auto';
-                }
-            },
-        });
+        useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
     };
 
     // Seed the inputs from the session's stored counts whenever it loads/changes.
@@ -262,25 +253,15 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         // Cancel a draft session — confirm first, and stop the row's open-on-click.
                         onClick={async (e) => {
                             e.stopPropagation();
-                            const res = await Swal.fire({
+                            await confirm({
+                                variant: 'warn',
                                 title: t('stock_count_cancel'),
-                                text: `${s.reference} — ${t('stock_count_cancel_confirm')}`,
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: t('stock_count_cancel'),
-                                cancelButtonText: t('stock_count_back'),
-                                confirmButtonColor: '#ef4444',
-                                cancelButtonColor: '#6b7280',
-                                customClass: {
-                                    popup: '!rounded-xl !shadow-xl',
-                                    confirmButton: '!rounded-lg !font-medium',
-                                    cancelButton: '!rounded-lg !font-medium',
-                                },
-                                reverseButtons: true,
+                                description: t('stock_count_cancel_confirm'),
+                                entity: { name: s.reference },
+                                confirmText: t('stock_count_cancel'),
+                                cancelText: t('stock_count_back'),
+                                action: () => cancel.mutateAsync(s.id),
                             });
-                            if (res.isConfirmed) {
-                                cancel.mutate(s.id, { onError });
-                            }
                         }}
                         title={t('stock_count_cancel')}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
@@ -410,21 +391,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
             <Dialog open={selectedId !== null} onOpenChange={(o) => !o && setSelectedId(null)}>
-                <DialogContent
-                    className="max-w-3xl"
-                    // The commit-confirm Swal renders at <body> (outside this content). While it's open,
-                    // neither Esc nor clicking its buttons (an "outside" interaction) should close this sheet.
-                    onEscapeKeyDown={(e) => {
-                        if (Swal.isVisible()) {
-                            e.preventDefault();
-                        }
-                    }}
-                    onInteractOutside={(e) => {
-                        if (Swal.isVisible()) {
-                            e.preventDefault();
-                        }
-                    }}
-                >
+                <DialogContent className="max-w-3xl">
                     {session ? (
                         <>
                             <DialogHeader>
@@ -665,34 +632,6 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                         <Button
                                             disabled={!anyCounted || savingDraft || committing || committedFlash}
                                             onClick={async () => {
-                                                // Confirm once more — message reflects the chosen mode's effect on stock.
-                                                const res = await Swal.fire({
-                                                    title: t('stock_count_commit_confirm'),
-                                                    text: `${session.reference} — ${mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint')}`,
-                                                    icon: mode === 'manual' ? 'warning' : 'question',
-                                                    showCancelButton: true,
-                                                    confirmButtonText: t('stock_count_commit'),
-                                                    cancelButtonText: t('stock_count_back'),
-                                                    confirmButtonColor: mode === 'manual' ? '#d97706' : '#16a34a',
-                                                    cancelButtonColor: '#6b7280',
-                                                    reverseButtons: true,
-                                                    customClass: {
-                                                        popup: '!rounded-xl !shadow-xl',
-                                                        confirmButton: '!rounded-lg !font-medium',
-                                                        cancelButton: '!rounded-lg !font-medium',
-                                                    },
-                                                    // Re-enable pointer events blocked by the parent Radix dialog.
-                                                    didOpen: () => {
-                                                        const container = Swal.getContainer();
-                                                        if (container) {
-                                                            container.style.pointerEvents = 'auto';
-                                                        }
-                                                    },
-                                                });
-                                                if (!res.isConfirmed) {
-                                                    return;
-                                                }
-
                                                 // Serialized lines that came up short must have their missing units ticked first.
                                                 const shorts: SerialCheckItem[] = (session.lines ?? [])
                                                     .filter((l) => l.track_serial)
@@ -710,12 +649,30 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                         serials: x.l.serials ?? [],
                                                     }));
 
-                                                if (shorts.length === 0) {
-                                                    await runCommit({});
+                                                // Shorts need ticking in the serial-verify dialog (which then commits).
+                                                if (shorts.length > 0) {
+                                                    setMissingByItem({});
+                                                    setSerialCheck(shorts);
                                                     return;
                                                 }
-                                                setMissingByItem({});
-                                                setSerialCheck(shorts);
+
+                                                // No shorts — confirm once more (message reflects the chosen mode's
+                                                // effect on stock) and let the dialog own the save+commit steps.
+                                                await confirm({
+                                                    variant: 'warn',
+                                                    title: t('stock_count_commit_confirm'),
+                                                    description:
+                                                        mode === 'manual' ? t('stock_count_mode_manual_warn') : t('stock_count_mode_auto_hint'),
+                                                    entity: { name: session.reference },
+                                                    confirmText: t('stock_count_commit'),
+                                                    cancelText: t('stock_count_back'),
+                                                    action: async () => {
+                                                        await save.mutateAsync({ id: session.id, counts: countsPayload() });
+                                                        await commit.mutateAsync({ id: session.id, mode, missingSerials: {} });
+                                                        setCommittedFlash(true);
+                                                        window.setTimeout(() => setCommittedFlash(false), 1200);
+                                                    },
+                                                });
                                             }}
                                         >
                                             {committing ? (

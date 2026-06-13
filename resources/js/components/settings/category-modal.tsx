@@ -5,9 +5,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { useCategoryMutations } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
+import { useToastStore } from '@/stores/toast';
 import type { Category } from '@/types';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -49,7 +49,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
@@ -62,14 +62,30 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                 <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('md_category_name_en')} required>
-                            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('md_category_name_en')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                            <Input
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                autoFocus
+                                placeholder={t('md_category_name_en')}
+                                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                            />
                         </Field>
                         <Field label={t('md_category_name_th')}>
-                            <Input value={nameTh} onChange={(e) => setNameTh(e.target.value)} placeholder={t('md_category_name_th')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                            <Input
+                                value={nameTh}
+                                onChange={(e) => setNameTh(e.target.value)}
+                                placeholder={t('md_category_name_th')}
+                                onKeyDown={(e) => e.key === 'Enter' && submit()}
+                            />
                         </Field>
                     </div>
                     <Field label={t('md_description')}>
-                        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('md_description')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                        <Input
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder={t('md_description')}
+                            onKeyDown={(e) => e.key === 'Enter' && submit()}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

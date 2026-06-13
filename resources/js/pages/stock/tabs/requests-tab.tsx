@@ -1,15 +1,16 @@
 import { Column, DataTable } from '@/components/shared/data-table';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useStockItem, useStockRequestActions, useStockRequests } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import type { StockRequest, StockRequestStatus } from '@/types';
 import { AlertTriangle, ArrowUpFromLine, Check, FilePlus2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
@@ -28,6 +29,7 @@ const REQ_ORDER: Record<StockRequestStatus, number> = {
 
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
+    const confirm = useConfirm();
     const { data: requests = [], isLoading: requestsLoading } = useStockRequests();
     // Surface actionable requests first (await approval → await fulfillment); the backend
     // already returns newest-first, and the stable sort keeps that order within each group.
@@ -61,57 +63,30 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: msg ?? 'Something went wrong.',
-            // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
-            didOpen: () => {
-                const container = Swal.getContainer();
-                if (container) {
-                    container.style.pointerEvents = 'auto';
-                }
-            },
-        });
+        useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
     };
 
     // One-line summary of the request, shown inside the confirm dialogs.
     const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} — ${r.item_name ?? ''}  ·  ×${r.qty}  ·  ${r.requester_name}`;
 
     const confirmApprove = async (r: (typeof requests)[number]) => {
-        const res = await Swal.fire({
+        await confirm({
+            variant: 'edit',
             title: t('stock_approve_confirm'),
-            text: reqSummary(r),
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: t('stock_approve'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#059669',
-            cancelButtonColor: '#6b7280',
-            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
-            reverseButtons: true,
+            entity: { name: reqSummary(r) },
+            confirmText: t('stock_approve'),
+            action: () => approve.mutateAsync(r.id),
         });
-        if (res.isConfirmed) {
-            approve.mutate(r.id, { onError });
-        }
     };
 
     const confirmReject = async (r: (typeof requests)[number]) => {
-        const res = await Swal.fire({
+        await confirm({
+            variant: 'warn',
             title: t('stock_reject_confirm'),
-            text: reqSummary(r),
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: t('stock_reject'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
-            reverseButtons: true,
+            entity: { name: reqSummary(r) },
+            confirmText: t('stock_reject'),
+            action: () => reject.mutateAsync(r.id),
         });
-        if (res.isConfirmed) {
-            reject.mutate(r.id, { onError });
-        }
     };
 
     const columns: Column<(typeof requests)[number]>[] = [

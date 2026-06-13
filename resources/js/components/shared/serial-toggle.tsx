@@ -1,7 +1,7 @@
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Box, ShieldCheck } from 'lucide-react';
-import Swal from 'sweetalert2';
 
 /**
  * SerialToggle — a clickable card row that switches a SKU (or category default)
@@ -20,36 +20,19 @@ export function SerialToggle({
     confirmOnEnable?: boolean;
 }) {
     const t = useT();
+    const confirm = useConfirm();
 
     const handleToggle = async () => {
         const next = !value;
         if (next && confirmOnEnable) {
-            const result = await Swal.fire({
-                title: t('stock_track_serial_title'),
-                text: t('stock_keep_serials_confirm'),
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: t('stock_enable'),
-                cancelButtonText: t('cancel'),
-                confirmButtonColor: '#2563eb',
-                cancelButtonColor: '#6b7280',
-                customClass: {
-                    popup: '!rounded-xl !shadow-xl',
-                    confirmButton: '!rounded-lg !font-medium',
-                    cancelButton: '!rounded-lg !font-medium',
-                },
-                // The parent Radix dialog sets `pointer-events: none` on the body
-                // while open; re-enable it on the Swal container so its buttons
-                // (and backdrop) stay clickable.
-                didOpen: () => {
-                    const container = Swal.getContainer();
-                    if (container) {
-                        container.style.pointerEvents = 'auto';
-                    }
-                },
-                reverseButtons: true,
-            });
-            if (!result.isConfirmed) {
+            if (
+                !(await confirm({
+                    variant: 'warn',
+                    title: t('stock_track_serial_title'),
+                    description: t('stock_keep_serials_confirm'),
+                    confirmText: t('stock_enable'),
+                }))
+            ) {
                 return;
             }
         }
@@ -76,9 +59,7 @@ export function SerialToggle({
             </span>
             <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold">{t('stock_track_serial_title')}</span>
-                <span className="text-muted-foreground mt-0.5 block text-xs">
-                    {value ? t('stock_track_serial_on') : t('stock_track_serial_off')}
-                </span>
+                <span className="text-muted-foreground mt-0.5 block text-xs">{value ? t('stock_track_serial_on') : t('stock_track_serial_off')}</span>
             </span>
             <span className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', value ? 'bg-brand' : 'bg-muted-foreground/30')}>
                 <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', value ? 'left-[18px]' : 'left-0.5')} />

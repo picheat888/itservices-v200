@@ -24,9 +24,7 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
     useEffect(() => {
         if (open) {
             setSaved(false);
-            const values = section
-                ? { department_id: String(section.department_id), name: section.name, name_th: section.name_th ?? '' }
-                : empty;
+            const values = section ? { department_id: String(section.department_id), name: section.name, name_th: section.name_th ?? '' } : empty;
             setForm(values);
             initial.current = values;
         }
@@ -64,7 +62,10 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{section ? t('edit_section') : t('add_section')}</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                        {section ? t('edit_section') : t('add_section')}
+                        {section?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{section.code}</span>}
+                    </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                     <Field label={t('department')}>
@@ -83,11 +84,20 @@ export function SectionModal({ open, onClose, section }: { open: boolean; onClos
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!form.department_id || !form.name.trim() || !isDirty || create.isPending || update.isPending || saved}>
+                    <Button
+                        onClick={submit}
+                        disabled={!form.department_id || !form.name.trim() || !isDirty || create.isPending || update.isPending || saved}
+                    >
                         {create.isPending || update.isPending ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" />{t('saving')}</>
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('saving')}
+                            </>
                         ) : saved ? (
-                            <><Check className="h-4 w-4" />{t('saved')}</>
+                            <>
+                                <Check className="h-4 w-4" />
+                                {t('saved')}
+                            </>
                         ) : (
                             t('save')
                         )}

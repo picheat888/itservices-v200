@@ -1,31 +1,60 @@
 import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
-import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
 import { DepartmentMembersDrawer } from '@/components/employees/department-members-drawer';
 import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
-import { PositionModal } from '@/components/employees/position-modal';
+import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
 import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
-import { SectionsTab } from '@/components/employees/sections-tab';
 import { PositionLevelPreview } from '@/components/employees/position-level-preview';
-import { ResignModal } from '@/components/employees/resign-modal';
+import { PositionModal } from '@/components/employees/position-modal';
 import { ResetPasswordModal } from '@/components/employees/reset-password-modal';
+import { ResignModal } from '@/components/employees/resign-modal';
+import { SectionsTab } from '@/components/employees/sections-tab';
 import { SetCredentialsModal } from '@/components/employees/set-credentials-modal';
 import { Column, DataTable } from '@/components/shared/data-table';
+import { TableSkeleton } from '@/components/shared/skeletons';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
-import { useDepartmentMutations, useDepartments, useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary, usePositionMutations, usePositions } from '@/hooks/use-org';
-import { TableSkeleton } from '@/components/shared/skeletons';
+import {
+    useDepartmentMutations,
+    useDepartments,
+    useEmployee,
+    useEmployeeDirectory,
+    useEmployeeMutations,
+    useEmployeeSummary,
+    usePositionMutations,
+    usePositions,
+} from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/types';
-import { Briefcase, Building2, ChevronLeft, ChevronRight, Eye, Import, KeyRound, Layers, MoreVertical, Plus, Search, ShieldCheck, SquarePen, Trash2, UserCheck, UserMinus, UserPlus, Users } from 'lucide-react';
+import {
+    Briefcase,
+    Building2,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    Import,
+    KeyRound,
+    Layers,
+    MoreVertical,
+    Plus,
+    Search,
+    ShieldCheck,
+    SquarePen,
+    Trash2,
+    UserCheck,
+    UserMinus,
+    UserPlus,
+    Users,
+} from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -39,11 +68,17 @@ function initialTab(): Tab {
 }
 
 function initials(name: string) {
-    return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+    return name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
 }
 
 export default function EmployeesPage() {
     const t = useT();
+    const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
     const { user } = useAuth();
     const role = (user?.role ?? 'user') as Role;
@@ -139,15 +174,21 @@ export default function EmployeesPage() {
                                 setEditPos(p);
                                 setPosModalOpen(true);
                             }}
-                            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent"
+                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                         >
                             <SquarePen className="h-4 w-4" />
                         </button>
                         <button
-                            onClick={() => {
-                                if (confirm(`${t('confirm_delete')} ${p.title}`)) positionMut.remove.mutate(p.id);
-                            }}
-                            className="flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
+                            onClick={() =>
+                                confirm({
+                                    variant: 'danger',
+                                    entity: { name: p.title },
+                                    action: async () => {
+                                        await positionMut.remove.mutateAsync(p.id);
+                                    },
+                                })
+                            }
+                            className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                         >
                             <Trash2 className="h-4 w-4" />
                         </button>
@@ -163,7 +204,7 @@ export default function EmployeesPage() {
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{t('employees')}</h1>
-                    <p className="text-sm text-muted-foreground">{t('emp_subtitle')}</p>
+                    <p className="text-muted-foreground text-sm">{t('emp_subtitle')}</p>
                 </div>
                 {(canAdd || canImport) && (
                     <div className="flex items-center gap-2">
@@ -184,14 +225,14 @@ export default function EmployeesPage() {
             </div>
 
             <Card className="overflow-hidden">
-                <div className="flex flex-wrap gap-1 border-b border-border px-3 pt-1">
+                <div className="border-border flex flex-wrap gap-1 border-b px-3 pt-1">
                     {tabs.map((tb) => (
                         <button
                             key={tb.id}
                             onClick={() => changeTab(tb.id)}
                             className={cn(
                                 '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'border-brand text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+                                tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
                             )}
                         >
                             {tb.label}
@@ -203,118 +244,134 @@ export default function EmployeesPage() {
                 <div className="p-5">
                     {tab === 'dashboard' && <Dashboard summary={summary} departments={departments} positions={positions} />}
 
-            {tab === 'directory' && (
-                <DirectoryTab
-                    departments={departments}
-                    canEdit={canEdit}
-                    isSuperViewer={role === 'super'}
-                    canResetPassword={canResetPassword}
-                    canResign={canResign}
-                    canCancelResign={canCancelResign}
-                    canSetCredentials={canSetCredentials}
-                    onView={setViewEmp}
-                    onEdit={setEditEmp}
-                    onResign={setResignEmp}
-                    onCancelResign={(e) => {
-                        if (confirm(t('cancel_resign_confirm'))) employeeMut.cancelResign.mutate(e.id);
-                    }}
-                    onResetPassword={setResetPwEmp}
-                    onSetCredentials={setCredEmp}
-                />
-            )}
+                    {tab === 'directory' && (
+                        <DirectoryTab
+                            departments={departments}
+                            canEdit={canEdit}
+                            isSuperViewer={role === 'super'}
+                            canResetPassword={canResetPassword}
+                            canResign={canResign}
+                            canCancelResign={canCancelResign}
+                            canSetCredentials={canSetCredentials}
+                            onView={setViewEmp}
+                            onEdit={setEditEmp}
+                            onResign={setResignEmp}
+                            onCancelResign={async (e) => {
+                                await confirm({
+                                    variant: 'warn',
+                                    description: t('cancel_resign_confirm'),
+                                    action: () => employeeMut.cancelResign.mutateAsync(e.id),
+                                });
+                            }}
+                            onResetPassword={setResetPwEmp}
+                            onSetCredentials={setCredEmp}
+                        />
+                    )}
 
-            {tab === 'positions' && (
-                <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <span className="text-sm text-muted-foreground">{t('pos_all_org')}</span>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={() => setPosPreviewOpen(true)}>
-                                <Layers className="h-4 w-4" />
-                                {t('pos_level_preview')}
-                            </Button>
-                            {canManageOrg && (
-                                <Button
-                                    onClick={() => {
-                                        setEditPos(null);
-                                        setPosModalOpen(true);
-                                    }}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    {t('add_position')}
-                                </Button>
-                            )}
+                    {tab === 'positions' && (
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="text-muted-foreground text-sm">{t('pos_all_org')}</span>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" onClick={() => setPosPreviewOpen(true)}>
+                                        <Layers className="h-4 w-4" />
+                                        {t('pos_level_preview')}
+                                    </Button>
+                                    {canManageOrg && (
+                                        <Button
+                                            onClick={() => {
+                                                setEditPos(null);
+                                                setPosModalOpen(true);
+                                            }}
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            {t('add_position')}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                            <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} />
                         </div>
-                    </div>
-                    <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} />
-                </div>
-            )}
+                    )}
 
-            {tab === 'departments' && (
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                        <span className="text-sm text-muted-foreground">{t('dept_all_org')}</span>
-                        {canManageOrg && (
-                            <Button
-                                onClick={() => {
-                                    setEditDept(null);
-                                    setDeptModalOpen(true);
-                                }}
-                            >
-                                <Plus className="h-4 w-4" />
-                                {t('add_department')}
-                            </Button>
-                        )}
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {departments.map((d) => (
-                            <Card key={d.id} className="p-4">
-                                <div className="flex items-start justify-between">
-                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">{d.tag}</span>
-                                    <div className="flex gap-1">
-                                        <button onClick={() => setViewDept(d)} className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent">
-                                            <Eye className="h-3.5 w-3.5" />
+                    {tab === 'departments' && (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-muted-foreground text-sm">{t('dept_all_org')}</span>
+                                {canManageOrg && (
+                                    <Button
+                                        onClick={() => {
+                                            setEditDept(null);
+                                            setDeptModalOpen(true);
+                                        }}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        {t('add_department')}
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {departments.map((d) => (
+                                    <Card key={d.id} className="p-4">
+                                        <div className="flex items-start justify-between">
+                                            <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{d.tag}</span>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setViewDept(d)}
+                                                    className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                </button>
+                                                {canManageOrg && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditDept(d);
+                                                                setDeptModalOpen(true);
+                                                            }}
+                                                            className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
+                                                        >
+                                                            <SquarePen className="h-3.5 w-3.5" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() =>
+                                                                confirm({
+                                                                    variant: 'danger',
+                                                                    entity: { name: d.name },
+                                                                    action: async () => {
+                                                                        await departmentMut.remove.mutateAsync(d.id);
+                                                                    },
+                                                                })
+                                                            }
+                                                            className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => setViewDept(d)}
+                                            className="hover:text-brand mt-3 block text-left text-base font-semibold"
+                                        >
+                                            {lang === 'th' ? (d.name_th ?? d.name) : d.name}
                                         </button>
-                                        {canManageOrg && (
-                                            <>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditDept(d);
-                                                        setDeptModalOpen(true);
-                                                    }}
-                                                    className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-accent"
-                                                >
-                                                    <SquarePen className="h-3.5 w-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (confirm(`${t('confirm_delete')} ${d.name}`)) departmentMut.remove.mutate(d.id);
-                                                    }}
-                                                    className="flex h-7 w-7 items-center justify-center rounded-md text-destructive hover:bg-destructive/10"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                <button onClick={() => setViewDept(d)} className="mt-3 block text-left text-base font-semibold hover:text-brand">
-                                    {lang === 'th' ? d.name_th ?? d.name : d.name}
-                                </button>
-                                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
-                                    <span className="text-muted-foreground">{t('dept_members')}</span>
-                                    <button onClick={() => setViewDept(d)} className="font-mono font-semibold text-brand">
-                                        {d.count ?? 0}
-                                    </button>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
-                </div>
-            )}
+                                        <div className="border-border mt-3 flex items-center justify-between border-t pt-3 text-sm">
+                                            <span className="text-muted-foreground">{t('dept_members')}</span>
+                                            <button onClick={() => setViewDept(d)} className="text-brand font-mono font-semibold">
+                                                {d.count ?? 0}
+                                            </button>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-            {tab === 'sections' && <SectionsTab canManage={canManageOrg} />}
+                    {tab === 'sections' && <SectionsTab canManage={canManageOrg} />}
 
-            {tab === 'orgchart' && <OrgChartTab />}
+                    {tab === 'orgchart' && <OrgChartTab />}
                 </div>
             </Card>
 
@@ -337,10 +394,15 @@ export default function EmployeesPage() {
                 canCancelResign={canCancelResign}
                 canSetCredentials={canSetCredentials}
                 onResign={(e) => setResignEmp(e)}
-                onCancelResign={(e) => {
-                    if (confirm(t('cancel_resign_confirm'))) {
-                        employeeMut.cancelResign.mutate(e.id, { onSuccess: () => setViewEmp(null) });
-                    }
+                onCancelResign={async (e) => {
+                    await confirm({
+                        variant: 'warn',
+                        description: t('cancel_resign_confirm'),
+                        action: async () => {
+                            await employeeMut.cancelResign.mutateAsync(e.id);
+                            setViewEmp(null);
+                        },
+                    });
                 }}
                 onResetPassword={(e) => setResetPwEmp(e)}
                 onSetCredentials={(e) => {
@@ -360,14 +422,8 @@ export default function EmployeesPage() {
                     setViewEmp(null);
                 }}
             />
-            <ResetPasswordModal
-                employee={resetPwEmp}
-                onClose={() => setResetPwEmp(null)}
-            />
-            <SetCredentialsModal
-                employee={credEmp}
-                onClose={() => setCredEmp(null)}
-            />
+            <ResetPasswordModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
+            <SetCredentialsModal employee={credEmp} onClose={() => setCredEmp(null)} />
             <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} />
             <PositionLevelPreview open={posPreviewOpen} onClose={() => setPosPreviewOpen(false)} positions={positions} />
             <DepartmentModal open={deptModalOpen} onClose={() => setDeptModalOpen(false)} department={editDept} />
@@ -394,7 +450,21 @@ interface DirectoryTabProps {
     onSetCredentials: (e: Employee) => void;
 }
 
-function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, canResign, canCancelResign, canSetCredentials, onView, onEdit, onResign, onCancelResign, onResetPassword, onSetCredentials }: DirectoryTabProps) {
+function DirectoryTab({
+    departments,
+    canEdit,
+    isSuperViewer,
+    canResetPassword,
+    canResign,
+    canCancelResign,
+    canSetCredentials,
+    onView,
+    onEdit,
+    onResign,
+    onCancelResign,
+    onResetPassword,
+    onSetCredentials,
+}: DirectoryTabProps) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [search, setSearch] = useState('');
@@ -411,10 +481,22 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
     const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
     const to = Math.min(page * pageSize, total);
 
-    const handleSearch = (v: string) => { setSearch(v); setPage(1); };
-    const handleDept = (v: string) => { setDeptFilter(v); setPage(1); };
-    const handleStatus = (v: string) => { setStatusFilter(v); setPage(1); };
-    const handlePageSize = (v: 10 | 20 | 50 | 100) => { setPageSize(v); setPage(1); };
+    const handleSearch = (v: string) => {
+        setSearch(v);
+        setPage(1);
+    };
+    const handleDept = (v: string) => {
+        setDeptFilter(v);
+        setPage(1);
+    };
+    const handleStatus = (v: string) => {
+        setStatusFilter(v);
+        setPage(1);
+    };
+    const handlePageSize = (v: 10 | 20 | 50 | 100) => {
+        setPageSize(v);
+        setPage(1);
+    };
 
     const columns: Column<Employee>[] = [
         {
@@ -424,15 +506,15 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                 <div className="flex items-center gap-2.5">
                     <Avatar className="h-8 w-8">
                         {e.photo_url && <AvatarImage src={e.photo_url} alt="" />}
-                        <AvatarFallback className="bg-brand/10 text-[11px] font-semibold text-brand">{initials(e.name)}</AvatarFallback>
+                        <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(e.name)}</AvatarFallback>
                     </Avatar>
-                    <div className="font-medium">{lang === 'th' ? e.name_th ?? e.name : e.name}</div>
+                    <div className="font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
                 </div>
             ),
         },
         { key: 'code', header: t('tbl_emp_id'), render: (e) => <span className="font-mono text-xs">{e.code}</span> },
         { key: 'position', header: t('position'), render: (e) => e.position ?? '—' },
-        { key: 'department', header: t('department'), render: (e) => (lang === 'th' ? e.department_th ?? e.department : e.department) ?? '—' },
+        { key: 'department', header: t('department'), render: (e) => (lang === 'th' ? (e.department_th ?? e.department) : e.department) ?? '—' },
         { key: 'email', header: t('emp_email'), render: (e) => <span className="font-mono text-xs">{e.email ?? '—'}</span> },
         { key: 'joined', header: t('joined'), render: (e) => <span className="font-mono text-xs">{e.joined_at ?? '—'}</span> },
         {
@@ -461,7 +543,7 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                 <div onClick={(ev) => ev.stopPropagation()} className="flex justify-end">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent">
+                            <button className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md">
                                 <MoreVertical className="h-4 w-4" />
                             </button>
                         </DropdownMenuTrigger>
@@ -470,8 +552,9 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                                 <Eye className="h-4 w-4" />
                                 {t('view')}
                             </DropdownMenuItem>
-                            {canEdit && e.status !== 'resigned' && (
-                                e.is_super_admin && !isSuperViewer ? (
+                            {canEdit &&
+                                e.status !== 'resigned' &&
+                                (e.is_super_admin && !isSuperViewer ? (
                                     <DropdownMenuItem disabled title={t('emp_admin_protected')}>
                                         <SquarePen className="h-4 w-4" />
                                         {t('edit')}
@@ -481,8 +564,7 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                                         <SquarePen className="h-4 w-4" />
                                         {t('edit')}
                                     </DropdownMenuItem>
-                                )
-                            )}
+                                ))}
                             {canSetCredentials && !e.has_account && e.status !== 'resigned' && (
                                 <DropdownMenuItem onClick={() => onSetCredentials(e)}>
                                     <ShieldCheck className="h-4 w-4" />
@@ -518,13 +600,8 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
         <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full max-w-xs">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        value={search}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        placeholder={t('search_name_id')}
-                        className="pl-9"
-                    />
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <Input value={search} onChange={(e) => handleSearch(e.target.value)} placeholder={t('search_name_id')} className="pl-9" />
                 </div>
                 <Select value={deptFilter} onValueChange={handleDept}>
                     <SelectTrigger className="w-56">
@@ -534,7 +611,7 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                         <SelectItem value="all">{t('all_departments')}</SelectItem>
                         {departments.map((d) => (
                             <SelectItem key={d.id} value={String(d.id)}>
-                                {lang === 'th' ? d.name_th ?? d.name : d.name}
+                                {lang === 'th' ? (d.name_th ?? d.name) : d.name}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -546,7 +623,7 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                     <SelectContent>
                         <SelectItem value="all">
                             <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground" />
+                                <span className="bg-muted-foreground h-2 w-2 shrink-0 rounded-full" />
                                 {t('all_status')}
                             </span>
                         </SelectItem>
@@ -578,10 +655,14 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                 </Select>
             </div>
 
-            {isLoading ? <TableSkeleton rows={pageSize > 20 ? 8 : 5} cols={7} /> : <DataTable columns={columns} rows={rows} rowKey={(e) => e.id} onRowClick={onView} hidePagination />}
+            {isLoading ? (
+                <TableSkeleton rows={pageSize > 20 ? 8 : 5} cols={7} />
+            ) : (
+                <DataTable columns={columns} rows={rows} rowKey={(e) => e.id} onRowClick={onView} hidePagination />
+            )}
 
             {/* Pagination bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm text-muted-foreground">
+            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                 <div className="flex items-center gap-2">
                     <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
                     <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}>
@@ -590,26 +671,32 @@ function DirectoryTab({ departments, canEdit, isSuperViewer, canResetPassword, c
                         </SelectTrigger>
                         <SelectContent>
                             {DIR_PAGE_SIZES.map((s) => (
-                                <SelectItem key={s} value={String(s)}>{s}</SelectItem>
+                                <SelectItem key={s} value={String(s)}>
+                                    {s}
+                                </SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span>{from}–{to} {lang === 'th' ? 'จาก' : 'of'} {total}</span>
+                    <span>
+                        {from}–{to} {lang === 'th' ? 'จาก' : 'of'} {total}
+                    </span>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
                             disabled={page <= 1}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <span className="px-1 font-medium text-foreground">{page} / {totalPages}</span>
+                        <span className="text-foreground px-1 font-medium">
+                            {page} / {totalPages}
+                        </span>
                         <button
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                             disabled={page >= totalPages}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
@@ -641,7 +728,7 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
                     return (
                         <Card key={k.label} className="p-5">
                             <div className="flex items-start justify-between">
-                                <div className="text-sm text-muted-foreground">{k.label}</div>
+                                <div className="text-muted-foreground text-sm">{k.label}</div>
                                 <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', k.tone)}>
                                     <Icon className="h-[18px] w-[18px]" />
                                 </span>
@@ -654,12 +741,12 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="p-5">
                     <div className="mb-4 text-sm font-semibold">{t('headcount_by_dept')}</div>
-                    <div className="divide-y divide-border/60">
+                    <div className="divide-border/60 divide-y">
                         {departments.map((d) => (
                             <div key={d.id} className="flex items-center justify-between py-2.5">
                                 <div className="flex items-center gap-2.5">
-                                    <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
-                                    <span className="text-sm">{lang === 'th' ? d.name_th ?? d.name : d.name}</span>
+                                    <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
+                                    <span className="text-sm">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>
                                 </div>
                                 <span className="font-mono text-sm font-semibold">{d.count ?? 0}</span>
                             </div>
@@ -670,17 +757,17 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
                     <div className="mb-4 text-sm font-semibold">{t('recent_hires')}</div>
                     <div className="space-y-1">
                         {(summary?.recent ?? []).map((e) => (
-                            <div key={e.id} className="flex items-center gap-3 border-b border-border/60 py-2 last:border-0">
+                            <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
                                 <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-brand/10 text-[11px] font-semibold text-brand">{initials(e.name)}</AvatarFallback>
+                                    <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(e.name)}</AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium">{lang === 'th' ? e.name_th ?? e.name : e.name}</div>
-                                    <div className="truncate text-xs text-muted-foreground">
-                                        {e.position} · {lang === 'th' ? e.department_th ?? e.department : e.department}
+                                    <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                                    <div className="text-muted-foreground truncate text-xs">
+                                        {e.position} · {lang === 'th' ? (e.department_th ?? e.department) : e.department}
                                     </div>
                                 </div>
-                                <span className="font-mono text-xs text-muted-foreground">{e.joined_at}</span>
+                                <span className="text-muted-foreground font-mono text-xs">{e.joined_at}</span>
                             </div>
                         ))}
                     </div>

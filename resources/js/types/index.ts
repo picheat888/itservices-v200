@@ -50,6 +50,7 @@ export interface Department {
 
 export interface Section {
     id: number;
+    code: string;
     department_id: number;
     name: string;
     name_th: string | null;

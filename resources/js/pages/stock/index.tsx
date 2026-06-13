@@ -8,6 +8,7 @@ import { StockItemDetailModal } from '@/components/stock/stock-item-detail-modal
 import { StockItemModal } from '@/components/stock/stock-item-modal';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
@@ -20,7 +21,6 @@ import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, Boxes, Plus, R
 import type React from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Swal from 'sweetalert2';
 import { AuditTab } from './tabs/counting-tab';
 import { DashboardTab } from './tabs/dashboard-tab';
 import { MovementsTab } from './tabs/movements-tab';
@@ -158,6 +158,7 @@ function AlertCard({ summary, t, onViewItems }: { summary: import('@/types').Sto
 
 export default function StockPage() {
     const t = useT();
+    const confirm = useConfirm();
     const { user } = useAuth();
     const role = (user?.role ?? 'user') as Role;
     const perms = user?.permissions ?? [];
@@ -165,9 +166,7 @@ export default function StockPage() {
     const canManage = can('manage_items');
 
     const [searchParams] = useSearchParams();
-    const initialTab = (['dashboard', 'items', 'movements', 'requests', 'audit'] as const).includes(
-        searchParams.get('tab') as never,
-    )
+    const initialTab = (['dashboard', 'items', 'movements', 'requests', 'audit'] as const).includes(searchParams.get('tab') as never)
         ? (searchParams.get('tab') as 'dashboard' | 'items' | 'movements' | 'requests' | 'audit')
         : 'dashboard';
     const [tab, setTab] = useState<'dashboard' | 'items' | 'movements' | 'requests' | 'audit'>(initialTab);
@@ -205,37 +204,13 @@ export default function StockPage() {
     // Delete an empty SKU after a confirm. Only items with 0 on-hand and 0 value
     // are deletable (the button is disabled otherwise); the server enforces this too.
     const confirmDelete = async (i: StockItem) => {
-        const res = await Swal.fire({
+        await confirm({
+            variant: 'danger',
             title: t('stock_delete_item'),
-            html: `<div class="font-mono text-sm">${i.sku}</div><div class="text-sm">${i.name}</div><div class="mt-2 text-xs text-muted-foreground">${t('stock_delete_confirm')}</div>`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: t('delete'),
-            cancelButtonText: t('cancel'),
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#6b7280',
-            customClass: { popup: '!rounded-xl !shadow-xl', confirmButton: '!rounded-lg !font-medium', cancelButton: '!rounded-lg !font-medium' },
-            reverseButtons: true,
+            description: t('stock_delete_confirm'),
+            entity: { name: i.name, sub: i.sku },
+            action: () => remove.mutateAsync(i.id),
         });
-        if (res.isConfirmed) {
-            remove.mutate(i.id, {
-                onError: (e) => {
-                    const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: msg ?? 'Something went wrong.',
-                        // Re-enable pointer events blocked by a parent Radix dialog/drawer (so OK is clickable).
-                        didOpen: () => {
-                            const container = Swal.getContainer();
-                            if (container) {
-                                container.style.pointerEvents = 'auto';
-                            }
-                        },
-                    });
-                },
-            });
-        }
     };
 
     const { format, formatCompact } = useCurrency();

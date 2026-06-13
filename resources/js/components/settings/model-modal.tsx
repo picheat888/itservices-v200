@@ -6,9 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAssetModelMutations, useBrands } from '@/hooks/use-master-data';
 import { useT } from '@/lib/i18n';
+import { useToastStore } from '@/stores/toast';
 import type { AssetModel, Brand } from '@/types';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -48,7 +48,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
@@ -67,13 +67,21 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                             <SelectContent>
                                 <SelectItem value={NO_BRAND}>—</SelectItem>
                                 {brands.map((b: Brand) => (
-                                    <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                                    <SelectItem key={b.id} value={String(b.id)}>
+                                        {b.name}
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </Field>
                     <Field label={t('md_model_name')} required>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={t('md_model_name')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoFocus
+                            placeholder={t('md_model_name')}
+                            onKeyDown={(e) => e.key === 'Enter' && submit()}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

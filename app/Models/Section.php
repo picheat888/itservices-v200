@@ -8,7 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Section extends Model
 {
-    protected $fillable = ['department_id', 'name', 'name_th'];
+    protected $fillable = ['code', 'department_id', 'name', 'name_th'];
+
+    protected static function booted(): void
+    {
+        // Auto-assign a sequential SEC-#### code on create.
+        static::creating(function (Section $section) {
+            if (blank($section->code)) {
+                $max = (int) str_replace('SEC-', '', (string) static::max('code'));
+                $section->code = 'SEC-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
+            }
+        });
+    }
 
     /** The department this section belongs to. */
     public function department(): BelongsTo

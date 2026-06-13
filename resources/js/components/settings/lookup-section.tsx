@@ -2,12 +2,13 @@ import { Column, DataTable } from '@/components/shared/data-table';
 import { Field } from '@/components/shared/field';
 import { SaveButton } from '@/components/shared/save-button';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useT } from '@/lib/i18n';
+import { useToastStore } from '@/stores/toast';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -50,6 +51,7 @@ interface LookupSectionProps {
  */
 export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel, addButtonLabel }: LookupSectionProps) {
     const t = useT();
+    const confirm = useConfirm();
     const { create, update, remove } = mutations;
     const [addOpen, setAddOpen] = useState(false);
     const [editItem, setEditItem] = useState<LookupItem | null>(null);
@@ -71,9 +73,13 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                         <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                        onClick={() => {
-                            if (confirm(`${t('confirm_delete')} ${r.name}`)) remove.mutate(r.id as never);
-                        }}
+                        onClick={() =>
+                            confirm({
+                                variant: 'danger',
+                                entity: { name: r.name, sub: r.description || undefined },
+                                action: () => remove.mutateAsync(r.id as never).then(() => undefined),
+                            })
+                        }
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -157,7 +163,7 @@ function LookupModal({
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong.' });
+            useToastStore.getState().push('Something went wrong.', 'error');
         }
     };
 
@@ -169,10 +175,21 @@ function LookupModal({
                 </DialogHeader>
                 <div className="space-y-3">
                     <Field label={nameLabel} required>
-                        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder={nameLabel} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                        <Input
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            autoFocus
+                            placeholder={nameLabel}
+                            onKeyDown={(e) => e.key === 'Enter' && submit()}
+                        />
                     </Field>
                     <Field label={t('md_description')}>
-                        <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('md_description')} onKeyDown={(e) => e.key === 'Enter' && submit()} />
+                        <Input
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder={t('md_description')}
+                            onKeyDown={(e) => e.key === 'Enter' && submit()}
+                        />
                     </Field>
                 </div>
                 <DialogFooter>

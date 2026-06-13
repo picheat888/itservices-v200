@@ -24,13 +24,15 @@ interface DataTableProps<T> {
     hidePagination?: boolean;
     /** Content rendered on the right of the search row (e.g. an Add button). */
     actions?: React.ReactNode;
+    /** Content rendered on the left, right next to the search box (e.g. filter/sort selects). */
+    filters?: React.ReactNode;
     /** Show shimmering skeleton rows instead of the empty state while data loads. */
     loading?: boolean;
 }
 
 const PAGE_SIZES = [20, 50, 100];
 
-export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions, loading }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions, filters, loading }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
@@ -54,37 +56,40 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
 
     return (
         <div className="space-y-3">
-            {(searchable || actions) && (
-                <div className="flex items-center justify-between gap-2">
-                    {searchable ? (
-                        <div className="relative w-full max-w-xs">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                value={query}
-                                onChange={(e) => {
-                                    setQuery(e.target.value);
-                                    setPage(1);
-                                }}
-                                placeholder={t('search_placeholder')}
-                                className="pl-9"
-                            />
-                        </div>
-                    ) : (
-                        <span />
-                    )}
+            {(searchable || actions || filters) && (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                        {searchable ? (
+                            <div className="relative w-full max-w-xs">
+                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                <Input
+                                    value={query}
+                                    onChange={(e) => {
+                                        setQuery(e.target.value);
+                                        setPage(1);
+                                    }}
+                                    placeholder={t('search_placeholder')}
+                                    className="pl-9"
+                                />
+                            </div>
+                        ) : (
+                            !filters && <span />
+                        )}
+                        {filters}
+                    </div>
                     {actions}
                 </div>
             )}
 
-            <div className="overflow-hidden rounded-xl border border-border">
+            <div className="border-border overflow-hidden rounded-xl border">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="border-b border-border bg-muted/40">
+                        <tr className="border-border bg-muted/40 border-b">
                             {columns.map((c) => (
                                 <th
                                     key={c.key}
                                     className={cn(
-                                        'px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground',
+                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide uppercase',
                                         alignClass(c.align),
                                     )}
                                 >
@@ -96,13 +101,17 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
                     <tbody>
                         {loading &&
                             Array.from({ length: 6 }).map((_, r) => (
-                                <tr key={`skeleton-${r}`} className="border-b border-border/60 last:border-0">
+                                <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
                                     {columns.map((c) => (
                                         <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align))}>
                                             <div
                                                 className={cn(
-                                                    'h-4 animate-pulse rounded bg-muted',
-                                                    c.align === 'right' ? 'ml-auto w-12' : c.align === 'center' ? 'mx-auto w-16' : 'w-3/4 max-w-[160px]',
+                                                    'bg-muted h-4 animate-pulse rounded',
+                                                    c.align === 'right'
+                                                        ? 'ml-auto w-12'
+                                                        : c.align === 'center'
+                                                          ? 'mx-auto w-16'
+                                                          : 'w-3/4 max-w-[160px]',
                                                 )}
                                             />
                                         </td>
@@ -111,80 +120,79 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
                             ))}
                         {!loading && pageRows.length === 0 && (
                             <tr>
-                                <td colSpan={columns.length} className="px-4 py-10 text-center text-muted-foreground">
+                                <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
                                     {lang === 'th' ? 'ไม่พบข้อมูล' : 'No data'}
                                 </td>
                             </tr>
                         )}
                         {!loading &&
                             pageRows.map((row) => (
-                            <tr
-                                key={rowKey(row)}
-                                onClick={() => onRowClick?.(row)}
-                                className={cn(
-                                    'border-b border-border/60 last:border-0',
-                                    onRowClick && 'cursor-pointer hover:bg-accent/50',
-                                )}
-                            >
-                                {columns.map((c) => (
-                                    <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className)}>
-                                        {c.render ? c.render(row) : (row as Record<string, unknown>)[c.key] as React.ReactNode}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
+                                <tr
+                                    key={rowKey(row)}
+                                    onClick={() => onRowClick?.(row)}
+                                    className={cn('border-border/60 border-b last:border-0', onRowClick && 'hover:bg-accent/50 cursor-pointer')}
+                                >
+                                    {columns.map((c) => (
+                                        <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className)}>
+                                            {c.render ? c.render(row) : ((row as Record<string, unknown>)[c.key] as React.ReactNode)}
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
 
-            {!hidePagination && <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                    <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                    <Select
-                        value={String(pageSize)}
-                        onValueChange={(v) => {
-                            setPageSize(Number(v));
-                            setPage(1);
-                        }}
-                    >
-                        <SelectTrigger className="h-8 w-[72px]">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {PAGE_SIZES.map((s) => (
-                                <SelectItem key={s} value={String(s)}>
-                                    {s}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+            {!hidePagination && (
+                <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                        <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                        <Select
+                            value={String(pageSize)}
+                            onValueChange={(v) => {
+                                setPageSize(Number(v));
+                                setPage(1);
+                            }}
+                        >
+                            <SelectTrigger className="h-8 w-[72px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {PAGE_SIZES.map((s) => (
+                                    <SelectItem key={s} value={String(s)}>
+                                        {s}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                <div className="flex items-center gap-3">
-                    <span>
-                        {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {lang === 'th' ? 'จาก' : 'of'} {total}
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            disabled={safePage <= 1}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <span className="px-1 font-medium text-foreground">
-                            {safePage} / {pageCount}
+                    <div className="flex items-center gap-3">
+                        <span>
+                            {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {lang === 'th' ? 'จาก' : 'of'} {total}
                         </span>
-                        <button
-                            onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                            disabled={safePage >= pageCount}
-                            className="flex h-8 w-8 items-center justify-center rounded-md border border-border hover:bg-accent disabled:opacity-40"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={safePage <= 1}
+                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <span className="text-foreground px-1 font-medium">
+                                {safePage} / {pageCount}
+                            </span>
+                            <button
+                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                                disabled={safePage >= pageCount}
+                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>}
+            )}
         </div>
     );
 }

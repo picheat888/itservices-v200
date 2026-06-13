@@ -8,10 +8,10 @@ import { useVendors, useWarehouses } from '@/hooks/use-master-data';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useToastStore } from '@/stores/toast';
 import type { StockItem, StockMovementType } from '@/types';
 import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -89,10 +89,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
     // Item detail (serials) for a serialized return — to list the units currently issued.
     const returnItemId = returnIsSerial && sku ? Number(sku) : null;
     const { data: returnItemDetail } = useStockItem(returnItemId);
-    const availableReturnSerials = useMemo(
-        () => (returnItemDetail?.serials ?? []).filter((s) => s.status === 'issued'),
-        [returnItemDetail],
-    );
+    const availableReturnSerials = useMemo(() => (returnItemDetail?.serials ?? []).filter((s) => s.status === 'issued'), [returnItemDetail]);
 
     // Every serial already known to the system, normalised for case-insensitive matching.
     const existingSet = useMemo(() => new Set(existingSerials.map((s) => s.trim().toLowerCase())), [existingSerials]);
@@ -281,7 +278,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
                 const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+                useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
             }
             return;
         }
@@ -300,7 +297,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
                 const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+                useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
             }
             return;
         }
@@ -333,7 +330,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
             }
         } catch (e) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            Swal.fire({ icon: 'error', title: 'Error', text: msg ?? 'Something went wrong.' });
+            useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
         }
     };
 
@@ -735,7 +732,9 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             }
                                         }}
                                     >
-                                        {returnSerialIds.size === availableReturnSerials.length ? t('stock_return_select_none') : t('stock_return_select_all')}
+                                        {returnSerialIds.size === availableReturnSerials.length
+                                            ? t('stock_return_select_none')
+                                            : t('stock_return_select_all')}
                                     </button>
                                 )}
                             </div>
