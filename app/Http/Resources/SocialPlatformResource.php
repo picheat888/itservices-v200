@@ -18,7 +18,13 @@ class SocialPlatformResource extends JsonResource
             'url' => $this->url,
             'color' => $this->color,
             'policy' => $this->policy,
-            'members_count' => $this->memberships()->active()->count(),
+            'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
+                'id' => $m->id,
+                'employee_id' => $m->employee_id,
+                'name' => $m->employee?->name,
+                'purpose' => $m->purpose,
+            ])->values()),
+            'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),
         ];
     }
 }

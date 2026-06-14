@@ -17,7 +17,7 @@ class SocialPlatformController extends Controller
     /** List all social/internet platforms. */
     public function index(): JsonResponse
     {
-        return SocialPlatformResource::collection(SocialPlatform::orderBy('code')->get())->response();
+        return SocialPlatformResource::collection(SocialPlatform::with(['memberships' => fn ($q) => $q->active()->with('employee')])->orderBy('code')->get())->response();
     }
 
     /** Create a new social platform. */
