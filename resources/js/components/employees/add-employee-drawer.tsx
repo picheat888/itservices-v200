@@ -2,34 +2,16 @@ import { Field } from '@/components/shared/field';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
-import { deptColor } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import type { Employee } from '@/types';
-import {
-    AlertTriangle,
-    ArrowLeft,
-    ArrowRight,
-    Briefcase,
-    Calendar,
-    Check,
-    Info,
-    KeyRound,
-    Laptop,
-    Mail,
-    Smartphone,
-    Upload,
-    User,
-    X,
-} from 'lucide-react';
+import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
@@ -58,16 +40,17 @@ const SERVICES = [
 
 const STEP_ICONS = [User, Briefcase, KeyRound];
 
-export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; onClose: () => void; employee?: Employee | null }) {
+/** Stepped right-side Sheet for adding a new employee (3 steps: personal, work, access). */
+export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
     const { data: employees = [] } = useEmployees();
-    const { create, update } = useEmployeeMutations();
+    const { create } = useEmployeeMutations();
     const { data: settings } = useSettings();
     const pushToast = useToastStore((s) => s.push);
-    const isEdit = !!employee;
+
     const [step, setStep] = useState(1);
     const [form, setForm] = useState(empty);
     const { data: sections = [] } = useSections(form.departmentId ? Number(form.departmentId) : null);
@@ -75,57 +58,18 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    // Set when the server rejects the chosen manager because it would form a
-    // reporting-tree loop — surfaced as a blocking warning dialog.
-    const [managerLoop, setManagerLoop] = useState(false);
-    // Set on edit when the position/department/manager assignment changed — shows
-    // a confirmation dialog summarising the move before the save is committed.
-    const [orgConfirm, setOrgConfirm] = useState(false);
 
     useEffect(() => {
-        if (!open) {
-            // The component stays mounted between opens — clear the transient
-            // warning/confirm flags on close so a leftover manager-loop / org-change
-            // dialog can't linger behind (or after) a dismissed form.
-            setManagerLoop(false);
-            setOrgConfirm(false);
-            return;
-        }
+        if (!open) return;
         setStep(1);
         setPhoto(null);
         setCropSrc(null);
         setPhotoError(null);
         setErrors({});
-        setManagerLoop(false);
-        setOrgConfirm(false);
-        if (employee) {
-            setForm({
-                firstName: employee.first_name ?? '',
-                lastName: employee.last_name ?? '',
-                firstNameTh: employee.first_name_th ?? '',
-                lastNameTh: employee.last_name_th ?? '',
-                email: employee.email ?? '',
-                phone: employee.phone ?? '',
-                code: employee.code ?? '',
-                departmentId: employee.department_id ? String(employee.department_id) : '',
-                sectionId: employee.section_id ? String(employee.section_id) : '',
-                positionId: employee.position_id ? String(employee.position_id) : '',
-                managerId: employee.manager_id ? String(employee.manager_id) : '',
-                joinedAt: employee.joined_at ?? '',
-                services: [],
-                onboardingNote: '',
-            });
-        } else {
-            setForm(empty);
-        }
-        // Depend on employee?.id (stable), NOT the employee object: a new object
-        // reference with the same id on an incidental re-render would otherwise
-        // re-run this and wipe transient state (e.g. the manager-loop warning) the
-        // instant it appears, making it flash away.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, employee?.id]);
+        setForm(empty);
+    }, [open]);
 
-    const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : (employee?.photo_url ?? null)), [photo, employee]);
+    const photoUrl = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo]);
     useEffect(
         () => () => {
             if (photo && photoUrl) URL.revokeObjectURL(photoUrl);
@@ -138,62 +82,21 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
     /** When department changes, clear the section so stale options don't persist. */
     const setDepartment = (v: string) => setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
 
-    // Manager candidates: the whole directory minus the employee being edited
-    // (server-side validation rejects any descendant that would form a loop).
+    // All employees are manager candidates when adding a new employee.
     const managerOptions = useMemo(
         () =>
-            employees
-                .filter((e) => e.id !== employee?.id)
-                .map((e) => ({
-                    value: String(e.id),
-                    label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
-                    hint: e.position ?? undefined,
-                    avatar: e.photo_url,
-                    sub: e.code,
-                    search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.position ?? ''}`,
-                })),
-        [employees, employee, lang],
+            employees.map((e) => ({
+                value: String(e.id),
+                label: lang === 'th' ? (e.name_th ?? e.name) : e.name,
+                hint: e.position ?? undefined,
+                avatar: e.photo_url,
+                sub: e.code,
+                search: `${e.name} ${e.name_th ?? ''} ${e.code} ${e.position ?? ''}`,
+            })),
+        [employees, lang],
     );
 
-    /** Human label for a position id (its title), or "(none)" when unset. */
-    const positionLabel = (id: string) => positions.find((p) => String(p.id) === id)?.title ?? t('emp_org_change_none');
-    /** Human label for a department id (language-aware name), or "(none)" when unset. */
-    const departmentLabel = (id: string) => {
-        const d = departments.find((x) => String(x.id) === id);
-        return d ? (lang === 'th' ? (d.name_th ?? d.name) : d.name) : t('emp_org_change_none');
-    };
-    /** Human label for a manager id (the employee's name), or "(none)" when unset. */
-    const managerLabel = (id: string) => {
-        const m = employees.find((e) => String(e.id) === id);
-        return m ? (lang === 'th' ? (m.name_th ?? m.name) : m.name) : t('emp_org_change_none');
-    };
-
-    // Org assignment as it stood when the drawer opened, used to diff against the form.
-    const origPositionId = employee?.position_id ? String(employee.position_id) : '';
-    const origDepartmentId = employee?.department_id ? String(employee.department_id) : '';
-    const origManagerId = employee?.manager_id ? String(employee.manager_id) : '';
-
-    // The position/department/manager moves to confirm — only computed when editing.
-    const orgChanges = employee
-        ? [
-              origPositionId !== form.positionId && {
-                  label: t('emp_org_change_position'),
-                  from: positionLabel(origPositionId),
-                  to: positionLabel(form.positionId),
-              },
-              origDepartmentId !== form.departmentId && {
-                  label: t('emp_org_change_department'),
-                  from: departmentLabel(origDepartmentId),
-                  to: departmentLabel(form.departmentId),
-              },
-              origManagerId !== form.managerId && {
-                  label: t('emp_org_change_manager'),
-                  from: managerLabel(origManagerId),
-                  to: managerLabel(form.managerId),
-              },
-          ].filter(Boolean as unknown as <T>(x: T | false) => x is T)
-        : [];
-
+    /** Validates personal info (step 1) or employment info (step 2). */
     const validateStep = (s: number) => {
         const e: Record<string, string> = {};
         if (s === 1) {
@@ -214,21 +117,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
         if (validateStep(step)) setStep((s) => s + 1);
     };
 
-    /**
-     * Save gate. On edit, if the employee is being moved (position/department/
-     * manager changed) we pause and ask for confirmation first; otherwise the
-     * save runs straight away.
-     */
-    const submit = async () => {
-        if (!validateStep(1) || !validateStep(2)) return;
-        if (employee && orgChanges.length > 0) {
-            setOrgConfirm(true);
-            return;
-        }
-        await persist();
-    };
-
-    /** Builds the payload and commits the create/update mutation. */
+    /** Builds the payload and commits the create mutation. */
     const persist = async () => {
         const payload = {
             first_name: form.firstName.trim(),
@@ -247,26 +136,22 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             photo: photo ?? null,
         };
         try {
-            if (employee) await update.mutateAsync({ id: employee.id, payload });
-            else await create.mutateAsync(payload);
-            setOrgConfirm(false);
+            await create.mutateAsync(payload);
             onClose();
         } catch (err) {
-            // 422 validation: a manager_id error means the pick would loop the
-            // reporting tree — close the confirm dialog, show the warning dialog
-            // and send the user back to the work-info step to fix it. Any other
-            // field error → a toast so the save never fails silently.
             const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
-            if (fieldErrors?.manager_id) {
-                setOrgConfirm(false);
-                setManagerLoop(true);
-                setStep(2);
-            } else if (fieldErrors) {
+            if (fieldErrors) {
                 pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'));
             } else {
                 throw err;
             }
         }
+    };
+
+    /** Validate both sections then save. */
+    const submit = async () => {
+        if (!validateStep(1) || !validateStep(2)) return;
+        await persist();
     };
 
     const onPhoto = (file?: File) => {
@@ -280,389 +165,12 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
             setPhotoError(t('emp_photo_err_size'));
             return;
         }
-        // Open crop dialog — user frames the 1:1 shot before committing.
         setCropSrc(URL.createObjectURL(file));
     };
 
     const steps = [t('emp_personal_info'), t('emp_work_info'), t('emp_access')];
     const photoInitials = `${form.firstName[0] ?? ''}${form.lastName[0] ?? ''}`.toUpperCase();
 
-    /** Inline bilingual literal helper for the edit dialog's hand-over copy. */
-    const L = (th: string, en: string) => (lang === 'th' ? th : en);
-
-    // Department accent — derived from the currently selected department's tag,
-    // used to tint the edit dialog header, avatar tile and Save button. Falls
-    // back to the app brand colour when no department is selected.
-    const selectedDept = departments.find((d) => String(d.id) === form.departmentId);
-    const accent = selectedDept ? deptColor(selectedDept.tag) : 'var(--brand)';
-
-    // ── Shared field blocks, reused by the add Sheet (stepped) and the edit
-    // Dialog (sectioned). Behaviour is identical — only the surrounding shell
-    // and grouping differ.
-
-    /** Photo upload + crop trigger (avatar, file picker, remove, error/help). */
-    const photoBlock = (
-        <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
-                {photoUrl && <AvatarImage src={photoUrl} alt="" />}
-                <AvatarFallback className="bg-brand/10 text-brand">{photoInitials || <User className="h-6 w-6" />}</AvatarFallback>
-            </Avatar>
-            <div>
-                <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
-                    <Upload className="h-4 w-4" />
-                    {photo ? t('emp_photo_change') : t('emp_photo')}
-                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
-                </label>
-                {photo && (
-                    <button onClick={() => setPhoto(null)} className="text-destructive ml-2 text-sm hover:underline">
-                        {t('emp_photo_remove')}
-                    </button>
-                )}
-                {photoError ? (
-                    <p className="text-destructive mt-2 text-xs">{photoError}</p>
-                ) : (
-                    <p className="text-muted-foreground mt-2 text-xs">{t('emp_photo_help')}</p>
-                )}
-            </div>
-        </div>
-    );
-
-    /** First/last name EN + first/last name TH grids. */
-    const nameFields = (
-        <>
-            <div className="grid grid-cols-2 gap-3">
-                <Field label={t('emp_first_name')} required error={errors.firstName}>
-                    <Input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="John" />
-                </Field>
-                <Field label={t('emp_last_name')} required error={errors.lastName}>
-                    <Input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" />
-                </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-                <Field label={t('emp_first_name_th')}>
-                    <Input value={form.firstNameTh} onChange={(e) => set('firstNameTh', e.target.value)} placeholder="สมชาย" />
-                </Field>
-                <Field label={t('emp_last_name_th')}>
-                    <Input value={form.lastNameTh} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="สุขสวัสดิ์" />
-                </Field>
-            </div>
-        </>
-    );
-
-    /** Email + phone fields. */
-    const contactFields = (
-        <>
-            <Field label={t('emp_email')} error={errors.email}>
-                <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
-            </Field>
-            <Field label={t('emp_phone')}>
-                <Input className="font-mono" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+1 202 555 0100" />
-            </Field>
-        </>
-    );
-
-    /** Department select — clears the section on change to drop stale options. */
-    const departmentField = (
-        <Field label={t('department')} required error={errors.departmentId}>
-            <Select value={form.departmentId} onValueChange={setDepartment}>
-                <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                    {departments.map((d) => (
-                        <SelectItem key={d.id} value={String(d.id)}>
-                            {lang === 'th' ? (d.name_th ?? d.name) : d.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </Field>
-    );
-
-    /** Section searchable-select — empty until a department is chosen. */
-    const sectionField = (
-        <Field label={t('emp_section')}>
-            <SearchableSelect
-                value={form.sectionId}
-                onChange={(v) => set('sectionId', v)}
-                options={
-                    form.departmentId
-                        ? sections.map((s) => ({
-                              value: String(s.id),
-                              label: lang === 'th' ? (s.name_th ?? s.name) : s.name,
-                              search: `${s.name} ${s.name_th ?? ''}`,
-                          }))
-                        : []
-                }
-                clearable
-            />
-        </Field>
-    );
-
-    /** Position select. */
-    const positionField = (
-        <Field label={t('position')} required error={errors.positionId}>
-            <Select value={form.positionId} onValueChange={(v) => set('positionId', v)}>
-                <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                    {positions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                            {p.title}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </Field>
-    );
-
-    /** Manager searchable-select (loop rejection handled on save). */
-    const managerField = (
-        <Field label={t('emp_manager')} help={t('emp_manager_help')}>
-            <SearchableSelect value={form.managerId} onChange={(v) => set('managerId', v)} options={managerOptions} clearable />
-        </Field>
-    );
-
-    /** Joined date picker. */
-    const joinedField = (
-        <Field label={t('emp_start_date')} required error={errors.joinedAt}>
-            <div className="relative">
-                <Input
-                    className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
-                    type="date"
-                    value={form.joinedAt}
-                    onChange={(e) => set('joinedAt', e.target.value)}
-                />
-                <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-            </div>
-        </Field>
-    );
-
-    /** Employee code field. */
-    const codeField = (
-        <Field label={t('emp_employee_id')} help={t('emp_id_help')}>
-            <Input className="font-mono" value={form.code} onChange={(e) => set('code', e.target.value)} placeholder={t('emp_id_auto')} />
-        </Field>
-    );
-
-    // The crop dialog is shared by both shells — lift it out so editing a photo
-    // works whether the form is shown as a Sheet (add) or Dialog (edit).
-    const cropDialog = cropSrc && (
-        <PhotoCropDialog
-            imageSrc={cropSrc}
-            onConfirm={(cropped) => {
-                setPhoto(cropped);
-                URL.revokeObjectURL(cropSrc);
-                setCropSrc(null);
-            }}
-            onCancel={() => {
-                URL.revokeObjectURL(cropSrc);
-                setCropSrc(null);
-            }}
-        />
-    );
-
-    // ── Edit mode: a centered, department-tinted "focus dialog" ──────────────
-    if (isEdit) {
-        const status = employee?.status;
-        return (
-            <>
-                {cropDialog}
-                <Dialog
-                    open={open}
-                    onOpenChange={(o) => {
-                        if (!o) onClose();
-                    }}
-                >
-                    <DialogContent
-                        className="max-w-[620px] gap-0 overflow-hidden p-0 [&>button]:hidden"
-                        onKeyDown={(e) => {
-                            if (e.key !== 'Enter' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
-                            e.preventDefault();
-                            void submit();
-                        }}
-                    >
-                        {/* Visually-hidden title keeps the dialog accessible. */}
-                        <DialogTitle className="sr-only">{t('edit_employee')}</DialogTitle>
-                        <DialogDescription className="sr-only">{t('edit_employee')}</DialogDescription>
-
-                        {/* ── Header (department-tinted) ── */}
-                        <div
-                            className="flex items-center gap-3.5 border-b px-5 py-4"
-                            style={{
-                                background: `color-mix(in oklch, ${accent} 8%, var(--background))`,
-                                borderBottomColor: `color-mix(in oklch, ${accent} 22%, var(--border))`,
-                            }}
-                        >
-                            {photoUrl ? (
-                                <img src={photoUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-                            ) : (
-                                <div
-                                    className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-extrabold tracking-tight text-white"
-                                    style={{ background: accent }}
-                                >
-                                    {photoInitials || <User className="h-6 w-6" />}
-                                </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                                <div className="truncate text-[17px] leading-tight font-extrabold tracking-tight">
-                                    {`${form.firstName} ${form.lastName}`.trim() || employee?.name}
-                                </div>
-                                <div className="text-muted-foreground mt-0.5 truncate text-xs">
-                                    {employee?.code} · {L('แก้ไขข้อมูลพนักงาน', 'Edit employee')}
-                                </div>
-                            </div>
-                            <span
-                                className={cn(
-                                    'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
-                                    status === 'resigned'
-                                        ? 'bg-destructive/15 text-destructive'
-                                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                                )}
-                            >
-                                {status === 'resigned' ? L('ลาออกแล้ว', 'Resigned') : L('ใช้งาน', 'Active')}
-                            </span>
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                aria-label={t('cancel')}
-                                className="bg-muted text-muted-foreground hover:bg-border hover:text-foreground grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-
-                        {/* Org-change confirmation rendered INLINE inside this same Dialog.
-                            A stacked sibling <Dialog> over the edit dialog fought Radix's
-                            focus-trap and only flashed on close (never usable) — the exact
-                            failure the manager-loop alert above was inlined to avoid. */}
-                        {orgConfirm && (
-                            <>
-                                <div className="flex flex-col gap-4 px-6 py-5">
-                                    <div className="flex items-start gap-3.5">
-                                        <span className="bg-brand/15 text-brand grid h-10 w-10 shrink-0 place-items-center rounded-lg">
-                                            <Briefcase className="h-5 w-5" />
-                                        </span>
-                                        <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
-                                            <div className="text-lg font-semibold">{t('emp_org_change_title')}</div>
-                                            <div className="text-muted-foreground text-sm leading-relaxed">{t('emp_org_change_desc')}</div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2.5">
-                                        {orgChanges.map((c) => (
-                                            <div key={c.label} className="border-border rounded-lg border p-3">
-                                                <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">
-                                                    {c.label}
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <span className="text-muted-foreground min-w-0 flex-1 truncate line-through">{c.from}</span>
-                                                    <ArrowRight className="text-brand h-4 w-4 shrink-0" />
-                                                    <span className="text-foreground min-w-0 flex-1 truncate font-medium">{c.to}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="bg-muted/40 flex items-center justify-end gap-2 border-t px-5 py-3.5">
-                                    <Button variant="outline" onClick={() => setOrgConfirm(false)} disabled={update.isPending}>
-                                        {t('cancel')}
-                                    </Button>
-                                    <Button onClick={persist} disabled={update.isPending} style={{ background: accent, borderColor: accent }}>
-                                        <Check className="h-4 w-4" />
-                                        {t('emp_org_confirm')}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-
-                        {!orgConfirm && (
-                            <>
-                                {/* ── Body ── */}
-                                <div className="flex max-h-[min(68vh,620px)] flex-col gap-6 overflow-y-auto px-6 py-5">
-                                    {/* Manager-loop alert — inline (NOT a stacked modal: a sibling modal over
-                                this dialog fights its focus-trap and Radix auto-closes it, so it only flashes). */}
-                                    {managerLoop && (
-                                        <div className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3.5 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                                            <div className="flex-1">
-                                                <div className="text-sm font-semibold">{t('emp_manager_loop_title')}</div>
-                                                <div className="mt-0.5 text-xs leading-relaxed">{t('emp_manager_loop_body')}</div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setManagerLoop(false)}
-                                                aria-label={t('emp_understood')}
-                                                className="-mr-1 grid h-6 w-6 shrink-0 place-items-center rounded hover:bg-amber-100 dark:hover:bg-amber-900/40"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {/* Personal info */}
-                                    <section>
-                                        <div className="text-muted-foreground mb-3.5 flex items-center gap-2 text-[10.5px] font-bold tracking-wider uppercase">
-                                            {L('ข้อมูลส่วนตัว', 'Personal info')}
-                                            <span className="bg-border h-px flex-1" />
-                                        </div>
-                                        <div className="flex flex-col gap-3.5">
-                                            {photoBlock}
-                                            {nameFields}
-                                            <div className="grid grid-cols-2 gap-3">{contactFields}</div>
-                                        </div>
-                                    </section>
-
-                                    {/* Employment */}
-                                    <section>
-                                        <div className="text-muted-foreground mb-3.5 flex items-center gap-2 text-[10.5px] font-bold tracking-wider uppercase">
-                                            {L('ข้อมูลการจ้างงาน', 'Employment')}
-                                            <span className="bg-border h-px flex-1" />
-                                        </div>
-                                        <div className="flex flex-col gap-3.5">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {departmentField}
-                                                {sectionField}
-                                            </div>
-                                            {positionField}
-                                            {managerField}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                {joinedField}
-                                                {codeField}
-                                            </div>
-                                        </div>
-                                    </section>
-
-                                    {/* Credentials notice */}
-                                    <div className="flex items-start gap-2.5 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
-                                        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                        <div>
-                                            {L(
-                                                'การเปลี่ยนแปลงจะมีผลทันทีในระบบ ข้อมูลบัญชี (username/password) ต้องตั้งค่าผ่าน "ตั้งค่าบัญชี" แยกต่างหาก',
-                                                'Changes take effect immediately. Account credentials (username/password) must be set via "Set account" separately.',
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── Footer ── */}
-                                <div className="bg-muted/40 flex items-center justify-end gap-2 border-t px-5 py-3.5">
-                                    <Button variant="outline" onClick={onClose}>
-                                        {t('cancel')}
-                                    </Button>
-                                    <Button onClick={submit} disabled={update.isPending} style={{ background: accent, borderColor: accent }}>
-                                        <Check className="h-4 w-4" />
-                                        {t('save')}
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </DialogContent>
-                </Dialog>
-            </>
-        );
-    }
-
-    // ── Add mode: the existing stepped right Sheet (unchanged) ───────────────
     return (
         <>
             <Sheet
@@ -672,9 +180,22 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                 }}
             >
                 <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
-                    {cropDialog}
+                    {cropSrc && (
+                        <PhotoCropDialog
+                            imageSrc={cropSrc}
+                            onConfirm={(cropped) => {
+                                setPhoto(cropped);
+                                URL.revokeObjectURL(cropSrc);
+                                setCropSrc(null);
+                            }}
+                            onCancel={() => {
+                                URL.revokeObjectURL(cropSrc);
+                                setCropSrc(null);
+                            }}
+                        />
+                    )}
                     <SheetHeader>
-                        <SheetTitle>{isEdit ? t('edit_employee') : t('add_employee')}</SheetTitle>
+                        <SheetTitle>{t('add_employee')}</SheetTitle>
                         <SheetDescription>
                             {t('emp_step')} {step} {t('emp_of')} 3
                         </SheetDescription>
@@ -692,10 +213,8 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                             const handleJump = () => {
                                 if (!canJump) return;
                                 if (n < step) {
-                                    // Going back — always allowed, no validation needed.
                                     setStep(n);
                                 } else {
-                                    // Going forward — validate every step up to n-1 first.
                                     let valid = true;
                                     for (let s = step; s < n; s++) {
                                         if (!validateStep(s)) {
@@ -908,15 +427,13 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                     </div>
                                 </div>
 
-                                {!isEdit && (
-                                    <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3">
-                                        <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                        <div>
-                                            <div className="text-foreground text-sm font-medium">{t('emp_account_pending_title')}</div>
-                                            <div className="text-muted-foreground mt-0.5 text-xs">{t('emp_account_pending_desc')}</div>
-                                        </div>
+                                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3">
+                                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <div>
+                                        <div className="text-foreground text-sm font-medium">{t('emp_account_pending_title')}</div>
+                                        <div className="text-muted-foreground mt-0.5 text-xs">{t('emp_account_pending_desc')}</div>
                                     </div>
-                                )}
+                                </div>
 
                                 <div>
                                     <div className="text-sm font-semibold">{t('emp_onboarding_title')}</div>
@@ -985,7 +502,7 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                                 <ArrowRight className="h-4 w-4" />
                             </Button>
                         ) : (
-                            <Button onClick={submit} disabled={create.isPending || update.isPending}>
+                            <Button onClick={submit} disabled={create.isPending}>
                                 <Check className="h-4 w-4" />
                                 {t('save')}
                             </Button>
@@ -993,49 +510,6 @@ export function AddEmployeeDrawer({ open, onClose, employee }: { open: boolean; 
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
-
-            {/* Confirm an employee's position/department/manager move before committing it. */}
-            <Dialog
-                open={orgConfirm && open}
-                onOpenChange={(o) => {
-                    if (!o) setOrgConfirm(false);
-                }}
-            >
-                <DialogContent className="max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-                    <DialogHeader>
-                        <div className="flex items-center gap-2.5">
-                            <span className="bg-brand/15 text-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                                <Briefcase className="h-5 w-5" />
-                            </span>
-                            <DialogTitle>{t('emp_org_change_title')}</DialogTitle>
-                        </div>
-                        <DialogDescription className="pt-2 leading-relaxed">{t('emp_org_change_desc')}</DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-2.5">
-                        {orgChanges.map((c) => (
-                            <div key={c.label} className="border-border rounded-lg border p-3">
-                                <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{c.label}</div>
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="text-muted-foreground min-w-0 flex-1 truncate line-through">{c.from}</span>
-                                    <ArrowRight className="text-brand h-4 w-4 shrink-0" />
-                                    <span className="text-foreground min-w-0 flex-1 truncate font-medium">{c.to}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setOrgConfirm(false)}>
-                            {t('cancel')}
-                        </Button>
-                        <Button onClick={persist} disabled={update.isPending}>
-                            <Check className="h-4 w-4" />
-                            {t('emp_org_confirm')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </>
     );
 }
