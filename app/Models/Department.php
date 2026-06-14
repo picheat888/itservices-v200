@@ -7,11 +7,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Department extends Model
 {
-    protected $fillable = ['tag', 'name', 'name_th'];
+    protected $fillable = ['code', 'tag', 'name', 'name_th'];
 
     protected static function booted(): void
     {
         static::creating(function (Department $department) {
+            // Auto-assign a sequential DEP-#### code on create.
+            if (blank($department->code)) {
+                $max = (int) str_replace('DEP-', '', (string) static::max('code'));
+                $department->code = 'DEP-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
+            }
             if (blank($department->tag)) {
                 $base = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $department->name ?? 'DEPT'), 0, 4)) ?: 'DEPT';
                 $tag = $base;

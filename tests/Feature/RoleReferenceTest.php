@@ -57,7 +57,7 @@ class RoleReferenceTest extends TestCase
         Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
         $hr = Role::create(['key' => 'hr', 'name' => 'HR', 'color' => '#111', 'is_system' => false]);
 
-        $employee = Employee::create(['code' => 'EMP-7100', 'name' => 'Grouped', 'email' => 'g7100@x.test']);
+        $employee = Employee::create(['code' => 'EMP-7100', 'first_name' => 'Grouped', 'last_name' => 'Test', 'email' => 'g7100@x.test']);
         $group = GroupRole::create(['name' => 'HR Team', 'role_id' => $hr->id]);
         $group->employees()->attach($employee->id);
 

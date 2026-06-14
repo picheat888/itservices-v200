@@ -20,7 +20,7 @@ class TicketAttachmentTest extends TestCase
     {
         return User::factory()->create([
             'role' => $role,
-            'employee_id' => Employee::create(['name' => 'Req', 'status' => 'active'])->id,
+            'employee_id' => Employee::create(['first_name' => 'Req', 'last_name' => 'Test', 'status' => 'active'])->id,
         ]);
     }
 

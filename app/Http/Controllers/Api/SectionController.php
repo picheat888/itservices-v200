@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSectionRequest;
+use App\Http\Resources\EmployeeResource;
 use App\Http\Resources\SectionResource;
 use App\Models\AuditLog;
 use App\Models\Section;
@@ -25,6 +26,15 @@ class SectionController extends Controller
         }
 
         return SectionResource::collection($query->get())->response();
+    }
+
+    /** Employees assigned to a section (for the "view members" dialog). */
+    public function members(Section $section): JsonResponse
+    {
+        $members = $section->employees()->with(['department', 'position', 'section'])
+            ->orderBy('first_name')->orderBy('last_name')->get();
+
+        return EmployeeResource::collection($members)->response();
     }
 
     /**

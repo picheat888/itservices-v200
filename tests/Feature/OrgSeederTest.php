@@ -24,14 +24,14 @@ class OrgSeederTest extends TestCase
         $this->seed(OrgSeeder::class);
     }
 
-    /** OrgSeeder defines 14 position levels (1 = Subcontract … 14 = Vice President). */
-    public function test_it_seeds_all_14_position_levels(): void
+    /** OrgSeeder seeds the 14 job-title positions (a flat list). */
+    public function test_it_seeds_the_14_positions(): void
     {
         $this->seedOrg();
 
-        $this->assertSame(14, Position::where('code', 'P-14')->value('level')); // Vice President
-        $this->assertSame(1, Position::where('code', 'P-01')->value('level'));  // Subcontract
-        $this->assertSame(14, Position::max('level'));
+        $this->assertSame(14, Position::count());
+        $this->assertSame('Vice President', Position::where('code', 'P-14')->value('title'));
+        $this->assertSame('Subcontract', Position::where('code', 'P-01')->value('title'));
     }
 
     /** EMP-0001 (Somchai Wattana — Vice President) has no manager: they are the root. */

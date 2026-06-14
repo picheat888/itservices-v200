@@ -101,6 +101,10 @@ class AuditLog extends Model
 
         [$class, $attr] = self::FK_LABELS[$field];
 
-        return $class::query()->whereKey($value)->value($attr) ?? "#{$value}";
+        // Load the record so computed accessors (e.g. Employee::$name, built from
+        // first_name + last_name) resolve too — not just real columns.
+        $label = $class::find($value)?->{$attr};
+
+        return ($label === null || $label === '') ? "#{$value}" : $label;
     }
 }

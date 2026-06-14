@@ -47,7 +47,25 @@ export const useEmployeeDirectory = (params: { page: number; per_page: number; s
         placeholderData: (prev) => prev,
     });
 export const useDepartments = () => useQuery({ queryKey: DEPT, queryFn: departmentApi.list });
+
+/** Employees in a department — loaded on demand for the "view members" dialog. */
+export function useDepartmentMembers(id: number | null) {
+    return useQuery({
+        queryKey: ['departments', id, 'members'],
+        queryFn: () => departmentApi.members(id as number),
+        enabled: id != null,
+    });
+}
 export const usePositions = () => useQuery({ queryKey: POS, queryFn: positionApi.list });
+
+/** Employees holding a position — loaded on demand for the "view members" dialog. */
+export function usePositionMembers(id: number | null) {
+    return useQuery({
+        queryKey: ['positions', id, 'members'],
+        queryFn: () => positionApi.members(id as number),
+        enabled: id != null,
+    });
+}
 export const useLocations = () => useQuery({ queryKey: LOC, queryFn: locationApi.list });
 
 export function useLocationMutations() {
@@ -70,7 +88,10 @@ export function useEmployeeMutations() {
     };
     return {
         create: useMutation({ mutationFn: (p: EmployeePayload) => employeeApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; payload: EmployeePayload }) => employeeApi.update(v.id, v.payload), onSuccess: invalidate }),
+        update: useMutation({
+            mutationFn: (v: { id: number; payload: EmployeePayload }) => employeeApi.update(v.id, v.payload),
+            onSuccess: invalidate,
+        }),
         remove: useMutation({ mutationFn: (id: number) => employeeApi.remove(id), onSuccess: invalidate }),
         resign: useMutation({
             mutationFn: (v: { id: number; reason: string; lastDay: string | null }) => employeeApi.resign(v.id, v.reason, v.lastDay),
@@ -99,8 +120,11 @@ export function usePositionMutations() {
     const qc = useQueryClient();
     const invalidate = () => qc.invalidateQueries({ queryKey: POS });
     return {
-        create: useMutation({ mutationFn: (p: { title: string; level: number }) => positionApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; title: string; level: number }) => positionApi.update(v.id, { title: v.title, level: v.level }), onSuccess: invalidate }),
+        create: useMutation({ mutationFn: (p: { title: string }) => positionApi.create(p), onSuccess: invalidate }),
+        update: useMutation({
+            mutationFn: (v: { id: number; title: string }) => positionApi.update(v.id, { title: v.title }),
+            onSuccess: invalidate,
+        }),
         remove: useMutation({ mutationFn: (id: number) => positionApi.remove(id), onSuccess: invalidate }),
     };
 }
@@ -110,7 +134,10 @@ export function useDepartmentMutations() {
     const invalidate = () => qc.invalidateQueries({ queryKey: DEPT });
     return {
         create: useMutation({ mutationFn: (p: Partial<Department>) => departmentApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; payload: Partial<Department> }) => departmentApi.update(v.id, v.payload), onSuccess: invalidate }),
+        update: useMutation({
+            mutationFn: (v: { id: number; payload: Partial<Department> }) => departmentApi.update(v.id, v.payload),
+            onSuccess: invalidate,
+        }),
         remove: useMutation({ mutationFn: (id: number) => departmentApi.remove(id), onSuccess: invalidate }),
     };
 }
@@ -122,6 +149,15 @@ export function useSections(departmentId?: number | null) {
     });
 }
 
+/** Employees assigned to a section — loaded on demand for the "view members" dialog. */
+export function useSectionMembers(id: number | null) {
+    return useQuery({
+        queryKey: ['sections', id, 'members'],
+        queryFn: () => sectionApi.members(id as number),
+        enabled: id != null,
+    });
+}
+
 export function useSectionMutations() {
     const qc = useQueryClient();
     const invalidate = () => {
@@ -130,10 +166,17 @@ export function useSectionMutations() {
         qc.invalidateQueries({ queryKey: ['employees-directory'] });
     };
     return {
-        create: useMutation({ mutationFn: (p: { department_id: number; name: string; name_th?: string | null }) => sectionApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; payload: { department_id: number; name: string; name_th?: string | null } }) => sectionApi.update(v.id, v.payload), onSuccess: invalidate }),
+        create: useMutation({
+            mutationFn: (p: { department_id: number; name: string; name_th?: string | null }) => sectionApi.create(p),
+            onSuccess: invalidate,
+        }),
+        update: useMutation({
+            mutationFn: (v: { id: number; payload: { department_id: number; name: string; name_th?: string | null } }) =>
+                sectionApi.update(v.id, v.payload),
+            onSuccess: invalidate,
+        }),
         remove: useMutation({ mutationFn: (id: number) => sectionApi.remove(id), onSuccess: invalidate }),
     };
 }
 
-export type { Position, Department };
+export type { Department, Position };

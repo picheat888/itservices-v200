@@ -1,11 +1,11 @@
+import { PhotoCropDialog } from '@/components/employees/photo-crop-dialog';
+import { SaveButton } from '@/components/shared/save-button';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { SaveButton } from '@/components/shared/save-button';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { PhotoCropDialog } from '@/components/employees/photo-crop-dialog';
 import { useAuth, useUpdateProfile } from '@/hooks/use-auth';
 import { useEmployee } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
@@ -14,7 +14,12 @@ import { Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 function initials(name: string) {
-    return name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+    return name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
 }
 
 // Names are stored as a single space-joined string ("First Last"); the first
@@ -29,7 +34,7 @@ function splitName(full: string | null | undefined): [string, string] {
 function Row({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
     return (
         <div>
-            <div className="text-xs text-muted-foreground">{label}</div>
+            <div className="text-muted-foreground text-xs">{label}</div>
             <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value || '—'}</div>
         </div>
     );
@@ -44,7 +49,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
     // Pull the full employee record so the drawer can show every field
     // (department, position, joined date, ...), not just what's on the user.
-    const { data: emp } = useEmployee(open ? user?.employee_id ?? null : null);
+    const { data: emp } = useEmployee(open ? (user?.employee_id ?? null) : null);
 
     const canEdit = !!user && (user.role === 'super' || user.permissions.includes('employees.edit_own'));
 
@@ -61,12 +66,14 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     // Prefill from the current user each time the drawer opens.
     useEffect(() => {
         if (open && user) {
+            // Prefer the linked employee's split fields; fall back to splitting
+            // the composed name for accounts without an employee record.
             const [fn, ln] = splitName(user.name);
             const [fnTh, lnTh] = splitName(user.name_th);
-            setFirstName(fn);
-            setLastName(ln);
-            setFirstNameTh(fnTh);
-            setLastNameTh(lnTh);
+            setFirstName(user.first_name ?? fn);
+            setLastName(user.last_name ?? ln);
+            setFirstNameTh(user.first_name_th ?? fnTh);
+            setLastNameTh(user.last_name_th ?? lnTh);
             setPhone(user.phone ?? '');
             setPhoto(null);
             setCropSrc(null);
@@ -80,7 +87,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
     const displayName = `${firstName} ${lastName}`.trim() || user.name;
     const previewUrl = photo ? URL.createObjectURL(photo) : user.photo_url;
-    const department = lang === 'th' ? emp?.department_th ?? emp?.department : emp?.department;
+    const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
 
     const pickPhoto = (f?: File) => {
         setSaved(false);
@@ -100,15 +107,15 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
     const save = async () => {
         setError('');
-        if (!firstName.trim()) {
+        if (!firstName.trim() || !lastName.trim()) {
             setError(t('profile_name_required'));
             return;
         }
-        const name = `${firstName} ${lastName}`.trim();
-        const nameTh = `${firstNameTh} ${lastNameTh}`.trim();
         const form = new FormData();
-        form.append('name', name);
-        form.append('name_th', nameTh);
+        form.append('first_name', firstName.trim());
+        form.append('last_name', lastName.trim());
+        form.append('first_name_th', firstNameTh.trim());
+        form.append('last_name_th', lastNameTh.trim());
         form.append('phone', phone);
         if (photo) form.append('photo', photo);
         try {
@@ -148,22 +155,28 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         <div className="relative">
                             <Avatar className="h-16 w-16">
                                 {previewUrl && <AvatarImage src={previewUrl} alt={user.name} />}
-                                <AvatarFallback className="bg-brand/10 text-lg font-semibold text-brand">{initials(displayName)}</AvatarFallback>
+                                <AvatarFallback className="bg-brand/10 text-brand text-lg font-semibold">{initials(displayName)}</AvatarFallback>
                             </Avatar>
                             {canEdit && (
                                 <button
                                     onClick={() => inputRef.current?.click()}
                                     title={t('profile_change_photo')}
-                                    className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-brand text-brand-foreground hover:opacity-90"
+                                    className="border-background bg-brand text-brand-foreground absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 hover:opacity-90"
                                 >
                                     <Camera className="h-3.5 w-3.5" />
                                 </button>
                             )}
-                            <input ref={inputRef} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+                            <input
+                                ref={inputRef}
+                                type="file"
+                                accept="image/png,image/jpeg"
+                                className="hidden"
+                                onChange={(e) => pickPhoto(e.target.files?.[0])}
+                            />
                         </div>
                         <div className="min-w-0">
                             <div className="truncate text-lg font-bold">{displayName}</div>
-                            <div className="truncate text-sm text-muted-foreground">{user.group_name ?? user.role_label}</div>
+                            <div className="text-muted-foreground truncate text-sm">{user.group_name ?? user.role_label}</div>
                             {emp && (
                                 <div className="mt-1">
                                     {emp.status === 'resigned' ? (
@@ -182,33 +195,69 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                                 <Label>{t('emp_first_name')}</Label>
-                                <Input value={firstName} onChange={(e) => { setFirstName(e.target.value); setSaved(false); }} disabled={!canEdit} />
+                                <Input
+                                    value={firstName}
+                                    onChange={(e) => {
+                                        setFirstName(e.target.value);
+                                        setSaved(false);
+                                    }}
+                                    disabled={!canEdit}
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <Label>{t('emp_last_name')}</Label>
-                                <Input value={lastName} onChange={(e) => { setLastName(e.target.value); setSaved(false); }} disabled={!canEdit} />
+                                <Input
+                                    value={lastName}
+                                    onChange={(e) => {
+                                        setLastName(e.target.value);
+                                        setSaved(false);
+                                    }}
+                                    disabled={!canEdit}
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1.5">
                                 <Label>{t('emp_first_name_th')}</Label>
-                                <Input value={firstNameTh} onChange={(e) => { setFirstNameTh(e.target.value); setSaved(false); }} disabled={!canEdit} />
+                                <Input
+                                    value={firstNameTh}
+                                    onChange={(e) => {
+                                        setFirstNameTh(e.target.value);
+                                        setSaved(false);
+                                    }}
+                                    disabled={!canEdit}
+                                />
                             </div>
                             <div className="space-y-1.5">
                                 <Label>{t('emp_last_name_th')}</Label>
-                                <Input value={lastNameTh} onChange={(e) => { setLastNameTh(e.target.value); setSaved(false); }} disabled={!canEdit} />
+                                <Input
+                                    value={lastNameTh}
+                                    onChange={(e) => {
+                                        setLastNameTh(e.target.value);
+                                        setSaved(false);
+                                    }}
+                                    disabled={!canEdit}
+                                />
                             </div>
                         </div>
                         <div className="space-y-1.5">
                             <Label>{t('emp_phone')}</Label>
-                            <Input className="font-mono" value={phone} onChange={(e) => { setPhone(e.target.value); setSaved(false); }} disabled={!canEdit} />
+                            <Input
+                                className="font-mono"
+                                value={phone}
+                                onChange={(e) => {
+                                    setPhone(e.target.value);
+                                    setSaved(false);
+                                }}
+                                disabled={!canEdit}
+                            />
                         </div>
-                        {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+                        {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
                     </div>
 
                     {/* Read-only employee details */}
-                    <div className="space-y-3 border-t border-border pt-4">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('profile_details')}</div>
+                    <div className="border-border space-y-3 border-t pt-4">
+                        <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('profile_details')}</div>
                         <div className="grid grid-cols-2 gap-4">
                             <Row label={t('emp_employee_id')} value={emp?.code} mono />
                             <Row label={t('joined')} value={emp?.joined_at} mono />
@@ -218,8 +267,8 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     </div>
 
                     {/* Read-only account & access */}
-                    <div className="space-y-3 border-t border-border pt-4">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t('profile_account')}</div>
+                    <div className="border-border space-y-3 border-t pt-4">
+                        <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('profile_account')}</div>
                         <div className="grid grid-cols-2 gap-4">
                             <Row label={t('login_email')} value={user.email} mono />
                             <Row label={t('emp_username')} value={user.username} mono />
@@ -228,7 +277,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <div className="border-border flex items-center justify-end gap-3 border-t pt-4">
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>

@@ -17,22 +17,22 @@ class ProfileUpdateTest extends TestCase
         $user = User::factory()->create(['role' => 'super']);
 
         $this->actingAs($user)
-            ->postJson('/api/profile', ['name' => 'Updated Name'])
+            ->postJson('/api/profile', ['first_name' => 'Updated', 'last_name' => 'Name'])
             ->assertOk()
             ->assertJsonPath('data.name', 'Updated Name');
 
         $this->assertSame('Updated Name', $user->refresh()->name);
     }
 
-    /** Name is required when updating the profile. */
+    /** First/last name are required when updating the profile. */
     public function test_name_is_required(): void
     {
         $user = User::factory()->create(['role' => 'super']);
 
         $this->actingAs($user)
-            ->postJson('/api/profile', ['name' => ''])
+            ->postJson('/api/profile', ['first_name' => '', 'last_name' => ''])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('name');
+            ->assertJsonValidationErrors(['first_name', 'last_name']);
     }
 
     /** A user lacking employees.edit_own cannot update their profile. */
@@ -41,7 +41,7 @@ class ProfileUpdateTest extends TestCase
         $user = User::factory()->create(['role' => 'user']);
 
         $this->actingAs($user)
-            ->postJson('/api/profile', ['name' => 'Nope'])
+            ->postJson('/api/profile', ['first_name' => 'Nope', 'last_name' => 'Nope'])
             ->assertForbidden();
     }
 }

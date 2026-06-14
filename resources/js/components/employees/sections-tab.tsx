@@ -1,3 +1,4 @@
+import { SectionMembersDialog } from '@/components/employees/section-members-dialog';
 import { SectionModal } from '@/components/employees/section-modal';
 import { Column, DataTable } from '@/components/shared/data-table';
 import { SearchableSelect } from '@/components/shared/searchable-select';
@@ -8,7 +9,7 @@ import { useDepartments, useSectionMutations, useSections } from '@/hooks/use-or
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Section } from '@/types';
-import { ArrowUpDown, Plus, SquarePen, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 type SortKey = 'dept' | 'name' | 'members' | 'code';
@@ -24,6 +25,7 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
     const [modalOpen, setModalOpen] = useState(false);
     const [deptFilter, setDeptFilter] = useState(''); // '' = all departments
     const [sort, setSort] = useState<SortKey>('dept');
+    const [membersOf, setMembersOf] = useState<Section | null>(null);
 
     const sectionLabel = (s: Section) => (lang === 'th' ? (s.name_th ?? s.name) : s.name);
 
@@ -83,7 +85,12 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
             key: 'members',
             header: t('section_members'),
             align: 'right',
-            render: (s) => <span className="font-mono text-xs">{s.members_count ?? 0}</span>,
+            render: (s) => (
+                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                    <Users className="text-muted-foreground h-3.5 w-3.5" />
+                    {s.members_count ?? 0}
+                </span>
+            ),
         },
         {
             key: 'actions',
@@ -91,7 +98,8 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
             align: 'right',
             render: (s) =>
                 canManage ? (
-                    <div className="flex justify-end gap-1">
+                    // Stop row-click (which opens the members dialog) from firing on the action buttons.
+                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                             onClick={() => {
                                 setEditSection(s);
@@ -123,6 +131,7 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
                     columns={columns}
                     rows={view}
                     rowKey={(s) => s.id}
+                    onRowClick={(s) => setMembersOf(s)}
                     searchable={(s) => `${s.code} ${s.name} ${s.name_th ?? ''} ${s.department ?? ''}`}
                     filters={
                         <>
@@ -174,6 +183,7 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
                 />
             )}
             <SectionModal open={modalOpen} onClose={() => setModalOpen(false)} section={editSection} />
+            <SectionMembersDialog section={membersOf} onClose={() => setMembersOf(null)} />
         </div>
     );
 }

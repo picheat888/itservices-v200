@@ -83,8 +83,10 @@ class AuthController extends Controller
         abort_unless((bool) $user->hasPermission('employees.edit_own'), 403);
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'name_th' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name_th' => ['nullable', 'string', 'max:255'],
+            'last_name_th' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'photo' => ['nullable', 'image', 'max:2048'],
         ]);
@@ -92,8 +94,10 @@ class AuthController extends Controller
         $employee = $user->linkedEmployee();
         if ($employee) {
             $payload = [
-                'name' => $data['name'],
-                'name_th' => $data['name_th'] ?? null,
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'first_name_th' => $data['first_name_th'] ?? null,
+                'last_name_th' => $data['last_name_th'] ?? null,
                 'phone' => $data['phone'] ?? null,
             ];
             if ($request->hasFile('photo')) {
@@ -106,7 +110,7 @@ class AuthController extends Controller
         }
 
         // Keep the login account's display name in sync with the profile.
-        $user->update(['name' => $data['name']]);
+        $user->update(['name' => trim($data['first_name'].' '.$data['last_name'])]);
         AuditLog::record('Updated own profile', $user->name);
 
         return (new UserResource($user->fresh()))->additional(['message' => 'success'])->response();

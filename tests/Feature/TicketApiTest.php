@@ -15,7 +15,7 @@ class TicketApiTest extends TestCase
     /** A standalone employee record. */
     private function employee(string $name = 'Requester One'): Employee
     {
-        return Employee::create(['name' => $name, 'status' => 'active']);
+        return Employee::create(['first_name' => $name, 'last_name' => 'Test', 'status' => 'active']);
     }
 
     /** A login account linked to a fresh employee. Super bypasses permission gates. */

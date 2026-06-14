@@ -16,10 +16,21 @@ return new class extends Migration
         Schema::table('departments', function (Blueprint $table) {
             $table->renameColumn('code', 'tag');
         });
+
+        // The unique index keeps its original "departments_code_unique" name and,
+        // on some drivers (notably sqlite), stays attached under that name after
+        // the column rename. Rename it to track the new column so a later "code"
+        // column can reclaim the original index name without colliding.
+        Schema::table('departments', function (Blueprint $table) {
+            $table->renameIndex('departments_code_unique', 'departments_tag_unique');
+        });
     }
 
     public function down(): void
     {
+        Schema::table('departments', function (Blueprint $table) {
+            $table->renameIndex('departments_tag_unique', 'departments_code_unique');
+        });
         Schema::table('departments', function (Blueprint $table) {
             $table->renameColumn('tag', 'code');
         });

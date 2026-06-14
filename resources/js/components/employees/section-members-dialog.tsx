@@ -1,0 +1,84 @@
+import { Column, DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useSectionMembers } from '@/hooks/use-org';
+import { useT } from '@/lib/i18n';
+import { useUiStore } from '@/stores/ui';
+import type { Employee, Section } from '@/types';
+import { Users } from 'lucide-react';
+
+function initials(name: string) {
+    return name
+        .split(' ')
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase();
+}
+
+/**
+ * Focused dialog listing every employee in a section. Uses the shared DataTable
+ * (search + pagination) so it scales to 100+ members per section without
+ * turning into an endless scroll — handy before acting on the section.
+ */
+export function SectionMembersDialog({ section, onClose }: { section: Section | null; onClose: () => void }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    const { data: members = [], isLoading } = useSectionMembers(section?.id ?? null);
+
+    const sectionName = section ? (lang === 'th' ? (section.name_th ?? section.name) : section.name) : '';
+
+    const columns: Column<Employee>[] = [
+        {
+            key: 'name',
+            header: t('order_name'),
+            render: (m) => (
+                <div className="flex items-center gap-2.5">
+                    <Avatar className="h-8 w-8">
+                        {m.photo_url && <AvatarImage src={m.photo_url} alt="" />}
+                        <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(m.name)}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate font-medium">{lang === 'th' ? (m.name_th ?? m.name) : m.name}</span>
+                </div>
+            ),
+        },
+        { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.code}</span> },
+        { key: 'position', header: t('position'), render: (m) => <span className="text-muted-foreground text-sm">{m.position ?? '—'}</span> },
+        {
+            key: 'status',
+            header: t('status'),
+            align: 'right',
+            render: (m) => (
+                <StatusBadge tone={m.status === 'resigned' ? 'red' : 'green'}>{m.status === 'resigned' ? t('resigned') : t('active')}</StatusBadge>
+            ),
+        },
+    ];
+
+    return (
+        <Dialog open={!!section} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Users className="text-muted-foreground h-4 w-4" />
+                        {sectionName}
+                        {section?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{section.code}</span>}
+                    </DialogTitle>
+                    <DialogDescription>
+                        {section?.department ? `${section.department} · ` : ''}
+                        {members.length} {t('section_members')}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <DataTable
+                    columns={columns}
+                    rows={members}
+                    rowKey={(m) => m.id}
+                    loading={isLoading}
+                    maxBodyHeight="52vh"
+                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''}`}
+                />
+            </DialogContent>
+        </Dialog>
+    );
+}

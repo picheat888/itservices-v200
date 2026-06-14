@@ -35,25 +35,25 @@ class OrgSeeder extends Seeder
         }
         $deptId = Department::pluck('id', 'tag');
 
-        // ── Positions (code => [level, title]) — 1 smallest .. 14 largest ────
+        // ── Positions (code => title) — a flat list of job titles. ───────────
         $positions = [
-            'P-01' => [1, 'Subcontract'],
-            'P-02' => [2, 'Staff/Officer'],
-            'P-03' => [3, 'Head of Shift'],
-            'P-04' => [4, 'Head of Line'],
-            'P-05' => [5, 'Sub-Leader'],
-            'P-06' => [6, 'Leader'],
-            'P-07' => [7, 'Asst. Supervisor'],
-            'P-08' => [8, 'Supervisor'],
-            'P-09' => [9, 'Senior Supervisor'],
-            'P-10' => [10, 'Asst. Manager'],
-            'P-11' => [11, 'Manager'],
-            'P-12' => [12, 'Senior Manager'],
-            'P-13' => [13, 'Director'],
-            'P-14' => [14, 'Vice President'],
+            'P-14' => 'Vice President',
+            'P-13' => 'Director',
+            'P-12' => 'Senior Manager',
+            'P-11' => 'Manager',
+            'P-10' => 'Asst. Manager',
+            'P-09' => 'Senior Supervisor',
+            'P-08' => 'Supervisor',
+            'P-07' => 'Asst. Supervisor',
+            'P-06' => 'Leader',
+            'P-05' => 'Sub-Leader',
+            'P-04' => 'Head of Line',
+            'P-03' => 'Head of Shift',
+            'P-02' => 'Staff/Officer',
+            'P-01' => 'Subcontract',
         ];
-        foreach ($positions as $code => [$level, $title]) {
-            Position::updateOrCreate(['code' => $code], ['title' => $title, 'level' => $level]);
+        foreach ($positions as $code => $title) {
+            Position::updateOrCreate(['code' => $code], ['title' => $title]);
         }
         $posId = Position::pluck('id', 'title');
 
@@ -128,11 +128,16 @@ class OrgSeeder extends Seeder
         // Pass 1: create/update each employee (no manager yet).
         foreach ($employees as $i => $e) {
             $email = 'emp'.str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT).'@abcd.co.th';
+            // Split the demo full names into first/last on the first space.
+            [$fn, $ln] = array_pad(explode(' ', $e['name'], 2), 2, '');
+            [$fnTh, $lnTh] = array_pad(explode(' ', $e['name_th'], 2), 2, '');
             Employee::updateOrCreate(
                 ['code' => $e['code']],
                 [
-                    'name' => $e['name'],
-                    'name_th' => $e['name_th'],
+                    'first_name' => $fn,
+                    'last_name' => $ln,
+                    'first_name_th' => $fnTh ?: null,
+                    'last_name_th' => $lnTh ?: null,
                     'department_id' => $e['dept'] ? ($deptId[$e['dept']] ?? null) : null,
                     'section_id' => $e['section'] ? ($sectionId["{$e['dept']}::{$e['section']}"] ?? null) : null,
                     'position_id' => $posId[$e['pos']] ?? null,

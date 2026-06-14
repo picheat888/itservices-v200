@@ -18,7 +18,7 @@ class TicketSlaTest extends TestCase
     {
         return User::factory()->create([
             'role' => 'super',
-            'employee_id' => Employee::create(['name' => 'Boss', 'status' => 'active'])->id,
+            'employee_id' => Employee::create(['first_name' => 'Boss', 'last_name' => 'Test', 'status' => 'active'])->id,
         ]);
     }
 

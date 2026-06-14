@@ -729,6 +729,103 @@ npm run build
 
 ---
 
+## Position — เปลี่ยนจาก "Level" เป็น "ลำดับชั้น" (Rank ladder) — 2026-06-13
+
+เดิม Position มีฟิลด์ `level` (เลข 1–14 เลือกเอง) ใช้แสดงผลอย่างเดียว ไม่ผูกกับ logic ใด ๆ
+เปลี่ยนเป็น **บันไดเรียงลำดับเส้นเดียว `rank`** (ไม่ซ้ำ ต่อเนื่อง, **rank 1 = สูงสุด**) แล้วใช้ตรวจสายบังคับบัญชา
+
+### หลักการ
+- ตำแหน่งใหม่ต่อท้ายบันไดอัตโนมัติ (`rank = max+1`) — ไม่ต้องกรอกเลขเอง
+- จัดลำดับผ่านหน้า **"ลำดับชั้นตำแหน่ง"** (เลื่อนขึ้น-ลง แล้วบันทึก) แทนปุ่ม 1–14 เดิม
+- เทียบกัน: A สูงกว่า B เมื่อ `A.rank < B.rank` (`Position::outranks()`)
+
+### กฎการเช็ค (หัวหน้าต้องสูงกว่าลูกน้องเสมอ — เช็คลูกน้องทุกชั้นใต้คนนั้น)
+1. **เปลี่ยน Position พนักงาน** → บล็อก ถ้าลูกน้อง (ทุกระดับ) มี `rank ≤` ตำแหน่งใหม่ (`StoreEmployeeRequest`)
+2. **เปลี่ยนหัวหน้า (manager)** → บล็อก ถ้าตำแหน่งหัวหน้าใหม่ `rank ≥` ตำแหน่งพนักงาน
+3. **จัดลำดับ Position ใหม่** → เตือน: `PUT /api/positions/reorder` ตรวจหา conflict ก่อน, ตอบ 422 (`reorder_conflict` + รายชื่อ) ให้ frontend เด้ง confirm แล้วส่งซ้ำด้วย `force`
+- ฝั่งใดไม่มี position → ข้ามการเช็ค
+
+### ไฟล์หลัก
+- **DB**: migration `..._rename_position_level_to_rank` (rename + backfill level สูง→rank 1 + unique) · `Position` model (`rank`, auto-append, `outranks()`) · `Employee::descendantIds()`
+- **API**: `PositionController@reorder` (dry-run/`force`, two-phase write กัน unique ชน) · route `positions/reorder` (ก่อน apiResource) · `StorePositionRequest` ตัด rule `level` · `PositionResource` `level→rank` · เอา `level` ออกจาก `OrgChartNodeResource`/`ApproverNodeResource`
+- **FE**: `position-modal` (ชื่ออย่างเดียว) · **`position-ladder-dialog`** (แทน `position-level-preview` เดิม) · types/`orgApi`/`use-org` (`reorder`) · เอา badge "Lv" ออกจาก org chart + approval chain · i18n + audit-format
+- **Seed**: `OrgSeeder` เรียง position บน→ล่าง กำหนด rank ตามลำดับ (VP = rank 1)
+
+### หมายเหตุ
+- รัน `php artisan migrate` บน DB จริงเพื่อ rename `level→rank` (ข้อมูลถูก backfill อัตโนมัติ)
+- **แถม (แก้ที่ต้นเหตุ)**: บน sqlite (เทส) migration rename `code→tag` ไม่ได้ rename ชื่อ index ทำให้ `departments_code_unique` ค้างอยู่บน `tag` แล้วชนกับ index ที่ `..._add_code_to_departments_table` สร้างใหม่ → เทสทั้งชุดรันไม่ได้ · แก้โดยให้ migration rename เพิ่ม `renameIndex('departments_code_unique','departments_tag_unique')` (ตามคอลัมน์) แล้ว `add_code` ใช้ชื่อ default ได้สะอาดทั้ง sqlite + MariaDB · ผลลัพธ์ fresh: `departments_code_unique → code`, `departments_tag_unique → tag`
+
+**ตรวจสอบ**: `php artisan test` 436 passed ✅ (รวม `PositionRankTest` 8 เคสใหม่) · fresh sqlite migrate index สะอาด ✅ · `tsc --noEmit` 0 error ✅ · `npm run build` ✅
+
+---
+
+## Position — ปรับจากบันไดเส้นเดียวเป็น Tree (parent_id) — 2026-06-13
+
+> **แทนที่หัวข้อ Rank ladder ด้านบน** — บันไดเส้นเดียว (rank ไม่ซ้ำ) บังคับให้ทุกตำแหน่งต่างระดับกันหมด แต่จริง ๆ มีตำแหน่ง**ระดับเดียวกัน (เสมอกัน)** จึงเปลี่ยนเป็นลำดับชั้นแบบต้นไม้
+
+### หลักการ
+- ทุก position มี **`parent_id`** (ชี้ตำแหน่งที่สูงกว่า, null = ระดับบนสุด) — เป็น tree
+- **ระดับ = ความลึก (depth) จาก root** (root = 0) · ตำแหน่งที่ลึกเท่ากัน = **ระดับเดียวกัน (เสมอกันได้)**
+- เทียบกัน: A สูงกว่า B เมื่อ `depth(A) < depth(B)` (`Position::outranks()`) · depth คำนวณสด + cache ต่อ request (`Position::depthMap()`)
+- ตั้ง parent ตอนสร้างได้ในฟอร์ม · ย้ายตำแหน่งทีหลังผ่านหน้า **"ผังลำดับชั้นตำแหน่ง"**
+
+### กฎการเช็ค (หัวหน้าต้องลึก<ลูกน้องเสมอ — เท่ากัน=บล็อก, เช็คลูกน้องทุกชั้น)
+1. **เปลี่ยน Position พนักงาน** → บล็อก ถ้าลูกน้อง (ทุกระดับ) มี `depth ≤` ตำแหน่งใหม่ (`StoreEmployeeRequest`)
+2. **เปลี่ยนหัวหน้า (manager)** → บล็อก ถ้าตำแหน่งหัวหน้าใหม่ `depth ≥` ตำแหน่งพนักงาน
+3. **ย้าย Position (เปลี่ยน parent)** → `PUT /api/positions/{id}/parent` · cycle (ลงใต้ตัวเอง/ลูกหลาน) = บล็อกถาวร 422 · ขัดสายบังคับบัญชา = 422 `parent_conflict` + รายชื่อ → frontend เด้ง confirm → ส่งซ้ำ `force`
+
+### ไฟล์หลัก (เปลี่ยนจากเวอร์ชัน rank)
+- **DB**: migration `..._convert_positions_rank_to_parent_tree` (เพิ่ม `parent_id` self-FK nullOnDelete + backfill chain จาก rank + drop rank)
+- **Model**: `Position` (`parent_id`, `parent()`/`children()`, `depthMap()` memoized+override, `depth()`, `descendantIds()`, `outranks()` by depth)
+- **API**: `PositionController@setParent` (cycle + conflict by depth) แทน `@reorder` · route `positions/{position}/parent` · `update` เหลือ rename อย่างเดียว · `PositionResource` → `parent_id` + **`level`** (1-based, root = Level 1; = depthMap+1) — เปิดเผยไว้ให้ **Workflow Approve** อ้างอิง (ตำแหน่ง level เดียวกัน = เสมอกันในขั้นอนุมัติ)
+- **FE (Tier lanes)**: `position-modal` (เลือก parent ตอนสร้าง) · `position-ladder-dialog` → **มุมมอง Tier lanes** (1 แถว = 1 ระดับ, ระดับ 1 บนสุด, **ไม่มีเส้นเชื่อม** แบ่งกลุ่มตาม level) · pill ลากวางบน pill อื่น = ให้ขึ้นกับตำแหน่งนั้น (level เปลี่ยนตาม) · ใช้ **`@dnd-kit/core`** (pointer/touch/keyboard) + DragOverlay · กัน cycle โดยปิด droppable ของ self+ลูกหลาน · มี rail "ตั้งเป็นระดับ 1" · types `parent_id`+`level` · `setParent` ใน orgApi/use-org
+- **deps ใหม่**: `@dnd-kit/core` ^6.3.1, `@dnd-kit/utilities` ^3.2.2 (รองรับ React 19)
+- **Seed**: `OrgSeeder` seed เป็น chain (VP = Level 1 → … → Subcontract = Level 14)
+- **Mockup สำรวจดีไซน์**: `docs/mockup/position-hierarchy-layouts.html` (4 เลย์เอาต์: Nested / Org chart / **Tier lanes (เลือกใช้)** / Sunburst), `position-hierarchy-boxchain.html`, `position-hierarchy.html`
+
+**ตรวจสอบ**: `php artisan test` **438 passed** ✅ (`PositionRankTest` 10 เคส: demote/manager/same-level/cycle/conflict-force/permission) · `tsc --noEmit` 0 ✅ · `npm run build` ✅ (ไม่ต้อง migrate — `level` คำนวณจาก tree ที่มีอยู่)
+
+---
+
+## ⛔ ยกเลิกฟีเจอร์ Position levels/hierarchy ทั้งหมด — 2026-06-13
+
+> **ลบทิ้งทั้งหมด** (แทนที่ทุกหัวข้อ Position ด้านบน: Rank ladder, Tree/parent_id, Tier lanes) ตามที่ตัดสินใจไม่ใช้แนวคิด level/hierarchy ของตำแหน่ง · **Position = แบน เหลือแค่ `code` + `title`**
+
+- **DB**: ลบ migration `add_level_to_positions`, `rename_position_level_to_rank`, `convert_positions_rank_to_parent_tree` · ตาราง `positions` เหลือ `id, code, title, timestamps` · รัน `migrate:fresh --seed` แล้ว
+- **Backend**: `Position` model เหลือ `code/title` + auto-code + `employees()` · `PositionResource` เหลือ `id/code/title/employees_count` · `PositionController` กลับเป็น CRUD ปกติ (เอา `setParent`/conflict/cycle ออก) · ลบ route `positions/{position}/parent` · `StoreEmployeeRequest` เอาเช็ค rank/depth ออก (เหลือ section + manager loop) · `Employee::descendantIds()` ลบ · `OrgSeeder` seed positions แบบแบน
+- **Frontend**: ลบ `position-ladder-dialog.tsx` · `position-modal` เหลือกรอกชื่อ · types/`orgApi`/`use-org` เอา level/parent/setParent ออก · ลบปุ่ม + dialog ในหน้า Employees · เอา i18n keys (`pos_tree*`, `pos_reorder*`, `pos_parent*`, ฯลฯ) + audit-format `rank` ออก
+- **ถอด dependency**: `@dnd-kit/core`, `@dnd-kit/utilities`
+- **ลบ mockup**: `docs/mockup/position-hierarchy*.html` ทั้งหมด
+- **Tests**: ลบ `PositionRankTest` · ปรับ `ApprovalChainTest` + `OrgSeederTest` เป็นแบบ flat
+- คงไว้: บั๊กฟิกซ์ index `departments_code_unique → departments_tag_unique` (คนละเรื่องกับ position levels)
+
+**ตรวจสอบ**: `php artisan test` **428 passed** ✅ · `tsc --noEmit` 0 ✅ · `eslint` 0 ✅ · `npm run build` ✅ · `positions` = `id, code, title` ✅
+
+---
+
+## 🐞 Bugfix — Confirm "ยืนยันการย้าย" เด้งแวบหายเอง (Edit พนักงาน) — 2026-06-14
+
+**อาการ:** แก้ไขพนักงานแล้วเปลี่ยน org (ตำแหน่ง/แผนก/หัวหน้า) → กด Save → dialog
+"Confirm organizational change / ยืนยันการย้าย" **โผล่แวบ ~0.5 วิแล้วหายเอง** ตอนฟอร์มปิด ไม่เคยกดยืนยันได้จริง
+
+**Root cause:** org-change confirm ถูก render เป็น Radix `<Dialog>` แยก **ซ้อนทับ** edit dialog
+(sibling) → 2 dialog ซ้อนกันทำให้ Radix แย่ง focus-trap กัน ตัวในถูกกดทับไว้ แล้ว exit-animate
+(แวบ) ตอน `open` กลายเป็น false — **บั๊กชนิดเดียวกับ manager-loop Warning ที่แก้ไปก่อนหน้า**
+(ซึ่งแก้ด้วยการทำเป็น inline ตามคอมเมนต์ใน `add-employee-drawer.tsx`) แต่ตัว confirm ยังเป็น dialog ซ้อนอยู่
+
+**แก้:** `resources/js/components/employees/add-employee-drawer.tsx` (edit branch)
+- ย้าย org-change confirm มาเป็น **inline step ใน edit dialog เดียว** — สลับ body/footer
+  เป็นหน้า confirm เมื่อ `orgConfirm=true` (ครอบ form ด้วย `{!orgConfirm && …}` + panel `{orgConfirm && …}`)
+- **ลบ** sibling `<Dialog open={orgConfirm && open}>` ที่เป็นต้นเหตุ flash ออก
+- เหลือ Radix Dialog ตัวเดียวตลอด → ไม่มี flash, กด Confirm & Save / Cancel ได้จริง
+- backend/validation ไม่แตะ (`StoreEmployeeRequest` + `Employee::isAncestorOf` ทำงานถูกอยู่แล้ว)
+
+**ตรวจสอบ:** `tsc --noEmit` 0 ✅ · `eslint` 0 ✅ — verify ใน UI: แก้หัวหน้าเป็นคนปกติ→confirm
+แสดงในฟอร์มกดได้, แก้เป็นลูกน้องตัวเอง→confirm→Save→manager-loop warning เด้ง inline, เปิด Edit
+แล้วปิดเฉย ๆ→ไม่มี dialog แวบ
+
+---
+
 ## คำสั่งที่ใช้บ่อย
 
 ```bash
@@ -738,3 +835,26 @@ php artisan route:list             # ดู routes ทั้งหมด
 npm run build                      # build frontend
 npm run lint                       # eslint --fix
 ```
+
+---
+
+## 🕗 รอทำ (Pending / TODO) — อัปเดต 2026-06-14
+
+### Access Control — Phase 2 (ยังไม่ทำ · ผูกกับโมดูล Request/Workflow)
+- **Access Requests + approval workflow**: ตาราง `workflows` + `access_requests` · แท็บ **Dashboard** (ตารางคำขอ + chain progress bars), **Workflows** (รายการ + `WorkflowStrip` stepper + editor drawer), **Requests** + request drawer (approve/reject) — ตามดีไซน์ `pages-7.jsx`/`pages-8.jsx`
+- **จุดเชื่อม**: เมื่อคำขออนุมัติครบทุกขั้น → เรียก `AccessService::grant()` (membership model ออกแบบรองรับไว้แล้ว) + auto-open Ticket ให้ทีม IT
+- KPI "คำขอค้าง" (ตอนนี้แทนด้วย **Total grants** ไปก่อน)
+
+### Access Control — เก็บรายละเอียดเล็ก
+- คอลัมน์ **"Created"** ในตาราง mail groups/file shares: ยังไม่โชว์ (ต้องเพิ่ม `created_at` ใน `EmailGroupResource`/`FileShareResource` ก่อน)
+- ปุ่ม **Export** บน header (ดีไซน์มี) ยังไม่ทำ
+
+### Employee detail — แท็บจากดีไซน์เดิมที่ยังไม่ได้ทำ
+- **Assets ต่อพนักงาน**: ต้องมี endpoint ดึง assets ตามผู้ถือครอง (ตอนนี้ `assets.owner` เป็น string ไม่มี FK)
+- **Tickets ต่อพนักงาน**: endpoint ดึง tickets ตาม requester ของพนักงานคนอื่น (ปัจจุบันกรองได้แค่ของตัวเอง)
+- **Requests / Activity feed**: ผูกกับ Request/Workflow module (Phase 2)
+- _(แท็บ Overview / Organization / Access — ทำแล้ว ✅)_
+
+### Git
+- branch **`feat/access-control`** ยังไม่ merge เข้า main
+- งานค้างอีก ~65 ไฟล์ใน working tree (employee detail redesign, การลบ position levels, spec/plan docs) ยังไม่ commit — รอจัดการแยกเอง
