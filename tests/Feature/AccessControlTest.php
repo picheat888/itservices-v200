@@ -17,4 +17,11 @@ class AccessControlTest extends TestCase
         $this->assertTrue(Schema::hasColumns('social_platforms', ['code', 'name', 'url', 'color', 'policy']));
         $this->assertTrue(Schema::hasColumns('access_memberships', ['resource_type', 'resource_id', 'employee_id', 'access_level', 'purpose', 'granted_at', 'revoked_at']));
     }
+
+    public function test_access_permission_keys_are_registered(): void
+    {
+        $this->assertContains('access.view', \App\Support\Permissions::all());
+        $this->assertContains('access.manage', \App\Support\Permissions::all());
+        $this->assertContains('access.manage', \App\Support\Permissions::defaults()['admin']);
+    }
 }
