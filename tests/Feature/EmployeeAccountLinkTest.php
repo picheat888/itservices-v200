@@ -37,6 +37,22 @@ class EmployeeAccountLinkTest extends TestCase
         $this->assertTrue($employee->fresh()->user()->exists());
     }
 
+    public function test_setting_credentials_rejects_a_duplicate_username(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        // An existing account already owns this username.
+        User::factory()->create(['username' => 'taken_user']);
+        $employee = Employee::create(['code' => 'EMP-9009', 'first_name' => 'Dup', 'last_name' => 'Name', 'email' => 'dup@x.test']);
+
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'taken_user',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertStatus(422)->assertJsonValidationErrors('username');
+
+        $this->assertFalse($employee->fresh()->user()->exists());
+    }
+
     public function test_reset_password_uses_fk_link(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));

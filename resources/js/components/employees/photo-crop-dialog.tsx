@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useT } from '@/lib/i18n';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import Cropper from 'react-easy-crop';
 import type { Area, Point } from 'react-easy-crop';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Props {
-    imageSrc: string;
+    /** Object URL to crop, or null when closed. Kept mounted so the close animation can play. */
+    imageSrc: string | null;
     onConfirm: (croppedFile: File) => void;
     onCancel: () => void;
 }
@@ -41,16 +43,27 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
     const [zoom, setZoom] = useState(1);
     const [croppedPixels, setCroppedPixels] = useState<Area | null>(null);
     const [applying, setApplying] = useState(false);
+    // Keep the last image so the cropper still renders during the close (fade-out) animation.
+    const [src, setSrc] = useState<string | null>(imageSrc);
+
+    useEffect(() => {
+        if (!imageSrc) return; // closing → retain `src` so content stays visible while it animates out
+        setSrc(imageSrc);
+        setCrop({ x: 0, y: 0 });
+        setZoom(1);
+        setCroppedPixels(null);
+        setApplying(false);
+    }, [imageSrc]);
 
     const onCropComplete = useCallback((_: Area, pixels: Area) => {
         setCroppedPixels(pixels);
     }, []);
 
     const apply = async () => {
-        if (!croppedPixels) return;
+        if (!croppedPixels || !src) return;
         setApplying(true);
         try {
-            const file = await getCroppedFile(imageSrc, croppedPixels);
+            const file = await getCroppedFile(src, croppedPixels);
             onConfirm(file);
         } catch {
             setApplying(false);
@@ -58,18 +71,21 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-            <div className="flex w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-background shadow-2xl ring-1 ring-border">
+        // Nested Radix dialog: portals itself above the parent dialog, owns its own
+        // overlay, and becomes the active (non-inerted) layer — so its controls are clickable.
+        // Kept mounted (open toggles) so the exit animation plays instead of snapping shut.
+        <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
+            <DialogContent className="max-w-sm gap-0 overflow-hidden p-0 [&>button]:hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                    <span className="text-sm font-semibold">{t('photo_crop_title')}</span>
+                    <DialogTitle className="text-sm font-semibold">{t('photo_crop_title')}</DialogTitle>
                     <span className="text-xs text-muted-foreground">{t('photo_crop_hint')}</span>
                 </div>
 
                 {/* Cropper — fixed square */}
                 <div className="relative h-72 w-full bg-muted/30">
                     <Cropper
-                        image={imageSrc}
+                        image={src ?? ''}
                         crop={crop}
                         zoom={zoom}
                         aspect={1}
@@ -112,7 +128,7 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                         {applying ? t('photo_crop_applying') : t('photo_crop_apply')}
                     </Button>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

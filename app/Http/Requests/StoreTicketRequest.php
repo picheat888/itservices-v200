@@ -29,7 +29,8 @@ class StoreTicketRequest extends FormRequest
             'subject_th' => ['nullable', 'string', 'max:200'],
             'description' => ['required', 'string', 'min:10', 'max:5000'],
             'category' => ['required', new Enum(TicketCategory::class)],
-            'callback_phone' => ['required', 'string', 'max:60'],
+            // At least 3 digits — internal extensions can be short (e.g. 123).
+            'callback_phone' => ['required', 'string', 'max:60', 'regex:/(\D*\d){3,}/'],
             'related_asset_id' => ['nullable', Rule::exists('assets', 'id')],
         ];
     }

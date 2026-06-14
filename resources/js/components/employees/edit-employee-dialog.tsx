@@ -4,15 +4,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import { deptColor } from '@/lib/org-tree';
-import { cn } from '@/lib/utils';
+import { cn, focusFirstError } from '@/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { AlertTriangle, ArrowRight, Briefcase, Calendar, Check, Info, Upload, User, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, Calendar, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
@@ -51,6 +49,8 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const [managerLoop, setManagerLoop] = useState(false);
     // Set when org fields (position/dept/manager) changed — shows inline confirm panel before saving.
     const [orgConfirm, setOrgConfirm] = useState(false);
+    // Brief success state after a save — shows "✓ Saved" before the dialog closes.
+    const [saved, setSaved] = useState(false);
 
     useEffect(() => {
         if (!open) {
@@ -64,6 +64,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         setErrors({});
         setManagerLoop(false);
         setOrgConfirm(false);
+        setSaved(false);
         if (employee) {
             setForm({
                 firstName: employee.first_name ?? '',
@@ -155,6 +156,34 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
           ].filter(Boolean as unknown as <T>(x: T | false) => x is T)
         : [];
 
+    // Snapshot of the form as the dialog opened — same shape/key-order as the init effect,
+    // so JSON compare against `form` is exact. Save stays disabled until something truly changes.
+    const initialForm = useMemo(
+        () =>
+            employee
+                ? {
+                      firstName: employee.first_name ?? '',
+                      lastName: employee.last_name ?? '',
+                      firstNameTh: employee.first_name_th ?? '',
+                      lastNameTh: employee.last_name_th ?? '',
+                      email: employee.email ?? '',
+                      phone: employee.phone ?? '',
+                      code: employee.code ?? '',
+                      departmentId: employee.department_id ? String(employee.department_id) : '',
+                      sectionId: employee.section_id ? String(employee.section_id) : '',
+                      positionId: employee.position_id ? String(employee.position_id) : '',
+                      managerId: employee.manager_id ? String(employee.manager_id) : '',
+                      joinedAt: employee.joined_at ?? '',
+                  }
+                : empty,
+        [employee],
+    );
+    // Dirty when any field differs from the snapshot, or a new photo was picked.
+    const isDirty = useMemo(() => photo != null || JSON.stringify(form) !== JSON.stringify(initialForm), [form, initialForm, photo]);
+
+    // A "special position" skips both the Department and Report-to requirements.
+    const posIsSpecial = positions.find((p) => String(p.id) === form.positionId)?.allow_special_position ?? false;
+
     /** Validates personal info (step 1) or employment info (step 2). */
     const validateStep = (s: number) => {
         const e: Record<string, string> = {};
@@ -164,11 +193,14 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = t('emp_err_email');
         }
         if (s === 2) {
-            if (!form.departmentId) e.departmentId = t('emp_err_dept');
+            if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
+            if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
             if (!form.positionId) e.positionId = t('emp_err_pos');
+            if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
             if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         }
         setErrors(e);
+        if (Object.keys(e).length) focusFirstError(e);
         return Object.keys(e).length === 0;
     };
 
@@ -207,7 +239,9 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         try {
             await update.mutateAsync({ id: employee.id, payload });
             setOrgConfirm(false);
-            onClose();
+            // Show "✓ Saved" briefly, then close.
+            setSaved(true);
+            window.setTimeout(onClose, 1200);
         } catch (err) {
             // 422 manager_id = reporting-tree loop: close confirm panel, show inline warning,
             // any other field error → toast so the save never fails silently.
@@ -242,9 +276,8 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     /** Inline bilingual literal helper. */
     const L = (th: string, en: string) => (lang === 'th' ? th : en);
 
-    // Department accent — tints the header, avatar tile and Save button.
-    const selectedDept = departments.find((d) => String(d.id) === form.departmentId);
-    const accent = selectedDept ? deptColor(selectedDept.tag) : 'var(--brand)';
+    // Accent uses the system brand colour — it no longer changes per department tag.
+    const accent = 'var(--brand)';
 
     const status = employee?.status;
 
@@ -252,7 +285,9 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const photoBlock = (
         <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            {/* key forces a remount when the photo changes/clears — otherwise Radix Avatar keeps
+                its stale "loaded" status and the fallback (initials) never reappears after Remove. */}
+            <Avatar key={photoUrl ?? 'no-photo'} className="h-16 w-16">
                 {photoUrl && <AvatarImage src={photoUrl} alt="" />}
                 <AvatarFallback className="bg-brand/10 text-brand">{photoInitials || <User className="h-6 w-6" />}</AvatarFallback>
             </Avatar>
@@ -279,10 +314,10 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const nameFields = (
         <>
             <div className="grid grid-cols-2 gap-3">
-                <Field label={t('emp_first_name')} required error={errors.firstName}>
+                <Field label={t('emp_first_name')} required name="firstName" error={errors.firstName}>
                     <Input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="John" />
                 </Field>
-                <Field label={t('emp_last_name')} required error={errors.lastName}>
+                <Field label={t('emp_last_name')} required name="lastName" error={errors.lastName}>
                     <Input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" />
                 </Field>
             </div>
@@ -299,7 +334,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const contactFields = (
         <>
-            <Field label={t('emp_email')} error={errors.email}>
+            <Field label={t('emp_email')} name="email" error={errors.email}>
                 <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
             </Field>
             <Field label={t('emp_phone')}>
@@ -309,24 +344,21 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     );
 
     const departmentField = (
-        <Field label={t('department')} required error={errors.departmentId}>
-            <Select value={form.departmentId} onValueChange={setDepartment}>
-                <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                    {departments.map((d) => (
-                        <SelectItem key={d.id} value={String(d.id)}>
-                            {lang === 'th' ? (d.name_th ?? d.name) : d.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+        <Field label={t('department')} required={!posIsSpecial} name="departmentId" error={errors.departmentId}>
+            <SearchableSelect
+                value={form.departmentId}
+                onChange={setDepartment}
+                options={departments.map((d) => ({
+                    value: String(d.id),
+                    label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                    search: `${d.name} ${d.name_th ?? ''}`,
+                }))}
+            />
         </Field>
     );
 
     const sectionField = (
-        <Field label={t('emp_section')}>
+        <Field label={t('emp_section')} required={!posIsSpecial} name="sectionId" error={errors.sectionId}>
             <SearchableSelect
                 value={form.sectionId}
                 onChange={(v) => set('sectionId', v)}
@@ -345,30 +377,27 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     );
 
     const positionField = (
-        <Field label={t('position')} required error={errors.positionId}>
-            <Select value={form.positionId} onValueChange={(v) => set('positionId', v)}>
-                <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                    {positions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                            {p.title}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
+        <Field label={t('position')} required name="positionId" error={errors.positionId}>
+            <SearchableSelect
+                value={form.positionId}
+                onChange={(v) => set('positionId', v)}
+                options={positions.map((p) => ({
+                    value: String(p.id),
+                    label: p.title,
+                    search: `${p.title} ${p.code}`,
+                }))}
+            />
         </Field>
     );
 
     const managerField = (
-        <Field label={t('emp_manager')} help={t('emp_manager_help')}>
+        <Field label={t('emp_manager')} help={t('emp_manager_help')} required={!posIsSpecial} name="managerId" error={errors.managerId}>
             <SearchableSelect value={form.managerId} onChange={(v) => set('managerId', v)} options={managerOptions} clearable />
         </Field>
     );
 
     const joinedField = (
-        <Field label={t('emp_start_date')} required error={errors.joinedAt}>
+        <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
             <div className="relative">
                 <Input
                     className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
@@ -387,16 +416,17 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         </Field>
     );
 
-    const cropDialog = cropSrc && (
+    // Always mounted (imageSrc toggles) so the crop dialog can animate closed.
+    const cropDialog = (
         <PhotoCropDialog
             imageSrc={cropSrc}
             onConfirm={(cropped) => {
                 setPhoto(cropped);
-                URL.revokeObjectURL(cropSrc);
+                if (cropSrc) URL.revokeObjectURL(cropSrc);
                 setCropSrc(null);
             }}
             onCancel={() => {
-                URL.revokeObjectURL(cropSrc);
+                if (cropSrc) URL.revokeObjectURL(cropSrc);
                 setCropSrc(null);
             }}
         />
@@ -404,7 +434,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     return (
         <>
-            {cropDialog}
             <Dialog
                 open={open}
                 onOpenChange={(o) => {
@@ -428,24 +457,12 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                     <DialogTitle className="sr-only">{t('edit_employee')}</DialogTitle>
                     <DialogDescription className="sr-only">{t('edit_employee')}</DialogDescription>
 
-                    {/* ── Header (department-tinted) ── */}
-                    <div
-                        className="flex items-center gap-3.5 border-b px-5 py-4"
-                        style={{
-                            background: `color-mix(in oklch, ${accent} 8%, var(--background))`,
-                            borderBottomColor: `color-mix(in oklch, ${accent} 22%, var(--border))`,
-                        }}
-                    >
-                        {photoUrl ? (
-                            <img src={photoUrl} alt="" className="h-12 w-12 shrink-0 rounded-xl object-cover" />
-                        ) : (
-                            <div
-                                className="grid h-12 w-12 shrink-0 place-items-center rounded-xl text-base font-extrabold tracking-tight text-white"
-                                style={{ background: accent }}
-                            >
-                                {photoInitials || <User className="h-6 w-6" />}
-                            </div>
-                        )}
+                    {/* PhotoCropDialog is its own (nested) Radix dialog, so it portals itself out
+                        and becomes the active layer — placement here is fine, not inerted. */}
+                    {cropDialog}
+
+                    {/* ── Header (neutral — no colour tint, no avatar) ── */}
+                    <div className="border-border bg-card flex items-center gap-3.5 border-b px-5 py-4">
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-[17px] leading-tight font-extrabold tracking-tight">
                                 {`${form.firstName} ${form.lastName}`.trim() || employee?.name}
@@ -509,9 +526,13 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                 <Button variant="outline" onClick={() => setOrgConfirm(false)} disabled={update.isPending}>
                                     {t('cancel')}
                                 </Button>
-                                <Button onClick={persist} disabled={update.isPending} style={{ background: accent, borderColor: accent }}>
-                                    <Check className="h-4 w-4" />
-                                    {t('emp_org_confirm')}
+                                <Button
+                                    onClick={persist}
+                                    disabled={update.isPending}
+                                    style={update.isPending ? undefined : { background: accent, borderColor: accent }}
+                                >
+                                    {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                    {update.isPending ? t('saving') : t('emp_org_confirm')}
                                 </Button>
                             </div>
                         </>
@@ -590,9 +611,13 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                 <Button variant="outline" onClick={onClose}>
                                     {t('cancel')}
                                 </Button>
-                                <Button onClick={submit} disabled={update.isPending} style={{ background: accent, borderColor: accent }}>
-                                    <Check className="h-4 w-4" />
-                                    {t('save')}
+                                <Button
+                                    onClick={submit}
+                                    disabled={update.isPending || saved || !isDirty}
+                                    style={update.isPending || saved || !isDirty ? undefined : { background: accent, borderColor: accent }}
+                                >
+                                    {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
+                                    {update.isPending ? t('saving') : saved ? t('saved') : t('save')}
                                 </Button>
                             </div>
                         </>

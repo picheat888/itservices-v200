@@ -14,11 +14,13 @@ const nodeTypes = { orgNode: OrgNode };
 // trees fit; maxZoom matches the search "zoom right in" target.
 const MIN_ZOOM = 0.08;
 const MAX_ZOOM = 2.5;
-// Wheel-zoom sensitivity. React Flow's own d3 wheel step only gets its ×10
-// boost on macOS, so on Windows a touchpad zooms painfully slowly. We zoom
-// ourselves with an exponential factor (~2–3× the default snappiness); raise
-// this to zoom faster per gesture, lower it to make it gentler.
-const ZOOM_SENSITIVITY = 0.003;
+// Wheel-zoom sensitivity. A touchpad pinch arrives as a `wheel` event with
+// ctrlKey=true and TINY deltas (≈1–4 per tick), so the old single 0.003 factor
+// barely moved — zoom lagged badly behind the fingers. We now split it:
+//  • PINCH_SENSITIVITY — much higher, so pinch tracks the fingers in real time.
+//  • WHEEL_SENSITIVITY — for a real mouse wheel (big notch deltas), kept gentle.
+const PINCH_SENSITIVITY = 0.02;
+const WHEEL_SENSITIVITY = 0.003;
 
 function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const t = useT();
@@ -28,6 +30,9 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
     const [query, setQuery] = useState('');
     const rf = useReactFlow();
     const fitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Set true right before a "jump to person" so the auto-refit below skips that
+    // one change and lets the targeted zoom-in win instead of fighting it.
+    const skipFit = useRef(false);
     const paneRef = useRef<HTMLDivElement | null>(null);
 
     // Custom wheel zoom (see ZOOM_SENSITIVITY). React Flow's built-in scroll/
@@ -44,7 +49,10 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             const { x, y, zoom } = rf.getViewport();
             // Normalise line-mode deltas (Firefox) to roughly pixel scale.
             const delta = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
-            const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * Math.exp(-delta * ZOOM_SENSITIVITY)));
+            // ctrlKey is set for a trackpad pinch (and ⌘/ctrl + wheel) → zoom
+            // snappily so it keeps up with the fingers; a plain mouse wheel stays gentle.
+            const sensitivity = e.ctrlKey || e.metaKey ? PINCH_SENSITIVITY : WHEEL_SENSITIVITY;
+            const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * Math.exp(-delta * sensitivity)));
             if (next === zoom) {
                 return;
             }
@@ -155,31 +163,37 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
             return;
         }
         const b = getNodesBounds(nodes);
-        const lifted = { x: b.x, y: b.y, width: b.width, height: b.height + Math.max(90, b.height * 0.28) };
-        rf.fitBounds(lifted, { padding: 0.12, duration: 360 });
+        // Lift the content slightly above dead-centre by padding the bottom of the bounds —
+        // kept small so it doesn't force the camera to zoom out and shrink the chart.
+        const lifted = { x: b.x, y: b.y, width: b.width, height: b.height + Math.max(40, b.height * 0.05) };
+        rf.fitBounds(lifted, { padding: 0.05, duration: 360 });
     }, [rf]);
 
-    // Refit only when the orientation flips — NOT on every single collapse, which
-    // would yank the camera around. Individual node collapses keep the current view
-    // (cards glide via CSS); collapse-all and the Fit button refit explicitly.
+    // Refit so the camera tracks the chart's size: when the orientation flips OR the
+    // number of visible cards changes (expand / collapse / collapse-all). Debounced and
+    // animated so it glides instead of snapping. The skipFit guard lets "jump to person"
+    // expand ancestors without the refit stealing its targeted zoom-in.
     useEffect(() => {
+        if (skipFit.current) {
+            skipFit.current = false;
+            return;
+        }
         if (fitTimer.current) {
             clearTimeout(fitTimer.current);
         }
-        fitTimer.current = setTimeout(runFit, 60);
+        fitTimer.current = setTimeout(runFit, 120);
         return () => {
             if (fitTimer.current) {
                 clearTimeout(fitTimer.current);
             }
         };
-    }, [dir, runFit]);
+    }, [dir, visibleIds.size, runFit]);
 
     const anyCollapsed = collapsed.size > 0;
     const toggleAll = useCallback(() => {
+        // The visible-count refit effect handles the camera once the new layout lands.
         setCollapsed((prev) => (prev.size > 0 ? new Set() : new Set(withReports)));
-        // Big structural change → refit after the new layout is in place.
-        window.setTimeout(runFit, 90);
-    }, [withReports, runFit]);
+    }, [withReports]);
 
     // Jump to + highlight a person picked from the search suggestions.
     const focusPerson = useCallback(
@@ -196,6 +210,9 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 if (![...ancestors].some((a) => prev.has(a))) {
                     return prev;
                 }
+                // Expanding ancestors changes the visible count; tell the refit effect to
+                // skip this one so our zoom-to-person below isn't overridden by a full fit.
+                skipFit.current = true;
                 const next = new Set(prev);
                 ancestors.forEach((a) => next.delete(a));
                 return next;
@@ -255,7 +272,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                         edges={rfEdges}
                         nodeTypes={nodeTypes}
                         fitView
-                        fitViewOptions={{ padding: 0.16 }}
+                        fitViewOptions={{ padding: 0.05 }}
                         minZoom={MIN_ZOOM}
                         maxZoom={MAX_ZOOM}
                         zoomOnScroll={false}

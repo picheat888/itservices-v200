@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import { useSettings } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn, focusFirstError } from '@/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
@@ -96,6 +96,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         [employees, lang],
     );
 
+    // A "special position" skips both the Department and Report-to requirements.
+    const posIsSpecial = positions.find((p) => String(p.id) === form.positionId)?.allow_special_position ?? false;
+
     /** Validates personal info (step 1) or employment info (step 2). */
     const validateStep = (s: number) => {
         const e: Record<string, string> = {};
@@ -105,11 +108,14 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = t('emp_err_email');
         }
         if (s === 2) {
-            if (!form.departmentId) e.departmentId = t('emp_err_dept');
+            if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
+            if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
             if (!form.positionId) e.positionId = t('emp_err_pos');
+            if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
             if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         }
         setErrors(e);
+        if (Object.keys(e).length) focusFirstError(e);
         return Object.keys(e).length === 0;
     };
 
@@ -180,20 +186,19 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 }}
             >
                 <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
-                    {cropSrc && (
-                        <PhotoCropDialog
-                            imageSrc={cropSrc}
-                            onConfirm={(cropped) => {
-                                setPhoto(cropped);
-                                URL.revokeObjectURL(cropSrc);
-                                setCropSrc(null);
-                            }}
-                            onCancel={() => {
-                                URL.revokeObjectURL(cropSrc);
-                                setCropSrc(null);
-                            }}
-                        />
-                    )}
+                    {/* Always mounted (imageSrc toggles) so the crop dialog can animate closed. */}
+                    <PhotoCropDialog
+                        imageSrc={cropSrc}
+                        onConfirm={(cropped) => {
+                            setPhoto(cropped);
+                            if (cropSrc) URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                        }}
+                        onCancel={() => {
+                            if (cropSrc) URL.revokeObjectURL(cropSrc);
+                            setCropSrc(null);
+                        }}
+                    />
                     <SheetHeader>
                         <SheetTitle>{t('add_employee')}</SheetTitle>
                         <SheetDescription>
@@ -272,7 +277,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                         {step === 1 && (
                             <>
                                 <div className="flex items-center gap-4">
-                                    <Avatar className="h-16 w-16">
+                                    {/* key forces a remount when the photo changes/clears — otherwise Radix Avatar
+                                        keeps its stale "loaded" status and the fallback never reappears after Remove. */}
+                                    <Avatar key={photoUrl ?? 'no-photo'} className="h-16 w-16">
                                         {photoUrl && <AvatarImage src={photoUrl} alt="" />}
                                         <AvatarFallback className="bg-brand/10 text-brand">
                                             {photoInitials || <User className="h-6 w-6" />}
@@ -303,10 +310,10 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Field label={t('emp_first_name')} required error={errors.firstName}>
+                                    <Field label={t('emp_first_name')} required name="firstName" error={errors.firstName}>
                                         <Input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="John" />
                                     </Field>
-                                    <Field label={t('emp_last_name')} required error={errors.lastName}>
+                                    <Field label={t('emp_last_name')} required name="lastName" error={errors.lastName}>
                                         <Input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" />
                                     </Field>
                                 </div>
@@ -318,7 +325,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <Input value={form.lastNameTh} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="สุขสวัสดิ์" />
                                     </Field>
                                 </div>
-                                <Field label={t('emp_email')} error={errors.email}>
+                                <Field label={t('emp_email')} name="email" error={errors.email}>
                                     <Input
                                         className="font-mono"
                                         value={form.email}
@@ -339,7 +346,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
                         {step === 2 && (
                             <>
-                                <Field label={t('department')} required error={errors.departmentId}>
+                                <Field label={t('department')} required={!posIsSpecial} name="departmentId" error={errors.departmentId}>
                                     <Select value={form.departmentId} onValueChange={setDepartment}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="—" />
@@ -353,7 +360,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         </SelectContent>
                                     </Select>
                                 </Field>
-                                <Field label={t('emp_section')}>
+                                <Field label={t('emp_section')} required={!posIsSpecial} name="sectionId" error={errors.sectionId}>
                                     <SearchableSelect
                                         value={form.sectionId}
                                         onChange={(v) => set('sectionId', v)}
@@ -369,7 +376,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         clearable
                                     />
                                 </Field>
-                                <Field label={t('position')} required error={errors.positionId}>
+                                <Field label={t('position')} required name="positionId" error={errors.positionId}>
                                     <Select value={form.positionId} onValueChange={(v) => set('positionId', v)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="—" />
@@ -383,7 +390,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         </SelectContent>
                                     </Select>
                                 </Field>
-                                <Field label={t('emp_manager')} help={t('emp_manager_help')}>
+                                <Field label={t('emp_manager')} help={t('emp_manager_help')} required={!posIsSpecial} name="managerId" error={errors.managerId}>
                                     <SearchableSelect
                                         value={form.managerId}
                                         onChange={(v) => set('managerId', v)}
@@ -392,7 +399,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                     />
                                 </Field>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <Field label={t('emp_start_date')} required error={errors.joinedAt}>
+                                    <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
                                         <div className="relative">
                                             <Input
                                                 className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"

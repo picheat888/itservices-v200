@@ -8,8 +8,8 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { TicketCategory } from '@/types';
-import { Loader2, Paperclip, Send, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { FileImage, FileText, Loader2, Paperclip, Send, UploadCloud, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 /** Employee-facing form to raise a ticket. Priority and assignee are set later by IT. */
 export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -22,7 +22,23 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     const [description, setDescription] = useState('');
     const [phone, setPhone] = useState('');
     const [files, setFiles] = useState<File[]>([]);
+    const [dragOver, setDragOver] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Accept PNG/JPG/PDF, max 10 files, dedupe by name+size.
+    const addFiles = (list: FileList | File[]) => {
+        const incoming = Array.from(list).filter((f) => ['image/png', 'image/jpeg', 'application/pdf'].includes(f.type));
+        setFiles((prev) => {
+            const merged = [...prev];
+            for (const f of incoming) {
+                if (merged.length >= 10) break;
+                if (!merged.some((m) => m.name === f.name && m.size === f.size)) merged.push(f);
+            }
+            return merged;
+        });
+    };
+    const fmtSize = (b: number) => (b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`);
 
     useEffect(() => {
         if (open) {
@@ -31,6 +47,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setDescription('');
             setPhone('');
             setFiles([]);
+            setDragOver(false);
             setErrors({});
         }
     }, [open]);
@@ -41,7 +58,8 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             e.subject = lang === 'th' ? 'กรุณาระบุหัวข้อ (อย่างน้อย 5 ตัวอักษร)' : 'Please describe the issue (min 5 characters)';
         if (description.trim().length < 10)
             e.description = lang === 'th' ? 'กรุณากรอกรายละเอียด (อย่างน้อย 10 ตัวอักษร)' : 'Please provide a description (min 10 characters)';
-        if (phone.replace(/\D/g, '').length < 6) e.phone = lang === 'th' ? 'เบอร์โทรไม่ถูกต้อง' : 'Please provide a callback phone number';
+        // Internal extensions can be as short as 3 digits (e.g. 123).
+        if (phone.replace(/\D/g, '').length < 3) e.phone = lang === 'th' ? 'เบอร์โทรไม่ถูกต้อง' : 'Please provide a callback phone number';
         setErrors(e);
         if (Object.keys(e).length) return;
 
@@ -131,22 +149,61 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                     </Field>
 
                     <Field label={t('ticket_attach')} help={t('ticket_attach_help')}>
-                        <label className="border-border hover:border-brand/50 text-muted-foreground flex cursor-pointer flex-col items-center rounded-md border border-dashed px-4 py-5 text-center text-sm transition-colors">
-                            <Paperclip className="h-5 w-5" />
-                            <span className="mt-1.5">{lang === 'th' ? 'คลิกเพื่อเลือกไฟล์' : 'Click to choose files'}</span>
+                        {/* Drag & drop OR click to choose */}
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => inputRef.current?.click()}
+                            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                setDragOver(true);
+                            }}
+                            onDragLeave={(e) => {
+                                e.preventDefault();
+                                setDragOver(false);
+                            }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                setDragOver(false);
+                                addFiles(e.dataTransfer.files);
+                            }}
+                            className={cn(
+                                'flex cursor-pointer flex-col items-center rounded-lg border border-dashed px-4 py-6 text-center text-sm transition-colors',
+                                dragOver ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:border-brand/50',
+                            )}
+                        >
+                            <UploadCloud className="h-6 w-6" />
+                            <span className="mt-2 font-medium">{lang === 'th' ? 'ลากไฟล์มาวาง หรือคลิกเพื่อเลือก' : 'Drag & drop files here, or click to choose'}</span>
+                            <span className="text-muted-foreground mt-0.5 text-[11px]">PNG · JPG · PDF</span>
                             <input
+                                ref={inputRef}
                                 type="file"
                                 multiple
                                 accept="image/png,image/jpeg,application/pdf"
                                 className="hidden"
-                                onChange={(e) => setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])])}
+                                onChange={(e) => {
+                                    addFiles(e.target.files ?? []);
+                                    e.target.value = '';
+                                }}
                             />
-                        </label>
+                        </div>
+
                         {files.length > 0 && (
-                            <ul className="mt-2 space-y-1">
+                            <div className="mt-2.5 space-y-1.5">
+                                <div className="text-brand flex items-center gap-1.5 text-[11px] font-semibold">
+                                    <Paperclip className="h-3.5 w-3.5" />
+                                    {lang === 'th' ? `แนบแล้ว ${files.length} ไฟล์` : `${files.length} file${files.length > 1 ? 's' : ''} attached`}
+                                </div>
                                 {files.map((f, i) => (
-                                    <li key={i} className="bg-muted/50 flex items-center justify-between gap-2 rounded px-2.5 py-1.5 text-xs">
-                                        <span className="truncate">{f.name}</span>
+                                    <div key={i} className="border-brand/30 bg-brand/5 flex items-center gap-2.5 rounded-lg border px-3 py-2">
+                                        <span className="text-brand shrink-0">
+                                            {f.type === 'application/pdf' ? <FileText className="h-4 w-4" /> : <FileImage className="h-4 w-4" />}
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-foreground truncate text-xs font-medium">{f.name}</div>
+                                            <div className="text-muted-foreground text-[10.5px]">{fmtSize(f.size)}</div>
+                                        </div>
                                         <button
                                             type="button"
                                             className="text-muted-foreground hover:text-destructive shrink-0"
@@ -154,9 +211,9 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         >
                                             <X className="h-3.5 w-3.5" />
                                         </button>
-                                    </li>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         )}
                     </Field>
                 </div>

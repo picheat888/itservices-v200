@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Employee;
+use App\Models\Position;
 use App\Models\Section;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,15 +35,22 @@ class StoreEmployeeRequest extends FormRequest
     {
         $employeeId = $this->route('employee')?->id;
 
+        // A "special position" skips both the department and the report-to (manager)
+        // requirements. A normal position (selected, not special) requires both. With no
+        // position (legacy/bare records) both stay optional.
+        $positionId = $this->input('position_id');
+        $position = $positionId ? Position::find($positionId) : null;
+        $requireOrg = $position !== null && ! $position->allow_special_position;
+
         return [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'first_name_th' => ['nullable', 'string', 'max:255'],
             'last_name_th' => ['nullable', 'string', 'max:255'],
-            'department_id' => ['nullable', 'exists:departments,id'],
-            'section_id' => ['nullable', 'exists:sections,id'],
+            'department_id' => [$requireOrg ? 'required' : 'nullable', 'exists:departments,id'],
+            'section_id' => [$requireOrg ? 'required' : 'nullable', 'exists:sections,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
-            'manager_id' => ['nullable', 'exists:employees,id'],
+            'manager_id' => [$requireOrg ? 'required' : 'nullable', 'exists:employees,id'],
             'email' => ['nullable', 'email', 'max:255'],
             'username' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],

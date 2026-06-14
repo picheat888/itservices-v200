@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends Model
 {
-    protected $fillable = ['code', 'title'];
+    protected $fillable = ['code', 'title', 'allow_special_position'];
+
+    protected $casts = [
+        'allow_special_position' => 'boolean',
+    ];
 
     protected static function booted(): void
     {

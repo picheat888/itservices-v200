@@ -93,8 +93,9 @@ class AuditDetailTest extends TestCase
     public function test_employee_update_endpoint_records_resolved_org_labels(): void
     {
         $super = User::factory()->create(['role' => 'super']);
-        $director = Position::create(['title' => 'Director']);
-        $manager = Position::create(['title' => 'Manager']);
+        // Special positions skip the org requirements so this audit-focused test needn't set them.
+        $director = Position::create(['title' => 'Director', 'allow_special_position' => true]);
+        $manager = Position::create(['title' => 'Manager', 'allow_special_position' => true]);
         $emp = Employee::create(['first_name' => 'Worker', 'last_name' => 'Test', 'position_id' => $director->id]);
 
         $this->actingAs($super)

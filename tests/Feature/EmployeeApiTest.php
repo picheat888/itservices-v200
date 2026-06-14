@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Position;
 use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class EmployeeApiTest extends TestCase
@@ -38,6 +41,83 @@ class EmployeeApiTest extends TestCase
         $this->putJson("/api/employees/{$boss->id}", ['first_name' => 'Boss', 'last_name' => 'Test', 'manager_id' => $staff->id])
             ->assertStatus(422)
             ->assertJsonValidationErrors('manager_id');
+    }
+
+    public function test_normal_position_requires_department_section_and_report_to(): void
+    {
+        $this->actingAs($this->super());
+        $position = Position::create(['title' => 'Operator']); // allow_special_position defaults to false
+        $emp = Employee::create(['first_name' => 'No', 'last_name' => 'Org']);
+
+        $this->putJson("/api/employees/{$emp->id}", ['first_name' => 'No', 'last_name' => 'Org', 'position_id' => $position->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['department_id', 'section_id', 'manager_id']);
+    }
+
+    public function test_special_position_skips_department_and_report_to(): void
+    {
+        $this->actingAs($this->super());
+        $position = Position::create(['title' => 'Managing Director', 'allow_special_position' => true]);
+        $emp = Employee::create(['first_name' => 'Top', 'last_name' => 'Boss']);
+
+        $this->putJson("/api/employees/{$emp->id}", ['first_name' => 'Top', 'last_name' => 'Boss', 'position_id' => $position->id])
+            ->assertOk();
+        $this->assertSame($position->id, $emp->fresh()->position_id);
+        $this->assertNull($emp->fresh()->department_id);
+        $this->assertNull($emp->fresh()->manager_id);
+    }
+
+    public function test_update_with_photo_saves_the_file(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->super());
+        // Special position so department/section/report-to aren't required — isolate the photo path.
+        $position = Position::create(['title' => 'MD', 'allow_special_position' => true]);
+        $emp = Employee::create(['first_name' => 'Pic', 'last_name' => 'Test']);
+        $file = UploadedFile::fake()->image('avatar.png', 600, 600);
+
+        // Mirror the frontend: multipart POST with spoofed PUT.
+        $this->post("/api/employees/{$emp->id}", [
+            '_method' => 'PUT',
+            'first_name' => 'Pic',
+            'last_name' => 'Test',
+            'position_id' => $position->id,
+            'photo' => $file,
+        ])->assertOk();
+
+        $path = $emp->fresh()->photo_path;
+        $this->assertNotNull($path, 'photo_path should be set after upload');
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_update_full_payload_with_photo_like_the_form(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->super());
+        $dept = Department::create(['name' => 'IT']);
+        $section = Section::create(['department_id' => $dept->id, 'name' => 'Network']);
+        $position = Position::create(['title' => 'Operator']); // normal → dept/section/report-to required
+        $boss = Employee::create(['first_name' => 'Boss', 'last_name' => 'Test']);
+        $emp = Employee::create(['first_name' => 'Pic', 'last_name' => 'Full', 'code' => 'EMP-9001']);
+        $file = UploadedFile::fake()->image('avatar.png', 600, 600);
+
+        $this->post("/api/employees/{$emp->id}", [
+            '_method' => 'PUT',
+            'first_name' => 'Pic',
+            'last_name' => 'Full',
+            'code' => 'EMP-9001', // its own code — must be ignored by the unique rule
+            'department_id' => $dept->id,
+            'section_id' => $section->id,
+            'position_id' => $position->id,
+            'manager_id' => $boss->id,
+            'email' => 'pic@x.co',
+            'phone' => '0800000000',
+            'joined_at' => '2024-01-15',
+            'photo' => $file,
+        ])->assertOk();
+
+        $this->assertNotNull($emp->fresh()->photo_path);
+        $this->assertSame($section->id, $emp->fresh()->section_id);
     }
 
     public function test_valid_manager_is_accepted(): void

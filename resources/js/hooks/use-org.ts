@@ -85,6 +85,10 @@ export function useEmployeeMutations() {
         qc.invalidateQueries({ queryKey: DEPT });
         qc.invalidateQueries({ queryKey: ['employees-directory'] });
         qc.invalidateQueries({ queryKey: ['employees-summary'] });
+        // Single-employee detail + org/access views so an open dialog reflects changes live.
+        qc.invalidateQueries({ queryKey: ['employee'] });
+        qc.invalidateQueries({ queryKey: ['org-chart'] });
+        qc.invalidateQueries({ queryKey: ['employee-access'] });
     };
     return {
         create: useMutation({ mutationFn: (p: EmployeePayload) => employeeApi.create(p), onSuccess: invalidate }),
@@ -120,9 +124,10 @@ export function usePositionMutations() {
     const qc = useQueryClient();
     const invalidate = () => qc.invalidateQueries({ queryKey: POS });
     return {
-        create: useMutation({ mutationFn: (p: { title: string }) => positionApi.create(p), onSuccess: invalidate }),
+        create: useMutation({ mutationFn: (p: { title: string; allow_special_position?: boolean }) => positionApi.create(p), onSuccess: invalidate }),
         update: useMutation({
-            mutationFn: (v: { id: number; title: string }) => positionApi.update(v.id, { title: v.title }),
+            mutationFn: (v: { id: number; title: string; allow_special_position?: boolean }) =>
+                positionApi.update(v.id, { title: v.title, allow_special_position: v.allow_special_position }),
             onSuccess: invalidate,
         }),
         remove: useMutation({ mutationFn: (id: number) => positionApi.remove(id), onSuccess: invalidate }),

@@ -21,6 +21,8 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import {
     useDepartmentMutations,
@@ -43,6 +45,7 @@ import {
     ChevronRight,
     Eye,
     Import,
+    Info,
     KeyRound,
     Layers,
     MoreVertical,
@@ -102,6 +105,8 @@ export default function EmployeesPage() {
     const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
     const [viewEmp, setViewEmp] = useState<Employee | null>(null);
+    // "View profile" inside the org explorer: load the picked person, then swap the dialog to them.
+    const [profileId, setProfileId] = useState<number | null>(null);
     const [resignEmp, setResignEmp] = useState<Employee | null>(null);
     const [resetPwEmp, setResetPwEmp] = useState<Employee | null>(null);
     const [credEmp, setCredEmp] = useState<Employee | null>(null);
@@ -121,6 +126,14 @@ export default function EmployeesPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const highlightId = searchParams.get('highlight');
     const { data: highlighted } = useEmployee(highlightId ? Number(highlightId) : null);
+    // Fetch the person chosen via "View profile" and switch the open dialog to them.
+    const { data: profileEmp } = useEmployee(profileId);
+    useEffect(() => {
+        if (profileEmp) {
+            setViewEmp(profileEmp);
+            setProfileId(null);
+        }
+    }, [profileEmp]);
 
     useEffect(() => {
         if (highlightId) setTab('directory');
@@ -193,6 +206,44 @@ export default function EmployeesPage() {
                     <Users className="text-muted-foreground h-3.5 w-3.5" />
                     {p.employees_count ?? 0}
                 </span>
+            ),
+        },
+        {
+            key: 'allow_special',
+            header: (
+                <span className="inline-flex items-center gap-1">
+                    {t('pos_allow_special')}
+                    <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex" aria-label={t('pos_allow_special')}>
+                                    <Info className="h-3.5 w-3.5" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-left font-normal normal-case">{t('pos_allow_special_info')}</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </span>
+            ),
+            align: 'center',
+            // Quick per-position toggle — stop row-click (opens members) from firing.
+            render: (p) => (
+                <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                        checked={p.allow_special_position}
+                        disabled={!canManageOrg || positionMut.update.isPending}
+                        onChange={(next) =>
+                            confirm({
+                                variant: 'warn',
+                                title: t('pos_allow_special'),
+                                description: next ? t('pos_allow_special_confirm_on') : t('pos_allow_special_confirm_off'),
+                                entity: { name: p.title },
+                                action: () => positionMut.update.mutateAsync({ id: p.id, title: p.title, allow_special_position: next }),
+                            })
+                        }
+                        aria-label={t('pos_allow_special')}
+                    />
+                </div>
             ),
         },
         {
@@ -460,14 +511,13 @@ export default function EmployeesPage() {
                     });
                 }}
                 onResetPassword={(e) => setResetPwEmp(e)}
-                onSetCredentials={(e) => {
-                    setViewEmp(null);
-                    setCredEmp(e);
-                }}
+                // Keep the view dialog open so the credentials modal stacks on top of it.
+                onSetCredentials={(e) => setCredEmp(e)}
                 onEdit={(e) => {
                     setViewEmp(null);
                     setEditEmp(e);
                 }}
+                onViewProfile={(id) => setProfileId(id)}
             />
             <ResignModal
                 employee={resignEmp}

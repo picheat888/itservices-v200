@@ -68,6 +68,8 @@ export interface Position {
     id: number;
     code: string;
     title: string;
+    /** "Special position": employees in it may be saved without a department or a report-to. */
+    allow_special_position: boolean;
     employees_count?: number;
 }
 

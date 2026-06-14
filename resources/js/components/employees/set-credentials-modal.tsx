@@ -1,11 +1,13 @@
+import { Field } from '@/components/shared/field';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useEmployeeMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/types';
-import { ShieldCheck } from 'lucide-react';
+import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 /**
@@ -20,14 +22,52 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
+    const [showPw, setShowPw] = useState(false);
+    const [copied, setCopied] = useState<string | null>(null);
+    // Brief success state — shows "✓ Saved" before the dialog closes.
+    const [saved, setSaved] = useState(false);
+    // Holds the auto-generated pair so the stacked confirm dialog can show them in plain text.
+    const [autoCreds, setAutoCreds] = useState<{ username: string; password: string } | null>(null);
 
-    // Reset the form whenever a different employee is opened.
+    // Reset the form whenever a different employee is opened. Skip on close (employee → null)
+    // so the "✓ Saved" state isn't reverted to "Save" mid-way through the exit animation.
     useEffect(() => {
+        if (!employee) return;
         setUsername('');
         setPassword('');
         setConfirm('');
         setError('');
+        setShowPw(false);
+        setAutoCreds(null);
+        setSaved(false);
+        // Re-run only when a different employee opens (id), not on every employee object change.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
+
+    // Auto-fill: username = first name + "_" + first 2 letters of last name (lowercased);
+    // password = the employee code. Then reveal the pair in a confirm dialog.
+    const handleAuto = () => {
+        if (!employee) return;
+        const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const u = `${clean(employee.first_name ?? '')}_${clean(employee.last_name ?? '').slice(0, 2)}`;
+        const p = employee.code ?? '';
+        setUsername(u);
+        setPassword(p);
+        setConfirm(p);
+        setShowPw(true);
+        setError('');
+        setAutoCreds({ username: u, password: p });
+    };
+
+    const copy = (text: string, key: string) => {
+        try {
+            navigator.clipboard?.writeText(text);
+        } catch {
+            /* clipboard may be unavailable */
+        }
+        setCopied(key);
+        setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
+    };
 
     const handleSubmit = async () => {
         if (!employee) return;
@@ -37,63 +77,133 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         if (password !== confirm) { setError(t('cred_err_no_match')); return; }
         try {
             await setCredentials.mutateAsync({ id: employee.id, username: username.trim(), password, password_confirmation: confirm });
-            onClose();
+            // Flash "✓ Saved" briefly, then close.
+            setSaved(true);
+            window.setTimeout(onClose, 1200);
         } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setError(msg ?? t('cred_err_generic'));
+            const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+            // Surface the unique-username rejection clearly (localized), else the server message.
+            setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
         }
     };
 
     const empName = employee ? (lang === 'th' ? employee.name_th ?? employee.name : employee.name) : '';
 
     return (
-        <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-w-sm">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <ShieldCheck className="h-5 w-5 text-brand" />
-                        {t('cred_set_title')}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {empName}
-                        {employee?.code ? ` (${employee.code})` : ''}
-                    </DialogDescription>
-                </DialogHeader>
+        <>
+            <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ShieldCheck className="text-brand h-5 w-5" />
+                            {t('cred_set_title')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {empName}
+                            {employee?.code ? ` (${employee.code})` : ''}
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <div className="space-y-2 py-1">
-                    <Input
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder={t('cred_username')}
-                        autoComplete="off"
-                    />
-                    <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder={t('cred_password')}
-                        autoComplete="new-password"
-                    />
-                    <Input
-                        type="password"
-                        value={confirm}
-                        onChange={(e) => setConfirm(e.target.value)}
-                        placeholder={t('cred_confirm_password')}
-                        autoComplete="new-password"
-                    />
-                    {error && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
-                </div>
+                    <div className="space-y-3">
+                        {/* Auto-generate */}
+                        <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground text-xs">{t('cred_auto_hint')}</span>
+                            <Button type="button" variant="outline" size="sm" onClick={handleAuto}>
+                                <Wand2 className="h-4 w-4" />
+                                {t('cred_auto')}
+                            </Button>
+                        </div>
 
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose}>
-                        {t('cancel')}
-                    </Button>
-                    <Button onClick={handleSubmit} disabled={setCredentials.isPending}>
-                        <ShieldCheck className="h-4 w-4" />
-                        {setCredentials.isPending ? t('cred_saving') : t('cred_save')}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                        <Field label={t('cred_username')}>
+                            <Input value={username} onChange={(e) => setUsername(e.target.value)} className="font-mono" placeholder="e.g. john_do" autoComplete="off" />
+                        </Field>
+                        <Field label={t('cred_password')}>
+                            <div className="relative">
+                                <Input
+                                    type={showPw ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="pr-9 font-mono"
+                                    placeholder="••••••"
+                                    autoComplete="new-password"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPw((s) => !s)}
+                                    className="text-muted-foreground hover:text-foreground absolute right-2.5 top-1/2 -translate-y-1/2"
+                                    tabIndex={-1}
+                                >
+                                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        </Field>
+                        <Field label={t('cred_confirm_password')}>
+                            <Input
+                                type={showPw ? 'text' : 'password'}
+                                value={confirm}
+                                onChange={(e) => setConfirm(e.target.value)}
+                                className="font-mono"
+                                placeholder="••••••"
+                                autoComplete="new-password"
+                            />
+                        </Field>
+
+                        {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={onClose}>
+                            {t('cancel')}
+                        </Button>
+                        <Button onClick={handleSubmit} disabled={setCredentials.isPending || saved}>
+                            {setCredentials.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
+                            {setCredentials.isPending ? t('saving') : saved ? t('saved') : t('save')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Stacked confirm — reveals the generated pair in plain text, copyable. */}
+            <Dialog open={!!autoCreds} onOpenChange={(o) => !o && setAutoCreds(null)}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Wand2 className="text-brand h-5 w-5" />
+                            {t('cred_auto_title')}
+                        </DialogTitle>
+                        <DialogDescription>{t('cred_share_hint')}</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-2">
+                        {[
+                            { key: 'u', label: t('cred_username'), value: autoCreds?.username ?? '' },
+                            { key: 'p', label: t('cred_password'), value: autoCreds?.password ?? '' },
+                        ].map((row) => (
+                            <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-muted-foreground text-[10.5px] font-semibold uppercase tracking-wide">{row.label}</div>
+                                    <div className="truncate font-mono text-sm font-semibold">{row.value}</div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => copy(row.value, row.key)}
+                                    title={copied === row.key ? t('cred_copied') : undefined}
+                                    className={cn(
+                                        'hover:bg-accent grid h-8 w-8 shrink-0 place-items-center rounded-md transition',
+                                        copied === row.key ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                    )}
+                                >
+                                    {copied === row.key ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <DialogFooter>
+                        <Button onClick={() => setAutoCreds(null)}>{t('cd_confirm')}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

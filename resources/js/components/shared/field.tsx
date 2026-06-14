@@ -6,16 +6,19 @@ export function Field({
     error,
     required,
     help,
+    name,
     children,
 }: {
     label: string;
     error?: string;
     required?: boolean;
     help?: string;
+    /** Field key — exposed as data-field so a form can scroll/focus it on validation error. */
+    name?: string;
     children: React.ReactNode;
 }) {
     return (
-        <div className="space-y-1.5">
+        <div data-field={name} className="space-y-1.5">
             <Label>
                 {label}
                 {required && <span className="text-destructive ml-0.5">*</span>}
