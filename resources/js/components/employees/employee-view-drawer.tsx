@@ -1,14 +1,16 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { useEmployeeAccess } from '@/hooks/use-access';
+import { useAccessMutations, useEmployeeAccess } from '@/hooks/use-access';
+import { useAuth } from '@/hooks/use-auth';
 import { useApprovalChain, useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { ApproverNode, Employee, OrgChartNode } from '@/types';
+import type { AccessKind, Employee, EmployeeAccessRow, ApproverNode, OrgChartNode } from '@/types';
 import {
+    Ban,
     Briefcase,
     Building2,
     Check,
@@ -88,6 +90,14 @@ export function EmployeeViewDrawer({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const L = (th: string, en: string) => (lang === 'th' ? th : en);
+    const { can } = useAuth();
+    const canViewAccess = can('access.view');
+    const canManageAccess = can('access.manage');
+
+    // Access mutation hooks — called unconditionally (Rules of Hooks); the right one is picked per group when revoking.
+    const emailGroupMut = useAccessMutations('email-groups');
+    const fileShareMut = useAccessMutations('file-shares');
+    const socialMut = useAccessMutations('social-platforms');
 
     const [tab, setTab] = useState<'overview' | 'org' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
@@ -132,6 +142,30 @@ export function EmployeeViewDrawer({
     };
 
     const colorFor = (id: number, fallback?: string | null) => deptColor(nodeById.get(id)?.department_code ?? fallback ?? null);
+
+    // ── Access revoke ──
+    // Map each access group to its AccessKind + matching mutation hook.
+    const accessGroups = [
+        { key: 'email_groups' as const, kind: 'email-groups' as AccessKind, mut: emailGroupMut, label: L('กลุ่มอีเมล', 'Email groups'), icon: <Mail className="h-3.5 w-3.5" /> },
+        { key: 'file_shares' as const, kind: 'file-shares' as AccessKind, mut: fileShareMut, label: L('ไฟล์แชร์', 'File shares'), icon: <Folder className="h-3.5 w-3.5" /> },
+        { key: 'social' as const, kind: 'social-platforms' as AccessKind, mut: socialMut, label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'), icon: <Globe className="h-3.5 w-3.5" /> },
+    ];
+    const mutByKey = { email_groups: emailGroupMut, file_shares: fileShareMut, social: socialMut } as const;
+    const revoking = emailGroupMut.revokeMember.isPending || fileShareMut.revokeMember.isPending || socialMut.revokeMember.isPending;
+
+    // Revoke one membership through the mutation matching its group.
+    const revokeRow = (groupKey: keyof typeof mutByKey, row: EmployeeAccessRow) =>
+        mutByKey[groupKey].revokeMember.mutateAsync({ id: row.resource_id, membershipId: row.id });
+
+    // Revoke every listed active membership across all three groups.
+    const revokeAll = async () => {
+        if (!access) return;
+        for (const grp of accessGroups) {
+            for (const row of access[grp.key]) {
+                await grp.mut.revokeMember.mutateAsync({ id: row.resource_id, membershipId: row.id });
+            }
+        }
+    };
 
     // ── Sub-components ──
     const RailRow = ({ icon, label, value, mono, copyKey }: { icon: React.ReactNode; label: string; value?: string | null; mono?: boolean; copyKey?: string }) => (
@@ -349,7 +383,9 @@ export function EmployeeViewDrawer({
                             {([
                                 { id: 'overview' as const, label: L('ภาพรวม', 'Overview'), icon: <LayoutDashboard className="h-[15px] w-[15px]" /> },
                                 { id: 'org' as const, label: L('องค์กร', 'Organization'), icon: <Users className="h-[15px] w-[15px]" />, count: directReports.length + approvalChain.length },
-                                { id: 'access' as const, label: L('สิทธิ์เข้าถึง', 'Access'), icon: <Shield className="h-[15px] w-[15px]" />, count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0 },
+                                ...(canViewAccess
+                                    ? [{ id: 'access' as const, label: L('สิทธิ์เข้าถึง', 'Access'), icon: <Shield className="h-[15px] w-[15px]" />, count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0 }]
+                                    : []),
                             ]).map((tb) => (
                                 <button
                                     key={tb.id}
@@ -389,15 +425,17 @@ export function EmployeeViewDrawer({
                                 <div className="space-y-5">
                                     {access?.outstanding && (
                                         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium">
-                                            <TriangleAlert className="h-4 w-4" />
-                                            {L('พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอน', 'Resigned — these accesses are still active and should be revoked')}
+                                            <TriangleAlert className="h-4 w-4 shrink-0" />
+                                            <span className="flex-1">{L('พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอน', 'Resigned — these accesses are still active and should be revoked')}</span>
+                                            {canManageAccess && (
+                                                <Button variant="destructive" size="sm" className="shrink-0" disabled={revoking} onClick={() => revokeAll()}>
+                                                    <Ban className="h-3.5 w-3.5" />
+                                                    {L('ถอนทั้งหมด', 'Revoke all')}
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
-                                    {[
-                                        { key: 'email_groups' as const, label: L('กลุ่มอีเมล', 'Email groups'), icon: <Mail className="h-3.5 w-3.5" /> },
-                                        { key: 'file_shares' as const, label: L('ไฟล์แชร์', 'File shares'), icon: <Folder className="h-3.5 w-3.5" /> },
-                                        { key: 'social' as const, label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'), icon: <Globe className="h-3.5 w-3.5" /> },
-                                    ].map((grp) => {
+                                    {accessGroups.map((grp) => {
                                         const rows = access?.[grp.key] ?? [];
                                         if (rows.length === 0) return null;
                                         return (
@@ -415,6 +453,18 @@ export function EmployeeViewDrawer({
                                                             <div className="text-muted-foreground truncate font-mono text-[11px]">{r.resource_detail ?? r.resource_code}</div>
                                                         </div>
                                                         <span className="text-muted-foreground shrink-0 text-xs">{r.access_level ?? r.purpose ?? '—'}</span>
+                                                        {canManageAccess && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => revokeRow(grp.key, r)}
+                                                                disabled={revoking}
+                                                                className="text-destructive hover:bg-destructive/10 inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition disabled:opacity-50"
+                                                                title={L('ถอนสิทธิ์', 'Revoke')}
+                                                            >
+                                                                <Ban className="h-3.5 w-3.5" />
+                                                                {L('ถอนสิทธิ์', 'Revoke')}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
