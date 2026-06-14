@@ -21,7 +21,7 @@ class EmailGroupResource extends JsonResource
             'description' => $this->description,
             'owner_employee_id' => $this->owner_employee_id,
             'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
-            'members_count' => $this->whenCounted('activeMemberships', $this->active_memberships_count, $this->memberships()->active()->count()),
+            'members_count' => $this->memberships()->active()->count(),
         ];
     }
 }
