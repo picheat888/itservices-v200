@@ -27,6 +27,10 @@ export interface User {
     photo_url: string | null;
     phone: string | null;
     name_th: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    first_name_th: string | null;
+    last_name_th: string | null;
     permissions: string[];
     preferences: UserPreferences;
     email_verified_at: string | null;
@@ -42,10 +46,12 @@ export type EmployeeStatus = 'active' | 'resigned';
 
 export interface Department {
     id: number;
+    code: string;
     tag: string;
     name: string;
     name_th: string | null;
     count?: number;
+    sections_count?: number;
 }
 
 export interface Section {
@@ -62,7 +68,7 @@ export interface Position {
     id: number;
     code: string;
     title: string;
-    level: number;
+    employees_count?: number;
 }
 
 export interface ApproverNode {
@@ -72,7 +78,6 @@ export interface ApproverNode {
     name_th: string | null;
     photo_url: string | null;
     position: string | null;
-    level: number | null;
     department: string | null;
     status: string;
 }
@@ -83,7 +88,6 @@ export interface OrgChartNode {
     name: string;
     name_th: string | null;
     title: string | null;
-    level: number | null;
     department: string | null;
     department_code: string | null;
     photo_url: string | null;
@@ -99,6 +103,11 @@ export interface LocationItem {
 export interface Employee {
     id: number;
     code: string;
+    first_name: string;
+    last_name: string;
+    first_name_th: string | null;
+    last_name_th: string | null;
+    // Composed full names from the API (read-only, derived from first/last).
     name: string;
     name_th: string | null;
     photo_url: string | null;
@@ -540,3 +549,70 @@ export interface StockSummary {
     by_warehouse: { warehouse: string; skus: number; units: number }[];
     by_category: { category: string; skus: number; units: number }[];
 }
+
+export interface EmailGroup {
+    id: number;
+    code: string;
+    name: string;
+    email: string;
+    department_id: number | null;
+    department?: string | null;
+    description?: string | null;
+    owner_employee_id: number | null;
+    owner?: string | null;
+    members_count?: number;
+}
+
+export interface FileShare {
+    id: number;
+    code: string;
+    name: string;
+    path: string;
+    department_id: number | null;
+    department?: string | null;
+    size_label?: string | null;
+    owner_employee_id: number | null;
+    owner?: string | null;
+    members_count?: number;
+}
+
+export interface SocialPlatform {
+    id: number;
+    code: string;
+    name: string;
+    url?: string | null;
+    color?: string | null;
+    policy?: string | null;
+    members_count?: number;
+}
+
+export interface AccessMember {
+    id: number;
+    employee_id: number;
+    employee?: string | null;
+    access_level: string | null;
+    purpose: string | null;
+    granted_at: string | null;
+    revoked_at: string | null;
+}
+
+export interface EmployeeAccessRow {
+    id: number;
+    resource_id: number;
+    resource_name: string | null;
+    resource_code: string | null;
+    resource_detail: string | null;
+    resource_color: string | null;
+    access_level: string | null;
+    purpose: string | null;
+    granted_at: string | null;
+}
+
+export interface EmployeeAccess {
+    email_groups: EmployeeAccessRow[];
+    file_shares: EmployeeAccessRow[];
+    social: EmployeeAccessRow[];
+    outstanding: boolean;
+}
+
+export type AccessKind = 'email-groups' | 'file-shares' | 'social-platforms';
