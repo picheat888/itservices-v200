@@ -17,7 +17,7 @@ class FileShareController extends Controller
     /** List all file shares (with department + owner). */
     public function index(): JsonResponse
     {
-        return FileShareResource::collection(FileShare::with(['department', 'owner'])->orderBy('code')->get())->response();
+        return FileShareResource::collection(FileShare::with(['department', 'owner', 'memberships' => fn ($q) => $q->active()->with('employee')])->orderBy('code')->get())->response();
     }
 
     /** Create a new file share. */

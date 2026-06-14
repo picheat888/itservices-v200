@@ -21,7 +21,13 @@ class FileShareResource extends JsonResource
             'size_label' => $this->size_label,
             'owner_employee_id' => $this->owner_employee_id,
             'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
-            'members_count' => $this->memberships()->active()->count(),
+            'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
+                'id' => $m->id,
+                'employee_id' => $m->employee_id,
+                'name' => $m->employee?->name,
+                'access_level' => $m->access_level,
+            ])->values()),
+            'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),
         ];
     }
 }
