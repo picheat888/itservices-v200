@@ -1,4 +1,5 @@
 import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
+import { EditEmployeeDialog } from '@/components/employees/edit-employee-dialog';
 import { DepartmentMembersDialog } from '@/components/employees/department-members-dialog';
 import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
@@ -435,14 +436,8 @@ export default function EmployeesPage() {
                 </div>
             </Card>
 
-            <AddEmployeeDrawer
-                open={addOpen || !!editEmp}
-                employee={editEmp}
-                onClose={() => {
-                    setAddOpen(false);
-                    setEditEmp(null);
-                }}
-            />
+            <AddEmployeeDrawer open={addOpen} onClose={() => setAddOpen(false)} />
+            <EditEmployeeDialog open={!!editEmp} onClose={() => setEditEmp(null)} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             <EmployeeViewDrawer
                 employee={viewEmp}
