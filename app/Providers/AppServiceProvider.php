@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -23,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+
+        Relation::enforceMorphMap([
+            'email_group' => \App\Models\EmailGroup::class,
+            'file_share' => \App\Models\FileShare::class,
+            'social_platform' => \App\Models\SocialPlatform::class,
+        ]);
     }
 
     /**
