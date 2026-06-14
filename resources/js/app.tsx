@@ -9,6 +9,7 @@ import { ConfirmProvider } from '@/components/ui/confirm-dialog';
 import { useApplyTheme } from '@/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
 import { queryClient } from '@/lib/query-client';
+import AccessControlPage from '@/pages/access';
 import AssetsPage from '@/pages/assets';
 import ContractsPage from '@/pages/contracts';
 import DashboardPage from '@/pages/dashboard';
@@ -49,6 +50,14 @@ function App() {
                             element={
                                 <RequirePermission anyOf={['employees.view']}>
                                     <EmployeesPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="access"
+                            element={
+                                <RequirePermission anyOf={['access.view']}>
+                                    <AccessControlPage />
                                 </RequirePermission>
                             }
                         />
