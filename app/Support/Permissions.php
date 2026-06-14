@@ -25,6 +25,7 @@ class Permissions
                 'request', 'approve', 'fulfill',
             ],
             'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
+            'access' => ['view', 'manage'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'assets', 'security'],
         ];
@@ -65,12 +66,14 @@ class Permissions
                 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
                 'employees.view', 'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
+                'access.view', 'access.manage',
                 'system.manage_permissions', 'system.manage_roles', 'system.manage_groups',
                 'system.view_audit',
             ],
             // HR — full Employee function + own tickets/requests
             'hr' => [
                 'employees.view', 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
+                'access.view',
                 'tickets.create', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
