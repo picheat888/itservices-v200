@@ -64,6 +64,22 @@ class TicketApiTest extends TestCase
             ->assertJsonValidationErrors(['subject', 'description']);
     }
 
+    public function test_callback_phone_accepts_a_short_internal_extension(): void
+    {
+        $this->actingAs($this->userWithEmployee());
+
+        $this->postJson('/api/tickets', $this->payload(['callback_phone' => '123']))->assertCreated();
+    }
+
+    public function test_callback_phone_rejects_fewer_than_three_digits(): void
+    {
+        $this->actingAs($this->userWithEmployee());
+
+        $this->postJson('/api/tickets', $this->payload(['callback_phone' => '12']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('callback_phone');
+    }
+
     public function test_user_without_create_permission_is_forbidden(): void
     {
         // A plain 'user' has no seeded role_permissions in this test DB → denied.

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useDepartmentMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import type { Department } from '@/types';
-import { Check, Loader2 } from 'lucide-react';
+import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const empty = { name: '', name_th: '', tag: '' };
@@ -37,6 +37,9 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
         form.tag.trim() !== initial.current.tag.trim();
 
     const set = (k: keyof typeof empty, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+    // Tag must be English letters / numbers only (plus space, dash, underscore). Warn live while typing.
+    const tagInvalid = /[^A-Z0-9 _-]/.test(form.tag);
 
     const submit = async () => {
         if (!form.name.trim()) return;
@@ -78,14 +81,21 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                             className="font-mono uppercase"
                             maxLength={50}
                         />
-                        {!error && <p className="mt-1 text-xs text-muted-foreground">{t('dept_code_hint')}</p>}
+                        {tagInvalid ? (
+                            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                {t('dept_code_en_only')}
+                            </p>
+                        ) : (
+                            !error && <p className="mt-1 text-xs text-muted-foreground">{t('dept_code_hint')}</p>
+                        )}
                     </Field>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={!form.name.trim() || !isDirty || create.isPending || update.isPending || saved}>
+                    <Button onClick={submit} disabled={!form.name.trim() || !isDirty || tagInvalid || create.isPending || update.isPending || saved}>
                         {create.isPending || update.isPending ? (
                             <><Loader2 className="h-4 w-4 animate-spin" />{t('saving')}</>
                         ) : saved ? (

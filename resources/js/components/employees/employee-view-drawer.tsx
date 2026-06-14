@@ -3,23 +3,29 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { useAccessMutations, useEmployeeAccess } from '@/hooks/use-access';
 import { useAuth } from '@/hooks/use-auth';
-import { useApprovalChain, useOrgChart } from '@/hooks/use-org';
+import { useApprovalChain, useEmployee, useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor } from '@/lib/org-tree';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { AccessKind, Employee, EmployeeAccessRow, ApproverNode, OrgChartNode } from '@/types';
+import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/types';
 import {
     Ban,
     Briefcase,
     Building2,
     Check,
+    ChevronLeft,
+    ChevronRight,
     Clock,
+    Contact,
     Copy,
     Crown,
     Folder,
     Globe,
     Hash,
+    House,
+    Inbox,
+    Laptop,
     LayoutDashboard,
     Mail,
     Phone,
@@ -27,6 +33,7 @@ import {
     Shield,
     ShieldCheck,
     SquarePen,
+    Ticket,
     TriangleAlert,
     UserCheck,
     UserMinus,
@@ -55,9 +62,6 @@ function tenureOf(joined?: string | null) {
     return { y: Math.floor(months / 12), m: months % 12 };
 }
 
-const CARD_W = 220;
-const GAP = 14;
-
 export function EmployeeViewDrawer({
     employee,
     onClose,
@@ -72,6 +76,7 @@ export function EmployeeViewDrawer({
     onResetPassword,
     onSetCredentials,
     onEdit,
+    onViewProfile,
 }: {
     employee: Employee | null;
     onClose: () => void;
@@ -86,6 +91,8 @@ export function EmployeeViewDrawer({
     onResetPassword: (e: Employee) => void;
     onSetCredentials: (e: Employee) => void;
     onEdit: (e: Employee) => void;
+    /** Open another person's profile (from the org explorer's "View profile"). */
+    onViewProfile?: (employeeId: number) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -99,7 +106,7 @@ export function EmployeeViewDrawer({
     const fileShareMut = useAccessMutations('file-shares');
     const socialMut = useAccessMutations('social-platforms');
 
-    const [tab, setTab] = useState<'overview' | 'org' | 'access'>('overview');
+    const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
     useEffect(() => {
         setTab('overview');
@@ -108,6 +115,9 @@ export function EmployeeViewDrawer({
     const { data: approvalChain = [] } = useApprovalChain(employee?.id ?? null);
     const { data: orgNodes = [] } = useOrgChart();
     const { data: access } = useEmployeeAccess(employee?.id ?? null);
+    // Live copy of the employee — refetched when mutations invalidate ['employee'], so
+    // setting credentials reflects immediately (No-account badge/strip clears without reload).
+    const { data: liveEmp } = useEmployee(employee?.id ?? null);
 
     const nodeById = useMemo(() => new Map(orgNodes.map((n) => [n.id, n])), [orgNodes]);
     const directReports = useMemo(
@@ -117,19 +127,21 @@ export function EmployeeViewDrawer({
 
     if (!employee) return null;
 
-    const emp = employee;
+    const emp = liveEmp ?? employee;
     const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';
     const tenure = tenureOf(emp.joined_at);
+    // The person this employee reports to (their manager), resolved from the org list.
+    const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;
+    const managerName = managerNode ? (lang === 'th' ? (managerNode.name_th ?? managerNode.name) : managerNode.name) : null;
 
     const accentCode = nodeById.get(emp.id)?.department_code ?? null;
-    const accent = deptColor(accentCode);
-    const accentSoft = `color-mix(in oklch, ${accent} 14%, var(--card))`;
-    const accentBorder = `color-mix(in oklch, ${accent} 30%, var(--card))`;
+    // The header/chrome is neutral. The brand colour is kept ONLY for the active tab
+    // indicator and the Edit button; department colours live ONLY in the Organization tab.
+    const accent = 'var(--brand)';
 
     const showCredentials = canSetCredentials && !emp.has_account && !resigned;
-    const hasAccountActions = canResetPassword || canSetCredentials || canResign || canCancelResign;
 
     const copy = (txt: string, key: string) => {
         try {
@@ -140,8 +152,6 @@ export function EmployeeViewDrawer({
         setCopied(key);
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
     };
-
-    const colorFor = (id: number, fallback?: string | null) => deptColor(nodeById.get(id)?.department_code ?? fallback ?? null);
 
     // ── Access revoke ──
     // Map each access group to its AccessKind + matching mutation hook.
@@ -191,62 +201,30 @@ export function EmployeeViewDrawer({
         </div>
     );
 
-    const OrgCard = ({ id, name: cardName, nameTh, title, deptCode, isCenter }: { id: number; name: string; nameTh?: string | null; title?: string | null; deptCode?: string | null; isCenter?: boolean }) => {
-        const dc = colorFor(id, deptCode);
-        const dn = lang === 'th' ? (nameTh ?? cardName) : cardName;
-        return (
-            <div
-                className={cn('bg-card relative rounded-xl border px-4 py-3 shadow-sm', isCenter ? 'shadow-md' : 'border-border')}
-                style={{ width: CARD_W, ...(isCenter ? { borderColor: dc, boxShadow: `0 0 0 3px color-mix(in oklch, ${dc} 16%, transparent)` } : {}) }}
-            >
-                <span aria-hidden className="absolute inset-y-0 left-0 w-[5px] rounded-l-xl" style={{ background: dc }} />
-                <div className="flex items-center gap-3 pl-1">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[13px] font-bold text-white" style={{ background: dc, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}>
-                        {initials(cardName)}
-                    </div>
-                    <div className="min-w-0">
-                        <div className="truncate text-sm font-bold leading-tight">{dn}</div>
-                        <div className="text-muted-foreground truncate text-[11.5px]">{title || '—'}</div>
-                    </div>
-                </div>
-                <div className="mt-2.5 flex items-center justify-between pl-1">
-                    <span className="font-mono text-[10.5px] font-semibold tracking-wide" style={{ color: dc }}>
-                        {deptCode || nodeById.get(id)?.department_code || ''}
-                    </span>
-                    {isCenter && (
-                        <span className="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide" style={{ color: dc, borderColor: accentBorder, background: accentSoft }}>
-                            {L('กำลังดู', 'Viewing')}
-                        </span>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    const VLine = () => <div className="bg-border h-7 w-0.5 shrink-0" />;
     const Kpi = ({ val, lbl, warn }: { val: React.ReactNode; lbl: string; warn?: boolean }) => (
-        <div className="flex min-w-[64px] flex-col items-center px-4">
-            <div className={cn('text-[22px] font-extrabold leading-none tracking-tight tabular-nums', warn && 'text-amber-500')}>{val}</div>
-            <div className="text-muted-foreground mt-1.5 text-[10.5px] font-semibold uppercase tracking-wide whitespace-nowrap">{lbl}</div>
+        <div className="flex min-w-[46px] flex-col items-center px-2.5">
+            <div className={cn('text-[16px] font-extrabold leading-none tracking-tight tabular-nums', warn && 'text-amber-500')}>{val}</div>
+            <div className="text-muted-foreground mt-1 text-[9px] font-semibold uppercase tracking-wide whitespace-nowrap">{lbl}</div>
         </div>
     );
-
-    // upward chain rendered top → direct-manager
-    const chainTopDown = [...approvalChain].reverse();
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="flex h-[88vh] max-h-[780px] w-[96vw] max-w-[1080px] flex-col gap-0 overflow-hidden rounded-2xl p-0">
                 <DialogTitle className="sr-only">{name}</DialogTitle>
 
-                {/* ── COVER ── */}
+                {/* ── COVER ── (neutral chrome — no brand tint here) */}
                 <div
                     className="border-border flex shrink-0 items-center gap-5 border-b px-7 pb-5 pt-6"
-                    style={{ background: `radial-gradient(120% 160% at 0% 0%, ${accentSoft} 0%, var(--card) 58%)` }}
+                    style={{ background: 'radial-gradient(120% 160% at 0% 0%, var(--accent) 0%, var(--card) 60%)' }}
                 >
-                    <Avatar className="h-[72px] w-[72px] shrink-0 rounded-2xl" style={{ boxShadow: `0 0 0 4px ${accentBorder}, 0 0 0 8px var(--card)` }}>
-                        {emp.photo_url && <AvatarImage src={emp.photo_url} alt="" className="rounded-2xl" />}
-                        <AvatarFallback className="rounded-2xl text-2xl font-extrabold text-white" style={{ background: accent }}>
+                    {/* Avatar — minimal: soft offset ring, gentle float shadow, monochrome fallback. */}
+                    <Avatar className="ring-card h-[72px] w-[72px] shrink-0 rounded-full shadow-md ring-2">
+                        {emp.photo_url && <AvatarImage src={emp.photo_url} alt="" className="rounded-full object-cover" />}
+                        <AvatarFallback
+                            className="text-muted-foreground rounded-full text-2xl font-semibold tracking-tight"
+                            style={{ background: 'linear-gradient(135deg, var(--muted), color-mix(in oklch, var(--foreground) 8%, var(--muted)))' }}
+                        >
                             {initials(emp.name)}
                         </AvatarFallback>
                     </Avatar>
@@ -265,30 +243,42 @@ export function EmployeeViewDrawer({
                                     {t('emp_super_admin')}
                                 </span>
                             )}
+                            {/* Login-account state as a badge alongside Status. */}
+                            {emp.has_account ? (
+                                <span className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
+                                    <ShieldCheck className="text-brand h-3 w-3" />
+                                    {L('มีบัญชีใช้งาน', 'Has login account')}
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                                    <TriangleAlert className="h-3 w-3" />
+                                    {L('ยังไม่มีบัญชีใช้งาน', 'No login account')}
+                                </span>
+                            )}
                         </div>
                         {altName && <div className="text-muted-foreground mb-2.5 text-[13px]">{altName}</div>}
                         <div className="flex flex-wrap gap-1.5">
-                            <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-xs font-medium" style={{ color: accent, background: accentSoft, borderColor: accentBorder }}>
-                                <Hash className="h-3 w-3" />
+                            <span className="bg-muted border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-mono text-xs font-medium">
+                                <Hash className="text-muted-foreground h-3 w-3" />
                                 {emp.code}
                             </span>
                             <span className="bg-muted border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium">
                                 <Briefcase className="text-muted-foreground h-3 w-3" />
                                 {emp.position || '—'}
                             </span>
-                            <span className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium" style={{ color: accent, background: accentSoft, borderColor: accentBorder }}>
-                                <Building2 className="h-3 w-3" />
+                            <span className="bg-muted border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                                <Building2 className="text-muted-foreground h-3 w-3" />
                                 {lang === 'th' ? (emp.department_th ?? emp.department) : emp.department}
                             </span>
                         </div>
                     </div>
 
                     {/* KPI strip */}
-                    <div className="border-border bg-card hidden shrink-0 items-center rounded-2xl border px-5 py-3.5 shadow-sm sm:flex">
-                        <Kpi val={<>{tenure.y}<small className="text-muted-foreground ml-0.5 text-[13px] font-semibold">{L('ปี', 'yr')}</small></>} lbl={L('อายุงาน', 'Tenure')} />
-                        <div className="bg-border h-9 w-px" />
+                    <div className="border-border bg-card hidden shrink-0 items-center rounded-xl border px-2.5 py-2 shadow-sm sm:flex">
+                        <Kpi val={<>{tenure.y}<small className="text-muted-foreground ml-0.5 text-[11px] font-semibold">{L('ปี', 'yr')}</small></>} lbl={L('อายุงาน', 'Tenure')} />
+                        <div className="bg-border h-7 w-px" />
                         <Kpi val={directReports.length} lbl={L('ลูกน้อง', 'Reports')} />
-                        <div className="bg-border h-9 w-px" />
+                        <div className="bg-border h-7 w-px" />
                         <Kpi val={approvalChain.length} lbl={L('ขั้นอนุมัติ', 'Approval')} />
                     </div>
                 </div>
@@ -303,6 +293,21 @@ export function EmployeeViewDrawer({
                     </div>
                 )}
 
+                {/* ── NO-ACCOUNT STRIP ── shown only while the employee still has no username/password */}
+                {showCredentials && (
+                    <div className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-7 py-2.5 dark:border-amber-800 dark:bg-amber-950/20">
+                        <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div className="min-w-0 flex-1">
+                            <span className="text-[12px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{t('cred_no_account')}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">{t('cred_no_account_desc')}</span>
+                        </div>
+                        <Button size="sm" className="shrink-0" onClick={() => onSetCredentials(emp)}>
+                            <ShieldCheck className="h-4 w-4" />
+                            {t('emp_set_credentials')}
+                        </Button>
+                    </div>
+                )}
+
                 {/* ── BODY ── */}
                 <div className="flex min-h-0 flex-1">
                     {/* RAIL */}
@@ -312,68 +317,17 @@ export function EmployeeViewDrawer({
                             <RailRow icon={<Mail className="h-3.5 w-3.5" />} label={L('อีเมล', 'Email')} value={emp.email} copyKey="email" />
                             <RailRow icon={<Phone className="h-3.5 w-3.5" />} label={L('โทรศัพท์', 'Phone')} value={emp.phone} copyKey="phone" mono />
                             {emp.username && <RailRow icon={<Shield className="h-3.5 w-3.5" />} label={L('ชื่อผู้ใช้', 'Username')} value={emp.username} copyKey="user" mono />}
-                            <div className="flex items-center gap-1.5 text-xs">
-                                {emp.has_account ? (
-                                    <span className="text-muted-foreground inline-flex items-center gap-1">
-                                        <ShieldCheck className="text-brand h-3.5 w-3.5" />
-                                        {L('มีบัญชีใช้งาน', 'Has login account')}
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                                        <TriangleAlert className="h-3.5 w-3.5" />
-                                        {L('ยังไม่มีบัญชีใช้งาน', 'No login account')}
-                                    </span>
-                                )}
-                            </div>
                         </section>
 
                         <section className="flex flex-col gap-3">
                             <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold uppercase tracking-wider">{L('ข้อมูลการจ้างงาน', 'Employment')}</div>
+                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={lang === 'th' ? (emp.section_th ?? emp.section) : emp.section} />
                             <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={lang === 'th' ? (emp.department_th ?? emp.department) : emp.department} />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp.position} />
-                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={lang === 'th' ? (emp.section_th ?? emp.section) : emp.section} />
+                            <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={managerName} />
                             <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={emp.joined_at} mono />
                         </section>
 
-                        {showCredentials && (
-                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-                                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                                    <ShieldCheck className="h-4 w-4" />
-                                    {t('cred_no_account')}
-                                </div>
-                                <p className="text-muted-foreground mt-1.5 text-xs">{t('cred_no_account_desc')}</p>
-                                <Button size="sm" className="mt-2.5 w-full" onClick={() => onSetCredentials(emp)}>
-                                    <ShieldCheck className="h-4 w-4" />
-                                    {t('emp_set_credentials')}
-                                </Button>
-                            </div>
-                        )}
-
-                        {hasAccountActions && (
-                            <section className="flex flex-col gap-3">
-                                <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold uppercase tracking-wider">{L('บัญชีและการเข้าถึง', 'Account & access')}</div>
-                                <div className="flex flex-col gap-1.5">
-                                    {canResetPassword && emp.has_account && (
-                                        <Button variant="outline" size="sm" className="justify-start" onClick={() => onResetPassword(emp)}>
-                                            <RefreshCw className="h-4 w-4" />
-                                            {t('reset_password')}
-                                        </Button>
-                                    )}
-                                    {canResign && !resigned && (
-                                        <Button variant="outline" size="sm" className="text-destructive justify-start" onClick={() => onResign(emp)}>
-                                            <UserMinus className="h-4 w-4" />
-                                            {t('resign_employee')}
-                                        </Button>
-                                    )}
-                                    {canCancelResign && resigned && (
-                                        <Button variant="outline" size="sm" className="justify-start text-emerald-600 dark:text-emerald-400" onClick={() => onCancelResign(emp)}>
-                                            <UserCheck className="h-4 w-4" />
-                                            {t('cancel_resign')}
-                                        </Button>
-                                    )}
-                                </div>
-                            </section>
-                        )}
                     </aside>
 
                     {/* MAIN */}
@@ -381,10 +335,14 @@ export function EmployeeViewDrawer({
                         {/* Tabs */}
                         <div className="border-border flex shrink-0 gap-1 border-b px-4 pt-2.5">
                             {([
-                                { id: 'overview' as const, label: L('ภาพรวม', 'Overview'), icon: <LayoutDashboard className="h-[15px] w-[15px]" /> },
-                                { id: 'org' as const, label: L('องค์กร', 'Organization'), icon: <Users className="h-[15px] w-[15px]" />, count: directReports.length + approvalChain.length },
+                                { id: 'overview' as const, label: L('ภาพรวม', 'Overview'), icon: <LayoutDashboard className="h-[15px] w-[15px]" />, count: undefined as number | undefined, soon: false },
+                                { id: 'org' as const, label: L('องค์กร', 'Organization'), icon: <Users className="h-[15px] w-[15px]" />, count: undefined, soon: false },
+                                // Planned tabs from the design — not wired to data yet (Coming soon).
+                                { id: 'assets' as const, label: L('อุปกรณ์', 'Assets'), icon: <Laptop className="h-[15px] w-[15px]" />, count: undefined, soon: true },
+                                { id: 'tickets' as const, label: L('ทิกเก็ต', 'Tickets'), icon: <Ticket className="h-[15px] w-[15px]" />, count: undefined, soon: true },
+                                { id: 'requests' as const, label: L('คำขอ', 'Requests'), icon: <Inbox className="h-[15px] w-[15px]" />, count: undefined, soon: true },
                                 ...(canViewAccess
-                                    ? [{ id: 'access' as const, label: L('สิทธิ์เข้าถึง', 'Access'), icon: <Shield className="h-[15px] w-[15px]" />, count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0 }]
+                                    ? [{ id: 'access' as const, label: L('สิทธิ์เข้าถึง', 'Access'), icon: <Shield className="h-[15px] w-[15px]" />, count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0, soon: false }]
                                     : []),
                             ]).map((tb) => (
                                 <button
@@ -401,23 +359,28 @@ export function EmployeeViewDrawer({
                                     {tb.count != null && tb.count > 0 && (
                                         <span className="bg-muted text-muted-foreground inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">{tb.count}</span>
                                     )}
+                                    {tb.soon && (
+                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                            {L('เร็วๆนี้', 'soon')}
+                                        </span>
+                                    )}
                                     {tab === tb.id && <span className="absolute inset-x-2 -bottom-px h-[2.5px] rounded" style={{ background: accent }} />}
                                 </button>
                             ))}
                         </div>
 
-                        {/* Pane */}
-                        <div className="flex-1 overflow-y-auto p-5">
+                        {/* Pane — the Organization tab fills the whole area (no padding/scroll
+                            here; OrgPane manages its own layout + single scroll). */}
+                        <div className={cn('min-h-0 flex-1', tab === 'org' ? 'flex flex-col' : 'overflow-y-auto p-5')}>
                             {tab === 'overview' && (
-                                <OverviewPane emp={emp} tenure={tenure} reports={directReports.length} steps={approvalChain.length} accent={accent} accentSoft={accentSoft} L={L} />
+                                <OverviewPane emp={emp} tenure={tenure} reports={directReports.length} steps={approvalChain.length} L={L} />
                             )}
                             {tab === 'org' && (
                                 <OrgPane
-                                    chainTopDown={chainTopDown}
-                                    directReports={directReports}
-                                    OrgCard={OrgCard}
-                                    VLine={VLine}
-                                    focus={{ id: emp.id, name: emp.name, nameTh: emp.name_th, title: emp.position, deptCode: accentCode }}
+                                    orgNodes={orgNodes}
+                                    nodeById={nodeById}
+                                    rootFocus={{ id: emp.id, name: emp.name, nameTh: emp.name_th, title: emp.position, deptCode: accentCode }}
+                                    onViewProfile={onViewProfile}
                                     L={L}
                                 />
                             )}
@@ -475,17 +438,39 @@ export function EmployeeViewDrawer({
                                     )}
                                 </div>
                             )}
+                            {tab === 'assets' && <ComingSoon icon={<Laptop className="h-6 w-6" />} title={L('อุปกรณ์', 'Assets')} L={L} />}
+                            {tab === 'tickets' && <ComingSoon icon={<Ticket className="h-6 w-6" />} title={L('ทิกเก็ต', 'Tickets')} L={L} />}
+                            {tab === 'requests' && <ComingSoon icon={<Inbox className="h-6 w-6" />} title={L('คำขอ', 'Requests')} L={L} />}
                         </div>
                     </div>
                 </div>
 
                 {/* ── FOOTER ── */}
                 <div className="border-border bg-card flex shrink-0 items-center justify-between gap-2.5 border-t px-5 py-3">
-                    <div className="text-muted-foreground truncate font-mono text-xs">{emp.email || emp.code}</div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={onClose}>
-                            {t('cancel')}
-                        </Button>
+                    {/* Cancel sits on the left. */}
+                    <Button variant="outline" onClick={onClose}>
+                        {t('cancel')}
+                    </Button>
+                    {/* Account actions (moved out of the rail) sit beside Edit on the right. */}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        {canResetPassword && emp.has_account && (
+                            <Button variant="outline" onClick={() => onResetPassword(emp)}>
+                                <RefreshCw className="h-4 w-4" />
+                                {t('reset_password')}
+                            </Button>
+                        )}
+                        {canResign && !resigned && (
+                            <Button variant="outline" className="text-destructive" onClick={() => onResign(emp)}>
+                                <UserMinus className="h-4 w-4" />
+                                {t('resign_employee')}
+                            </Button>
+                        )}
+                        {canCancelResign && resigned && (
+                            <Button variant="outline" className="text-emerald-600 dark:text-emerald-400" onClick={() => onCancelResign(emp)}>
+                                <UserCheck className="h-4 w-4" />
+                                {t('cancel_resign')}
+                            </Button>
+                        )}
                         {canEdit && !resigned && (
                             <Button
                                 onClick={() => onEdit(emp)}
@@ -504,26 +489,35 @@ export function EmployeeViewDrawer({
     );
 }
 
+/** Placeholder pane for tabs from the design that aren't wired to data yet. */
+function ComingSoon({ icon, title, L }: { icon: React.ReactNode; title: string; L: (th: string, en: string) => string }) {
+    return (
+        <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
+            <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">{icon}</div>
+            <div>
+                <div className="text-foreground text-sm font-semibold">{title}</div>
+                <div className="mt-0.5 text-xs">{L('กำลังจะมาเร็ว ๆ นี้', 'Coming soon')}</div>
+            </div>
+        </div>
+    );
+}
+
 /** Overview tab — summary cards. */
 function OverviewPane({
     emp,
     tenure,
     reports,
     steps,
-    accent,
-    accentSoft,
     L,
 }: {
     emp: Employee;
     tenure: { y: number; m: number };
     reports: number;
     steps: number;
-    accent: string;
-    accentSoft: string;
     L: (th: string, en: string) => string;
 }) {
     const cards = [
-        { icon: <Clock className="h-[17px] w-[17px]" />, val: `${tenure.y}${L('ปี', 'y')} ${tenure.m}${L('ด.', 'm')}`, lbl: L('อายุงาน', 'Tenure'), tint: true },
+        { icon: <Clock className="h-[17px] w-[17px]" />, val: `${tenure.y}${L('ปี', 'y')} ${tenure.m}${L('ด.', 'm')}`, lbl: L('อายุงาน', 'Tenure') },
         { icon: <Users className="h-[17px] w-[17px]" />, val: reports, lbl: L('ลูกน้อง', 'Direct reports') },
         { icon: <Crown className="h-[17px] w-[17px]" />, val: steps, lbl: L('ขั้นอนุมัติ', 'Approval steps') },
         { icon: <ShieldCheck className="h-[17px] w-[17px]" />, val: emp.has_account ? '✓' : '—', lbl: L('บัญชี', 'Account') },
@@ -532,7 +526,7 @@ function OverviewPane({
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {cards.map((c, i) => (
                 <div key={i} className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]" style={c.tint ? { background: accentSoft, color: accent } : { background: 'var(--accent)', color: 'var(--accent-foreground)' }}>
+                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]" style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>
                         {c.icon}
                     </div>
                     <div className="min-w-0">
@@ -545,82 +539,305 @@ function OverviewPane({
     );
 }
 
-/** Organization tab — manager chain (top → down), focused employee, direct reports. */
+/**
+ * Organization tab — a Microsoft Teams-style org explorer. Shows the focused person's
+ * manager chain (above), the person, and their direct reports. Clicking any manager or
+ * report "walks" the view to that person. A Home | Back | Next control (top-left of the
+ * framed area) navigates the browse history.
+ */
 function OrgPane({
-    chainTopDown,
-    directReports,
-    OrgCard,
-    VLine,
-    focus,
+    orgNodes,
+    nodeById,
+    rootFocus,
+    onViewProfile,
     L,
 }: {
-    chainTopDown: ApproverNode[];
-    directReports: OrgChartNode[];
-    OrgCard: (p: { id: number; name: string; nameTh?: string | null; title?: string | null; deptCode?: string | null; isCenter?: boolean }) => React.ReactNode;
-    VLine: () => React.ReactNode;
-    focus: { id: number; name: string; nameTh?: string | null; title?: string | null; deptCode?: string | null };
+    orgNodes: OrgChartNode[];
+    nodeById: Map<number, OrgChartNode>;
+    rootFocus: { id: number; name: string; nameTh?: string | null; title?: string | null; deptCode?: string | null };
+    onViewProfile?: (employeeId: number) => void;
     L: (th: string, en: string) => string;
 }) {
-    const Label = ({ children }: { children: React.ReactNode }) => (
-        <div className="text-muted-foreground my-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">{children}</div>
+    const lang = useUiStore((s) => s.lang);
+
+    // How many managers above the focus to show before collapsing the rest into a
+    // "Show N more" pill, and how many direct reports before a "Show N more" button.
+    const VISIBLE_MANAGERS = 2;
+    const VISIBLE_REPORTS = 6;
+
+    // Browse history (like a browser): history[ptr] is the person on screen.
+    // index 0 is always the employee the dialog was opened for (Home target).
+    const [history, setHistory] = useState<number[]>([rootFocus.id]);
+    const [ptr, setPtr] = useState(0);
+    const [managersExpanded, setManagersExpanded] = useState(false);
+    const [reportsExpanded, setReportsExpanded] = useState(false);
+    useEffect(() => {
+        setHistory([rootFocus.id]);
+        setPtr(0);
+    }, [rootFocus.id]);
+
+    const focusId = history[ptr];
+    const canBack = ptr > 0;
+    const canNext = ptr < history.length - 1;
+    const canHome = focusId !== rootFocus.id;
+
+    // Collapse the expand toggles whenever the focused person changes.
+    useEffect(() => {
+        setManagersExpanded(false);
+        setReportsExpanded(false);
+    }, [focusId]);
+
+    // Navigate to a new person → truncate any forward history and push.
+    const navTo = (id: number) => {
+        if (id === focusId) return;
+        setHistory((h) => [...h.slice(0, ptr + 1), id]);
+        setPtr((p) => p + 1);
+    };
+    const goHome = () => setPtr(0);
+    const goBack = () => setPtr((p) => Math.max(0, p - 1));
+    const goNext = () => setPtr((p) => Math.min(history.length - 1, p + 1));
+
+    // Children index → direct reports + total-subtree size for any node.
+    const childrenOf = useMemo(() => {
+        const m = new Map<number, OrgChartNode[]>();
+        for (const n of orgNodes) {
+            if (n.manager_id == null) continue;
+            const arr = m.get(n.manager_id);
+            if (arr) arr.push(n);
+            else m.set(n.manager_id, [n]);
+        }
+        return m;
+    }, [orgNodes]);
+
+    // Total people anywhere below a node (all levels), used for the 👥 badge.
+    const totalReports = (id: number) => {
+        let count = 0;
+        const seen = new Set<number>();
+        const stack = [...(childrenOf.get(id) ?? [])];
+        while (stack.length) {
+            const n = stack.pop()!;
+            if (seen.has(n.id)) continue;
+            seen.add(n.id);
+            count++;
+            const ch = childrenOf.get(n.id);
+            if (ch) stack.push(...ch);
+        }
+        return count;
+    };
+    const directCount = (id: number) => childrenOf.get(id)?.length ?? 0;
+
+    // Synthetic node for the focus, falling back to rootFocus when not in the org list.
+    const focusNode: OrgChartNode =
+        nodeById.get(focusId) ?? {
+            id: rootFocus.id,
+            code: '',
+            name: rootFocus.name,
+            name_th: rootFocus.nameTh ?? null,
+            title: rootFocus.title ?? null,
+            department: null,
+            department_code: rootFocus.deptCode ?? null,
+            photo_url: null,
+            manager_id: null,
+            reports_count: 0,
+        };
+
+    // Manager chain above the focus, top → direct-manager.
+    const chainTopDown = useMemo(() => {
+        const chain: OrgChartNode[] = [];
+        const seen = new Set<number>();
+        let cur = nodeById.get(focusId)?.manager_id ?? null;
+        while (cur != null && nodeById.has(cur) && !seen.has(cur)) {
+            seen.add(cur);
+            chain.push(nodeById.get(cur)!);
+            cur = nodeById.get(cur)?.manager_id ?? null;
+        }
+        return chain.reverse();
+    }, [focusId, nodeById]);
+
+    const directReports = useMemo(() => childrenOf.get(focusId) ?? [], [childrenOf, focusId]);
+
+    const hiddenManagers = chainTopDown.slice(0, Math.max(0, chainTopDown.length - VISIBLE_MANAGERS));
+    const shownManagers = managersExpanded ? chainTopDown : chainTopDown.slice(Math.max(0, chainTopDown.length - VISIBLE_MANAGERS));
+    const shownReports = reportsExpanded ? directReports : directReports.slice(0, VISIBLE_REPORTS);
+    const hiddenReportsCount = directReports.length - shownReports.length;
+
+    const nameOf = (n: { name: string; name_th?: string | null }) => (lang === 'th' ? (n.name_th ?? n.name) : n.name);
+
+    // ── Small building blocks ──
+    const NavBtn = ({ onClick, disabled, title, children }: { onClick: () => void; disabled?: boolean; title: string; children: React.ReactNode }) => (
+        <button
+            type="button"
+            onClick={onClick}
+            disabled={disabled}
+            title={title}
+            className="border-border bg-card text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md border transition disabled:cursor-not-allowed disabled:opacity-40"
+        >
+            {children}
+        </button>
     );
 
-    const drTotal = directReports.length * CARD_W + (directReports.length - 1) * GAP;
-    const drCenters = directReports.map((_, i) => i * (CARD_W + GAP) + CARD_W / 2);
+    const NodeAvatar = ({ node, size }: { node: OrgChartNode; size: number }) => {
+        const dc = deptColor(node.department_code);
+        return (
+            <div className="shrink-0 overflow-hidden rounded-full" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}>
+                {node.photo_url ? (
+                    <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                    <div className="grid h-full w-full place-items-center font-bold text-white" style={{ background: dc, fontSize: size * 0.36 }}>
+                        {initials(node.name)}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const Connector = () => <div className="bg-border mx-auto h-3 w-px" />;
+
+    // Full-width card for a manager / direct report (clickable to walk the view).
+    const NodeCard = ({ node }: { node: OrgChartNode }) => {
+        const dc = deptColor(node.department_code);
+        const total = totalReports(node.id);
+        return (
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => navTo(node.id)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), navTo(node.id))}
+                className="border-border bg-card relative flex w-full cursor-pointer items-center gap-2.5 rounded-lg border py-1.5 pl-3 pr-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+                <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-lg" style={{ background: dc }} />
+                <NodeAvatar node={node} size={32} />
+                <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-bold leading-tight">{nameOf(node)}</div>
+                    <div className="text-muted-foreground truncate text-[11px]">{node.title || '—'}</div>
+                </div>
+                {total > 0 && (
+                    <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1 text-[11px]">
+                        <Users className="h-3 w-3" />
+                        {total}
+                    </span>
+                )}
+            </div>
+        );
+    };
+
+    const dc = deptColor(focusNode.department_code);
 
     return (
-        <div className="flex w-full flex-col items-center overflow-x-auto pb-7">
-            {chainTopDown.length === 0 && <div className="bg-muted border-border text-muted-foreground mb-1 rounded-full border px-3.5 py-1 text-[10.5px] font-semibold">{L('ระดับสูงสุดในโครงสร้าง', 'Top of hierarchy')}</div>}
-
-            {chainTopDown.map((node, i) => (
-                <div key={node.id} className="flex flex-col items-center">
-                    {i === 0 && chainTopDown.length > 0 && <Label>{L('สายบังคับบัญชา', 'Reporting line')}</Label>}
-                    <OrgCard id={node.id} name={node.name} nameTh={node.name_th} title={node.position} />
-                    <VLine />
+        <div className="flex h-full min-h-0 flex-col">
+            {/* Navigation bar (top-left controls + current person) — flush at the top of the tab */}
+            <div className="border-border bg-card/40 flex shrink-0 items-center gap-1.5 border-b px-4 py-2.5">
+                <NavBtn onClick={goHome} disabled={!canHome} title={L('กลับไปคนเริ่มต้น', 'Home')}>
+                    <House className="h-3.5 w-3.5" />
+                </NavBtn>
+                <NavBtn onClick={goBack} disabled={!canBack} title={L('ย้อนกลับ', 'Back')}>
+                    <ChevronLeft className="h-4 w-4" />
+                </NavBtn>
+                <NavBtn onClick={goNext} disabled={!canNext} title={L('ถัดไป', 'Next')}>
+                    <ChevronRight className="h-4 w-4" />
+                </NavBtn>
+                <div className="text-muted-foreground ml-2 min-w-0 truncate text-xs">
+                    <span className="text-foreground font-medium">{L('กำลังดู', 'Viewing')}:</span> {nameOf(focusNode)}
                 </div>
-            ))}
+            </div>
 
-            {/* Focused employee */}
-            <OrgCard id={focus.id} name={focus.name} nameTh={focus.nameTh} title={focus.title} deptCode={focus.deptCode} isCenter />
+            {/* Diagram — fills the remaining height and is the single scroll container */}
+            <div className="min-h-0 flex-1 overflow-auto p-4">
+                <div className="mx-auto flex w-full max-w-[460px] flex-col">
+                    {/* Collapsed managers → "Show N more" pill with an avatar stack */}
+                    {!managersExpanded && hiddenManagers.length > 0 && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => setManagersExpanded(true)}
+                                className="border-border bg-card hover:bg-accent mx-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition"
+                            >
+                                <span className="flex -space-x-2">
+                                    {hiddenManagers.slice(0, 3).map((m) => (
+                                        <span key={m.id} className="ring-card inline-flex rounded-full ring-2">
+                                            <NodeAvatar node={m} size={20} />
+                                        </span>
+                                    ))}
+                                </span>
+                                {L(`แสดงอีก ${hiddenManagers.length}`, `Show ${hiddenManagers.length} more`)}
+                            </button>
+                            <Connector />
+                        </>
+                    )}
 
-            {/* Direct reports */}
-            {directReports.length === 1 && (
-                <>
-                    <Label>{L('ผู้ใต้บังคับบัญชา', 'Direct report')}</Label>
-                    <VLine />
-                    <OrgCard id={directReports[0].id} name={directReports[0].name} nameTh={directReports[0].name_th} title={directReports[0].title} deptCode={directReports[0].department_code} />
-                </>
-            )}
+                    {/* Manager chain (clickable) */}
+                    {shownManagers.map((node) => (
+                        <div key={node.id} className="flex flex-col">
+                            <NodeCard node={node} />
+                            <Connector />
+                        </div>
+                    ))}
 
-            {directReports.length > 1 && (
-                <>
-                    <Label>
-                        {L('ผู้ใต้บังคับบัญชา', 'Direct reports')}
-                        <span className="bg-muted border-border text-muted-foreground inline-grid h-4 min-w-4 place-items-center rounded-lg border px-1 font-mono text-[10px] font-bold">{directReports.length}</span>
-                    </Label>
-                    <VLine />
-                    <div className="flex max-w-full flex-col items-center overflow-x-auto pb-1">
-                        <svg width={drTotal} height={24} className="mx-auto block overflow-visible">
-                            <line x1={drCenters[0]} y1={0} x2={drCenters[drCenters.length - 1]} y2={0} className="stroke-border" strokeWidth={1.5} />
-                            {drCenters.map((cx, i) => (
-                                <line key={i} x1={cx} y1={0} x2={cx} y2={24} className="stroke-border" strokeWidth={1.5} />
-                            ))}
-                        </svg>
-                        <div className="flex" style={{ gap: GAP }}>
-                            {directReports.map((r) => (
-                                <OrgCard key={r.id} id={r.id} name={r.name} nameTh={r.name_th} title={r.title} deptCode={r.department_code} />
-                            ))}
+                    {/* Focused person — highlighted card */}
+                    <div className="bg-card relative rounded-lg border px-3.5 py-2.5 shadow-md" style={{ borderColor: dc, boxShadow: `0 0 0 2px color-mix(in oklch, ${dc} 16%, transparent)` }}>
+                        <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-lg" style={{ background: dc }} />
+                        <div className="flex items-start gap-2.5">
+                            <NodeAvatar node={focusNode} size={42} />
+                            <div className="min-w-0 flex-1">
+                                <div className="truncate text-[14px] font-bold leading-tight">{nameOf(focusNode)}</div>
+                                <div className="text-muted-foreground truncate text-[12px]">{focusNode.title || '—'}</div>
+                                {focusNode.department && <div className="text-muted-foreground truncate text-[11px]">{focusNode.department}</div>}
+                            </div>
+                        </div>
+                        {/* Footer: View profile (left) + report counts (right) */}
+                        <div className="border-border mt-2.5 flex items-center justify-between gap-3 border-t pt-2">
+                            {onViewProfile ? (
+                                <Button variant="outline" size="sm" onClick={() => onViewProfile(focusId)}>
+                                    <Contact className="h-4 w-4" />
+                                    {L('ดูโปรไฟล์', 'View profile')}
+                                </Button>
+                            ) : (
+                                <span />
+                            )}
+                            <div className="text-muted-foreground shrink-0 text-right text-[11px] leading-tight">
+                                <div>
+                                    <span className="text-foreground font-bold">{totalReports(focusId)}</span> {L('ใต้สังกัด', 'reports')}
+                                </div>
+                                <div className="mt-0.5">
+                                    <span className="text-foreground font-bold">{directCount(focusId)}</span> {L('โดยตรง', 'direct')}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </>
-            )}
 
-            {directReports.length === 0 && (
-                <div className="text-muted-foreground mt-4 flex items-center gap-1.5 text-xs">
-                    <Users className="h-[15px] w-[15px] opacity-40" />
-                    {L('ไม่มีผู้ใต้บังคับบัญชา', 'No direct reports')}
+                    {/* Direct reports */}
+                    {directReports.length > 0 ? (
+                        <>
+                            <div className="my-2.5 flex items-center gap-3">
+                                <div className="bg-border h-px flex-1" />
+                                <span className="text-muted-foreground text-[11px]">
+                                    {L('ผู้ใต้บังคับบัญชาของ', 'People reporting to')} <span className="text-foreground font-semibold">{nameOf(focusNode)}</span>
+                                </span>
+                                <div className="bg-border h-px flex-1" />
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {shownReports.map((r) => (
+                                    <NodeCard key={r.id} node={r} />
+                                ))}
+                            </div>
+                            {hiddenReportsCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setReportsExpanded(true)}
+                                    className="border-border bg-card hover:bg-accent mx-auto mt-3 inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold shadow-sm transition"
+                                >
+                                    {L(`แสดงอีก ${hiddenReportsCount}`, `Show ${hiddenReportsCount} more`)}
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <div className="text-muted-foreground mt-4 flex items-center justify-center gap-1.5 text-xs">
+                            <Users className="h-[15px] w-[15px] opacity-40" />
+                            {L('ไม่มีผู้ใต้บังคับบัญชา', 'No direct reports')}
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
         </div>
     );
 }

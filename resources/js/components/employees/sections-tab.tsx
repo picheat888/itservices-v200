@@ -146,9 +146,11 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
                             </div>
                             {/* Order by */}
                             <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-                                <SelectTrigger className="w-44">
-                                    <ArrowUpDown className="text-muted-foreground h-4 w-4" />
-                                    <SelectValue />
+                                <SelectTrigger className="w-52">
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                        <ArrowUpDown className="text-muted-foreground h-4 w-4 shrink-0" />
+                                        <SelectValue />
+                                    </div>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="code">

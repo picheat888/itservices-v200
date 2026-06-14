@@ -125,8 +125,8 @@ export const sectionApi = {
 export const positionApi = {
     list: () => http.get<ApiEnvelope<Position[]>>('/positions').then((r) => r.data.data),
     members: (id: number) => http.get<ApiEnvelope<Employee[]>>(`/positions/${id}/members`).then((r) => r.data.data),
-    create: (payload: { title: string }) => mutate<Position>('post', '/positions', payload),
-    update: (id: number, payload: { title: string }) => mutate<Position>('put', `/positions/${id}`, payload),
+    create: (payload: { title: string; allow_special_position?: boolean }) => mutate<Position>('post', '/positions', payload),
+    update: (id: number, payload: { title: string; allow_special_position?: boolean }) => mutate<Position>('put', `/positions/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/positions/${id}`),
 };
 

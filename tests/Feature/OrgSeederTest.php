@@ -30,8 +30,8 @@ class OrgSeederTest extends TestCase
         $this->seedOrg();
 
         $this->assertSame(14, Position::count());
-        $this->assertSame('Vice President', Position::where('code', 'P-14')->value('title'));
-        $this->assertSame('Subcontract', Position::where('code', 'P-01')->value('title'));
+        $this->assertSame('Vice President', Position::where('code', 'PST-0001')->value('title'));
+        $this->assertSame('Subcontract', Position::where('code', 'PST-0014')->value('title'));
     }
 
     /** EMP-0001 (Somchai Wattana — Vice President) has no manager: they are the root. */

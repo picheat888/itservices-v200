@@ -40,7 +40,9 @@ return [
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            // Relative URL so uploaded files (e.g. employee photos) load from whatever
+            // origin/port the SPA is served on — APP_URL's host/port can differ in dev.
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
         ],

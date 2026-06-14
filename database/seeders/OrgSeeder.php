@@ -37,20 +37,20 @@ class OrgSeeder extends Seeder
 
         // ── Positions (code => title) — a flat list of job titles. ───────────
         $positions = [
-            'P-14' => 'Vice President',
-            'P-13' => 'Director',
-            'P-12' => 'Senior Manager',
-            'P-11' => 'Manager',
-            'P-10' => 'Asst. Manager',
-            'P-09' => 'Senior Supervisor',
-            'P-08' => 'Supervisor',
-            'P-07' => 'Asst. Supervisor',
-            'P-06' => 'Leader',
-            'P-05' => 'Sub-Leader',
-            'P-04' => 'Head of Line',
-            'P-03' => 'Head of Shift',
-            'P-02' => 'Staff/Officer',
-            'P-01' => 'Subcontract',
+            'PST-0001' => 'Vice President',
+            'PST-0002' => 'Director',
+            'PST-0003' => 'Senior Manager',
+            'PST-0004' => 'Manager',
+            'PST-0005' => 'Asst. Manager',
+            'PST-0006' => 'Senior Supervisor',
+            'PST-0007' => 'Supervisor',
+            'PST-0008' => 'Asst. Supervisor',
+            'PST-0009' => 'Leader',
+            'PST-0010' => 'Sub-Leader',
+            'PST-0011' => 'Head of Line',
+            'PST-0012' => 'Head of Shift',
+            'PST-0013' => 'Staff/Officer',
+            'PST-0014' => 'Subcontract',
         ];
         foreach ($positions as $code => $title) {
             Position::updateOrCreate(['code' => $code], ['title' => $title]);
@@ -142,6 +142,8 @@ class OrgSeeder extends Seeder
                     'section_id' => $e['section'] ? ($sectionId["{$e['dept']}::{$e['section']}"] ?? null) : null,
                     'position_id' => $posId[$e['pos']] ?? null,
                     'email' => $email,
+                    // Spread join dates so the demo has realistic tenures (earlier rows = senior = joined earlier).
+                    'joined_at' => date('Y-m-d', strtotime('2016-01-01 +'.($i * 2).' months')),
                     'status' => 'active',
                 ],
             );

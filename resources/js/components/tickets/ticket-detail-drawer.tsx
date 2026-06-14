@@ -1,12 +1,14 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-meta';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useTicketMutations } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Ticket } from '@/types';
-import { Check, Paperclip, RefreshCcw, Users, X, Zap } from 'lucide-react';
+import type { Ticket, TicketAttachment } from '@/types';
+import { Check, ExternalLink, FileText, RefreshCcw, Users, X, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';
 
 /** Human-readable file size (KB/MB) for the attachment list. */
@@ -47,6 +49,11 @@ export function TicketDetailDrawer({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { deleteAttachment } = useTicketMutations();
+    // In-app image preview (lightbox) instead of opening a new browser tab.
+    const [preview, setPreview] = useState<TicketAttachment | null>(null);
+    useEffect(() => {
+        setPreview(null);
+    }, [ticket?.id]);
     if (!ticket) return null;
 
     const subject = lang === 'th' && ticket.subject_th ? ticket.subject_th : ticket.subject;
@@ -54,6 +61,7 @@ export function TicketDetailDrawer({
     const isOpenUnassigned = ticket.status === 'open' && ticket.assignee_id == null;
 
     return (
+        <>
         <Sheet open={!!ticket} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
                 <SheetHeader>
@@ -136,23 +144,41 @@ export function TicketDetailDrawer({
                         <div>
                             <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{t('ticket_attach')}</div>
                             <ul className="space-y-1.5">
-                                {ticket.attachments.map((a) => (
-                                    <li key={a.id} className="border-border flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
-                                        <Paperclip className="text-muted-foreground h-4 w-4 shrink-0" />
-                                        <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-brand flex-1 truncate hover:underline">
-                                            {a.name}
-                                        </a>
-                                        <span className="text-muted-foreground shrink-0 font-mono text-xs">{formatSize(a.size)}</span>
-                                        <button
-                                            type="button"
-                                            className="text-muted-foreground hover:text-destructive shrink-0"
-                                            onClick={() => deleteAttachment.mutate({ id: ticket.id, attachmentId: a.id })}
-                                            disabled={deleteAttachment.isPending}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </li>
-                                ))}
+                                {ticket.attachments.map((a) => {
+                                    const isImage = a.mime?.startsWith('image/');
+                                    return (
+                                        <li key={a.id} className="border-border flex items-center gap-2.5 rounded-md border px-3 py-2 text-sm">
+                                            {isImage ? (
+                                                // Thumbnail → opens the in-app lightbox.
+                                                <button type="button" onClick={() => setPreview(a)} className="shrink-0">
+                                                    <img src={a.url} alt="" className="border-border h-9 w-9 rounded-md border object-cover" />
+                                                </button>
+                                            ) : (
+                                                <span className="bg-muted text-muted-foreground grid h-9 w-9 shrink-0 place-items-center rounded-md">
+                                                    <FileText className="h-4 w-4" />
+                                                </span>
+                                            )}
+                                            {isImage ? (
+                                                <button type="button" onClick={() => setPreview(a)} className="hover:text-brand min-w-0 flex-1 truncate text-left hover:underline">
+                                                    {a.name}
+                                                </button>
+                                            ) : (
+                                                <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-brand min-w-0 flex-1 truncate hover:underline">
+                                                    {a.name}
+                                                </a>
+                                            )}
+                                            <span className="text-muted-foreground shrink-0 font-mono text-xs">{formatSize(a.size)}</span>
+                                            <button
+                                                type="button"
+                                                className="text-muted-foreground hover:text-destructive shrink-0"
+                                                onClick={() => deleteAttachment.mutate({ id: ticket.id, attachmentId: a.id })}
+                                                disabled={deleteAttachment.isPending}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </div>
                     )}
@@ -191,5 +217,32 @@ export function TicketDetailDrawer({
                 </SheetFooter>
             </SheetContent>
         </Sheet>
+
+        {/* Image lightbox — preview in-app instead of opening a new tab */}
+        <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+            <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
+                <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
+                    <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{preview?.name}</DialogTitle>
+                    {preview && (
+                        <a
+                            href={preview.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1.5 text-xs font-medium"
+                        >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            {lang === 'th' ? 'เปิดแท็บใหม่' : 'Open in new tab'}
+                        </a>
+                    )}
+                    <button type="button" onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground shrink-0">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+                <div className="bg-muted/30 flex items-center justify-center p-4">
+                    {preview && <img src={preview.url} alt={preview.name} className="max-h-[72vh] w-auto rounded-lg object-contain" />}
+                </div>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

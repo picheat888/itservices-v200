@@ -17,6 +17,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/fonts
 /vendor
 auth.json
 Homestead.json
