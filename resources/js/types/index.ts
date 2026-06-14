@@ -560,6 +560,7 @@ export interface EmailGroup {
     description?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    members?: AccessMemberPreview[];
     members_count?: number;
 }
 
@@ -573,6 +574,7 @@ export interface FileShare {
     size_label?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    members?: AccessMemberPreview[];
     members_count?: number;
 }
 
@@ -583,7 +585,17 @@ export interface SocialPlatform {
     url?: string | null;
     color?: string | null;
     policy?: string | null;
+    members?: AccessMemberPreview[];
     members_count?: number;
+}
+
+/** Lightweight member preview returned inline on the index endpoints. */
+export interface AccessMemberPreview {
+    id: number;
+    employee_id: number;
+    name: string | null;
+    access_level?: string | null;
+    purpose?: string | null;
 }
 
 export interface AccessMember {
