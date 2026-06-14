@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\AuditLogController;
@@ -9,8 +10,10 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContractAttachmentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
+use App\Http\Controllers\Api\EmailGroupController;
 use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\FileShareController;
 use App\Http\Controllers\Api\GroupRoleController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\NotificationController;
@@ -19,6 +22,7 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\SocialPlatformController;
 use App\Http\Controllers\Api\StockCountController;
 use App\Http\Controllers\Api\StockItemController;
 use App\Http\Controllers\Api\StockMovementController;
@@ -88,9 +92,11 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('employees/{employee}/approval-chain', [EmployeeController::class, 'approvalChain'])->name('api.employees.approval-chain');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
     Route::apiResource('employees', EmployeeController::class);
+    Route::get('positions/{position}/members', [PositionController::class, 'members'])->name('api.positions.members');
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
     Route::apiResource('departments', DepartmentController::class)->except(['show']);
+    Route::get('sections/{section}/members', [SectionController::class, 'members'])->name('api.sections.members');
     Route::apiResource('sections', SectionController::class)->only(['index', 'store', 'update', 'destroy']);
     // Master Data — reads open (consumed by Asset/Contract/Stock forms); writes gated by settings.masterdata.
     Route::get('brands', [BrandController::class, 'index'])->name('api.brands.index');
@@ -179,4 +185,26 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('api.notifications.read-all');
     Route::put('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('api.notifications.read');
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
+
+    // Access Control — reads gated by access.view, writes by access.manage
+    Route::middleware('permission:access.view')->group(function () {
+        Route::get('email-groups', [EmailGroupController::class, 'index']);
+        Route::get('file-shares', [FileShareController::class, 'index']);
+        Route::get('social-platforms', [SocialPlatformController::class, 'index']);
+        Route::get('email-groups/{emailGroup}/members', [EmailGroupController::class, 'members']);
+        Route::get('file-shares/{fileShare}/members', [FileShareController::class, 'members']);
+        Route::get('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'members']);
+        Route::get('employees/{employee}/access', [AccessController::class, 'employee']);
+    });
+    Route::middleware('permission:access.manage')->group(function () {
+        Route::apiResource('email-groups', EmailGroupController::class)->except(['index', 'show']);
+        Route::apiResource('file-shares', FileShareController::class)->except(['index', 'show']);
+        Route::apiResource('social-platforms', SocialPlatformController::class)->except(['index', 'show']);
+        Route::post('email-groups/{emailGroup}/members', [EmailGroupController::class, 'addMember']);
+        Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember']);
+        Route::post('file-shares/{fileShare}/members', [FileShareController::class, 'addMember']);
+        Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember']);
+        Route::post('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'addMember']);
+        Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember']);
+    });
 });
