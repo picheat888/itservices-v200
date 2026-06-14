@@ -22,7 +22,6 @@ const FIELD_LABELS: Record<string, { en: string; th: string }> = {
     resign_reason: { en: 'Resign reason', th: 'เหตุผลลาออก' },
     last_day: { en: 'Last day', th: 'วันสุดท้าย' },
     title: { en: 'Title', th: 'ชื่อตำแหน่ง' },
-    level: { en: 'Level', th: 'ระดับ' },
     tag: { en: 'Tag', th: 'แท็ก' },
     // Foreign keys resolved by the backend (shown as names) — label them nicely too.
     employee_id: { en: 'Employee', th: 'พนักงาน' },

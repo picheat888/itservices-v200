@@ -28,11 +28,24 @@ interface DataTableProps<T> {
     filters?: React.ReactNode;
     /** Show shimmering skeleton rows instead of the empty state while data loads. */
     loading?: boolean;
+    /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
+    maxBodyHeight?: string;
 }
 
 const PAGE_SIZES = [20, 50, 100];
 
-export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hidePagination, actions, filters, loading }: DataTableProps<T>) {
+export function DataTable<T>({
+    columns,
+    rows,
+    searchable,
+    rowKey,
+    onRowClick,
+    hidePagination,
+    actions,
+    filters,
+    loading,
+    maxBodyHeight,
+}: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
@@ -81,9 +94,12 @@ export function DataTable<T>({ columns, rows, searchable, rowKey, onRowClick, hi
                 </div>
             )}
 
-            <div className="border-border overflow-hidden rounded-xl border">
+            <div
+                className={cn('border-border rounded-xl border', maxBodyHeight ? 'overflow-y-auto' : 'overflow-hidden')}
+                style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+            >
                 <table className="w-full text-sm">
-                    <thead>
+                    <thead className={cn(maxBodyHeight && 'bg-card sticky top-0 z-10')}>
                         <tr className="border-border bg-muted/40 border-b">
                             {columns.map((c) => (
                                 <th

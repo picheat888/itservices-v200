@@ -69,11 +69,11 @@ class AuditDetailTest extends TestCase
 
     public function test_changes_helper_resolves_foreign_keys_to_labels(): void
     {
-        $director = Position::create(['title' => 'Director', 'level' => 5]);
-        $manager = Position::create(['title' => 'Manager', 'level' => 4]);
+        $director = Position::create(['title' => 'Director']);
+        $manager = Position::create(['title' => 'Manager']);
         $sales = Department::create(['name' => 'Sales', 'tag' => 'SALE']);
-        $boss = Employee::create(['name' => 'Big Boss']);
-        $emp = Employee::create(['name' => 'Worker', 'position_id' => $director->id]);
+        $boss = Employee::create(['first_name' => 'Big', 'last_name' => 'Boss']);
+        $emp = Employee::create(['first_name' => 'Worker', 'last_name' => 'Test', 'position_id' => $director->id]);
 
         $before = $emp->getOriginal();
         $emp->update(['position_id' => $manager->id, 'department_id' => $sales->id, 'manager_id' => $boss->id]);
@@ -93,12 +93,12 @@ class AuditDetailTest extends TestCase
     public function test_employee_update_endpoint_records_resolved_org_labels(): void
     {
         $super = User::factory()->create(['role' => 'super']);
-        $director = Position::create(['title' => 'Director', 'level' => 5]);
-        $manager = Position::create(['title' => 'Manager', 'level' => 4]);
-        $emp = Employee::create(['name' => 'Worker', 'position_id' => $director->id]);
+        $director = Position::create(['title' => 'Director']);
+        $manager = Position::create(['title' => 'Manager']);
+        $emp = Employee::create(['first_name' => 'Worker', 'last_name' => 'Test', 'position_id' => $director->id]);
 
         $this->actingAs($super)
-            ->putJson("/api/employees/{$emp->id}", ['name' => 'Worker', 'position_id' => $manager->id])
+            ->putJson("/api/employees/{$emp->id}", ['first_name' => 'Worker', 'last_name' => 'Test', 'position_id' => $manager->id])
             ->assertOk();
 
         $log = AuditLog::where('action', 'Updated employee')->latest('id')->first();

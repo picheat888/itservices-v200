@@ -23,7 +23,6 @@ class ApproverNodeResource extends JsonResource
             'name_th' => $this->name_th,
             'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
             'position' => $this->position?->title,
-            'level' => $this->position?->level,
             'department' => $this->department?->name,
             'status' => $this->status instanceof EmployeeStatus ? $this->status->value : (string) $this->status,
         ];

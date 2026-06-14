@@ -26,6 +26,11 @@ class EmployeeResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'first_name_th' => $this->first_name_th,
+            'last_name_th' => $this->last_name_th,
+            // Composed full names (read-only accessors) for display convenience.
             'name' => $this->name,
             'name_th' => $this->name_th,
             'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,

@@ -24,7 +24,6 @@ class OrgChartNodeResource extends JsonResource
             'name' => $this->name,
             'name_th' => $this->name_th,
             'title' => $this->position?->title,
-            'level' => $this->position?->level,
             'department' => $this->department?->name,
             'department_code' => $this->department?->tag,
             'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,

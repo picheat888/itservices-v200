@@ -7,14 +7,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends Model
 {
-    protected $fillable = ['code', 'title', 'level'];
+    protected $fillable = ['code', 'title'];
 
     protected static function booted(): void
     {
         static::creating(function (Position $position) {
+            // Auto-assign a sequential PST-#### code on create.
             if (blank($position->code)) {
-                $next = (static::max('id') ?? 0) + 1;
-                $position->code = 'P-'.str_pad((string) $next, 3, '0', STR_PAD_LEFT);
+                $max = (int) str_replace('PST-', '', (string) static::max('code'));
+                $position->code = 'PST-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
             }
         });
     }

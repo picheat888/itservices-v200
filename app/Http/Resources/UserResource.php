@@ -35,6 +35,11 @@ class UserResource extends JsonResource
             'photo_url' => $employee && $employee->photo_path ? Storage::disk('public')->url($employee->photo_path) : null,
             'phone' => $employee?->phone,
             'name_th' => $employee?->name_th,
+            // Split name parts from the linked employee (for the profile edit form).
+            'first_name' => $employee?->first_name,
+            'last_name' => $employee?->last_name,
+            'first_name_th' => $employee?->first_name_th,
+            'last_name_th' => $employee?->last_name_th,
             'permissions' => $this->permissions(),
             'preferences' => $this->resolvedPreferences(),
             'email_verified_at' => $this->email_verified_at,

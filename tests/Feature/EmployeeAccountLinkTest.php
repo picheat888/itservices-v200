@@ -13,7 +13,7 @@ class EmployeeAccountLinkTest extends TestCase
 
     public function test_employee_and_user_resolve_each_other_through_the_fk(): void
     {
-        $employee = Employee::create(['code' => 'EMP-9001', 'name' => 'Test Person', 'email' => 'tp@x.test']);
+        $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'Test', 'last_name' => 'Person', 'email' => 'tp@x.test']);
         $user = User::factory()->create(['employee_id' => $employee->id]);
 
         $this->assertSame($user->id, $employee->fresh()->user->id);
@@ -23,7 +23,7 @@ class EmployeeAccountLinkTest extends TestCase
     public function test_setting_credentials_links_the_account_via_fk(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $employee = Employee::create(['code' => 'EMP-9002', 'name' => 'New Hire', 'email' => 'nh@x.test']);
+        $employee = Employee::create(['code' => 'EMP-9002', 'first_name' => 'New', 'last_name' => 'Hire', 'email' => 'nh@x.test']);
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
             'username' => 'newhire',
@@ -41,9 +41,9 @@ class EmployeeAccountLinkTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $linked = Employee::create(['code' => 'EMP-9003', 'name' => 'Linked', 'email' => 'l@x.test']);
+        $linked = Employee::create(['code' => 'EMP-9003', 'first_name' => 'Linked', 'last_name' => 'Test', 'email' => 'l@x.test']);
         User::factory()->create(['employee_id' => $linked->id]);
-        $unlinked = Employee::create(['code' => 'EMP-9004', 'name' => 'Unlinked', 'email' => 'u@x.test']);
+        $unlinked = Employee::create(['code' => 'EMP-9004', 'first_name' => 'Unlinked', 'last_name' => 'Test', 'email' => 'u@x.test']);
 
         $this->postJson("/api/employees/{$linked->id}/reset-password")
             ->assertOk()->assertJsonPath('new_password', 'EMP-9003');
@@ -56,7 +56,7 @@ class EmployeeAccountLinkTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $linked = Employee::create(['code' => 'EMP-9005', 'name' => 'HasAcct', 'email' => 'h@x.test']);
+        $linked = Employee::create(['code' => 'EMP-9005', 'first_name' => 'HasAcct', 'last_name' => 'Test', 'email' => 'h@x.test']);
         User::factory()->create(['employee_id' => $linked->id]);
 
         $this->getJson("/api/employees/{$linked->id}")
@@ -66,7 +66,7 @@ class EmployeeAccountLinkTest extends TestCase
     public function test_credentials_rejected_when_already_linked(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $employee = Employee::create(['code' => 'EMP-9006', 'name' => 'Dup', 'email' => 'd@x.test']);
+        $employee = Employee::create(['code' => 'EMP-9006', 'first_name' => 'Dup', 'last_name' => 'Test', 'email' => 'd@x.test']);
         User::factory()->create(['employee_id' => $employee->id]);
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
@@ -78,9 +78,9 @@ class EmployeeAccountLinkTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
-        $withAcct = Employee::create(['code' => 'EMP-9007', 'name' => 'WithAcct', 'email' => 'wa@x.test']);
+        $withAcct = Employee::create(['code' => 'EMP-9007', 'first_name' => 'WithAcct', 'last_name' => 'Test', 'email' => 'wa@x.test']);
         User::factory()->create(['employee_id' => $withAcct->id]);
-        $without = Employee::create(['code' => 'EMP-9008', 'name' => 'WithoutAcct', 'email' => 'wo@x.test']);
+        $without = Employee::create(['code' => 'EMP-9008', 'first_name' => 'WithoutAcct', 'last_name' => 'Test', 'email' => 'wo@x.test']);
 
         $hasCodes = collect($this->getJson('/api/employees?page=1&status=has_account')->json('data'))->pluck('code');
         $noCodes = collect($this->getJson('/api/employees?page=1&status=no_account')->json('data'))->pluck('code');

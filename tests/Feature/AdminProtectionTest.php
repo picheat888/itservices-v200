@@ -47,40 +47,40 @@ class AdminProtectionTest extends TestCase
 
     public function test_non_super_with_edit_permission_cannot_edit_an_admin_employee(): void
     {
-        $adminEmployee = Employee::create(['name' => 'Boss', 'email' => 'boss@inaba.co.th']);
+        $adminEmployee = Employee::create(['first_name' => 'Boss', 'last_name' => 'Test', 'email' => 'boss@inaba.co.th']);
         User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th', 'employee_id' => $adminEmployee->id]);
 
         $this->actingAs($this->userWith('employees.edit'));
 
-        $this->putJson("/api/employees/{$adminEmployee->id}", ['name' => 'Hacked'])
+        $this->putJson("/api/employees/{$adminEmployee->id}", ['first_name' => 'Hacked', 'last_name' => 'Test'])
             ->assertForbidden();
 
-        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id, 'name' => 'Boss']);
+        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id, 'first_name' => 'Boss']);
     }
 
     public function test_super_can_edit_an_admin_employee(): void
     {
-        $adminEmployee = Employee::create(['name' => 'Boss', 'email' => 'boss@inaba.co.th']);
+        $adminEmployee = Employee::create(['first_name' => 'Boss', 'last_name' => 'Test', 'email' => 'boss@inaba.co.th']);
         User::factory()->create(['role' => 'super', 'email' => 'boss@inaba.co.th', 'employee_id' => $adminEmployee->id]);
 
         $this->actingAs($this->super());
 
-        $this->putJson("/api/employees/{$adminEmployee->id}", ['name' => 'Boss Renamed'])
+        $this->putJson("/api/employees/{$adminEmployee->id}", ['first_name' => 'Boss', 'last_name' => 'Renamed'])
             ->assertOk();
 
-        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id, 'name' => 'Boss Renamed']);
+        $this->assertDatabaseHas('employees', ['id' => $adminEmployee->id, 'first_name' => 'Boss', 'last_name' => 'Renamed']);
     }
 
     public function test_non_super_with_edit_permission_can_still_edit_a_normal_employee(): void
     {
-        $normal = Employee::create(['name' => 'Regular Joe', 'email' => 'joe@inaba.co.th']);
+        $normal = Employee::create(['first_name' => 'Regular', 'last_name' => 'Joe', 'email' => 'joe@inaba.co.th']);
 
         $this->actingAs($this->userWith('employees.edit'));
 
-        $this->putJson("/api/employees/{$normal->id}", ['name' => 'Joe Updated'])
+        $this->putJson("/api/employees/{$normal->id}", ['first_name' => 'Joe', 'last_name' => 'Updated'])
             ->assertOk();
 
-        $this->assertDatabaseHas('employees', ['id' => $normal->id, 'name' => 'Joe Updated']);
+        $this->assertDatabaseHas('employees', ['id' => $normal->id, 'first_name' => 'Joe', 'last_name' => 'Updated']);
     }
 
     public function test_non_super_cannot_create_a_group_with_the_super_role(): void

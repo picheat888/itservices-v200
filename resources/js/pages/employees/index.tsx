@@ -1,10 +1,10 @@
 import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
-import { DepartmentMembersDrawer } from '@/components/employees/department-members-drawer';
+import { DepartmentMembersDialog } from '@/components/employees/department-members-dialog';
 import { DepartmentModal } from '@/components/employees/department-modal';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
 import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
 import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
-import { PositionLevelPreview } from '@/components/employees/position-level-preview';
+import { PositionMembersDialog } from '@/components/employees/position-members-dialog';
 import { PositionModal } from '@/components/employees/position-modal';
 import { ResetPasswordModal } from '@/components/employees/reset-password-modal';
 import { ResignModal } from '@/components/employees/resign-modal';
@@ -106,7 +106,7 @@ export default function EmployeesPage() {
     const [credEmp, setCredEmp] = useState<Employee | null>(null);
     const [editPos, setEditPos] = useState<Position | null>(null);
     const [posModalOpen, setPosModalOpen] = useState(false);
-    const [posPreviewOpen, setPosPreviewOpen] = useState(false);
+    const [viewPos, setViewPos] = useState<Position | null>(null);
     const [editDept, setEditDept] = useState<Department | null>(null);
     const [deptModalOpen, setDeptModalOpen] = useState(false);
     const [viewDept, setViewDept] = useState<Department | null>(null);
@@ -159,16 +159,49 @@ export default function EmployeesPage() {
         { id: 'orgchart', label: t('sub_org_chart') },
     ];
 
+    // A position can only be deleted when no employee holds it; otherwise show a notice.
+    const handleDeletePos = (p: Position) => {
+        const members = p.employees_count ?? 0;
+        if (members > 0) {
+            confirm({
+                variant: 'warn',
+                hideCancel: true,
+                title: t('pos_del_blocked_title'),
+                description: t('pos_del_blocked_desc'),
+                entity: { name: p.title, sub: `${members} ${t('dept_members')}` },
+                confirmText: t('got_it'),
+            });
+            return;
+        }
+        confirm({
+            variant: 'danger',
+            entity: { name: p.title },
+            action: () => positionMut.remove.mutateAsync(p.id),
+        });
+    };
+
     const posColumns: Column<Position>[] = [
-        { key: 'code', header: t('pos_code'), render: (p) => <span className="font-mono text-xs">{p.code}</span> },
+        { key: 'code', header: t('pos_code'), render: (p) => <span className="text-muted-foreground font-mono text-xs">{p.code}</span> },
         { key: 'title', header: t('pos_title'), render: (p) => <span className="font-medium">{p.title}</span> },
+        {
+            key: 'members',
+            header: t('dept_members'),
+            align: 'right',
+            render: (p) => (
+                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                    <Users className="text-muted-foreground h-3.5 w-3.5" />
+                    {p.employees_count ?? 0}
+                </span>
+            ),
+        },
         {
             key: 'actions',
             header: t('actions'),
             align: 'right',
             render: (p) =>
                 canManageOrg ? (
-                    <div className="flex justify-end gap-1">
+                    // Stop row-click (opens members dialog) from firing on the action buttons.
+                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                             onClick={() => {
                                 setEditPos(p);
@@ -179,15 +212,93 @@ export default function EmployeesPage() {
                             <SquarePen className="h-4 w-4" />
                         </button>
                         <button
-                            onClick={() =>
-                                confirm({
-                                    variant: 'danger',
-                                    entity: { name: p.title },
-                                    action: async () => {
-                                        await positionMut.remove.mutateAsync(p.id);
-                                    },
-                                })
-                            }
+                            onClick={() => handleDeletePos(p)}
+                            className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    </div>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
+        },
+    ];
+
+    // A department can only be deleted when it has no employees AND no sections.
+    // Otherwise show a blocking notice (sections cascade-delete, employees unassign).
+    const handleDeleteDept = (d: Department) => {
+        const members = d.count ?? 0;
+        const sections = d.sections_count ?? 0;
+        if (members > 0 || sections > 0) {
+            confirm({
+                variant: 'warn',
+                hideCancel: true,
+                title: t('dept_del_blocked_title'),
+                description: t('dept_del_blocked_desc'),
+                entity: {
+                    name: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                    sub: `${members} ${t('dept_members')} · ${sections} ${t('sub_sections')}`,
+                },
+                confirmText: t('got_it'),
+            });
+            return;
+        }
+        confirm({
+            variant: 'danger',
+            entity: { name: lang === 'th' ? (d.name_th ?? d.name) : d.name },
+            action: () => departmentMut.remove.mutateAsync(d.id),
+        });
+    };
+
+    const deptColumns: Column<Department>[] = [
+        { key: 'code', header: t('section_code'), render: (d) => <span className="text-muted-foreground font-mono text-xs">{d.code}</span> },
+        { key: 'tag', header: t('dept_code'), render: (d) => <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{d.tag}</span> },
+        {
+            key: 'name',
+            header: t('department'),
+            render: (d) => <span className="font-medium">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>,
+        },
+        {
+            key: 'sections',
+            header: t('sub_sections'),
+            align: 'right',
+            render: (d) => (
+                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                    <Layers className="text-muted-foreground h-3.5 w-3.5" />
+                    {d.sections_count ?? 0}
+                </span>
+            ),
+        },
+        {
+            key: 'members',
+            header: t('dept_members'),
+            align: 'right',
+            render: (d) => (
+                <span className="inline-flex items-center justify-end gap-1.5 font-mono text-xs">
+                    <Users className="text-muted-foreground h-3.5 w-3.5" />
+                    {d.count ?? 0}
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            header: t('actions'),
+            align: 'right',
+            render: (d) =>
+                canManageOrg ? (
+                    // Stop row-click (opens the members dialog) from firing on the action buttons.
+                    <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => {
+                                setEditDept(d);
+                                setDeptModalOpen(true);
+                            }}
+                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                        >
+                            <SquarePen className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={() => handleDeleteDept(d)}
                             className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                         >
                             <Trash2 className="h-4 w-4" />
@@ -242,7 +353,14 @@ export default function EmployeesPage() {
                 </div>
 
                 <div className="p-5">
-                    {tab === 'dashboard' && <Dashboard summary={summary} departments={departments} positions={positions} />}
+                    {tab === 'dashboard' && (
+                        <Dashboard
+                            summary={summary}
+                            departments={departments}
+                            positions={positions}
+                            onViewDepartments={() => changeTab('departments')}
+                        />
+                    )}
 
                     {tab === 'directory' && (
                         <DirectoryTab
@@ -272,33 +390,31 @@ export default function EmployeesPage() {
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <span className="text-muted-foreground text-sm">{t('pos_all_org')}</span>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" onClick={() => setPosPreviewOpen(true)}>
-                                        <Layers className="h-4 w-4" />
-                                        {t('pos_level_preview')}
+                                {canManageOrg && (
+                                    <Button
+                                        onClick={() => {
+                                            setEditPos(null);
+                                            setPosModalOpen(true);
+                                        }}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        {t('add_position')}
                                     </Button>
-                                    {canManageOrg && (
-                                        <Button
-                                            onClick={() => {
-                                                setEditPos(null);
-                                                setPosModalOpen(true);
-                                            }}
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            {t('add_position')}
-                                        </Button>
-                                    )}
-                                </div>
+                                )}
                             </div>
-                            <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} />
+                            <DataTable columns={posColumns} rows={positions} rowKey={(p) => p.id} onRowClick={(p) => setViewPos(p)} />
                         </div>
                     )}
 
                     {tab === 'departments' && (
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <span className="text-muted-foreground text-sm">{t('dept_all_org')}</span>
-                                {canManageOrg && (
+                        <DataTable
+                            columns={deptColumns}
+                            rows={departments}
+                            rowKey={(d) => d.id}
+                            onRowClick={(d) => setViewDept(d)}
+                            searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
+                            actions={
+                                canManageOrg && (
                                     <Button
                                         onClick={() => {
                                             setEditDept(null);
@@ -308,65 +424,9 @@ export default function EmployeesPage() {
                                         <Plus className="h-4 w-4" />
                                         {t('add_department')}
                                     </Button>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {departments.map((d) => (
-                                    <Card key={d.id} className="p-4">
-                                        <div className="flex items-start justify-between">
-                                            <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{d.tag}</span>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => setViewDept(d)}
-                                                    className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                </button>
-                                                {canManageOrg && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditDept(d);
-                                                                setDeptModalOpen(true);
-                                                            }}
-                                                            className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md"
-                                                        >
-                                                            <SquarePen className="h-3.5 w-3.5" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() =>
-                                                                confirm({
-                                                                    variant: 'danger',
-                                                                    entity: { name: d.name },
-                                                                    action: async () => {
-                                                                        await departmentMut.remove.mutateAsync(d.id);
-                                                                    },
-                                                                })
-                                                            }
-                                                            className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => setViewDept(d)}
-                                            className="hover:text-brand mt-3 block text-left text-base font-semibold"
-                                        >
-                                            {lang === 'th' ? (d.name_th ?? d.name) : d.name}
-                                        </button>
-                                        <div className="border-border mt-3 flex items-center justify-between border-t pt-3 text-sm">
-                                            <span className="text-muted-foreground">{t('dept_members')}</span>
-                                            <button onClick={() => setViewDept(d)} className="text-brand font-mono font-semibold">
-                                                {d.count ?? 0}
-                                            </button>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
+                                )
+                            }
+                        />
                     )}
 
                     {tab === 'sections' && <SectionsTab canManage={canManageOrg} />}
@@ -425,9 +485,9 @@ export default function EmployeesPage() {
             <ResetPasswordModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
             <SetCredentialsModal employee={credEmp} onClose={() => setCredEmp(null)} />
             <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} />
-            <PositionLevelPreview open={posPreviewOpen} onClose={() => setPosPreviewOpen(false)} positions={positions} />
             <DepartmentModal open={deptModalOpen} onClose={() => setDeptModalOpen(false)} department={editDept} />
-            <DepartmentMembersDrawer department={viewDept} onClose={() => setViewDept(null)} />
+            <DepartmentMembersDialog department={viewDept} onClose={() => setViewDept(null)} />
+            <PositionMembersDialog position={viewPos} onClose={() => setViewPos(null)} />
         </div>
     );
 }
@@ -709,7 +769,19 @@ function DirectoryTab({
 
 import type { EmployeeSummary } from '@/services/orgApi';
 
-function Dashboard({ summary, departments, positions }: { summary: EmployeeSummary | undefined; departments: Department[]; positions: Position[] }) {
+const DASH_DEPT_LIMIT = 8;
+
+function Dashboard({
+    summary,
+    departments,
+    positions,
+    onViewDepartments,
+}: {
+    summary: EmployeeSummary | undefined;
+    departments: Department[];
+    positions: Position[];
+    onViewDepartments: () => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
@@ -740,22 +812,32 @@ function Dashboard({ summary, departments, positions }: { summary: EmployeeSumma
             </div>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="p-5">
-                    <div className="mb-4 text-sm font-semibold">{t('headcount_by_dept')}</div>
+                    <div className="mb-4 flex items-center justify-between">
+                        <span className="text-sm font-semibold">{t('headcount_by_dept')}</span>
+                        {departments.length > DASH_DEPT_LIMIT && (
+                            <button onClick={onViewDepartments} className="text-brand text-xs font-medium hover:underline">
+                                {t('view_all')}
+                            </button>
+                        )}
+                    </div>
                     <div className="divide-border/60 divide-y">
-                        {departments.map((d) => (
-                            <div key={d.id} className="flex items-center justify-between py-2.5">
-                                <div className="flex items-center gap-2.5">
-                                    <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
-                                    <span className="text-sm">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>
+                        {[...departments]
+                            .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+                            .slice(0, DASH_DEPT_LIMIT)
+                            .map((d) => (
+                                <div key={d.id} className="flex items-center justify-between py-2.5">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-[11px]">{d.tag}</span>
+                                        <span className="text-sm">{lang === 'th' ? (d.name_th ?? d.name) : d.name}</span>
+                                    </div>
+                                    <span className="font-mono text-sm font-semibold">{d.count ?? 0}</span>
                                 </div>
-                                <span className="font-mono text-sm font-semibold">{d.count ?? 0}</span>
-                            </div>
-                        ))}
+                            ))}
                     </div>
                 </Card>
                 <Card className="p-5">
                     <div className="mb-4 text-sm font-semibold">{t('recent_hires')}</div>
-                    <div className="space-y-1">
+                    <div className="max-h-[22rem] space-y-1 overflow-y-auto">
                         {(summary?.recent ?? []).map((e) => (
                             <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
                                 <Avatar className="h-8 w-8">

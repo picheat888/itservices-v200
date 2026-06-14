@@ -16,10 +16,12 @@ class DepartmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'code' => $this->code,
             'tag' => $this->tag,
             'name' => $this->name,
             'name_th' => $this->name_th,
             'count' => $this->whenCounted('employees', $this->employees_count, $this->employees()->count()),
+            'sections_count' => $this->whenCounted('sections', $this->sections_count, $this->sections()->count()),
         ];
     }
 }

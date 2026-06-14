@@ -12,10 +12,25 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Employee extends Model
 {
     protected $fillable = [
-        'code', 'name', 'name_th', 'photo_path', 'department_id', 'section_id', 'position_id',
+        'code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'photo_path',
+        'department_id', 'section_id', 'position_id',
         'manager_id', 'email', 'phone', 'username',
         'joined_at', 'status', 'resign_reason', 'last_day',
     ];
+
+    /** Composed full name (EN) for display — first + last. */
+    public function getNameAttribute(): string
+    {
+        return trim(($this->first_name ?? '').' '.($this->last_name ?? ''));
+    }
+
+    /** Composed full Thai name for display, or null when no Thai name is set. */
+    public function getNameThAttribute(): ?string
+    {
+        $th = trim(($this->first_name_th ?? '').' '.($this->last_name_th ?? ''));
+
+        return $th !== '' ? $th : null;
+    }
 
     protected function casts(): array
     {

@@ -53,7 +53,8 @@ class EmployeeController extends Controller
         $query = Employee::with(['department', 'position', 'section', 'user'])
             ->orderByRaw("status = 'resigned'")
             ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
-            ->orderBy('name');
+            ->orderBy('first_name')
+            ->orderBy('last_name');
 
         if ($request->has('page')) {
             $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -61,8 +62,10 @@ class EmployeeController extends Controller
             if ($request->filled('search')) {
                 $q = '%'.$request->query('search').'%';
                 $query->where(function ($w) use ($q) {
-                    $w->where('name', 'like', $q)
-                        ->orWhere('name_th', 'like', $q)
+                    $w->where('first_name', 'like', $q)
+                        ->orWhere('last_name', 'like', $q)
+                        ->orWhere('first_name_th', 'like', $q)
+                        ->orWhere('last_name_th', 'like', $q)
                         ->orWhere('code', 'like', $q);
                 });
             }
@@ -127,8 +130,8 @@ class EmployeeController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
-        $headers = ['code', 'name', 'name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
-        $sample = ['', 'John Doe', 'จอห์น โด', 'john.doe@abcd.co.th', '+66 81 000 0000', 'IT', 'P-010', '2024-01-15'];
+        $headers = ['code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
+        $sample = ['', 'John', 'Doe', 'จอห์น', 'โด', 'john.doe@abcd.co.th', '+66 81 000 0000', 'IT', 'PST-0002', '2024-01-15'];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
@@ -237,7 +240,8 @@ class EmployeeController extends Controller
             ->where('status', EmployeeStatus::Active)
             ->with(['position', 'department'])
             ->withCount(['subordinates as reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)])
-            ->orderBy('name')
+            ->orderBy('first_name')
+            ->orderBy('last_name')
             ->get();
 
         return OrgChartNodeResource::collection($employees)->additional(['message' => 'success'])->response();

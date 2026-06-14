@@ -26,9 +26,11 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 }
 
 export interface EmployeePayload {
-    name: string;
+    first_name: string;
+    last_name: string;
+    first_name_th?: string | null;
+    last_name_th?: string | null;
     code?: string;
-    name_th?: string | null;
     department_id?: number | null;
     position_id?: number | null;
     section_id?: number | null;
@@ -80,23 +82,19 @@ export const employeeApi = {
         const { data } = await http.put<ApiEnvelope<Employee>>(`/employees/${id}`, withoutPhoto(payload));
         return data.data;
     },
-    approvalChain: (id: number) =>
-        http.get<ApiEnvelope<ApproverNode[]>>(`/employees/${id}/approval-chain`).then((r) => r.data.data),
+    approvalChain: (id: number) => http.get<ApiEnvelope<ApproverNode[]>>(`/employees/${id}/approval-chain`).then((r) => r.data.data),
     orgChart: () => http.get<ApiEnvelope<OrgChartNode[]>>('/employees/org-chart').then((r) => r.data.data),
     remove: (id: number) => mutate<void>('delete', `/employees/${id}`),
     resign: (id: number, reason: string, lastDay: string | null) =>
         mutate<Employee>('post', `/employees/${id}/resign`, { reason, last_day: lastDay }),
-    cancelResign: (id: number) =>
-        mutate<Employee>('post', `/employees/${id}/cancel-resign`),
-    resetPassword: (id: number) =>
-        mutate<{ new_password: string }>('post', `/employees/${id}/reset-password`),
+    cancelResign: (id: number) => mutate<Employee>('post', `/employees/${id}/cancel-resign`),
+    resetPassword: (id: number) => mutate<{ new_password: string }>('post', `/employees/${id}/reset-password`),
     setCredentials: async (id: number, payload: { username: string; password: string; password_confirmation: string }) => {
         await ensureCsrf();
         const { data } = await http.post<ApiEnvelope<{ message: string }>>(`/employees/${id}/credentials`, payload);
         return data;
     },
-    downloadImportTemplate: () =>
-        http.get('/employees/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    downloadImportTemplate: () => http.get('/employees/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
     import: async (file: File) => {
         await ensureCsrf();
         const fd = new FormData();
@@ -116,18 +114,19 @@ export const departmentApi = {
 
 export const sectionApi = {
     list: (departmentId?: number | null) =>
-        http
-            .get<ApiEnvelope<Section[]>>('/sections', { params: departmentId ? { department_id: departmentId } : {} })
-            .then((r) => r.data.data),
+        http.get<ApiEnvelope<Section[]>>('/sections', { params: departmentId ? { department_id: departmentId } : {} }).then((r) => r.data.data),
+    members: (id: number) => http.get<ApiEnvelope<Employee[]>>(`/sections/${id}/members`).then((r) => r.data.data),
     create: (payload: { department_id: number; name: string; name_th?: string | null }) => mutate<Section>('post', '/sections', payload),
-    update: (id: number, payload: { department_id: number; name: string; name_th?: string | null }) => mutate<Section>('put', `/sections/${id}`, payload),
+    update: (id: number, payload: { department_id: number; name: string; name_th?: string | null }) =>
+        mutate<Section>('put', `/sections/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/sections/${id}`),
 };
 
 export const positionApi = {
     list: () => http.get<ApiEnvelope<Position[]>>('/positions').then((r) => r.data.data),
-    create: (payload: { title: string; level: number }) => mutate<Position>('post', '/positions', payload),
-    update: (id: number, payload: { title: string; level: number }) => mutate<Position>('put', `/positions/${id}`, payload),
+    members: (id: number) => http.get<ApiEnvelope<Employee[]>>(`/positions/${id}/members`).then((r) => r.data.data),
+    create: (payload: { title: string }) => mutate<Position>('post', '/positions', payload),
+    update: (id: number, payload: { title: string }) => mutate<Position>('put', `/positions/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/positions/${id}`),
 };
 

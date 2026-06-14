@@ -35,8 +35,10 @@ class StoreEmployeeRequest extends FormRequest
         $employeeId = $this->route('employee')?->id;
 
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'name_th' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name_th' => ['nullable', 'string', 'max:255'],
+            'last_name_th' => ['nullable', 'string', 'max:255'],
             'department_id' => ['nullable', 'exists:departments,id'],
             'section_id' => ['nullable', 'exists:sections,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
@@ -54,6 +56,7 @@ class StoreEmployeeRequest extends FormRequest
     /**
      * A manager may not be the employee itself, nor anyone who already reports
      * (directly or indirectly) to it — either would create a cycle in the tree.
+     * Also validates that the chosen section belongs to the employee's department.
      */
     public function withValidator(Validator $validator): void
     {

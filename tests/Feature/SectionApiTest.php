@@ -22,7 +22,7 @@ class SectionApiTest extends TestCase
     {
         $dept = Department::create(['name' => 'IT']);
         $section = Section::create(['department_id' => $dept->id, 'name' => 'Network', 'name_th' => 'เครือข่าย']);
-        Employee::create(['name' => 'A', 'department_id' => $dept->id, 'section_id' => $section->id]);
+        Employee::create(['first_name' => 'A', 'last_name' => 'Test', 'department_id' => $dept->id, 'section_id' => $section->id]);
 
         $this->assertSame($dept->id, $section->department->id);
         $this->assertCount(1, $section->employees);
@@ -42,7 +42,7 @@ class SectionApiTest extends TestCase
     {
         $dept = Department::create(['name' => 'QA']);
         $section = Section::create(['department_id' => $dept->id, 'name' => 'Inspect']);
-        $emp = Employee::create(['name' => 'B', 'department_id' => $dept->id, 'section_id' => $section->id]);
+        $emp = Employee::create(['first_name' => 'B', 'last_name' => 'Test', 'department_id' => $dept->id, 'section_id' => $section->id]);
 
         $section->delete();
 
@@ -56,7 +56,7 @@ class SectionApiTest extends TestCase
         $hr = Department::create(['name' => 'HR']);
         $net = Section::create(['department_id' => $it->id, 'name' => 'Network']);
         Section::create(['department_id' => $hr->id, 'name' => 'Payroll']);
-        Employee::create(['name' => 'A', 'department_id' => $it->id, 'section_id' => $net->id]);
+        Employee::create(['first_name' => 'A', 'last_name' => 'Test', 'department_id' => $it->id, 'section_id' => $net->id]);
 
         $this->getJson("/api/sections?department_id={$it->id}")
             ->assertOk()

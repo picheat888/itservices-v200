@@ -47,7 +47,7 @@ class GroupRoleMembershipTest extends TestCase
     {
         $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
-        $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test', 'email' => 'joe@inaba.co.th']);
         $allStaff->employees()->attach($emp->id);
 
         $this->actingAs($this->super())
@@ -61,7 +61,7 @@ class GroupRoleMembershipTest extends TestCase
 
     public function test_move_updates_the_linked_user_role(): void
     {
-        $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test', 'email' => 'joe@inaba.co.th']);
         $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
@@ -77,7 +77,7 @@ class GroupRoleMembershipTest extends TestCase
     public function test_creating_a_group_also_moves_members_out_of_their_old_group(): void
     {
         $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
-        $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test', 'email' => 'joe@inaba.co.th']);
         $allStaff->employees()->attach($emp->id);
 
         $this->actingAs($this->super())
@@ -92,7 +92,7 @@ class GroupRoleMembershipTest extends TestCase
     {
         $a = GroupRole::create(['name' => 'A', 'role' => 'user']);
         $b = GroupRole::create(['name' => 'B', 'role' => 'user']);
-        $emp = Employee::create(['name' => 'Joe']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test']);
         $a->employees()->attach($emp->id);
 
         $this->expectException(QueryException::class);
@@ -104,7 +104,7 @@ class GroupRoleMembershipTest extends TestCase
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         AppSetting::put('default_employee_group_id', (string) $default->id);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
-        $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test', 'email' => 'joe@inaba.co.th']);
         $user = User::factory()->create(['role' => 'admin', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $itTeam->employees()->attach($emp->id);
 
@@ -125,7 +125,7 @@ class GroupRoleMembershipTest extends TestCase
      */
     public function test_move_into_group_follows_role_via_employee_fk(): void
     {
-        $emp = Employee::create(['name' => 'Kanya', 'email' => 'kanya@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Kanya', 'last_name' => 'Test', 'email' => 'kanya@inaba.co.th']);
         $user = User::factory()->create(['role' => 'user', 'username' => 'it', 'email' => 'it@inaba.co.th', 'employee_id' => $emp->id]);
         $allStaff = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
@@ -149,7 +149,7 @@ class GroupRoleMembershipTest extends TestCase
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         AppSetting::put('default_employee_group_id', (string) $default->id);
         $itTeam = GroupRole::create(['name' => 'IT Team', 'role' => 'admin']);
-        $emp = Employee::create(['name' => 'Kanya', 'email' => 'kanya@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Kanya', 'last_name' => 'Test', 'email' => 'kanya@inaba.co.th']);
         $user = User::factory()->create(['role' => 'admin', 'username' => 'it', 'email' => 'it@inaba.co.th', 'employee_id' => $emp->id]);
         $itTeam->employees()->attach($emp->id);
 
@@ -164,7 +164,7 @@ class GroupRoleMembershipTest extends TestCase
     {
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
         AppSetting::put('default_employee_group_id', (string) $default->id);
-        $emp = Employee::create(['name' => 'Joe', 'email' => 'joe@inaba.co.th']);
+        $emp = Employee::create(['first_name' => 'Joe', 'last_name' => 'Test', 'email' => 'joe@inaba.co.th']);
         $user = User::factory()->create(['role' => 'user', 'email' => 'joe@inaba.co.th', 'employee_id' => $emp->id]);
         $default->employees()->attach($emp->id);
 

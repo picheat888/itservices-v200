@@ -29,7 +29,8 @@ class TicketFactory extends Factory
             'status' => TicketStatus::Open,
             'callback_phone' => fake()->numerify('+66 8# ### ####'),
             'requester_id' => fn () => Employee::create([
-                'name' => fake()->name(),
+                'first_name' => fake()->firstName(),
+                'last_name' => fake()->lastName(),
                 'status' => 'active',
             ])->id,
             'assignee_id' => null,

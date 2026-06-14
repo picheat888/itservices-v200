@@ -70,7 +70,6 @@ export function OrgNode({ data }: NodeProps<OrgFlowNode>) {
                     >
                         {d.department_code ?? d.department ?? '—'}
                     </span>
-                    {d.level != null && <span className="shrink-0 font-mono text-[10.5px] font-medium text-muted-foreground">Lv {d.level}</span>}
                 </div>
                 {d.hasReports && (
                     <button

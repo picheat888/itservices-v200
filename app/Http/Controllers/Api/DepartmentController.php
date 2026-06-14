@@ -16,7 +16,7 @@ class DepartmentController extends Controller
     public function index(): JsonResponse
     {
         return DepartmentResource::collection(
-            Department::withCount('employees')->orderBy('name')->get()
+            Department::withCount(['employees', 'sections'])->orderBy('name')->get()
         )->response();
     }
 
@@ -40,6 +40,18 @@ class DepartmentController extends Controller
     public function destroy(Request $request, Department $department): JsonResponse
     {
         abort_unless((bool) $request->user()?->canManageOrg(), 403);
+
+        // A department can only be deleted once it's empty — it must have no
+        // employees (FK is nullOnDelete → would silently unassign them) and no
+        // sections (FK is cascadeOnDelete → would silently delete them too).
+        if ($department->employees()->exists() || $department->sections()->exists()) {
+            return response()->json([
+                'message' => 'department_not_empty',
+                'employees_count' => $department->employees()->count(),
+                'sections_count' => $department->sections()->count(),
+            ], 422);
+        }
+
         AuditLog::record('Deleted department', $department->name);
         $department->delete();
 
@@ -49,7 +61,7 @@ class DepartmentController extends Controller
     // Members of a department (for the "view members" drawer).
     public function members(Department $department): JsonResponse
     {
-        $members = $department->employees()->with(['department', 'position'])->orderBy('name')->get();
+        $members = $department->employees()->with(['department', 'position', 'section'])->orderBy('first_name')->orderBy('last_name')->get();
 
         return EmployeeResource::collection($members)->response();
     }

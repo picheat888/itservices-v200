@@ -137,15 +137,19 @@ class EmployeeService
         foreach ($rows as $i => $row) {
             $line = $i + 2; // +1 for header, +1 for 1-based line numbers
             $code = trim($row['code'] ?? '');
-            $name = trim($row['name'] ?? '');
+            $firstName = trim($row['first_name'] ?? '');
+            $lastName = trim($row['last_name'] ?? '');
             $email = trim($row['email'] ?? '');
             $deptCode = trim($row['department'] ?? '');
             $posCode = trim($row['position'] ?? '');
             $joined = trim($row['joined_at'] ?? '');
             $rowErr = [];
 
-            if ($name === '') {
-                $rowErr[] = 'name ว่าง';
+            if ($firstName === '') {
+                $rowErr[] = 'first_name ว่าง';
+            }
+            if ($lastName === '') {
+                $rowErr[] = 'last_name ว่าง';
             }
 
             if ($code !== '') {
@@ -203,8 +207,10 @@ class EmployeeService
 
             $prepared[] = [
                 'code' => $code !== '' ? $code : null,
-                'name' => $name,
-                'name_th' => trim($row['name_th'] ?? '') ?: null,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'first_name_th' => trim($row['first_name_th'] ?? '') ?: null,
+                'last_name_th' => trim($row['last_name_th'] ?? '') ?: null,
                 'email' => $email !== '' ? $email : null,
                 'phone' => trim($row['phone'] ?? '') ?: null,
                 'department_id' => $deptId,
