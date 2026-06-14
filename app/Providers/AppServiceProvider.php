@@ -25,10 +25,17 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureRateLimiting();
 
+        // Strict morph map for Access Control resources. Because enforceMorphMap()
+        // puts Eloquent into strict mode, EVERY model used in a polymorphic
+        // relationship must be listed here — including User, which backs the
+        // `notifiable` morph on Laravel's database notifications. Existing
+        // notification rows store the User FQCN, so we key it by its class name
+        // to keep both stored data and new writes resolving correctly.
         Relation::enforceMorphMap([
             'email_group' => \App\Models\EmailGroup::class,
             'file_share' => \App\Models\FileShare::class,
             'social_platform' => \App\Models\SocialPlatform::class,
+            \App\Models\User::class => \App\Models\User::class,
         ]);
     }
 
