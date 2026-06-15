@@ -250,7 +250,10 @@ export default function ContractsPage() {
                                     setPage(1);
                                 }}
                             >
-                                <SelectTrigger className="h-9 w-44">
+                                <SelectTrigger className="h-9 w-52">
+                                    <span className="text-muted-foreground mr-1 shrink-0 text-xs font-medium">
+                                        {lang === 'th' ? 'ประเภท:' : 'Type:'}
+                                    </span>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -269,7 +272,10 @@ export default function ContractsPage() {
                                     setPage(1);
                                 }}
                             >
-                                <SelectTrigger className="h-9 w-48">
+                                <SelectTrigger className="h-9 w-64">
+                                    <span className="text-muted-foreground mr-1 shrink-0 text-xs font-medium">
+                                        {lang === 'th' ? 'เรียงตาม:' : 'Sort By:'}
+                                    </span>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
