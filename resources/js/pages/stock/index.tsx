@@ -17,14 +17,41 @@ import { useStockCounts, useStockItemMutations, useStockItems, useStockRequests,
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/types';
-import { AlertTriangle, Archive, ArrowDownToLine, ArrowLeftRight, Boxes, Plus, RotateCcw, Search, Send, SquarePen, Trash2, X } from 'lucide-react';
+import {
+    AlertTriangle,
+    Archive,
+    ArrowDownToLine,
+    ArrowLeftRight,
+    Boxes,
+    FilePlus2,
+    Plus,
+    RotateCcw,
+    Search,
+    Send,
+    SquarePen,
+    Trash2,
+    X,
+} from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AuditTab } from './tabs/counting-tab';
 import { DashboardTab } from './tabs/dashboard-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { RequestsTab } from './tabs/requests-tab';
+
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
+// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+const STOCK_TABS = ['dashboard', 'items', 'movements', 'requests', 'audit'] as const;
+type StockTab = (typeof STOCK_TABS)[number];
+
+// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
+// (e.g. landing on /stock from the sidebar menu rather than a reload/shared link).
+const STOCK_TAB_KEY = 'stock.tab';
+
+// localStorage key for the Items-tab filters (search + category + warehouse + status).
+// Kept out of the URL so personal filters survive a reload without cluttering shareable links.
+const STOCK_FILTER_KEY = 'stock.item-filters';
 
 const STATUS_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
     ok: 'green',
@@ -165,15 +192,53 @@ export default function StockPage() {
     const can = (p: string) => role === 'super' || perms.includes(`stock.${p}`);
     const canManage = can('manage_items');
 
-    const [searchParams] = useSearchParams();
-    const initialTab = (['dashboard', 'items', 'movements', 'requests', 'audit'] as const).includes(searchParams.get('tab') as never)
-        ? (searchParams.get('tab') as 'dashboard' | 'items' | 'movements' | 'requests' | 'audit')
-        : 'dashboard';
-    const [tab, setTab] = useState<'dashboard' | 'items' | 'movements' | 'requests' | 'audit'>(initialTab);
-    const [search, setSearch] = useState('');
-    const [cat, setCat] = useState('all');
-    const [wh, setWh] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [searchParams, setSearchParams] = useSearchParams();
+    // Resolve the starting tab: the URL (?tab=) wins so reloads / shared links are exact;
+    // otherwise fall back to the last tab saved in localStorage; otherwise the dashboard.
+    const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
+    const urlTab = searchParams.get('tab');
+    const initialTab: StockTab = isStockTab(urlTab)
+        ? urlTab
+        : isStockTab(localStorage.getItem(STOCK_TAB_KEY))
+          ? (localStorage.getItem(STOCK_TAB_KEY) as StockTab)
+          : 'dashboard';
+    const [tab, setTab] = useState<StockTab>(initialTab);
+
+    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
+    // localStorage (so navigating away and back — which clears the URL — restores it).
+    const changeTab = useCallback(
+        (next: StockTab) => {
+            setTab(next);
+            localStorage.setItem(STOCK_TAB_KEY, next);
+            setSearchParams(
+                (prev) => {
+                    const sp = new URLSearchParams(prev);
+                    sp.set('tab', next);
+                    return sp;
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
+
+    // Restore the last-used Items-tab filters so a reload lands on the same view.
+    const savedFilters = useMemo<{ search?: string; cat?: string; wh?: string; status?: string }>(() => {
+        try {
+            return JSON.parse(localStorage.getItem(STOCK_FILTER_KEY) || '{}');
+        } catch {
+            return {};
+        }
+    }, []);
+    const [search, setSearch] = useState(savedFilters.search ?? '');
+    const [cat, setCat] = useState(savedFilters.cat ?? 'all');
+    const [wh, setWh] = useState(savedFilters.wh ?? 'all');
+    const [statusFilter, setStatusFilter] = useState(savedFilters.status ?? 'all');
+
+    // Persist the Items-tab filters across reloads.
+    useEffect(() => {
+        localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify({ search, cat, wh, status: statusFilter }));
+    }, [search, cat, wh, statusFilter]);
     const [editItem, setEditItem] = useState<StockItem | null>(null);
     const [viewId, setViewId] = useState<number | null>(null);
     const [addOpen, setAddOpen] = useState(false);
@@ -311,9 +376,9 @@ export default function StockPage() {
     // If the currently active tab is filtered out (user lost permission), fall back to the first available tab.
     useEffect(() => {
         if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
-            setTab(tabs[0].id);
+            changeTab(tabs[0].id);
         }
-    }, [tabs, tab]);
+    }, [tabs, tab, changeTab]);
 
     // Active item filters surfaced as removable chips (search stays in its own box).
     const statusChipLabel = statusFilter === 'alerts' ? t('stock_st_alerts') : t(`stock_st_${statusFilter}` as Parameters<typeof t>[0]);
@@ -337,8 +402,8 @@ export default function StockPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                     {can('request') && (
-                        <Button variant="outline" onClick={() => setReqOpen(true)}>
-                            <Send className="h-4 w-4" />
+                        <Button onClick={() => setReqOpen(true)}>
+                            <FilePlus2 className="h-4 w-4" />
                             {t('stock_request')}
                         </Button>
                     )}
@@ -350,7 +415,7 @@ export default function StockPage() {
                     summary={summary}
                     t={t}
                     onViewItems={() => {
-                        setTab('items');
+                        changeTab('items');
                         setStatusFilter('alerts');
                     }}
                 />
@@ -361,7 +426,7 @@ export default function StockPage() {
                     {tabs.map((tb) => (
                         <button
                             key={tb.id}
-                            onClick={() => setTab(tb.id)}
+                            onClick={() => changeTab(tb.id)}
                             className={cn(
                                 '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
                                 tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
@@ -394,7 +459,7 @@ export default function StockPage() {
                                 setCat('all');
                                 setStatusFilter('all');
                                 setWh(w);
-                                setTab('items');
+                                changeTab('items');
                             }}
                             onSelectCategory={(c) => {
                                 // Jump to the Items tab showing only the chosen category.
@@ -402,7 +467,7 @@ export default function StockPage() {
                                 setWh('all');
                                 setStatusFilter('all');
                                 setCat(c);
-                                setTab('items');
+                                changeTab('items');
                             }}
                         />
                     )}

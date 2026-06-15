@@ -8,16 +8,53 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/hooks/use-auth';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '@/hooks/use-assets';
+import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset, AssetStatus, AssetType, Role } from '@/types';
-import { Archive, ArrowRight, Box, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock, Cog, Download, Eye, Pencil, Plus, RefreshCcw, Search, Share2, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import {
+    Archive,
+    ArrowRight,
+    Box,
+    Check,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Cog,
+    Download,
+    Eye,
+    Pencil,
+    Plus,
+    RefreshCcw,
+    Search,
+    Share2,
+    Trash2,
+} from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
-type Tab = 'dashboard' | 'inventory' | 'transfers';
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
+// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+const TAB_IDS = ['dashboard', 'inventory', 'transfers'] as const;
+type Tab = (typeof TAB_IDS)[number];
+
+// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
+// (e.g. landing on /assets from the sidebar menu rather than a reload/shared link).
+const ASSET_TAB_KEY = 'assets.tab';
+const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+/** Resolve the starting tab: URL (?tab=) wins, then the last tab in localStorage, then the dashboard. */
+function initialAssetTab(): Tab {
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    if (isAssetTab(fromUrl)) {
+        return fromUrl;
+    }
+    const fromStore = localStorage.getItem(ASSET_TAB_KEY);
+    return isAssetTab(fromStore) ? fromStore : 'dashboard';
+}
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
     return (
@@ -48,7 +85,27 @@ export default function AssetsPage() {
     const canTransfer = isSuper || perms.includes('assets.transfer');
     const canRetire = isSuper || perms.includes('assets.retire');
 
-    const [tab, setTab] = useState<Tab>('dashboard');
+    const [, setSearchParams] = useSearchParams();
+    const [tab, setTab] = useState<Tab>(initialAssetTab);
+
+    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
+    // localStorage (so navigating away and back — which clears the URL — restores it).
+    const changeTab = useCallback(
+        (next: Tab) => {
+            setTab(next);
+            localStorage.setItem(ASSET_TAB_KEY, next);
+            setSearchParams(
+                (prev) => {
+                    const sp = new URLSearchParams(prev);
+                    sp.set('tab', next);
+                    return sp;
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
+
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
     const [sourceFilter, setSourceFilter] = useState('');
@@ -87,8 +144,7 @@ export default function AssetsPage() {
         setFormOpen(true);
     };
 
-    const toggleRow = (id: number, on: boolean) =>
-        setSelectedIds((prev) => (on ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
+    const toggleRow = (id: number, on: boolean) => setSelectedIds((prev) => (on ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
     const allOnPage = rows.length > 0 && rows.every((a) => selectedIds.includes(a.id));
 
     const runBulk = (op: 'maintenance' | 'writeoff') => {
@@ -122,20 +178,25 @@ export default function AssetsPage() {
 
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
-                <StatCard label={t('asset_deployed')} value={summary?.deployed ?? 0} hint={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`} icon={CheckCircle2} />
+                <StatCard
+                    label={t('asset_deployed')}
+                    value={summary?.deployed ?? 0}
+                    hint={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
+                    icon={CheckCircle2}
+                />
                 <StatCard label={t('asset_pending_accept')} value={summary?.pending_acceptance ?? 0} icon={Clock} />
                 <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
             </div>
 
             <Card className="overflow-hidden">
-                <div className="flex gap-1 border-b border-border px-2">
+                <div className="border-border flex gap-1 border-b px-2">
                     {(['dashboard', 'inventory', 'transfers'] as Tab[]).map((tb) => (
                         <button
                             key={tb}
-                            onClick={() => setTab(tb)}
+                            onClick={() => changeTab(tb)}
                             className={cn(
                                 'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                                tab === tb ? 'border-brand text-brand' : 'border-transparent text-muted-foreground hover:text-foreground',
+                                tab === tb ? 'border-brand text-brand' : 'text-muted-foreground hover:text-foreground border-transparent',
                             )}
                         >
                             {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
@@ -180,7 +241,11 @@ export default function AssetsPage() {
                                     </thead>
                                     <tbody>
                                         {(summary?.top_value ?? []).map((a) => (
-                                            <tr key={a.id} className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0" onClick={() => setDetail(a)}>
+                                            <tr
+                                                key={a.id}
+                                                className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
+                                                onClick={() => setDetail(a)}
+                                            >
                                                 <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{a.tag}</td>
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
                                                 <td className="px-3 py-2">{a.owner}</td>
@@ -201,7 +266,7 @@ export default function AssetsPage() {
                     <>
                         <div className="flex flex-wrap items-center gap-2 p-3">
                             <div className="relative min-w-[200px] flex-1">
-                                <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={search}
                                     onChange={(e) => {
@@ -212,29 +277,57 @@ export default function AssetsPage() {
                                     className="h-9 pl-9"
                                 />
                             </div>
-                            <Select value={typeFilter || ALL} onValueChange={(v) => { setTypeFilter(v === ALL ? '' : (v as AssetType)); setPage(1); }}>
-                                <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+                            <Select
+                                value={typeFilter || ALL}
+                                onValueChange={(v) => {
+                                    setTypeFilter(v === ALL ? '' : (v as AssetType));
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 w-36">
+                                    <SelectValue />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
                                     {ASSET_TYPES.map((tp) => (
-                                        <SelectItem key={tp} value={tp}>{t(`asset_type_${tp}`)}</SelectItem>
+                                        <SelectItem key={tp} value={tp}>
+                                            {t(`asset_type_${tp}`)}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={sourceFilter || ALL} onValueChange={(v) => { setSourceFilter(v === ALL ? '' : v); setPage(1); }}>
-                                <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+                            <Select
+                                value={sourceFilter || ALL}
+                                onValueChange={(v) => {
+                                    setSourceFilter(v === ALL ? '' : v);
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 w-36">
+                                    <SelectValue />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
                                     <SelectItem value="purchased">{t('asset_purchase')}</SelectItem>
                                     <SelectItem value="rented">{t('asset_lease')}</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Select value={statusFilter || ALL} onValueChange={(v) => { setStatusFilter(v === ALL ? '' : (v as AssetStatus)); setPage(1); }}>
-                                <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                            <Select
+                                value={statusFilter || ALL}
+                                onValueChange={(v) => {
+                                    setStatusFilter(v === ALL ? '' : (v as AssetStatus));
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 w-40">
+                                    <SelectValue />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
                                     {(Object.keys(ASSET_STATUS_META) as AssetStatus[]).map((s) => (
-                                        <SelectItem key={s} value={s}>{t(ASSET_STATUS_META[s].key)}</SelectItem>
+                                        <SelectItem key={s} value={s}>
+                                            {t(ASSET_STATUS_META[s].key)}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -244,9 +337,13 @@ export default function AssetsPage() {
                         {selectedIds.length > 0 && (
                             <div className="bg-brand/5 border-border flex items-center gap-3 border-y px-4 py-2.5">
                                 <span className="text-brand text-sm font-semibold">
-                                    {lang === 'th' ? `${t('asset_selected')} ${selectedIds.length} ${lang === 'th' ? 'รายการ' : ''}` : `${selectedIds.length} ${t('asset_selected')}`}
+                                    {lang === 'th'
+                                        ? `${t('asset_selected')} ${selectedIds.length} ${lang === 'th' ? 'รายการ' : ''}`
+                                        : `${selectedIds.length} ${t('asset_selected')}`}
                                 </span>
-                                <button className="text-muted-foreground text-xs hover:underline" onClick={() => setSelectedIds([])}>{t('asset_clear')}</button>
+                                <button className="text-muted-foreground text-xs hover:underline" onClick={() => setSelectedIds([])}>
+                                    {t('asset_clear')}
+                                </button>
                                 <div className="flex-1" />
                                 {canEdit && (
                                     <Button size="sm" variant="outline" onClick={() => runBulk('maintenance')} disabled={bulk.isPending}>
@@ -276,7 +373,13 @@ export default function AssetsPage() {
                                                 <input
                                                     type="checkbox"
                                                     checked={allOnPage}
-                                                    onChange={(e) => setSelectedIds(e.target.checked ? [...new Set([...selectedIds, ...rows.map((a) => a.id)])] : selectedIds.filter((id) => !rows.some((a) => a.id === id)))}
+                                                    onChange={(e) =>
+                                                        setSelectedIds(
+                                                            e.target.checked
+                                                                ? [...new Set([...selectedIds, ...rows.map((a) => a.id)])]
+                                                                : selectedIds.filter((id) => !rows.some((a) => a.id === id)),
+                                                        )
+                                                    }
                                                 />
                                             </th>
                                             <th className="px-4 py-2.5">{t('asset_tag')}</th>
@@ -291,55 +394,108 @@ export default function AssetsPage() {
                                     </thead>
                                     <tbody>
                                         {rows.map((a) => (
-                                            <tr key={a.id} className={cn('border-border/60 border-b last:border-0', selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40')}>
+                                            <tr
+                                                key={a.id}
+                                                className={cn(
+                                                    'border-border/60 border-b last:border-0',
+                                                    selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
+                                                )}
+                                            >
                                                 <td className="px-4 py-2.5">
-                                                    <input type="checkbox" checked={selectedIds.includes(a.id)} onChange={(e) => toggleRow(a.id, e.target.checked)} />
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(a.id)}
+                                                        onChange={(e) => toggleRow(a.id, e.target.checked)}
+                                                    />
                                                 </td>
-                                                <td className="text-muted-foreground cursor-pointer px-4 py-2.5 font-mono text-xs" onClick={() => setDetail(a)}>{a.tag}</td>
+                                                <td
+                                                    className="text-muted-foreground cursor-pointer px-4 py-2.5 font-mono text-xs"
+                                                    onClick={() => setDetail(a)}
+                                                >
+                                                    {a.tag}
+                                                </td>
                                                 <td className="px-4 py-2.5">
                                                     <span className="flex items-center gap-2">
                                                         <AssetTypeIcon type={a.type} className="text-muted-foreground h-4 w-4" />
                                                         {t(`asset_type_${a.type}`)}
                                                     </span>
                                                 </td>
-                                                <td className="cursor-pointer px-4 py-2.5 font-medium" onClick={() => setDetail(a)}>{a.model}</td>
+                                                <td className="cursor-pointer px-4 py-2.5 font-medium" onClick={() => setDetail(a)}>
+                                                    {a.model}
+                                                </td>
                                                 <td className="px-4 py-2.5">{a.owner}</td>
                                                 <td className="px-4 py-2.5">{a.department}</td>
-                                                <td className="px-4 py-2.5"><AssetStatusBadge status={a.status} t={t} /></td>
+                                                <td className="px-4 py-2.5">
+                                                    <AssetStatusBadge status={a.status} t={t} />
+                                                </td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{a.value_display}</td>
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex items-center justify-end gap-1">
                                                         {canTransfer && a.status === 'pending_acceptance' && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_accept')} onClick={() => accept.mutate(a.id)}>
+                                                            <button
+                                                                className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                title={t('asset_accept')}
+                                                                onClick={() => accept.mutate(a.id)}
+                                                            >
                                                                 <Check className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {canTransfer && a.status === 'pending_return' && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_mark_received')} onClick={() => receive.mutate(a.id)}>
+                                                            <button
+                                                                className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                title={t('asset_mark_received')}
+                                                                onClick={() => receive.mutate(a.id)}
+                                                            >
                                                                 <CheckCircle2 className="h-4 w-4" />
                                                             </button>
                                                         )}
-                                                        {canTransfer && !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5" title={t('transfer_asset')} onClick={() => setTransferAsset(a)}>
-                                                                <Share2 className="h-4 w-4" />
-                                                            </button>
-                                                        )}
+                                                        {canTransfer &&
+                                                            !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
+                                                                <button
+                                                                    className="hover:bg-accent rounded-md p-1.5"
+                                                                    title={t('transfer_asset')}
+                                                                    onClick={() => setTransferAsset(a)}
+                                                                >
+                                                                    <Share2 className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         {canEdit && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5" title={a.status === 'maintenance' ? t('asset_exit_maintenance') : t('asset_set_maintenance')} onClick={() => toggleMaintenance.mutate(a.id)}>
+                                                            <button
+                                                                className="hover:bg-accent rounded-md p-1.5"
+                                                                title={
+                                                                    a.status === 'maintenance'
+                                                                        ? t('asset_exit_maintenance')
+                                                                        : t('asset_set_maintenance')
+                                                                }
+                                                                onClick={() => toggleMaintenance.mutate(a.id)}
+                                                            >
                                                                 <Cog className="h-4 w-4" />
                                                             </button>
                                                         )}
-                                                        {canRetire && !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5 text-emerald-600" title={t('asset_to_stock')} onClick={() => setToStockAsset(a)}>
-                                                                <Archive className="h-4 w-4" />
-                                                            </button>
-                                                        )}
+                                                        {canRetire &&
+                                                            !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
+                                                                <button
+                                                                    className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                    title={t('asset_to_stock')}
+                                                                    onClick={() => setToStockAsset(a)}
+                                                                >
+                                                                    <Archive className="h-4 w-4" />
+                                                                </button>
+                                                            )}
                                                         {canEdit && (
-                                                            <button className="hover:bg-accent rounded-md p-1.5" title={t('edit_asset')} onClick={() => openEdit(a)}>
+                                                            <button
+                                                                className="hover:bg-accent rounded-md p-1.5"
+                                                                title={t('edit_asset')}
+                                                                onClick={() => openEdit(a)}
+                                                            >
                                                                 <Pencil className="h-4 w-4" />
                                                             </button>
                                                         )}
-                                                        <button className="hover:bg-accent rounded-md p-1.5" title={t('asset_view')} onClick={() => setDetail(a)}>
+                                                        <button
+                                                            className="hover:bg-accent rounded-md p-1.5"
+                                                            title={t('asset_view')}
+                                                            onClick={() => setDetail(a)}
+                                                        >
                                                             <Eye className="h-4 w-4" />
                                                         </button>
                                                     </div>
@@ -354,13 +510,22 @@ export default function AssetsPage() {
                         {meta && rows.length > 0 && (
                             <div className="border-border text-muted-foreground flex items-center justify-between gap-3 border-t px-4 py-3 text-sm">
                                 <span>
-                                    {meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1}–{Math.min(meta.current_page * meta.per_page, meta.total)} {t('asset_of')} {meta.total}
+                                    {meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1}–
+                                    {Math.min(meta.current_page * meta.per_page, meta.total)} {t('asset_of')} {meta.total}
                                 </span>
                                 <div className="flex items-center gap-1">
-                                    <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40">
+                                    <button
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={page <= 1}
+                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                    >
                                         <ChevronLeft className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => setPage((p) => p + 1)} disabled={!!meta && page >= meta.last_page} className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40">
+                                    <button
+                                        onClick={() => setPage((p) => p + 1)}
+                                        disabled={!!meta && page >= meta.last_page}
+                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                    >
                                         <ChevronRight className="h-4 w-4" />
                                     </button>
                                 </div>
@@ -392,7 +557,9 @@ export default function AssetsPage() {
                                             <td className="px-4 py-2.5 font-mono text-xs">{tr.date}</td>
                                             <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tr.asset_tag}</td>
                                             <td className="px-4 py-2.5">{tr.from_owner ?? '—'}</td>
-                                            <td className="text-muted-foreground px-4 py-2.5"><ArrowRight className="h-4 w-4" /></td>
+                                            <td className="text-muted-foreground px-4 py-2.5">
+                                                <ArrowRight className="h-4 w-4" />
+                                            </td>
                                             <td className="px-4 py-2.5 font-medium">{tr.to_owner}</td>
                                             <td className="text-muted-foreground px-4 py-2.5">{tr.reason ?? '—'}</td>
                                             <td className="px-4 py-2.5">{tr.performed_by ?? '—'}</td>
@@ -405,7 +572,19 @@ export default function AssetsPage() {
                 )}
             </Card>
 
-            <AssetDetailDrawer asset={detail} onClose={() => setDetail(null)} onTransfer={(a) => { setDetail(null); setTransferAsset(a); }} onReceive={(a) => { setDetail(null); receive.mutate(a.id); }} canTransfer={canTransfer} />
+            <AssetDetailDrawer
+                asset={detail}
+                onClose={() => setDetail(null)}
+                onTransfer={(a) => {
+                    setDetail(null);
+                    setTransferAsset(a);
+                }}
+                onReceive={(a) => {
+                    setDetail(null);
+                    receive.mutate(a.id);
+                }}
+                canTransfer={canTransfer}
+            />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
             <AssetTransferDrawer asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetToStockModal asset={toStockAsset} onClose={() => setToStockAsset(null)} />

@@ -7,13 +7,15 @@ import { useCurrency, useDateTime } from '@/hooks/use-settings';
 import { useMovementSerials, useStockMovements } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import type { StockMovementType } from '@/types';
-import { ArrowRight, Printer } from 'lucide-react';
+import { ArrowRight, Filter, Printer } from 'lucide-react';
 import { useState } from 'react';
 import { MV_META, MV_TONE_BG } from '../shared';
 
 export function MovementsTab() {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const { format } = useCurrency();
     const { format: fmtDateTime } = useDateTime();
     const [type, setType] = useState('all');
@@ -66,7 +68,10 @@ export function MovementsTab() {
 
     return (
         <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
+            {/* Inline type filter: icon + label + dropdown (no popover). */}
+            <div className="flex flex-wrap items-center gap-1.5">
+                <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'ประเภท:' : 'Filter:'}</span>
                 <div className="w-44">
                     <SearchableSelect
                         value={type}

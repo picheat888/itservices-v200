@@ -17,22 +17,54 @@ import type { Contract, ContractStatus, ContractType, Role } from '@/types';
 import {
     AlertTriangle,
     ArrowRight,
+    ArrowUpDown,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
     Clock,
     FileText,
+    Filter,
     Import,
     Plus,
     Search,
     TrendingUp,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-type Tab = 'dashboard' | 'all' | 'expiring';
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
+// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+const TAB_IDS = ['dashboard', 'all', 'expiring'] as const;
+type Tab = (typeof TAB_IDS)[number];
 
-function StatCard({ label, value, hint, hintDanger, icon: Icon }: { label: string; value: string | number; hint?: string; hintDanger?: boolean; icon: typeof FileText }) {
+// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
+// (e.g. landing on /contracts from the sidebar menu rather than a reload/shared link).
+const CONTRACT_TAB_KEY = 'contracts.tab';
+const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+/** Resolve the starting tab: URL (?tab=) wins, then the last tab in localStorage, then the dashboard. */
+function initialContractTab(): Tab {
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    if (isContractTab(fromUrl)) {
+        return fromUrl;
+    }
+    const fromStore = localStorage.getItem(CONTRACT_TAB_KEY);
+    return isContractTab(fromStore) ? fromStore : 'dashboard';
+}
+
+function StatCard({
+    label,
+    value,
+    hint,
+    hintDanger,
+    icon: Icon,
+}: {
+    label: string;
+    value: string | number;
+    hint?: string;
+    hintDanger?: boolean;
+    icon: typeof FileText;
+}) {
     return (
         <Card className="p-5">
             <div className="flex items-start justify-between">
@@ -81,7 +113,7 @@ export default function ContractsPage() {
     const canEdit = isSuper || perms.includes('contracts.edit');
     const canImport = isSuper || perms.includes('contracts.import');
 
-    const [tab, setTab] = useState<Tab>('dashboard');
+    const [tab, setTab] = useState<Tab>(initialContractTab);
     const [search, setSearch] = useState('');
     const ALL_TYPES = '__all__';
     const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
@@ -98,7 +130,11 @@ export default function ContractsPage() {
 
     const { data: summary } = useContractSummary();
     const listEnabledTab = tab === 'expiring' ? 'expiring' : 'all';
-    const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab, type: typeFilter || undefined, sort });
+    const {
+        data: listData,
+        isLoading,
+        isFetching,
+    } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab, type: typeFilter || undefined, sort });
     const { data: selected } = useContract(selectedId);
 
     // Deep-link from a notification: /contracts?view=<id> opens that contract's
@@ -116,6 +152,24 @@ export default function ContractsPage() {
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
 
+    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
+    // localStorage (so navigating away and back — which clears the URL — restores it).
+    const changeTab = useCallback(
+        (next: Tab) => {
+            setTab(next);
+            localStorage.setItem(CONTRACT_TAB_KEY, next);
+            setSearchParams(
+                (prev) => {
+                    const sp = new URLSearchParams(prev);
+                    sp.set('tab', next);
+                    return sp;
+                },
+                { replace: true },
+            );
+        },
+        [setSearchParams],
+    );
+
     const openCreate = () => {
         setEditing(null);
         setFormOpen(true);
@@ -129,7 +183,7 @@ export default function ContractsPage() {
     /** Called by ContractFormDrawer after a new contract is saved. */
     const handleCreated = (contract: Contract) => {
         // Switch to the "all" tab and go to page 1 so the user can see the list.
-        setTab('all');
+        changeTab('all');
         setPage(1);
         // Pin the new row at the top for 8 seconds.
         if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
@@ -183,7 +237,7 @@ export default function ContractsPage() {
                         <Button
                             variant="outline"
                             onClick={() => {
-                                setTab('expiring');
+                                changeTab('expiring');
                                 setPage(1);
                             }}
                         >
@@ -205,7 +259,7 @@ export default function ContractsPage() {
                         <button
                             key={tb.id}
                             onClick={() => {
-                                setTab(tb.id);
+                                changeTab(tb.id);
                                 setPage(1);
                                 setTypeFilter('');
                             }}
@@ -228,9 +282,8 @@ export default function ContractsPage() {
                 {tab === 'dashboard' ? (
                     <DashboardTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
                 ) : (
-                    <>
-                        <div className="border-border flex flex-wrap items-center gap-2 border-b p-3">
-                            <p className="text-muted-foreground mr-auto text-sm">{tab === 'expiring' ? t('expiring_soon_hint') : t('all_contracts_hint')}</p>
+                    <div className="space-y-3 p-5">
+                        <div className="flex flex-wrap items-center gap-2">
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
@@ -240,99 +293,139 @@ export default function ContractsPage() {
                                         setPage(1);
                                     }}
                                     placeholder={`${t('contract_vendor')} / ${t('contract_title')}`}
-                                    className="h-9 pl-9"
+                                    className="pl-9"
                                 />
                             </div>
-                            <Select
-                                value={typeFilter || ALL_TYPES}
-                                onValueChange={(v) => {
-                                    setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 w-52">
-                                    <span className="text-muted-foreground mr-1 shrink-0 text-xs font-medium">
-                                        {lang === 'th' ? 'ประเภท:' : 'Type:'}
-                                    </span>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL_TYPES}>{lang === 'th' ? 'ทุกประเภท' : 'All types'}</SelectItem>
-                                    <SelectItem value="software">{t('contract_type_software')}</SelectItem>
-                                    <SelectItem value="hardware">{t('contract_type_hardware')}</SelectItem>
-                                    <SelectItem value="service">{t('contract_type_service')}</SelectItem>
-                                    <SelectItem value="connectivity">{t('contract_type_connectivity')}</SelectItem>
-                                    <SelectItem value="other">{t('contract_type_other')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                value={sort}
-                                onValueChange={(v) => {
-                                    setSort(v);
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 w-64">
-                                    <span className="text-muted-foreground mr-1 shrink-0 text-xs font-medium">
-                                        {lang === 'th' ? 'เรียงตาม:' : 'Sort By:'}
-                                    </span>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="end_asc">{lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first'}</SelectItem>
-                                    <SelectItem value="end_desc">{lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first'}</SelectItem>
-                                    <SelectItem value="created_desc">{lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added'}</SelectItem>
-                                    <SelectItem value="created_asc">{lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added'}</SelectItem>
-                                    <SelectItem value="value_desc">{lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first'}</SelectItem>
-                                    <SelectItem value="value_asc">{lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first'}</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-1.5">
+                                <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'ประเภท:' : 'Filter:'}</span>
+                                <Select
+                                    value={typeFilter || ALL_TYPES}
+                                    onValueChange={(v) => {
+                                        setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="w-40">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value={ALL_TYPES}>
+                                            <span className="flex items-center gap-2">
+                                                <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
+                                                {lang === 'th' ? 'ทุกประเภท' : 'All types'}
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="software">
+                                            <span className="flex items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                                                {t('contract_type_software')}
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="hardware">
+                                            <span className="flex items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
+                                                {t('contract_type_hardware')}
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="service">
+                                            <span className="flex items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                                                {t('contract_type_service')}
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="connectivity">
+                                            <span className="flex items-center gap-2">
+                                                <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                                                {t('contract_type_connectivity')}
+                                            </span>
+                                        </SelectItem>
+                                        <SelectItem value="other">
+                                            <span className="flex items-center gap-2">
+                                                <span className="bg-muted-foreground/40 h-2 w-2 shrink-0 rounded-full" />
+                                                {t('contract_type_other')}
+                                            </span>
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <ArrowUpDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'เรียงตาม:' : 'Sort by:'}</span>
+                                <Select
+                                    value={sort}
+                                    onValueChange={(v) => {
+                                        setSort(v);
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="w-48">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="end_asc">
+                                            {lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first'}
+                                        </SelectItem>
+                                        <SelectItem value="end_desc">{lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first'}</SelectItem>
+                                        <SelectItem value="created_desc">{lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added'}</SelectItem>
+                                        <SelectItem value="created_asc">{lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added'}</SelectItem>
+                                        <SelectItem value="value_desc">{lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first'}</SelectItem>
+                                        <SelectItem value="value_asc">{lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first'}</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {isLoading ? (
-                            <div className="p-4">
+                            <div className="border-border rounded-xl border p-4">
                                 <TableSkeleton rows={8} cols={8} />
                             </div>
                         ) : rows.length === 0 ? (
-                            <div className="text-muted-foreground px-4 py-16 text-center text-sm">{t('contract_none')}</div>
+                            <div className="border-border rounded-xl border">
+                                <div className="text-muted-foreground px-4 py-16 text-center text-sm">{t('contract_none')}</div>
+                            </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                            <th className="px-4 py-2.5">{t('contract_code')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_title')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_vendor')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_type')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_start')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_end')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_days_remaining')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_value')}</th>
-                                            <th className="px-4 py-2.5">{t('status')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {/* Newly-created contract pinned at top, independent of current sort order. */}
-                                        {newlyCreated && (
-                                            <ContractRow
-                                                key={`new-${newlyCreated.id}`}
-                                                c={newlyCreated}
-                                                isNew
-                                                onSelect={setSelectedId}
-                                            />
-                                        )}
-                                        {rows
-                                            .filter((c) => c.id !== newlyCreated?.id)
-                                            .map((c) => (
-                                                <ContractRow key={c.id} c={c} onSelect={setSelectedId} />
-                                            ))}
-                                    </tbody>
-                                </table>
+                            <div
+                                className={cn(
+                                    'border-border overflow-hidden rounded-xl border transition-opacity duration-200',
+                                    // Keep the current rows visible (placeholderData) but dim them while the
+                                    // next page / filter / sort loads — smoother than a skeleton flash.
+                                    isFetching && 'pointer-events-none opacity-60',
+                                )}
+                            >
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                                <th className="px-4 py-2.5">{t('contract_code')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_title')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_vendor')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_type')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_start')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_end')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_days_remaining')}</th>
+                                                <th className="px-4 py-2.5">{t('contract_value')}</th>
+                                                <th className="px-4 py-2.5">{t('status')}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {/* Newly-created contract pinned at top, independent of current sort order. */}
+                                            {newlyCreated && (
+                                                <ContractRow key={`new-${newlyCreated.id}`} c={newlyCreated} isNew onSelect={setSelectedId} />
+                                            )}
+                                            {rows
+                                                .filter((c) => c.id !== newlyCreated?.id)
+                                                .map((c) => (
+                                                    <ContractRow key={c.id} c={c} onSelect={setSelectedId} />
+                                                ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
                         {meta && rows.length > 0 && (
-                            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-sm">
+                            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                                 <div className="flex items-center gap-2">
                                     <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
                                     <Select
@@ -382,16 +475,11 @@ export default function ContractsPage() {
                                 </div>
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </Card>
 
-            <ContractDetailDrawer
-                contract={selected ?? null}
-                onClose={() => setSelectedId(null)}
-                onEdit={openEdit}
-                canEdit={canEdit}
-            />
+            <ContractDetailDrawer contract={selected ?? null} onClose={() => setSelectedId(null)} onEdit={openEdit} canEdit={canEdit} />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
@@ -406,25 +494,21 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
         <tr
             onClick={() => onSelect(c.id)}
             className={cn(
-                'border-border/60 cursor-pointer border-b last:border-0',
-                isNew
-                    ? 'bg-emerald-500/8 hover:bg-emerald-500/12 animate-in fade-in duration-500'
-                    : 'hover:bg-accent/40',
+                'border-border/60 cursor-pointer border-b transition-colors last:border-0',
+                isNew ? 'animate-in fade-in bg-emerald-500/8 duration-500 hover:bg-emerald-500/12' : 'hover:bg-accent/40',
             )}
         >
             <td className="px-4 py-2.5">
                 <div className="flex items-center gap-2">
                     <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
                     {isNew && (
-                        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                             {lang === 'th' ? 'ใหม่' : 'New'}
                         </span>
                     )}
                 </div>
             </td>
-            <td className="max-w-[280px] truncate px-4 py-2.5">
-                {c.title || <span className="text-muted-foreground">—</span>}
-            </td>
+            <td className="max-w-[280px] truncate px-4 py-2.5">{c.title || <span className="text-muted-foreground">—</span>}</td>
             <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
             <td className="px-4 py-2.5">
                 <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>
@@ -440,13 +524,24 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
                     {c.status === 'cancelled'
                         ? t('contract_cancelled')
                         : c.status === 'expired'
-                          ? lang === 'th' ? 'หมดอายุ' : 'Expired'
-                          : lang === 'th' ? 'ใช้งาน' : 'Active'}
+                          ? lang === 'th'
+                              ? 'หมดอายุ'
+                              : 'Expired'
+                          : lang === 'th'
+                            ? 'ใช้งาน'
+                            : 'Active'}
                 </StatusBadge>
             </td>
         </tr>
     );
 }
+
+/** Scoped keyframes for the Contracts dashboard — staggered row reveal, matching the Stock dashboard feel. */
+const contractDashStyles = `
+@keyframes cf-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.cf-row { animation: cf-fade .35s ease both; }
+@media (prefers-reduced-motion: reduce) { .cf-row { animation: none; } }
+`;
 
 function DashboardTab({
     summary,
@@ -461,10 +556,30 @@ function DashboardTab({
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
 
+    // Loading state mirrors the real layout with pulsing placeholders (same feel as the Stock dashboard).
     if (!summary)
         return (
-            <div className="p-6">
-                <TableSkeleton rows={4} cols={2} />
+            <div className="space-y-6 p-5">
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i} className="p-5">
+                            <div className="flex items-start justify-between">
+                                <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                                <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
+                            </div>
+                            <div className="bg-muted mt-3 h-8 w-20 animate-pulse rounded" />
+                        </Card>
+                    ))}
+                </div>
+                <div className="bg-muted/40 h-36 animate-pulse rounded-lg" />
+                <div className="grid gap-6 lg:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <Card key={i} className="p-5">
+                            <div className="bg-muted mb-4 h-3 w-32 animate-pulse rounded" />
+                            <div className="bg-muted/60 h-44 animate-pulse rounded" />
+                        </Card>
+                    ))}
+                </div>
             </div>
         );
 
@@ -517,6 +632,7 @@ function DashboardTab({
 
     return (
         <div className="space-y-6 p-5">
+            <style>{contractDashStyles}</style>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
                 <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
@@ -546,7 +662,7 @@ function DashboardTab({
                         </span>
                         <span className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-amber-500" />
-                            {lang === 'th' ? '≤30 วัน' : '≤30 days'}
+                            {lang === 'th' ? 'ในช่วงแจ้งเตือน' : 'In reminder window'}
                         </span>
                         <span className="flex items-center gap-1.5">
                             <span className="bg-destructive h-2 w-2 rounded-full" />
@@ -570,7 +686,11 @@ function DashboardTab({
                         <div className="relative z-10 mx-2 mt-3" style={{ height: `${plotHeight}px` }}>
                             {/* Month separators */}
                             {months.slice(1).map((m, i) => (
-                                <div key={m.key} className="border-border/40 absolute inset-y-0 border-l" style={{ left: `${((i + 1) / 12) * 100}%` }} />
+                                <div
+                                    key={m.key}
+                                    className="border-border/40 absolute inset-y-0 border-l"
+                                    style={{ left: `${((i + 1) / 12) * 100}%` }}
+                                />
                             ))}
                             {/* Axis baseline */}
                             <div className="border-border absolute inset-x-0 bottom-0 border-t" />
@@ -586,7 +706,7 @@ function DashboardTab({
                                     onClick={() => onSelect(c.id)}
                                     className={cn(
                                         'ring-background absolute h-3 w-3 -translate-x-1/2 rounded-full ring-2 transition-transform hover:z-10 hover:scale-125',
-                                        c.days <= 0 ? 'bg-destructive' : c.days <= 30 ? 'bg-amber-500' : 'bg-brand',
+                                        c.days <= 0 ? 'bg-destructive' : c.in_reminder ? 'bg-amber-500' : 'bg-brand',
                                     )}
                                     style={{ left: `${frac * 100}%`, bottom: `${8 + lane * 16}px` }}
                                 />
@@ -613,14 +733,17 @@ function DashboardTab({
 
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* Top vendors by spend */}
-                <div>
+                <Card className="p-5">
                     <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_top_vendors')}</div>
                     <div className="space-y-2.5">
-                        {summary.top_vendors.map((r) => (
-                            <div key={r.vendor}>
+                        {summary.top_vendors.map((r, i) => (
+                            <div key={r.vendor} className="cf-row" style={{ animationDelay: `${i * 40}ms` }}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
-                                    <span className="text-muted-foreground font-mono text-xs">{symbol}{Math.round(r.amount / 1000)}K</span>
+                                    <span className="text-muted-foreground font-mono text-xs">
+                                        {symbol}
+                                        {Math.round(r.amount / 1000)}K
+                                    </span>
                                 </div>
                                 <div className="bg-muted h-2 overflow-hidden rounded-full">
                                     <span className="bg-brand block h-full rounded-full" style={{ width: `${(r.amount / maxVendor) * 100}%` }} />
@@ -628,20 +751,23 @@ function DashboardTab({
                             </div>
                         ))}
                     </div>
-                </div>
+                </Card>
 
                 {/* Action queue */}
-                <div>
+                <Card className="p-5">
                     <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_action_queue')}</div>
-                    <div className="space-y-2">
+                    {/* Up to 20 items (server-capped); scroll within the card so a long queue
+                        doesn't stretch the layout past the Top-vendors card beside it. */}
+                    <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
                         {summary.action_queue.length === 0 && (
                             <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">—</div>
                         )}
-                        {summary.action_queue.map((c) => (
+                        {summary.action_queue.map((c, i) => (
                             <button
                                 key={c.id}
                                 onClick={() => onSelect(c.id)}
-                                className="border-border hover:bg-accent/40 flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left"
+                                style={{ animationDelay: `${i * 40}ms` }}
+                                className="cf-row border-border hover:bg-accent/40 flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors"
                             >
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
                                     {c.days}d
@@ -654,7 +780,7 @@ function DashboardTab({
                             </button>
                         ))}
                     </div>
-                </div>
+                </Card>
             </div>
         </div>
     );

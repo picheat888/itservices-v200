@@ -1,7 +1,7 @@
 import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
-import { EditEmployeeDialog } from '@/components/employees/edit-employee-dialog';
 import { DepartmentMembersDialog } from '@/components/employees/department-members-dialog';
 import { DepartmentModal } from '@/components/employees/department-modal';
+import { EditEmployeeDialog } from '@/components/employees/edit-employee-dialog';
 import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
 import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
 import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
@@ -65,10 +65,22 @@ import { useSearchParams } from 'react-router-dom';
 const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
-/** Read the initial tab from the URL (?tab=) so a reload stays on the same tab. */
+// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
+// (e.g. landing on /employees from the sidebar menu rather than a reload/shared link).
+const EMP_TAB_KEY = 'employees.tab';
+const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
+
+/**
+ * Resolve the starting tab: the URL (?tab=) wins so reloads / shared links are exact;
+ * otherwise fall back to the last tab saved in localStorage; otherwise the dashboard.
+ */
 function initialTab(): Tab {
-    const p = new URLSearchParams(window.location.search).get('tab');
-    return (TAB_IDS as readonly string[]).includes(p ?? '') ? (p as Tab) : 'dashboard';
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    if (isTab(fromUrl)) {
+        return fromUrl;
+    }
+    const fromStore = localStorage.getItem(EMP_TAB_KEY);
+    return isTab(fromStore) ? fromStore : 'dashboard';
 }
 
 function initials(name: string) {
@@ -139,10 +151,12 @@ export default function EmployeesPage() {
         if (highlightId) setTab('directory');
     }, [highlightId]);
 
-    // Switch tab and remember it in the URL (?tab=) so a reload stays put.
+    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
+    // localStorage (so navigating away and back — which clears the URL — restores it).
     const changeTab = useCallback(
         (next: Tab) => {
             setTab(next);
+            localStorage.setItem(EMP_TAB_KEY, next);
             setSearchParams(
                 (prev) => {
                     const sp = new URLSearchParams(prev);
@@ -216,7 +230,11 @@ export default function EmployeesPage() {
                     <TooltipProvider delayDuration={150}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex" aria-label={t('pos_allow_special')}>
+                                <button
+                                    type="button"
+                                    className="text-muted-foreground hover:text-foreground inline-flex"
+                                    aria-label={t('pos_allow_special')}
+                                >
                                     <Info className="h-3.5 w-3.5" />
                                 </button>
                             </TooltipTrigger>
