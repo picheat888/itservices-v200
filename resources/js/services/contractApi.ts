@@ -39,7 +39,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 }
 
 export const contractApi = {
-    list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string }) =>
+    list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string; sort?: string }) =>
         http.get<ContractPageResponse>('/contracts', { params }).then((r) => r.data),
     downloadImportTemplate: () =>
         http.get('/contracts/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),

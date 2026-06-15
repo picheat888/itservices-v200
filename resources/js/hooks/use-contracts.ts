@@ -5,7 +5,7 @@ const CONTRACTS = ['contracts'] as const;
 const SUMMARY = ['contracts-summary'] as const;
 
 /** Paginated contract list; the "expiring" tab is server-filtered. */
-export const useContracts = (params: { page: number; per_page: number; search: string; tab: string; type?: string }) =>
+export const useContracts = (params: { page: number; per_page: number; search: string; tab: string; type?: string; sort?: string }) =>
     useQuery({
         queryKey: ['contracts-list', params],
         queryFn: () =>
@@ -15,6 +15,7 @@ export const useContracts = (params: { page: number; per_page: number; search: s
                 search: params.search || undefined,
                 tab: params.tab,
                 type: params.type || undefined,
+                sort: params.sort || undefined,
             }),
         placeholderData: (prev) => prev,
     });

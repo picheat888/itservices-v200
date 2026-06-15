@@ -38,9 +38,17 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with(['attachments', 'assets'])
-            ->orderByRaw('cancelled_at IS NOT NULL')
-            ->orderBy('end_date');
+            ->with(['attachments', 'assets']);
+
+        // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
+        match ($request->query('sort', 'end_asc')) {
+            'end_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('end_date', 'desc'),
+            'created_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('created_at', 'desc'),
+            'created_asc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('created_at', 'asc'),
+            'value_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('value', 'desc'),
+            'value_asc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('value', 'asc'),
+            default => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('end_date', 'asc'),
+        };
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
