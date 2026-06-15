@@ -133,12 +133,15 @@ class ContractController extends Controller
                 'vendor' => $c->vendor,
                 'end' => $c->end_date->toDateString(),
                 'days' => $c->daysRemaining(),
+                // Mirror the Action-queue logic: amber dot = inside the contract's
+                // own (per-contract) reminder window, not a fixed day threshold.
+                'in_reminder' => $c->isInReminder(),
             ])
             ->values();
 
         $actionQueue = $expiring
             ->sortBy(fn ($c) => $c->daysRemaining())
-            ->take(6)
+            ->take(20)
             ->map(fn ($c) => [
                 'id' => $c->id,
                 'code' => $c->code,

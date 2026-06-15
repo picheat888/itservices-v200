@@ -195,7 +195,7 @@ export interface ContractSummary {
     cancelled: number;
     annual_value: string;
     top_vendors: { vendor: string; amount: number }[];
-    timeline: { id: number; code: string; name: string; vendor: string; end: string; days: number }[];
+    timeline: { id: number; code: string; name: string; vendor: string; end: string; days: number; in_reminder: boolean }[];
     action_queue: { id: number; code: string; name: string; vendor: string; days: number }[];
 }
 
