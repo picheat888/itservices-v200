@@ -80,10 +80,13 @@ export function ContractFormDrawer({
     open,
     editing,
     onClose,
+    onCreated,
 }: {
     open: boolean;
     editing: Contract | null;
     onClose: () => void;
+    /** Called after a new contract is successfully saved — receives the created contract. */
+    onCreated?: (contract: Contract) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -236,6 +239,7 @@ export function ContractFormDrawer({
             }
 
             setSaveState('done');
+            if (!editing) onCreated?.(saved as Contract);
             setTimeout(() => {
                 setSaveState('idle');
                 onClose();

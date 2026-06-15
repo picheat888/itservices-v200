@@ -27,7 +27,7 @@ import {
     Search,
     TrendingUp,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'all' | 'expiring';
@@ -85,16 +85,20 @@ export default function ContractsPage() {
     const [search, setSearch] = useState('');
     const ALL_TYPES = '__all__';
     const [typeFilter, setTypeFilter] = useState<ContractType | ''>('');
+    const [sort, setSort] = useState('end_asc');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Contract | null>(null);
     const [importOpen, setImportOpen] = useState(false);
+    // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
+    const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
+    const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const { data: summary } = useContractSummary();
     const listEnabledTab = tab === 'expiring' ? 'expiring' : 'all';
-    const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab, type: typeFilter || undefined });
+    const { data: listData, isLoading } = useContracts({ page, per_page: perPage, search, tab: listEnabledTab, type: typeFilter || undefined, sort });
     const { data: selected } = useContract(selectedId);
 
     // Deep-link from a notification: /contracts?view=<id> opens that contract's
@@ -120,6 +124,17 @@ export default function ContractsPage() {
         setSelectedId(null);
         setEditing(c);
         setFormOpen(true);
+    };
+
+    /** Called by ContractFormDrawer after a new contract is saved. */
+    const handleCreated = (contract: Contract) => {
+        // Switch to the "all" tab and go to page 1 so the user can see the list.
+        setTab('all');
+        setPage(1);
+        // Pin the new row at the top for 8 seconds.
+        if (newlyCreatedTimer.current) clearTimeout(newlyCreatedTimer.current);
+        setNewlyCreated(contract);
+        newlyCreatedTimer.current = setTimeout(() => setNewlyCreated(null), 8000);
     };
 
     const maxVendor = summary?.top_vendors?.[0]?.amount ?? 1;
@@ -247,6 +262,25 @@ export default function ContractsPage() {
                                     <SelectItem value="other">{t('contract_type_other')}</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <Select
+                                value={sort}
+                                onValueChange={(v) => {
+                                    setSort(v);
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-9 w-48">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="end_asc">{lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first'}</SelectItem>
+                                    <SelectItem value="end_desc">{lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first'}</SelectItem>
+                                    <SelectItem value="created_desc">{lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added'}</SelectItem>
+                                    <SelectItem value="created_asc">{lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added'}</SelectItem>
+                                    <SelectItem value="value_desc">{lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first'}</SelectItem>
+                                    <SelectItem value="value_asc">{lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first'}</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {isLoading ? (
@@ -272,41 +306,20 @@ export default function ContractsPage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {rows.map((c) => (
-                                            <tr
-                                                key={c.id}
-                                                onClick={() => setSelectedId(c.id)}
-                                                className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
-                                            >
-                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{c.code}</td>
-                                                <td className="max-w-[280px] truncate px-4 py-2.5">
-                                                    {c.title || <span className="text-muted-foreground">—</span>}
-                                                </td>
-                                                <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <StatusBadge tone={TYPE_TONE[c.type]}>
-                                                        {t(`contract_type_${c.type}`)}
-                                                    </StatusBadge>
-                                                </td>
-                                                <td className="px-4 py-2.5 font-mono text-xs">{c.start}</td>
-                                                <td className="px-4 py-2.5 font-mono text-xs">{c.end}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />
-                                                </td>
-                                                <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <StatusBadge
-                                                        tone={c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'red' : 'green'}
-                                                    >
-                                                        {c.status === 'cancelled'
-                                                            ? t('contract_cancelled')
-                                                            : c.status === 'expired'
-                                                              ? lang === 'th' ? 'หมดอายุ' : 'Expired'
-                                                              : lang === 'th' ? 'ใช้งาน' : 'Active'}
-                                                    </StatusBadge>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {/* Newly-created contract pinned at top, independent of current sort order. */}
+                                        {newlyCreated && (
+                                            <ContractRow
+                                                key={`new-${newlyCreated.id}`}
+                                                c={newlyCreated}
+                                                isNew
+                                                onSelect={setSelectedId}
+                                            />
+                                        )}
+                                        {rows
+                                            .filter((c) => c.id !== newlyCreated?.id)
+                                            .map((c) => (
+                                                <ContractRow key={c.id} c={c} onSelect={setSelectedId} />
+                                            ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -373,9 +386,59 @@ export default function ContractsPage() {
                 onEdit={openEdit}
                 canEdit={canEdit}
             />
-            <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+            <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
+    );
+}
+
+/** Single contract row — shared by the normal list and the "new" pinned row. */
+function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: boolean; onSelect: (id: number) => void }) {
+    const t = useT();
+    const lang = useUiStore((s) => s.lang);
+    return (
+        <tr
+            onClick={() => onSelect(c.id)}
+            className={cn(
+                'border-border/60 cursor-pointer border-b last:border-0',
+                isNew
+                    ? 'bg-emerald-500/8 hover:bg-emerald-500/12 animate-in fade-in duration-500'
+                    : 'hover:bg-accent/40',
+            )}
+        >
+            <td className="px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
+                    {isNew && (
+                        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                            {lang === 'th' ? 'ใหม่' : 'New'}
+                        </span>
+                    )}
+                </div>
+            </td>
+            <td className="max-w-[280px] truncate px-4 py-2.5">
+                {c.title || <span className="text-muted-foreground">—</span>}
+            </td>
+            <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
+            <td className="px-4 py-2.5">
+                <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>
+            </td>
+            <td className="px-4 py-2.5 font-mono text-xs">{c.start}</td>
+            <td className="px-4 py-2.5 font-mono text-xs">{c.end}</td>
+            <td className="px-4 py-2.5">
+                <DaysCell days={c.days_remaining} inReminder={c.in_reminder} status={c.status} />
+            </td>
+            <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
+            <td className="px-4 py-2.5">
+                <StatusBadge tone={c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'red' : 'green'}>
+                    {c.status === 'cancelled'
+                        ? t('contract_cancelled')
+                        : c.status === 'expired'
+                          ? lang === 'th' ? 'หมดอายุ' : 'Expired'
+                          : lang === 'th' ? 'ใช้งาน' : 'Active'}
+                </StatusBadge>
+            </td>
+        </tr>
     );
 }
 
