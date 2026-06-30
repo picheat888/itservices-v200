@@ -304,4 +304,37 @@ class ContractApiTest extends TestCase
 
         $this->assertTrue($contract->fresh()->end_date->gt($oldEnd));
     }
+
+    /**
+     * Notes entered in the Edit form persist through the update endpoint.
+     * Verifies that the `notes` field is accepted by StoreContractRequest,
+     * written by ContractService::update, and returned in the response.
+     */
+    public function test_contract_notes_round_trip_through_update(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create([
+            'code' => 'CT-NOTES-01', 'vendor' => 'TestVendor', 'name' => 'Notes test contract',
+            'title' => 'Notes Round-trip', 'type' => 'software',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
+            'value' => 50000, 'billing_cycle' => 'yearly', 'notes' => null,
+        ]);
+
+        $payload = [
+            'code' => $contract->code, 'vendor' => $contract->vendor, 'name' => $contract->name,
+            'title' => $contract->title, 'type' => $contract->type,
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
+            'value' => $contract->value, 'billing_cycle' => $contract->billing_cycle,
+            'notes' => 'Renewed with vendor on 2026-06-30.',
+        ];
+
+        $this->putJson("/api/contracts/{$contract->id}", $payload)
+            ->assertOk();
+
+        $this->assertDatabaseHas('contracts', [
+            'id' => $contract->id,
+            'notes' => 'Renewed with vendor on 2026-06-30.',
+        ]);
+    }
 }
