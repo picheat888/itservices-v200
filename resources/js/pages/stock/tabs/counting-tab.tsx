@@ -30,6 +30,9 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const { data: warehouses = [] } = useWarehouses();
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const { data: session } = useStockCount(selectedId);
+    // Open state is separate from selectedId so the loaded session content stays mounted
+    // while the sheet animates closed (closing keeps selectedId; only the next open replaces it).
+    const [sheetOpen, setSheetOpen] = useState(false);
     const { data: allItems = [] } = useStockItems({});
     const [creating, setCreating] = useState(false);
     const [wh, setWh] = useState('all');
@@ -52,6 +55,8 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
         serials: { id: number; serial: string }[];
     };
     const [serialCheck, setSerialCheck] = useState<SerialCheckItem[] | null>(null);
+    // Separate open state so the serial-verify content stays mounted during the close animation.
+    const [serialOpen, setSerialOpen] = useState(false);
     const [missingByItem, setMissingByItem] = useState<Record<number, number[]>>({});
 
     const toggleSerial = (itemId: number, serialId: number) =>
@@ -75,7 +80,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             onError(e);
         } finally {
             setCommitting(false);
-            setSerialCheck(null);
+            setSerialOpen(false);
         }
     };
 
@@ -112,6 +117,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 stock_item_ids: selectedSkus,
             });
             setSelectedId(created.id);
+            setSheetOpen(true);
         } catch (e) {
             onError(e);
         } finally {
@@ -295,7 +301,10 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 columns={sessionColumns}
                 rows={sessions}
                 rowKey={(s) => s.id}
-                onRowClick={(s) => setSelectedId(s.id)}
+                onRowClick={(s) => {
+                    setSelectedId(s.id);
+                    setSheetOpen(true);
+                }}
                 loading={sessionsLoading || sessionsFetching}
                 server={{
                     page,
@@ -407,7 +416,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             </Dialog>
 
             {/* Count sheet — opens in a dialog when a session row is clicked. */}
-            <Dialog open={selectedId !== null} onOpenChange={(o) => !o && setSelectedId(null)}>
+            <Dialog open={sheetOpen} onOpenChange={(o) => !o && setSheetOpen(false)}>
                 <DialogContent className="max-w-3xl">
                     {session ? (
                         <>
@@ -670,6 +679,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                 if (shorts.length > 0) {
                                                     setMissingByItem({});
                                                     setSerialCheck(shorts);
+                                                    setSerialOpen(true);
                                                     return;
                                                 }
 
@@ -718,7 +728,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             </Dialog>
 
             {/* Serial verification — tick the not-found units before an Auto commit adjusts stock. */}
-            <Dialog open={serialCheck !== null} onOpenChange={(o) => !o && setSerialCheck(null)}>
+            <Dialog open={serialOpen} onOpenChange={(o) => !o && setSerialOpen(false)}>
                 <DialogContent className="max-w-lg">
                     <DialogHeader>
                         <DialogTitle>{t('stock_count_serial_verify_title')}</DialogTitle>
@@ -772,7 +782,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                         })}
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setSerialCheck(null)}>
+                        <Button variant="outline" onClick={() => setSerialOpen(false)}>
                             {t('stock_count_back')}
                         </Button>
                         <Button disabled={!serialCheckOk || committing} onClick={() => runCommit(missingByItem)}>
