@@ -673,7 +673,18 @@ export default function StockPage() {
                     setEditItem(null);
                 }}
             />
-            <StockItemDetailModal itemId={viewId} onClose={() => setViewId(null)} />
+            <StockItemDetailModal
+                    itemId={viewId}
+                    onClose={() => setViewId(null)}
+                    onEdit={
+                        canManage
+                            ? (i) => {
+                                  setViewId(null);
+                                  setEditItem(i);
+                              }
+                            : undefined
+                    }
+                />
             <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
         </div>
