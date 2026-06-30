@@ -2,7 +2,8 @@ import { Field } from '@/components/shared/field';
 import { SearchableSelect } from '@/components/shared/searchable-select';
 import { Button } from '@/components/ui/button';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ContractDialogHeader } from '@/components/contracts/contract-dialog-header';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { useContractMutations } from '@/hooks/use-contracts';
@@ -382,23 +383,13 @@ export function ContractFormDrawer({
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 {/* Header */}
-                <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-                    <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                        <TypeIcon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                        <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">
-                            {editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : lang === 'th' ? 'สัญญาใหม่' : 'New contract'}
-                        </div>
-                        <DialogTitle className="mt-0.5 flex items-center gap-2 text-base font-extrabold tracking-tight">
-                            {editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : t('new_contract')}
-                            {editing && (
-                                <span className="bg-brand/10 text-brand rounded-md px-2 py-0.5 font-mono text-xs font-semibold">{editing.code}</span>
-                            )}
-                        </DialogTitle>
-                    </div>
-                    <DialogDescription className="sr-only">{t('contract_register_sub')}</DialogDescription>
-                </div>
+                <ContractDialogHeader
+                    icon={TypeIcon}
+                    eyebrow={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : lang === 'th' ? 'สัญญาใหม่' : 'New contract'}
+                    title={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : t('new_contract')}
+                    code={editing ? editing.code : undefined}
+                    srDescription={t('contract_register_sub')}
+                />
 
                 {/* Horizontal stepper */}
                 <div className="border-border/60 flex items-start border-b px-6 pb-4">
@@ -534,6 +525,16 @@ export function ContractFormDrawer({
                                                 value={form.name}
                                                 onChange={(e) => upd('name', e.target.value)}
                                                 placeholder={lang === 'th' ? 'เช่น Microsoft 365 — 320 สิทธิ์' : 'e.g. Microsoft 365 — 320 seats'}
+                                            />
+                                        </Field>
+
+                                        <Field label={lang === 'th' ? 'หมายเหตุ' : 'Notes'}>
+                                            <textarea
+                                                value={form.notes}
+                                                onChange={(e) => upd('notes', e.target.value)}
+                                                rows={3}
+                                                placeholder={lang === 'th' ? 'รายละเอียดเพิ่มเติม (ถ้ามี)' : 'Additional notes (optional)'}
+                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-brand"
                                             />
                                         </Field>
                                     </div>
