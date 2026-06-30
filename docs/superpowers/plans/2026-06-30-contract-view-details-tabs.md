@@ -250,6 +250,7 @@ A two-column panel: file list (middle-truncated names, own scroll) + an in-dialo
 ```tsx
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import { type ContractAttachment } from '@/types';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { useState } from 'react';
@@ -281,6 +282,7 @@ function TruncName({ name, className }: { name: string; className?: string }) {
 /** Attachments tab: file list on the left, an in-dialog PDF preview filling the frame on the right. */
 export function ContractAttachmentsTab({ attachments }: { attachments: ContractAttachment[] }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const [selected, setSelected] = useState(0);
 
     if (attachments.length === 0) {
@@ -330,7 +332,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         className="border-border hover:bg-accent inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
                     >
                         <ExternalLink className="h-3.5 w-3.5" />
-                        {t('open_new_tab')}
+                        {lang === 'th' ? 'เปิดแท็บใหม่' : 'Open in new tab'}
                     </a>
                     <a
                         href={active.url}
@@ -338,7 +340,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         className="border-border hover:bg-accent inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
                     >
                         <Download className="h-3.5 w-3.5" />
-                        {t('download')}
+                        {lang === 'th' ? 'ดาวน์โหลด' : 'Download'}
                     </a>
                 </div>
                 <iframe key={active.id} src={active.url} title={active.name} className="min-h-0 flex-1 bg-[#525659]" />
@@ -348,25 +350,16 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
 }
 ```
 
-- [ ] **Step 2: Add i18n keys if missing**
-
-`t('open_new_tab')` and `t('download')` — check `resources/js/lib/i18n.ts` for both keys. If either is missing, add it to BOTH the `en` and `th` maps next to other shared keys:
-- `open_new_tab`: en `'Open in new tab'`, th `'เปิดแท็บใหม่'`
-- `download`: en `'Download'`, th `'ดาวน์โหลด'`
-
-> NOTE: `i18n.ts` is a shared file with unrelated uncommitted changes. If you must add keys, stage `i18n.ts` together with this task's commit (it is a required dependency of this component). If both keys already exist, do not touch `i18n.ts`.
-
-- [ ] **Step 3: Type-check**
+- [ ] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: zero errors referencing `contract-attachments-tab.tsx`.
+The button labels use inline `lang === 'th' ? … : …` (matching how the detail component already handles ad-hoc labels) — do NOT add i18n keys, so `i18n.ts` (a shared file with unrelated uncommitted work) is left untouched.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add resources/js/components/contracts/contract-attachments-tab.tsx
-# add i18n.ts too ONLY if you added keys in Step 2:
-# git add resources/js/lib/i18n.ts
 git commit -m "feat(contracts): attachments tab with in-dialog PDF preview"
 ```
 
