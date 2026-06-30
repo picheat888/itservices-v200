@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stock Item · View Details — Tabbed Dialog Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --brand:#2563eb; --brand-700:#1d4ed8;
+    --bg:#fff; --canvas:#f6f8fb;
+    --fg:hsl(222,30%,12%); --muted:hsl(215,16%,47%); --muted-2:hsl(215,18%,62%);
+    --border:hsl(214,20%,90%); --border-soft:hsl(214,22%,93%); --input:hsl(214,20%,86%);
+    --accent:hsl(210,24%,95%); --destructive:hsl(0,72%,51%);
+    --green:hsl(142,71%,45%); --amber:hsl(38,92%,50%); --red:hsl(0,72%,51%); --violet:hsl(258,70%,58%);
+    --radius:16px;
+    --shadow-dialog:0 32px 80px -20px rgba(16,24,40,.45), 0 0 0 1px rgba(16,24,40,.04);
+    --font:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;background:var(--canvas)}
+
+  .chooser{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 20px;background:rgba(11,18,32,.94);backdrop-filter:blur(8px);color:#e7ecf5;border-bottom:1px solid rgba(255,255,255,.08)}
+  .chooser .brandmark{display:flex;align-items:center;gap:9px;font-weight:800;padding-right:14px;margin-right:2px;border-right:1px solid rgba(255,255,255,.12)}
+  .chooser .brandmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,99,235,.25)}
+  .chooser .label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#8b96ab}
+  .chooser .hint{margin-left:auto;font-size:12px;color:#7e8aa1}
+
+  .appbg{position:fixed;inset:56px 0 0;overflow:hidden;background:var(--canvas)}
+  .appbg .sidebar{position:absolute;left:0;top:0;bottom:0;width:240px;background:#fff;border-right:1px solid var(--border)}
+  .appbg .topbar{position:absolute;left:240px;right:0;top:0;height:60px;background:#fff;border-bottom:1px solid var(--border)}
+  .appbg .content{position:absolute;left:272px;right:32px;top:96px;bottom:32px}
+  .appbg .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+  .appbg .skeleton{height:14px;border-radius:6px;background:#e9eef5;margin-bottom:14px}
+  .appbg::after{content:"";position:absolute;inset:0;background:rgba(11,18,32,.46);backdrop-filter:blur(3px)}
+
+  .overlay{position:fixed;inset:56px 0 0;z-index:100;display:flex;align-items:center;justify-content:center;padding:30px}
+  .dialog{position:relative;background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow-dialog);width:100%;max-width:1100px;height:min(860px,calc(100vh - 56px - 60px));display:flex;flex-direction:column;overflow:hidden;animation:pop .32s cubic-bezier(.16,1,.3,1)}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  .dlg-head{display:flex;align-items:center;gap:13px;padding:18px 22px 16px;position:relative}
+  .dlg-head .ico{width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,.1);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex:none}
+  .dlg-head .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+  .dlg-head h2{margin:1px 0 0;font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .dlg-head h2 .code{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand-700);background:rgba(37,99,235,.08);padding:2px 8px;border-radius:6px}
+  .dlg-head .head-right{margin-left:auto;display:flex;align-items:center;gap:10px;padding-right:42px}
+  .dlg-head .x{position:absolute;right:14px;top:16px;border:0;background:transparent;color:var(--muted);cursor:pointer;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+  .dlg-head .x:hover{background:var(--accent);color:var(--fg)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid}
+  .badge .pip{width:7px;height:7px;border-radius:50%}
+  .badge.sm{padding:2px 9px;font-size:11.5px}
+  .badge.green{color:hsl(142,60%,32%);background:hsl(142,71%,45%,.12);border-color:hsl(142,71%,45%,.3)} .badge.green .pip{background:var(--green)}
+  .badge.amber{color:hsl(32,80%,38%);background:hsl(38,92%,50%,.13);border-color:hsl(38,92%,50%,.32)} .badge.amber .pip{background:var(--amber)}
+  .badge.red{color:hsl(0,65%,42%);background:hsl(0,72%,51%,.12);border-color:hsl(0,72%,51%,.3)} .badge.red .pip{background:var(--red)}
+  .badge.gray{color:var(--muted);background:var(--accent);border-color:var(--border)} .badge.gray .pip{background:var(--muted-2)}
+  .badge.blue{color:var(--brand-700);background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.3)} .badge.blue .pip{background:var(--brand)}
+  .badge.violet{color:hsl(258,55%,46%);background:hsl(258,70%,58%,.12);border-color:hsl(258,70%,58%,.3)} .badge.violet .pip{background:var(--violet)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:6px;background:rgba(37,99,235,.1);color:var(--brand-700)}
+  .pill.muted{background:var(--accent);color:var(--muted)}
+
+  .tabs{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--border-soft)}
+  .tab{position:relative;appearance:none;border:0;background:transparent;font-family:var(--font);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;padding:13px 16px;transition:.15s}
+  .tab:hover{color:var(--fg)}
+  .tab .cnt{margin-left:7px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted-2);background:var(--accent);border-radius:999px;padding:1px 7px}
+  .tab.active{color:var(--brand-700)}
+  .tab.active .cnt{color:var(--brand-700);background:rgba(37,99,235,.1)}
+  .tab.active::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:var(--brand)}
+
+  .dlg-body{flex:1;min-height:0;display:flex;flex-direction:column}
+  .dlg-body.scroll{overflow:auto;padding:22px}
+  .dlg-body.fill{overflow:hidden;padding:22px}
+  .pane{display:none;animation:rise .28s cubic-bezier(.16,1,.3,1)}
+  .pane.show{display:block}
+  .pane.fillpane.show{display:flex;flex-direction:column;height:100%}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .dlg-foot{display:flex;align-items:center;gap:8px;padding:11px 18px;border-top:1px solid var(--border-soft);background:#fcfdff}
+  .btn{appearance:none;border:0;font-family:var(--font);font-weight:600;font-size:13px;cursor:pointer;border-radius:9px;padding:0 13px;height:34px;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.16s}
+  .btn svg{width:15px;height:15px}
+  .btn-ghost{background:#fff;color:var(--fg);border:1.5px solid var(--border)} .btn-ghost:hover{background:var(--accent)}
+  .btn-outline{background:#fff;color:var(--fg);border:1.5px solid var(--border)} .btn-outline:hover{background:var(--accent)}
+
+  /* KPI strip */
+  .kpi{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:14px;overflow:hidden;background:hsl(214,30%,98%)}
+  .kpi > div{padding:14px 18px;border-right:1px solid var(--border-soft)}
+  .kpi > div:last-child{border-right:0}
+  .kpi .k{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+  .kpi .v{margin-top:3px;font-family:var(--mono);font-size:22px;font-weight:700;line-height:1.1}
+  .kpi .v .cur{font-size:13px;color:var(--muted)}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+  .section-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px}
+  .meta .k{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+  .meta .v{font-size:13.5px;font-weight:500}
+  .meta .v.mono{font-family:var(--mono)}
+  .wh-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .wh{border:1px solid var(--border);border-radius:11px;padding:11px 13px;background:#fff}
+  .wh .n{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+  .wh .q{margin-top:5px;font-family:var(--mono);font-size:18px;font-weight:700}
+  .wh .q .u{font-size:11px;color:var(--muted);font-weight:400;margin-left:3px}
+  .stack{display:flex;flex-direction:column;gap:22px}
+
+  /* tables */
+  .dt-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .pane[data-pane="movements"] .dt-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+  .dt-body{flex:1;min-height:0;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#fafbfd;padding:9px 13px;border-bottom:1px solid var(--border-soft)}
+  thead th.r{text-align:right}
+  tbody td{padding:9px 13px;border-bottom:1px solid var(--border-soft)}
+  tbody td.r{text-align:right}
+  tbody tr:last-child td{border-bottom:0}
+  .mono{font-family:var(--mono)}
+  .xs{font-size:12px}
+  .muted{color:var(--muted)}
+  .qty-pos{color:hsl(142,60%,32%);font-weight:700} .qty-neg{color:hsl(0,65%,42%);font-weight:700}
+  .lot-row{cursor:pointer;transition:background .12s} .lot-row:hover{background:var(--accent)}
+  .lot-detail td{background:hsl(214,30%,98%);padding:14px 16px}
+  .lot-detail .meta-grid{grid-template-columns:repeat(3,1fr)}
+  .caret{display:inline-block;transition:transform .18s} .caret.open{transform:rotate(180deg)}
+  .dt-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;border-top:1px solid var(--border-soft);font-size:12.5px;color:var(--muted)}
+  .nav{display:flex;align-items:center;gap:4px}
+  .pg-btn{appearance:none;border:1.5px solid var(--border);background:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg)}
+  .pg-btn:hover:not(:disabled){background:var(--accent)} .pg-btn:disabled{opacity:.4;cursor:default}
+  .empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:42px 20px;color:var(--muted);text-align:center}
+  .link{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;color:var(--brand-700);text-decoration:none}
+  .link:hover{text-decoration:underline}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="chooser">
+  <div class="brandmark"><span class="dot"></span> IT Service Desk</div>
+  <span class="label">Mockup · Stock Item View Details (tabs)</span>
+  <span class="hint">คลิก tab สลับ · คลิกแถว Lot ขยายดูรายละเอียดรับเข้า · Movements กด Next แบ่งหน้า</span>
+</div>
+
+<div class="appbg">
+  <div class="sidebar"></div><div class="topbar"></div>
+  <div class="content">
+    <div class="card"><div class="skeleton" style="width:30%"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:60%;margin-bottom:0"></div></div>
+    <div class="card"><div class="skeleton" style="width:24%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:70%;margin-bottom:0"></div></div>
+  </div>
+</div>
+
+<div class="overlay">
+  <div class="dialog">
+    <!-- Header -->
+    <div class="dlg-head">
+      <div class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg></div>
+      <div>
+        <div class="eyebrow">Stock Item</div>
+        <h2>Notebook Dell Latitude 5440 <span class="code">SKU-NB-5440</span> <span class="pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/></svg> Serialized</span></h2>
+      </div>
+      <div class="head-right"><span class="badge amber"><span class="pip"></span> Low stock</span></div>
+      <button class="x" title="ปิด"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="movements">Movements <span class="cnt">24</span></button>
+      <button class="tab" data-tab="lots">Lots <span class="cnt">3</span></button>
+      <button class="tab" data-tab="serials">Serials <span class="cnt">6</span></button>
+    </div>
+
+    <!-- Body -->
+    <div class="dlg-body scroll" id="body">
+
+      <!-- Overview -->
+      <div class="pane show" data-pane="overview">
+        <div class="stack">
+          <div class="kpi">
+            <div><div class="k">คงเหลือ</div><div class="v">6 <span class="cur">ชิ้น</span></div><div class="sub">สำรองไว้ 2 · ว่าง 4</div></div>
+            <div><div class="k">มูลค่ารวม</div><div class="v"><span class="cur">฿</span>153,000.00</div></div>
+            <div><div class="k">ต้นทุนเฉลี่ย</div><div class="v"><span class="cur">฿</span>25,500.00</div></div>
+          </div>
+
+          <div>
+            <div class="section-label">รายละเอียดสินค้า</div>
+            <div class="meta-grid">
+              <div class="meta"><div class="k">หมวดหมู่</div><div class="v">Notebook</div></div>
+              <div class="meta"><div class="k">ยี่ห้อ / รุ่น</div><div class="v">Dell Latitude 5440</div></div>
+              <div class="meta"><div class="k">หน่วย</div><div class="v">ชิ้น</div></div>
+              <div class="meta"><div class="k">Min / Max</div><div class="v mono">5 / 20</div></div>
+              <div class="meta"><div class="k">การรับประกัน</div><div class="v">3 ปี (ถึง 2028-01)</div></div>
+              <div class="meta"><div class="k">เคลื่อนไหวล่าสุด</div><div class="v mono">2026-06-24</div></div>
+              <div class="meta"><div class="k">ติดตาม Serial</div><div class="v">ใช่</div></div>
+              <div class="meta"><div class="k">สถานะ</div><div class="v"><span class="badge amber sm"><span class="pip"></span> Low stock</span></div></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-label">คงเหลือตามคลัง</div>
+            <div class="wh-grid">
+              <div class="wh"><div class="n"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg> คลังกลาง</div><div class="q">4<span class="u">ชิ้น</span></div></div>
+              <div class="wh"><div class="n"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg> สาขา A</div><div class="q">2<span class="u">ชิ้น</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Movements (fillHeight table) -->
+      <div class="pane fillpane" data-pane="movements">
+        <div class="dt-wrap">
+          <div class="dt-body">
+            <table>
+              <thead><tr><th>วันที่</th><th>เลขที่เอกสาร</th><th>ประเภท</th><th class="r">จำนวน</th><th>จาก → ไป</th><th>โดย</th></tr></thead>
+              <tbody id="moveRows"></tbody>
+            </table>
+          </div>
+          <div class="dt-foot">
+            <span id="mvRange"></span>
+            <div class="nav">
+              <button class="pg-btn" id="mvPrev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <span id="mvLabel" style="font-weight:600;color:var(--fg);padding:0 4px"></span>
+              <button class="pg-btn" id="mvNext"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lots (expandable) -->
+      <div class="pane" data-pane="lots">
+        <div class="dt-wrap">
+          <table>
+            <thead><tr><th>เลขที่รับเข้า</th><th>วันที่</th><th class="r">ต้นทุน/หน่วย</th><th class="r">คงเหลือ</th><th class="r">มูลค่า</th></tr></thead>
+            <tbody id="lotRows"></tbody>
+          </table>
+        </div>
+        <p class="muted xs" style="margin:10px 2px 0">คลิกแถวเพื่อดูรายละเอียดการรับเข้า (PO / คลัง / ผู้จำหน่าย)</p>
+      </div>
+
+      <!-- Serials -->
+      <div class="pane" data-pane="serials">
+        <div class="dt-wrap">
+          <table>
+            <thead><tr><th style="width:40px">#</th><th>Serial</th><th>สถานะ</th><th>คลัง</th><th>รับเข้าเมื่อ</th></tr></thead>
+            <tbody id="serialRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="dlg-foot">
+      <a class="btn btn-ghost" style="margin-right:auto" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg> ประวัติทั้งหมด</a>
+      <button class="btn btn-outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> แก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* tabs — Movements is a fill pane (table fills + paginates); others scroll */
+  const body=document.getElementById('body');
+  document.querySelectorAll('#tabs .tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('#tabs .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id=btn.dataset.tab;
+    document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('show',p.dataset.pane===id));
+    body.classList.toggle('fill',id==='movements');
+    body.classList.toggle('scroll',id!=='movements');
+    if(id==='movements') setTimeout(refitMoves,0);
+  }));
+
+  /* ---- Movements data + fill-height pagination ---- */
+  const TYPES={receive:{l:'รับเข้า',c:'green',s:'+'},issue:{l:'เบิกออก',c:'violet',s:'−'},return:{l:'คืน',c:'blue',s:'+'},transfer:{l:'โอน',c:'gray',s:''},adjust_up:{l:'ปรับเพิ่ม',c:'green',s:'+'},adjust_down:{l:'ปรับลด',c:'amber',s:'−'}};
+  const MOVES=[];
+  const seed=[['receive','RCV-2601','คลังกลาง','PO-2026-014','สมชาย'],['issue','ISS-2602','สมหญิง','TKT-1209','สมชาย'],['transfer','TRF-2603','คลังกลาง → สาขา A','',' วิชัย'],['receive','RCV-2604','คลังกลาง','PO-2026-031','สมชาย'],['issue','ISS-2605','อนุชา','TKT-1244','วิชัย'],['return','RET-2606','สาขา A','TKT-1244','อนุชา'],['adjust_down','ADJ-2607','คลังกลาง','นับสต๊อก','ปรียา'],['issue','ISS-2608','ปรียา','TKT-1301','สมชาย']];
+  for(let i=0;i<24;i++){const s=seed[i%seed.length];MOVES.push({date:'2026-06-'+String(24-(i%24)).padStart(2,'0'),doc:s[1].replace(/\d+$/,(2600+i)),type:s[0],qty:(i%3)+1,fromto:s[2],by:s[4]});}
+  let mvSize=8,mvPage=1;
+  const moveRows=document.getElementById('moveRows');
+  const dtBody=document.querySelector('.pane[data-pane="movements"] .dt-body');
+  function refitMoves(){const h=dtBody?dtBody.clientHeight:0;if(h>0)mvSize=Math.max(1,Math.floor((h-37)/40));renderMoves();}
+  function renderMoves(){
+    const total=MOVES.length,pages=Math.max(1,Math.ceil(total/mvSize));if(mvPage>pages)mvPage=pages;
+    const start=(mvPage-1)*mvSize,slice=MOVES.slice(start,start+mvSize);
+    moveRows.innerHTML=slice.map(m=>{const ty=TYPES[m.type];const q=ty.s==='+'?`<span class="qty-pos">+${m.qty}</span>`:ty.s==='−'?`<span class="qty-neg">−${m.qty}</span>`:`<span>${m.qty}</span>`;
+      return `<tr><td class="mono xs muted">${m.date}</td><td class="mono xs">${m.doc}</td><td><span class="badge ${ty.c} sm"><span class="pip"></span> ${ty.l}</span></td><td class="r mono">${q}</td><td class="xs">${m.fromto||'—'}</td><td class="xs">${m.by}</td></tr>`;}).join('');
+    document.getElementById('mvRange').textContent=`${start+1}–${Math.min(start+mvSize,total)} จาก ${total}`;
+    document.getElementById('mvLabel').textContent=`${mvPage} / ${pages}`;
+    document.getElementById('mvPrev').disabled=mvPage<=1;document.getElementById('mvNext').disabled=mvPage>=pages;
+  }
+  document.getElementById('mvPrev').addEventListener('click',()=>{if(mvPage>1){mvPage--;renderMoves();}});
+  document.getElementById('mvNext').addEventListener('click',()=>{const pages=Math.ceil(MOVES.length/mvSize);if(mvPage<pages){mvPage++;renderMoves();}});
+  window.addEventListener('resize',()=>{if(document.querySelector('.tab[data-tab="movements"]').classList.contains('active'))refitMoves();});
+  renderMoves();
+
+  /* ---- Lots (expandable) ---- */
+  const LOTS=[
+    {doc:'RCV-2604',date:'2026-06-24',cost:'฿25,000.00',rem:'2/4',val:'฿50,000.00',ref:'PO-2026-031',wh:'คลังกลาง',sup:'Dell (Thailand)',by:'สมชาย',notes:'ล็อตใหม่ ราคาปรับลง'},
+    {doc:'RCV-2601',date:'2026-05-12',cost:'฿25,500.00',rem:'3/6',val:'฿76,500.00',ref:'PO-2026-014',wh:'คลังกลาง',sup:'Dell (Thailand)',by:'สมชาย',notes:''},
+    {doc:'RCV-2588',date:'2026-03-02',cost:'฿26,500.00',rem:'1/3',val:'฿26,500.00',ref:'PO-2026-002',wh:'สาขา A',sup:'SVOA',by:'วิชัย',notes:'ล็อตเก่า'},
+  ];
+  const lotRows=document.getElementById('lotRows');let openLot=-1;
+  function renderLots(){
+    lotRows.innerHTML=LOTS.map((l,i)=>{
+      const main=`<tr class="lot-row" data-i="${i}"><td class="mono xs"><span class="caret ${i===openLot?'open':''}">▾</span> ${l.doc}</td><td class="mono xs muted">${l.date}</td><td class="r mono xs">${l.cost}</td><td class="r mono">${l.rem}</td><td class="r mono" style="font-weight:600">${l.val}</td></tr>`;
+      const det=i===openLot?`<tr class="lot-detail"><td colspan="5"><div class="meta-grid"><div class="meta"><div class="k">อ้างอิง</div><div class="v">${l.ref}</div></div><div class="meta"><div class="k">คลัง</div><div class="v">${l.wh}</div></div><div class="meta"><div class="k">ผู้จำหน่าย</div><div class="v">${l.sup}</div></div><div class="meta"><div class="k">บันทึกโดย</div><div class="v">${l.by}</div></div><div class="meta"><div class="k">รับเข้าเมื่อ</div><div class="v mono">${l.date}</div></div><div class="meta"><div class="k">คงเหลือ/รับ</div><div class="v mono">${l.rem}</div></div></div>${l.notes?`<div class="muted xs" style="margin-top:10px">หมายเหตุ: ${l.notes}</div>`:''}</td></tr>`:'';
+      return main+det;
+    }).join('');
+    lotRows.querySelectorAll('.lot-row').forEach(r=>r.addEventListener('click',()=>{openLot=openLot===+r.dataset.i?-1:+r.dataset.i;renderLots();}));
+  }
+  renderLots();
+
+  /* ---- Serials ---- */
+  const SN_TONE={in_stock:['green','คงคลัง'],returned:['blue','คืนแล้ว'],retired:['gray','ปลดระวาง']};
+  const SERIALS=[['DLNB5440A001','in_stock','คลังกลาง','2026-06-24'],['DLNB5440A002','in_stock','คลังกลาง','2026-06-24'],['DLNB5440A003','in_stock','คลังกลาง','2026-05-12'],['DLNB5440A004','in_stock','สาขา A','2026-05-12'],['DLNB5440A005','returned','คลังกลาง','2026-03-02'],['DLNB5440A006','in_stock','สาขา A','2026-03-02']];
+  document.getElementById('serialRows').innerHTML=SERIALS.map((s,i)=>{const tn=SN_TONE[s[1]];return `<tr><td class="mono xs muted">${i+1}</td><td class="mono">${s[0]}</td><td><span class="badge ${tn[0]} sm"><span class="pip"></span> ${tn[1]}</span></td><td class="xs">${s[2]}</td><td class="mono xs muted">${s[3]}</td></tr>`;}).join('');
+</script>
+</body>
+</html>
