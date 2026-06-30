@@ -29,6 +29,9 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
     const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
+    // Open state is separate from the data so the dialog content stays mounted while it
+    // animates closed (otherwise the content unmounts and Radix skips the exit animation).
+    const [fulfillOpen, setFulfillOpen] = useState(false);
     const [issueSerialIds, setIssueSerialIds] = useState<number[]>([]);
     // Warehouse filter for the serial pick list (large serialized SKUs span many warehouses).
     const [serialWh, setSerialWh] = useState<string>('all');
@@ -124,7 +127,13 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                         </>
                     )}
                     {can('fulfill') && r.status === 'approved' && (
-                        <Button size="sm" onClick={() => setFulfillReq(r)}>
+                        <Button
+                            size="sm"
+                            onClick={() => {
+                                setFulfillReq(r);
+                                setFulfillOpen(true);
+                            }}
+                        >
                             <ArrowUpFromLine className="h-3.5 w-3.5" />
                             {t('stock_fulfill')}
                         </Button>
@@ -190,7 +199,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
             />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
-            <Dialog open={!!fulfillReq} onOpenChange={(o) => !o && setFulfillReq(null)}>
+            <Dialog open={fulfillOpen} onOpenChange={(o) => !o && setFulfillOpen(false)}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -333,7 +342,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setFulfillReq(null)} disabled={fulfill.isPending}>
+                        <Button variant="outline" onClick={() => setFulfillOpen(false)} disabled={fulfill.isPending}>
                             {t('cancel')}
                         </Button>
                         <Button
@@ -350,7 +359,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                                                   .filter(([, q]) => q > 0)
                                                   .map(([warehouse, qty]) => ({ warehouse, qty })),
                                     },
-                                    { onError, onSuccess: () => setFulfillReq(null) },
+                                    { onError, onSuccess: () => setFulfillOpen(false) },
                                 )
                             }
                         >

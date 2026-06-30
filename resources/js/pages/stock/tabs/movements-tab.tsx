@@ -32,6 +32,9 @@ export function MovementsTab() {
     } = useStockMovements({ type: type === 'all' ? undefined : type, page, per_page: perPage });
     const movements = movementsPage?.data ?? [];
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
+    // Open state is separate from the data so the detail content stays mounted while the
+    // dialog animates closed (Radix only plays the exit animation if content isn't unmounted).
+    const [moveOpen, setMoveOpen] = useState(false);
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
     const { data: moveSerials = [] } = useMovementSerials(viewMove?.id ?? null);
 
@@ -102,7 +105,10 @@ export function MovementsTab() {
                 columns={columns}
                 rows={movements}
                 rowKey={(m) => m.id}
-                onRowClick={(m) => setViewMove(m)}
+                onRowClick={(m) => {
+                    setViewMove(m);
+                    setMoveOpen(true);
+                }}
                 loading={movementsLoading || movementsFetching}
                 server={{
                     page,
@@ -117,7 +123,7 @@ export function MovementsTab() {
             />
 
             {/* Movement detail — the per-entry audit-log view. */}
-            <Dialog open={!!viewMove} onOpenChange={(o) => !o && setViewMove(null)}>
+            <Dialog open={moveOpen} onOpenChange={(o) => !o && setMoveOpen(false)}>
                 <DialogContent className="max-w-md">
                     {viewMove &&
                         (() => {
