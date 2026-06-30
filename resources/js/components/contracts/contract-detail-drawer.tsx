@@ -60,20 +60,31 @@ export function ContractDetailDrawer({
     const { cancel } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
 
+    // Retain the last contract so the dialog can keep rendering its content while it
+    // animates closed (open → false). Without this, the component would unmount the
+    // instant `contract` becomes null and Radix could never play the exit animation.
+    const [shown, setShown] = useState<Contract | null>(contract);
+    useEffect(() => {
+        if (contract) setShown(contract);
+    }, [contract]);
+
     // Reset to Overview whenever a (different) contract opens.
     useEffect(() => {
         setTab('overview');
     }, [contract?.id]);
 
-    if (!contract) return null;
+    // Drive `open` off the live prop (so closing animates), but render from the retained
+    // `c` so content stays present during the fade-out.
+    const c = contract ?? shown;
+    if (!c) return null;
 
     /**
      * Cancel flow. Hardware contracts may only be cancelled once every linked asset is
      * written off — otherwise warn and stop. All cancels then require a final confirmation.
      */
     const handleCancel = async () => {
-        if (contract.type === 'hardware') {
-            const pending = contract.linked_assets.filter((a) => a.status !== 'writeoff');
+        if (c.type === 'hardware') {
+            const pending = c.linked_assets.filter((a) => a.status !== 'writeoff');
             if (pending.length > 0) {
                 await confirm({
                     variant: 'warn',
@@ -91,28 +102,28 @@ export function ContractDetailDrawer({
         await confirm({
             variant: 'danger',
             title: lang === 'th' ? 'ยืนยันยกเลิกสัญญา?' : 'Cancel this contract?',
-            entity: { name: contract.name, sub: contract.code },
+            entity: { name: c.name, sub: c.code },
             confirmText: t('contract_cancel'),
             action: async () => {
-                await cancel.mutateAsync(contract.id);
+                await cancel.mutateAsync(c.id);
                 onClose();
             },
         });
     };
 
-    const days = contract.days_remaining;
-    const cancelled = contract.status === 'cancelled';
-    const tone = cancelled ? 'gray' : contract.status === 'expired' ? 'red' : contract.in_reminder ? 'amber' : 'green';
+    const days = c.days_remaining;
+    const cancelled = c.status === 'cancelled';
+    const tone = cancelled ? 'gray' : c.status === 'expired' ? 'red' : c.in_reminder ? 'amber' : 'green';
     const statusLabel = cancelled
         ? t('contract_cancelled')
-        : contract.status === 'expired'
+        : c.status === 'expired'
           ? lang === 'th'
               ? 'หมดอายุ'
               : 'Expired'
           : lang === 'th'
             ? 'ใช้งาน'
             : 'Active';
-    const TypeIcon = TYPE_ICON[contract.type] ?? FileText;
+    const TypeIcon = TYPE_ICON[c.type] ?? FileText;
 
     // Days-remaining badge (header titleSuffix): hidden when cancelled; colored by state.
     const daysBadge = cancelled ? null : (
@@ -121,7 +132,7 @@ export function ContractDetailDrawer({
                 'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
                 days <= 0
                     ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                    : contract.in_reminder
+                    : c.in_reminder
                       ? 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
                       : 'border-brand/30 bg-brand/10 text-brand',
             )}
@@ -131,7 +142,7 @@ export function ContractDetailDrawer({
                 ? lang === 'th'
                     ? `เกินกำหนด ${-days} วัน`
                     : `${-days} days overdue`
-                : contract.in_reminder
+                : c.in_reminder
                   ? lang === 'th'
                       ? `หมดอายุใน ${days} วัน`
                       : `Expires in ${days} days`
@@ -143,8 +154,8 @@ export function ContractDetailDrawer({
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
         { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
-        { id: 'assets', label: lang === 'th' ? 'ทรัพย์สิน' : 'Assets', count: contract.linked_assets.length },
-        { id: 'attachments', label: lang === 'th' ? 'เอกสารแนบ' : 'Attachments', count: contract.attachments.length },
+        { id: 'assets', label: lang === 'th' ? 'ทรัพย์สิน' : 'Assets', count: c.linked_assets.length },
+        { id: 'attachments', label: lang === 'th' ? 'เอกสารแนบ' : 'Attachments', count: c.attachments.length },
     ];
 
     return (
@@ -153,9 +164,9 @@ export function ContractDetailDrawer({
                 <ContractDialogHeader
                     icon={TypeIcon}
                     eyebrow={lang === 'th' ? 'สัญญา' : 'Contract'}
-                    title={contract.title || contract.name}
-                    code={contract.code}
-                    srDescription={contract.vendor}
+                    title={c.title || c.name}
+                    code={c.code}
+                    srDescription={c.vendor}
                     titleSuffix={daysBadge}
                     headerRight={<StatusBadge tone={tone}>{statusLabel}</StatusBadge>}
                 />
@@ -187,19 +198,19 @@ export function ContractDetailDrawer({
                         <div className="grid gap-8 md:grid-cols-2">
                             {/* Left — particulars */}
                             <div className="grid grid-cols-2 gap-4">
-                                <KV label={t('contract_code')} value={contract.code} mono />
-                                <KV label={t('contract_vendor')} value={contract.vendor} />
+                                <KV label={t('contract_code')} value={c.code} mono />
+                                <KV label={t('contract_vendor')} value={c.vendor} />
                                 <div className="col-span-2">
-                                    <KV label={t('contract_title')} value={contract.title || '—'} />
+                                    <KV label={t('contract_title')} value={c.title || '—'} />
                                 </div>
                                 <div className="col-span-2">
-                                    <KV label={t('contract_name')} value={contract.name} />
+                                    <KV label={t('contract_name')} value={c.name} />
                                 </div>
-                                <KV label={t('contract_type')} value={t(`contract_type_${contract.type}`)} />
-                                <KV label={t('contract_billing')} value={t(`contract_billing_${contract.billing_cycle}`)} />
-                                <KV label={t('contract_start')} value={contract.start} mono />
-                                <KV label={t('contract_end')} value={contract.end} mono />
-                                <KV label={t('contract_value')} value={contract.value_display} mono />
+                                <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
+                                <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
+                                <KV label={t('contract_start')} value={c.start} mono />
+                                <KV label={t('contract_end')} value={c.end} mono />
+                                <KV label={t('contract_value')} value={c.value_display} mono />
                                 <KV
                                     label={t('contract_days_remaining')}
                                     value={
@@ -214,19 +225,19 @@ export function ContractDetailDrawer({
                                 />
                                 <KV
                                     label={t('contract_auto_renew')}
-                                    value={contract.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
+                                    value={c.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
                                 />
                                 <KV
                                     label={t('contract_reminder_threshold')}
                                     value={
-                                        contract.reminder_days
-                                            ? `${contract.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
+                                        c.reminder_days
+                                            ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
                                             : '—'
                                     }
                                 />
-                                {cancelled && contract.cancelled_at && <KV label={t('contract_cancelled_on')} value={contract.cancelled_at} mono />}
-                                <KV label={t('contract_created')} value={contract.created_at ?? '—'} mono />
-                                <KV label={t('contract_updated')} value={contract.updated_at ?? '—'} mono />
+                                {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
+                                <KV label={t('contract_created')} value={c.created_at ?? '—'} mono />
+                                <KV label={t('contract_updated')} value={c.updated_at ?? '—'} mono />
                             </div>
 
                             {/* Right — schedule + notes */}
@@ -235,13 +246,13 @@ export function ContractDetailDrawer({
                                     <SectionLabel>{t('contract_notification_schedule')}</SectionLabel>
                                     <div className="flex flex-wrap gap-1.5">
                                         {[
-                                            { d: 150, on: contract.notify_150 },
-                                            { d: 120, on: contract.notify_120 },
-                                            { d: 90, on: contract.notify_90 },
-                                            { d: 60, on: contract.notify_60 },
-                                            { d: 45, on: contract.notify_45 },
-                                            { d: 30, on: contract.notify_30 },
-                                            { d: 7, on: contract.notify_7 },
+                                            { d: 150, on: c.notify_150 },
+                                            { d: 120, on: c.notify_120 },
+                                            { d: 90, on: c.notify_90 },
+                                            { d: 60, on: c.notify_60 },
+                                            { d: 45, on: c.notify_45 },
+                                            { d: 30, on: c.notify_30 },
+                                            { d: 7, on: c.notify_7 },
                                         ].map((n) => (
                                             <span
                                                 key={n.d}
@@ -258,18 +269,18 @@ export function ContractDetailDrawer({
                                         ))}
                                     </div>
                                 </div>
-                                {contract.notes && (
+                                {c.notes && (
                                     <div>
                                         <SectionLabel>{lang === 'th' ? 'หมายเหตุ' : 'Notes'}</SectionLabel>
-                                        <p className="text-sm whitespace-pre-wrap">{contract.notes}</p>
+                                        <p className="text-sm whitespace-pre-wrap">{c.notes}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {tab === 'assets' && <ContractAssetsTab assets={contract.linked_assets} />}
-                    {tab === 'attachments' && <ContractAttachmentsTab attachments={contract.attachments} />}
+                    {tab === 'assets' && <ContractAssetsTab assets={c.linked_assets} />}
+                    {tab === 'attachments' && <ContractAttachmentsTab attachments={c.attachments} />}
                 </div>
 
                 {/* Footer — Cancel (left) / Edit (right); the ✕ handles closing. */}
@@ -279,7 +290,7 @@ export function ContractDetailDrawer({
                             <Ban className="h-4 w-4" />
                             {t('contract_cancel')}
                         </Button>
-                        <Button variant="outline" onClick={() => onEdit(contract)}>
+                        <Button variant="outline" onClick={() => onEdit(c)}>
                             <SquarePen className="h-4 w-4" />
                             {t('edit')}
                         </Button>
