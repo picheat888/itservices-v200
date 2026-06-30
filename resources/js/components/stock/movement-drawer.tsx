@@ -46,7 +46,15 @@ function primaryWarehouse(item?: StockItem): string {
 export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | null; onClose: () => void }) {
     const t = useT();
     const open = kind !== null;
-    const isReceive = kind === 'receive';
+    // Retain the last non-null kind so the type-specific form content stays mounted while
+    // the dialog animates closed — kind → null on close would otherwise blank the body
+    // (every section branches on the movement kind), reading as a flash instead of a fade.
+    const [shownKind, setShownKind] = useState<StockMovementType | null>(null);
+    useEffect(() => {
+        if (kind) setShownKind(kind);
+    }, [kind]);
+    const k = kind ?? shownKind;
+    const isReceive = k === 'receive';
     const record = useRecordMovement();
     const { data: items = [] } = useStockItems({});
     const { data: existingSerials = [] } = useExistingSerials();
@@ -78,13 +86,13 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
 
     const selected = items.find((i) => String(i.id) === sku);
     const isSerial = isReceive && !!selected?.track_serial;
-    const isTransfer = kind === 'transfer';
+    const isTransfer = k === 'transfer';
 
     // Fetch per-warehouse detail (balances + serials) only when in transfer mode and a SKU is selected.
     const transferItemId = isTransfer && sku ? Number(sku) : null;
     const { data: transferItemDetail } = useStockItem(transferItemId);
 
-    const isReturn = kind === 'return';
+    const isReturn = k === 'return';
     const returnIsSerial = isReturn && !!selected?.track_serial;
     // Item detail (serials) for a serialized return — to list the units currently issued.
     const returnItemId = returnIsSerial && sku ? Number(sku) : null;
@@ -169,8 +177,8 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
     };
 
     // Which master-data source backs the from/to fields for this movement kind.
-    const fromType: 'warehouse' | 'vendor' | 'text' = kind === 'receive' ? 'vendor' : kind === 'return' ? 'text' : 'warehouse';
-    const toType: 'warehouse' | 'vendor' | 'text' = kind === 'issue' ? 'text' : 'warehouse';
+    const fromType: 'warehouse' | 'vendor' | 'text' = k === 'receive' ? 'vendor' : k === 'return' ? 'text' : 'warehouse';
+    const toType: 'warehouse' | 'vendor' | 'text' = k === 'issue' ? 'text' : 'warehouse';
 
     // ---- serial slot management ----
     const setSerialCount = (n: number) => {
@@ -254,7 +262,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         if (returnIsSerial) {
             return returnSerialIds.size > 0 ? `${t('stock_mv_return')} (${returnSerialIds.size})` : t('stock_mv_return');
         }
-        return kind ? t(`stock_mv_${kind}` as Parameters<typeof t>[0]) : t('save');
+        return k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : t('save');
     })();
 
     const submit = async () => {
@@ -407,7 +415,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="max-w-xl">
                 <DialogHeader>
-                    <DialogTitle>{kind ? t(`stock_mv_${kind}` as Parameters<typeof t>[0]) : ''}</DialogTitle>
+                    <DialogTitle>{k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : ''}</DialogTitle>
                 </DialogHeader>
                 {/* -mx-2/px-2 keeps content aligned while pushing the scroll clip edge
                     out so focused inputs' rings (ring-2 + ring-offset-2) aren't cut off. */}
@@ -666,8 +674,8 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                     className="font-mono"
                                 />
                             </Field>
-                            <Field label={kind === 'receive' ? t('stock_supplier') : t('stock_from')} required={isReceive}>
-                                {locationField(fromType, from, setFrom, kind === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
+                            <Field label={k === 'receive' ? t('stock_supplier') : t('stock_from')} required={isReceive}>
+                                {locationField(fromType, from, setFrom, k === 'receive' ? t('stock_supplier') : t('stock_warehouse'))}
                             </Field>
                         </div>
                     )}
@@ -675,7 +683,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     {/* Destination warehouse — every non-transfer movement (receive/issue/return). */}
                     {!isTransfer && (
                         <Field label={t('stock_to')} required={isReceive}>
-                            {locationField(toType, to, setTo, kind === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
+                            {locationField(toType, to, setTo, k === 'issue' ? 'EMP-1234' : t('stock_warehouse'))}
                         </Field>
                     )}
 
