@@ -1,7 +1,6 @@
 import { AssetDetailDrawer } from '@/components/assets/asset-detail-drawer';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { type Column, DataTable } from '@/components/shared/data-table';
-import { useT } from '@/lib/i18n';
 import { assetApi } from '@/services/assetApi';
 import { useUiStore } from '@/stores/ui';
 import { type Asset, type ContractLinkedAsset } from '@/types';
@@ -21,7 +20,6 @@ const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = 
 
 /** Assets tab: a fill-height data table of the contract's linked assets; a row opens the asset detail (read-only). */
 export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] }) {
-    const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [assetId, setAssetId] = useState<number | null>(null);
 
