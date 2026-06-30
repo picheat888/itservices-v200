@@ -30,6 +30,18 @@ interface DataTableProps<T> {
     loading?: boolean;
     /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
     maxBodyHeight?: string;
+    /**
+     * Server-side pagination. When provided, the table renders `rows` as the current
+     * page (no client slicing/searching) and delegates page/size changes to the parent.
+     * Leave undefined for the default client-side behaviour.
+     */
+    server?: {
+        page: number;
+        pageSize: number;
+        total: number;
+        onPageChange: (page: number) => void;
+        onPageSizeChange: (size: number) => void;
+    };
 }
 
 const PAGE_SIZES = [20, 50, 100];
@@ -45,12 +57,13 @@ export function DataTable<T>({
     filters,
     loading,
     maxBodyHeight,
+    server,
 }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
-    const [pageSize, setPageSize] = useState(20);
-    const [page, setPage] = useState(1);
+    const [clientPageSize, setClientPageSize] = useState(20);
+    const [clientPage, setClientPage] = useState(1);
 
     const filtered = useMemo(() => {
         if (!query || !searchable) return rows;
@@ -58,12 +71,17 @@ export function DataTable<T>({
         return rows.filter((r) => searchable(r).toLowerCase().includes(q));
     }, [rows, query, searchable]);
 
-    const total = filtered.length;
+    // Server-paginated tables render `rows` as-is (the parent fetched just this page);
+    // client tables slice the filtered set locally. Pagination state/handlers route accordingly.
+    const pageSize = server ? server.pageSize : clientPageSize;
+    const total = server ? server.total : filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = Math.min(page, pageCount);
+    const safePage = server ? server.page : Math.min(clientPage, pageCount);
     const start = (safePage - 1) * pageSize;
-    // When hidePagination is true, show all passed rows without slicing
-    const pageRows = hidePagination ? filtered : filtered.slice(start, start + pageSize);
+    const setPage = (p: number) => (server ? server.onPageChange(p) : setClientPage(p));
+    const setPageSize = (s: number) => (server ? server.onPageSizeChange(s) : setClientPageSize(s));
+    // Server: rows are already the page. Client: slice (unless pagination is hidden).
+    const pageRows = server ? rows : hidePagination ? filtered : filtered.slice(start, start + pageSize);
 
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
 
@@ -189,7 +207,7 @@ export function DataTable<T>({
                         </span>
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                onClick={() => setPage(Math.max(1, safePage - 1))}
                                 disabled={safePage <= 1}
                                 className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                             >
@@ -199,7 +217,7 @@ export function DataTable<T>({
                                 {safePage} / {pageCount}
                             </span>
                             <button
-                                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                                onClick={() => setPage(Math.min(pageCount, safePage + 1))}
                                 disabled={safePage >= pageCount}
                                 className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
                             >
