@@ -184,8 +184,9 @@ export default function ContractsPage() {
         setEditing(null);
         setFormOpen(true);
     };
+    // Open the Edit wizard over the current View. selectedId is kept so that
+    // closing the form returns the user to the (now refreshed) detail dialog.
     const openEdit = (c: Contract) => {
-        setSelectedId(null);
         setEditing(c);
         setFormOpen(true);
     };
@@ -596,7 +597,12 @@ export default function ContractsPage() {
                 )}
             </Card>
 
-            <ContractDetailDrawer contract={selected ?? null} onClose={() => setSelectedId(null)} onEdit={openEdit} canEdit={canEdit} />
+            <ContractDetailDrawer
+                contract={formOpen ? null : (selected ?? null)}
+                onClose={() => setSelectedId(null)}
+                onEdit={openEdit}
+                canEdit={canEdit}
+            />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
