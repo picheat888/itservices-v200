@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
 import { useCurrency } from '@/hooks/use-settings';
-import { useStockCounts, useStockItemMutations, useStockItems, useStockRequests, useStockSummary } from '@/hooks/use-stock';
+import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/types';
@@ -117,11 +117,25 @@ function StockBar({ item }: { item: StockItem }) {
     );
 }
 
+/** Attention-grabbing double-blink (+ slight zoom) for the alert-banner icon. */
+const stockBlinkStyles = `
+@keyframes cf-blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  20% { opacity: .25; transform: scale(1.25); }
+  40% { opacity: 1; transform: scale(1); }
+  60% { opacity: .25; transform: scale(1.25); }
+  80% { opacity: 1; transform: scale(1); }
+}
+.cf-blink { animation: cf-blink 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .cf-blink { animation: none; } }
+`;
+
 /** Alert banner shown when any items are in a warning state. Displays real item data grouped by type. */
 function AlertCard({ summary, t, onViewItems }: { summary: import('@/types').StockSummary; t: ReturnType<typeof useT>; onViewItems: () => void }) {
     const hasCritical = summary.out_count > 0 || summary.low_count > 0;
     return (
         <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>
+            <style>{stockBlinkStyles}</style>
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -131,7 +145,7 @@ function AlertCard({ summary, t, onViewItems }: { summary: import('@/types').Sto
                             hasCritical ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600',
                         )}
                     >
-                        <AlertTriangle className="h-5 w-5" />
+                        <AlertTriangle className="cf-blink h-5 w-5" />
                     </span>
                     <div>
                         <div className="font-semibold">{t('stock_minmax_alerts')}</div>
@@ -223,22 +237,25 @@ export default function StockPage() {
     );
 
     // Restore the last-used Items-tab filters so a reload lands on the same view.
-    const savedFilters = useMemo<{ search?: string; cat?: string; wh?: string; status?: string }>(() => {
+    const savedFilters = useMemo<{ search?: string; cat?: string; wh?: string; status?: string; sort?: string }>(() => {
         try {
             return JSON.parse(localStorage.getItem(STOCK_FILTER_KEY) || '{}');
         } catch {
             return {};
         }
     }, []);
+    // Default sort for the Items table — alphabetical by name.
+    const DEFAULT_ITEM_SORT = 'name_asc';
     const [search, setSearch] = useState(savedFilters.search ?? '');
     const [cat, setCat] = useState(savedFilters.cat ?? 'all');
     const [wh, setWh] = useState(savedFilters.wh ?? 'all');
     const [statusFilter, setStatusFilter] = useState(savedFilters.status ?? 'all');
+    const [itemSort, setItemSort] = useState(savedFilters.sort ?? DEFAULT_ITEM_SORT);
 
     // Persist the Items-tab filters across reloads.
     useEffect(() => {
-        localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify({ search, cat, wh, status: statusFilter }));
-    }, [search, cat, wh, statusFilter]);
+        localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify({ search, cat, wh, status: statusFilter, sort: itemSort }));
+    }, [search, cat, wh, statusFilter, itemSort]);
     const [editItem, setEditItem] = useState<StockItem | null>(null);
     const [viewId, setViewId] = useState<number | null>(null);
     const [addOpen, setAddOpen] = useState(false);
@@ -248,21 +265,34 @@ export default function StockPage() {
     const { data: summary } = useStockSummary();
     const { data: categories = [] } = useCategories();
     const { data: warehouses = [] } = useWarehouses();
-    const { data: items = [], isLoading: itemsLoading } = useStockItems({
-        search,
+    // Server-side pagination for the Items table.
+    const [itemsPage, setItemsPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(20);
+    // Reset to page 1 whenever a filter/sort/search changes (the result set changes).
+    useEffect(() => {
+        setItemsPage(1);
+    }, [search, cat, wh, statusFilter, itemSort]);
+
+    const { data: itemsPageData, isLoading: itemsLoading, isFetching: itemsFetching } = useStockItemsPage({
+        search: search || undefined,
         category: cat === 'all' ? undefined : cat,
         warehouse: wh === 'all' ? undefined : wh,
         status: statusFilter === 'all' ? undefined : statusFilter,
+        sort: itemSort,
+        page: itemsPage,
+        per_page: itemsPerPage,
     });
+    const items = itemsPageData?.data ?? [];
+    const itemsTotal = itemsPageData?.meta.total ?? 0;
 
-    const { data: requests = [] } = useStockRequests();
-    const pendingRequests = requests.filter((r) => r.status === 'pending').length;
+    const { data: requestsPage } = useStockRequests();
+    const pendingRequests = requestsPage?.meta.pending ?? 0;
     // Outstanding work = awaiting approval (pending) + awaiting fulfillment (approved).
-    const outstandingRequests = requests.filter((r) => r.status === 'pending' || r.status === 'approved').length;
+    const outstandingRequests = requestsPage?.meta.outstanding ?? 0;
 
     // Outstanding counting work = draft (not-yet-committed) count sessions.
-    const { data: countSessions = [] } = useStockCounts(can('view_count'));
-    const draftCounts = countSessions.filter((s) => s.status === 'draft').length;
+    const { data: countsPage } = useStockCounts({}, can('view_count'));
+    const draftCounts = countsPage?.meta.draft ?? 0;
 
     const { remove } = useStockItemMutations();
 
@@ -363,10 +393,12 @@ export default function StockPage() {
     ];
 
     const hasAlerts = !!summary && (summary.out_count > 0 || summary.low_count > 0 || summary.over_count > 0 || summary.dead_count > 0);
+    // Items-tab badge: total stock alerts (out of stock + below min + overstock).
+    const itemAlerts = summary ? summary.out_count + summary.low_count + summary.over_count : 0;
 
     const allTabs = [
         { id: 'dashboard' as const, label: t('sub_dashboard'), view: 'view_dashboard' },
-        { id: 'items' as const, label: t('stock_items_tab'), count: summary?.skus, view: 'view' },
+        { id: 'items' as const, label: t('stock_items_tab'), count: itemAlerts || undefined, view: 'view' },
         { id: 'requests' as const, label: t('stock_requests_tab'), count: outstandingRequests || undefined, view: 'view_request' },
         { id: 'audit' as const, label: t('stock_audit_tab'), count: draftCounts || undefined, view: 'view_count' },
         { id: 'movements' as const, label: t('stock_movements_tab'), view: 'view_events' },
@@ -387,10 +419,13 @@ export default function StockPage() {
         wh !== 'all' ? { key: 'wh', label: wh, clear: () => setWh('all') } : null,
         statusFilter !== 'all' ? { key: 'status', label: statusChipLabel, clear: () => setStatusFilter('all') } : null,
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
+    // Anything to clear = an active chip filter OR a non-default sort order.
+    const hasItemFilters = activeChips.length > 0 || itemSort !== DEFAULT_ITEM_SORT;
     const resetItemFilters = () => {
         setCat('all');
         setWh('all');
         setStatusFilter('all');
+        setItemSort(DEFAULT_ITEM_SORT);
     };
 
     return (
@@ -433,15 +468,12 @@ export default function StockPage() {
                             )}
                         >
                             {tb.label}
-                            {tb.count != null &&
-                                (tb.id === 'requests' || tb.id === 'audit' ? (
-                                    // Outstanding-work alert: soft red pill.
-                                    <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                                        {tb.count}
-                                    </span>
-                                ) : (
-                                    <span className="ml-1.5 font-mono text-xs opacity-60">{tb.count}</span>
-                                ))}
+                            {tb.count != null && (
+                                // Outstanding-work / stock alert: soft red pill.
+                                <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
+                                    {tb.count}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>
@@ -525,19 +557,42 @@ export default function StockPage() {
                                                     ]}
                                                 />
                                             </div>
-                                            {activeChips.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={resetItemFilters}
-                                                    className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs font-medium"
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                    {t('reset_filters')}
-                                                </button>
-                                            )}
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_sort_by')}</div>
+                                                <SearchableSelect
+                                                    value={itemSort}
+                                                    onChange={setItemSort}
+                                                    options={[
+                                                        { value: 'name_asc', label: t('stock_sort_name_asc'), search: t('stock_sort_name_asc') },
+                                                        { value: 'name_desc', label: t('stock_sort_name_desc'), search: t('stock_sort_name_desc') },
+                                                        {
+                                                            value: 'stock_desc',
+                                                            label: t('stock_sort_stock_desc'),
+                                                            search: t('stock_sort_stock_desc'),
+                                                        },
+                                                        { value: 'stock_asc', label: t('stock_sort_stock_asc'), search: t('stock_sort_stock_asc') },
+                                                        {
+                                                            value: 'value_desc',
+                                                            label: t('stock_sort_value_desc'),
+                                                            search: t('stock_sort_value_desc'),
+                                                        },
+                                                        { value: 'value_asc', label: t('stock_sort_value_asc'), search: t('stock_sort_value_asc') },
+                                                    ]}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </FilterPopover>
+                                {hasItemFilters && (
+                                    <button
+                                        type="button"
+                                        onClick={resetItemFilters}
+                                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                        {t('reset_filters')}
+                                    </button>
+                                )}
                                 <div className="ml-auto flex flex-wrap items-center gap-2">
                                     {can('receive') && (
                                         <Button variant="outline" onClick={() => setMoveKind('receive')}>
@@ -580,15 +635,6 @@ export default function StockPage() {
                                             <X className="h-3 w-3" />
                                         </button>
                                     ))}
-                                    {activeChips.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={resetItemFilters}
-                                            className="text-muted-foreground hover:text-foreground px-1 text-xs font-medium"
-                                        >
-                                            {t('reset_filters')}
-                                        </button>
-                                    )}
                                 </div>
                             )}
 
@@ -597,7 +643,17 @@ export default function StockPage() {
                                 rows={items}
                                 rowKey={(i) => i.id}
                                 onRowClick={(i) => setViewId(i.id)}
-                                loading={itemsLoading}
+                                loading={itemsLoading || itemsFetching}
+                                server={{
+                                    page: itemsPage,
+                                    pageSize: itemsPerPage,
+                                    total: itemsTotal,
+                                    onPageChange: setItemsPage,
+                                    onPageSizeChange: (s) => {
+                                        setItemsPerPage(s);
+                                        setItemsPage(1);
+                                    },
+                                }}
                             />
                         </div>
                     )}

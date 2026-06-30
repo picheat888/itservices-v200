@@ -62,6 +62,73 @@ class StockItemTest extends TestCase
         $this->assertSame('dead', $this->makeItem(['current_stock' => 5, 'min_stock' => 2, 'max_stock' => 10, 'last_move_at' => now()->subDays(120)])->status());
     }
 
+    public function test_status_filter_matches_derived_status(): void
+    {
+        // One item per status, mirroring the branch order of StockItem::status().
+        $out = $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);
+        $low = $this->makeItem(['current_stock' => 1, 'min_stock' => 5]);
+        $over = $this->makeItem(['current_stock' => 30, 'max_stock' => 10]);
+        $dead = $this->makeItem(['current_stock' => 5, 'min_stock' => 2, 'max_stock' => 10, 'last_move_at' => now()->subDays(200)]);
+        $ok = $this->makeItem(['current_stock' => 5, 'min_stock' => 2, 'max_stock' => 10, 'last_move_at' => now()]);
+
+        // Sanity: the PHP-derived status of each fixture is what we expect.
+        $this->assertSame('out', $out->status());
+        $this->assertSame('low', $low->status());
+        $this->assertSame('over', $over->status());
+        $this->assertSame('dead', $dead->status());
+        $this->assertSame('ok', $ok->status());
+
+        $user = $this->superUser();
+
+        // Each concrete status: the SQL filter returns exactly the matching item.
+        foreach (['out' => $out, 'low' => $low, 'over' => $over, 'dead' => $dead, 'ok' => $ok] as $status => $item) {
+            $this->actingAs($user)
+                ->getJson("/api/stock-items?status={$status}")
+                ->assertOk()
+                ->assertJsonPath('meta.total', 1)
+                ->assertJsonPath('data.0.id', $item->id)
+                ->assertJsonPath('data.0.status', $status);
+        }
+
+        // 'alerts' = everything that is not 'ok'.
+        $this->actingAs($user)
+            ->getJson('/api/stock-items?status=alerts')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 4);
+    }
+
+    public function test_index_is_server_paginated_and_sortable(): void
+    {
+        for ($n = 1; $n <= 25; $n++) {
+            $this->makeItem(['name' => sprintf('Item %02d', $n)]);
+        }
+
+        $user = $this->superUser();
+
+        // Page 1 returns per_page rows with full pagination meta.
+        $this->actingAs($user)
+            ->getJson('/api/stock-items?per_page=10&page=1&sort=name_asc')
+            ->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('meta.total', 25)
+            ->assertJsonPath('meta.per_page', 10)
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 3)
+            ->assertJsonPath('data.0.name', 'Item 01');
+
+        // Descending sort flips the first row.
+        $this->actingAs($user)
+            ->getJson('/api/stock-items?per_page=10&sort=name_desc')
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Item 25');
+
+        // all=1 bypasses pagination for pickers/drawers.
+        $this->actingAs($user)
+            ->getJson('/api/stock-items?all=1')
+            ->assertOk()
+            ->assertJsonCount(25, 'data');
+    }
+
     public function test_summary_reports_alert_buckets(): void
     {
         $this->makeItem(['current_stock' => 0, 'min_stock' => 3]);            // out

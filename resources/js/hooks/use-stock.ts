@@ -3,6 +3,7 @@ import {
     stockCountApi,
     stockMovementApi,
     stockRequestApi,
+    type StockItemPageParams,
     type StockItemPayload,
     type StockMovementPayload,
     type StockRequestPayload,
@@ -23,8 +24,12 @@ interface StockItemFilters {
     status?: string;
 }
 
-/** Stock item list, scoped by the active filters. */
-export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey: [...ITEMS, filters], queryFn: () => stockApi.list(filters) });
+/** Full (filtered) item list for pickers/drawers — returns every matching item, not a page. */
+export const useStockItems = (filters: StockItemFilters) => useQuery({ queryKey: [...ITEMS, 'all', filters], queryFn: () => stockApi.list(filters) });
+
+/** Server-paginated item list for the Stock items table (page/sort/filters handled by the API). */
+export const useStockItemsPage = (params: StockItemPageParams) =>
+    useQuery({ queryKey: [...ITEMS, 'page', params], queryFn: () => stockApi.listPage(params), placeholderData: (prev) => prev });
 
 /** Dashboard aggregates (KPIs, min/max alerts, breakdowns). */
 export const useStockSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: stockApi.summary, enabled });
@@ -55,9 +60,12 @@ export function useStockItemMutations() {
     };
 }
 
-/** Movement log, optionally filtered by type. Pass enabled=false to skip the fetch (e.g. when the caller lacks view_events permission). */
-export const useStockMovements = (type?: string, enabled = true) =>
-    useQuery({ queryKey: [...MOVEMENTS, type ?? 'all'], queryFn: () => stockMovementApi.list({ type }), enabled });
+/**
+ * Server-paginated movement log, optionally filtered by type. Returns { data, meta }.
+ * Pass enabled=false to skip the fetch (e.g. when the caller lacks view_events permission).
+ */
+export const useStockMovements = (params: { type?: string; page?: number; per_page?: number } = {}, enabled = true) =>
+    useQuery({ queryKey: [...MOVEMENTS, params], queryFn: () => stockMovementApi.list(params), enabled, placeholderData: (prev) => prev });
 
 /** Serial codes tied to a single movement (for the movement detail dialog). */
 export const useMovementSerials = (id: number | null) =>
@@ -76,8 +84,9 @@ export function useRecordMovement() {
     });
 }
 
-/** Stock requests visible to the current user. */
-export const useStockRequests = (enabled = true) => useQuery({ queryKey: REQUESTS, queryFn: stockRequestApi.list, enabled });
+/** Server-paginated stock requests visible to the current user. meta carries pending/outstanding totals. */
+export const useStockRequests = (params: { page?: number; per_page?: number } = {}, enabled = true) =>
+    useQuery({ queryKey: [...REQUESTS, params], queryFn: () => stockRequestApi.list(params), enabled, placeholderData: (prev) => prev });
 
 /**
  * Combined "needs attention" count for the Stock sidebar badge: min/max alerts
@@ -86,12 +95,12 @@ export const useStockRequests = (enabled = true) => useQuery({ queryKey: REQUEST
  */
 export function useStockSidebarBadge(enabled = true): number {
     const { data: summary } = useStockSummary(enabled);
-    const { data: requests = [] } = useStockRequests(enabled);
-    const { data: counts = [] } = useStockCounts(enabled);
+    const { data: requests } = useStockRequests({}, enabled);
+    const { data: counts } = useStockCounts({}, enabled);
 
     const alerts = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
-    const openRequests = requests.filter((r) => r.status === 'pending' || r.status === 'approved').length;
-    const draftCounts = counts.filter((s) => s.status === 'draft').length;
+    const openRequests = requests?.meta.outstanding ?? 0;
+    const draftCounts = counts?.meta.draft ?? 0;
 
     return alerts + openRequests + draftCounts;
 }
@@ -117,8 +126,9 @@ export function useStockRequestActions() {
     };
 }
 
-/** Recent stock-count sessions (newest first). */
-export const useStockCounts = (enabled = true) => useQuery({ queryKey: COUNTS, queryFn: stockCountApi.list, enabled });
+/** Server-paginated stock-count sessions (newest first). meta carries the draft total. */
+export const useStockCounts = (params: { page?: number; per_page?: number } = {}, enabled = true) =>
+    useQuery({ queryKey: [...COUNTS, params], queryFn: () => stockCountApi.list(params), enabled, placeholderData: (prev) => prev });
 
 /** A single count session with its lines (for the count sheet). */
 export const useStockCount = (id: number | null) =>

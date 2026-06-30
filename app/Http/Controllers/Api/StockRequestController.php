@@ -36,18 +36,34 @@ class StockRequestController extends Controller
         $user = $request->user();
         abort_unless((bool) $user?->hasPermission('stock.view_request'), 403);
 
-        $query = StockRequest::with('item')->latest();
+        // Actionable first (await approval → await fulfillment → done), newest within each group.
+        $query = StockRequest::with('item')
+            ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
+            ->latest();
 
         $seesAll = $user->isSuper() || $user->hasPermission('stock.approve') || $user->hasPermission('stock.fulfill');
         if (! $seesAll) {
             $query->where('user_id', $user->id);
         }
 
-        $requests = $query->limit(200)->get();
+        // Aggregate counts over the full (visibility-scoped) set — feed the sidebar
+        // badge and the Requests tab chip, which must not depend on the current page.
+        $pending = (clone $query)->where('status', 'pending')->count();
+        $outstanding = (clone $query)->whereIn('status', ['pending', 'approved'])->count();
+
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
-            'data' => StockRequestResource::collection($requests),
-            'meta' => ['total' => $requests->count()],
+            'data' => StockRequestResource::collection($paginator->items()),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'pending' => $pending,
+                'outstanding' => $outstanding,
+            ],
         ]);
     }
 
