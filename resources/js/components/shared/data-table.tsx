@@ -4,7 +4,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface Column<T> {
     key: string;
@@ -30,6 +30,10 @@ interface DataTableProps<T> {
     loading?: boolean;
     /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
     maxBodyHeight?: string;
+    /** Fill the parent's height: rows-per-page is computed from the available height,
+     *  the rows-per-page picker is hidden, and the body never scrolls (page over instead).
+     *  Opt-in; requires the parent to give the table a definite height. */
+    fillHeight?: boolean;
     /**
      * Server-side pagination. When provided, the table renders `rows` as the current
      * page (no client slicing/searching) and delegates page/size changes to the parent.
@@ -57,6 +61,7 @@ export function DataTable<T>({
     filters,
     loading,
     maxBodyHeight,
+    fillHeight,
     server,
 }: DataTableProps<T>) {
     const t = useT();
@@ -64,6 +69,25 @@ export function DataTable<T>({
     const [query, setQuery] = useState('');
     const [clientPageSize, setClientPageSize] = useState(20);
     const [clientPage, setClientPage] = useState(1);
+
+    // fillHeight: measure the body container and derive how many rows fit.
+    const bodyRef = useRef<HTMLDivElement>(null);
+    const [autoSize, setAutoSize] = useState(10);
+    useEffect(() => {
+        if (!fillHeight) return;
+        const el = bodyRef.current;
+        if (!el) return;
+        const ROW_H = 45; // approx rendered row height (slightly over-estimated so rows never clip)
+        const THEAD_H = 40; // approx header row height
+        const compute = () => {
+            const h = el.clientHeight;
+            if (h > 0) setAutoSize(Math.max(1, Math.floor((h - THEAD_H) / ROW_H)));
+        };
+        compute();
+        const ro = new ResizeObserver(compute);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [fillHeight]);
 
     const filtered = useMemo(() => {
         if (!query || !searchable) return rows;
@@ -73,7 +97,7 @@ export function DataTable<T>({
 
     // Server-paginated tables render `rows` as-is (the parent fetched just this page);
     // client tables slice the filtered set locally. Pagination state/handlers route accordingly.
-    const pageSize = server ? server.pageSize : clientPageSize;
+    const pageSize = server ? server.pageSize : fillHeight ? autoSize : clientPageSize;
     const total = server ? server.total : filtered.length;
     const pageCount = Math.max(1, Math.ceil(total / pageSize));
     const safePage = server ? server.page : Math.min(clientPage, pageCount);
@@ -86,7 +110,7 @@ export function DataTable<T>({
     const alignClass = (a?: string) => (a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left');
 
     return (
-        <div className="space-y-3">
+        <div className={cn(fillHeight ? 'flex h-full flex-col gap-3' : 'space-y-3')}>
             {(searchable || actions || filters) && (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -113,8 +137,12 @@ export function DataTable<T>({
             )}
 
             <div
-                className={cn('border-border rounded-xl border', maxBodyHeight ? 'overflow-y-auto' : 'overflow-hidden')}
-                style={maxBodyHeight ? { maxHeight: maxBodyHeight } : undefined}
+                ref={bodyRef}
+                className={cn(
+                    'border-border rounded-xl border',
+                    fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-y-auto' : 'overflow-hidden',
+                )}
+                style={maxBodyHeight && !fillHeight ? { maxHeight: maxBodyHeight } : undefined}
             >
                 <table className="w-full text-sm">
                     <thead className={cn(maxBodyHeight && 'bg-card sticky top-0 z-10')}>
@@ -179,27 +207,31 @@ export function DataTable<T>({
 
             {!hidePagination && (
                 <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <div className="flex items-center gap-2">
-                        <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                        <Select
-                            value={String(pageSize)}
-                            onValueChange={(v) => {
-                                setPageSize(Number(v));
-                                setPage(1);
-                            }}
-                        >
-                            <SelectTrigger className="h-8 w-[72px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PAGE_SIZES.map((s) => (
-                                    <SelectItem key={s} value={String(s)}>
-                                        {s}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {fillHeight ? (
+                        <span />
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                            <Select
+                                value={String(pageSize)}
+                                onValueChange={(v) => {
+                                    setPageSize(Number(v));
+                                    setPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-8 w-[72px]">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PAGE_SIZES.map((s) => (
+                                        <SelectItem key={s} value={String(s)}>
+                                            {s}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-3">
                         <span>
