@@ -20,7 +20,18 @@ export const useContracts = (params: { page: number; per_page: number; search: s
         placeholderData: (prev) => prev,
     });
 
-export const useContractSummary = () => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary });
+export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary, enabled });
+
+/**
+ * "Needs attention" count for the Contracts sidebar badge: contracts inside their
+ * reminder window (expiring soon) plus contracts already expired. Pass enabled=false
+ * to skip the query for users without contracts access.
+ */
+export function useContractSidebarBadge(enabled = true): number {
+    const { data: summary } = useContractSummary(enabled);
+
+    return summary ? summary.expiring + summary.expired : 0;
+}
 
 /** Fetches one full contract by id — used when opening the detail drawer. */
 export const useContract = (id: number | null) =>

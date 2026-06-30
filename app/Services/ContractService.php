@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AssetStatus;
 use App\Enums\ContractType;
+use App\Models\Asset;
 use App\Models\Contract;
 use App\Models\Vendor;
 use Illuminate\Support\Carbon;
@@ -18,7 +19,11 @@ class ContractService
      */
     public function create(array $data): Contract
     {
-        return Contract::create($this->withoutBlankCode($data));
+        $assetIds = $this->pullAssetIds($data);
+        $contract = Contract::create($this->withoutBlankCode($data));
+        $this->syncAssets($contract, $assetIds);
+
+        return $contract;
     }
 
     /**
@@ -28,9 +33,59 @@ class ContractService
      */
     public function update(Contract $contract, array $data): Contract
     {
+        $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));
+        $this->syncAssets($contract, $assetIds);
 
         return $contract->fresh();
+    }
+
+    /**
+     * Pull the (optional) asset_ids out of the payload so they don't reach the
+     * Contract model. Returns null when not provided (links left untouched), or a
+     * de-duplicated list of ids otherwise.
+     *
+     * @param  array<string, mixed>  $data
+     * @return list<int>|null
+     */
+    private function pullAssetIds(array &$data): ?array
+    {
+        if (! array_key_exists('asset_ids', $data)) {
+            return null;
+        }
+
+        $ids = $data['asset_ids'];
+        unset($data['asset_ids']);
+
+        return is_array($ids) ? array_values(array_unique(array_map('intval', $ids))) : [];
+    }
+
+    /**
+     * Sync which assets point at this contract (asset.contract_id). Detaches assets
+     * that were unselected and attaches selected ones — but only assets that are
+     * currently free or already this contract's, so links are never stolen from
+     * another contract. Passing null leaves all existing links untouched.
+     *
+     * @param  list<int>|null  $assetIds
+     */
+    private function syncAssets(Contract $contract, ?array $assetIds): void
+    {
+        if ($assetIds === null) {
+            return;
+        }
+
+        // Detach assets currently linked here but no longer selected ([0] sentinel
+        // detaches all when the selection is empty).
+        Asset::where('contract_id', $contract->id)
+            ->whereNotIn('id', $assetIds ?: [0])
+            ->update(['contract_id' => null]);
+
+        // Attach the selected, link-free (or already-ours) assets.
+        if ($assetIds !== []) {
+            Asset::whereIn('id', $assetIds)
+                ->where(fn ($q) => $q->whereNull('contract_id')->orWhere('contract_id', $contract->id))
+                ->update(['contract_id' => $contract->id]);
+        }
     }
 
     /**

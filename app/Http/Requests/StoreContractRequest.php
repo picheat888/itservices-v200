@@ -46,6 +46,9 @@ class StoreContractRequest extends FormRequest
             'notify_30' => ['sometimes', 'boolean'],
             'notify_7' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            // Assets to link to this contract (sets each asset's contract_id). Omit to leave links untouched.
+            'asset_ids' => ['sometimes', 'array'],
+            'asset_ids.*' => ['integer', 'exists:assets,id'],
         ];
     }
 }
