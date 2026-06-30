@@ -19,21 +19,14 @@ const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> =
     rejected: 'red',
 };
 
-/** Sort priority for the Requests list: awaiting approval, then awaiting fulfillment, then the rest. */
-const REQ_ORDER: Record<StockRequestStatus, number> = {
-    pending: 0,
-    approved: 1,
-    fulfilled: 2,
-    rejected: 3,
-};
-
 export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
     const t = useT();
     const confirm = useConfirm();
-    const { data: requests = [], isLoading: requestsLoading } = useStockRequests();
-    // Surface actionable requests first (await approval → await fulfillment); the backend
-    // already returns newest-first, and the stable sort keeps that order within each group.
-    const sortedRequests = [...requests].sort((a, b) => REQ_ORDER[a.status] - REQ_ORDER[b.status]);
+    // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+    const { data: requestsPage, isLoading: requestsLoading, isFetching: requestsFetching } = useStockRequests({ page, per_page: perPage });
+    const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
     const [issueSerialIds, setIssueSerialIds] = useState<number[]>([]);
@@ -179,7 +172,22 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                     </Button>
                 )}
             </div>
-            <DataTable columns={columns} rows={sortedRequests} rowKey={(r) => r.id} loading={requestsLoading} />
+            <DataTable
+                columns={columns}
+                rows={requests}
+                rowKey={(r) => r.id}
+                loading={requestsLoading || requestsFetching}
+                server={{
+                    page,
+                    pageSize: perPage,
+                    total: requestsPage?.meta.total ?? 0,
+                    onPageChange: setPage,
+                    onPageSizeChange: (s) => {
+                        setPerPage(s);
+                        setPage(1);
+                    },
+                }}
+            />
 
             {/* Fulfill — review the deduction and issue stock to the requester from here. */}
             <Dialog open={!!fulfillReq} onOpenChange={(o) => !o && setFulfillReq(null)}>

@@ -33,9 +33,21 @@ class StockCountController extends Controller
     public function index(Request $request): JsonResponse
     {
         $this->gateView($request);
-        $counts = StockCount::with(['countedBy', 'lines'])->latest('id')->limit(100)->get();
 
-        return response()->json(['data' => StockCountResource::collection($counts)]);
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $paginator = StockCount::with(['countedBy', 'lines'])->latest('id')->paginate($perPage);
+
+        return response()->json([
+            'data' => StockCountResource::collection($paginator->items()),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                // Open (draft) sessions across all pages — drives the Audit tab chip + sidebar badge.
+                'draft' => StockCount::where('status', 'draft')->count(),
+            ],
+        ]);
     }
 
     public function store(Request $request): JsonResponse

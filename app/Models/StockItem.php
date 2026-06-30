@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -132,5 +133,43 @@ class StockItem extends Model
         }
 
         return 'ok';
+    }
+
+    /**
+     * Constrain a query to items whose derived status() equals $status. Mirrors the
+     * exact branch order of status() so server-side filtering matches the PHP result.
+     * Accepts the five concrete statuses or the virtual 'alerts' (= anything not 'ok').
+     *
+     * @param  Builder<StockItem>  $query
+     * @return Builder<StockItem>
+     */
+    public function scopeWithDerivedStatus(Builder $query, string $status): Builder
+    {
+        // "dead" = healthy stock level but untouched for more than DEAD_STOCK_DAYS.
+        $deadCutoff = now()->startOfDay()->subDays(self::DEAD_STOCK_DAYS);
+        $isHealthyLevel = fn (Builder $q) => $q->where('current_stock', '>', 0)
+            ->whereColumn('current_stock', '>=', 'min_stock')
+            ->whereColumn('current_stock', '<=', 'max_stock');
+        $isDead = fn (Builder $q) => $isHealthyLevel($q)
+            ->whereNotNull('last_move_at')
+            ->whereDate('last_move_at', '<', $deadCutoff);
+
+        return match ($status) {
+            'out' => $query->where('current_stock', 0),
+            'low' => $query->where('current_stock', '>', 0)->whereColumn('current_stock', '<', 'min_stock'),
+            'over' => $query->where('current_stock', '>', 0)
+                ->whereColumn('current_stock', '>=', 'min_stock')
+                ->whereColumn('current_stock', '>', 'max_stock'),
+            'dead' => $query->where(fn (Builder $q) => $isDead($q)),
+            'ok' => $query->where(fn (Builder $q) => $isHealthyLevel($q)
+                ->where(fn (Builder $w) => $w->whereNull('last_move_at')->orWhereDate('last_move_at', '>=', $deadCutoff))),
+            // alerts = NOT ok: out OR below-min OR over-max OR dead.
+            'alerts' => $query->where(fn (Builder $q) => $q
+                ->where('current_stock', 0)
+                ->orWhereColumn('current_stock', '<', 'min_stock')
+                ->orWhereColumn('current_stock', '>', 'max_stock')
+                ->orWhere(fn (Builder $d) => $isDead($d))),
+            default => $query,
+        };
     }
 }

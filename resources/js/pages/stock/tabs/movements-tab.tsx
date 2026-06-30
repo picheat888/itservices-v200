@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { StockMovementType } from '@/types';
 import { ArrowRight, Filter, Printer } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MV_META, MV_TONE_BG } from '../shared';
 
 export function MovementsTab() {
@@ -19,7 +19,18 @@ export function MovementsTab() {
     const { format } = useCurrency();
     const { format: fmtDateTime } = useDateTime();
     const [type, setType] = useState('all');
-    const { data: movements = [], isLoading: movementsLoading } = useStockMovements(type === 'all' ? undefined : type);
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+    // Changing the type filter resets to page 1 (the result set changes).
+    useEffect(() => {
+        setPage(1);
+    }, [type]);
+    const {
+        data: movementsPage,
+        isLoading: movementsLoading,
+        isFetching: movementsFetching,
+    } = useStockMovements({ type: type === 'all' ? undefined : type, page, per_page: perPage });
+    const movements = movementsPage?.data ?? [];
     const [viewMove, setViewMove] = useState<(typeof movements)[number] | null>(null);
     // Serial codes for the movement being viewed (fetched on demand for the detail dialog).
     const { data: moveSerials = [] } = useMovementSerials(viewMove?.id ?? null);
@@ -87,7 +98,23 @@ export function MovementsTab() {
                     />
                 </div>
             </div>
-            <DataTable columns={columns} rows={movements} rowKey={(m) => m.id} onRowClick={(m) => setViewMove(m)} loading={movementsLoading} />
+            <DataTable
+                columns={columns}
+                rows={movements}
+                rowKey={(m) => m.id}
+                onRowClick={(m) => setViewMove(m)}
+                loading={movementsLoading || movementsFetching}
+                server={{
+                    page,
+                    pageSize: perPage,
+                    total: movementsPage?.meta.total ?? 0,
+                    onPageChange: setPage,
+                    onPageSizeChange: (s) => {
+                        setPerPage(s);
+                        setPage(1);
+                    },
+                }}
+            />
 
             {/* Movement detail — the per-entry audit-log view. */}
             <Dialog open={!!viewMove} onOpenChange={(o) => !o && setViewMove(null)}>

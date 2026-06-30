@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\StockBalance;
 use App\Models\StockItem;
 use App\Models\StockItemSerial;
+use App\Models\StockLot;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -33,19 +34,24 @@ class StockItemController extends Controller
     }
 
     /**
-     * Paginated stock item list with search and category/warehouse/status filters.
-     * Status is derived, so status filtering happens after the collection is built.
+     * Server-paginated stock item list with search, category/warehouse/status filters
+     * and sorting. Status is derived but maps to DB columns, so it filters in SQL via
+     * StockItem::scopeWithDerivedStatus() — letting pagination happen at the database.
      */
     public function index(Request $request): JsonResponse
     {
         $this->gateView($request);
 
         $query = StockItem::query()
+            ->select('stock_items.*')
             ->with(['lots', 'balances'])
             // Reserved = qty committed by approved-but-unfulfilled requests (not yet
             // deducted from on-hand). Used to show "available to request" in New Request.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
-            ->orderBy('name');
+            // FIFO stock value as a subquery column so we can sort by it at the DB.
+            ->addSelect(['value_total' => StockLot::query()
+                ->selectRaw('COALESCE(SUM(qty_remaining * unit_cost), 0)')
+                ->whereColumn('stock_item_id', 'stock_items.id')]);
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -65,20 +71,41 @@ class StockItemController extends Controller
             $warehouse = $request->query('warehouse');
             $query->whereHas('balances', fn ($q) => $q->where('warehouse', $warehouse));
         }
-
-        $items = $query->get();
-
         if ($request->filled('status')) {
-            $status = $request->query('status');
-            // 'alerts' is a virtual filter: show every item that is not healthy (ok).
-            $items = $status === 'alerts'
-                ? $items->filter(fn (StockItem $i) => $i->status() !== 'ok')->values()
-                : $items->filter(fn (StockItem $i) => $i->status() === $status)->values();
+            $query->withDerivedStatus($request->query('status'));
         }
 
+        match ($request->query('sort', 'name_asc')) {
+            'name_desc' => $query->orderBy('name', 'desc'),
+            'stock_desc' => $query->orderBy('current_stock', 'desc'),
+            'stock_asc' => $query->orderBy('current_stock', 'asc'),
+            'value_desc' => $query->orderBy('value_total', 'desc'),
+            'value_asc' => $query->orderBy('value_total', 'asc'),
+            default => $query->orderBy('name', 'asc'),
+        };
+
+        // `all=1` returns the full (filtered) list — used by item pickers/drawers,
+        // which are selectors, not paginated tables.
+        if ($request->boolean('all')) {
+            $items = $query->get();
+
+            return response()->json([
+                'data' => StockItemResource::collection($items),
+                'meta' => ['total' => $items->count()],
+            ]);
+        }
+
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $paginator = $query->paginate($perPage);
+
         return response()->json([
-            'data' => StockItemResource::collection($items),
-            'meta' => ['total' => $items->count()],
+            'data' => StockItemResource::collection($paginator->items()),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 

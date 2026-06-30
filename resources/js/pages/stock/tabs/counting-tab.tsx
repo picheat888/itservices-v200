@@ -18,7 +18,14 @@ import { useEffect, useState } from 'react';
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
     const confirm = useConfirm();
-    const { data: sessions = [], isLoading: sessionsLoading } = useStockCounts(can('view_count'));
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+    const {
+        data: sessionsPage,
+        isLoading: sessionsLoading,
+        isFetching: sessionsFetching,
+    } = useStockCounts({ page, per_page: perPage }, can('view_count'));
+    const sessions = sessionsPage?.data ?? [];
     const { open, save, commit, cancel } = useStockCountMutations();
     const { data: warehouses = [] } = useWarehouses();
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -289,7 +296,17 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                 rows={sessions}
                 rowKey={(s) => s.id}
                 onRowClick={(s) => setSelectedId(s.id)}
-                loading={sessionsLoading}
+                loading={sessionsLoading || sessionsFetching}
+                server={{
+                    page,
+                    pageSize: perPage,
+                    total: sessionsPage?.meta.total ?? 0,
+                    onPageChange: setPage,
+                    onPageSizeChange: (s) => {
+                        setPerPage(s);
+                        setPage(1);
+                    },
+                }}
             />
 
             {/* New count — warehouse → categories (with stock) → pick the SKUs to count. */}

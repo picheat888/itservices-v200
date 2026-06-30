@@ -49,7 +49,7 @@ class StockMovementController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.view_events'), 403);
 
-        $query = StockMovement::with('item')->orderByDesc('moved_at');
+        $query = StockMovement::with('item')->orderByDesc('moved_at')->orderByDesc('id');
 
         if ($request->filled('type')) {
             $query->where('type', $request->query('type'));
@@ -58,11 +58,17 @@ class StockMovementController extends Controller
             $query->where('stock_item_id', $request->query('stock_item_id'));
         }
 
-        $movements = $query->limit(200)->get();
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $paginator = $query->paginate($perPage);
 
         return response()->json([
-            'data' => StockMovementResource::collection($movements),
-            'meta' => ['total' => $movements->count()],
+            'data' => StockMovementResource::collection($paginator->items()),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+            ],
         ]);
     }
 

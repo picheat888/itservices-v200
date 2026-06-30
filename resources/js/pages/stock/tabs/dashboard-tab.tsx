@@ -34,7 +34,9 @@ export function DashboardTab({
     /** When false the movements query is skipped and the recent-movements widget is hidden (caller lacks stock.view_events). */
     canEvents: boolean;
 }) {
-    const { data: movements = [] } = useStockMovements(undefined, canEvents);
+    // Only the most recent movements are shown here; one page is plenty.
+    const { data: movementsPage } = useStockMovements({ per_page: 10 }, canEvents);
+    const movements = movementsPage?.data ?? [];
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     // Items below their minimum, out-of-stock first, are the reorder queue.
     const reorderItems = summary ? [...summary.out_items, ...summary.low_items] : [];
