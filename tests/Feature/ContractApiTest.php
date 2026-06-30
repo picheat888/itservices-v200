@@ -104,6 +104,24 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.0.vendor', 'Soon');
     }
 
+    public function test_expired_tab_returns_only_live_past_due_contracts(): void
+    {
+        $this->actingAs($this->super());
+
+        // Past its end date and still live — should appear.
+        Contract::create(['vendor' => 'Past', 'name' => 'Past', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 1, 'billing_cycle' => 'yearly']);
+        // Still active — must not appear.
+        Contract::create(['vendor' => 'Active', 'name' => 'Active', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        // Past its end date but cancelled — excluded from the expired tab.
+        $cancelled = Contract::create(['vendor' => 'Gone', 'name' => 'Gone', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(10), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $cancelled->update(['cancelled_at' => now()]);
+
+        $this->getJson('/api/contracts?tab=expired')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.vendor', 'Past');
+    }
+
     public function test_long_lead_reminder_threshold_enters_window(): void
     {
         $this->actingAs($this->super());
@@ -122,6 +140,49 @@ class ContractApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.vendor', 'Early');
+    }
+
+    public function test_links_and_unlinks_assets_via_asset_ids(): void
+    {
+        $this->actingAs($this->super());
+        $a1 = Asset::factory()->create();
+        $a2 = Asset::factory()->create();
+
+        $base = [
+            'code' => 'CT-LINK-1', 'vendor' => 'V', 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
+        ];
+
+        // Create linking both assets.
+        $id = $this->postJson('/api/contracts', [...$base, 'asset_ids' => [$a1->id, $a2->id]])
+            ->assertStatus(201)
+            ->json('data.id');
+        $this->assertSame($id, $a1->fresh()->contract_id);
+        $this->assertSame($id, $a2->fresh()->contract_id);
+
+        // Update keeping only a1 — a2 gets detached.
+        $this->putJson("/api/contracts/{$id}", [...$base, 'asset_ids' => [$a1->id]])->assertOk();
+        $this->assertSame($id, $a1->fresh()->contract_id);
+        $this->assertNull($a2->fresh()->contract_id);
+    }
+
+    public function test_linking_never_steals_assets_from_another_contract(): void
+    {
+        $this->actingAs($this->super());
+        $other = Contract::create([
+            'code' => 'CT-OTHER', 'vendor' => 'V', 'name' => 'N', 'type' => 'hardware',
+            'start_date' => now()->subYear(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+        $owned = Asset::factory()->create(['contract_id' => $other->id]);
+
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-LINK-2', 'vendor' => 'V', 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
+            'asset_ids' => [$owned->id],
+        ])->assertStatus(201);
+
+        // The asset stays with its original contract.
+        $this->assertSame($other->id, $owned->fresh()->contract_id);
     }
 
     public function test_contract_code_is_required(): void

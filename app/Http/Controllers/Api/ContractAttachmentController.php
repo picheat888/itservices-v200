@@ -22,7 +22,7 @@ class ContractAttachmentController extends Controller
     private const MAX_SIZE_KB = 25600;
 
     /** Hard cap on the number of attachments a single contract may hold. */
-    private const MAX_FILES = 10;
+    private const MAX_FILES = 5;
 
     /**
      * Stores one or more uploaded PDFs against the contract. Creating a contract

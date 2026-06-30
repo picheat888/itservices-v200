@@ -30,7 +30,8 @@ class ContractController extends Controller
 
     /**
      * Paginated contract list. The "expiring" tab narrows to contracts that have
-     * entered their own reminder window (any enabled threshold reached);
+     * entered their own reminder window (any enabled threshold reached); the
+     * "expired" tab narrows to live contracts whose end date has already passed;
      * search matches vendor/name/code. Soonest expiry first.
      */
     public function index(Request $request): JsonResponse
@@ -76,6 +77,12 @@ class ContractController extends Controller
                         });
                     }
                 });
+        }
+
+        if ($request->query('tab') === 'expired') {
+            // Expired = still live (not cancelled) but the end date has already passed.
+            $query->whereNull('cancelled_at')
+                ->whereDate('end_date', '<=', now());
         }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -169,7 +176,7 @@ class ContractController extends Controller
         $contract = $this->service->create($request->validated());
         AuditLog::record('Created contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract))
+        return (new ContractResource($contract->load('assets')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -186,7 +193,7 @@ class ContractController extends Controller
         $contract = $this->service->update($contract, $request->validated());
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract));
 
-        return (new ContractResource($contract))
+        return (new ContractResource($contract->load('assets')))
             ->additional(['message' => 'success'])->response();
     }
 

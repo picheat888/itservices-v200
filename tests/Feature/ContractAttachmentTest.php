@@ -74,7 +74,7 @@ class ContractAttachmentTest extends TestCase
         Storage::fake('public');
         $this->actingAs($this->super());
         $contract = $this->contract();
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 5; $i++) {
             $contract->attachments()->create([
                 'original_name' => "f{$i}.pdf", 'path' => "contracts/{$contract->id}/f{$i}.pdf",
                 'size' => 100, 'mime' => 'application/pdf',
@@ -85,7 +85,7 @@ class ContractAttachmentTest extends TestCase
             'files' => [UploadedFile::fake()->create('one-more.pdf', 100, 'application/pdf')],
         ])->assertStatus(422);
 
-        $this->assertSame(10, $contract->attachments()->count());
+        $this->assertSame(5, $contract->attachments()->count());
     }
 
     public function test_deletes_an_attachment(): void

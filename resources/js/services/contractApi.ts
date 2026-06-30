@@ -30,6 +30,8 @@ export interface ContractPayload {
     notify_30?: boolean;
     notify_7?: boolean;
     notes?: string | null;
+    /** Asset ids to link to this contract (sets each asset's contract_id). */
+    asset_ids?: number[];
 }
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
