@@ -39,7 +39,7 @@ class DepartmentController extends Controller
 
     public function destroy(Request $request, Department $department): JsonResponse
     {
-        abort_unless((bool) $request->user()?->canManageOrg(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.department_delete'), 403);
 
         // A department can only be deleted once it's empty — it must have no
         // employees (FK is nullOnDelete → would silently unassign them) and no

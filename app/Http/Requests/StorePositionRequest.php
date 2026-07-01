@@ -7,9 +7,20 @@ use Illuminate\Validation\Rule;
 
 class StorePositionRequest extends FormRequest
 {
+    /**
+     * Store requires employees.position_add; update requires employees.position_edit.
+     * The allow_special_position field is additionally gated in the controller by
+     * employees.position_special.
+     */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->canManageOrg();
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+        $permission = $this->route('position') ? 'employees.position_edit' : 'employees.position_add';
+
+        return (bool) $user->hasPermission($permission);
     }
 
     /**

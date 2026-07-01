@@ -61,11 +61,11 @@ class SectionController extends Controller
     }
 
     /**
-     * Delete a section. Requires org-manage permission.
+     * Delete a section. Requires employees.section_delete permission.
      */
     public function destroy(Request $request, Section $section): JsonResponse
     {
-        abort_unless((bool) $request->user()?->canManageOrg(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.section_delete'), 403);
 
         // A section can only be deleted once it's empty. The section_id FK is
         // nullOnDelete, so deleting a populated section would silently unassign
