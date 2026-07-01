@@ -1,4 +1,4 @@
-import { authApi } from '@/services/authApi';
+import { authApi } from '@/modules/auth/api/authApi';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

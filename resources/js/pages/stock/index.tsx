@@ -10,7 +10,7 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
 import { useCurrency } from '@/hooks/use-settings';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '@/hooks/use-stock';

@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import { useContract, useContracts, useContractSummary } from '@/hooks/use-contracts';
 import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';

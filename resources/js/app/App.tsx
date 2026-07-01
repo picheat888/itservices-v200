@@ -1,8 +1,7 @@
 import '../../css/app.css';
 
 import { AppErrorScreen } from '@/components/app-error-screen';
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { RequirePermission } from '@/components/auth/require-permission';
+import { ProtectedRoute, RequirePermission } from '@/modules/auth';
 import { AppShell } from '@/app/layout/app-shell';
 import { TransientToaster } from '@/app/layout/transient-toaster';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
@@ -15,7 +14,7 @@ import ContractsPage from '@/pages/contracts';
 import { DashboardPage } from '@/modules/dashboard';
 import EmailTemplatesPage from '@/pages/email-templates';
 import EmployeesPage from '@/pages/employees';
-import LoginPage from '@/pages/login';
+import { LoginPage } from '@/modules/auth';
 import PermissionsPage from '@/pages/permissions';
 import PlaceholderPage from '@/pages/placeholder';
 import SettingsPage from '@/pages/settings';

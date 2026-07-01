@@ -1,5 +1,5 @@
 import type { ApiEnvelope, User } from '@/shared/types';
-import { ensureCsrf, http } from './http';
+import { ensureCsrf, http } from '@/services/http';
 
 export interface LoginPayload {
     login: string;

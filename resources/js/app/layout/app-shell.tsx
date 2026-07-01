@@ -1,9 +1,5 @@
-import { ChangePasswordDialog } from '@/components/auth/change-password-dialog';
-import { SessionTimeoutModal } from '@/components/auth/session-timeout-modal';
-import { useAuth } from '@/hooks/use-auth';
+import { ChangePasswordDialog, SessionTimeoutModal, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { useSessionTimeout } from '@/hooks/use-session-timeout';
-import { useUserPreferences } from '@/hooks/use-user-preferences';
 import { settingsApi } from '@/services/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';

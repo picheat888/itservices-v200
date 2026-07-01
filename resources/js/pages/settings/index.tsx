@@ -1,4 +1,4 @@
-import { NoAccess } from '@/components/auth/require-permission';
+import { NoAccess } from '@/modules/auth';
 import { BrandModal } from '@/components/settings/brand-modal';
 import { CategoryModal } from '@/components/settings/category-modal';
 import { LocationModal } from '@/components/settings/location-modal';
@@ -17,7 +17,7 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import {
     useAssetModelMutations,
     useAssetModels,

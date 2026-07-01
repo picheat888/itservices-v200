@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
-import { useAuth, useLogout } from '@/hooks/use-auth';
+import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/hooks/use-settings';
 import { useContractSidebarBadge } from '@/hooks/use-contracts';
 import { useStockSidebarBadge } from '@/hooks/use-stock';
