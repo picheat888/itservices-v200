@@ -99,7 +99,6 @@ export default function EmployeesPage() {
     const { user } = useAuth();
     const role = (user?.role ?? 'user') as Role;
     const perms = user?.permissions ?? [];
-    const canManageOrg = role === 'super';
     const canAdd = perms.includes('employees.add') || role === 'super';
     const canImport = perms.includes('employees.import') || role === 'super';
     const canEdit = perms.includes('employees.edit') || role === 'super';
@@ -107,6 +106,24 @@ export default function EmployeesPage() {
     const canResign = perms.includes('employees.resign') || role === 'super';
     const canCancelResign = perms.includes('employees.cancel_resign') || role === 'super';
     const canSetCredentials = perms.includes('employees.set_credentials') || role === 'super';
+
+    const canViewDashboard = perms.includes('employees.view_dashboard') || role === 'super';
+    const canViewDirectory = perms.includes('employees.view') || role === 'super';
+    const canViewSections = perms.includes('employees.view_section') || role === 'super';
+    const canViewDepartments = perms.includes('employees.view_department') || role === 'super';
+    const canViewPositions = perms.includes('employees.view_position') || role === 'super';
+    const canViewOrg = perms.includes('employees.view_org') || role === 'super';
+
+    const canSectionAdd = perms.includes('employees.section_add') || role === 'super';
+    const canSectionEdit = perms.includes('employees.section_edit') || role === 'super';
+    const canSectionDelete = perms.includes('employees.section_delete') || role === 'super';
+    const canDeptAdd = perms.includes('employees.department_add') || role === 'super';
+    const canDeptEdit = perms.includes('employees.department_edit') || role === 'super';
+    const canDeptDelete = perms.includes('employees.department_delete') || role === 'super';
+    const canPosAdd = perms.includes('employees.position_add') || role === 'super';
+    const canPosEdit = perms.includes('employees.position_edit') || role === 'super';
+    const canPosDelete = perms.includes('employees.position_delete') || role === 'super';
+    const canPosSpecial = perms.includes('employees.position_special') || role === 'super';
 
     const [tab, setTab] = useState<Tab>(initialTab);
     const { data: summary } = useEmployeeSummary();
@@ -179,13 +196,21 @@ export default function EmployeesPage() {
     }, [highlighted]);
 
     const tabs: { id: Tab; label: string; count?: number }[] = [
-        { id: 'dashboard', label: t('sub_dashboard') },
-        { id: 'directory', label: t('sub_directory'), count: summary?.total },
-        { id: 'sections', label: t('sub_sections') },
-        { id: 'departments', label: t('sub_departments') },
-        { id: 'positions', label: t('sub_positions') },
-        { id: 'orgchart', label: t('sub_org_chart') },
-    ];
+        canViewDashboard && { id: 'dashboard' as Tab, label: t('sub_dashboard') },
+        canViewDirectory && { id: 'directory' as Tab, label: t('sub_directory'), count: summary?.total },
+        canViewSections && { id: 'sections' as Tab, label: t('sub_sections') },
+        canViewDepartments && { id: 'departments' as Tab, label: t('sub_departments') },
+        canViewPositions && { id: 'positions' as Tab, label: t('sub_positions') },
+        canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart') },
+    ].filter(Boolean) as { id: Tab; label: string; count?: number }[];
+
+    // If the persisted/landing tab isn't visible (permission removed), fall back to first visible tab.
+    useEffect(() => {
+        if (tabs.length > 0 && !tabs.some((tb) => tb.id === tab)) {
+            changeTab(tabs[0].id);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tabs.map((tb) => tb.id).join(',')]);
 
     // A position can only be deleted when no employee holds it; otherwise show a notice.
     const handleDeletePos = (p: Position) => {
@@ -249,7 +274,7 @@ export default function EmployeesPage() {
                 <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
                     <Switch
                         checked={p.allow_special_position}
-                        disabled={!canManageOrg || positionMut.update.isPending}
+                        disabled={!canPosSpecial || positionMut.update.isPending}
                         onChange={(next) =>
                             confirm({
                                 variant: 'warn',
@@ -269,24 +294,27 @@ export default function EmployeesPage() {
             header: t('actions'),
             align: 'right',
             render: (p) =>
-                canManageOrg ? (
-                    // Stop row-click (opens members dialog) from firing on the action buttons.
+                canPosEdit || canPosDelete ? (
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button
-                            onClick={() => {
-                                setEditPos(p);
-                                setPosModalOpen(true);
-                            }}
-                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <SquarePen className="h-4 w-4" />
-                        </button>
-                        <button
-                            onClick={() => handleDeletePos(p)}
-                            className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canPosEdit && (
+                            <button
+                                onClick={() => {
+                                    setEditPos(p);
+                                    setPosModalOpen(true);
+                                }}
+                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <SquarePen className="h-4 w-4" />
+                            </button>
+                        )}
+                        {canPosDelete && (
+                            <button
+                                onClick={() => handleDeletePos(p)}
+                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <span className="text-muted-foreground">—</span>
@@ -355,24 +383,27 @@ export default function EmployeesPage() {
             header: t('actions'),
             align: 'right',
             render: (d) =>
-                canManageOrg ? (
-                    // Stop row-click (opens the members dialog) from firing on the action buttons.
+                canDeptEdit || canDeptDelete ? (
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button
-                            onClick={() => {
-                                setEditDept(d);
-                                setDeptModalOpen(true);
-                            }}
-                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <SquarePen className="h-4 w-4" />
-                        </button>
-                        <button
-                            onClick={() => handleDeleteDept(d)}
-                            className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canDeptEdit && (
+                            <button
+                                onClick={() => {
+                                    setEditDept(d);
+                                    setDeptModalOpen(true);
+                                }}
+                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <SquarePen className="h-4 w-4" />
+                            </button>
+                        )}
+                        {canDeptDelete && (
+                            <button
+                                onClick={() => handleDeleteDept(d)}
+                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <span className="text-muted-foreground">—</span>
@@ -460,7 +491,7 @@ export default function EmployeesPage() {
                         <div className="space-y-3">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <span className="text-muted-foreground text-sm">{t('pos_all_org')}</span>
-                                {canManageOrg && (
+                                {canPosAdd && (
                                     <Button
                                         onClick={() => {
                                             setEditPos(null);
@@ -484,7 +515,7 @@ export default function EmployeesPage() {
                             onRowClick={(d) => setViewDept(d)}
                             searchable={(d) => `${d.code} ${d.tag} ${d.name} ${d.name_th ?? ''}`}
                             actions={
-                                canManageOrg && (
+                                canDeptAdd && (
                                     <Button
                                         onClick={() => {
                                             setEditDept(null);
@@ -499,7 +530,7 @@ export default function EmployeesPage() {
                         />
                     )}
 
-                    {tab === 'sections' && <SectionsTab canManage={canManageOrg} />}
+                    {tab === 'sections' && <SectionsTab canAdd={canSectionAdd} canEdit={canSectionEdit} canDelete={canSectionDelete} />}
 
                     {tab === 'orgchart' && <OrgChartTab />}
                 </div>

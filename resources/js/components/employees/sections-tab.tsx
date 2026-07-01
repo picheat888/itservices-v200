@@ -14,7 +14,7 @@ import { useMemo, useState } from 'react';
 
 type SortKey = 'dept' | 'name' | 'members' | 'code';
 
-export function SectionsTab({ canManage }: { canManage: boolean }) {
+export function SectionsTab({ canAdd, canEdit, canDelete }: { canAdd: boolean; canEdit: boolean; canDelete: boolean }) {
     const t = useT();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
@@ -97,24 +97,28 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
             header: t('actions'),
             align: 'right',
             render: (s) =>
-                canManage ? (
+                canEdit || canDelete ? (
                     // Stop row-click (which opens the members dialog) from firing on the action buttons.
                     <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button
-                            onClick={() => {
-                                setEditSection(s);
-                                setModalOpen(true);
-                            }}
-                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <SquarePen className="h-4 w-4" />
-                        </button>
-                        <button
-                            onClick={() => handleDelete(s)}
-                            className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canEdit && (
+                            <button
+                                onClick={() => {
+                                    setEditSection(s);
+                                    setModalOpen(true);
+                                }}
+                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <SquarePen className="h-4 w-4" />
+                            </button>
+                        )}
+                        {canDelete && (
+                            <button
+                                onClick={() => handleDelete(s)}
+                                className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <span className="text-muted-foreground">—</span>
@@ -170,7 +174,7 @@ export function SectionsTab({ canManage }: { canManage: boolean }) {
                         </>
                     }
                     actions={
-                        canManage && (
+                        canAdd && (
                             <Button
                                 onClick={() => {
                                     setEditSection(null);
