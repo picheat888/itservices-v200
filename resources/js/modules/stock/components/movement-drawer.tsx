@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useVendors, useWarehouses } from '@/hooks/use-master-data';
-import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '@/hooks/use-stock';
+import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';

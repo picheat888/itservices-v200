@@ -1,5 +1,5 @@
 import { Card } from '@/shared/ui/card';
-import { useStockMovements, useStockSummary } from '@/hooks/use-stock';
+import { useStockMovements, useStockSummary } from '../../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';

@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/hooks/use-master-data';
-import { useStockItemMutations } from '@/hooks/use-stock';
+import { useStockItemMutations } from '../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
-import type { StockItemPayload } from '@/services/stockApi';
+import type { StockItemPayload } from '../api/stockApi';
 import { useToastStore } from '@/stores/toast';
 import type { StockItem } from '@/shared/types';
 import { useEffect, useState } from 'react';

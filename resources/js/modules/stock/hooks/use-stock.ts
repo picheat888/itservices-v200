@@ -7,7 +7,7 @@ import {
     type StockItemPayload,
     type StockMovementPayload,
     type StockRequestPayload,
-} from '@/services/stockApi';
+} from '../api/stockApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { StockCountAdjustMode } from '@/shared/types';
 
