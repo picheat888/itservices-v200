@@ -1,4 +1,4 @@
-import { notificationApi } from '@/services/notificationApi';
+import { notificationApi } from '@/modules/notifications/api/notificationApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = ['notifications'] as const;

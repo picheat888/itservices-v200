@@ -1,7 +1,7 @@
-import { useMarkRead, useNotifications } from '@/hooks/use-notifications';
+import { useMarkRead, useNotifications } from '@/modules/notifications';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
-import type { AppNotification } from '@/services/notificationApi';
+import type { AppNotification } from '@/modules/notifications';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
