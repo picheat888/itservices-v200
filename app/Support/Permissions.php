@@ -24,7 +24,15 @@ class Permissions
                 'manage_items', 'receive', 'return', 'transfer',
                 'request', 'approve', 'fulfill',
             ],
-            'employees' => ['view', 'add', 'import', 'edit', 'edit_own', 'reset_password', 'resign', 'cancel_resign', 'set_credentials'],
+            'employees' => [
+                'module',
+                'view_dashboard', 'view', 'view_section', 'view_department', 'view_position', 'view_org',
+                'add', 'import', 'edit', 'reset_password', 'resign', 'cancel_resign', 'set_credentials',
+                'section_add', 'section_edit', 'section_delete',
+                'department_add', 'department_edit', 'department_delete',
+                'position_add', 'position_edit', 'position_delete', 'position_special',
+                'edit_own',
+            ],
             'access' => ['view', 'manage'],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'assets', 'security'],
@@ -121,6 +129,64 @@ class Permissions
 
         if (! isset($set[$hierarchy['master']])) {
             return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'stock.')));
+        }
+
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
+    }
+
+    /**
+     * Employee permission tree used for client cascade and server normalization.
+     * `standalone` keys (edit_own — self-service) are never gated by the master.
+     *
+     * @return array{master: string, standalone: list<string>, groups: array<string, list<string>>}
+     */
+    public static function employeeHierarchy(): array
+    {
+        return [
+            'master' => 'employees.module',
+            'standalone' => ['employees.edit_own'],
+            'groups' => [
+                'employees.view_dashboard' => [],
+                'employees.view' => [
+                    'employees.add', 'employees.import', 'employees.edit', 'employees.reset_password',
+                    'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
+                ],
+                'employees.view_section' => ['employees.section_add', 'employees.section_edit', 'employees.section_delete'],
+                'employees.view_department' => ['employees.department_add', 'employees.department_edit', 'employees.department_delete'],
+                'employees.view_position' => ['employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special'],
+                'employees.view_org' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the employee hierarchy on a granted set: a management child requires its
+     * group's view key; every view key requires the master. `standalone` keys survive
+     * even when the master is off (edit_own is self-service). Non-employee keys pass
+     * through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeEmployees(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::employeeHierarchy();
+        $standalone = array_flip($hierarchy['standalone']);
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter(
+                $granted,
+                fn ($key) => ! str_starts_with($key, 'employees.') || isset($standalone[$key]),
+            ));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {
