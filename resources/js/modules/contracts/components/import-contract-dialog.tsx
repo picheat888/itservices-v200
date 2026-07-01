@@ -1,8 +1,8 @@
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { useContractMutations } from '@/hooks/use-contracts';
+import { useContractMutations } from '../hooks/use-contracts';
 import { useT } from '@/lib/i18n';
-import { contractApi } from '@/services/contractApi';
+import { contractApi } from '../api/contractApi';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';

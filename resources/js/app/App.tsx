@@ -10,7 +10,7 @@ import { useHydrateSettings } from '@/hooks/use-settings';
 import { queryClient } from '@/shared/lib/query-client';
 import { AccessControlPage } from '@/modules/access';
 import AssetsPage from '@/pages/assets';
-import ContractsPage from '@/pages/contracts';
+import { ContractsPage } from '@/modules/contracts';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import EmployeesPage from '@/pages/employees';
