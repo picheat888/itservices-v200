@@ -1,22 +1,22 @@
-import { Column, DataTable } from '@/components/shared/data-table';
-import { FilterPopover } from '@/components/shared/filter-popover';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { MovementDrawer } from '@/components/stock/movement-drawer';
 import { RequestDrawer } from '@/components/stock/request-drawer';
 import { StockItemDetailModal } from '@/components/stock/stock-item-detail-modal';
 import { StockItemModal } from '@/components/stock/stock-item-modal';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Input } from '@/shared/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useCategories, useWarehouses } from '@/hooks/use-master-data';
 import { useCurrency } from '@/hooks/use-settings';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
-import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/types';
+import { cn } from '@/shared/lib/utils';
+import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import {
     AlertTriangle,
     Archive,
@@ -131,7 +131,7 @@ const stockBlinkStyles = `
 `;
 
 /** Alert banner shown when any items are in a warning state. Displays real item data grouped by type. */
-function AlertCard({ summary, t, onViewItems }: { summary: import('@/types').StockSummary; t: ReturnType<typeof useT>; onViewItems: () => void }) {
+function AlertCard({ summary, t, onViewItems }: { summary: import('@/shared/types').StockSummary; t: ReturnType<typeof useT>; onViewItems: () => void }) {
     const hasCritical = summary.out_count > 0 || summary.low_count > 0;
     return (
         <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>

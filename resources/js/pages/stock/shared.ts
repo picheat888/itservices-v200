@@ -1,4 +1,4 @@
-import type { StockMovementType } from '@/types';
+import type { StockMovementType } from '@/shared/types';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, RotateCcw } from 'lucide-react';
 
 /** Visual tone shared by the movement feed/badges. */

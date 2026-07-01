@@ -1,16 +1,16 @@
-import { Column, DataTable } from '@/components/shared/data-table';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useWarehouses } from '@/hooks/use-master-data';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockCountAdjustMode, StockItem } from '@/types';
+import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { AlertTriangle, Check, ClipboardList, FileText, Loader2, Search, Trash2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

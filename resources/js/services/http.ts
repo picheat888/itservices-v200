@@ -1,4 +1,4 @@
-import { ME_KEY, queryClient } from '@/lib/query-client';
+import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useToastStore } from '@/stores/toast';
 import axios from 'axios';

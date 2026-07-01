@@ -1,7 +1,7 @@
-import { Card } from '@/components/ui/card';
+import { Card } from '@/shared/ui/card';
 import { useStockMovements, useStockSummary } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';
 import { MV_META, MV_TONE_BG } from '../shared';
 

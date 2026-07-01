@@ -1,4 +1,4 @@
-import type { ApiEnvelope, Contract, ContractSummary } from '@/types';
+import type { ApiEnvelope, Contract, ContractSummary } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export interface ContractPageMeta {

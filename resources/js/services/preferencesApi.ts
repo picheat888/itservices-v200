@@ -1,4 +1,4 @@
-import type { ApiEnvelope, User, UserPreferences } from '@/types';
+import type { ApiEnvelope, User, UserPreferences } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export const preferencesApi = {

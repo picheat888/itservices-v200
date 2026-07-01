@@ -6,17 +6,17 @@ import { LookupSection } from '@/components/settings/lookup-section';
 import { ModelModal } from '@/components/settings/model-modal';
 import { VendorModal } from '@/components/settings/vendor-modal';
 import { WarehouseModal } from '@/components/settings/warehouse-modal';
-import { Column, DataTable } from '@/components/shared/data-table';
-import { Field } from '@/components/shared/field';
-import { SaveButton } from '@/components/shared/save-button';
-import { SearchSelect } from '@/components/shared/search-select';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { Field } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
+import { SearchSelect } from '@/shared/components/search-select';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { TicketPriorityBadge } from '@/components/tickets/ticket-meta';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import {
     useAssetModelMutations,
@@ -45,14 +45,14 @@ import {
     useUpdateTicketSla,
     useUploadLogo,
 } from '@/hooks/use-settings';
-import { resolveBrand } from '@/lib/brand-color';
+import { resolveBrand } from '@/shared/lib/brand-color';
 import { useT } from '@/lib/i18n';
-import { countryOptions, currencyOptions, timezoneOptions } from '@/lib/locale-data';
-import { cn } from '@/lib/utils';
+import { countryOptions, currencyOptions, timezoneOptions } from '@/shared/lib/locale-data';
+import { cn } from '@/shared/lib/utils';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/types';
+import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     AlertCircle,

@@ -1,4 +1,4 @@
-import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog } from '@/types';
+import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, ContractLinkableAsset } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export interface AssetPageMeta {
@@ -44,6 +44,11 @@ export const assetApi = {
     list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string }) =>
         http.get<AssetPageResponse>('/assets', { params }).then((r) => r.data),
     summary: () => http.get<AssetSummary>('/assets/summary').then((r) => r.data),
+    // Assets selectable in the contract form's link picker (free assets + this contract's own).
+    linkable: (contractId?: number) =>
+        http
+            .get<ApiEnvelope<ContractLinkableAsset[]>>('/assets/linkable', { params: contractId ? { contract_id: contractId } : {} })
+            .then((r) => r.data.data),
     transfers: () => http.get<{ data: AssetTransferLog[] }>('/assets/transfers').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),

@@ -1,18 +1,18 @@
 import { ContractDetailDrawer } from '@/components/contracts/contract-detail-drawer';
 import { ContractFormDrawer } from '@/components/contracts/contract-form-drawer';
 import { ImportContractDialog } from '@/components/contracts/import-contract-dialog';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { useContract, useContracts, useContractSummary } from '@/hooks/use-contracts';
 import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Contract, ContractStatus, ContractType, Role } from '@/types';
+import type { Contract, ContractStatus, ContractType, Role } from '@/shared/types';
 import {
     AlertOctagon,
     AlertTriangle,

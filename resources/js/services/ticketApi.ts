@@ -1,4 +1,4 @@
-import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/types';
+import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export interface TicketPageMeta {
