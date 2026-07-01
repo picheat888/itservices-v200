@@ -1,112 +1,19 @@
 import type { Lang } from '@/shared/types';
+import { translate } from '@/lang';
 
-type L = { en: string; th: string };
-
-const MODULES: Record<string, L> = {
-    tickets: { en: 'Tickets', th: 'Ticket' },
-    requests: { en: 'Requests', th: 'คำขอ' },
-    assets: { en: 'Assets', th: 'ทรัพย์สิน' },
-    contracts: { en: 'Contracts', th: 'สัญญา' },
-    stock: { en: 'Stock', th: 'คลังพัสดุ' },
-    employees: { en: 'Employees', th: 'พนักงาน' },
-    system: { en: 'System', th: 'ระบบ' },
-    // Administration sub-groups (design split). Permission/Email/Setting reuse the
-    // live system.* keys; the rest are presentational "coming soon" placeholders.
-    permissions: { en: 'Permission', th: 'สิทธิ์การใช้งาน' },
-    email_templates: { en: 'Email Templates', th: 'เทมเพลตอีเมล' },
-    settings: { en: 'Setting', th: 'ตั้งค่า' },
-    reports: { en: 'Reports', th: 'รายงาน' },
+// Module + action display labels now live in lang/<locale>/permissions.ts
+// (keys perm_mod_<module> / perm_act_<module>.<action>). These helpers resolve
+// them and fall back to the raw key/action when a label is absent.
+export const moduleLabel = (key: string, lang: Lang) => {
+    const k = `perm_mod_${key}`;
+    const v = translate(lang, k);
+    return v === k ? key : v;
 };
-
-const ACTIONS: Record<string, L> = {
-    'tickets.view_all': { en: 'View all tickets', th: 'ดูตั๋วทั้งหมด' },
-    'tickets.create': { en: 'Create tickets', th: 'สร้างตั๋ว' },
-    'tickets.assign': { en: 'Assign tickets', th: 'รับมอบหมายตั๋ว' },
-    'tickets.resolve': { en: 'Resolve & close', th: 'แก้ไขและปิดเคส' },
-    'tickets.delete': { en: 'Delete tickets', th: 'ลบตั๋ว' },
-    'requests.submit': { en: 'Submit requests', th: 'ส่งคำขอ' },
-    'requests.approve_manager': { en: 'Approve as manager', th: 'อนุมัติในฐานะหัวหน้า' },
-    'requests.approve_it': { en: 'Approve as IT', th: 'อนุมัติในฐานะไอที' },
-    'requests.view_all': { en: 'View all requests', th: 'ดูคำขอทั้งหมด' },
-    'requests.reject': { en: 'Reject requests', th: 'ปฏิเสธคำขอ' },
-    'assets.view': { en: 'View inventory', th: 'ดูคลังทรัพย์สิน' },
-    'assets.register': { en: 'Register assets', th: 'ลงทะเบียนทรัพย์สิน' },
-    'assets.transfer': { en: 'Transfer assets', th: 'โอนทรัพย์สิน' },
-    'assets.retire': { en: 'Retire assets', th: 'เลิกใช้ทรัพย์สิน' },
-    'assets.edit': { en: 'Edit asset metadata', th: 'แก้ไขข้อมูลทรัพย์สิน' },
-    'contracts.view': { en: 'View contracts', th: 'ดูสัญญา' },
-    'contracts.create': { en: 'Create contracts', th: 'สร้างสัญญา' },
-    'contracts.edit': { en: 'Edit contracts', th: 'แก้ไขสัญญา' },
-    'contracts.import': { en: 'Import contracts (CSV)', th: 'นำเข้าข้อมูลสัญญา (CSV)' },
-    'contracts.renew': { en: 'Renew contracts', th: 'ต่ออายุสัญญา' },
-    'contracts.alerts': { en: 'Contract Expiry Notification', th: 'การแจ้งเตือนสัญญาหมดอายุ' },
-    'stock.module': { en: 'Stock', th: 'คลังพัสดุ' },
-    'stock.view_dashboard': { en: 'Dashboard', th: 'แดชบอร์ด' },
-    'stock.view': { en: 'Stock item', th: 'รายการพัสดุ' },
-    'stock.view_request': { en: 'Request', th: 'คำขอเบิก' },
-    'stock.view_count': { en: 'Counting', th: 'การนับสต็อก' },
-    'stock.view_events': { en: 'Event', th: 'การเคลื่อนไหว' },
-    'stock.manage_items': { en: 'Manage SKU', th: 'จัดการรายการสินค้า (SKU, Min/Max)' },
-    'stock.receive': { en: 'Receive', th: 'รับเข้าคลัง' },
-    'stock.return': { en: 'Return', th: 'รับคืนพัสดุ' },
-    'stock.transfer': { en: 'Transfer', th: 'ย้ายระหว่างคลัง' },
-    'stock.request': { en: 'New Request', th: 'ขอเบิกพัสดุ' },
-    'stock.approve': { en: 'Approve Request', th: 'อนุมัติคำขอเบิก' },
-    'stock.fulfill': { en: 'Issue / Fulfill', th: 'จ่ายของ' },
-    'employees.view': { en: 'View directory', th: 'ดูรายชื่อพนักงาน' },
-    'employees.add': { en: 'Add employee', th: 'เพิ่มพนักงาน' },
-    'employees.import': { en: 'Import employees (CSV)', th: 'นำเข้าข้อมูลพนักงาน (CSV)' },
-    'employees.edit': { en: 'Edit employee', th: 'แก้ไขข้อมูลพนักงาน' },
-    'employees.edit_own': { en: 'Edit own profile', th: 'แก้ไขโปรไฟล์ของตนเอง' },
-    'employees.reset_password': { en: 'Reset password', th: 'รีเซ็ตรหัสผ่าน' },
-    'employees.resign': { en: 'Record resignation', th: 'บันทึกการลาออก' },
-    'employees.cancel_resign': { en: 'Cancel resignation', th: 'ยกเลิกการลาออก' },
-    'employees.set_credentials': { en: 'Set username & password', th: 'ตั้งชื่อผู้ใช้และรหัสผ่าน' },
-    'employees.module': { en: 'Employee', th: 'พนักงาน' },
-    'employees.view_dashboard': { en: 'Dashboard', th: 'แดชบอร์ด' },
-    'employees.view_section': { en: 'Sections', th: 'ส่วนงาน' },
-    'employees.section_add': { en: 'Add section', th: 'เพิ่มส่วนงาน' },
-    'employees.section_edit': { en: 'Edit section', th: 'แก้ไขส่วนงาน' },
-    'employees.section_delete': { en: 'Delete section', th: 'ลบส่วนงาน' },
-    'employees.view_department': { en: 'Departments', th: 'แผนก' },
-    'employees.department_add': { en: 'Add department', th: 'เพิ่มแผนก' },
-    'employees.department_edit': { en: 'Edit department', th: 'แก้ไขแผนก' },
-    'employees.department_delete': { en: 'Delete department', th: 'ลบแผนก' },
-    'employees.view_position': { en: 'Positions', th: 'ตำแหน่ง' },
-    'employees.position_add': { en: 'Add position', th: 'เพิ่มตำแหน่ง' },
-    'employees.position_edit': { en: 'Edit position', th: 'แก้ไขตำแหน่ง' },
-    'employees.position_delete': { en: 'Delete position', th: 'ลบตำแหน่ง' },
-    'employees.position_special': { en: 'Special Position Control', th: 'ควบคุมตำแหน่งพิเศษ' },
-    'employees.view_org': { en: 'Organization chart', th: 'ผังองค์กร' },
-    'system.manage_permissions': { en: 'Manage permissions', th: 'จัดการสิทธิ์การใช้งาน' },
-    'system.manage_roles': { en: 'Manage roles', th: 'จัดการบทบาท' },
-    'system.manage_groups': { en: 'Manage groups', th: 'จัดการกลุ่มผู้ใช้' },
-    'system.configure_notifications': { en: 'Configure notifications', th: 'ตั้งค่าการแจ้งเตือน' },
-    'system.view_audit': { en: 'View audit log', th: 'ดูบันทึกการตรวจสอบ' },
-    // Reports module — not built yet (all coming soon).
-    'reports.view': { en: 'View reports', th: 'ดูรายงาน' },
-    'reports.run': { en: 'Run reports', th: 'เรียกใช้รายงาน' },
-    'reports.export': { en: 'Export data (CSV / XLSX)', th: 'ส่งออกข้อมูล (CSV / XLSX)' },
-    'reports.schedule': { en: 'Schedule automated runs', th: 'ตั้งกำหนดการอัตโนมัติ' },
-    'reports.custom': { en: 'Create custom report', th: 'สร้างรายงานแบบกำหนดเอง' },
-    // Email Templates — granular enforcement coming soon (configure_notifications is live).
-    'email.edit': { en: 'Edit template content', th: 'แก้ไขเนื้อหาเทมเพลต' },
-    'email.enable': { en: 'Enable / disable templates', th: 'เปิด / ปิดเทมเพลต' },
-    'email.create': { en: 'Create new template', th: 'สร้างเทมเพลตใหม่' },
-    'email.test': { en: 'Send test email', th: 'ส่งอีเมลทดสอบ' },
-    // Settings — granular per-section permissions
-    'settings.access': { en: 'Settings access', th: 'เข้าถึงการตั้งค่า' },
-    'settings.company': { en: 'Company information', th: 'ข้อมูลบริษัท' },
-    'settings.system': { en: 'System (branding & display)', th: 'ระบบ (แบรนด์ & การแสดงผล)' },
-    'settings.masterdata': { en: 'Master Data', th: 'จัดการ Master Data' },
-    'settings.email': { en: 'Email (SMTP) settings', th: 'ตั้งค่าอีเมล (SMTP)' },
-    'settings.sla': { en: 'Ticket & SLA', th: 'ตั๋ว & SLA' },
-    'settings.assets': { en: 'Asset settings', th: 'ตั้งค่าทรัพย์สิน' },
-    'settings.security': { en: 'Security policy', th: 'นโยบายความปลอดภัย' },
+export const actionLabel = (module: string, action: string, lang: Lang) => {
+    const k = `perm_act_${module}.${action}`;
+    const v = translate(lang, k);
+    return v === k ? action : v;
 };
-
-export const moduleLabel = (key: string, lang: Lang) => MODULES[key]?.[lang] ?? key;
-export const actionLabel = (module: string, action: string, lang: Lang) => ACTIONS[`${module}.${action}`]?.[lang] ?? action;
 
 // Permission keys whose enforcement is actually live today. Everything else is
 // shown with a "(Coming soon)" tag in the matrix (toggle still persists).
