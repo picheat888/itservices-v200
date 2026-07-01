@@ -9,7 +9,7 @@ import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
 import { queryClient } from '@/shared/lib/query-client';
 import { AccessControlPage } from '@/modules/access';
-import AssetsPage from '@/pages/assets';
+import { AssetsPage } from '@/modules/assets';
 import { ContractsPage } from '@/modules/contracts';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';

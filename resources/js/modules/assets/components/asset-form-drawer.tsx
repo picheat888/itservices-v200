@@ -1,10 +1,10 @@
-import { ASSET_TYPES } from '@/components/assets/asset-meta';
+import { ASSET_TYPES } from './asset-meta';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAssetMutations } from '@/hooks/use-assets';
+import { useAssetMutations } from '../hooks/use-assets';
 import { useContracts } from '@/modules/contracts';
 import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';

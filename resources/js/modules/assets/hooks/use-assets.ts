@@ -1,4 +1,4 @@
-import { assetApi, type AssetPayload } from '@/services/assetApi';
+import { assetApi, type AssetPayload } from '../api/assetApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ASSETS = ['assets'] as const;

@@ -11,7 +11,7 @@ import { useVendors } from '@/hooks/use-master-data';
 import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
-import { assetApi } from '@/services/assetApi';
+import { assetApi } from '@/modules/assets';
 import { useUiStore } from '@/stores/ui';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';

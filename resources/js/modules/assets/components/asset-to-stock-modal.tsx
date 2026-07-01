@@ -2,7 +2,7 @@ import { Field } from '@/shared/components/field';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAssetMutations } from '@/hooks/use-assets';
+import { useAssetMutations } from '../hooks/use-assets';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Asset } from '@/shared/types';
