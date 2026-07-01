@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Models\AccessMembership;
-use App\Models\EmailGroup;
+use App\Models\Access\AccessMembership;
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
+use App\Models\Access\SocialPlatform;
 use App\Models\Employee;
-use App\Models\FileShare;
 use App\Models\Role;
 use App\Models\RolePermission;
-use App\Models\SocialPlatform;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,9 +43,9 @@ class AccessControlTest extends TestCase
 
     public function test_access_permission_keys_are_registered(): void
     {
-        $this->assertContains('access.view', \App\Support\Permissions::all());
-        $this->assertContains('access.manage', \App\Support\Permissions::all());
-        $this->assertContains('access.manage', \App\Support\Permissions::defaults()['admin']);
+        $this->assertContains('access.view', Permissions::all());
+        $this->assertContains('access.manage', Permissions::all());
+        $this->assertContains('access.manage', Permissions::defaults()['admin']);
     }
 
     public function test_models_auto_code_and_relations(): void

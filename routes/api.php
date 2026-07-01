@@ -1,6 +1,9 @@
 <?php
 
-use App\Http\Controllers\Api\AccessController;
+use App\Http\Controllers\Api\Access\AccessController;
+use App\Http\Controllers\Api\Access\EmailGroupController;
+use App\Http\Controllers\Api\Access\FileShareController;
+use App\Http\Controllers\Api\Access\SocialPlatformController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\AuditLogController;
@@ -10,10 +13,8 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContractAttachmentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
-use App\Http\Controllers\Api\EmailGroupController;
 use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\EmployeeController;
-use App\Http\Controllers\Api\FileShareController;
 use App\Http\Controllers\Api\GroupRoleController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\NotificationController;
@@ -22,7 +23,6 @@ use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
 use App\Http\Controllers\Api\SectionController;
 use App\Http\Controllers\Api\SettingsController;
-use App\Http\Controllers\Api\SocialPlatformController;
 use App\Http\Controllers\Api\StockCountController;
 use App\Http\Controllers\Api\StockItemController;
 use App\Http\Controllers\Api\StockMovementController;

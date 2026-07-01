@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmailGroup;
+use App\Models\Access\EmailGroup;
 use App\Models\Employee;
 use App\Models\Role;
 use App\Models\RolePermission;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Access;
 
-use App\Models\AccessMembership;
+use App\Models\Access\AccessMembership;
 use App\Models\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;

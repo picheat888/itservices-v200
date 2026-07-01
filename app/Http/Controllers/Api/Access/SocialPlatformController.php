@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Access;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreAccessMembershipRequest;
-use App\Http\Requests\StoreSocialPlatformRequest;
-use App\Http\Resources\AccessMembershipResource;
-use App\Http\Resources\SocialPlatformResource;
-use App\Models\AccessMembership;
-use App\Models\SocialPlatform;
-use App\Services\AccessService;
+use App\Http\Requests\Access\StoreAccessMembershipRequest;
+use App\Http\Requests\Access\StoreSocialPlatformRequest;
+use App\Http\Resources\Access\AccessMembershipResource;
+use App\Http\Resources\Access\SocialPlatformResource;
+use App\Models\Access\AccessMembership;
+use App\Models\Access\SocialPlatform;
+use App\Services\Access\AccessService;
 use Illuminate\Http\JsonResponse;
 
 class SocialPlatformController extends Controller

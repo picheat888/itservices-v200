@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Access;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
-class StoreEmailGroupRequest extends FormRequest
+class StoreFileShareRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,13 +13,11 @@ class StoreEmailGroupRequest extends FormRequest
 
     public function rules(): array
     {
-        $id = $this->route('email_group')?->id;
-
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('email_groups', 'email')->ignore($id)],
+            'path' => ['required', 'string', 'max:255'],
             'department_id' => ['nullable', 'exists:departments,id'],
-            'description' => ['nullable', 'string', 'max:500'],
+            'size_label' => ['nullable', 'string', 'max:50'],
             'owner_employee_id' => ['nullable', 'exists:employees,id'],
         ];
     }

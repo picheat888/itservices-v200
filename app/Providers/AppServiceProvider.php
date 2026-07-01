@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
+use App\Models\Access\SocialPlatform;
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -32,10 +36,10 @@ class AppServiceProvider extends ServiceProvider
         // notification rows store the User FQCN, so we key it by its class name
         // to keep both stored data and new writes resolving correctly.
         Relation::enforceMorphMap([
-            'email_group' => \App\Models\EmailGroup::class,
-            'file_share' => \App\Models\FileShare::class,
-            'social_platform' => \App\Models\SocialPlatform::class,
-            \App\Models\User::class => \App\Models\User::class,
+            'email_group' => EmailGroup::class,
+            'file_share' => FileShare::class,
+            'social_platform' => SocialPlatform::class,
+            User::class => User::class,
         ]);
     }
 

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Access;
 
-use App\Models\FileShare;
+use App\Models\Access\SocialPlatform;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin FileShare */
-class FileShareResource extends JsonResource
+/** @mixin SocialPlatform */
+class SocialPlatformResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
@@ -15,17 +15,14 @@ class FileShareResource extends JsonResource
             'id' => $this->id,
             'code' => $this->code,
             'name' => $this->name,
-            'path' => $this->path,
-            'department_id' => $this->department_id,
-            'department' => $this->whenLoaded('department', fn () => $this->department?->name),
-            'size_label' => $this->size_label,
-            'owner_employee_id' => $this->owner_employee_id,
-            'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
+            'url' => $this->url,
+            'color' => $this->color,
+            'policy' => $this->policy,
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,
                 'name' => $m->employee?->name,
-                'access_level' => $m->access_level,
+                'purpose' => $m->purpose,
             ])->values()),
             'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),
         ];

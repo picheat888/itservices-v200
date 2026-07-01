@@ -1,7 +1,9 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Access;
 
+use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
