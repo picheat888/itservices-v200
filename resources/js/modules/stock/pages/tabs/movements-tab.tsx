@@ -4,7 +4,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useCurrency, useDateTime } from '@/hooks/use-settings';
-import { useMovementSerials, useStockMovements } from '@/hooks/use-stock';
+import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

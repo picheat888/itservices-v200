@@ -1,6 +1,6 @@
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { useStockItemHistory } from '@/hooks/use-stock';
+import { useStockItemHistory } from '../hooks/use-stock';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { type StockMovementType } from '@/shared/types';

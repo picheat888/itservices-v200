@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/hooks/use-settings';
 import { useContractSidebarBadge } from '@/modules/contracts';
-import { useStockSidebarBadge } from '@/hooks/use-stock';
+import { useStockSidebarBadge } from '@/modules/stock';
 import { useT } from '@/lib/i18n';
 import { navGroups } from '@/app/nav';
 import { cn } from '@/shared/lib/utils';
