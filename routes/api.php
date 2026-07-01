@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\AccessController;
 use App\Http\Controllers\Api\AssetController;
 use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContractAttachmentController;
