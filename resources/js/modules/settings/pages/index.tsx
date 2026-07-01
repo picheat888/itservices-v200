@@ -1,11 +1,11 @@
 import { NoAccess } from '@/modules/auth';
-import { BrandModal } from '@/components/settings/brand-modal';
-import { CategoryModal } from '@/components/settings/category-modal';
-import { LocationModal } from '@/components/settings/location-modal';
-import { LookupSection } from '@/components/settings/lookup-section';
-import { ModelModal } from '@/components/settings/model-modal';
-import { VendorModal } from '@/components/settings/vendor-modal';
-import { WarehouseModal } from '@/components/settings/warehouse-modal';
+import { BrandModal } from '../components/brand-modal';
+import { CategoryModal } from '../components/category-modal';
+import { LocationModal } from '../components/location-modal';
+import { LookupSection } from '../components/lookup-section';
+import { ModelModal } from '../components/model-modal';
+import { VendorModal } from '../components/vendor-modal';
+import { WarehouseModal } from '../components/warehouse-modal';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
@@ -33,7 +33,7 @@ import {
     useWarehouses,
     useWarrantyTypeMutations,
     useWarrantyTypes,
-} from '@/hooks/use-master-data';
+} from '../hooks/use-master-data';
 import { useLocationMutations, useLocations } from '@/modules/employees';
 import {
     useResetLogo,
@@ -44,12 +44,12 @@ import {
     useUpdateDisplay,
     useUpdateTicketSla,
     useUploadLogo,
-} from '@/hooks/use-settings';
+} from '../hooks/use-settings';
 import { resolveBrand } from '@/shared/lib/brand-color';
 import { useT } from '@/lib/i18n';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/shared/lib/locale-data';
 import { cn } from '@/shared/lib/utils';
-import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '@/services/settingsApi';
+import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';

@@ -6,11 +6,10 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
-import { useSettings } from '@/hooks/use-settings';
+import { settingsApi, useSettings } from '@/modules/settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { emailTemplateApi, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
-import { settingsApi } from '@/services/settingsApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import {

@@ -2,7 +2,7 @@ import { StockMovementsTab } from './stock-movements-tab';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { useCurrency } from '@/hooks/use-settings';
+import { useCurrency } from '@/modules/settings';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';

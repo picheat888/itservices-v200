@@ -1,4 +1,4 @@
-import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '@/services/masterDataApi';
+import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '../api/masterDataApi';
 import type { AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

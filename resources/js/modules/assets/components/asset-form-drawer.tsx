@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssetMutations } from '../hooks/use-assets';
 import { useContracts } from '@/modules/contracts';
-import { useCurrency } from '@/hooks/use-settings';
+import { useCurrency } from '@/modules/settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
