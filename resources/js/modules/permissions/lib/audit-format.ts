@@ -3,43 +3,18 @@
 // turn those into friendly labels and resolved entity names at display time, so
 // historical logs become readable without rewriting stored data.
 
-type Lang = 'en' | 'th';
+import type { Lang } from '@/shared/types';
+import { translate } from '@/lang';
 
-/** Friendly labels for the raw DB column names that show up in audit diffs. */
-const FIELD_LABELS: Record<string, { en: string; th: string }> = {
-    name: { en: 'Name', th: 'ชื่อ' },
-    name_th: { en: 'Name (TH)', th: 'ชื่อ (ไทย)' },
-    code: { en: 'Code', th: 'รหัส' },
-    department_id: { en: 'Department', th: 'แผนก' },
-    section_id: { en: 'Section', th: 'หน่วยงาน' },
-    position_id: { en: 'Position', th: 'ตำแหน่ง' },
-    manager_id: { en: 'Manager', th: 'หัวหน้างาน' },
-    email: { en: 'Email', th: 'อีเมล' },
-    phone: { en: 'Phone', th: 'โทรศัพท์' },
-    username: { en: 'Username', th: 'ชื่อผู้ใช้' },
-    joined_at: { en: 'Join date', th: 'วันเริ่มงาน' },
-    status: { en: 'Status', th: 'สถานะ' },
-    resign_reason: { en: 'Resign reason', th: 'เหตุผลลาออก' },
-    last_day: { en: 'Last day', th: 'วันสุดท้าย' },
-    title: { en: 'Title', th: 'ชื่อตำแหน่ง' },
-    tag: { en: 'Tag', th: 'แท็ก' },
-    // Foreign keys resolved by the backend (shown as names) — label them nicely too.
-    employee_id: { en: 'Employee', th: 'พนักงาน' },
-    requester_id: { en: 'Requester', th: 'ผู้ขอ' },
-    assignee_id: { en: 'Assignee', th: 'ผู้รับผิดชอบ' },
-    user_id: { en: 'User', th: 'ผู้ใช้' },
-    role_id: { en: 'Role', th: 'บทบาท' },
-    group_role_id: { en: 'Role group', th: 'กลุ่มบทบาท' },
-    contract_id: { en: 'Contract', th: 'สัญญา' },
-    brand_id: { en: 'Brand', th: 'ยี่ห้อ' },
-    asset_id: { en: 'Asset', th: 'ทรัพย์สิน' },
-    related_asset_id: { en: 'Related asset', th: 'ทรัพย์สินที่เกี่ยวข้อง' },
-    stock_item_id: { en: 'Stock item', th: 'รายการสต็อก' },
-};
-
-/** Maps a raw column name to a friendly label, falling back to the column name. */
+/**
+ * Maps a raw DB column name to a friendly label. The labels live in
+ * lang/<locale>/permissions.ts under keys `audit_field_<column>`; this resolves
+ * them and falls back to the raw column name when no label exists.
+ */
 export function auditFieldLabel(field: string, lang: Lang): string {
-    return FIELD_LABELS[field]?.[lang] ?? field;
+    const k = `audit_field_${field}`;
+    const v = translate(lang, k);
+    return v === k ? field : v;
 }
 
 /** Reference maps (id → display name) used to resolve foreign-key ids in diffs. */
