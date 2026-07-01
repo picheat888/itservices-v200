@@ -1,7 +1,7 @@
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { type ContractAttachment } from '@/types';
+import { type ContractAttachment } from '@/shared/types';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { useState } from 'react';
 

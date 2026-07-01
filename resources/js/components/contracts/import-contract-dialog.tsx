@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useContractMutations } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { contractApi } from '@/services/contractApi';

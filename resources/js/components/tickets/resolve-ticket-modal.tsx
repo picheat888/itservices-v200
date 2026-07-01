@@ -1,11 +1,11 @@
-import { Field } from '@/components/shared/field';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Field } from '@/shared/components/field';
+import { Button } from '@/shared/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Ticket } from '@/types';
+import type { Ticket } from '@/shared/types';
 import { Check, Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

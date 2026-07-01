@@ -1,5 +1,5 @@
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 
 /**
  * Small pill describing a file-share access level:

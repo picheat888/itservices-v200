@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { useT } from '@/lib/i18n';
 import { Clock } from 'lucide-react';
 

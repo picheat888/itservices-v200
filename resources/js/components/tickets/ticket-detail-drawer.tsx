@@ -1,12 +1,12 @@
-import { StatusBadge } from '@/components/shared/status-badge';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-meta';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Ticket, TicketAttachment } from '@/types';
+import type { Ticket, TicketAttachment } from '@/shared/types';
 import { Check, ExternalLink, FileText, RefreshCcw, Users, X, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';

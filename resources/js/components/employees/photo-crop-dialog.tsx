@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useT } from '@/lib/i18n';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import Cropper from 'react-easy-crop';

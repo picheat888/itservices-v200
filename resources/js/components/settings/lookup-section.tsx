@@ -1,10 +1,10 @@
-import { Column, DataTable } from '@/components/shared/data-table';
-import { Field } from '@/components/shared/field';
-import { SaveButton } from '@/components/shared/save-button';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { Field } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useT } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toast';
 import { Pencil, Plus, Trash2 } from 'lucide-react';

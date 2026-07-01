@@ -1,6 +1,6 @@
-import { StatusBadge } from '@/components/shared/status-badge';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { useUiStore } from '@/stores/ui';
-import type { AssetStatus, AssetType } from '@/types';
+import type { AssetStatus, AssetType } from '@/shared/types';
 import { Box, Laptop, Monitor, Network, Printer, Server, Smartphone } from 'lucide-react';
 
 type Tone = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'gray';

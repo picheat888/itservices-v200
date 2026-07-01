@@ -1,5 +1,5 @@
 import { ticketApi, type CreateTicketPayload, type TicketListParams } from '@/services/ticketApi';
-import type { TicketPriority } from '@/types';
+import type { TicketPriority } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const SUMMARY = ['tickets-summary'] as const;

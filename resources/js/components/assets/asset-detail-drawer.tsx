@@ -1,9 +1,9 @@
 import { AssetStatusBadge, AssetTypeIcon } from '@/components/assets/asset-meta';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/shared/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Asset } from '@/types';
+import type { Asset } from '@/shared/types';
 import { Check, Share2 } from 'lucide-react';
 
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {

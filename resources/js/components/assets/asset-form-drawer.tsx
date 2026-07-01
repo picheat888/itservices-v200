@@ -1,16 +1,16 @@
 import { ASSET_TYPES } from '@/components/assets/asset-meta';
-import { Field } from '@/components/shared/field';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Field } from '@/shared/components/field';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssetMutations } from '@/hooks/use-assets';
 import { useContracts } from '@/hooks/use-contracts';
 import { useCurrency } from '@/hooks/use-settings';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Asset, AssetSource, AssetType } from '@/types';
+import type { Asset, AssetSource, AssetType } from '@/shared/types';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 

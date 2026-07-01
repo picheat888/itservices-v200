@@ -1,4 +1,4 @@
-import type { Lang } from '@/types';
+import type { Lang } from '@/shared/types';
 
 type L = { en: string; th: string };
 

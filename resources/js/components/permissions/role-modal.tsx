@@ -1,11 +1,11 @@
-import { Field } from '@/components/shared/field';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Field } from '@/shared/components/field';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useRoleMutations } from '@/hooks/use-permissions';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import type { RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';

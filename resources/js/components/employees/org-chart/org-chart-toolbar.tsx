@@ -1,6 +1,6 @@
 import { useT } from '@/lib/i18n';
 import type { OrgDir } from '@/lib/org-tree';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 

@@ -1,9 +1,9 @@
 import { AssetDetailDrawer } from '@/components/assets/asset-detail-drawer';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { type Column, DataTable } from '@/components/shared/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { type Column, DataTable } from '@/shared/components/data-table';
 import { assetApi } from '@/services/assetApi';
 import { useUiStore } from '@/stores/ui';
-import { type Asset, type ContractLinkedAsset } from '@/types';
+import { type Asset, type ContractLinkedAsset } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useState } from 'react';

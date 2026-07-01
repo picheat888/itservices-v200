@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { useAppErrorStore, type AppErrorKind } from '@/stores/app-error';
 import { Ban, RotateCw, ServerCrash, WifiOff } from 'lucide-react';
 import type { ComponentType } from 'react';

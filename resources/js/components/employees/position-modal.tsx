@@ -1,12 +1,12 @@
-import { Field } from '@/components/shared/field';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+import { Field } from '@/shared/components/field';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
+import { Switch } from '@/shared/ui/switch';
 import { usePositionMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import type { Position } from '@/types';
+import type { Position } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {

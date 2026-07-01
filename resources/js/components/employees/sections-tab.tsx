@@ -1,14 +1,14 @@
 import { SectionMembersDialog } from '@/components/employees/section-members-dialog';
 import { SectionModal } from '@/components/employees/section-modal';
-import { Column, DataTable } from '@/components/shared/data-table';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useDepartments, useSectionMutations, useSections } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Section } from '@/types';
+import type { Section } from '@/shared/types';
 import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 

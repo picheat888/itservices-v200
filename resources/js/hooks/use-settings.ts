@@ -1,4 +1,4 @@
-import { currencySymbol } from '@/lib/currency';
+import { currencySymbol } from '@/shared/lib/currency';
 import {
     settingsApi,
     type AssetColorsPayload,

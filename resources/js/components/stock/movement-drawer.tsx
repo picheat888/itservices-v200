@@ -1,15 +1,15 @@
-import { Field } from '@/components/shared/field';
-import { SaveButton } from '@/components/shared/save-button';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Field } from '@/shared/components/field';
+import { SaveButton } from '@/shared/components/save-button';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useVendors, useWarehouses } from '@/hooks/use-master-data';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockItem, StockMovementType } from '@/types';
+import type { StockItem, StockMovementType } from '@/shared/types';
 import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
