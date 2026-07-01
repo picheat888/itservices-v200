@@ -2,7 +2,7 @@ import {
     emailTemplateApi,
     type CreateEmailTemplatePayload,
     type EmailTemplatePayload,
-} from '@/services/emailTemplateApi';
+} from '../api/emailTemplateApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = ['email-templates'] as const;
