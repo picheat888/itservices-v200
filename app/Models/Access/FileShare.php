@@ -1,21 +1,23 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Access;
 
+use App\Models\Department;
+use App\Models\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-class EmailGroup extends Model
+class FileShare extends Model
 {
-    protected $fillable = ['code', 'name', 'email', 'department_id', 'description', 'owner_employee_id'];
+    protected $fillable = ['code', 'name', 'path', 'department_id', 'size_label', 'owner_employee_id'];
 
     protected static function booted(): void
     {
-        static::creating(function (EmailGroup $g) {
-            if (blank($g->code)) {
-                $max = (int) str_replace('MG-', '', (string) static::max('code'));
-                $g->code = 'MG-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
+        static::creating(function (FileShare $fs) {
+            if (blank($fs->code)) {
+                $max = (int) str_replace('FS-', '', (string) static::max('code'));
+                $fs->code = 'FS-'.str_pad((string) ($max + 1), 4, '0', STR_PAD_LEFT);
             }
         });
     }

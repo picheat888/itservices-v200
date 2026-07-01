@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Access;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreAccessMembershipRequest;
-use App\Http\Requests\StoreEmailGroupRequest;
-use App\Http\Resources\AccessMembershipResource;
-use App\Http\Resources\EmailGroupResource;
-use App\Models\AccessMembership;
-use App\Models\EmailGroup;
-use App\Services\AccessService;
+use App\Http\Requests\Access\StoreAccessMembershipRequest;
+use App\Http\Requests\Access\StoreEmailGroupRequest;
+use App\Http\Resources\Access\AccessMembershipResource;
+use App\Http\Resources\Access\EmailGroupResource;
+use App\Models\Access\AccessMembership;
+use App\Models\Access\EmailGroup;
+use App\Services\Access\AccessService;
 use Illuminate\Http\JsonResponse;
 
 class EmailGroupController extends Controller

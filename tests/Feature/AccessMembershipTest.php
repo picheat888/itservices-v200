@@ -2,8 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\{EmailGroup, Employee};
-use App\Services\AccessService;
+use App\Models\Access\EmailGroup;
+use App\Models\Employee;
+use App\Services\Access\AccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -12,7 +13,10 @@ class AccessMembershipTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function svc(): AccessService { return app(AccessService::class); }
+    private function svc(): AccessService
+    {
+        return app(AccessService::class);
+    }
 
     public function test_grant_then_duplicate_active_is_rejected(): void
     {
