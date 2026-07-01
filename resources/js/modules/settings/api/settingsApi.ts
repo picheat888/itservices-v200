@@ -1,5 +1,5 @@
 import type { ApiEnvelope } from '@/shared/types';
-import { ensureCsrf, http } from './http';
+import { ensureCsrf, http } from '@/services/http';
 
 export interface SettingsData {
     brand_name: string;

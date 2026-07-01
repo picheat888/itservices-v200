@@ -7,7 +7,7 @@ import {
     type DisplayPayload,
     type SettingsData,
     type TicketSlaPayload,
-} from '@/services/settingsApi';
+} from '../api/settingsApi';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';

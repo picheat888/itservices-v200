@@ -4,7 +4,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useVendors, useWarehouses } from '@/hooks/use-master-data';
+import { useVendors, useWarehouses } from '@/modules/settings';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';

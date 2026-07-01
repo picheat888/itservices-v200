@@ -8,7 +8,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/modules/auth';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
-import { useCurrency } from '@/hooks/use-settings';
+import { useCurrency } from '@/modules/settings';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

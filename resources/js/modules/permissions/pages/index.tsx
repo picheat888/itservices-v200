@@ -22,7 +22,7 @@ import {
     useSetDefaultGroup,
     useUpdateRolePermissions,
 } from '../hooks/use-permissions';
-import { useDateTime } from '@/hooks/use-settings';
+import { useDateTime } from '@/modules/settings';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';

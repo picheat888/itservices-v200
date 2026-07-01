@@ -3,7 +3,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useVendorMutations } from '@/hooks/use-master-data';
+import { useVendorMutations } from '../hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toast';
 import type { Vendor } from '@/shared/types';

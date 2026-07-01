@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAssetModelMutations, useBrands } from '@/hooks/use-master-data';
+import { useAssetModelMutations, useBrands } from '../hooks/use-master-data';
 import { useT } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toast';
 import type { AssetModel, Brand } from '@/shared/types';
