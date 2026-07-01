@@ -1,0 +1,26 @@
+import type { Dict } from '@/lang/types';
+
+export const notifications: Dict = {
+    "notifications": "เทมเพลตอีเมล",
+    "notif_title": "การแจ้งเตือน",
+    "notif_all": "ทั้งหมด",
+    "notif_mark_all": "อ่านทั้งหมด",
+    "notif_clear_all": "ลบทั้งหมด",
+    "notif_empty": "ไม่มีการแจ้งเตือน",
+    "notif_dismiss": "ปิดรายการนี้",
+    "notif_module_soon": "การแจ้งเตือนของโมดูลนี้จะมาพร้อมกับโมดูลที่เกี่ยวข้อง",
+    "notif_unread": "ยังไม่ได้อ่าน",
+    "notif_cred_required": "ยังไม่มีบัญชี — กรุณาตั้ง Username/Password",
+    "notif_resigned": "ลาออก — โปรดเพิกถอนบัญชีและเรียกคืนทรัพย์สิน",
+    "notif_contract_expiring": "หมดอายุในอีก {days} วัน",
+    "notif_contract_expired": "หมดอายุไปแล้ว {days} วัน — โปรดตรวจสอบและต่ออายุ",
+    "notif_stock_out": "สินค้าหมดสต็อก",
+    "notif_stock_low": "ต่ำกว่าขั้นต่ำ — ควรเติม",
+    "notif_stock_over": "สต็อกเกิน",
+    "notif_stock_req_created": "มีคำขอเบิกใหม่",
+    "notif_stock_req_waiting": "รออนุมัติ / จ่ายของ",
+    "notif_stock_req_approved": "คำขอของคุณได้รับการอนุมัติ",
+    "notif_stock_req_rejected": "คำขอของคุณถูกปฏิเสธ",
+    "notif_stock_req_fulfilled": "คำขอของคุณถูกจ่ายแล้ว",
+    "notif_stock_count_draft": "การนับสต็อกยังเป็นฉบับร่าง",
+};

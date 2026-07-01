@@ -1,0 +1,26 @@
+import type { Dict } from '@/lang/types';
+
+export const notifications: Dict = {
+    "notifications": "Email Templates",
+    "notif_title": "Notifications",
+    "notif_all": "All",
+    "notif_mark_all": "Mark all read",
+    "notif_clear_all": "Clear all",
+    "notif_empty": "No notifications",
+    "notif_dismiss": "Dismiss",
+    "notif_module_soon": "Notifications for this module arrive once the module ships.",
+    "notif_unread": "unread",
+    "notif_cred_required": "Needs login account — set username & password",
+    "notif_resigned": "Resigned — revoke login account & reclaim assets",
+    "notif_contract_expiring": "Expires in {days} days",
+    "notif_contract_expired": "Expired {days} days ago — review & renew",
+    "notif_stock_out": "Out of stock",
+    "notif_stock_low": "Below minimum — reorder",
+    "notif_stock_over": "Overstock",
+    "notif_stock_req_created": "New stock request",
+    "notif_stock_req_waiting": "Awaiting approval / fulfilment",
+    "notif_stock_req_approved": "Your request was approved",
+    "notif_stock_req_rejected": "Your request was rejected",
+    "notif_stock_req_fulfilled": "Your request was fulfilled",
+    "notif_stock_count_draft": "Stock count still in draft",
+};
