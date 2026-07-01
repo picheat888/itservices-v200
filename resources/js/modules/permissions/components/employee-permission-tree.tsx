@@ -1,22 +1,39 @@
-import { actionLabel } from '@/lib/permission-labels';
+import { actionLabel } from '../lib/permission-labels';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 
-// Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
-const MASTER = 'stock.module';
-// `chip: false` hides the "View" tag — used for single-switch groups (Counting,
-// Event) that gate their whole feature rather than a view/management split.
+// Mirrors App\Support\Permissions::employeeHierarchy() — keep in sync.
+const MASTER = 'employees.module';
+const STANDALONE = 'employees.edit_own';
+// `chip: false` hides the "View" tag — used for single-switch groups (Dashboard,
+// Org chart) that gate their whole tab rather than a view/management split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'stock.view_dashboard', children: [] },
-    { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
-    { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: [], chip: false },
-    { view: 'stock.view_events', children: [], chip: false },
+    { view: 'employees.view_dashboard', children: [], chip: false },
+    {
+        view: 'employees.view',
+        children: [
+            'employees.add',
+            'employees.import',
+            'employees.edit',
+            'employees.reset_password',
+            'employees.resign',
+            'employees.cancel_resign',
+            'employees.set_credentials',
+        ],
+    },
+    { view: 'employees.view_section', children: ['employees.section_add', 'employees.section_edit', 'employees.section_delete'] },
+    { view: 'employees.view_department', children: ['employees.department_add', 'employees.department_edit', 'employees.department_delete'] },
+    {
+        view: 'employees.view_position',
+        children: ['employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special'],
+    },
+    { view: 'employees.view_org', children: [], chip: false },
 ];
-const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+// Every key that lives under the master (excludes the standalone edit_own).
+const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
-const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
+const label = (key: string, lang: Lang) => actionLabel('employees', key.replace('employees.', ''), lang);
 
 /** True when every ancestor (master, and the group view for a child) is on. */
 function hasAncestors(key: string, has: (k: string) => boolean): boolean {
@@ -50,11 +67,12 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 }
 
 /**
- * Renders the Stock permission card as a master → view → management tree with
+ * Renders the Employee permission card as a master → view → management tree with
  * cascade: turning a parent off clears + locks its children; turning a child on
- * implies its ancestors. Super is read-only (everything shown on + locked).
+ * implies its ancestors. `edit_own` is a standalone self-service switch the master
+ * never locks. Super is read-only (everything shown on + locked).
  */
-export function StockPermissionTree({
+export function EmployeePermissionTree({
     draft,
     setDraft,
     isSuper,
@@ -77,7 +95,7 @@ export function StockPermissionTree({
             if (next.has(key)) {
                 next.delete(key);
                 if (key === MASTER) {
-                    ALL_KEYS.forEach((k) => next.delete(k));
+                    GATED_KEYS.forEach((k) => next.delete(k));
                 }
                 const group = GROUPS.find((g) => g.view === key);
                 if (group) {
@@ -98,14 +116,17 @@ export function StockPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? ALL_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const editOwnOn = has(STANDALONE);
+    const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = gatedActive + (editOwnOn ? 1 : 0);
+    const totalCount = GATED_KEYS.length + 1; // + edit_own
 
     return (
         <div className="border-border rounded-lg border">
             <div className="border-border flex items-center justify-between border-b px-3.5 py-2.5">
                 <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{label(MASTER, lang)}</span>
                 <span className={cn('font-mono text-[10.5px] font-bold', activeCount === 0 ? 'text-muted-foreground' : 'text-brand')}>
-                    {activeCount}/{ALL_KEYS.length}
+                    {activeCount}/{totalCount}
                 </span>
             </div>
 
@@ -152,6 +173,19 @@ export function StockPermissionTree({
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Standalone self-service switch — never locked by the master. */}
+            <div className="border-border flex items-center gap-2.5 border-t px-3.5 py-2.5">
+                <div className="min-w-0">
+                    <div className="text-sm font-medium">{label(STANDALONE, lang)}</div>
+                    <div className="text-muted-foreground text-[10.5px]">
+                        {lang === 'th' ? 'ทุกผู้ใช้แก้โปรไฟล์ตัวเองได้ · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of the master'}
+                    </div>
+                </div>
+                <div className="ml-auto">
+                    <Switch on={editOwnOn} locked={isSuper} onClick={() => toggle(STANDALONE)} />
+                </div>
             </div>
         </div>
     );
