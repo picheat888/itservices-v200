@@ -9,7 +9,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/modules/settings';
 import { useStockItemMutations } from '../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { StockItemPayload } from '../api/stockApi';
 import { useToastStore } from '@/stores/toast';

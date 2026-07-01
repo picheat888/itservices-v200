@@ -8,7 +8,7 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useEmailGroups, useFileShares, useSocialPlatforms } from '../hooks/use-access';
 import { useAuth } from '@/modules/auth';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
 import { Eye, Folder, Globe, Layers, Plus, Search, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';

@@ -3,7 +3,7 @@ import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/modules/settings';
 import { useContractSidebarBadge } from '@/modules/contracts';
 import { useStockSidebarBadge } from '@/modules/stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { navGroups } from '@/app/nav';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

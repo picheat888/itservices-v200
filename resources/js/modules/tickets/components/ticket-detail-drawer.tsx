@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations } from '../hooks/use-tickets';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Ticket, TicketAttachment } from '@/shared/types';
 import { Check, ExternalLink, FileText, RefreshCcw, Users, X, Zap } from 'lucide-react';

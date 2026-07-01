@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useCategoryMutations } from '../hooks/use-master-data';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
 import type { Category } from '@/shared/types';
 import { useEffect, useState } from 'react';

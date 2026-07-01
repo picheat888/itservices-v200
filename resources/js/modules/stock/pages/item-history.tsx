@@ -1,6 +1,6 @@
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useStockItemHistory } from '../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, SlidersHorizontal } from 'lucide-react';

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { usePositionMutations } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import type { Position } from '@/shared/types';
 import { useEffect, useState } from 'react';
 

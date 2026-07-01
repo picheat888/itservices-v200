@@ -1,5 +1,5 @@
 import { Button } from '@/shared/ui/button';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { Clock } from 'lucide-react';
 
 interface Props {

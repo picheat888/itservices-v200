@@ -4,7 +4,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useRoleMutations } from '../hooks/use-permissions';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { RoleRow } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';

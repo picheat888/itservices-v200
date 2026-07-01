@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useCurrency, useDateTime } from '@/modules/settings';
 import { useMovementSerials, useStockMovements } from '../../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { StockMovementType } from '@/shared/types';

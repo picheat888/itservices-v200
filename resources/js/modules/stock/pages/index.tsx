@@ -13,7 +13,7 @@ import { Input } from '@/shared/ui/input';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import {

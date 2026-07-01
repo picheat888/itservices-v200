@@ -11,7 +11,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/modules/auth';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';

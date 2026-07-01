@@ -5,7 +5,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import type { StockRequest, StockRequestStatus } from '@/shared/types';

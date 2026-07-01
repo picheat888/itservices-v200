@@ -3,7 +3,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, ArrowRight, Eye, EyeOff, Languages, Loader2, Lock, Moon, Sun, User } from 'lucide-react';

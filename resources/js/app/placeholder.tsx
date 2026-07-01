@@ -1,4 +1,4 @@
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { Construction } from 'lucide-react';
 

@@ -46,7 +46,7 @@ import {
     useUploadLogo,
 } from '../hooks/use-settings';
 import { resolveBrand } from '@/shared/lib/brand-color';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { countryOptions, currencyOptions, timezoneOptions } from '@/shared/lib/locale-data';
 import { cn } from '@/shared/lib/utils';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';

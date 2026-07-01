@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { useSettings } from '@/modules/settings';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';

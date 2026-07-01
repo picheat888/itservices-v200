@@ -3,7 +3,7 @@ import { TICKET_PRIORITY_META } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations, useTicketStaff } from '../hooks/use-tickets';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Check, Info, Loader2 } from 'lucide-react';

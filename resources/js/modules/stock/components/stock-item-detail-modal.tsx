@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useCurrency } from '@/modules/settings';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';

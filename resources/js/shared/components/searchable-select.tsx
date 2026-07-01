@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';

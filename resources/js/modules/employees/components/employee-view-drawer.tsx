@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useAccessMutations, useEmployeeAccess } from '@/modules/access';
 import { useAuth } from '@/modules/auth';
 import { useApprovalChain, useEmployee, useOrgChart } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { deptColor } from '../lib/org-tree';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

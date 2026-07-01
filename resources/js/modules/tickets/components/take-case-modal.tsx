@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssets } from '@/modules/assets';
 import { useTicketMutations } from '../hooks/use-tickets';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Loader2, Zap } from 'lucide-react';

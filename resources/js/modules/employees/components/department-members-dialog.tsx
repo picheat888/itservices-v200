@@ -3,7 +3,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useDepartmentMembers, useSections } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee } from '@/shared/types';
 import { Building2 } from 'lucide-react';

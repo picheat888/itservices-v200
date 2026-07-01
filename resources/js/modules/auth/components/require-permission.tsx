@@ -1,5 +1,5 @@
 import { useAuth } from '@/modules/auth/hooks/use-auth';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/shared/types';
 import { Lock } from 'lucide-react';

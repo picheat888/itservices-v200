@@ -2,7 +2,7 @@ import { Field } from '@/shared/components/field';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { useLogout } from '@/modules/auth/hooks/use-auth';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
 import type { User } from '@/shared/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

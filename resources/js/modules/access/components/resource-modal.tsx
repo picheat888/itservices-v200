@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { useAccessMutations } from '../hooks/use-access';
 import { useDepartments, useEmployees } from '@/modules/employees';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
 import { useEffect, useMemo, useState } from 'react';

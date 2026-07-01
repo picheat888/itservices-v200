@@ -1,4 +1,4 @@
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';

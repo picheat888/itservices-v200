@@ -1,6 +1,6 @@
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { AlertTriangle, Check, Loader2, PencilLine, Trash2, type LucideIcon } from 'lucide-react';
 import * as React from 'react';
