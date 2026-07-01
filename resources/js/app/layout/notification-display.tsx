@@ -1,4 +1,4 @@
-import type { AppNotification } from '@/services/notificationApi';
+import type { AppNotification } from '@/modules/notifications';
 import { Boxes, CalendarClock, ClipboardList, Inbox, PackageMinus, PackagePlus, UserMinus, UserPlus } from 'lucide-react';
 
 /**

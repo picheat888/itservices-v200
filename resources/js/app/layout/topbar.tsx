@@ -1,6 +1,6 @@
 import { FlagEN, FlagTH } from '@/shared/components/flags';
 import { useAuth } from '@/modules/auth';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useNotifications } from '@/modules/notifications';
 import { useT } from '@/lib/i18n';
 import { navGroups } from '@/app/nav';
 import { useUiStore } from '@/stores/ui';
