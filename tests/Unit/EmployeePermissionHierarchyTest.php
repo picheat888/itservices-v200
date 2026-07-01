@@ -52,4 +52,29 @@ class EmployeePermissionHierarchyTest extends TestCase
             $this->assertNotContains('employees.edit_own', $children);
         }
     }
+
+    public function test_default_grants_are_employee_hierarchy_consistent(): void
+    {
+        foreach (Permissions::defaults() as $role => $granted) {
+            $normalized = Permissions::normalizeEmployees($granted);
+            $before = array_values(array_filter($granted, fn ($k) => str_starts_with($k, 'employees.')));
+            $after = array_values(array_filter($normalized, fn ($k) => str_starts_with($k, 'employees.')));
+            sort($before);
+            sort($after);
+            $this->assertSame($before, $after, "employee defaults for {$role} are not hierarchy-consistent");
+        }
+    }
+
+    public function test_admin_and_hr_defaults_include_module_and_view_groups(): void
+    {
+        foreach (['admin', 'hr'] as $role) {
+            $g = Permissions::defaults()[$role];
+            $this->assertContains('employees.module', $g, "{$role} missing module");
+            $this->assertContains('employees.view_dashboard', $g);
+            $this->assertContains('employees.view_org', $g);
+        }
+        // Org CRUD stays super-only: not granted to admin/hr by default.
+        $this->assertNotContains('employees.section_add', Permissions::defaults()['admin']);
+        $this->assertNotContains('employees.position_delete', Permissions::defaults()['hr']);
+    }
 }
