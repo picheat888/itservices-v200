@@ -1,7 +1,6 @@
-import { AssetDetailDrawer } from '@/components/assets/asset-detail-drawer';
+import { AssetDetailDrawer, assetApi } from '@/modules/assets';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { type Column, DataTable } from '@/shared/components/data-table';
-import { assetApi } from '@/services/assetApi';
 import { useUiStore } from '@/stores/ui';
 import { type Asset, type ContractLinkedAsset } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';

@@ -1,14 +1,14 @@
-import { AssetDetailDrawer } from '@/components/assets/asset-detail-drawer';
-import { AssetFormDrawer } from '@/components/assets/asset-form-drawer';
-import { ASSET_STATUS_META, ASSET_TYPES, AssetStatusBadge, AssetTypeIcon } from '@/components/assets/asset-meta';
-import { AssetToStockModal } from '@/components/assets/asset-to-stock-modal';
-import { AssetTransferDrawer } from '@/components/assets/asset-transfer-drawer';
+import { AssetDetailDrawer } from '../components/asset-detail-drawer';
+import { AssetFormDrawer } from '../components/asset-form-drawer';
+import { ASSET_STATUS_META, ASSET_TYPES, AssetStatusBadge, AssetTypeIcon } from '../components/asset-meta';
+import { AssetToStockModal } from '../components/asset-to-stock-modal';
+import { AssetTransferDrawer } from '../components/asset-transfer-drawer';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '@/hooks/use-assets';
+import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { useAuth } from '@/modules/auth';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
@@ -33,7 +33,7 @@ import {
     Share2,
     Trash2,
 } from 'lucide-react';
-import { assetApi } from '@/services/assetApi';
+import { assetApi } from '../api/assetApi';
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';

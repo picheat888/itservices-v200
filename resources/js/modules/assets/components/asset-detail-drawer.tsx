@@ -1,4 +1,4 @@
-import { AssetStatusBadge, AssetTypeIcon } from '@/components/assets/asset-meta';
+import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useT } from '@/lib/i18n';

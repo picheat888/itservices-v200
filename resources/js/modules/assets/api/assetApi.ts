@@ -1,5 +1,5 @@
 import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, ContractLinkableAsset } from '@/shared/types';
-import { ensureCsrf, http } from './http';
+import { ensureCsrf, http } from '@/services/http';
 
 export interface AssetPageMeta {
     total: number;
