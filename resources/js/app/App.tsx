@@ -8,7 +8,7 @@ import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { useHydrateSettings } from '@/hooks/use-settings';
 import { queryClient } from '@/shared/lib/query-client';
-import AccessControlPage from '@/pages/access';
+import { AccessControlPage } from '@/modules/access';
 import AssetsPage from '@/pages/assets';
 import ContractsPage from '@/pages/contracts';
 import { DashboardPage } from '@/modules/dashboard';
