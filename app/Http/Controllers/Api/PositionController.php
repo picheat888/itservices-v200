@@ -27,9 +27,32 @@ class PositionController extends Controller
         return EmployeeResource::collection($members)->response();
     }
 
+    /**
+     * The allow_special_position flag is a privileged toggle: changing it requires
+     * employees.position_special. If the caller lacks that permission and the request
+     * would change the stored value, abort with 403 (super bypasses via hasPermission).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function guardSpecialFlag(Request $request, array $data, ?Position $position = null): array
+    {
+        if (! array_key_exists('allow_special_position', $data)) {
+            return $data;
+        }
+        $current = (bool) ($position?->allow_special_position ?? false);
+        $requested = (bool) $data['allow_special_position'];
+        if ($requested !== $current && ! $request->user()?->hasPermission('employees.position_special')) {
+            abort(403, 'Changing the special-position flag requires the Special Position Control permission.');
+        }
+
+        return $data;
+    }
+
     public function store(StorePositionRequest $request): JsonResponse
     {
-        $position = Position::create($request->validated());
+        $data = $this->guardSpecialFlag($request, $request->validated());
+        $position = Position::create($data);
         AuditLog::record('Created position', $position->title);
 
         return (new PositionResource($position))->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -38,7 +61,8 @@ class PositionController extends Controller
     public function update(StorePositionRequest $request, Position $position): JsonResponse
     {
         $before = $position->getOriginal();
-        $position->update($request->validated());
+        $data = $this->guardSpecialFlag($request, $request->validated(), $position);
+        $position->update($data);
         AuditLog::record('Updated position', $position->title, AuditLog::changes($before, $position));
 
         return (new PositionResource($position))->additional(['message' => 'success'])->response();
@@ -46,7 +70,7 @@ class PositionController extends Controller
 
     public function destroy(Request $request, Position $position): JsonResponse
     {
-        abort_unless((bool) $request->user()?->canManageOrg(), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.position_delete'), 403);
 
         // A position can only be deleted once no employee holds it — the FK is
         // nullOnDelete, so deleting it would silently clear their position.

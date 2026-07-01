@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Department;
+use App\Models\Position;
 use App\Models\Role;
 use App\Models\RolePermission;
 use App\Models\User;
@@ -60,5 +62,50 @@ class EmployeePermissionGatingTest extends TestCase
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
         $this->assertContains('employees.edit_own', $stored);
+    }
+
+    public function test_section_store_requires_section_add(): void
+    {
+        $dept = Department::create(['name' => 'IT', 'tag' => 'IT']);
+        $blocked = $this->userWith(['employees.module', 'employees.view_section']);
+        $allowed = $this->userWith(['employees.module', 'employees.view_section', 'employees.section_add']);
+
+        $payload = ['department_id' => $dept->id, 'name' => 'Helpdesk'];
+        $this->actingAs($blocked)->postJson('/api/sections', $payload)->assertForbidden();
+        $this->actingAs($allowed)->postJson('/api/sections', $payload)->assertCreated();
+    }
+
+    public function test_department_delete_requires_department_delete(): void
+    {
+        $dept = Department::create(['name' => 'Temp', 'tag' => 'TMP']);
+        $blocked = $this->userWith(['employees.module', 'employees.view_department']);
+        $this->actingAs($blocked)->deleteJson("/api/departments/{$dept->id}")->assertForbidden();
+
+        $allowed = $this->userWith(['employees.module', 'employees.view_department', 'employees.department_delete']);
+        $this->actingAs($allowed)->deleteJson("/api/departments/{$dept->id}")->assertOk();
+    }
+
+    public function test_position_special_toggle_requires_position_special(): void
+    {
+        $pos = Position::create(['title' => 'Dev', 'allow_special_position' => false]);
+        // Has edit but not special -> may rename, may NOT flip allow_special_position
+        $editor = $this->userWith(['employees.module', 'employees.view_position', 'employees.position_edit']);
+        $this->actingAs($editor)
+            ->putJson("/api/positions/{$pos->id}", ['title' => 'Dev', 'allow_special_position' => true])
+            ->assertForbidden();
+
+        $special = $this->userWith(['employees.module', 'employees.view_position', 'employees.position_edit', 'employees.position_special']);
+        $this->actingAs($special)
+            ->putJson("/api/positions/{$pos->id}", ['title' => 'Dev', 'allow_special_position' => true])
+            ->assertOk();
+    }
+
+    public function test_reference_reads_stay_open_for_any_authenticated_user(): void
+    {
+        // A user with NO employee permissions can still read the dropdown lists.
+        $picker = $this->userWith(['tickets.create']);
+        $this->actingAs($picker)->getJson('/api/departments')->assertOk();
+        $this->actingAs($picker)->getJson('/api/positions')->assertOk();
+        $this->actingAs($picker)->getJson('/api/sections')->assertOk();
     }
 }

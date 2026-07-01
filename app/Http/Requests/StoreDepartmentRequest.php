@@ -7,9 +7,18 @@ use Illuminate\Validation\Rule;
 
 class StoreDepartmentRequest extends FormRequest
 {
+    /**
+     * Store requires employees.department_add; update requires employees.department_edit.
+     */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->canManageOrg();
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+        $permission = $this->route('department') ? 'employees.department_edit' : 'employees.department_add';
+
+        return (bool) $user->hasPermission($permission);
     }
 
     /** Normalise tag to uppercase before validation so DB always stores consistent casing. */

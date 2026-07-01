@@ -6,9 +6,19 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSectionRequest extends FormRequest
 {
+    /**
+     * Store requires employees.section_add; update requires employees.section_edit.
+     * The presence of a {section} route binding distinguishes update from store.
+     */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->canManageOrg();
+        $user = $this->user();
+        if (! $user) {
+            return false;
+        }
+        $permission = $this->route('section') ? 'employees.section_edit' : 'employees.section_add';
+
+        return (bool) $user->hasPermission($permission);
     }
 
     /**
