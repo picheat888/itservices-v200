@@ -1,11 +1,11 @@
-import { ContractAssetsTab } from '@/components/contracts/contract-assets-tab';
-import { ContractAttachmentsTab } from '@/components/contracts/contract-attachments-tab';
-import { ContractDialogHeader } from '@/components/contracts/contract-dialog-header';
+import { ContractAssetsTab } from './contract-assets-tab';
+import { ContractAttachmentsTab } from './contract-attachments-tab';
+import { ContractDialogHeader } from './contract-dialog-header';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { useContractMutations } from '@/hooks/use-contracts';
+import { useContractMutations } from '../hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

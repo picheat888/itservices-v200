@@ -1,4 +1,4 @@
-import { contractApi, type ContractPayload } from '@/services/contractApi';
+import { contractApi, type ContractPayload } from '../api/contractApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const CONTRACTS = ['contracts'] as const;
