@@ -1,4 +1,4 @@
-import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '@/services/orgApi';
+import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '../api/orgApi';
 import type { Department, Position } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

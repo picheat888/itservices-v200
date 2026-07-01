@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '@/hooks/use-org';
+import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';

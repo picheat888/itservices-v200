@@ -2,7 +2,7 @@ import { Field } from '@/shared/components/field';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useEmployeeMutations } from '@/hooks/use-org';
+import { useEmployeeMutations } from '../hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

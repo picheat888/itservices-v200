@@ -34,7 +34,7 @@ import {
     useWarrantyTypeMutations,
     useWarrantyTypes,
 } from '@/hooks/use-master-data';
-import { useLocationMutations, useLocations } from '@/hooks/use-org';
+import { useLocationMutations, useLocations } from '@/modules/employees';
 import {
     useResetLogo,
     useSettings,

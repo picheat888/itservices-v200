@@ -1,5 +1,5 @@
 import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/shared/types';
-import { ensureCsrf, http } from './http';
+import { ensureCsrf, http } from '@/services/http';
 
 export interface EmployeeSummary {
     total: number;

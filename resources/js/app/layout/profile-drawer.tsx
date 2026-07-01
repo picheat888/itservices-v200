@@ -1,4 +1,3 @@
-import { PhotoCropDialog } from '@/components/employees/photo-crop-dialog';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
@@ -7,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { useEmployee } from '@/hooks/use-org';
+import { PhotoCropDialog, useEmployee } from '@/modules/employees';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import { Camera } from 'lucide-react';

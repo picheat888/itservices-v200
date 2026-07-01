@@ -3,7 +3,7 @@ import { SaveButton } from '@/shared/components/save-button';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useLocationMutations } from '@/hooks/use-org';
+import { useLocationMutations } from '@/modules/employees';
 import { useT } from '@/lib/i18n';
 import { useToastStore } from '@/stores/toast';
 import type { LocationItem } from '@/shared/types';
