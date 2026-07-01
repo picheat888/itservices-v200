@@ -1,9 +1,9 @@
-import { AccessBadge } from '@/components/access/access-badge';
+import { AccessBadge } from './access-badge';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAccessMutations, useResourceMembers } from '@/hooks/use-access';
+import { useAccessMutations, useResourceMembers } from '../hooks/use-access';
 import { useEmployees } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import type { AccessKind } from '@/shared/types';

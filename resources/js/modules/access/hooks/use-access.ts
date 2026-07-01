@@ -1,4 +1,4 @@
-import { accessApi } from '@/services/accessApi';
+import { accessApi } from '../api/accessApi';
 import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

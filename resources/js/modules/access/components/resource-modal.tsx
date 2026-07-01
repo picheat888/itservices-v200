@@ -3,7 +3,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useAccessMutations } from '@/hooks/use-access';
+import { useAccessMutations } from '../hooks/use-access';
 import { useDepartments, useEmployees } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';

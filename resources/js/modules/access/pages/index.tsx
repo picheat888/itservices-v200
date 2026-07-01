@@ -1,12 +1,12 @@
-import { AccessBadge } from '@/components/access/access-badge';
-import { AvatarStack } from '@/components/access/avatar-stack';
-import { MembersDrawer, type MemberTarget } from '@/components/access/members-drawer';
-import { ResourceModal } from '@/components/access/resource-modal';
+import { AccessBadge } from '../components/access-badge';
+import { AvatarStack } from '../components/avatar-stack';
+import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
+import { ResourceModal } from '../components/resource-modal';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { useEmailGroups, useFileShares, useSocialPlatforms } from '@/hooks/use-access';
+import { useEmailGroups, useFileShares, useSocialPlatforms } from '../hooks/use-access';
 import { useAuth } from '@/modules/auth';
 import { useT } from '@/lib/i18n';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
