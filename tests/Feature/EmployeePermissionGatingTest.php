@@ -108,4 +108,32 @@ class EmployeePermissionGatingTest extends TestCase
         $this->actingAs($picker)->getJson('/api/positions')->assertOk();
         $this->actingAs($picker)->getJson('/api/sections')->assertOk();
     }
+
+    public function test_summary_requires_view_dashboard(): void
+    {
+        $blocked = $this->userWith(['employees.module', 'employees.view']);
+        $allowed = $this->userWith(['employees.module', 'employees.view_dashboard']);
+        $this->actingAs($blocked)->getJson('/api/employees/summary')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/employees/summary')->assertOk();
+    }
+
+    public function test_org_chart_requires_view_org(): void
+    {
+        $blocked = $this->userWith(['employees.module', 'employees.view']);
+        $allowed = $this->userWith(['employees.module', 'employees.view_org']);
+        $this->actingAs($blocked)->getJson('/api/employees/org-chart')->assertForbidden();
+        $this->actingAs($allowed)->getJson('/api/employees/org-chart')->assertOk();
+    }
+
+    public function test_directory_browse_requires_view_but_picker_stays_open(): void
+    {
+        $picker = $this->userWith(['tickets.create']); // no employee perms
+        // Paginated directory browse is gated
+        $this->actingAs($picker)->getJson('/api/employees?page=1')->assertForbidden();
+        // Unpaginated picker list stays open
+        $this->actingAs($picker)->getJson('/api/employees')->assertOk();
+
+        $viewer = $this->userWith(['employees.module', 'employees.view']);
+        $this->actingAs($viewer)->getJson('/api/employees?page=1')->assertOk();
+    }
 }
