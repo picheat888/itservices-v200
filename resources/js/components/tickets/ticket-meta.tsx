@@ -1,5 +1,5 @@
-import { StatusBadge } from '@/components/shared/status-badge';
-import type { TicketCategory, TicketPriority, TicketStatus } from '@/types';
+import { StatusBadge } from '@/shared/components/status-badge';
+import type { TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Code, Laptop, MoreHorizontal, Wifi } from 'lucide-react';
 
 type T = (key: string) => string;

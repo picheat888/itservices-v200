@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useEmployeeMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { employeeApi } from '@/services/orgApi';

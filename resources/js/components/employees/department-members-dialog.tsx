@@ -1,11 +1,11 @@
-import { Column, DataTable } from '@/components/shared/data-table';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useDepartmentMembers, useSections } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Department, Employee } from '@/types';
+import type { Department, Employee } from '@/shared/types';
 import { Building2 } from 'lucide-react';
 
 function initials(name: string) {

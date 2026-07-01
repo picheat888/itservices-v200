@@ -1,5 +1,5 @@
 import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '@/services/masterDataApi';
-import type { AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/types';
+import type { AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const BRANDS = ['brands'] as const;

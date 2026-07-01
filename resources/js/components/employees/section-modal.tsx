@@ -1,12 +1,12 @@
-import { Field } from '@/components/shared/field';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Field } from '@/shared/components/field';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useDepartments, useSectionMutations } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Section } from '@/types';
+import type { Section } from '@/shared/types';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 

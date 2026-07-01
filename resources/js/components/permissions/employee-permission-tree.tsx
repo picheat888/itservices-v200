@@ -1,6 +1,6 @@
 import { actionLabel } from '@/lib/permission-labels';
-import { cn } from '@/lib/utils';
-import type { Lang } from '@/types';
+import { cn } from '@/shared/lib/utils';
+import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 
 // Mirrors App\Support\Permissions::employeeHierarchy() — keep in sync.

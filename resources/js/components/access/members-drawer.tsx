@@ -1,12 +1,12 @@
 import { AccessBadge } from '@/components/access/access-badge';
-import { SearchableSelect, type SearchOption } from '@/components/shared/searchable-select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
+import { Button } from '@/shared/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAccessMutations, useResourceMembers } from '@/hooks/use-access';
 import { useEmployees } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import type { AccessKind } from '@/types';
+import type { AccessKind } from '@/shared/types';
 import { Folder, Globe, Plus, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 

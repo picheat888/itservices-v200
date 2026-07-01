@@ -1,4 +1,4 @@
-import type { OrgChartNode } from '@/types';
+import type { OrgChartNode } from '@/shared/types';
 import * as dagre from '@dagrejs/dagre';
 import type { Node } from '@xyflow/react';
 

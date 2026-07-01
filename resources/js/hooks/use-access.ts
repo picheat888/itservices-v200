@@ -1,5 +1,5 @@
 import { accessApi } from '@/services/accessApi';
-import type { AccessKind } from '@/types';
+import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 export const useEmailGroups = () => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups });

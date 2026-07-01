@@ -1,11 +1,11 @@
-import { Field } from '@/components/shared/field';
+import { Field } from '@/shared/components/field';
 import { TICKET_PRIORITY_META } from '@/components/tickets/ticket-meta';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Button } from '@/shared/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations, useTicketStaff } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
-import type { Ticket, TicketPriority } from '@/types';
+import { cn } from '@/shared/lib/utils';
+import type { Ticket, TicketPriority } from '@/shared/types';
 import { Check, Info, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

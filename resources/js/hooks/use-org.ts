@@ -1,5 +1,5 @@
 import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '@/services/orgApi';
-import type { Department, Position } from '@/types';
+import type { Department, Position } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const EMP = ['employees'] as const;

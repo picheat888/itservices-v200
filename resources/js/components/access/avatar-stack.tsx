@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
+import { cn } from '@/shared/lib/utils';
 
 /** First two initials of a name, used for the avatar fallback. */
 function initials(name: string): string {

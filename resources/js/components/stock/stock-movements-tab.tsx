@@ -1,9 +1,9 @@
-import { type Column, DataTable } from '@/components/shared/data-table';
-import { StatusBadge } from '@/components/shared/status-badge';
+import { type Column, DataTable } from '@/shared/components/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { useStockItemHistory } from '@/hooks/use-stock';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { type StockMovementType } from '@/types';
+import { type StockMovementType } from '@/shared/types';
 import { History } from 'lucide-react';
 
 /** One movement row as returned by the item-history endpoint. */

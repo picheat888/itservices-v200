@@ -9,7 +9,7 @@ import {
     type StockRequestPayload,
 } from '@/services/stockApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { StockCountAdjustMode } from '@/types';
+import type { StockCountAdjustMode } from '@/shared/types';
 
 const ITEMS = ['stock-items'] as const;
 const SUMMARY = ['stock-summary'] as const;

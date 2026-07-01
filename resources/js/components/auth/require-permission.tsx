@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Role } from '@/types';
+import type { Role } from '@/shared/types';
 import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';

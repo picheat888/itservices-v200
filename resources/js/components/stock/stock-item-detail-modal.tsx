@@ -1,13 +1,13 @@
 import { StockMovementsTab } from '@/components/stock/stock-movements-tab';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useCurrency } from '@/hooks/use-settings';
 import { useStockItem, useStockItemHistory } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { StockItem, StockItemStatus, StockSerialStatus } from '@/types';
+import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Box, ChevronDown, ChevronLeft, ChevronRight, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 

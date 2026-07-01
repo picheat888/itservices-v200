@@ -1,7 +1,7 @@
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
-import { cn } from '@/lib/utils';
-import type { Lang } from '@/types';
+import { cn } from '@/shared/lib/utils';
+import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 
 /**

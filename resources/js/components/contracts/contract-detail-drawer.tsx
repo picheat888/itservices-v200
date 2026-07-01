@@ -1,15 +1,15 @@
 import { ContractAssetsTab } from '@/components/contracts/contract-assets-tab';
 import { ContractAttachmentsTab } from '@/components/contracts/contract-attachments-tab';
 import { ContractDialogHeader } from '@/components/contracts/contract-dialog-header';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { useContractMutations } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { type Contract, type ContractType } from '@/types';
+import { type Contract, type ContractType } from '@/shared/types';
 import { Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, SquarePen, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

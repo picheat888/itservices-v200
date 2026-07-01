@@ -1,14 +1,14 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useAccessMutations, useEmployeeAccess } from '@/hooks/use-access';
 import { useAuth } from '@/hooks/use-auth';
 import { useApprovalChain, useEmployee, useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor } from '@/lib/org-tree';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/types';
+import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
 import {
     Ban,
     Briefcase,

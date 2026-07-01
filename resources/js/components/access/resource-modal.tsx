@@ -1,13 +1,13 @@
-import { Field } from '@/components/shared/field';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Field } from '@/shared/components/field';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useAccessMutations } from '@/hooks/use-access';
 import { useDepartments, useEmployees } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/types';
+import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
 import { useEffect, useMemo, useState } from 'react';
 
 type AnyResource = EmailGroup | FileShare | SocialPlatform;
