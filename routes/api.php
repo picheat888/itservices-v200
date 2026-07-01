@@ -141,6 +141,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
 
     // Assets Management module
     Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
+    Route::get('assets/linkable', [AssetController::class, 'linkable'])->name('api.assets.linkable');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
     Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');
