@@ -25,6 +25,34 @@ class AssetController extends Controller
     }
 
     /**
+     * Assets that can be linked to a contract from the contract form: those not yet
+     * linked anywhere, plus the ones already linked to the given contract (so the
+     * picker can show current selections). Never lists assets owned by other contracts.
+     */
+    public function linkable(Request $request): JsonResponse
+    {
+        $this->gateView($request);
+
+        $contractId = $request->integer('contract_id') ?: null;
+
+        $assets = Asset::query()
+            ->where(fn ($q) => $q->whereNull('contract_id')
+                ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)))
+            ->orderBy('tag')
+            ->get();
+
+        return response()->json([
+            'data' => $assets->map(fn (Asset $a) => [
+                'id' => $a->id,
+                'tag' => $a->tag,
+                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type->value,
+                'type' => $a->type->value,
+                'status' => $a->status->value,
+            ])->all(),
+        ]);
+    }
+
+    /**
      * Paginated asset list with search (tag/model/owner/serial) and
      * type / source / status filters. Newest first.
      */
