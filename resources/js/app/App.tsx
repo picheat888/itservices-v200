@@ -12,7 +12,7 @@ import { queryClient } from '@/shared/lib/query-client';
 import AccessControlPage from '@/pages/access';
 import AssetsPage from '@/pages/assets';
 import ContractsPage from '@/pages/contracts';
-import DashboardPage from '@/pages/dashboard';
+import { DashboardPage } from '@/modules/dashboard';
 import EmailTemplatesPage from '@/pages/email-templates';
 import EmployeesPage from '@/pages/employees';
 import LoginPage from '@/pages/login';
