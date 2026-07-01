@@ -1,5 +1,5 @@
 import type { ApiEnvelope, User, UserPreferences } from '@/shared/types';
-import { ensureCsrf, http } from './http';
+import { ensureCsrf, http } from '@/services/http';
 
 export const preferencesApi = {
     update: async (prefs: Partial<UserPreferences>): Promise<User> => {

@@ -23,7 +23,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import {
     useDepartmentMutations,
     useDepartments,

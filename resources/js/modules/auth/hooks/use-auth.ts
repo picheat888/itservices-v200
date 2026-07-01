@@ -1,5 +1,5 @@
 import { ME_KEY } from '@/shared/lib/query-client';
-import { authApi, type LoginPayload } from '@/services/authApi';
+import { authApi, type LoginPayload } from '@/modules/auth/api/authApi';
 import type { User } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

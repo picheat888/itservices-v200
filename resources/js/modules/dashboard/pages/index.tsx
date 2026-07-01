@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Card } from '@/shared/ui/card';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';

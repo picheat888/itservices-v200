@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAuth, useUpdateProfile } from '@/hooks/use-auth';
+import { useAuth, useUpdateProfile } from '@/modules/auth';
 import { useEmployee } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';

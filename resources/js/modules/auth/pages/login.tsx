@@ -1,7 +1,7 @@
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { useAuth, useLogin } from '@/hooks/use-auth';
+import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';

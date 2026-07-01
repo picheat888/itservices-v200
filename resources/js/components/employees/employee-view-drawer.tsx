@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useAccessMutations, useEmployeeAccess } from '@/hooks/use-access';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth';
 import { useApprovalChain, useEmployee, useOrgChart } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { deptColor } from '@/lib/org-tree';

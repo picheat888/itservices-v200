@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/shared/types';

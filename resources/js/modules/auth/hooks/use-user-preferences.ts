@@ -1,5 +1,5 @@
-import { useAuth } from '@/hooks/use-auth';
-import { preferencesApi } from '@/services/preferencesApi';
+import { useAuth } from '@/modules/auth/hooks/use-auth';
+import { preferencesApi } from '@/modules/auth/api/preferencesApi';
 import { useUiStore } from '@/stores/ui';
 import { useEffect, useRef } from 'react';
 
