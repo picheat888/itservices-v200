@@ -57,6 +57,8 @@ class EmployeeController extends Controller
             ->orderBy('last_name');
 
         if ($request->has('page')) {
+            abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
             $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
 
             if ($request->filled('search')) {
@@ -105,9 +107,12 @@ class EmployeeController extends Controller
     /**
      * Returns aggregated dashboard stats without loading all employee records.
      * Includes total count, new-hire count, and the 5 most recent hires.
+     * Requires the employees.view_dashboard permission.
      */
     public function summary(): JsonResponse
     {
+        abort_unless((bool) request()->user()?->hasPermission('employees.view_dashboard'), 403);
+
         $total = Employee::count();
         $newHires = Employee::where('joined_at', '>=', '2023-01-01')->count();
         $recent = Employee::with(['department', 'position', 'section'])
@@ -231,10 +236,11 @@ class EmployeeController extends Controller
      * Returns active employees as a flat list of org-chart nodes (resigned
      * excluded). The frontend assembles the reporting forest from manager_id;
      * reports_count is the number of active direct reports.
+     * Requires the employees.view_org permission.
      */
     public function orgChart(Request $request): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('employees.view_org'), 403);
 
         $employees = Employee::query()
             ->where('status', EmployeeStatus::Active)
