@@ -11,7 +11,7 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { TicketPriorityBadge } from '@/components/tickets/ticket-meta';
+import { TicketPriorityBadge } from '@/modules/tickets';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';

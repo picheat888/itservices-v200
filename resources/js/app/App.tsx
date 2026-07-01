@@ -20,7 +20,7 @@ import PlaceholderPage from '@/pages/placeholder';
 import SettingsPage from '@/pages/settings';
 import StockPage from '@/pages/stock';
 import ItemHistoryPage from '@/pages/stock/item-history';
-import TicketsPage from '@/pages/tickets';
+import { TicketsPage } from '@/modules/tickets';
 import type { Role } from '@/shared/types';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';

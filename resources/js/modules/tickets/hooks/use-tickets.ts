@@ -1,4 +1,4 @@
-import { ticketApi, type CreateTicketPayload, type TicketListParams } from '@/services/ticketApi';
+import { ticketApi, type CreateTicketPayload, type TicketListParams } from '../api/ticketApi';
 import type { TicketPriority } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 

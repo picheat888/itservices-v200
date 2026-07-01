@@ -1,9 +1,9 @@
 import { Field } from '@/shared/components/field';
-import { TICKET_CATEGORIES, TicketCategoryIcon } from '@/components/tickets/ticket-meta';
+import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useTicketMutations } from '@/hooks/use-tickets';
+import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';

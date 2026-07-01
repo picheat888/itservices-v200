@@ -1,9 +1,9 @@
 import { StatusBadge } from '@/shared/components/status-badge';
-import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-meta';
+import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useTicketMutations } from '@/hooks/use-tickets';
+import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
 import type { Ticket, TicketAttachment } from '@/shared/types';
