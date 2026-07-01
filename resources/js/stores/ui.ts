@@ -1,5 +1,5 @@
 import type { AssetStatusColors } from '@/services/settingsApi';
-import type { Density, Lang, SidebarStyle } from '@/types';
+import type { Density, Lang, SidebarStyle } from '@/shared/types';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 

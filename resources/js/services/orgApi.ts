@@ -1,4 +1,4 @@
-import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/types';
+import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export interface EmployeeSummary {

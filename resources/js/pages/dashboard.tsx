@@ -1,9 +1,9 @@
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Card } from '@/components/ui/card';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Card } from '@/shared/ui/card';
 import { useAuth } from '@/hooks/use-auth';
 import { useContractSummary } from '@/hooks/use-contracts';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Box, Construction, FileText, Inbox, type LucideIcon, Ticket } from 'lucide-react';
 

@@ -1,14 +1,14 @@
-import { Column, DataTable } from '@/components/shared/data-table';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Button } from '@/components/ui/button';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useStockItem, useStockRequestActions, useStockRequests } from '@/hooks/use-stock';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockRequest, StockRequestStatus } from '@/types';
+import type { StockRequest, StockRequestStatus } from '@/shared/types';
 import { AlertTriangle, ArrowUpFromLine, Check, FilePlus2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 

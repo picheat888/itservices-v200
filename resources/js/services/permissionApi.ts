@@ -1,4 +1,4 @@
-import type { ApiEnvelope } from '@/types';
+import type { ApiEnvelope } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 export interface RoleRow {

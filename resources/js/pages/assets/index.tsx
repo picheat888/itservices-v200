@@ -3,17 +3,17 @@ import { AssetFormDrawer } from '@/components/assets/asset-form-drawer';
 import { ASSET_STATUS_META, ASSET_TYPES, AssetStatusBadge, AssetTypeIcon } from '@/components/assets/asset-meta';
 import { AssetToStockModal } from '@/components/assets/asset-to-stock-modal';
 import { AssetTransferDrawer } from '@/components/assets/asset-transfer-drawer';
-import { TableSkeleton } from '@/components/shared/skeletons';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TableSkeleton } from '@/shared/components/skeletons';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '@/hooks/use-assets';
 import { useAuth } from '@/hooks/use-auth';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Asset, AssetStatus, AssetType, Role } from '@/types';
+import type { Asset, AssetStatus, AssetType, Role } from '@/shared/types';
 import {
     Archive,
     ArrowRight,
@@ -33,7 +33,9 @@ import {
     Share2,
     Trash2,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { assetApi } from '@/services/assetApi';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
@@ -85,7 +87,7 @@ export default function AssetsPage() {
     const canTransfer = isSuper || perms.includes('assets.transfer');
     const canRetire = isSuper || perms.includes('assets.retire');
 
-    const [, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [tab, setTab] = useState<Tab>(initialAssetTab);
 
     // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
@@ -114,6 +116,29 @@ export default function AssetsPage() {
     const [perPage] = useState(20);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [detail, setDetail] = useState<Asset | null>(null);
+
+    // Deep-link from a contract's linked-assets list: /assets?view=<id> opens that asset's
+    // detail drawer (fetched by id since it may not be on the current page), then clears the param.
+    const viewId = searchParams.get('view');
+    const { data: deepLinkedAsset } = useQuery({
+        queryKey: ['asset', 'view', viewId],
+        queryFn: () => assetApi.get(Number(viewId)),
+        enabled: !!viewId,
+    });
+    useEffect(() => {
+        if (!deepLinkedAsset) return;
+        setDetail(deepLinkedAsset);
+        setSearchParams(
+            (prev) => {
+                const sp = new URLSearchParams(prev);
+                sp.delete('view');
+                return sp;
+            },
+            { replace: true },
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deepLinkedAsset]);
+
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Asset | null>(null);
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);

@@ -3,14 +3,14 @@ import { ModulePermissionCard, type ModuleMaster } from '@/components/permission
 import { RoleModal } from '@/components/permissions/role-modal';
 import { StockPermissionTree } from '@/components/permissions/stock-permission-tree';
 import { EmployeePermissionTree } from '@/components/permissions/employee-permission-tree';
-import { SearchableSelect } from '@/components/shared/searchable-select';
-import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/components/shared/skeletons';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { useDepartments, useEmployees, usePositions, useSections } from '@/hooks/use-org';
 import {
@@ -26,7 +26,7 @@ import { useDateTime } from '@/hooks/use-settings';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '@/lib/audit-format';
 import { useT } from '@/lib/i18n';
 import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '@/services/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import {

@@ -11,18 +11,18 @@ import { ResetPasswordModal } from '@/components/employees/reset-password-modal'
 import { ResignModal } from '@/components/employees/resign-modal';
 import { SectionsTab } from '@/components/employees/sections-tab';
 import { SetCredentialsModal } from '@/components/employees/set-credentials-modal';
-import { Column, DataTable } from '@/components/shared/data-table';
-import { TableSkeleton } from '@/components/shared/skeletons';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useConfirm } from '@/components/ui/confirm-dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Column, DataTable } from '@/shared/components/data-table';
+import { TableSkeleton } from '@/shared/components/skeletons';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Switch } from '@/shared/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import {
     useDepartmentMutations,
@@ -35,9 +35,9 @@ import {
     usePositions,
 } from '@/hooks/use-org';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Department, Employee, Position, Role } from '@/types';
+import type { Department, Employee, Position, Role } from '@/shared/types';
 import {
     Briefcase,
     Building2,

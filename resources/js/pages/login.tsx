@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
 import { useAuth, useLogin } from '@/hooks/use-auth';
-import { useDocumentTitle } from '@/hooks/use-document-title';
+import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, ArrowRight, Eye, EyeOff, Languages, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
 import { useState } from 'react';

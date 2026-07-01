@@ -1,20 +1,20 @@
-import { TableSkeleton } from '@/components/shared/skeletons';
+import { TableSkeleton } from '@/shared/components/skeletons';
 import { AssignTicketModal } from '@/components/tickets/assign-ticket-modal';
 import { CreateTicketDrawer } from '@/components/tickets/create-ticket-drawer';
 import { ResolveTicketModal, type ResolveMode } from '@/components/tickets/resolve-ticket-modal';
 import { TakeCaseModal } from '@/components/tickets/take-case-modal';
 import { TicketDetailDrawer } from '@/components/tickets/ticket-detail-drawer';
 import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from '@/components/tickets/ticket-meta';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/shared/ui/button';
+import { Card } from '@/shared/ui/card';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { useTickets, useTicketSummary } from '@/hooks/use-tickets';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/types';
+import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, Plus, RefreshCcw, Search, Ticket as TicketIcon } from 'lucide-react';
 import { useState } from 'react';
 

@@ -1,4 +1,4 @@
-import type { ApiEnvelope, AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/types';
+import type { ApiEnvelope, AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/shared/types';
 import { ensureCsrf, http } from './http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
