@@ -1,8 +1,8 @@
-import { GroupRoleModal } from '@/components/permissions/group-role-modal';
-import { ModulePermissionCard, type ModuleMaster } from '@/components/permissions/module-permission-card';
-import { RoleModal } from '@/components/permissions/role-modal';
-import { StockPermissionTree } from '@/components/permissions/stock-permission-tree';
-import { EmployeePermissionTree } from '@/components/permissions/employee-permission-tree';
+import { GroupRoleModal } from '../components/group-role-modal';
+import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
+import { RoleModal } from '../components/role-modal';
+import { StockPermissionTree } from '../components/stock-permission-tree';
+import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { Button } from '@/shared/ui/button';
@@ -21,13 +21,13 @@ import {
     useRoleMutations,
     useSetDefaultGroup,
     useUpdateRolePermissions,
-} from '@/hooks/use-permissions';
+} from '../hooks/use-permissions';
 import { useDateTime } from '@/hooks/use-settings';
-import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '@/lib/audit-format';
+import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { useT } from '@/lib/i18n';
-import { actionLabel, isLivePermission, moduleLabel } from '@/lib/permission-labels';
+import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { cn } from '@/shared/lib/utils';
-import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '@/services/permissionApi';
+import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowLeftRight,

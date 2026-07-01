@@ -1,4 +1,4 @@
-import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '@/services/permissionApi';
+import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '../api/permissionApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const KEY = ['permissions-matrix'] as const;
