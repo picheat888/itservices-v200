@@ -2,11 +2,11 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { useDepartmentMembers, useSections } from '@/hooks/use-org';
+import { usePositionMembers } from '../hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { useUiStore } from '@/stores/ui';
-import type { Department, Employee } from '@/shared/types';
-import { Building2 } from 'lucide-react';
+import type { Employee, Position } from '@/shared/types';
+import { Briefcase } from 'lucide-react';
 
 function initials(name: string) {
     return name
@@ -18,17 +18,13 @@ function initials(name: string) {
 }
 
 /**
- * Focused dialog listing every employee in a department. Uses the shared
- * DataTable (search + pagination + sticky header) so it scales to 100+ members
- * without an endless scroll.
+ * Focused dialog listing every employee holding a position. Uses the shared
+ * DataTable (search + pagination + sticky header) so it scales to 100+ members.
  */
-export function DepartmentMembersDialog({ department, onClose }: { department: Department | null; onClose: () => void }) {
+export function PositionMembersDialog({ position, onClose }: { position: Position | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data: members = [], isLoading } = useDepartmentMembers(department?.id ?? null);
-    const { data: sections = [] } = useSections(department?.id ?? null);
-
-    const deptName = department ? (lang === 'th' ? (department.name_th ?? department.name) : department.name) : '';
+    const { data: members = [], isLoading } = usePositionMembers(position?.id ?? null);
 
     const columns: Column<Employee>[] = [
         {
@@ -46,11 +42,17 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
         },
         { key: 'code', header: t('tbl_emp_id'), render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.code}</span> },
         {
+            key: 'department',
+            header: t('department'),
+            render: (m) => (
+                <span className="text-muted-foreground text-sm">{(lang === 'th' ? (m.department_th ?? m.department) : m.department) ?? '—'}</span>
+            ),
+        },
+        {
             key: 'section',
             header: t('emp_section'),
             render: (m) => <span className="text-muted-foreground text-sm">{(lang === 'th' ? (m.section_th ?? m.section) : m.section) ?? '—'}</span>,
         },
-        { key: 'position', header: t('position'), render: (m) => <span className="text-muted-foreground text-sm">{m.position ?? '—'}</span> },
         {
             key: 'status',
             header: t('status'),
@@ -62,16 +64,16 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
     ];
 
     return (
-        <Dialog open={!!department} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={!!position} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="flex max-h-[88vh] max-w-3xl flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Building2 className="text-muted-foreground h-4 w-4" />
-                        {deptName}
-                        {department?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{department.tag}</span>}
+                        <Briefcase className="text-muted-foreground h-4 w-4" />
+                        {position?.title}
+                        {position?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{position.code}</span>}
                     </DialogTitle>
                     <DialogDescription>
-                        {sections.length} {t('sub_sections')} · {members.length} {t('dept_members')}
+                        {members.length} {t('dept_members')}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -81,7 +83,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     rowKey={(m) => m.id}
                     loading={isLoading}
                     maxBodyHeight="52vh"
-                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.position ?? ''} ${m.section ?? ''}`}
+                    searchable={(m) => `${m.name} ${m.name_th ?? ''} ${m.code} ${m.department ?? ''} ${m.section ?? ''}`}
                 />
             </DialogContent>
         </Dialog>

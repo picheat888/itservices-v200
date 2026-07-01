@@ -1,16 +1,16 @@
-import { AddEmployeeDrawer } from '@/components/employees/add-employee-drawer';
-import { DepartmentMembersDialog } from '@/components/employees/department-members-dialog';
-import { DepartmentModal } from '@/components/employees/department-modal';
-import { EditEmployeeDialog } from '@/components/employees/edit-employee-dialog';
-import { EmployeeViewDrawer } from '@/components/employees/employee-view-drawer';
-import { ImportEmployeeDialog } from '@/components/employees/import-employee-dialog';
-import { OrgChartTab } from '@/components/employees/org-chart/org-chart-tab';
-import { PositionMembersDialog } from '@/components/employees/position-members-dialog';
-import { PositionModal } from '@/components/employees/position-modal';
-import { ResetPasswordModal } from '@/components/employees/reset-password-modal';
-import { ResignModal } from '@/components/employees/resign-modal';
-import { SectionsTab } from '@/components/employees/sections-tab';
-import { SetCredentialsModal } from '@/components/employees/set-credentials-modal';
+import { AddEmployeeDrawer } from '../components/add-employee-drawer';
+import { DepartmentMembersDialog } from '../components/department-members-dialog';
+import { DepartmentModal } from '../components/department-modal';
+import { EditEmployeeDialog } from '../components/edit-employee-dialog';
+import { EmployeeViewDrawer } from '../components/employee-view-drawer';
+import { ImportEmployeeDialog } from '../components/import-employee-dialog';
+import { OrgChartTab } from '../components/org-chart/org-chart-tab';
+import { PositionMembersDialog } from '../components/position-members-dialog';
+import { PositionModal } from '../components/position-modal';
+import { ResetPasswordModal } from '../components/reset-password-modal';
+import { ResignModal } from '../components/resign-modal';
+import { SectionsTab } from '../components/sections-tab';
+import { SetCredentialsModal } from '../components/set-credentials-modal';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -33,7 +33,7 @@ import {
     useEmployeeSummary,
     usePositionMutations,
     usePositions,
-} from '@/hooks/use-org';
+} from '../hooks/use-org';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -861,7 +861,7 @@ function DirectoryTab({
     );
 }
 
-import type { EmployeeSummary } from '@/services/orgApi';
+import type { EmployeeSummary } from '../api/orgApi';
 
 const DASH_DEPT_LIMIT = 8;
 

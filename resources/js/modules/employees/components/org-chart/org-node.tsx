@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
-import type { OrgFlowNode, OrgNodeData } from '@/lib/org-tree';
-import { NODE_W } from '@/lib/org-tree';
+import type { OrgFlowNode, OrgNodeData } from '../../lib/org-tree';
+import { NODE_W } from '../../lib/org-tree';
 import { cn } from '@/shared/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight } from 'lucide-react';

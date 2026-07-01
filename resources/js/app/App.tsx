@@ -13,7 +13,7 @@ import { AssetsPage } from '@/modules/assets';
 import { ContractsPage } from '@/modules/contracts';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
-import EmployeesPage from '@/pages/employees';
+import { EmployeesPage } from '@/modules/employees';
 import { LoginPage } from '@/modules/auth';
 import { PermissionsPage } from '@/modules/permissions';
 import PlaceholderPage from '@/pages/placeholder';

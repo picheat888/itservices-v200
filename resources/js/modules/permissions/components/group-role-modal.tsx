@@ -5,10 +5,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useGroupRoleMutations, useGroupRoles, usePermissionMatrix } from '../hooks/use-permissions';
-import { useDepartments, useEmployees } from '@/hooks/use-org';
+import { departmentApi, useDepartments, useEmployees } from '@/modules/employees';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/shared/lib/utils';
-import { departmentApi } from '@/services/orgApi';
 import type { GroupRole } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import { ArrowRight, Check, Info, Loader2, UserPlus, Users, X } from 'lucide-react';
