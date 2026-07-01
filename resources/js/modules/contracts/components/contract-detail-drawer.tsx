@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { useContractMutations } from '../hooks/use-contracts';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { type Contract, type ContractType } from '@/shared/types';

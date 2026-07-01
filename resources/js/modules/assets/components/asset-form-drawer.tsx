@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useAssetMutations } from '../hooks/use-assets';
 import { useContracts } from '@/modules/contracts';
 import { useCurrency } from '@/modules/settings';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset, AssetSource, AssetType } from '@/shared/types';

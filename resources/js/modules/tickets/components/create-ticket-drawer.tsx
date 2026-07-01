@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useTicketMutations } from '../hooks/use-tickets';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { TicketCategory } from '@/shared/types';

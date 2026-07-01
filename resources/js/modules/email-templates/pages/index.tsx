@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Input } from '@/shared/ui/input';
 import { useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
 import { settingsApi, useSettings } from '@/modules/settings';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { emailTemplateApi, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useToastStore } from '@/stores/toast';

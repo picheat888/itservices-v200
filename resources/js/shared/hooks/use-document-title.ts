@@ -1,4 +1,4 @@
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { navGroups } from '@/app/nav';
 import { useUiStore } from '@/stores/ui';
 import { useEffect } from 'react';

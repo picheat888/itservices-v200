@@ -1,7 +1,7 @@
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useEmployeeMutations } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { employeeApi } from '../api/orgApi';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';

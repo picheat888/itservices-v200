@@ -8,7 +8,7 @@ import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useContractMutations } from '../hooks/use-contracts';
 import { useCurrency, useVendors } from '@/modules/settings';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { assetApi } from '@/modules/assets';
 import { useUiStore } from '@/stores/ui';

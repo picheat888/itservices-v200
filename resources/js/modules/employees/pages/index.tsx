@@ -34,7 +34,7 @@ import {
     usePositionMutations,
     usePositions,
 } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee, Position, Role } from '@/shared/types';

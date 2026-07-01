@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useDepartments, useSectionMutations, useSections } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Section } from '@/shared/types';
 import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';

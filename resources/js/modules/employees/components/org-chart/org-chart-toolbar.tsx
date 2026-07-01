@@ -1,4 +1,4 @@
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import type { OrgDir } from '../../lib/org-tree';
 import { cn } from '@/shared/lib/utils';
 import { ArrowDown, ArrowRight, ChevronsDownUp, ChevronsUpDown, Maximize2, Search, X } from 'lucide-react';

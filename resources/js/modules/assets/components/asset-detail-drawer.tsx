@@ -1,7 +1,7 @@
 import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Asset } from '@/shared/types';
 import { Check, Share2 } from 'lucide-react';

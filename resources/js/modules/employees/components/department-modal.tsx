@@ -3,7 +3,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useDepartmentMutations } from '../hooks/use-org';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import type { Department } from '@/shared/types';
 import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';

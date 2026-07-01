@@ -2,7 +2,7 @@ import { StatusBadge } from '@/shared/components/status-badge';
 import { Card } from '@/shared/ui/card';
 import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contracts';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Box, Construction, FileText, Inbox, type LucideIcon, Ticket } from 'lucide-react';

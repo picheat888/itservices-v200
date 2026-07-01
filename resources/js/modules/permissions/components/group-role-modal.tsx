@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useGroupRoleMutations, useGroupRoles, usePermissionMatrix } from '../hooks/use-permissions';
 import { departmentApi, useDepartments, useEmployees } from '@/modules/employees';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { GroupRole } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';

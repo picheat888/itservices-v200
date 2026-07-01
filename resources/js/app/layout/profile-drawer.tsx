@@ -7,7 +7,7 @@ import { Label } from '@/shared/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
 import { PhotoCropDialog, useEmployee } from '@/modules/employees';
-import { useT } from '@/lib/i18n';
+import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
