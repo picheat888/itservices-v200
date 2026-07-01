@@ -72,7 +72,9 @@ class Permissions
                 'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.renew', 'contracts.alerts',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
-                'employees.view', 'employees.add', 'employees.import', 'employees.edit',
+                'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
+                'employees.view_section', 'employees.view_department', 'employees.view_position',
+                'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
                 'access.view', 'access.manage',
                 'system.manage_permissions', 'system.manage_roles', 'system.manage_groups',
@@ -80,7 +82,9 @@ class Permissions
             ],
             // HR — full Employee function + own tickets/requests
             'hr' => [
-                'employees.view', 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
+                'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
+                'employees.view_section', 'employees.view_department', 'employees.view_position',
+                'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
                 'access.view',
                 'tickets.create', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
