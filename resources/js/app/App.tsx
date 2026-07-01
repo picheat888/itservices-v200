@@ -1,6 +1,6 @@
 import '../../css/app.css';
 
-import { AppErrorScreen } from '@/components/app-error-screen';
+import { AppErrorScreen } from '@/shared/components/app-error-screen';
 import { ProtectedRoute, RequirePermission } from '@/modules/auth';
 import { AppShell } from '@/app/layout/app-shell';
 import { TransientToaster } from '@/app/layout/transient-toaster';
@@ -16,7 +16,7 @@ import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employees';
 import { LoginPage } from '@/modules/auth';
 import { PermissionsPage } from '@/modules/permissions';
-import PlaceholderPage from '@/pages/placeholder';
+import PlaceholderPage from '@/app/placeholder';
 import { StockPage, ItemHistoryPage } from '@/modules/stock';
 import { TicketsPage } from '@/modules/tickets';
 import type { Role } from '@/shared/types';

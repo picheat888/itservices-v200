@@ -1,5 +1,5 @@
 import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/shared/types';
-import { ensureCsrf, http } from '@/services/http';
+import { ensureCsrf, http } from '@/shared/lib/http';
 
 export interface TicketPageMeta {
     total: number;
