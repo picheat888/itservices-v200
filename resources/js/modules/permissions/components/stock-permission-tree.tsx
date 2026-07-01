@@ -1,4 +1,4 @@
-import { actionLabel } from '../lib/permission-labels';
+import { actionLabel, moduleLabel } from '../lib/permission-labels';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
@@ -103,7 +103,7 @@ export function StockPermissionTree({
     return (
         <div className="border-border rounded-lg border">
             <div className="border-border flex items-center justify-between border-b px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{label(MASTER, lang)}</span>
+                <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{moduleLabel('stock', lang)}</span>
                 <span className={cn('font-mono text-[10.5px] font-bold', activeCount === 0 ? 'text-muted-foreground' : 'text-brand')}>
                     {activeCount}/{ALL_KEYS.length}
                 </span>
