@@ -43,8 +43,12 @@ class RoleReferenceTest extends TestCase
         $hr = Role::create(['key' => 'hr', 'name' => 'HR', 'color' => '#111', 'is_system' => false]);
         $actor = User::factory()->create(['role' => 'super']);
 
+        // employees.* is gated by the employees.module master (see
+        // Permissions::employeeHierarchy / normalizeEmployees): a child permission
+        // only persists when the master is granted too. The permission matrix UI
+        // always sends the master alongside any child, so include it here.
         $this->actingAs($actor)->putJson('/api/permissions/hr', [
-            'permissions' => ['employees.view'],
+            'permissions' => ['employees.module', 'employees.view'],
         ])->assertOk();
 
         $this->assertDatabaseHas('role_permissions', [
