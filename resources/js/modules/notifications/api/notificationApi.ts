@@ -1,4 +1,4 @@
-import { http } from '@/services/http';
+import { http } from '@/shared/lib/http';
 
 export interface NotificationData {
     type: string;

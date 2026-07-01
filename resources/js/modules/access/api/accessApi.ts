@@ -1,5 +1,5 @@
 import type { AccessKind, AccessMember, ApiEnvelope, EmailGroup, EmployeeAccess, FileShare, SocialPlatform } from '@/shared/types';
-import { ensureCsrf, http } from '@/services/http';
+import { ensureCsrf, http } from '@/shared/lib/http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();

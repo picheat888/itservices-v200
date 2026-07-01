@@ -1,4 +1,4 @@
-import { ensureCsrf, http } from '@/services/http';
+import { ensureCsrf, http } from '@/shared/lib/http';
 
 export interface EmailTemplate {
     id: number;
