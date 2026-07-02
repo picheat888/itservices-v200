@@ -77,11 +77,15 @@ Custom tab bar (same visual pattern as Contract/Stock): `Overview · งาน�
 - `resources/js/modules/asset/components/asset-history-tab.tsx` — new: `DataTable` (fillHeight) of `asset.transfers`.
 - `resources/js/modules/asset/pages/index.tsx` — pass `onEdit={canEdit ? openEdit : undefined}` to `AssetDetailDrawer`.
 - `resources/js/lang/en/asset.ts` + `resources/js/lang/th/asset.ts` — add tab labels + ticket/history column keys + empty-state strings.
+- `resources/js/modules/ticket/pages/index.tsx` — add minimal `?view=<id>` deep-link support (fetch by id via `ticketApi.get`, open the detail drawer, clear the param) so an asset's repair-ticket row can open the ticket. Mirrors the existing asset/contract `?view=` handlers.
+
+**Cross-module note:** `asset-tickets-tab` inlines the ticket status/priority tones + reuses the global `ticket_*` i18n keys rather than importing `@/modules/ticket` — the ticket module already imports `@/modules/asset` (`take-case-modal` → `useAssets`), so a barrel import back would close an asset ⇄ ticket dependency cycle. Same approach `contract-assets-tab` uses for asset status.
 
 ## Out of Scope
 
 - No DB / migration changes (`tickets.related_asset_id` and `asset_transfers` already exist).
-- No change to the Tickets module, the add/edit `AssetFormDrawer`, `AssetTransferDrawer`, or `AssetToStockModal`.
+- No change to the add/edit `AssetFormDrawer`, `AssetTransferDrawer`, or `AssetToStockModal`.
+- The only Tickets-module change is the `?view=` deep-link handler above (no change to ticket data, detail drawer, or actions).
 - The global `/assets/transfers` endpoint stays as-is.
 - `DataTable` is unchanged (the `fillHeight` prop already exists from the Contract feature).
 - No tab-state persistence (modal opens on Overview each time).

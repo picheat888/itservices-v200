@@ -44,6 +44,28 @@ class AssetResource extends JsonResource
             'last_reason' => $this->last_reason,
             'created_at' => $this->created_at?->toDateString(),
             'updated_at' => $this->updated_at?->toDateString(),
+
+            // Included only on the single-asset endpoint (whenLoaded) so the list stays lean.
+            'transfers' => $this->whenLoaded('transfers', fn () => $this->transfers->map(fn ($tr) => [
+                'id' => $tr->id,
+                'date' => $tr->created_at?->toDateString(),
+                'from_owner' => $tr->from_owner,
+                'to_owner' => $tr->to_owner,
+                'reason' => $tr->reason,
+                'performed_by' => $tr->performed_by,
+            ])),
+            'tickets' => $this->whenLoaded('tickets', fn () => $this->tickets->map(fn ($tk) => [
+                'id' => $tk->id,
+                'ticket_no' => $tk->ticket_no,
+                'subject' => $tk->subject,
+                'subject_th' => $tk->subject_th,
+                'category' => $tk->category?->value,
+                'priority' => $tk->priority?->value,
+                'status' => $tk->status?->value,
+                'assignee_name' => $tk->assignee?->name,
+                'created_at' => $tk->created_at?->toDateString(),
+                'resolved_at' => $tk->resolved_at?->toDateString(),
+            ])),
         ];
     }
 

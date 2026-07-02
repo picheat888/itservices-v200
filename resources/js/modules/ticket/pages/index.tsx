@@ -10,13 +10,16 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/modules/auth';
+import { ticketApi } from '../api/ticketApi';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
+import { useQuery } from '@tanstack/react-query';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, Plus, RefreshCcw, Search, Ticket as TicketIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'all' | 'mine';
 const ALL = '__all__';
@@ -62,6 +65,30 @@ export default function TicketsPage() {
     const [createOpen, setCreateOpen] = useState(false);
     const [detail, setDetail] = useState<Ticket | null>(null);
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
+
+    // Deep-link from another module (e.g. an asset's repair-tickets tab): /tickets?view=<id>
+    // fetches that ticket by id and opens its detail drawer, then clears the param.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const viewId = searchParams.get('view');
+    const { data: deepLinkedTicket } = useQuery({
+        queryKey: ['ticket', 'view', viewId],
+        queryFn: () => ticketApi.get(Number(viewId)),
+        enabled: !!viewId,
+    });
+    useEffect(() => {
+        if (!deepLinkedTicket) return;
+        setDetail(deepLinkedTicket);
+        setSearchParams(
+            (prev) => {
+                const sp = new URLSearchParams(prev);
+                sp.delete('view');
+                return sp;
+            },
+            { replace: true },
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deepLinkedTicket]);
+
     const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
 

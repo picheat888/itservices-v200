@@ -159,7 +159,9 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        return (new AssetResource($asset->load('contract')))->response();
+        $asset->load(['contract', 'transfers', 'tickets.assignee']);
+
+        return (new AssetResource($asset))->response();
     }
 
     public function update(StoreAssetRequest $request, Asset $asset): JsonResponse

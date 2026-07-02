@@ -6,10 +6,12 @@ use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Asset\AssetType;
 use App\Models\Contract\Contract;
+use App\Models\Ticket\Ticket;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 class Asset extends Model
@@ -52,6 +54,18 @@ class Asset extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    /** Ownership/custody trail — transfers and returns-to-pool, most recent first. */
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(AssetTransfer::class)->latest();
+    }
+
+    /** Repair/service tickets that reference this asset, most recent first. */
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class, 'related_asset_id')->latest();
     }
 
     /** Auto-generate an INB-XX-NNNNN / RNT-XX-NNNNN tag and registration date on create. */

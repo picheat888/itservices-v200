@@ -608,6 +608,7 @@ export default function AssetsPage() {
                     setDetail(null);
                     receive.mutate(a.id);
                 }}
+                onEdit={canEdit ? openEdit : undefined}
                 canTransfer={canTransfer}
             />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
