@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Ticket;
 
 /** The kind of issue a ticket is about (drives the create-form category cards). */
 enum TicketCategory: string

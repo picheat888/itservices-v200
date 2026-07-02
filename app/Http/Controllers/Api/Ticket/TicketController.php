@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Ticket;
 
-use App\Enums\TicketCategory;
-use App\Enums\TicketPriority;
-use App\Enums\TicketStatus;
+use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreTicketRequest;
-use App\Http\Resources\TicketResource;
+use App\Http\Requests\Ticket\StoreTicketRequest;
+use App\Http\Resources\Ticket\TicketResource;
 use App\Models\AuditLog;
-use App\Models\Ticket;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
-use App\Services\TicketService;
+use App\Services\Ticket\TicketService;
 use App\Support\TicketSla;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
