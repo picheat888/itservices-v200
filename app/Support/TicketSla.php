@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Models\AppSetting;
+use App\Models\Settings\AppSetting;
 
 /**
  * SLA response/resolution targets per ticket priority. Targets are configurable

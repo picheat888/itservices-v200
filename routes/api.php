@@ -22,7 +22,7 @@ use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\SectionController;
-use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\StockCountController;
 use App\Http\Controllers\Api\StockItemController;
 use App\Http\Controllers\Api\StockMovementController;

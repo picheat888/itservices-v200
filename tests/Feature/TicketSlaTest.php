@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\AppSetting;
 use App\Models\Employee;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
