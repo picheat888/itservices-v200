@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Employee;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Position */
+/** @mixin \App\Models\Employee\Position */
 class PositionResource extends JsonResource
 {
     /**

@@ -4,6 +4,10 @@ namespace App\Models;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\Brand;

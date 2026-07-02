@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreSectionRequest;
-use App\Http\Resources\EmployeeResource;
-use App\Http\Resources\SectionResource;
+use App\Http\Requests\Employee\StoreSectionRequest;
+use App\Http\Resources\Employee\EmployeeResource;
+use App\Http\Resources\Employee\SectionResource;
 use App\Models\AuditLog;
-use App\Models\Section;
+use App\Models\Employee\Section;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

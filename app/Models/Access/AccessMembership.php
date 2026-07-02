@@ -2,7 +2,7 @@
 
 namespace App\Models\Access;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Employee;
 
-use App\Models\Employee;
-use App\Models\Position;
-use App\Models\Section;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;

@@ -4,7 +4,7 @@ namespace App\Services\Ticket;
 
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 

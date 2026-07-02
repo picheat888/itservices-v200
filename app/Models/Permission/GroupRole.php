@@ -2,7 +2,7 @@
 
 namespace App\Models\Permission;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;

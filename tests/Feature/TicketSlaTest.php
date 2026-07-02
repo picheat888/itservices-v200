@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;

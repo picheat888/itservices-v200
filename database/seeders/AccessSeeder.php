@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use Illuminate\Database\Seeder;
 
 class AccessSeeder extends Seeder

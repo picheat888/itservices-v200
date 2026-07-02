@@ -6,7 +6,7 @@ use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;

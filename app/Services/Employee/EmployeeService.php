@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Employee;
 
-use App\Enums\EmployeeStatus;
-use App\Models\Department;
-use App\Models\Employee;
+use App\Enums\Employee\EmployeeStatus;
+use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
-use App\Models\Position;
+use App\Models\Employee\Position;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;

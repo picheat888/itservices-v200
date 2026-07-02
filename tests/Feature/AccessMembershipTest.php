@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Access\EmailGroup;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Services\Access\AccessService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;

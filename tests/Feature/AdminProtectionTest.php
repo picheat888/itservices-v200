@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;

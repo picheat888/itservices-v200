@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\AuditLog;
-use App\Models\Department;
-use App\Models\Employee;
+use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
-use App\Models\Position;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

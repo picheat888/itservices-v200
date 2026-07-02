@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Employee;
 
-use App\Enums\EmployeeStatus;
+use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreEmployeeRequest;
-use App\Http\Resources\ApproverNodeResource;
-use App\Http\Resources\EmployeeResource;
-use App\Http\Resources\OrgChartNodeResource;
+use App\Http\Requests\Employee\StoreEmployeeRequest;
+use App\Http\Resources\Employee\ApproverNodeResource;
+use App\Http\Resources\Employee\EmployeeResource;
+use App\Http\Resources\Employee\OrgChartNodeResource;
 use App\Models\AuditLog;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\User;
-use App\Services\ApprovalChainService;
-use App\Services\EmployeeService;
+use App\Services\Employee\ApprovalChainService;
+use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;

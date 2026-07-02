@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
@@ -37,7 +37,7 @@ class AvatarDemoSeeder extends Seeder
             $employee->update(['photo_path' => $path]);
         }
 
-        $this->command?->info('Seeded ' . count($avatars) . ' demo avatars.');
+        $this->command?->info('Seeded '.count($avatars).' demo avatars.');
     }
 
     /**

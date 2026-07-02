@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employee;
-use App\Models\Position;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\User;
-use App\Services\ApprovalChainService;
+use App\Services\Employee\ApprovalChainService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

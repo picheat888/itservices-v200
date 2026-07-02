@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -29,9 +29,9 @@ class NewEmployeeNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'type'          => 'new_employee',
-            'subtype'       => 'credentials_required',
-            'employee_id'   => $this->employee->id,
+            'type' => 'new_employee',
+            'subtype' => 'credentials_required',
+            'employee_id' => $this->employee->id,
             'employee_name' => $this->employee->name,
             'employee_code' => $this->employee->code,
         ];

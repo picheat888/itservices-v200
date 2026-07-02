@@ -3,7 +3,7 @@
 namespace App\Services\Access;
 
 use App\Models\Access\AccessMembership;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;

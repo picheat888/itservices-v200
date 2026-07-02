@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Employee;
-use App\Models\Position;
-use App\Services\ApprovalChainService;
+use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Services\Employee\ApprovalChainService;
 use Database\Seeders\OrgSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

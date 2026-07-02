@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Access;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Access\EmployeeAccessResource;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Services\Access\AccessService;
 use Illuminate\Http\JsonResponse;
 
