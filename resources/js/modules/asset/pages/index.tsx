@@ -22,16 +22,19 @@ import {
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
+    CircleDot,
     Clock,
     Cog,
     Download,
-    Eye,
-    Pencil,
+    Filter,
     Plus,
     RefreshCcw,
     Search,
     Share2,
+    SquarePen,
+    Tag,
     Trash2,
+    X,
 } from 'lucide-react';
 import { assetApi } from '../api/assetApi';
 import { useQuery } from '@tanstack/react-query';
@@ -74,6 +77,16 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
 }
 
 const ALL = '__all__';
+
+// Badge-tone → dot colour for the Contract-style filter dropdowns.
+const TONE_DOT: Record<string, string> = {
+    green: 'bg-emerald-500',
+    blue: 'bg-blue-500',
+    amber: 'bg-amber-500',
+    red: 'bg-red-500',
+    violet: 'bg-violet-500',
+    gray: 'bg-muted-foreground/40',
+};
 
 export default function AssetsPage() {
     const t = useT();
@@ -175,6 +188,18 @@ export default function AssetsPage() {
     const runBulk = (op: 'maintenance' | 'writeoff') => {
         if (selectedIds.length === 0) return;
         bulk.mutate({ ids: selectedIds, op }, { onSuccess: () => setSelectedIds([]) });
+    };
+
+    // True when any inventory list control differs from its default — drives the "Clear filters" pill.
+    const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter;
+
+    /** Reset the inventory search + type/source/status filters back to their defaults. */
+    const clearFilters = () => {
+        setSearch('');
+        setTypeFilter('');
+        setSourceFilter('');
+        setStatusFilter('');
+        setPage(1);
     };
 
     const typeBars = summary?.by_type ?? [];
@@ -290,8 +315,8 @@ export default function AssetsPage() {
                 {tab === 'inventory' && (
                     <>
                         <div className="flex flex-wrap items-center gap-2 p-3">
-                            <div className="relative min-w-[200px] flex-1">
-                                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                            <div className="relative w-full max-w-xs">
+                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     value={search}
                                     onChange={(e) => {
@@ -299,64 +324,120 @@ export default function AssetsPage() {
                                         setPage(1);
                                     }}
                                     placeholder={t('asset_search')}
-                                    className="h-9 pl-9"
+                                    className="pl-9"
                                 />
                             </div>
-                            <Select
-                                value={typeFilter || ALL}
-                                onValueChange={(v) => {
-                                    setTypeFilter(v === ALL ? '' : (v as AssetType));
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 w-36">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
-                                    {ASSET_TYPES.map((tp) => (
-                                        <SelectItem key={tp} value={tp}>
-                                            {t(`asset_type_${tp}`)}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                value={sourceFilter || ALL}
-                                onValueChange={(v) => {
-                                    setSourceFilter(v === ALL ? '' : v);
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 w-36">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
-                                    <SelectItem value="purchased">{t('asset_purchase')}</SelectItem>
-                                    <SelectItem value="rented">{t('asset_lease')}</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select
-                                value={statusFilter || ALL}
-                                onValueChange={(v) => {
-                                    setStatusFilter(v === ALL ? '' : (v as AssetStatus));
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-9 w-40">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={ALL}>{t('asset_all')}</SelectItem>
-                                    {(Object.keys(ASSET_STATUS_META) as AssetStatus[]).map((s) => (
-                                        <SelectItem key={s} value={s}>
-                                            {t(ASSET_STATUS_META[s].key)}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <div className="text-muted-foreground ml-auto font-mono text-xs">{meta?.total ?? 0}</div>
+                            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                                {hasActiveFilters && (
+                                    <button
+                                        type="button"
+                                        onClick={clearFilters}
+                                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                                    >
+                                        <X className="h-3 w-3" />
+                                        {t('reset_filters')}
+                                    </button>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                    <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'ประเภท:' : 'Type:'}</span>
+                                    <Select
+                                        value={typeFilter || ALL}
+                                        onValueChange={(v) => {
+                                            setTypeFilter(v === ALL ? '' : (v as AssetType));
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
+                                                    {t('asset_all')}
+                                                </span>
+                                            </SelectItem>
+                                            {ASSET_TYPES.map((tp) => (
+                                                <SelectItem key={tp} value={tp}>
+                                                    <span className="flex items-center gap-2">
+                                                        <AssetTypeIcon type={tp} className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                                        {t(`asset_type_${tp}`)}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Tag className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">
+                                        {lang === 'th' ? 'แหล่งที่มา:' : 'Source:'}
+                                    </span>
+                                    <Select
+                                        value={sourceFilter || ALL}
+                                        onValueChange={(v) => {
+                                            setSourceFilter(v === ALL ? '' : v);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-36">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
+                                                    {t('asset_all')}
+                                                </span>
+                                            </SelectItem>
+                                            <SelectItem value="purchased">
+                                                <span className="flex items-center gap-2">
+                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
+                                                    {t('asset_purchase')}
+                                                </span>
+                                            </SelectItem>
+                                            <SelectItem value="rented">
+                                                <span className="flex items-center gap-2">
+                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
+                                                    {t('asset_lease')}
+                                                </span>
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <CircleDot className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'สถานะ:' : 'Status:'}</span>
+                                    <Select
+                                        value={statusFilter || ALL}
+                                        onValueChange={(v) => {
+                                            setStatusFilter(v === ALL ? '' : (v as AssetStatus));
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-40">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
+                                                    {t('asset_all')}
+                                                </span>
+                                            </SelectItem>
+                                            {(Object.keys(ASSET_STATUS_META) as AssetStatus[]).map((s) => (
+                                                <SelectItem key={s} value={s}>
+                                                    <span className="flex items-center gap-2">
+                                                        <span className={cn('h-2 w-2 shrink-0 rounded-full', TONE_DOT[ASSET_STATUS_META[s].tone])} />
+                                                        {t(ASSET_STATUS_META[s].key)}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
                         </div>
 
                         {selectedIds.length > 0 && (
@@ -421,8 +502,9 @@ export default function AssetsPage() {
                                         {rows.map((a) => (
                                             <tr
                                                 key={a.id}
+                                                onClick={() => setDetail(a)}
                                                 className={cn(
-                                                    'border-border/60 border-b last:border-0',
+                                                    'border-border/60 cursor-pointer border-b last:border-0',
                                                     selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
                                                 )}
                                             >
@@ -430,24 +512,18 @@ export default function AssetsPage() {
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedIds.includes(a.id)}
+                                                        onClick={(e) => e.stopPropagation()}
                                                         onChange={(e) => toggleRow(a.id, e.target.checked)}
                                                     />
                                                 </td>
-                                                <td
-                                                    className="text-muted-foreground cursor-pointer px-4 py-2.5 font-mono text-xs"
-                                                    onClick={() => setDetail(a)}
-                                                >
-                                                    {a.tag}
-                                                </td>
+                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{a.tag}</td>
                                                 <td className="px-4 py-2.5">
                                                     <span className="flex items-center gap-2">
                                                         <AssetTypeIcon type={a.type} className="text-muted-foreground h-4 w-4" />
                                                         {t(`asset_type_${a.type}`)}
                                                     </span>
                                                 </td>
-                                                <td className="cursor-pointer px-4 py-2.5 font-medium" onClick={() => setDetail(a)}>
-                                                    {a.model}
-                                                </td>
+                                                <td className="px-4 py-2.5 font-medium">{a.model}</td>
                                                 <td className="px-4 py-2.5">{a.owner}</td>
                                                 <td className="px-4 py-2.5">{a.department}</td>
                                                 <td className="px-4 py-2.5">
@@ -458,18 +534,24 @@ export default function AssetsPage() {
                                                     <div className="flex items-center justify-end gap-1">
                                                         {canTransfer && a.status === 'pending_acceptance' && (
                                                             <button
-                                                                className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
                                                                 title={t('asset_accept')}
-                                                                onClick={() => accept.mutate(a.id)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    accept.mutate(a.id);
+                                                                }}
                                                             >
                                                                 <Check className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {canTransfer && a.status === 'pending_return' && (
                                                             <button
-                                                                className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
                                                                 title={t('asset_mark_received')}
-                                                                onClick={() => receive.mutate(a.id)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    receive.mutate(a.id);
+                                                                }}
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4" />
                                                             </button>
@@ -477,22 +559,28 @@ export default function AssetsPage() {
                                                         {canTransfer &&
                                                             !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
                                                                 <button
-                                                                    className="hover:bg-accent rounded-md p-1.5"
+                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                                                     title={t('transfer_asset')}
-                                                                    onClick={() => setTransferAsset(a)}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setTransferAsset(a);
+                                                                    }}
                                                                 >
                                                                     <Share2 className="h-4 w-4" />
                                                                 </button>
                                                             )}
                                                         {canEdit && (
                                                             <button
-                                                                className="hover:bg-accent rounded-md p-1.5"
+                                                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                                                 title={
                                                                     a.status === 'maintenance'
                                                                         ? t('asset_exit_maintenance')
                                                                         : t('asset_set_maintenance')
                                                                 }
-                                                                onClick={() => toggleMaintenance.mutate(a.id)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleMaintenance.mutate(a.id);
+                                                                }}
                                                             >
                                                                 <Cog className="h-4 w-4" />
                                                             </button>
@@ -500,29 +588,28 @@ export default function AssetsPage() {
                                                         {canRetire &&
                                                             !['deployed', 'writeoff', 'pending_return', 'pending_stock'].includes(a.status) && (
                                                                 <button
-                                                                    className="hover:bg-accent rounded-md p-1.5 text-emerald-600"
+                                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md text-emerald-600"
                                                                     title={t('asset_to_stock')}
-                                                                    onClick={() => setToStockAsset(a)}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setToStockAsset(a);
+                                                                    }}
                                                                 >
                                                                     <Archive className="h-4 w-4" />
                                                                 </button>
                                                             )}
                                                         {canEdit && (
                                                             <button
-                                                                className="hover:bg-accent rounded-md p-1.5"
+                                                                className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                                                 title={t('edit_asset')}
-                                                                onClick={() => openEdit(a)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openEdit(a);
+                                                                }}
                                                             >
-                                                                <Pencil className="h-4 w-4" />
+                                                                <SquarePen className="h-4 w-4" />
                                                             </button>
                                                         )}
-                                                        <button
-                                                            className="hover:bg-accent rounded-md p-1.5"
-                                                            title={t('asset_view')}
-                                                            onClick={() => setDetail(a)}
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
