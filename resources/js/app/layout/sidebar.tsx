@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/modules/settings';
-import { useContractSidebarBadge } from '@/modules/contracts';
+import { useContractSidebarBadge } from '@/modules/contract';
 import { useStockSidebarBadge } from '@/modules/stock';
 import { useT } from '@/lang';
 import { navGroups } from '@/app/nav';

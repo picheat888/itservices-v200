@@ -1,4 +1,4 @@
-import { AssetDetailDrawer, assetApi } from '@/modules/assets';
+import { AssetDetailDrawer, assetApi } from '@/modules/asset';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { useUiStore } from '@/stores/ui';

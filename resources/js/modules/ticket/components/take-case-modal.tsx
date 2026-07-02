@@ -2,7 +2,7 @@ import { Field } from '@/shared/components/field';
 import { TICKET_PRIORITY_META } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAssets } from '@/modules/assets';
+import { useAssets } from '@/modules/asset';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';

@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { PhotoCropDialog, useEmployee } from '@/modules/employees';
+import { PhotoCropDialog, useEmployee } from '@/modules/employee';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { Camera } from 'lucide-react';

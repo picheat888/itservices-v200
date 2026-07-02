@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useAccessMutations } from '../hooks/use-access';
-import { useDepartments, useEmployees } from '@/modules/employees';
+import { useDepartments, useEmployees } from '@/modules/employee';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';

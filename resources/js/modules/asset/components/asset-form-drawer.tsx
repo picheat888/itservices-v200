@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssetMutations } from '../hooks/use-assets';
-import { useContracts } from '@/modules/contracts';
+import { useContracts } from '@/modules/contract';
 import { useCurrency } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
