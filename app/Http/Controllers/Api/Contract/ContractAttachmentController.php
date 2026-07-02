@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\ContractResource;
+use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
-use App\Models\Contract;
-use App\Models\ContractAttachment;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

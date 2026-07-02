@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\ContractExpiryAlertService;
+use App\Services\Contract\ContractExpiryAlertService;
 use Illuminate\Console\Command;
 
 /**

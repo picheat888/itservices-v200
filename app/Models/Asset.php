@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AssetSource;
 use App\Enums\AssetStatus;
 use App\Enums\AssetType;
+use App\Models\Contract\Contract;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

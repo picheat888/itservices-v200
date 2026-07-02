@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Contract;
 
 use App\Enums\AssetStatus;
-use App\Enums\ContractType;
+use App\Enums\Contract\ContractType;
 use App\Models\Asset;
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use App\Models\Vendor;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;

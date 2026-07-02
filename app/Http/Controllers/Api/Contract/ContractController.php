@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreContractRequest;
-use App\Http\Resources\ContractResource;
+use App\Http\Requests\Contract\StoreContractRequest;
+use App\Http\Resources\Contract\ContractResource;
 use App\Models\AuditLog;
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use App\Models\Settings\AppSetting;
-use App\Services\ContractExpiryAlertService;
-use App\Services\ContractService;
+use App\Services\Contract\ContractExpiryAlertService;
+use App\Services\Contract\ContractService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

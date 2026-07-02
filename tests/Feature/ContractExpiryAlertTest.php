@@ -3,14 +3,14 @@
 namespace Tests\Feature;
 
 use App\Jobs\SendTemplatedEmail;
-use App\Models\Contract;
-use App\Models\ContractAlertLog;
-use App\Models\ContractBellLog;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractAlertLog;
+use App\Models\Contract\ContractBellLog;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
-use App\Services\ContractExpiryAlertService;
+use App\Services\Contract\ContractExpiryAlertService;
 use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;

@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use Illuminate\Notifications\Notification;
 
 /**

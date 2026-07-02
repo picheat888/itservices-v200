@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
