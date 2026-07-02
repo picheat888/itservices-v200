@@ -17,7 +17,7 @@ use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\GroupRoleController;
 use App\Http\Controllers\Api\LocationController;
-use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\PositionController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\RolePermissionController;
