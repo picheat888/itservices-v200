@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\EmailTemplate;
+use App\Models\Email\EmailTemplate;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
