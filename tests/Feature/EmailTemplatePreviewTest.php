@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Email\EmailTemplate;
-use App\Models\Role;
+use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,7 +21,7 @@ class EmailTemplatePreviewTest extends TestCase
         $tpl = EmailTemplate::create([
             'key' => 'preview.sample',
             'name' => 'Preview Sample Digest',
-            'subject' => 'Daily stock alert — {{count}} item(s)',
+            'subject' => 'Daily stock alert โ€” {{count}} item(s)',
             'body_html' => '<p>Hi {{user.first_name}},</p><p>{{count}} item(s):</p>{{items}}',
             'enabled' => true,
         ]);

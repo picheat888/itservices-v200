@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\Employee;
-use App\Models\RolePermission;
+use App\Models\Permission\RolePermission;
 use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +26,7 @@ class TicketSlaTest extends TestCase
     {
         $this->actingAs($this->super());
 
-        // Critical target = 4h. Closed in 2h → met; closed in 7h → missed.
+        // Critical target = 4h. Closed in 2h โ’ met; closed in 7h โ’ missed.
         Ticket::factory()->create([
             'priority' => 'critical', 'status' => 'completed',
             'created_at' => now()->subHours(10), 'resolved_at' => now()->subHours(8),

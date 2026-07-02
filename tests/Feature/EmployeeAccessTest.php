@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Access\EmailGroup;
 use App\Models\Employee;
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;

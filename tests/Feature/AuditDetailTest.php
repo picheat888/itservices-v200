@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\AuditLog;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\Permission\Role;
 use App\Models\Position;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -36,7 +36,7 @@ class AuditDetailTest extends TestCase
         $role = Role::create(['key' => 'viewer', 'name' => 'Viewer', 'color' => '#333333', 'is_system' => false]);
 
         $before = $role->getOriginal();
-        $role->update(['name' => 'Viewer']); // same value → no real change
+        $role->update(['name' => 'Viewer']); // same value โ’ no real change
 
         $this->assertNull(AuditLog::changes($before, $role));
     }

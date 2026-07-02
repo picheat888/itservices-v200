@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\MailSetting;
-use App\Models\Role;
+use App\Models\Permission\Role;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;

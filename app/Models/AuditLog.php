@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Permission\GroupRole;
+use App\Models\Permission\Role;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 

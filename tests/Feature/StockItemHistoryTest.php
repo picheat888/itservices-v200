@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\RolePermission;
+use App\Models\Permission\RolePermission;
 use App\Models\StockItem;
 use App\Models\StockItemSerialEvent;
 use App\Models\User;

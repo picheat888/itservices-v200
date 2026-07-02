@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\StockBalance;
 use App\Models\StockItem;
 use App\Models\StockMovement;
@@ -81,13 +81,13 @@ class StockWorkflowTest extends TestCase
             ->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-HQ'])
             ->assertCreated();
 
-        // Transfer 2 from WH-HQ → WH-2: total on-hand is unchanged (neutral).
+        // Transfer 2 from WH-HQ โ’ WH-2: total on-hand is unchanged (neutral).
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 2, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertCreated();
         $this->assertSame(3, $item->fresh()->current_stock);
 
-        // Only 1 left at WH-HQ → transferring 5 from there is rejected.
+        // Only 1 left at WH-HQ โ’ transferring 5 from there is rejected.
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertUnprocessable()
@@ -97,7 +97,7 @@ class StockWorkflowTest extends TestCase
     public function test_movement_requires_type_specific_permission(): void
     {
         $item = $this->item();
-        // Holds only stock.receive — cannot transfer.
+        // Holds only stock.receive โ€” cannot transfer.
         $user = $this->userWith(['stock.view', 'stock.receive']);
 
         $this->actingAs($user)
@@ -187,7 +187,7 @@ class StockWorkflowTest extends TestCase
     {
         $this->actingAs($this->superUser());
         $item = $this->item(0);
-        // Stock split: WH-1 has 3, WH-2 has 2 — neither alone covers a qty-5 request.
+        // Stock split: WH-1 has 3, WH-2 has 2 โ€” neither alone covers a qty-5 request.
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 3, 'to_label' => 'WH-1'])->assertCreated();
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 2, 'to_label' => 'WH-2'])->assertCreated();
 
@@ -222,7 +222,7 @@ class StockWorkflowTest extends TestCase
             'requester_name' => 'Tester', 'qty' => 5, 'reason' => 'x', 'status' => 'approved',
         ]);
 
-        // Allocations total 4, not 5 → rejected, nothing deducted.
+        // Allocations total 4, not 5 โ’ rejected, nothing deducted.
         $this->postJson("/api/stock-requests/{$req->id}/fulfill", [
             'allocations' => [['warehouse' => 'WH-1', 'qty' => 3], ['warehouse' => 'WH-2', 'qty' => 1]],
         ])->assertStatus(422);

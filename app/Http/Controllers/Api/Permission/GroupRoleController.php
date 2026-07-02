@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Permission;
 
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\AuditLog;
 use App\Models\Employee;
-use App\Models\GroupRole;
-use App\Models\Role;
+use App\Models\Permission\GroupRole;
+use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

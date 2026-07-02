@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Role;
+use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Broken-access-control coverage for the REST API: being authenticated is not
- * enough — a signed-in user who lacks the required permission must be refused
+ * enough โ€” a signed-in user who lacks the required permission must be refused
  * (403) on write endpoints across every module, before any action is taken.
  */
 class ApiAuthorizationTest extends TestCase
@@ -49,7 +49,7 @@ class ApiAuthorizationTest extends TestCase
         $this->actingAs($user)->json($method, $url, [])->assertForbidden();
     }
 
-    /** A super-admin (bypass) is NOT forbidden on the same endpoints — proves the 403 is the gate. */
+    /** A super-admin (bypass) is NOT forbidden on the same endpoints โ€” proves the 403 is the gate. */
     #[DataProvider('gatedWrites')]
     public function test_super_admin_is_not_forbidden(string $method, string $url): void
     {

@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\AppSetting;
 use App\Models\Employee;
-use App\Models\GroupRole;
-use App\Models\Role;
+use App\Models\Permission\GroupRole;
+use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,7 +31,7 @@ class GroupRoleMembershipTest extends TestCase
         Role::create(['key' => 'admin', 'name' => 'IT Technician', 'is_system' => false]);
     }
 
-    /** A super (Administrator) login account — bypasses the manage-groups gate. */
+    /** A super (Administrator) login account โ€” bypasses the manage-groups gate. */
     private function super(): User
     {
         return User::factory()->create(['role' => 'super']);
@@ -121,7 +121,7 @@ class GroupRoleMembershipTest extends TestCase
      * Mirrors a real provisioned account: the login User is linked to its Employee
      * via the users.employee_id FK, the User email differs from the Employee contact
      * email, and the Employee has no username. Moving INTO a group must still carry
-     * the role across — resolved through the FK, not email.
+     * the role across โ€” resolved through the FK, not email.
      */
     public function test_move_into_group_follows_role_via_employee_fk(): void
     {

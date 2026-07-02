@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AssetModel;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\RolePermission;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Models\Warehouse;
@@ -34,7 +34,7 @@ class MasterDataTest extends TestCase
         return $user;
     }
 
-    // ── Guest / unauthenticated ──────────────────────────────
+    // โ”€โ”€ Guest / unauthenticated โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_guest_cannot_access_brands(): void
     {
@@ -61,7 +61,7 @@ class MasterDataTest extends TestCase
         $this->getJson('/api/warehouses')->assertUnauthorized();
     }
 
-    // ── Brands ──────────────────────────────────────────────
+    // โ”€โ”€ Brands โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_super_can_create_brand(): void
     {
@@ -123,7 +123,7 @@ class MasterDataTest extends TestCase
             ->assertUnprocessable();
     }
 
-    // ── Asset Models ─────────────────────────────────────────
+    // โ”€โ”€ Asset Models โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_super_can_create_asset_model_with_brand(): void
     {
@@ -173,7 +173,7 @@ class MasterDataTest extends TestCase
         $this->assertDatabaseMissing('asset_models', ['id' => $model->id]);
     }
 
-    // ── Categories ───────────────────────────────────────────
+    // โ”€โ”€ Categories โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_super_can_create_category(): void
     {
@@ -186,11 +186,11 @@ class MasterDataTest extends TestCase
     public function test_super_can_create_category_with_thai_name(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/categories', ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป'])
+            ->postJson('/api/categories', ['name' => 'Laptop', 'name_th' => 'เนเธฅเนเธเธ—เนเธญเธ'])
             ->assertCreated()
-            ->assertJsonPath('data.name_th', 'แล็ปท็อป');
+            ->assertJsonPath('data.name_th', 'เนเธฅเนเธเธ—เนเธญเธ');
 
-        $this->assertDatabaseHas('categories', ['name' => 'Laptop', 'name_th' => 'แล็ปท็อป']);
+        $this->assertDatabaseHas('categories', ['name' => 'Laptop', 'name_th' => 'เนเธฅเนเธเธ—เนเธญเธ']);
     }
 
     public function test_category_name_is_required(): void
@@ -229,14 +229,14 @@ class MasterDataTest extends TestCase
         $this->assertDatabaseMissing('categories', ['id' => $category->id]);
     }
 
-    // ── Vendors ──────────────────────────────────────────────
+    // โ”€โ”€ Vendors โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_super_can_create_vendor(): void
     {
         $this->actingAs($this->superUser())
             ->postJson('/api/vendors', [
                 'name' => 'TechCorp',
-                'name_th' => 'เทคคอร์ป',
+                'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ',
                 'email' => 'sales@techcorp.com',
                 'phone' => '02-111-2222',
             ])
@@ -254,7 +254,7 @@ class MasterDataTest extends TestCase
 
     public function test_vendor_thai_name_is_required_on_update(): void
     {
-        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ']);
 
         $this->actingAs($this->superUser())
             ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd', 'name_th' => ''])
@@ -267,18 +267,18 @@ class MasterDataTest extends TestCase
         $this->actingAs($this->superUser())
             ->postJson('/api/vendors', [
                 'name' => 'TechCorp',
-                'name_th' => 'เทคคอร์ป',
+                'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ',
             ])
             ->assertCreated()
-            ->assertJsonPath('data.name_th', 'เทคคอร์ป');
+            ->assertJsonPath('data.name_th', 'เน€เธ—เธเธเธญเธฃเนเธ');
 
-        $this->assertDatabaseHas('vendors', ['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+        $this->assertDatabaseHas('vendors', ['name' => 'TechCorp', 'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ']);
     }
 
     public function test_vendor_email_must_be_valid(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/vendors', ['name' => 'X', 'name_th' => 'เอ็กซ์', 'email' => 'not-an-email'])
+            ->postJson('/api/vendors', ['name' => 'X', 'name_th' => 'เน€เธญเนเธเธเน', 'email' => 'not-an-email'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('email');
     }
@@ -292,10 +292,10 @@ class MasterDataTest extends TestCase
 
     public function test_super_can_update_vendor(): void
     {
-        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+        $vendor = Vendor::create(['name' => 'TechCorp', 'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ']);
 
         $this->actingAs($this->superUser())
-            ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd', 'name_th' => 'เทคคอร์ป จำกัด'])
+            ->putJson("/api/vendors/{$vendor->id}", ['name' => 'TechCorp Ltd', 'name_th' => 'เน€เธ—เธเธเธญเธฃเนเธ เธเธณเธเธฑเธ”'])
             ->assertOk()
             ->assertJsonPath('data.name', 'TechCorp Ltd');
     }
@@ -311,7 +311,7 @@ class MasterDataTest extends TestCase
         $this->assertDatabaseMissing('vendors', ['id' => $vendor->id]);
     }
 
-    // ── Warehouses ───────────────────────────────────────────
+    // โ”€โ”€ Warehouses โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
     public function test_super_can_create_warehouse(): void
     {

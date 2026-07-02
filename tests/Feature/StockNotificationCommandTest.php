@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Jobs\SendTemplatedEmail;
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\StockAlertLog;
 use App\Models\StockCount;
 use App\Models\StockItem;
