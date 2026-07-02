@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\AssetSource;
-use App\Enums\AssetStatus;
-use App\Enums\AssetType;
-use App\Models\Asset;
+use App\Enums\Asset\AssetSource;
+use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetType;
+use App\Models\Asset\Asset;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +13,14 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class AssetFactory extends Factory
 {
+    /**
+     * The domain-namespaced model this factory builds. Set explicitly because the
+     * flat factory name no longer maps to App\Models\Asset\Asset by convention.
+     *
+     * @var class-string<Asset>
+     */
+    protected $model = Asset::class;
+
     /**
      * @return array<string, mixed>
      */

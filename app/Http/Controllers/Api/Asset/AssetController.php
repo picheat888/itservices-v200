@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Asset;
 
-use App\Enums\AssetStatus;
+use App\Enums\Asset\AssetStatus;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreAssetRequest;
-use App\Http\Resources\AssetResource;
-use App\Models\Asset;
-use App\Models\AssetTransfer;
+use App\Http\Requests\Asset\StoreAssetRequest;
+use App\Http\Resources\Asset\AssetResource;
+use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
 use App\Models\AuditLog;
-use App\Services\AssetService;
+use App\Services\Asset\AssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;

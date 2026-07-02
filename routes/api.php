@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\Access\AccessController;
 use App\Http\Controllers\Api\Access\EmailGroupController;
 use App\Http\Controllers\Api\Access\FileShareController;
 use App\Http\Controllers\Api\Access\SocialPlatformController;
-use App\Http\Controllers\Api\AssetController;
+use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\AssetModelController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\BrandController;

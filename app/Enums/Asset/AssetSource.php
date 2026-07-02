@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Asset;
 
 /** How an asset was acquired: owned outright or rented/leased from a vendor. */
 enum AssetSource: string

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Asset;
 
-use App\Enums\AssetSource;
-use App\Enums\AssetStatus;
-use App\Enums\AssetType;
+use App\Enums\Asset\AssetSource;
+use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

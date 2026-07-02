@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Asset;
 
-use App\Enums\AssetSource;
-use App\Enums\AssetStatus;
-use App\Enums\AssetType;
+use App\Enums\Asset\AssetSource;
+use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetType;
 use App\Models\Contract\Contract;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,6 +16,15 @@ class Asset extends Model
 {
     /** @use HasFactory<AssetFactory> */
     use HasFactory;
+
+    /**
+     * Bind to the flat AssetFactory explicitly — factory auto-discovery would look for
+     * Database\Factories\Asset\AssetFactory under this domain sub-namespace and miss it.
+     */
+    protected static function newFactory(): AssetFactory
+    {
+        return AssetFactory::new();
+    }
 
     protected $fillable = [
         'tag', 'type', 'brand', 'model', 'serial', 'source', 'status',

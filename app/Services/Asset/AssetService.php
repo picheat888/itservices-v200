@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Asset;
 
-use App\Enums\AssetStatus;
-use App\Models\Asset;
-use App\Models\AssetTransfer;
+use App\Enums\Asset\AssetStatus;
+use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
 use App\Models\StockItem;
 
 class AssetService

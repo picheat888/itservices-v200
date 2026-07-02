@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Asset;
 
 /** Hardware category of an asset. Labels/icons are resolved on the frontend. */
 enum AssetType: string

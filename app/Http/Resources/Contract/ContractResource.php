@@ -3,7 +3,7 @@
 namespace App\Http\Resources\Contract;
 
 use App\Enums\Contract\ContractType;
-use App\Models\Asset;
+use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAttachment;
 use App\Models\Settings\AppSetting;
