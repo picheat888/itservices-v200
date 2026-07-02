@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const notifications: Dict = {
+export const notification: Dict = {
     "notifications": "เทมเพลตอีเมล",
     "notif_title": "การแจ้งเตือน",
     "notif_all": "ทั้งหมด",

@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const permissions: Dict = {
+export const permission: Dict = {
     "perm_other": "อื่น ๆ",
     "permissions": "สิทธิ์การใช้งาน",
     "perm_sub": "Role Templates, กลุ่มสิทธิ์ และบันทึกการตรวจสอบ",

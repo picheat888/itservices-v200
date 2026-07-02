@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const assets: Dict = {
+export const asset: Dict = {
     "assets_title": "การจัดการทรัพย์สิน",
     "assets_sub": "อุปกรณ์ที่ซื้อและเช่าใช้ในแต่ละแผนก",
     "asset_dashboard": "ภาพรวม",
