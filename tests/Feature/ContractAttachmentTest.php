@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contract;
-use App\Models\ContractAttachment;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Contract;
 
-use App\Enums\ContractType;
+use App\Enums\Contract\ContractType;
+use App\Models\Asset;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Contract;
 
-use App\Models\Contract;
-use App\Models\ContractAlertLog;
-use App\Models\ContractBellLog;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractAlertLog;
+use App\Models\Contract\ContractBellLog;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Services\Email\EmailNotificationService;

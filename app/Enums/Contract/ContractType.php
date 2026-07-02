@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Contract;
 
 /**
  * Category of a vendor/service contract. Mirrors the design's four radio-card

@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Contract;
 
-use App\Enums\ContractType;
+use App\Enums\Contract\ContractType;
 use App\Models\Asset;
-use App\Models\Contract;
-use App\Models\ContractAttachment;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractAttachment;
 use App\Models\Settings\AppSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

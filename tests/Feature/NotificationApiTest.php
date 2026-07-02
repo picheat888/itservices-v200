@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
