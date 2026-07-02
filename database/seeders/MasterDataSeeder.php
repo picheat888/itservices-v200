@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\AssetModel;
-use App\Models\Brand;
-use App\Models\Category;
-use App\Models\Unit;
-use App\Models\Vendor;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
+use App\Models\Settings\Unit;
+use App\Models\Settings\Vendor;
+use App\Models\Settings\WarrantyType;
 use App\Models\Warehouse;
-use App\Models\WarrantyType;
 use Illuminate\Database\Seeder;
 
 class MasterDataSeeder extends Seeder

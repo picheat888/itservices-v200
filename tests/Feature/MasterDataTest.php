@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\AssetModel;
-use App\Models\Brand;
-use App\Models\Category;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
+use App\Models\Settings\Vendor;
 use App\Models\User;
-use App\Models\Vendor;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

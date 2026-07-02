@@ -4,11 +4,11 @@ namespace Database\Seeders;
 
 use App\Models\Department;
 use App\Models\Employee;
-use App\Models\Location;
 use App\Models\Permission\GroupRole;
 use App\Models\Position;
 use App\Models\Section;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\Location;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
