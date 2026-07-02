@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stock;
 
-use App\Models\StockItem;
-use App\Models\StockLot;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
 use Illuminate\Support\Carbon;
 
 /**

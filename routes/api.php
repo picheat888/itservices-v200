@@ -26,13 +26,13 @@ use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Settings\UnitController;
 use App\Http\Controllers\Api\Settings\VendorController;
 use App\Http\Controllers\Api\Settings\WarrantyTypeController;
-use App\Http\Controllers\Api\StockCountController;
-use App\Http\Controllers\Api\StockItemController;
-use App\Http\Controllers\Api\StockMovementController;
-use App\Http\Controllers\Api\StockRequestController;
+use App\Http\Controllers\Api\Stock\StockCountController;
+use App\Http\Controllers\Api\Stock\StockItemController;
+use App\Http\Controllers\Api\Stock\StockMovementController;
+use App\Http\Controllers\Api\Stock\StockRequestController;
+use App\Http\Controllers\Api\Stock\WarehouseController;
 use App\Http\Controllers\Api\Ticket\TicketAttachmentController;
 use App\Http\Controllers\Api\Ticket\TicketController;
-use App\Http\Controllers\Api\WarehouseController;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 

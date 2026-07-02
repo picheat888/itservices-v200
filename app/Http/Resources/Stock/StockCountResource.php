@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Stock;
 
-use App\Models\StockCount;
+use App\Models\Stock\StockCount;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

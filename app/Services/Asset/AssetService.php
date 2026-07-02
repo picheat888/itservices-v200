@@ -5,7 +5,7 @@ namespace App\Services\Asset;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
-use App\Models\StockItem;
+use App\Models\Stock\StockItem;
 
 class AssetService
 {

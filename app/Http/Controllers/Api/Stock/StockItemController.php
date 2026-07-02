@@ -1,16 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StoreStockItemRequest;
-use App\Http\Resources\StockItemResource;
+use App\Http\Requests\Stock\StoreStockItemRequest;
+use App\Http\Resources\Stock\StockItemResource;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
-use App\Models\StockBalance;
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockLot;
+use App\Models\Stock\StockBalance;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockLot;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;

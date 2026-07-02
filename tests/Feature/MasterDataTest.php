@@ -7,8 +7,8 @@ use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Vendor;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
-use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\StockBalance;
-use App\Models\StockItem;
+use App\Models\Stock\StockBalance;
+use App\Models\Stock\StockItem;
 use App\Models\User;
-use App\Services\StockBalanceService;
+use App\Services\Stock\StockBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;

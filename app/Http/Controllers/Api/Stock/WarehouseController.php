@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Warehouse;
+use App\Models\Stock\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

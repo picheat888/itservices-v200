@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\StockItem;
+use App\Models\Stock\StockItem;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell alert that a stock item entered an out/low/over state. */

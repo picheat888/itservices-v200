@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\StockRequestResource;
+use App\Http\Resources\Stock\StockRequestResource;
 use App\Models\AuditLog;
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockMovement;
-use App\Models\StockRequest;
-use App\Services\StockBalanceService;
-use App\Services\StockLotService;
-use App\Services\StockNotificationService;
-use App\Services\StockSerialService;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockMovement;
+use App\Models\Stock\StockRequest;
+use App\Services\Stock\StockBalanceService;
+use App\Services\Stock\StockLotService;
+use App\Services\Stock\StockNotificationService;
+use App\Services\Stock\StockSerialService;
 use App\Support\DocNumber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

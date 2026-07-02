@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stock;
 
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockItemSerialEvent;
-use App\Models\StockMovement;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockMovement;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 

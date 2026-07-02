@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Stock;
 
 /** Lifecycle of a stock-count session. */
 enum StockCountStatus: string

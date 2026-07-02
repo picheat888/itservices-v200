@@ -11,6 +11,7 @@ use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\Brand;
+use App\Models\Stock\StockItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 

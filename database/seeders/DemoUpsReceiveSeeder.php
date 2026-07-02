@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockMovement;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockMovement;
 use App\Models\User;
-use App\Services\StockBalanceService;
-use App\Services\StockLotService;
+use App\Services\Stock\StockBalanceService;
+use App\Services\Stock\StockLotService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;

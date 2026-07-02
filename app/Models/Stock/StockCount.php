@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Stock;
 
-use App\Enums\StockCountAdjustMode;
-use App\Enums\StockCountStatus;
+use App\Enums\Stock\StockCountAdjustMode;
+use App\Enums\Stock\StockCountStatus;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
