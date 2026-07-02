@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Ticket;
 
 /**
  * Lifecycle state of a support ticket.

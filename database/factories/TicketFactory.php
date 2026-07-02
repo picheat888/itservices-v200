@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\TicketCategory;
-use App\Enums\TicketStatus;
+use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketStatus;
 use App\Models\Employee;
-use App\Models\Ticket;
+use App\Models\Ticket\Ticket;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,6 +13,14 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class TicketFactory extends Factory
 {
+    /**
+     * The domain-namespaced model this factory builds. Set explicitly because the
+     * flat factory name no longer maps to App\Models\Ticket\Ticket by convention.
+     *
+     * @var class-string<Ticket>
+     */
+    protected $model = Ticket::class;
+
     /**
      * A fresh ticket: Open, unassigned, no priority. Creates a standalone employee
      * as the requester so the factory works without external setup.

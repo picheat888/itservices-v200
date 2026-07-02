@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Employee;
-use App\Models\Ticket;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Ticket;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\TicketResource;
+use App\Http\Resources\Ticket\TicketResource;
 use App\Models\AuditLog;
-use App\Models\Ticket;
-use App\Models\TicketAttachment;
+use App\Models\Ticket\Ticket;
+use App\Models\Ticket\TicketAttachment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Employee;
-use App\Models\Ticket;
-use App\Models\TicketAttachment;
+use App\Models\Ticket\Ticket;
+use App\Models\Ticket\TicketAttachment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;

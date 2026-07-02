@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Ticket;
 
 /**
  * Impact-based priority. Null on a fresh ticket — an IT staff sets it when they

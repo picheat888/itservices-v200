@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Ticket;
 
-use App\Enums\TicketPriority;
-use App\Enums\TicketStatus;
+use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketStatus;
 use App\Models\Employee;
-use App\Models\Ticket;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 
 class TicketService

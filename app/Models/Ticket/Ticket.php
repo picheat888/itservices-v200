@@ -1,10 +1,13 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Ticket;
 
-use App\Enums\TicketCategory;
-use App\Enums\TicketPriority;
-use App\Enums\TicketStatus;
+use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketStatus;
+use App\Models\Asset;
+use App\Models\Employee;
+use App\Models\User;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +18,15 @@ class Ticket extends Model
 {
     /** @use HasFactory<TicketFactory> */
     use HasFactory;
+
+    /**
+     * Bind to the flat TicketFactory explicitly — factory auto-discovery would look for
+     * Database\Factories\Ticket\TicketFactory under this domain sub-namespace and miss it.
+     */
+    protected static function newFactory(): TicketFactory
+    {
+        return TicketFactory::new();
+    }
 
     protected $fillable = [
         'ticket_no', 'subject', 'subject_th', 'description',
