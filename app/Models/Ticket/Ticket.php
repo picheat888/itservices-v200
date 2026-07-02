@@ -5,7 +5,7 @@ namespace App\Models\Ticket;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
-use App\Models\Asset;
+use App\Models\Asset\Asset;
 use App\Models\Employee;
 use App\Models\User;
 use Database\Factories\TicketFactory;

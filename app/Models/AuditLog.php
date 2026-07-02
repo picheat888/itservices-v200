@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;

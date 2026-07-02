@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Asset;
 
-use App\Enums\AssetSource;
-use App\Models\Asset;
+use App\Enums\Asset\AssetSource;
+use App\Models\Asset\Asset;
 use App\Models\Settings\AppSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

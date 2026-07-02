@@ -2,9 +2,9 @@
 
 namespace App\Services\Contract;
 
-use App\Enums\AssetStatus;
+use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
-use App\Models\Asset;
+use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Vendor;
 use Illuminate\Support\Carbon;

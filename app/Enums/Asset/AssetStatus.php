@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Asset;
 
 /**
  * Lifecycle state of an asset.
