@@ -228,6 +228,7 @@ export interface Asset {
     initial_owner: string | null;
     department: string | null;
     location: string | null;
+    warehouse: string | null;
     value: number;
     value_display: string;
     supplier: string | null;

@@ -80,6 +80,9 @@ class AssetController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
         }
+        if ($request->filled('warehouse')) {
+            $query->where('warehouse', $request->query('warehouse'));
+        }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
         $paginator = $query->paginate($perPage);
@@ -214,7 +217,10 @@ class AssetController extends Controller
     public function markReceived(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
-        $asset = $this->service->markReceived($asset, $request->user()?->name);
+        $data = $request->validate([
+            'warehouse' => ['nullable', 'string', 'max:120'],
+        ]);
+        $asset = $this->service->markReceived($asset, $request->user()?->name, $data['warehouse'] ?? null);
         AuditLog::record('Received asset', $asset->tag);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();

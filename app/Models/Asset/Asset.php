@@ -30,7 +30,7 @@ class Asset extends Model
 
     protected $fillable = [
         'tag', 'type', 'brand', 'model', 'serial', 'source', 'status',
-        'owner', 'initial_owner', 'department', 'location', 'value', 'supplier',
+        'owner', 'initial_owner', 'department', 'location', 'warehouse', 'value', 'supplier',
         'purchase_date', 'warranty_end', 'contract_id', 'lease_start', 'lease_end',
         'registered_date', 'notes', 'last_reason',
     ];

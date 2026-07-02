@@ -1,6 +1,7 @@
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { ASSET_STATUS_META, ASSET_TYPES, AssetStatusBadge, AssetTypeIcon } from '../components/asset-meta';
+import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetToStockModal } from '../components/asset-to-stock-modal';
 import { AssetTransferDrawer } from '../components/asset-transfer-drawer';
 import { TableSkeleton } from '@/shared/components/skeletons';
@@ -10,6 +11,7 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers } from '../hooks/use-assets';
 import { useAuth } from '@/modules/auth';
+import { useWarehouses } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -34,6 +36,7 @@ import {
     SquarePen,
     Tag,
     Trash2,
+    Warehouse,
     X,
 } from 'lucide-react';
 import { assetApi } from '../api/assetApi';
@@ -125,10 +128,14 @@ export default function AssetsPage() {
     const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
     const [sourceFilter, setSourceFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState<AssetStatus | ''>('');
+    const [warehouseFilter, setWarehouseFilter] = useState('');
     const [page, setPage] = useState(1);
     const [perPage] = useState(20);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [detail, setDetail] = useState<Asset | null>(null);
+    const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
+
+    const { data: warehouses = [] } = useWarehouses();
 
     // Deep-link from a contract's linked-assets list: /assets?view=<id> opens that asset's
     // detail drawer (fetched by id since it may not be on the current page), then clears the param.
@@ -165,8 +172,9 @@ export default function AssetsPage() {
         type: typeFilter || undefined,
         source: sourceFilter || undefined,
         status: statusFilter || undefined,
+        warehouse: warehouseFilter || undefined,
     });
-    const { toggleMaintenance, receive, accept, bulk } = useAssetMutations();
+    const { toggleMaintenance, accept, bulk } = useAssetMutations();
     const { data: transfers = [] } = useAssetTransfers();
 
     const rows = listData?.data ?? [];
@@ -191,14 +199,15 @@ export default function AssetsPage() {
     };
 
     // True when any inventory list control differs from its default — drives the "Clear filters" pill.
-    const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter;
+    const hasActiveFilters = !!search || !!typeFilter || !!sourceFilter || !!statusFilter || !!warehouseFilter;
 
-    /** Reset the inventory search + type/source/status filters back to their defaults. */
+    /** Reset the inventory search + type/source/status/warehouse filters back to their defaults. */
     const clearFilters = () => {
         setSearch('');
         setTypeFilter('');
         setSourceFilter('');
         setStatusFilter('');
+        setWarehouseFilter('');
         setPage(1);
     };
 
@@ -437,6 +446,37 @@ export default function AssetsPage() {
                                         </SelectContent>
                                     </Select>
                                 </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Warehouse className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">{t('asset_warehouse')}:</span>
+                                    <Select
+                                        value={warehouseFilter || ALL}
+                                        onValueChange={(v) => {
+                                            setWarehouseFilter(v === ALL ? '' : v);
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-44">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value={ALL}>
+                                                <span className="flex items-center gap-2">
+                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
+                                                    {t('asset_all')}
+                                                </span>
+                                            </SelectItem>
+                                            {warehouses.map((w) => (
+                                                <SelectItem key={w.id} value={w.name}>
+                                                    <span className="flex items-center gap-2">
+                                                        <Warehouse className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                                                        {w.name}
+                                                    </span>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
 
@@ -493,6 +533,7 @@ export default function AssetsPage() {
                                             <th className="px-4 py-2.5">{t('asset_model')}</th>
                                             <th className="px-4 py-2.5">{t('asset_owner')}</th>
                                             <th className="px-4 py-2.5">{t('asset_dept')}</th>
+                                            <th className="px-4 py-2.5">{t('asset_warehouse')}</th>
                                             <th className="px-4 py-2.5">{t('asset_status')}</th>
                                             <th className="px-4 py-2.5">{t('asset_value')}</th>
                                             <th className="px-4 py-2.5 text-right">{t('asset_actions')}</th>
@@ -527,6 +568,16 @@ export default function AssetsPage() {
                                                 <td className="px-4 py-2.5">{a.owner}</td>
                                                 <td className="px-4 py-2.5">{a.department}</td>
                                                 <td className="px-4 py-2.5">
+                                                    {a.warehouse ? (
+                                                        <span className="inline-flex items-center gap-1.5">
+                                                            <Warehouse className="text-muted-foreground/70 h-3.5 w-3.5 shrink-0" />
+                                                            {a.warehouse}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-2.5">
                                                     <AssetStatusBadge status={a.status} t={t} />
                                                 </td>
                                                 <td className="px-4 py-2.5 font-mono text-xs">{a.value_display}</td>
@@ -550,7 +601,7 @@ export default function AssetsPage() {
                                                                 title={t('asset_mark_received')}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    receive.mutate(a.id);
+                                                                    setReceiveAsset(a);
                                                                 }}
                                                             >
                                                                 <CheckCircle2 className="h-4 w-4" />
@@ -693,7 +744,7 @@ export default function AssetsPage() {
                 }}
                 onReceive={(a) => {
                     setDetail(null);
-                    receive.mutate(a.id);
+                    setReceiveAsset(a);
                 }}
                 onEdit={canEdit ? openEdit : undefined}
                 canTransfer={canTransfer}
@@ -701,6 +752,7 @@ export default function AssetsPage() {
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
             <AssetTransferDrawer asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetToStockModal asset={toStockAsset} onClose={() => setToStockAsset(null)} />
+            <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
         </div>
     );
 }

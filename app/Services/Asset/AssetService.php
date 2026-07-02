@@ -95,13 +95,18 @@ class AssetService
         return $asset->fresh();
     }
 
-    /** IT receives a returned asset back into the pool: pending return → ready. */
-    public function markReceived(Asset $asset, ?string $performedBy = null): Asset
+    /**
+     * IT receives a returned asset back into the pool: pending return → ready.
+     * When a destination warehouse is supplied, the asset is stored there;
+     * otherwise it keeps whatever warehouse it already had.
+     */
+    public function markReceived(Asset $asset, ?string $performedBy = null, ?string $warehouse = null): Asset
     {
         $from = $asset->owner;
         $asset->update([
             'status' => AssetStatus::Ready,
             'owner' => 'Pool — IT',
+            'warehouse' => filled($warehouse) ? $warehouse : $asset->warehouse,
         ]);
         $this->logTransfer($asset, $from, 'Pool — IT', 'Returned to pool', $performedBy);
 

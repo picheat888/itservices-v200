@@ -6,7 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssetMutations } from '../hooks/use-assets';
 import { useContracts } from '@/modules/contract';
-import { useCurrency } from '@/modules/settings';
+import { useCurrency, useWarehouses } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -23,6 +23,7 @@ interface FormState {
     owner: string;
     department: string;
     location: string;
+    warehouse: string;
     value: string;
     supplier: string;
     purchase_date: string;
@@ -42,6 +43,7 @@ const EMPTY: FormState = {
     owner: '',
     department: '',
     location: '',
+    warehouse: '',
     value: '',
     supplier: '',
     purchase_date: '',
@@ -58,6 +60,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
     const { create, update } = useAssetMutations();
+    const { data: warehouses = [] } = useWarehouses();
+    const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })), [warehouses]);
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
@@ -76,6 +80,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 owner: editing.owner ?? '',
                 department: editing.department ?? '',
                 location: editing.location ?? '',
+                warehouse: editing.warehouse ?? '',
                 value: String(editing.value ?? ''),
                 supplier: editing.supplier ?? '',
                 purchase_date: editing.purchase_date ?? '',
@@ -122,6 +127,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             owner: form.owner.trim() || null,
             department: form.department.trim() || null,
             location: form.location.trim() || null,
+            warehouse: form.warehouse.trim() || null,
             value: Number(form.value),
             supplier: form.supplier.trim() || null,
             purchase_date: rented ? null : form.purchase_date || null,
@@ -215,6 +221,18 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                         </Field>
                         <Field label={t('asset_location')}>
                             <Input value={form.location} onChange={(e) => upd('location', e.target.value)} />
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <Field label={t('asset_warehouse')}>
+                            <SearchableSelect
+                                value={form.warehouse}
+                                onChange={(v) => upd('warehouse', v)}
+                                options={warehouseOptions}
+                                placeholder={lang === 'th' ? 'เลือกคลัง' : 'Select warehouse'}
+                                clearable
+                            />
                         </Field>
                     </div>
 

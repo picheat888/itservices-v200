@@ -24,6 +24,7 @@ export interface AssetPayload {
     owner?: string | null;
     department?: string | null;
     location?: string | null;
+    warehouse?: string | null;
     value: number;
     supplier?: string | null;
     purchase_date?: string | null;
@@ -41,7 +42,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 }
 
 export const assetApi = {
-    list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string }) =>
+    list: (params: { page: number; per_page: number; search?: string; type?: string; source?: string; status?: string; warehouse?: string }) =>
         http.get<AssetPageResponse>('/assets', { params }).then((r) => r.data),
     summary: () => http.get<AssetSummary>('/assets/summary').then((r) => r.data),
     // Assets selectable in the contract form's link picker (free assets + this contract's own).
@@ -56,7 +57,7 @@ export const assetApi = {
     remove: (id: number) => mutate<void>('delete', `/assets/${id}`),
     transfer: (id: number, owner: string, reason?: string) => mutate<Asset>('post', `/assets/${id}/transfer`, { owner, reason }),
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
-    receive: (id: number) => mutate<Asset>('post', `/assets/${id}/receive`),
+    receive: (id: number, warehouse?: string) => mutate<Asset>('post', `/assets/${id}/receive`, warehouse ? { warehouse } : {}),
     toggleMaintenance: (id: number) => mutate<Asset>('post', `/assets/${id}/maintenance`),
     toStock: (id: number, body: { sku: string; warehouse?: string; qty: number; reason?: string }) => mutate<Asset>('post', `/assets/${id}/to-stock`, body),
     bulk: async (ids: number[], op: 'maintenance' | 'writeoff', reason?: string): Promise<{ updated: number }> => {
