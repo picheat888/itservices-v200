@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\AppSetting;
+use App\Models\Settings\AppSetting;
 use App\Models\AuditLog;
-use App\Models\MailSetting;
+use App\Models\Settings\MailSetting;
 use App\Models\Permission\Role;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;

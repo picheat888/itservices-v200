@@ -3,12 +3,12 @@
 namespace App\Services;
 
 use App\Enums\EmployeeStatus;
-use App\Models\AppSetting;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Position;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;

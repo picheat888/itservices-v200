@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\AppSetting;
 use App\Models\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;

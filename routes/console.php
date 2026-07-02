@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\AppSetting;
+use App\Models\Settings\AppSetting;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;

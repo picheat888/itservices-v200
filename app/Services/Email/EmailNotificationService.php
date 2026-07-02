@@ -4,10 +4,10 @@ namespace App\Services\Email;
 
 use App\Jobs\SendTemplatedEmail;
 use App\Mail\TemplatedMail;
-use App\Models\AppSetting;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
-use App\Services\MailConfigService;
+use App\Models\Settings\AppSetting;
+use App\Services\Settings\MailConfigService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Settings;
 
-use App\Models\MailSetting;
+use App\Models\Settings\MailSetting;
 use Illuminate\Support\Facades\Config;
 
 /**

@@ -3,8 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Enums\AssetSource;
-use App\Models\AppSetting;
 use App\Models\Asset;
+use App\Models\Settings\AppSetting;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
