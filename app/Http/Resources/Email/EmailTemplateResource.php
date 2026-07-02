@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Email;
 
-use App\Models\EmailTemplate;
+use App\Models\Email\EmailTemplate;
 use App\Support\EmailTemplates;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

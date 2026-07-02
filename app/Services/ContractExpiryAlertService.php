@@ -7,6 +7,7 @@ use App\Models\ContractAlertLog;
 use App\Models\ContractBellLog;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
+use App\Services\Email\EmailNotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;

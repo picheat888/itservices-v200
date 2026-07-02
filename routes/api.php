@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ContractAttachmentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DepartmentController;
-use App\Http\Controllers\Api\EmailTemplateController;
+use App\Http\Controllers\Api\Email\EmailTemplateController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\GroupRoleController;
 use App\Http\Controllers\Api\LocationController;

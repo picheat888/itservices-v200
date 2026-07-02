@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Email;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\EmailTemplateResource;
+use App\Http\Resources\Email\EmailTemplateResource;
 use App\Models\AppSetting;
 use App\Models\AuditLog;
-use App\Models\EmailLog;
-use App\Models\EmailTemplate;
-use App\Services\EmailNotificationService;
+use App\Models\Email\EmailLog;
+use App\Models\Email\EmailTemplate;
+use App\Services\Email\EmailNotificationService;
 use App\Support\EmailTemplates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
 use App\Notifications\StockRequestNotification;
+use App\Services\Email\EmailNotificationService;
 use Illuminate\Notifications\Notification as NotificationInstance;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;

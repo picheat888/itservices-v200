@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\EmailNotificationService;
+use App\Services\Email\EmailNotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
