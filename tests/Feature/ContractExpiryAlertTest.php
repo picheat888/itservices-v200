@@ -6,8 +6,8 @@ use App\Jobs\SendTemplatedEmail;
 use App\Models\Contract;
 use App\Models\ContractAlertLog;
 use App\Models\ContractBellLog;
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Notifications\ContractExpiryNotification;
 use App\Services\ContractExpiryAlertService;
@@ -106,7 +106,7 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->assertSame(1, $secondRun);
         $this->assertSame(2, ContractBellLog::count());
-        // The email channel must NOT re-fire — same threshold already covered.
+        // The email channel must NOT re-fire โ€” same threshold already covered.
         $this->assertSame(1, ContractAlertLog::count());
     }
 
@@ -224,7 +224,7 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->assertSame(0, $belled);
         Notification::assertNothingSent();
-        // No ledger may be burned when nobody is configured to receive alerts —
+        // No ledger may be burned when nobody is configured to receive alerts โ€”
         // otherwise enabling the permission later would never deliver them.
         $this->assertSame(0, ContractBellLog::count());
         $this->assertSame(0, ContractAlertLog::count());
@@ -308,7 +308,7 @@ class ContractExpiryAlertTest extends TestCase
 
         $this->service()->run();   // day 1
         $this->travel(1)->days();
-        $this->service()->run();   // day 2 — overwrites, does not stack
+        $this->service()->run();   // day 2 โ€” overwrites, does not stack
 
         $this->assertSame(1, $this->bellsFor($user, $contract));
     }

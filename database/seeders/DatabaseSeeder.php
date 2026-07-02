@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\Permissions;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;

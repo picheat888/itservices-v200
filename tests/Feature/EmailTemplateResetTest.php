@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Email\EmailTemplate;
-use App\Models\Role;
+use App\Models\Permission\Role;
 use App\Models\User;
 use App\Support\EmailTemplates;
 use Database\Seeders\EmailTemplateSeeder;

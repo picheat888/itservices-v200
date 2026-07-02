@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\StockAlertLog;
 use App\Models\StockCount;
 use App\Models\StockItem;
@@ -74,7 +74,7 @@ class StockNotificationServiceTest extends TestCase
         $svc = app(StockNotificationService::class);
 
         $svc->alert($item);
-        $svc->alert($item); // same day → no duplicate ledger row
+        $svc->alert($item); // same day โ’ no duplicate ledger row
         $this->assertSame(1, StockAlertLog::where('stock_item_id', $item->id)->count());
 
         $item->update(['current_stock' => 20]); // back to normal
@@ -132,7 +132,7 @@ class StockNotificationServiceTest extends TestCase
 
         $item = StockItem::create(['sku' => 'OV-1', 'name' => 'Ov', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 10, 'current_stock' => 0]);
 
-        // Receive 50 → on-hand 50 > max 10 → overstock → realtime alert to module holders.
+        // Receive 50 โ’ on-hand 50 > max 10 โ’ overstock โ’ realtime alert to module holders.
         $this->actingAs($mover)->postJson('/api/stock-movements', [
             'type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 50,
         ])->assertCreated();
@@ -147,13 +147,13 @@ class StockNotificationServiceTest extends TestCase
         $owner = $this->userWithPerm('stock.request');
         $item = StockItem::create(['sku' => 'WF-1', 'name' => 'Wf', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 0, 'current_stock' => 10]);
 
-        // Owner submits → approvers get a bell
+        // Owner submits โ’ approvers get a bell
         $res = $this->actingAs($owner)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 1, 'reason' => 'need']);
         $res->assertCreated();
         $reqId = $res->json('data.id');
         Notification::assertSentTo($approver, StockRequestNotification::class);
 
-        // Approve → owner gets a bell
+        // Approve โ’ owner gets a bell
         $this->actingAs($approver)->postJson("/api/stock-requests/{$reqId}/approve")->assertOk();
         Notification::assertSentTo($owner, StockRequestNotification::class);
     }

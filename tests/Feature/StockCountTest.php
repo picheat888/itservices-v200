@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\RolePermission;
+use App\Models\Permission\RolePermission;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -21,7 +21,7 @@ class StockCountTest extends TestCase
     private function item(string $sku, int $stock, string $wh = 'Main'): StockItem
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100]);
-        // Warehouse scoping is balance-based now — park the stock in the given warehouse.
+        // Warehouse scoping is balance-based now โ€” park the stock in the given warehouse.
         $item->balances()->create(['warehouse' => $wh, 'qty' => $stock]);
 
         return $item;
@@ -47,7 +47,7 @@ class StockCountTest extends TestCase
         $c = $this->item('C-1', 3, 'Main');
         $this->actingAs($this->super());
 
-        // Pick only A-1 and C-1 — warehouse has 3 items but we count 2.
+        // Pick only A-1 and C-1 โ€” warehouse has 3 items but we count 2.
         $this->postJson('/api/stock-counts', ['warehouse' => 'Main', 'stock_item_ids' => [$a->id, $c->id]])
             ->assertCreated()
             ->assertJsonCount(2, 'data.lines');

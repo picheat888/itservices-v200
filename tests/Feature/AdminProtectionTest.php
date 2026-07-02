@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Employee;
-use App\Models\GroupRole;
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\GroupRole;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

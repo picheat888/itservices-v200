@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\EnsurePermission;
-use App\Models\RolePermission;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;

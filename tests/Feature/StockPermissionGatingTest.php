@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Role;
-use App\Models\RolePermission;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\StockItem;
 use App\Models\StockMovement;
 use App\Models\User;
@@ -48,7 +48,7 @@ class StockPermissionGatingTest extends TestCase
 
     /**
      * The dashboard summary endpoint must be gated by stock.view_dashboard,
-     * not the generic stock.view — a user who can see stock items but has no
+     * not the generic stock.view โ€” a user who can see stock items but has no
      * view_dashboard permission must receive 403.
      */
     public function test_summary_requires_view_dashboard(): void
@@ -62,7 +62,7 @@ class StockPermissionGatingTest extends TestCase
 
     /**
      * The request-list endpoint must be gated by stock.view_request, not the
-     * generic stock.view — a user who can view items but has no view_request
+     * generic stock.view โ€” a user who can view items but has no view_request
      * permission must receive 403.
      */
     public function test_request_list_requires_view_request(): void
@@ -76,7 +76,7 @@ class StockPermissionGatingTest extends TestCase
 
     /**
      * The movement log endpoint must be gated by stock.view_events, not the generic
-     * stock.view — a user who can view items but has no view_events permission must
+     * stock.view โ€” a user who can view items but has no view_events permission must
      * receive 403.
      */
     public function test_movement_log_requires_view_events(): void
@@ -97,7 +97,7 @@ class StockPermissionGatingTest extends TestCase
         $receiver = $this->userWith(['stock.module', 'stock.view', 'stock.receive']);
         $movement = $this->makeMovement();
 
-        // Not forbidden — a receiver may print labels even without stock.events.
+        // Not forbidden โ€” a receiver may print labels even without stock.events.
         $response = $this->actingAs($receiver)->get("/api/stock-movements/{$movement->id}/labels/pdf");
         $this->assertNotSame(403, $response->getStatusCode());
     }
@@ -136,7 +136,7 @@ class StockPermissionGatingTest extends TestCase
 
         $this->actingAs($blocked)->getJson('/api/stock-counts')->assertForbidden();
         $this->actingAs($allowed)->getJson('/api/stock-counts')->assertOk();           // list
-        $this->actingAs($allowed)->postJson('/api/stock-counts', [])->assertCreated(); // open — same key
+        $this->actingAs($allowed)->postJson('/api/stock-counts', [])->assertCreated(); // open โ€” same key
     }
 
     /**
@@ -149,8 +149,8 @@ class StockPermissionGatingTest extends TestCase
         $admin = $this->admin();
         $role = Role::create(['key' => 'norm_test', 'name' => 'Norm Test', 'is_system' => false]);
 
-        // module + stock.view present → stock.receive is valid
-        // stock.view_request absent → stock.fulfill is an orphan and must be dropped
+        // module + stock.view present โ’ stock.receive is valid
+        // stock.view_request absent โ’ stock.fulfill is an orphan and must be dropped
         $this->actingAs($admin)->putJson("/api/permissions/{$role->key}", [
             'permissions' => ['stock.module', 'stock.view', 'stock.receive', 'stock.fulfill'],
         ])->assertOk();
