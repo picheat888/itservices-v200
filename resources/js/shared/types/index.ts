@@ -243,6 +243,33 @@ export interface Asset {
     last_reason: string | null;
     created_at: string | null;
     updated_at: string | null;
+    // Present only on the single-asset endpoint (GET /assets/{id}).
+    transfers?: AssetTransferEntry[];
+    tickets?: AssetTicket[];
+}
+
+/** One custody event (transfer / return-to-pool) in an asset's history. */
+export interface AssetTransferEntry {
+    id: number;
+    date: string | null;
+    from_owner: string | null;
+    to_owner: string;
+    reason: string | null;
+    performed_by: string | null;
+}
+
+/** Compact repair-ticket row shown on an asset's "งานแจ้งซ่อม" tab. */
+export interface AssetTicket {
+    id: number;
+    ticket_no: string;
+    subject: string;
+    subject_th: string | null;
+    category: TicketCategory;
+    priority: TicketPriority | null;
+    status: TicketStatus;
+    assignee_name: string | null;
+    created_at: string | null;
+    resolved_at: string | null;
 }
 
 export interface AssetTransferLog {

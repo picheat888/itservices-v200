@@ -20,6 +20,14 @@ export const useAssets = (params: { page: number; per_page: number; search: stri
         placeholderData: (prev) => prev,
     });
 
+/** Full single asset (incl. transfer history + related tickets) — used by the detail dialog. */
+export const useAsset = (id: number | null | undefined) =>
+    useQuery({
+        queryKey: ['asset', id],
+        queryFn: () => assetApi.get(id as number),
+        enabled: id != null,
+    });
+
 export const useAssetSummary = () => useQuery({ queryKey: SUMMARY, queryFn: assetApi.summary });
 
 export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'], queryFn: assetApi.transfers });

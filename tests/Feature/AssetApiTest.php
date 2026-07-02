@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
 use App\Models\Settings\AppSetting;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -178,5 +180,51 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.status', 'pending_stock');
 
         $this->assertDatabaseHas('stock_items', ['sku' => 'STK-TEST-1', 'current_stock' => 2, 'name' => 'Dell Latitude']);
+    }
+
+    public function test_show_includes_transfer_history_and_related_tickets(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-2000']);
+
+        AssetTransfer::create([
+            'asset_id' => $asset->id,
+            'asset_tag' => $asset->tag,
+            'asset_model' => $asset->model,
+            'from_owner' => 'Pool — IT',
+            'to_owner' => 'EMP-2000',
+            'reason' => 'New hire',
+            'performed_by' => 'IT Admin',
+        ]);
+
+        $handler = User::factory()->create(['name' => 'Somchai IT', 'role' => 'admin']);
+        Ticket::factory()->create([
+            'related_asset_id' => $asset->id,
+            'subject' => 'Screen flickering',
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'assignee_id' => $handler->id,
+        ]);
+
+        $this->getJson("/api/assets/{$asset->id}")
+            ->assertOk()
+            ->assertJsonPath('data.transfers.0.to_owner', 'EMP-2000')
+            ->assertJsonPath('data.transfers.0.from_owner', 'Pool — IT')
+            ->assertJsonPath('data.transfers.0.reason', 'New hire')
+            ->assertJsonPath('data.tickets.0.subject', 'Screen flickering')
+            ->assertJsonPath('data.tickets.0.priority', 'high')
+            ->assertJsonPath('data.tickets.0.status', 'in_progress')
+            ->assertJsonPath('data.tickets.0.assignee_name', 'Somchai IT');
+    }
+
+    public function test_asset_list_omits_transfer_and_ticket_details(): void
+    {
+        $this->actingAs($this->super());
+        Asset::factory()->create();
+
+        $this->getJson('/api/assets')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.transfers')
+            ->assertJsonMissingPath('data.0.tickets');
     }
 }
