@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Http\Resources;
+namespace App\Http\Resources\Employee;
 
-use App\Models\Department;
+use App\Models\Employee\Department;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\User;
+use App\Notifications\NewEmployeeNotification;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,7 +24,7 @@ class NotificationDemoSeeder extends Seeder
     private const SEED_TAG = 'notification-demo';
 
     /** Notification class — matches the real one so the UI renders identically. */
-    private const TYPE = \App\Notifications\NewEmployeeNotification::class;
+    private const TYPE = NewEmployeeNotification::class;
 
     public function run(): void
     {
@@ -70,19 +71,19 @@ class NotificationDemoSeeder extends Seeder
                 $createdAt = $now->copy()->subMinutes($p['offset']);
 
                 $rows[] = [
-                    'id'              => (string) Str::uuid(),
-                    'type'            => self::TYPE,
+                    'id' => (string) Str::uuid(),
+                    'type' => self::TYPE,
                     'notifiable_type' => User::class,
-                    'notifiable_id'   => $user->id,
-                    'data'            => json_encode([
-                        'type'          => 'new_employee',
-                        'subtype'       => 'credentials_required',
-                        'employee_id'   => $emp->id,
+                    'notifiable_id' => $user->id,
+                    'data' => json_encode([
+                        'type' => 'new_employee',
+                        'subtype' => 'credentials_required',
+                        'employee_id' => $emp->id,
                         'employee_name' => $emp->name,
                         'employee_code' => $emp->code,
-                        'seed'          => self::SEED_TAG,
+                        'seed' => self::SEED_TAG,
                     ]),
-                    'read_at'    => $p['read'] ? $createdAt->copy()->addMinutes(5) : null,
+                    'read_at' => $p['read'] ? $createdAt->copy()->addMinutes(5) : null,
                     'created_at' => $createdAt,
                     'updated_at' => $createdAt,
                 ];

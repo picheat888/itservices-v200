@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Employee;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\StorePositionRequest;
-use App\Http\Resources\EmployeeResource;
-use App\Http\Resources\PositionResource;
+use App\Http\Requests\Employee\StorePositionRequest;
+use App\Http\Resources\Employee\EmployeeResource;
+use App\Http\Resources\Employee\PositionResource;
 use App\Models\AuditLog;
-use App\Models\Position;
+use App\Models\Employee\Position;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

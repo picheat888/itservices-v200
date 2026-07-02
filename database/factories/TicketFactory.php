@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketStatus;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
 use Illuminate\Database\Eloquent\Factories\Factory;
 

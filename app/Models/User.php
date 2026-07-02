@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;

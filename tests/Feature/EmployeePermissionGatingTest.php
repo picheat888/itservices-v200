@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Department;
+use App\Models\Employee\Department;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
-use App\Models\Position;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

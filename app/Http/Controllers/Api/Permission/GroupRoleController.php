@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Permission;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Employee;
+use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
