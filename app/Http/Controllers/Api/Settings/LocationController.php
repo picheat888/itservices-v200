@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Location;
+use App\Models\Settings\Location;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
