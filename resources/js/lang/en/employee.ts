@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const employees: Dict = {
+export const employee: Dict = {
     "employees": "Employees",
     "kpi_open_tickets": "Open tickets",
     "kpi_pending_requests": "Pending requests",

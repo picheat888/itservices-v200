@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const contracts: Dict = {
+export const contract: Dict = {
     "cd_delete_title": "ลบข้อมูลนี้?",
     "cd_delete_desc": "การลบนี้ถาวรและไม่สามารถย้อนกลับได้",
     "cd_edit_title": "บันทึกการแก้ไขนี้?",

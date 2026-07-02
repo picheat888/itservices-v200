@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const contracts: Dict = {
+export const contract: Dict = {
     "cd_delete_title": "Delete this record?",
     "cd_delete_desc": "This action is permanent and cannot be undone.",
     "cd_edit_title": "Save these changes?",

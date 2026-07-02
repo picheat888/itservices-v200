@@ -1,6 +1,6 @@
 import type { Dict } from '@/lang/types';
 
-export const employees: Dict = {
+export const employee: Dict = {
     "employees": "พนักงาน",
     "kpi_open_tickets": "Ticket ที่เปิดอยู่",
     "kpi_pending_requests": "คำขอรออนุมัติ",
