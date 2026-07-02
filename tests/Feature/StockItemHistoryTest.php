@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Permission\RolePermission;
-use App\Models\StockItem;
-use App\Models\StockItemSerialEvent;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerialEvent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

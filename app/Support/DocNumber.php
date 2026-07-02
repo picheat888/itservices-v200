@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-use App\Models\StockMovement;
+use App\Models\Stock\StockMovement;
 
 /**
  * Running document numbers for stock movements: <PREFIX>-<YEAR>-<NNN>, counted per

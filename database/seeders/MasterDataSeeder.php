@@ -8,7 +8,7 @@ use App\Models\Settings\Category;
 use App\Models\Settings\Unit;
 use App\Models\Settings\Vendor;
 use App\Models\Settings\WarrantyType;
-use App\Models\Warehouse;
+use App\Models\Stock\Warehouse;
 use Illuminate\Database\Seeder;
 
 class MasterDataSeeder extends Seeder

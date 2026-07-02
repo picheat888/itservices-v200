@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\StockRequest;
+use App\Models\Stock\StockRequest;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell alert for a stock request lifecycle event. */

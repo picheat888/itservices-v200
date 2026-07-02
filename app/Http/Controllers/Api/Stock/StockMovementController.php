@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\StockMovementResource;
+use App\Http\Resources\Stock\StockMovementResource;
 use App\Models\AuditLog;
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockItemSerialEvent;
-use App\Models\StockMovement;
-use App\Services\StockBalanceService;
-use App\Services\StockLotService;
-use App\Services\StockNotificationService;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockMovement;
+use App\Services\Stock\StockBalanceService;
+use App\Services\Stock\StockLotService;
+use App\Services\Stock\StockNotificationService;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;

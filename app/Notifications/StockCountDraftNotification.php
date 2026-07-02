@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\StockCount;
+use App\Models\Stock\StockCount;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell reminder that a stock count session is still in draft. */

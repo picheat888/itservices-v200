@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Services\StockNotificationService;
+use App\Services\Stock\StockNotificationService;
 use Illuminate\Console\Command;
 
 /** Daily Stock sweep: re-fires alerts, the waiting-request nag, and draft-count reminders. */

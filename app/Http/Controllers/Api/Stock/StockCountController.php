@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\Stock;
 
-use App\Enums\StockCountAdjustMode;
+use App\Enums\Stock\StockCountAdjustMode;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\StockCountResource;
-use App\Models\StockCount;
-use App\Services\StockCountService;
-use App\Services\StockNotificationService;
+use App\Http\Resources\Stock\StockCountResource;
+use App\Models\Stock\StockCount;
+use App\Services\Stock\StockCountService;
+use App\Services\Stock\StockNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

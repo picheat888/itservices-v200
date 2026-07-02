@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\StockItem;
-use App\Models\StockMovement;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockMovement;
 use App\Support\DocNumber;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;

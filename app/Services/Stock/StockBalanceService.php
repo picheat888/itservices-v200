@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stock;
 
-use App\Models\StockBalance;
-use App\Models\StockItem;
+use App\Models\Stock\StockBalance;
+use App\Models\Stock\StockItem;
 use Illuminate\Validation\ValidationException;
 
 /**

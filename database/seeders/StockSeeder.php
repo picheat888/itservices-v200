@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockMovement;
-use App\Models\StockRequest;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockMovement;
+use App\Models\Stock\StockRequest;
 use App\Models\User;
 use App\Support\DocNumber;
 use Illuminate\Database\Seeder;

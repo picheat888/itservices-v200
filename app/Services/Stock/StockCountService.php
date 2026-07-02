@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stock;
 
-use App\Enums\StockCountAdjustMode;
-use App\Enums\StockCountStatus;
+use App\Enums\Stock\StockCountAdjustMode;
+use App\Enums\Stock\StockCountStatus;
 use App\Models\AuditLog;
-use App\Models\StockCount;
-use App\Models\StockItem;
-use App\Models\StockItemSerial;
-use App\Models\StockItemSerialEvent;
-use App\Models\StockMovement;
+use App\Models\Stock\StockCount;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockItemSerial;
+use App\Models\Stock\StockItemSerialEvent;
+use App\Models\Stock\StockMovement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 

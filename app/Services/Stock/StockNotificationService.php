@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stock;
 
-use App\Models\StockAlertLog;
-use App\Models\StockCount;
-use App\Models\StockItem;
-use App\Models\StockRequest;
+use App\Models\Stock\StockAlertLog;
+use App\Models\Stock\StockCount;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockRequest;
 use App\Models\User;
 use App\Notifications\StockAlertNotification;
 use App\Notifications\StockCountDraftNotification;
