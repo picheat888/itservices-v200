@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Asset · View Details — Focus Dialog Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --brand:#2563eb; --brand-700:#1d4ed8;
+    --bg:#fff; --canvas:#f6f8fb;
+    --fg:hsl(222,30%,12%); --muted:hsl(215,16%,47%); --muted-2:hsl(215,18%,62%);
+    --border:hsl(214,20%,90%); --border-soft:hsl(214,22%,93%); --input:hsl(214,20%,86%);
+    --accent:hsl(210,24%,95%); --destructive:hsl(0,72%,51%);
+    --green:hsl(142,71%,45%); --amber:hsl(38,92%,50%); --red:hsl(0,72%,51%); --violet:hsl(258,70%,58%);
+    --radius:16px;
+    --shadow-dialog:0 32px 80px -20px rgba(16,24,40,.45), 0 0 0 1px rgba(16,24,40,.04);
+    --font:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;background:var(--canvas)}
+
+  .chooser{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 20px;background:rgba(11,18,32,.94);backdrop-filter:blur(8px);color:#e7ecf5;border-bottom:1px solid rgba(255,255,255,.08)}
+  .chooser .brandmark{display:flex;align-items:center;gap:9px;font-weight:800;padding-right:14px;margin-right:2px;border-right:1px solid rgba(255,255,255,.12)}
+  .chooser .brandmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,99,235,.25)}
+  .chooser .label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#8b96ab}
+  .chooser .seg{margin-left:auto;display:flex;gap:2px;background:rgba(255,255,255,.06);padding:3px;border-radius:9px}
+  .chooser .seg button{appearance:none;border:0;background:transparent;color:#aeb8cc;font-family:var(--font);font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;cursor:pointer}
+  .chooser .seg button.on{background:var(--brand);color:#fff}
+  .chooser .hint{width:100%;font-size:12px;color:#7e8aa1}
+
+  .appbg{position:fixed;inset:56px 0 0;overflow:hidden;background:var(--canvas)}
+  .appbg .sidebar{position:absolute;left:0;top:0;bottom:0;width:240px;background:#fff;border-right:1px solid var(--border)}
+  .appbg .topbar{position:absolute;left:240px;right:0;top:0;height:60px;background:#fff;border-bottom:1px solid var(--border)}
+  .appbg .content{position:absolute;left:272px;right:32px;top:96px;bottom:32px}
+  .appbg .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+  .appbg .skeleton{height:14px;border-radius:6px;background:#e9eef5;margin-bottom:14px}
+  .appbg::after{content:"";position:absolute;inset:0;background:rgba(11,18,32,.46);backdrop-filter:blur(3px)}
+
+  .overlay{position:fixed;inset:56px 0 0;z-index:100;display:flex;align-items:center;justify-content:center;padding:30px}
+  .dialog{position:relative;background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow-dialog);width:100%;max-width:1100px;height:min(860px,calc(100vh - 56px - 60px));display:flex;flex-direction:column;overflow:hidden;animation:pop .32s cubic-bezier(.16,1,.3,1)}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  .dlg-head{display:flex;align-items:center;gap:13px;padding:18px 22px 16px;position:relative}
+  .dlg-head .ico{width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,.1);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex:none}
+  .dlg-head .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+  .dlg-head h2{margin:1px 0 0;font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .dlg-head h2 .code{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand-700);background:rgba(37,99,235,.08);padding:2px 8px;border-radius:6px}
+  .dlg-head .head-right{margin-left:auto;display:flex;align-items:center;gap:10px;padding-right:42px}
+  .dlg-head .x{position:absolute;right:14px;top:16px;border:0;background:transparent;color:var(--muted);cursor:pointer;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center}
+  .dlg-head .x:hover{background:var(--accent);color:var(--fg)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;border:1px solid}
+  .badge .pip{width:7px;height:7px;border-radius:50%}
+  .badge.sm{padding:2px 9px;font-size:11.5px}
+  .badge.green{color:hsl(142,60%,32%);background:hsl(142,71%,45%,.12);border-color:hsl(142,71%,45%,.3)} .badge.green .pip{background:var(--green)}
+  .badge.amber{color:hsl(32,80%,38%);background:hsl(38,92%,50%,.13);border-color:hsl(38,92%,50%,.32)} .badge.amber .pip{background:var(--amber)}
+  .badge.red{color:hsl(0,65%,42%);background:hsl(0,72%,51%,.12);border-color:hsl(0,72%,51%,.3)} .badge.red .pip{background:var(--red)}
+  .badge.gray{color:var(--muted);background:var(--accent);border-color:var(--border)} .badge.gray .pip{background:var(--muted-2)}
+  .badge.blue{color:var(--brand-700);background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.3)} .badge.blue .pip{background:var(--brand)}
+  .badge.violet{color:hsl(258,55%,46%);background:hsl(258,70%,58%,.12);border-color:hsl(258,70%,58%,.3)} .badge.violet .pip{background:var(--violet)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:6px;background:rgba(37,99,235,.1);color:var(--brand-700)}
+  .pill.muted{background:var(--accent);color:var(--muted)}
+
+  .tabs{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--border-soft)}
+  .tab{position:relative;appearance:none;border:0;background:transparent;font-family:var(--font);font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;padding:13px 16px;transition:.15s}
+  .tab:hover{color:var(--fg)}
+  .tab .cnt{margin-left:7px;font-family:var(--mono);font-size:11px;font-weight:600;color:var(--muted-2);background:var(--accent);border-radius:999px;padding:1px 7px}
+  .tab.active{color:var(--brand-700)}
+  .tab.active .cnt{color:var(--brand-700);background:rgba(37,99,235,.1)}
+  .tab.active::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:var(--brand)}
+
+  .dlg-body{flex:1;min-height:0;display:flex;flex-direction:column}
+  .dlg-body.scroll{overflow:auto;padding:22px}
+  .dlg-body.fill{overflow:hidden;padding:22px}
+  .pane{display:none;animation:rise .28s cubic-bezier(.16,1,.3,1)}
+  .pane.show{display:block}
+  .pane.fillpane.show{display:flex;flex-direction:column;height:100%}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .dlg-foot{display:flex;align-items:center;gap:8px;padding:11px 18px;border-top:1px solid var(--border-soft);background:#fcfdff}
+  .btn{appearance:none;border:0;font-family:var(--font);font-weight:600;font-size:13px;cursor:pointer;border-radius:9px;padding:0 13px;height:34px;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.16s}
+  .btn svg{width:15px;height:15px}
+  .btn-ghost{background:#fff;color:var(--fg);border:1.5px solid var(--border)} .btn-ghost:hover{background:var(--accent)}
+  .btn-outline{background:#fff;color:var(--fg);border:1.5px solid var(--border)} .btn-outline:hover{background:var(--accent)}
+  .btn-primary{background:var(--brand);color:#fff} .btn-primary:hover{background:var(--brand-700)}
+
+  /* KPI strip */
+  .kpi{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--border);border-radius:14px;overflow:hidden;background:hsl(214,30%,98%)}
+  .kpi > div{padding:14px 18px;border-right:1px solid var(--border-soft)}
+  .kpi > div:last-child{border-right:0}
+  .kpi .k{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+  .kpi .v{margin-top:3px;font-family:var(--mono);font-size:22px;font-weight:700;line-height:1.1}
+  .kpi .v.txt{font-family:var(--font);font-size:16px}
+  .kpi .v .cur{font-size:13px;color:var(--muted)}
+  .kpi .sub{font-size:11px;color:var(--muted);margin-top:3px}
+  .kpi .sub.warn{color:hsl(32,80%,38%);font-weight:600}
+  .kpi .sub.ok{color:hsl(142,60%,32%);font-weight:600}
+
+  .section-label{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin:0 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 18px}
+  .meta .k{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+  .meta .v{font-size:13.5px;font-weight:500}
+  .meta .v.mono{font-family:var(--mono)}
+  .stack{display:flex;flex-direction:column;gap:22px}
+  .cols{display:grid;grid-template-columns:1fr 300px;gap:26px;align-items:start}
+
+  /* contract card (rented) */
+  .ct-card{border:1px solid var(--border);border-radius:13px;padding:14px 16px;background:linear-gradient(180deg,hsl(214,40%,98%),#fff)}
+  .ct-card .ct-top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+  .ct-card .ct-ico{width:32px;height:32px;border-radius:9px;background:rgba(37,99,235,.1);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex:none}
+  .ct-card .ct-code{font-family:var(--mono);font-size:12.5px;font-weight:600}
+  .ct-card .ct-vendor{font-size:11.5px;color:var(--muted)}
+  .ct-line{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-bottom:1px dashed var(--border-soft)}
+  .ct-line:last-of-type{border-bottom:0}
+  .ct-line .kk{color:var(--muted)} .ct-line .vv{font-weight:500}
+  .ct-line .vv.mono{font-family:var(--mono)}
+  .notes-box{background:hsl(214,30%,97%);border:1px solid var(--border-soft);border-radius:10px;padding:11px 13px;font-size:13px;white-space:pre-wrap}
+  .reason-box{background:hsl(38,92%,50%,.08);border:1px solid hsl(38,92%,50%,.25);color:hsl(32,70%,34%);border-radius:10px;padding:11px 13px;font-size:13px}
+
+  /* tables */
+  .dt-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .pane[data-pane="history"] .dt-wrap,.pane[data-pane="tickets"] .dt-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+  .subj{font-weight:600}
+  .subj .no{font-family:var(--mono);font-size:11px;color:var(--muted-2);display:block;margin-bottom:1px}
+  .tk-row{cursor:pointer;transition:background .12s} .tk-row:hover{background:var(--accent)}
+  .dt-body{flex:1;min-height:0;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:#fafbfd;padding:9px 13px;border-bottom:1px solid var(--border-soft)}
+  tbody td{padding:9px 13px;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  tbody tr:last-child td{border-bottom:0}
+  .mono{font-family:var(--mono)}
+  .xs{font-size:12px}
+  .muted{color:var(--muted)}
+  .flow{display:inline-flex;align-items:center;gap:7px;font-size:12.5px}
+  .flow .arr{color:var(--muted-2)}
+  .flow .from{color:var(--muted)}
+  .flow .to{font-weight:600}
+  .flow .pool{color:var(--brand-700)}
+  .dt-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;border-top:1px solid var(--border-soft);font-size:12.5px;color:var(--muted)}
+  .nav{display:flex;align-items:center;gap:4px}
+  .pg-btn{appearance:none;border:1.5px solid var(--border);background:#fff;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--fg)}
+  .pg-btn:hover:not(:disabled){background:var(--accent)} .pg-btn:disabled{opacity:.4;cursor:default}
+  .empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:42px 20px;color:var(--muted);text-align:center}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="chooser">
+  <div class="brandmark"><span class="dot"></span> IT Service Desk</div>
+  <span class="label">Mockup · Asset View Details (focus dialog)</span>
+  <div class="seg" id="seg">
+    <button class="on" data-case="rented">เช่า (deployed)</button>
+    <button data-case="owned">ซื้อ (ready)</button>
+    <button data-case="return">รอรับคืน</button>
+  </div>
+  <span class="hint">คลิก tab สลับ · แท็บ History กด Next แบ่งหน้า · ปุ่มด้านบนขวาสลับตัวอย่าง asset (เช่า/ซื้อ/รอรับคืน)</span>
+</div>
+
+<div class="appbg">
+  <div class="sidebar"></div><div class="topbar"></div>
+  <div class="content">
+    <div class="card"><div class="skeleton" style="width:30%"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:60%;margin-bottom:0"></div></div>
+    <div class="card"><div class="skeleton" style="width:24%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:70%;margin-bottom:0"></div></div>
+  </div>
+</div>
+
+<div class="overlay">
+  <div class="dialog">
+    <!-- Header -->
+    <div class="dlg-head">
+      <div class="ico" id="hIco"></div>
+      <div>
+        <div class="eyebrow">ทรัพย์สิน · Asset</div>
+        <h2><span id="hTitle"></span> <span class="code" id="hTag"></span> <span class="pill" id="hType"></span> <span class="pill muted" id="hSource"></span></h2>
+      </div>
+      <div class="head-right"><span id="hStatus"></span></div>
+      <button class="x" title="ปิด"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="tickets">งานแจ้งซ่อม <span class="cnt" id="tkCount">0</span></button>
+      <button class="tab" data-tab="history">History <span class="cnt" id="hCount">0</span></button>
+    </div>
+
+    <!-- Body -->
+    <div class="dlg-body scroll" id="body">
+
+      <!-- Overview -->
+      <div class="pane show" data-pane="overview">
+        <div class="stack">
+          <!-- KPI strip -->
+          <div class="kpi">
+            <div><div class="k">มูลค่า</div><div class="v" id="kVal"></div><div class="sub" id="kValSub"></div></div>
+            <div><div class="k" id="kCovK">การรับประกัน</div><div class="v txt" id="kCov"></div><div class="sub" id="kCovSub"></div></div>
+            <div><div class="k">ผู้ถือครองปัจจุบัน</div><div class="v txt" id="kOwner"></div><div class="sub" id="kOwnerSub"></div></div>
+          </div>
+
+          <div class="cols">
+            <div class="stack" style="gap:22px">
+              <div>
+                <div class="section-label">ข้อมูลทั่วไป</div>
+                <div class="meta-grid">
+                  <div class="meta"><div class="k">ประเภท</div><div class="v" id="mType"></div></div>
+                  <div class="meta"><div class="k">ยี่ห้อ</div><div class="v" id="mBrand"></div></div>
+                  <div class="meta"><div class="k">Serial</div><div class="v mono" id="mSerial"></div></div>
+                  <div class="meta"><div class="k">ที่ตั้ง</div><div class="v" id="mLoc"></div></div>
+                </div>
+              </div>
+              <div>
+                <div class="section-label">การถือครอง</div>
+                <div class="meta-grid">
+                  <div class="meta"><div class="k">ผู้ถือครอง</div><div class="v" id="mOwner"></div></div>
+                  <div class="meta"><div class="k">ผู้ถือครองเริ่มต้น</div><div class="v" id="mInit"></div></div>
+                  <div class="meta"><div class="k">แผนก</div><div class="v" id="mDept"></div></div>
+                  <div class="meta"><div class="k">ลงทะเบียนเมื่อ</div><div class="v mono" id="mReg"></div></div>
+                </div>
+              </div>
+              <div>
+                <div class="section-label">การได้มา</div>
+                <div class="meta-grid" id="mAcq"></div>
+              </div>
+              <div id="notesWrap" style="display:none">
+                <div class="section-label">หมายเหตุ</div>
+                <div class="notes-box" id="mNotes"></div>
+              </div>
+              <div id="reasonWrap" style="display:none">
+                <div class="section-label">เหตุผลล่าสุด</div>
+                <div class="reason-box" id="mReason"></div>
+              </div>
+            </div>
+
+            <!-- right rail -->
+            <div class="stack" style="gap:16px">
+              <div id="ctWrap" style="display:none">
+                <div class="section-label">สัญญาที่ผูก</div>
+                <div class="ct-card">
+                  <div class="ct-top">
+                    <div class="ct-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg></div>
+                    <div><div class="ct-code" id="ctCode"></div><div class="ct-vendor" id="ctVendor"></div></div>
+                  </div>
+                  <div class="ct-line"><span class="kk">ประเภท</span><span class="vv" id="ctType"></span></div>
+                  <div class="ct-line"><span class="kk">เริ่ม</span><span class="vv mono" id="ctStart"></span></div>
+                  <div class="ct-line"><span class="kk">สิ้นสุด</span><span class="vv mono" id="ctEnd"></span></div>
+                  <div class="ct-line"><span class="kk">ค่าเช่า</span><span class="vv mono" id="ctVal"></span></div>
+                  <a class="btn btn-outline" style="width:100%;margin-top:12px" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg> เปิดสัญญา</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Repair tickets (fillHeight table) -->
+      <div class="pane fillpane" data-pane="tickets">
+        <div class="dt-wrap">
+          <div class="dt-body">
+            <table>
+              <thead><tr><th>เรื่อง</th><th style="width:110px">หมวดหมู่</th><th style="width:100px">ความสำคัญ</th><th style="width:120px">สถานะ</th><th style="width:110px">วันที่แจ้ง</th><th style="width:120px">ผู้รับผิดชอบ</th></tr></thead>
+              <tbody id="tkRows"></tbody>
+            </table>
+          </div>
+          <div class="dt-foot">
+            <span id="tkRange"></span>
+            <div class="nav">
+              <button class="pg-btn" id="tkPrev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <span id="tkLabel" style="font-weight:600;color:var(--fg);padding:0 4px"></span>
+              <button class="pg-btn" id="tkNext"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History (fillHeight table) -->
+      <div class="pane fillpane" data-pane="history">
+        <div class="dt-wrap">
+          <div class="dt-body">
+            <table>
+              <thead><tr><th style="width:120px">วันที่</th><th>จาก → ถึง</th><th>เหตุผล</th><th style="width:130px">โดย</th></tr></thead>
+              <tbody id="histRows"></tbody>
+            </table>
+          </div>
+          <div class="dt-foot">
+            <span id="hxRange"></span>
+            <div class="nav">
+              <button class="pg-btn" id="hxPrev"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+              <span id="hxLabel" style="font-weight:600;color:var(--fg);padding:0 4px"></span>
+              <button class="pg-btn" id="hxNext"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="dlg-foot">
+      <button class="btn btn-outline" style="margin-right:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> แก้ไข</button>
+      <button class="btn btn-primary" id="ctxBtn"></button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ---- Icons ---- */
+  const ICON_LAPTOP='<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>';
+
+  /* ---- Sample assets (3 states) ---- */
+  const CASES={
+    rented:{
+      title:'MacBook Pro 14"', tag:'AST-NB-0042', type:'โน้ตบุ๊ก', source:'เช่า', sourceCls:'',
+      status:{cls:'green',label:'ใช้งานอยู่'},
+      val:'฿8,500', valSub:'ต่อเดือน (เช่า)',
+      covK:'ความคุ้มครอง (สัญญา)', cov:'ถึง 2027-12-31', covSub:{cls:'ok',text:'เหลือ 547 วัน'},
+      owner:'สมชาย ใจดี', ownerSub:'ฝ่ายบัญชี',
+      brand:'Apple', serial:'C02XK1ABJGH7', loc:'สำนักงานใหญ่ ชั้น 3',
+      initOwner:'Pool — IT', dept:'ฝ่ายบัญชี', reg:'2026-01-05',
+      acq:[['มูลค่า/เดือน','฿8,500','mono'],['สัญญาที่ผูก','CT-2026-003','mono'],['เริ่มเช่า','2026-01-01','mono'],['สิ้นสุดเช่า','2027-12-31','mono'],['ผู้จำหน่าย','SVOA','']],
+      notes:'เครื่องเช่าประจำฝ่ายบัญชี ติดตั้ง VPN + โปรแกรมบัญชีแล้ว',
+      reason:'', contract:{code:'CT-2026-003',vendor:'SVOA Public Co., Ltd.',type:'Hardware (เช่า)',start:'2026-01-01',end:'2027-12-31',val:'฿8,500/เดือน'},
+      ctx:{label:'โอนย้าย',icon:'transfer'},
+      tk:[
+        ['TKT-2871','จอมีเส้นรบกวนด้านซ้าย','hardware','high','in_progress','2026-06-25','วิชัย'],
+        ['TKT-2790','ติดตั้ง VPN + โปรแกรมบัญชี','software','medium','completed','2026-03-20','สมศักดิ์'],
+        ['TKT-2612','เชื่อมต่อ Wi-Fi สำนักงานไม่ได้','network','low','completed','2026-01-12','วิชัย'],
+      ],
+      hist:[
+        ['2026-06-20','Pool — IT','สมชาย ใจดี','pool','มอบหมายเครื่องให้พนักงานใหม่','วิชัย (IT)'],
+        ['2026-03-15','สมหญิง รักงาน','Pool — IT','','คืนเข้าคลัง (ย้ายแผนก)','วิชัย (IT)','ret'],
+        ['2026-01-10','Pool — IT','สมหญิง รักงาน','pool','มอบหมายครั้งแรกหลังรับเครื่องเช่า','วิชัย (IT)'],
+      ]
+    },
+    owned:{
+      title:'Dell OptiPlex 7010', tag:'AST-PC-0117', type:'คอมพิวเตอร์ตั้งโต๊ะ', source:'ซื้อ', sourceCls:'',
+      status:{cls:'blue',label:'พร้อมใช้งาน'},
+      val:'฿24,900', valSub:'ราคาซื้อ',
+      covK:'การรับประกัน', cov:'ถึง 2028-02-15', covSub:{cls:'ok',text:'เหลือ ~1 ปี 7 เดือน'},
+      owner:'—', ownerSub:'อยู่ใน Pool',
+      brand:'Dell', serial:'7010XKJ22', loc:'คลัง IT',
+      initOwner:'Pool — IT', dept:'—', reg:'2026-02-16',
+      acq:[['มูลค่า','฿24,900','mono'],['วันที่ซื้อ','2026-02-15','mono'],['สิ้นสุดประกัน','2028-02-15','mono'],['ผู้จำหน่าย','JIB Computer','']],
+      notes:'', reason:'', contract:null,
+      ctx:{label:'โอนย้าย',icon:'transfer'},
+      tk:[],
+      hist:[]
+    },
+    return:{
+      title:'iPhone 15 Pro', tag:'AST-MB-0088', type:'มือถือ', source:'ซื้อ', sourceCls:'',
+      status:{cls:'amber',label:'รอรับคืน'},
+      val:'฿42,900', valSub:'ราคาซื้อ',
+      covK:'การรับประกัน', cov:'ถึง 2027-05-30', covSub:{cls:'warn',text:'เหลือ 62 วัน'},
+      owner:'อนุชา พากเพียร', ownerSub:'กำลังคืน → Pool',
+      brand:'Apple', serial:'F2LXK9P8Q1', loc:'ฝ่ายขาย',
+      initOwner:'Pool — IT', dept:'ฝ่ายขาย', reg:'2026-05-20',
+      acq:[['มูลค่า','฿42,900','mono'],['วันที่ซื้อ','2025-05-30','mono'],['สิ้นสุดประกัน','2027-05-30','mono'],['ผู้จำหน่าย','Studio 7','']],
+      notes:'', reason:'พนักงานลาออก — แจ้งคืนอุปกรณ์',
+      contract:null, ctx:{label:'ยืนยันรับคืน',icon:'check'},
+      tk:[
+        ['TKT-2855','แบตเตอรี่เสื่อมเร็วผิดปกติ','hardware','medium','completed','2026-05-10','สมศักดิ์'],
+        ['TKT-2650','ตั้งค่าอีเมลบริษัท + MDM','software','low','completed','2025-06-05','วิชัย'],
+      ],
+      hist:[
+        ['2026-06-28','อนุชา พากเพียร','Pool — IT','','แจ้งคืน (พนักงานลาออก)','อนุชา','ret'],
+        ['2025-11-02','ธนา มั่งมี','อนุชา พากเพียร','','โอนย้ายภายในฝ่ายขาย','วิชัย (IT)'],
+        ['2025-06-01','Pool — IT','ธนา มั่งมี','pool','มอบหมายครั้งแรก','วิชัย (IT)'],
+      ]
+    }
+  };
+
+  const ICON_CTX={
+    transfer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+    check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+  };
+
+  let CUR='rented';
+
+  function render(){
+    const a=CASES[CUR];
+    // header
+    document.getElementById('hIco').innerHTML=ICON_LAPTOP;
+    document.getElementById('hTitle').textContent=a.title;
+    document.getElementById('hTag').textContent=a.tag;
+    document.getElementById('hType').textContent=a.type;
+    document.getElementById('hSource').textContent=a.source;
+    document.getElementById('hStatus').innerHTML=`<span class="badge ${a.status.cls}"><span class="pip"></span> ${a.status.label}</span>`;
+    // KPI
+    document.getElementById('kVal').innerHTML=`<span class="cur">${a.val.charAt(0)}</span>${a.val.slice(1)}`;
+    document.getElementById('kValSub').textContent=a.valSub;
+    document.getElementById('kCovK').textContent=a.covK;
+    document.getElementById('kCov').textContent=a.cov;
+    const cs=document.getElementById('kCovSub'); cs.textContent=a.covSub.text; cs.className='sub '+a.covSub.cls;
+    document.getElementById('kOwner').textContent=a.owner;
+    document.getElementById('kOwnerSub').textContent=a.ownerSub;
+    // meta
+    document.getElementById('mType').textContent=a.type;
+    document.getElementById('mBrand').textContent=a.brand;
+    document.getElementById('mSerial').textContent=a.serial;
+    document.getElementById('mLoc').textContent=a.loc;
+    document.getElementById('mOwner').textContent=a.owner;
+    document.getElementById('mInit').textContent=a.initOwner;
+    document.getElementById('mDept').textContent=a.dept;
+    document.getElementById('mReg').textContent=a.reg;
+    document.getElementById('mAcq').innerHTML=a.acq.map(x=>`<div class="meta"><div class="k">${x[0]}</div><div class="v ${x[2]}">${x[1]}</div></div>`).join('');
+    // notes / reason
+    document.getElementById('notesWrap').style.display=a.notes?'block':'none';
+    document.getElementById('mNotes').textContent=a.notes;
+    document.getElementById('reasonWrap').style.display=a.reason?'block':'none';
+    document.getElementById('mReason').textContent=a.reason;
+    // contract card
+    const cw=document.getElementById('ctWrap');
+    if(a.contract){cw.style.display='block';
+      document.getElementById('ctCode').textContent=a.contract.code;
+      document.getElementById('ctVendor').textContent=a.contract.vendor;
+      document.getElementById('ctType').textContent=a.contract.type;
+      document.getElementById('ctStart').textContent=a.contract.start;
+      document.getElementById('ctEnd').textContent=a.contract.end;
+      document.getElementById('ctVal').textContent=a.contract.val;
+    } else {cw.style.display='none';}
+    // context button
+    document.getElementById('ctxBtn').innerHTML=ICON_CTX[a.ctx.icon]+' '+a.ctx.label;
+    // repair tickets
+    document.getElementById('tkCount').textContent=a.tk.length;
+    document.querySelector('.tab[data-tab="tickets"] .cnt').style.display=a.tk.length?'':'none';
+    tkPage=1; refitTk();
+    // history
+    document.getElementById('hCount').textContent=a.hist.length;
+    document.querySelector('.tab[data-tab="history"] .cnt').style.display=a.hist.length?'':'none';
+    hxPage=1; refitHist();
+  }
+
+  /* ---- tabs ---- */
+  const body=document.getElementById('body');
+  document.querySelectorAll('#tabs .tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('#tabs .tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const id=btn.dataset.tab;
+    const isTable=(id==='history'||id==='tickets');
+    document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('show',p.dataset.pane===id));
+    body.classList.toggle('fill',isTable);
+    body.classList.toggle('scroll',!isTable);
+    if(id==='history') setTimeout(refitHist,0);
+    if(id==='tickets') setTimeout(refitTk,0);
+  }));
+
+  /* ---- Repair tickets fill-height pagination ---- */
+  const TK_CAT={hardware:'ฮาร์ดแวร์',software:'ซอฟต์แวร์',network:'เครือข่าย',other:'อื่น ๆ'};
+  const TK_PRIO={critical:['red','วิกฤต'],high:['amber','สูง'],medium:['blue','กลาง'],low:['gray','ต่ำ']};
+  const TK_STAT={open:['amber','รอรับเรื่อง'],in_progress:['blue','กำลังดำเนินการ'],completed:['green','เสร็จสิ้น'],canceled:['gray','ยกเลิก']};
+  let tkSize=8,tkPage=1;
+  const tkRows=document.getElementById('tkRows');
+  const tkBody=document.querySelector('.pane[data-pane="tickets"] .dt-body');
+  function refitTk(){const h=tkBody?tkBody.clientHeight:0;if(h>0)tkSize=Math.max(1,Math.floor((h-37)/52));renderTk();}
+  function renderTk(){
+    const T=CASES[CUR].tk, total=T.length, pages=Math.max(1,Math.ceil(total/tkSize));
+    if(tkPage>pages)tkPage=pages;
+    const start=(tkPage-1)*tkSize, slice=T.slice(start,start+tkSize);
+    if(total===0){
+      tkRows.innerHTML=`<tr><td colspan="6"><div class="empty"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><div>ยังไม่มีงานแจ้งซ่อม</div><div class="xs">ทรัพย์สินนี้ยังไม่เคยถูกอ้างอิงในใบแจ้งซ่อม</div></div></td></tr>`;
+      document.getElementById('tkRange').textContent='';document.getElementById('tkLabel').textContent='';
+      document.getElementById('tkPrev').disabled=true;document.getElementById('tkNext').disabled=true;
+      return;
+    }
+    tkRows.innerHTML=slice.map(r=>{
+      const pr=TK_PRIO[r[3]], st=TK_STAT[r[4]];
+      return `<tr class="tk-row"><td><div class="subj"><span class="no">${r[0]}</span>${r[1]}</div></td>`+
+        `<td><span class="pill muted">${TK_CAT[r[2]]}</span></td>`+
+        `<td><span class="badge ${pr[0]} sm"><span class="pip"></span> ${pr[1]}</span></td>`+
+        `<td><span class="badge ${st[0]} sm"><span class="pip"></span> ${st[1]}</span></td>`+
+        `<td class="mono xs muted">${r[5]}</td><td class="xs">${r[6]}</td></tr>`;
+    }).join('');
+    document.getElementById('tkRange').textContent=`${start+1}–${Math.min(start+tkSize,total)} จาก ${total}`;
+    document.getElementById('tkLabel').textContent=`${tkPage} / ${pages}`;
+    document.getElementById('tkPrev').disabled=tkPage<=1;document.getElementById('tkNext').disabled=tkPage>=pages;
+  }
+  document.getElementById('tkPrev').addEventListener('click',()=>{if(tkPage>1){tkPage--;renderTk();}});
+  document.getElementById('tkNext').addEventListener('click',()=>{const T=CASES[CUR].tk;const pages=Math.ceil(T.length/tkSize);if(tkPage<pages){tkPage++;renderTk();}});
+
+  /* ---- History fill-height pagination ---- */
+  let hxSize=8,hxPage=1;
+  const histRows=document.getElementById('histRows');
+  const dtBody=document.querySelector('.pane[data-pane="history"] .dt-body');
+  function refitHist(){const h=dtBody?dtBody.clientHeight:0;if(h>0)hxSize=Math.max(1,Math.floor((h-37)/44));renderHist();}
+  function renderHist(){
+    const H=CASES[CUR].hist, total=H.length, pages=Math.max(1,Math.ceil(total/hxSize));
+    if(hxPage>pages)hxPage=pages;
+    const start=(hxPage-1)*hxSize, slice=H.slice(start,start+hxSize);
+    if(total===0){
+      histRows.innerHTML=`<tr><td colspan="4"><div class="empty"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg><div>ยังไม่มีประวัติการถือครอง</div><div class="xs">ทรัพย์สินนี้ยังไม่เคยถูกโอนย้ายหรือรับคืน</div></div></td></tr>`;
+      document.getElementById('hxRange').textContent='';
+      document.getElementById('hxLabel').textContent='';
+      document.getElementById('hxPrev').disabled=true;document.getElementById('hxNext').disabled=true;
+      return;
+    }
+    histRows.innerHTML=slice.map(r=>{
+      const fromPool=r[3]==='pool', toPool=r[6]==='ret';
+      const from=fromPool?`<span class="pool">${r[1]}</span>`:`<span class="from">${r[1]}</span>`;
+      const to=toPool?`<span class="pool">${r[2]}</span>`:`<span class="to">${r[2]}</span>`;
+      return `<tr><td class="mono xs muted">${r[0]}</td><td><span class="flow">${from}<span class="arr">→</span>${to}</span></td><td class="xs">${r[4]||'—'}</td><td class="xs">${r[5]}</td></tr>`;
+    }).join('');
+    document.getElementById('hxRange').textContent=`${start+1}–${Math.min(start+hxSize,total)} จาก ${total}`;
+    document.getElementById('hxLabel').textContent=`${hxPage} / ${pages}`;
+    document.getElementById('hxPrev').disabled=hxPage<=1;document.getElementById('hxNext').disabled=hxPage>=pages;
+  }
+  document.getElementById('hxPrev').addEventListener('click',()=>{if(hxPage>1){hxPage--;renderHist();}});
+  document.getElementById('hxNext').addEventListener('click',()=>{const H=CASES[CUR].hist;const pages=Math.ceil(H.length/hxSize);if(hxPage<pages){hxPage++;renderHist();}});
+  window.addEventListener('resize',()=>{
+    if(document.querySelector('.tab[data-tab="history"]').classList.contains('active'))refitHist();
+    if(document.querySelector('.tab[data-tab="tickets"]').classList.contains('active'))refitTk();
+  });
+
+  /* ---- case switcher ---- */
+  document.querySelectorAll('#seg button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); CUR=b.dataset.case; render();
+  }));
+
+  render();
+</script>
+</body>
+</html>
