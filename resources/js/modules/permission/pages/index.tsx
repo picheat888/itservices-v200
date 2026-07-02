@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useAuth } from '@/modules/auth';
-import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employees';
+import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
 import {
     useAuditLogs,
     useGroupRoleMutations,

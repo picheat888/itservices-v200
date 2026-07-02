@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAccessMutations, useResourceMembers } from '../hooks/use-access';
-import { useEmployees } from '@/modules/employees';
+import { useEmployees } from '@/modules/employee';
 import { useT } from '@/lang';
 import type { AccessKind } from '@/shared/types';
 import { Folder, Globe, Plus, Trash2, Users } from 'lucide-react';

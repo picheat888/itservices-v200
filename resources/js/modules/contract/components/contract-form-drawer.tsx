@@ -10,7 +10,7 @@ import { useContractMutations } from '../hooks/use-contracts';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { assetApi } from '@/modules/assets';
+import { assetApi } from '@/modules/asset';
 import { useUiStore } from '@/stores/ui';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';
