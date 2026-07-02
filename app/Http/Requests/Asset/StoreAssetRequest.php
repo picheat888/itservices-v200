@@ -41,6 +41,7 @@ class StoreAssetRequest extends FormRequest
             'initial_owner' => ['nullable', 'string', 'max:200'],
             'department' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:200'],
+            'warehouse' => ['nullable', 'string', 'max:120'],
             'value' => ['required', 'numeric', 'min:0'],
             'supplier' => ['nullable', 'string', 'max:200'],
             'purchase_date' => ['nullable', 'date'],

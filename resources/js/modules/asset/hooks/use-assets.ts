@@ -5,7 +5,15 @@ const ASSETS = ['assets'] as const;
 const SUMMARY = ['assets-summary'] as const;
 
 /** Paginated asset list with search + type/source/status filters. */
-export const useAssets = (params: { page: number; per_page: number; search: string; type?: string; source?: string; status?: string }) =>
+export const useAssets = (params: {
+    page: number;
+    per_page: number;
+    search: string;
+    type?: string;
+    source?: string;
+    status?: string;
+    warehouse?: string;
+}) =>
     useQuery({
         queryKey: ['assets-list', params],
         queryFn: () =>
@@ -16,6 +24,7 @@ export const useAssets = (params: { page: number; per_page: number; search: stri
                 type: params.type || undefined,
                 source: params.source || undefined,
                 status: params.status || undefined,
+                warehouse: params.warehouse || undefined,
             }),
         placeholderData: (prev) => prev,
     });
@@ -53,7 +62,10 @@ export function useAssetMutations() {
             onSuccess: invalidate,
         }),
         accept: useMutation({ mutationFn: (id: number) => assetApi.accept(id), onSuccess: invalidate }),
-        receive: useMutation({ mutationFn: (id: number) => assetApi.receive(id), onSuccess: invalidate }),
+        receive: useMutation({
+            mutationFn: (v: { id: number; warehouse?: string }) => assetApi.receive(v.id, v.warehouse),
+            onSuccess: invalidate,
+        }),
         toggleMaintenance: useMutation({ mutationFn: (id: number) => assetApi.toggleMaintenance(id), onSuccess: invalidate }),
         toStock: useMutation({
             mutationFn: (v: { id: number; sku: string; warehouse?: string; qty: number; reason?: string }) =>

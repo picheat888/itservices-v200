@@ -195,6 +195,7 @@ export function AssetDetailDrawer({
                                             <KV label={t('asset_brand')} value={a.brand} />
                                             <KV label={t('asset_serial')} value={a.serial} mono />
                                             <KV label={t('asset_location')} value={a.location} />
+                                            <KV label={t('asset_warehouse')} value={a.warehouse} />
                                         </div>
                                     </div>
                                     <div>

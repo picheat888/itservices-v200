@@ -29,6 +29,7 @@ class AssetResource extends JsonResource
             'initial_owner' => $this->initial_owner,
             'department' => $this->department,
             'location' => $this->location,
+            'warehouse' => $this->warehouse,
             'value' => (float) $this->value,
             'value_display' => $this->valueDisplay(),
             'supplier' => $this->supplier,

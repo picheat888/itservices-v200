@@ -128,6 +128,44 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owner', 'Pool — IT');
     }
 
+    public function test_mark_received_stores_asset_in_chosen_warehouse(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'warehouse' => 'Branch A']);
+
+        $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner', 'Pool — IT')
+            ->assertJsonPath('data.warehouse', 'Central IT');
+    }
+
+    public function test_mark_received_keeps_existing_warehouse_when_none_given(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'warehouse' => 'Branch A']);
+
+        $this->postJson("/api/assets/{$asset->id}/receive")
+            ->assertOk()
+            ->assertJsonPath('data.warehouse', 'Branch A');
+    }
+
+    public function test_asset_can_be_created_and_filtered_by_warehouse(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/assets', [
+            'type' => 'laptop', 'source' => 'purchased', 'model' => 'Dell 5440', 'value' => 100, 'warehouse' => 'Central IT',
+        ])->assertCreated()->assertJsonPath('data.warehouse', 'Central IT');
+
+        Asset::factory()->create(['warehouse' => 'Branch A']);
+
+        $this->getJson('/api/assets?warehouse=Central IT')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.warehouse', 'Central IT');
+    }
+
     public function test_summary_reports_status_counts(): void
     {
         $this->actingAs($this->super());
