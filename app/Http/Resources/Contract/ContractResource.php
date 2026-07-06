@@ -23,7 +23,8 @@ class ContractResource extends JsonResource
         return [
             'id' => $this->id,
             'code' => $this->code,
-            'vendor' => $this->vendor,
+            'vendor' => $this->vendor?->name,
+            'vendor_id' => $this->vendor_id,
             'name' => $this->name,
             'title' => $this->title,
             'type' => $type?->value ?? ContractType::Software->value,

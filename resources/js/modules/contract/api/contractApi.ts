@@ -15,7 +15,7 @@ export interface ContractPageResponse {
 
 export interface ContractPayload {
     code?: string | null;
-    vendor: string;
+    vendor_id: number;
     name: string;
     type: Contract['type'];
     start_date: string;

@@ -171,6 +171,7 @@ export interface Contract {
     id: number;
     code: string;
     vendor: string;
+    vendor_id: number | null;
     title: string | null;
     name: string;
     type: ContractType;
@@ -241,6 +242,7 @@ export interface Asset {
     value: number;
     value_display: string;
     supplier: string | null;
+    vendor_id: number | null;
     purchase_date: string | null;
     warranty_end: string | null;
     warranty_lifetime: boolean;

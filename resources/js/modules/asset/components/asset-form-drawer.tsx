@@ -25,7 +25,7 @@ interface FormState {
     nickname: string;
     warehouse: string;
     value: string;
-    supplier: string;
+    vendor_id: string;
     purchase_date: string;
     warranty_end: string;
     warranty_lifetime: boolean;
@@ -42,7 +42,7 @@ const EMPTY: FormState = {
     nickname: '',
     warehouse: '',
     value: '',
-    supplier: '',
+    vendor_id: '',
     purchase_date: '',
     warranty_end: '',
     warranty_lifetime: false,
@@ -77,7 +77,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const { data: vendors = [] } = useVendors();
     const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })), [warehouses]);
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
-    const vendorOptions = useMemo(() => vendors.map((v) => ({ value: v.name, label: v.name, search: v.name })), [vendors]);
+    const vendorOptions = useMemo(() => vendors.map((v) => ({ value: String(v.id), label: v.name, search: v.name })), [vendors]);
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
@@ -96,7 +96,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 nickname: editing.nickname ?? '',
                 warehouse: editing.warehouse ?? '',
                 value: String(editing.value ?? ''),
-                supplier: editing.supplier ?? '',
+                vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
                 purchase_date: editing.purchase_date ?? '',
                 warranty_end: editing.warranty_end ?? '',
                 warranty_lifetime: editing.warranty_lifetime ?? false,
@@ -145,7 +145,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             if (!form.contract_id) e.contract_id = required;
         } else {
             if (!form.value.trim()) e.value = required;
-            if (!form.supplier.trim()) e.supplier = required;
+            if (!form.vendor_id) e.supplier = required;
             if (!form.purchase_date) e.purchase_date = required;
             if (!form.warranty_lifetime && !form.warranty_end) e.warranty_end = required;
         }
@@ -166,7 +166,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 ? { contract_id: form.contract_id ? Number(form.contract_id) : null }
                 : {
                       value: Number(form.value),
-                      supplier: form.supplier.trim() || null,
+                      vendor_id: form.vendor_id ? Number(form.vendor_id) : null,
                       purchase_date: form.purchase_date || null,
                       warranty_end: form.warranty_lifetime ? null : form.warranty_end || null,
                       warranty_lifetime: form.warranty_lifetime,
@@ -332,8 +332,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         </Field>
                                         <Field label={t('asset_supplier')} required error={err.supplier} name="supplier">
                                             <SearchableSelect
-                                                value={form.supplier}
-                                                onChange={(v) => upd('supplier', v)}
+                                                value={form.vendor_id}
+                                                onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
                                                 placeholder={lang === 'th' ? 'เลือกผู้ขาย' : 'Select supplier'}
                                             />

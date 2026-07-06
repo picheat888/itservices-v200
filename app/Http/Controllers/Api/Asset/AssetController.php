@@ -35,7 +35,7 @@ class AssetController extends Controller
         $contractId = $request->integer('contract_id') ?: null;
 
         $assets = Asset::query()
-            ->with(['brand', 'model', 'category'])
+            ->with(['brand', 'model', 'category', 'vendor'])
             ->where(fn ($q) => $q->whereNull('contract_id')
                 ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)))
             ->orderBy('tag')
@@ -60,7 +60,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category'])->latest('id');
+        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -110,7 +110,7 @@ class AssetController extends Controller
 
         // Eager-load location + category: top_value builds AssetResource (location?->name)
         // and the by-type breakdown groups on the category name.
-        $assets = Asset::with(['location', 'category'])->get();
+        $assets = Asset::with(['location', 'category', 'vendor'])->get();
 
         $byType = $assets->groupBy(fn (Asset $a) => $a->category?->name)
             ->map(fn ($group, $type) => [
@@ -174,7 +174,7 @@ class AssetController extends Controller
         $asset = $this->service->create($request->validated());
         AuditLog::record('Registered asset', "{$asset->tag} — {$asset->model?->name}");
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -182,7 +182,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category']);
+        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor']);
 
         return (new AssetResource($asset))->response();
     }
@@ -193,7 +193,7 @@ class AssetController extends Controller
         $asset = $this->service->update($asset, $request->validated());
         AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model?->name}", AuditLog::changes($before, $asset));
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor')))
             ->additional(['message' => 'success'])->response();
     }
 

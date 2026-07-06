@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Contract\Contract;
+use App\Models\Settings\Vendor;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -33,6 +34,9 @@ class ContractSeeder extends Seeder
         ];
 
         foreach ($design as $c) {
+            // Vendor is an FK id now (Master Data); resolve (or create) the vendor by name.
+            $c['vendor_id'] = Vendor::firstOrCreate(['name' => $c['vendor']])->id;
+            unset($c['vendor']);
             Contract::updateOrCreate(['code' => $c['code']], $c + ['notify_60' => true, 'notify_30' => true, 'notify_7' => true]);
         }
 
@@ -62,7 +66,7 @@ class ContractSeeder extends Seeder
             $start = $end->copy()->subYear();
 
             Contract::updateOrCreate(['code' => $code], [
-                'vendor' => $vendor,
+                'vendor_id' => Vendor::firstOrCreate(['name' => $vendor])->id,
                 'title' => $title,
                 'name' => $name,
                 'type' => $type,
