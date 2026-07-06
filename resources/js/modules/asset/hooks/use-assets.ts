@@ -107,8 +107,8 @@ export function useAssetMutations() {
         }),
         remove: useMutation({ mutationFn: (id: number) => assetApi.remove(id), onSuccess: invalidate }),
         transfer: useMutation({
-            mutationFn: (v: { id: number; owner: string; location: string; reason?: string }) =>
-                assetApi.transfer(v.id, v.owner, v.location, v.reason),
+            mutationFn: (v: { id: number; owner: string; locationId: number; reason?: string }) =>
+                assetApi.transfer(v.id, v.owner, v.locationId, v.reason),
             onSuccess: invalidate,
         }),
         accept: useMutation({ mutationFn: (id: number) => assetApi.accept(id), onSuccess: invalidate }),
