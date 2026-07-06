@@ -39,7 +39,7 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with(['attachments', 'assets.brand', 'assets.model', 'assets.category']);
+            ->with(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category']);
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {
@@ -54,7 +54,7 @@ class ContractController extends Controller
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
             $query->where(function ($w) use ($q) {
-                $w->where('vendor', 'like', $q)
+                $w->whereHas('vendor', fn ($v) => $v->where('name', 'like', $q))
                     ->orWhere('title', 'like', $q)
                     ->orWhere('name', 'like', $q)
                     ->orWhere('code', 'like', $q);
@@ -107,7 +107,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        $contracts = Contract::all();
+        $contracts = Contract::with('vendor')->get();
 
         $live = $contracts->filter(fn ($c) => $c->cancelled_at === null);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
@@ -120,7 +120,7 @@ class ContractController extends Controller
         $annual = $live->sum('value');
 
         $topVendors = $contracts
-            ->groupBy('vendor')
+            ->groupBy(fn ($c) => $c->vendor?->name)
             ->map(fn ($group, $vendor) => [
                 'vendor' => $vendor,
                 'amount' => round($group->sum(fn ($c) => $c->annualValue())),
@@ -137,7 +137,7 @@ class ContractController extends Controller
                 'id' => $c->id,
                 'code' => $c->code,
                 'name' => $c->name,
-                'vendor' => $c->vendor,
+                'vendor' => $c->vendor?->name,
                 'end' => $c->end_date->toDateString(),
                 'days' => $c->daysRemaining(),
                 // Mirror the Action-queue logic: amber dot = inside the contract's
@@ -153,7 +153,7 @@ class ContractController extends Controller
                 'id' => $c->id,
                 'code' => $c->code,
                 'name' => $c->name,
-                'vendor' => $c->vendor,
+                'vendor' => $c->vendor?->name,
                 'days' => $c->daysRemaining(),
             ])
             ->values();
@@ -176,7 +176,7 @@ class ContractController extends Controller
         $contract = $this->service->create($request->validated());
         AuditLog::record('Created contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load(['assets.brand', 'assets.model', 'assets.category'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -184,7 +184,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load(['attachments', 'assets.brand', 'assets.model', 'assets.category'])))->response();
+        return (new ContractResource($contract->load(['vendor', 'attachments', 'assets.brand', 'assets.model', 'assets.category'])))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
@@ -193,7 +193,7 @@ class ContractController extends Controller
         $contract = $this->service->update($contract, $request->validated());
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract));
 
-        return (new ContractResource($contract->load(['assets.brand', 'assets.model', 'assets.category'])))
+        return (new ContractResource($contract->load(['vendor', 'assets.brand', 'assets.model', 'assets.category'])))
             ->additional(['message' => 'success'])->response();
     }
 

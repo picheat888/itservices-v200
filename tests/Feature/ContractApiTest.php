@@ -6,6 +6,7 @@ use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Vendor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,6 +20,12 @@ class ContractApiTest extends TestCase
         return User::factory()->create(['role' => 'super']);
     }
 
+    /** Create a vendor (Master Data) and return its id — contract POSTs now send vendor_id. */
+    private function vendorId(string $name = 'Acme Vendor'): int
+    {
+        return Vendor::create(['name' => $name])->id;
+    }
+
     public function test_guests_cannot_list_contracts(): void
     {
         $this->getJson('/api/contracts')->assertUnauthorized();
@@ -28,9 +35,10 @@ class ContractApiTest extends TestCase
     {
         $this->actingAs($this->super());
 
+        $vendor = Vendor::create(['name' => 'Microsoft Thailand']);
         $payload = [
             'code' => 'CT-TEST-001',
-            'vendor' => 'Microsoft Thailand',
+            'vendor_id' => $vendor->id,
             'name' => 'Microsoft 365 — 320 seats',
             'title' => 'Microsoft 365 Enterprise Agreement',
             'type' => 'software',
@@ -48,7 +56,7 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.cancelled_at', null)
             ->assertJsonStructure(['data' => ['created_at', 'updated_at']]);
 
-        $this->assertDatabaseHas('contracts', ['vendor' => 'Microsoft Thailand']);
+        $this->assertDatabaseHas('contracts', ['vendor_id' => $vendor->id]);
         $this->getJson('/api/contracts')->assertOk()->assertJsonCount(1, 'data');
     }
 
@@ -100,7 +108,7 @@ class ContractApiTest extends TestCase
         // Far out relative to its 60-day reminder — not yet in window.
         Contract::create(['vendor' => 'Far', 'name' => 'Far', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_60' => true]);
         // Inside its 30-day reminder window.
-        Contract::create(['vendor' => 'Soon', 'name' => 'Soon', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addDays(30), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_30' => true]);
+        Contract::create(['vendor_id' => $this->vendorId('Soon'), 'name' => 'Soon', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addDays(30), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_30' => true]);
 
         $this->getJson('/api/contracts?tab=expiring')
             ->assertOk()
@@ -113,7 +121,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         // Past its end date and still live — should appear.
-        Contract::create(['vendor' => 'Past', 'name' => 'Past', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 1, 'billing_cycle' => 'yearly']);
+        Contract::create(['vendor_id' => $this->vendorId('Past'), 'name' => 'Past', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 1, 'billing_cycle' => 'yearly']);
         // Still active — must not appear.
         Contract::create(['vendor' => 'Active', 'name' => 'Active', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
         // Past its end date but cancelled — excluded from the expired tab.
@@ -131,7 +139,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         // 120 days out with the 120-day reminder enabled — should be "in reminder".
-        $early = Contract::create(['vendor' => 'Early', 'name' => 'Early', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addDays(118), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_120' => true]);
+        $early = Contract::create(['vendor_id' => $this->vendorId('Early'), 'name' => 'Early', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addDays(118), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_120' => true]);
         // Same horizon but only a 60-day reminder enabled — still far out.
         Contract::create(['vendor' => 'Quiet', 'name' => 'Quiet', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addDays(118), 'value' => 1, 'billing_cycle' => 'yearly', 'notify_60' => true]);
 
@@ -153,7 +161,7 @@ class ContractApiTest extends TestCase
         $a2 = Asset::factory()->create();
 
         $base = [
-            'code' => 'CT-LINK-1', 'vendor' => 'V', 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'code' => 'CT-LINK-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
         ];
 
@@ -180,7 +188,7 @@ class ContractApiTest extends TestCase
         $owned = Asset::factory()->create(['contract_id' => $other->id]);
 
         $this->postJson('/api/contracts', [
-            'code' => 'CT-LINK-2', 'vendor' => 'V', 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'code' => 'CT-LINK-2', 'vendor_id' => $this->vendorId('V2'), 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
             'asset_ids' => [$owned->id],
         ])->assertStatus(201);
@@ -319,14 +327,14 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         $contract = Contract::create([
-            'code' => 'CT-NOTES-01', 'vendor' => 'TestVendor', 'name' => 'Notes test contract',
+            'code' => 'CT-NOTES-01', 'vendor_id' => $this->vendorId('TestVendor'), 'name' => 'Notes test contract',
             'title' => 'Notes Round-trip', 'type' => 'software',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
             'value' => 50000, 'billing_cycle' => 'yearly', 'notes' => null,
         ]);
 
         $payload = [
-            'code' => $contract->code, 'vendor' => $contract->vendor, 'name' => $contract->name,
+            'code' => $contract->code, 'vendor_id' => $contract->vendor_id, 'name' => $contract->name,
             'title' => $contract->title, 'type' => $contract->type,
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
             'value' => $contract->value, 'billing_cycle' => $contract->billing_cycle,
@@ -340,5 +348,34 @@ class ContractApiTest extends TestCase
             'id' => $contract->id,
             'notes' => 'Renewed with vendor on 2026-06-30.',
         ]);
+    }
+
+    public function test_renaming_a_vendor_propagates_to_contracts(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'Old Vendor']);
+        Contract::create([
+            'code' => 'CT-VEN-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'type' => 'software',
+            'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+
+        $vendor->update(['name' => 'New Vendor']);
+
+        $this->getJson('/api/contracts')
+            ->assertOk()
+            ->assertJsonPath('data.0.vendor', 'New Vendor');
+    }
+
+    public function test_vendor_in_use_by_a_contract_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'In Use Vendor']);
+        Contract::create([
+            'code' => 'CT-VEN-2', 'vendor_id' => $vendor->id, 'name' => 'N', 'type' => 'software',
+            'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+
+        $this->deleteJson("/api/vendors/{$vendor->id}")->assertStatus(409);
+        $this->assertDatabaseHas('vendors', ['id' => $vendor->id]);
     }
 }

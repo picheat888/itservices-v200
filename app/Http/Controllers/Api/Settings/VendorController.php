@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,9 +53,12 @@ class VendorController extends Controller
         return response()->json(['data' => $vendor, 'message' => 'success']);
     }
 
-    /** Delete a vendor. */
+    /** Delete a vendor — blocked (409) while any asset or contract still references it. */
     public function destroy(Vendor $vendor): JsonResponse
     {
+        if (Asset::where('vendor_id', $vendor->id)->exists() || Contract::where('vendor_id', $vendor->id)->exists()) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted vendor', $vendor->name);
         $vendor->delete();
 

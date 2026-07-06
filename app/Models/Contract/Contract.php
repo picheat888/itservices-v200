@@ -4,8 +4,10 @@ namespace App\Models\Contract;
 
 use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
+use App\Models\Settings\Vendor;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
@@ -16,6 +18,12 @@ class Contract extends Model
         return $this->hasMany(ContractAttachment::class)->latest();
     }
 
+    /** The vendor this contract is with (Master Data). */
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
+    }
+
     /** Assets linked to this contract (e.g. leased hardware), ordered by tag. */
     public function assets(): HasMany
     {
@@ -23,7 +31,7 @@ class Contract extends Model
     }
 
     protected $fillable = [
-        'code', 'vendor', 'name', 'title', 'type', 'start_date', 'end_date',
+        'code', 'vendor_id', 'name', 'title', 'type', 'start_date', 'end_date',
         'value', 'billing_cycle', 'auto_renew', 'cancelled_at',
         'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];

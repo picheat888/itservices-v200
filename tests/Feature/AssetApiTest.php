@@ -12,6 +12,7 @@ use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
+use App\Models\Settings\Vendor;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,6 +39,12 @@ class AssetApiTest extends TestCase
         return Category::create(['name' => $name])->id;
     }
 
+    /** Create a vendor (Master Data) and return its id — purchased asset POSTs now send vendor_id. */
+    private function vendorId(string $name = 'Acme Vendor'): int
+    {
+        return Vendor::create(['name' => $name])->id;
+    }
+
     public function test_guests_cannot_list_assets(): void
     {
         $this->getJson('/api/assets')->assertUnauthorized();
@@ -51,6 +58,7 @@ class AssetApiTest extends TestCase
             'category_id' => $this->categoryId('laptop'),
             'source' => 'purchased',
             'model_id' => $this->modelId('Dell Latitude 5440'),
+            'vendor_id' => $this->vendorId(),
             'owner' => 'EMP-1042',
             'value' => 32100,
             'purchase_date' => '2025-01-10',
@@ -72,7 +80,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'value' => 100,
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
         ])->assertCreated()
             ->assertJsonPath('data.tag', fn ($tag) => is_string($tag) && str_starts_with($tag, 'INK-IT-'));
     }
@@ -82,7 +90,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $contract = Contract::create([
-            'vendor' => 'SVOA', 'name' => 'Network lease', 'type' => 'hardware',
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
             'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
             'value' => 8500, 'billing_cycle' => 'monthly',
         ]);
@@ -112,7 +120,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'category_id' => $this->categoryId('printer'), 'source' => 'purchased', 'model_id' => $this->modelId('Brother HL'), 'value' => 5000,
+            'category_id' => $this->categoryId('printer'), 'source' => 'purchased', 'model_id' => $this->modelId('Brother HL'), 'vendor_id' => $this->vendorId(), 'value' => 5000,
             'warranty_end' => '2030-01-01', 'warranty_lifetime' => true,
         ])->assertCreated()
             ->assertJsonPath('data.warranty_lifetime', true)
@@ -125,7 +133,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'value' => 32100,
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'vendor_id' => $this->vendorId(), 'value' => 32100,
         ])->assertCreated()
             ->assertJsonPath('data.value_display', '$32,100');
     }
@@ -201,6 +209,27 @@ class AssetApiTest extends TestCase
 
         $this->deleteJson("/api/categories/{$category->id}")->assertStatus(409);
         $this->assertDatabaseHas('categories', ['id' => $category->id]);
+    }
+
+    public function test_renaming_a_vendor_propagates_to_assets(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'Old Supplier']);
+        $asset = Asset::factory()->create(['vendor_id' => $vendor->id]);
+
+        $vendor->update(['name' => 'New Supplier']);
+
+        $this->getJson("/api/assets/{$asset->id}")->assertOk()->assertJsonPath('data.supplier', 'New Supplier');
+    }
+
+    public function test_vendor_in_use_by_an_asset_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'In Use Supplier']);
+        Asset::factory()->create(['vendor_id' => $vendor->id]);
+
+        $this->deleteJson("/api/vendors/{$vendor->id}")->assertStatus(409);
+        $this->assertDatabaseHas('vendors', ['id' => $vendor->id]);
     }
 
     public function test_user_without_permission_cannot_register(): void
@@ -361,7 +390,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'value' => 100, 'warehouse' => 'Central IT',
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'vendor_id' => $this->vendorId(), 'value' => 100, 'warehouse' => 'Central IT',
         ])->assertCreated()->assertJsonPath('data.warehouse', 'Central IT');
 
         Asset::factory()->create(['warehouse' => 'Branch A']);

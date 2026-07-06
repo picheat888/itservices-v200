@@ -133,7 +133,9 @@ class ContractService
         $errors = [];
         $types = ['software', 'hardware', 'service', 'connectivity', 'other'];
         $cycles = ['monthly', 'quarterly', 'yearly'];
-        $validVendors = Vendor::pluck('name')->map(fn ($n) => strtolower($n))->all();
+        // Map lowercased vendor name → id so the CSV (still name-based) resolves to the FK.
+        $vendorIdByName = Vendor::pluck('id', 'name')->mapWithKeys(fn ($id, $name) => [strtolower($name) => $id])->all();
+        $validVendors = array_keys($vendorIdByName);
 
         foreach ($rows as $i => $row) {
             $n = $i + 2; // 1-based + header row
@@ -167,7 +169,7 @@ class ContractService
 
         foreach ($rows as $row) {
             $data = [
-                'vendor' => trim($row['vendor']),
+                'vendor_id' => $vendorIdByName[strtolower(trim($row['vendor']))],
                 'name' => trim($row['name']),
                 'type' => $row['type'],
                 'start_date' => $row['start_date'],

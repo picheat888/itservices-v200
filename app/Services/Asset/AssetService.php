@@ -79,7 +79,7 @@ class AssetService
         if (($data['source'] ?? null) === AssetSource::Rented->value) {
             $contract = ! blank($data['contract_id'] ?? null) ? Contract::find($data['contract_id']) : null;
             if ($contract) {
-                $data['supplier'] = $contract->vendor;
+                $data['vendor_id'] = $contract->vendor_id;
                 $data['lease_start'] = $contract->start_date?->toDateString();
                 $data['lease_end'] = $contract->end_date?->toDateString();
                 $data['value'] = $contract->value;

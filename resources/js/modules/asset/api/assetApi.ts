@@ -25,7 +25,7 @@ export interface AssetPayload {
     warehouse?: string | null;
     // Sent only for purchased assets; rented assets derive value from the contract.
     value?: number | null;
-    supplier?: string | null;
+    vendor_id?: number | null;
     purchase_date?: string | null;
     warranty_end?: string | null;
     warranty_lifetime?: boolean;

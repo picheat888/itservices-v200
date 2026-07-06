@@ -9,6 +9,7 @@ use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
+use App\Models\Settings\Vendor;
 use App\Models\Ticket\Ticket;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +34,7 @@ class Asset extends Model
 
     protected $fillable = [
         'tag', 'nickname', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
-        'owner', 'initial_owner', 'department', 'location_id', 'warehouse', 'value', 'supplier',
+        'owner', 'initial_owner', 'department', 'location_id', 'warehouse', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
         'registered_date', 'owned_since', 'notes', 'last_reason',
     ];
@@ -70,6 +71,12 @@ class Asset extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /** Supplier the asset was bought from (Master Data vendor). */
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(Vendor::class);
     }
 
     /** Manufacturer brand (Master Data). */

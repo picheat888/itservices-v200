@@ -41,7 +41,7 @@ const LAST_STEP = 5;
 /** Required fields owned by each step — used to validate on "Next" and to jump to the first error on Save. */
 const STEP_FIELDS: string[][] = [
     [], // 0 · type (always valid — has a default)
-    ['code', 'title', 'vendor', 'name'], // 1 · contract info
+    ['code', 'title', 'vendor_id', 'name'], // 1 · contract info
     ['start_date', 'end_date', 'value'], // 2 · term & value
     ['notify'], // 3 · reminders
     [], // 4 · link assets (optional)
@@ -51,7 +51,7 @@ const STEP_FIELDS: string[][] = [
 const FIELD_STEP: Record<string, number> = {
     code: 1,
     title: 1,
-    vendor: 1,
+    vendor_id: 1,
     name: 1,
     start_date: 2,
     end_date: 2,
@@ -62,7 +62,7 @@ const FIELD_STEP: Record<string, number> = {
 interface FormState {
     code: string;
     type: ContractType;
-    vendor: string;
+    vendor_id: string;
     title: string;
     name: string;
     start_date: string;
@@ -86,7 +86,7 @@ interface FormState {
 const EMPTY: FormState = {
     code: '',
     type: 'software',
-    vendor: '',
+    vendor_id: '',
     title: '',
     name: '',
     start_date: '',
@@ -139,19 +139,14 @@ export function ContractFormDrawer({
     const [fileErr, setFileErr] = useState('');
 
     const vendorOptions = useMemo(() => {
-        // Value stays the canonical vendor name (what's stored on the contract);
-        // only the label follows the active language so the Thai name surfaces.
-        const opts = (vendors as Vendor[]).map((v) => ({
-            value: v.name,
+        // Value is the vendor id (FK); only the label follows the active language so
+        // the Thai name surfaces.
+        return (vendors as Vendor[]).map((v) => ({
+            value: String(v.id),
             label: lang === 'th' ? (v.name_th ?? v.name) : v.name,
             search: `${v.name} ${v.name_th ?? ''}`,
         }));
-        // Keep existing vendor visible when editing a contract not yet in master data
-        if (form.vendor && !opts.some((o) => o.value === form.vendor)) {
-            opts.unshift({ value: form.vendor, label: form.vendor, search: form.vendor });
-        }
-        return opts;
-    }, [vendors, form.vendor, lang]);
+    }, [vendors, lang]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
@@ -170,7 +165,7 @@ export function ContractFormDrawer({
             setForm({
                 code: editing.code,
                 type: editing.type,
-                vendor: editing.vendor,
+                vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
                 title: editing.title ?? '',
                 name: editing.name,
                 start_date: editing.start,
@@ -264,7 +259,7 @@ export function ContractFormDrawer({
         const e: Record<string, string> = {};
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         if (!form.code.trim()) e.code = required;
-        if (!form.vendor.trim()) e.vendor = required;
+        if (!form.vendor_id) e.vendor_id = required;
         if (!form.title.trim()) e.title = required;
         if (!form.name.trim()) e.name = required;
         if (!form.start_date) e.start_date = required;
@@ -317,7 +312,7 @@ export function ContractFormDrawer({
         const payload = {
             code: form.code.trim(),
             type: form.type,
-            vendor: form.vendor.trim(),
+            vendor_id: Number(form.vendor_id),
             title: form.title.trim(),
             name: form.name.trim(),
             start_date: form.start_date,
@@ -510,10 +505,10 @@ export function ContractFormDrawer({
                                             />
                                         </Field>
 
-                                        <Field label={t('contract_vendor')} required error={err.vendor} name="vendor">
+                                        <Field label={t('contract_vendor')} required error={err.vendor_id} name="vendor_id">
                                             <SearchableSelect
-                                                value={form.vendor}
-                                                onChange={(v) => upd('vendor', v)}
+                                                value={form.vendor_id}
+                                                onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
                                                 placeholder={lang === 'th' ? 'เลือกผู้จำหน่าย' : 'Select vendor'}
                                             />
@@ -865,7 +860,7 @@ export function ContractFormDrawer({
                                         </div>
                                     </div>
                                     <ReviewRow k={lang === 'th' ? 'ประเภท' : 'Type'} v={t(TYPE_META.find((m) => m.value === form.type)!.labelKey)} />
-                                    <ReviewRow k={t('contract_vendor')} v={form.vendor || '—'} />
+                                    <ReviewRow k={t('contract_vendor')} v={vendorOptions.find((o) => o.value === form.vendor_id)?.label || '—'} />
                                     <ReviewRow
                                         k={lang === 'th' ? 'ระยะเวลา' : 'Term'}
                                         v={form.start_date && form.end_date ? `${form.start_date} → ${form.end_date}` : '—'}

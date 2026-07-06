@@ -975,7 +975,7 @@ employees.module               ← MASTER (คุมโมดูล + ไอค�
 
 ---
 
-## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–4)
+## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–5)
 
 Master data ที่เคยถูก **ก๊อปเป็น string** ลงตารางอ้างอิง (เช่น `assets.location`, `stock_items.unit`) เปลี่ยนมา **ผูกด้วย FK id** ไปตาราง master — แก้ชื่อ master ที่เดียวสะท้อนทุกที่, ลบ master ที่ยังถูกใช้ไม่ได้, ไม่มีข้อมูลค้าง/สะกดเพี้ยน แผนเต็ม 6 เฟสอยู่ที่ `docs/superpowers/plans/2026-07-06-master-data-fk-normalization.md`
 
@@ -1013,7 +1013,16 @@ plan: `docs/superpowers/plans/2026-07-06-phase4-categories-fk.md`
 - filter (asset type / stock category) **ยังส่งชื่อ** → backend match ผ่าน `whereHas('category', name)` (UI filter/chip ไม่ต้องแก้); dashboard by-type/by-category group ตามชื่อ category ผ่าน relation
 - `CategoryController::destroy` → 409 เมื่อมี asset **หรือ** stock อ้างอิง; ContractController eager-load `assets.{brand,model,category}` กัน N+1
 
+### Phase 5 — Vendors (`assets.supplier` + `contracts.vendor` → `vendor_id`)
+master ร่วม 2 โมดูล; plan: `docs/superpowers/plans/2026-07-06-phase5-vendors-fk.md`
+- `Asset`/`Contract` เพิ่ม relation `vendor()`; resource ส่ง `supplier`/`vendor` (ชื่อผ่าน relation) + `vendor_id`; ฟอร์ม asset (supplier) + contract (multi-step vendor) เลือกด้วย id
+- **match/display ด้วย `vendors.name`** (อังกฤษ) — ข้อมูลจริง supplier/vendor ตรง name เท่านั้น ไม่เคยตรง name_th
+- `contracts.vendor` ส่วนใหญ่เป็น free-text (18/21 ไม่มีใน master — Fortinet/Zoom/Adobe/Oracle… เป็น vendor จริง) + `assets.supplier` มี junk 2 ตัว → **create-missing by name** (เหมือน Phase 3)
+- ตัวอ่าน `$x->supplier`/`$x->vendor` เปลี่ยนเป็น `?->name` ทั้งหมด: AssetService (rented derive), Contract dashboard (topVendors/timeline/actionQueue), search→whereHas, ContractExpiryNotification + ContractExpiryAlertService
+- **Contract import (CSV ยังเป็นชื่อ)** — `ContractService::importRows` validate ชื่อใน master แล้ว resolve → vendor_id; `VendorController::destroy` → 409 เมื่อมี asset **หรือ** contract อ้างอิง
+- `AssetService::create` rented → คัด `vendor_id` จาก contract; seeders (ContractSeeder) resolve ชื่อ→id
+
 ### Verification
-- **Backend**: `php artisan test --compact` = **502 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
-- **รัน migration บน DB จริงแล้ว** (Phase 1–4): backfill ครบ 100% — assets 21/21 + stock 16/16 ผูก category_id/brand_id/model_id; categories คงที่ 20 (mapping ไม่สร้างซ้ำ), brands 10→17, asset_models 21→50
-- **Phase 5–6 ยังไม่ทำ**: Vendors (`assets.supplier` + `contracts.vendor`) · Warehouses (ตัวใหญ่สุด — หลายตาราง)
+- **Backend**: `php artisan test --compact` = **506 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **รัน migration บน DB จริงแล้ว** (Phase 1–5): backfill ครบ — contracts 22/22 + (assets ที่มี supplier) 6/6 ผูก vendor_id; vendors 10→31; categories 20, brands 17, asset_models 50
+- **Phase 6 ยังไม่ทำ**: Warehouses (ตัวใหญ่สุด — assets/stock_items/serials/counts/balances(+unique index)/serial_events)

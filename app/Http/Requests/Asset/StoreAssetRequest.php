@@ -45,7 +45,7 @@ class StoreAssetRequest extends FormRequest
             'warehouse' => ['nullable', 'string', 'max:120'],
             // Purchased assets carry their own price; rented assets derive value from the contract.
             'value' => ['nullable', 'required_if:source,purchased', 'numeric', 'min:0'],
-            'supplier' => ['nullable', 'string', 'max:200'],
+            'vendor_id' => ['nullable', 'required_if:source,purchased', 'integer', 'exists:vendors,id'],
             'purchase_date' => ['nullable', 'date'],
             'warranty_end' => ['nullable', 'date'],
             'warranty_lifetime' => ['sometimes', 'boolean'],
