@@ -1,39 +1,43 @@
+import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
+import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { StatusBadge } from '@/shared/components/status-badge';
-import { MovementDrawer } from '../components/movement-drawer';
-import { RequestDrawer } from '../components/request-drawer';
-import { StockItemDetailModal } from '../components/stock-item-detail-modal';
-import { StockItemModal } from '../components/stock-item-modal';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { cn } from '@/shared/lib/utils';
+import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Input } from '@/shared/ui/input';
-import { useAuth } from '@/modules/auth';
-import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
-import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
-import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import {
     AlertTriangle,
     Archive,
     ArrowDownToLine,
     ArrowLeftRight,
+    ArrowUpDown,
     Boxes,
+    CircleDot,
     FilePlus2,
     Plus,
     RotateCcw,
     Search,
     Send,
     SquarePen,
+    Tag,
     Trash2,
+    Warehouse,
     X,
 } from 'lucide-react';
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { MovementDrawer } from '../components/movement-drawer';
+import { RequestDrawer } from '../components/request-drawer';
+import { StockItemDetailModal } from '../components/stock-item-detail-modal';
+import { StockItemModal } from '../components/stock-item-modal';
+import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
 import { AuditTab } from './tabs/counting-tab';
 import { DashboardTab } from './tabs/dashboard-tab';
 import { MovementsTab } from './tabs/movements-tab';
@@ -130,7 +134,15 @@ const stockBlinkStyles = `
 `;
 
 /** Alert banner shown when any items are in a warning state. Displays real item data grouped by type. */
-function AlertCard({ summary, t, onViewItems }: { summary: import('@/shared/types').StockSummary; t: ReturnType<typeof useT>; onViewItems: () => void }) {
+function AlertCard({
+    summary,
+    t,
+    onViewItems,
+}: {
+    summary: import('@/shared/types').StockSummary;
+    t: ReturnType<typeof useT>;
+    onViewItems: () => void;
+}) {
     const hasCritical = summary.out_count > 0 || summary.low_count > 0;
     return (
         <Card className={cn('border p-4', hasCritical ? 'border-destructive/40 bg-destructive/5' : 'border-amber-500/40 bg-amber-500/5')}>
@@ -272,7 +284,11 @@ export default function StockPage() {
         setItemsPage(1);
     }, [search, cat, wh, statusFilter, itemSort]);
 
-    const { data: itemsPageData, isLoading: itemsLoading, isFetching: itemsFetching } = useStockItemsPage({
+    const {
+        data: itemsPageData,
+        isLoading: itemsLoading,
+        isFetching: itemsFetching,
+    } = useStockItemsPage({
         search: search || undefined,
         category: cat === 'all' ? undefined : cat,
         warehouse: wh === 'all' ? undefined : wh,
@@ -418,8 +434,8 @@ export default function StockPage() {
         wh !== 'all' ? { key: 'wh', label: wh, clear: () => setWh('all') } : null,
         statusFilter !== 'all' ? { key: 'status', label: statusChipLabel, clear: () => setStatusFilter('all') } : null,
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
-    // Anything to clear = an active chip filter OR a non-default sort order.
-    const hasItemFilters = activeChips.length > 0 || itemSort !== DEFAULT_ITEM_SORT;
+    // Anything to clear = an active chip filter OR a non-default sort order (drives the popover badge).
+    const activeItemFilterCount = activeChips.length + (itemSort !== DEFAULT_ITEM_SORT ? 1 : 0);
     const resetItemFilters = () => {
         setCat('all');
         setWh('all');
@@ -515,50 +531,92 @@ export default function StockPage() {
                                         className="pl-9"
                                     />
                                 </div>
-                                <FilterPopover count={activeChips.length}>
+                                <FilterPopover count={activeItemFilterCount} width={460} onClear={resetItemFilters} resultCount={itemsTotal}>
                                     {() => (
-                                        <div className="space-y-3">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <div>
-                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_category')}</div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Tag className="h-3.5 w-3.5" />
+                                                    {t('stock_category')}
+                                                </div>
                                                 <SearchableSelect
+                                                    active={cat !== 'all'}
                                                     value={cat}
                                                     onChange={setCat}
                                                     options={[
-                                                        { value: 'all', label: t('stock_all_categories'), search: t('stock_all_categories') },
+                                                        {
+                                                            value: 'all',
+                                                            label: t('stock_all_categories'),
+                                                            search: t('stock_all_categories'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
                                                         ...categories.map((c) => ({ value: c.name, label: c.name, search: c.name })),
                                                     ]}
                                                 />
                                             </div>
                                             <div>
-                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_warehouse')}</div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Warehouse className="h-3.5 w-3.5" />
+                                                    {t('stock_warehouse')}
+                                                </div>
                                                 <SearchableSelect
+                                                    active={wh !== 'all'}
                                                     value={wh}
                                                     onChange={setWh}
                                                     options={[
-                                                        { value: 'all', label: t('stock_all_warehouses'), search: t('stock_all_warehouses') },
-                                                        ...warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })),
-                                                    ]}
-                                                />
-                                            </div>
-                                            <div>
-                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('status')}</div>
-                                                <SearchableSelect
-                                                    value={statusFilter}
-                                                    onChange={setStatusFilter}
-                                                    options={[
-                                                        { value: 'all', label: t('stock_all_statuses'), search: t('stock_all_statuses') },
-                                                        { value: 'alerts', label: t('stock_st_alerts'), search: t('stock_st_alerts') },
-                                                        ...(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => ({
-                                                            value: s,
-                                                            label: t(`stock_st_${s}` as Parameters<typeof t>[0]),
-                                                            search: t(`stock_st_${s}` as Parameters<typeof t>[0]),
+                                                        {
+                                                            value: 'all',
+                                                            label: t('stock_all_warehouses'),
+                                                            search: t('stock_all_warehouses'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
+                                                        ...warehouses.map((w) => ({
+                                                            value: w.name,
+                                                            label: w.name,
+                                                            search: w.name,
+                                                            icon: <Warehouse className="text-muted-foreground/70 h-4 w-4" />,
                                                         })),
                                                     ]}
                                                 />
                                             </div>
                                             <div>
-                                                <div className="text-muted-foreground mb-1 text-xs font-medium">{t('stock_sort_by')}</div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <CircleDot className="h-3.5 w-3.5" />
+                                                    {t('status')}
+                                                </div>
                                                 <SearchableSelect
+                                                    active={statusFilter !== 'all'}
+                                                    value={statusFilter}
+                                                    onChange={setStatusFilter}
+                                                    options={[
+                                                        {
+                                                            value: 'all',
+                                                            label: t('stock_all_statuses'),
+                                                            search: t('stock_all_statuses'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
+                                                        {
+                                                            value: 'alerts',
+                                                            label: t('stock_st_alerts'),
+                                                            search: t('stock_st_alerts'),
+                                                            icon: <ToneDot tone="red" />,
+                                                        },
+                                                        ...(['ok', 'low', 'out', 'over', 'dead'] as StockItemStatus[]).map((s) => ({
+                                                            value: s,
+                                                            label: t(`stock_st_${s}` as Parameters<typeof t>[0]),
+                                                            search: t(`stock_st_${s}` as Parameters<typeof t>[0]),
+                                                            icon: <ToneDot tone={STATUS_TONE[s]} />,
+                                                        })),
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                                    {t('stock_sort_by')}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={itemSort !== DEFAULT_ITEM_SORT}
                                                     value={itemSort}
                                                     onChange={setItemSort}
                                                     options={[
@@ -582,7 +640,7 @@ export default function StockPage() {
                                         </div>
                                     )}
                                 </FilterPopover>
-                                {hasItemFilters && (
+                                {activeItemFilterCount > 0 && (
                                     <button
                                         type="button"
                                         onClick={resetItemFilters}
@@ -673,17 +731,17 @@ export default function StockPage() {
                 }}
             />
             <StockItemDetailModal
-                    itemId={viewId}
-                    onClose={() => setViewId(null)}
-                    onEdit={
-                        canManage
-                            ? (i) => {
-                                  setViewId(null);
-                                  setEditItem(i);
-                              }
-                            : undefined
-                    }
-                />
+                itemId={viewId}
+                onClose={() => setViewId(null)}
+                onEdit={
+                    canManage
+                        ? (i) => {
+                              setViewId(null);
+                              setEditItem(i);
+                          }
+                        : undefined
+                }
+            />
             <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />
         </div>

@@ -4,7 +4,6 @@ namespace App\Models\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
-use App\Enums\Asset\AssetType;
 use App\Models\Contract\Contract;
 use App\Models\Ticket\Ticket;
 use Database\Factories\AssetFactory;
@@ -29,24 +28,25 @@ class Asset extends Model
     }
 
     protected $fillable = [
-        'tag', 'type', 'brand', 'model', 'serial', 'source', 'status',
+        'tag', 'nickname', 'type', 'brand', 'model', 'serial', 'source', 'status',
         'owner', 'initial_owner', 'department', 'location', 'warehouse', 'value', 'supplier',
-        'purchase_date', 'warranty_end', 'contract_id', 'lease_start', 'lease_end',
-        'registered_date', 'notes', 'last_reason',
+        'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
+        'registered_date', 'owned_since', 'notes', 'last_reason',
     ];
 
     protected function casts(): array
     {
         return [
-            'type' => AssetType::class,
             'source' => AssetSource::class,
             'status' => AssetStatus::class,
             'value' => 'decimal:2',
             'purchase_date' => 'date',
             'warranty_end' => 'date',
+            'warranty_lifetime' => 'boolean',
             'lease_start' => 'date',
             'lease_end' => 'date',
             'registered_date' => 'date',
+            'owned_since' => 'date',
         ];
     }
 
@@ -81,16 +81,21 @@ class Asset extends Model
         });
     }
 
-    /** Build a unique asset tag from its source prefix + type code + a running number. */
+    /**
+     * Build the Asset ID as INK-IT-YY-NNNN: a fixed INK-IT prefix, the 2-digit
+     * year, and a 4-digit running number that restarts each year.
+     */
     public function generateTag(): string
     {
-        $source = $this->source instanceof AssetSource ? $this->source : AssetSource::tryFrom((string) $this->source);
-        $type = $this->type instanceof AssetType ? $this->type : AssetType::tryFrom((string) $this->type);
-        $prefix = $source === AssetSource::Rented ? 'RNT' : 'INB';
-        $code = strtoupper(substr($type?->value ?? 'as', 0, 2));
-        $next = (static::max('id') ?? 0) + 1;
+        $prefix = 'INK-IT-'.now()->format('y').'-';
 
-        return sprintf('%s-%s-%05d', $prefix, $code, $next);
+        // Highest sequence already issued under this year's prefix, then +1.
+        $last = static::where('tag', 'like', $prefix.'%')
+            ->pluck('tag')
+            ->map(fn (string $tag) => (int) substr($tag, strlen($prefix)))
+            ->max() ?? 0;
+
+        return sprintf('%s%04d', $prefix, $last + 1);
     }
 
     /** True when the asset is actively deployed to an owner (blocks a direct transfer). */

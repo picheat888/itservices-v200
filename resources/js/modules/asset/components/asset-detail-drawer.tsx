@@ -1,14 +1,15 @@
 import { AssetHistoryTab } from './asset-history-tab';
 import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
 import { AssetTicketsTab } from './asset-tickets-tab';
-import { useAsset } from '../hooks/use-assets';
+import { useAsset, useAssetMutations } from '../hooks/use-assets';
+import { useAuth } from '@/modules/auth';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Asset } from '@/shared/types';
-import { Check, ExternalLink, FileText, Share2, SquarePen } from 'lucide-react';
+import { Check, ExternalLink, FileText, Share2, SquarePen, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -53,6 +54,7 @@ export function AssetDetailDrawer({
     onReceive,
     onEdit,
     canTransfer,
+    canReceive,
 }: {
     asset: Asset | null;
     onClose: () => void;
@@ -60,6 +62,7 @@ export function AssetDetailDrawer({
     onReceive: (a: Asset) => void;
     onEdit?: (a: Asset) => void;
     canTransfer: boolean;
+    canReceive: boolean;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -79,6 +82,9 @@ export function AssetDetailDrawer({
 
     // Enriched asset (transfers + tickets) — Overview renders immediately from the list asset.
     const { data: full } = useAsset(asset?.id);
+    // The recipient (matched by employee code) is the only one who can accept a hand-over.
+    const { user } = useAuth();
+    const { accept } = useAssetMutations();
 
     const a = asset ?? shown;
     if (!a) return null;
@@ -88,7 +94,9 @@ export function AssetDetailDrawer({
     const tickets = enriched?.tickets ?? [];
 
     const rented = a.source === 'rented';
-    const blocked = ['deployed', 'writeoff', 'pending_stock'].includes(a.status);
+    const lifetime = !rented && a.warranty_lifetime;
+    const myEmpCode = user?.employee_code ?? null;
+    const isRecipient = a.status === 'pending_acceptance' && !!myEmpCode && a.owner === myEmpCode;
 
     // Coverage / warranty days-remaining sub-line for the KPI strip.
     const coverDays = daysUntil(a.cover_end);
@@ -125,8 +133,14 @@ export function AssetDetailDrawer({
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span className="truncate">{a.model}</span>
                             <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">{a.tag}</span>
+                            {a.nickname && (
+                                <span className="bg-accent text-foreground inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
+                                    <Tag className="h-3 w-3 opacity-60" />
+                                    {a.nickname}
+                                </span>
+                            )}
                             <span className="bg-accent text-muted-foreground shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
-                                {t(`asset_type_${a.type}`)}
+                                {a.type}
                             </span>
                             <span className="bg-accent text-muted-foreground shrink-0 rounded-md px-2 py-0.5 text-[11.5px] font-semibold">
                                 {rented ? t('asset_lease') : t('asset_purchase')}
@@ -175,8 +189,8 @@ export function AssetDetailDrawer({
                                     <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
                                         {rented ? t('asset_lease_end') : t('asset_warranty_end')}
                                     </div>
-                                    <div className="mt-1 text-base font-semibold">{a.cover_end ?? '—'}</div>
-                                    {coverSub && <div className={cn('mt-0.5 text-xs font-medium', coverTone)}>{coverSub}</div>}
+                                    <div className="mt-1 text-base font-semibold">{lifetime ? t('asset_lifetime') : (a.cover_end ?? '—')}</div>
+                                    {!lifetime && coverSub && <div className={cn('mt-0.5 text-xs font-medium', coverTone)}>{coverSub}</div>}
                                 </div>
                                 <div className="px-5 py-3.5">
                                     <div className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">{t('asset_owner')}</div>
@@ -191,20 +205,21 @@ export function AssetDetailDrawer({
                                     <div>
                                         <SectionLabel>{t('asset_general')}</SectionLabel>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <KV label={t('asset_type')} value={t(`asset_type_${a.type}`)} />
+                                            <KV label={t('asset_nickname')} value={a.nickname} />
+                                            <KV label={t('asset_type')} value={a.type} />
                                             <KV label={t('asset_brand')} value={a.brand} />
                                             <KV label={t('asset_serial')} value={a.serial} mono />
                                             <KV label={t('asset_location')} value={a.location} />
                                             <KV label={t('asset_warehouse')} value={a.warehouse} />
+                                            <KV label={t('asset_registered')} value={a.registered_date} mono />
                                         </div>
                                     </div>
                                     <div>
                                         <SectionLabel>{t('asset_ownership')}</SectionLabel>
                                         <div className="grid grid-cols-2 gap-4">
                                             <KV label={t('asset_owner')} value={a.owner} />
-                                            <KV label={t('asset_initial_owner')} value={a.initial_owner} />
                                             <KV label={t('asset_dept')} value={a.department} />
-                                            <KV label={t('asset_registered')} value={a.registered_date} mono />
+                                            <KV label={t('asset_owned_since')} value={a.owned_since} mono />
                                         </div>
                                     </div>
                                     <div>
@@ -219,7 +234,7 @@ export function AssetDetailDrawer({
                                             ) : (
                                                 <>
                                                     <KV label={t('asset_purchase_date')} value={a.purchase_date} mono />
-                                                    <KV label={t('asset_warranty_end')} value={a.warranty_end} mono />
+                                                    <KV label={t('asset_warranty_end')} value={lifetime ? t('asset_lifetime') : a.warranty_end} mono={!lifetime} />
                                                 </>
                                             )}
                                             <KV label={t('asset_supplier')} value={a.supplier} />
@@ -289,25 +304,31 @@ export function AssetDetailDrawer({
                     {tab === 'history' && <AssetHistoryTab transfers={transfers} />}
                 </div>
 
-                {/* Footer — Edit (left) / context action (right); the ✕ handles closing. */}
-                {(onEdit || canTransfer) && (
+                {/* Footer — context action (left) / Edit (right); the ✕ handles closing. */}
+                {(onEdit || canTransfer || canReceive || isRecipient) && (
                     <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                        {onEdit && (
-                            <Button variant="outline" className="mr-auto" onClick={() => onEdit(a)}>
-                                <SquarePen className="h-4 w-4" />
-                                {t('edit')}
+                        {isRecipient && (
+                            <Button onClick={() => accept.mutate(a.id, { onSuccess: onClose })} disabled={accept.isPending}>
+                                <Check className="h-4 w-4" />
+                                {t('asset_accept')}
                             </Button>
                         )}
-                        {canTransfer && a.status === 'pending_return' && (
-                            <Button className="ml-auto" onClick={() => onReceive(a)}>
+                        {canReceive && a.status === 'pending_return' && (
+                            <Button onClick={() => onReceive(a)}>
                                 <Check className="h-4 w-4" />
                                 {t('asset_mark_received')}
                             </Button>
                         )}
-                        {canTransfer && !blocked && a.status !== 'pending_return' && (
-                            <Button className="ml-auto" onClick={() => onTransfer(a)}>
+                        {canTransfer && a.status === 'ready' && (
+                            <Button onClick={() => onTransfer(a)}>
                                 <Share2 className="h-4 w-4" />
                                 {t('transfer_asset')}
+                            </Button>
+                        )}
+                        {onEdit && (
+                            <Button variant="outline" className="ml-auto" onClick={() => onEdit(a)}>
+                                <SquarePen className="h-4 w-4" />
+                                {t('edit')}
                             </Button>
                         )}
                     </div>

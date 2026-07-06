@@ -23,6 +23,12 @@ export interface NotificationData {
     reference?: string;
     // Stock count notifications (stock_count)
     stock_count_id?: number;
+    // Asset assigned notifications (asset_assigned)
+    asset_id?: number;
+    asset_tag?: string;
+    asset_model?: string;
+    asset_nickname?: string | null;
+    from?: string | null;
 }
 
 export interface AppNotification {

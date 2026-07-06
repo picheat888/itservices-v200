@@ -16,7 +16,7 @@ class Permissions
         return [
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
-            'assets' => ['view', 'register', 'transfer', 'retire', 'edit'],
+            'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my'],
             'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts'],
             'stock' => [
                 'module',
@@ -68,7 +68,7 @@ class Permissions
             'admin' => [
                 'tickets.view_all', 'tickets.create', 'tickets.assign', 'tickets.resolve',
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
-                'assets.view', 'assets.register', 'assets.transfer', 'assets.retire', 'assets.edit',
+                'assets.view', 'assets.register', 'assets.transfer', 'assets.receive', 'assets.retire', 'assets.edit', 'assets.my',
                 'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.renew', 'contracts.alerts',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
@@ -86,13 +86,14 @@ class Permissions
                 'employees.view_section', 'employees.view_department', 'employees.view_position',
                 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
                 'access.view',
+                'assets.my',
                 'tickets.create', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
-                'tickets.create', 'requests.submit', 'employees.edit_own',
+                'tickets.create', 'requests.submit', 'employees.edit_own', 'assets.my',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],

@@ -2,10 +2,16 @@
 
 namespace App\Services\Asset;
 
+use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
-use App\Models\Stock\StockItem;
+use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
+use App\Models\User;
+use App\Notifications\AssetAssignedNotification;
+use App\Notifications\AssetReturnRequestedNotification;
+use Illuminate\Support\Facades\Notification;
 
 class AssetService
 {
@@ -41,7 +47,7 @@ class AssetService
             $data['initial_owner'] = $data['owner'];
         }
 
-        return Asset::create($data);
+        return Asset::create($this->normalizeAcquisition($data));
     }
 
     /**
@@ -54,43 +60,112 @@ class AssetService
         if (blank($data['tag'] ?? null)) {
             unset($data['tag']);
         }
-        $asset->update($data);
+        $asset->update($this->normalizeAcquisition($data));
 
         return $asset->fresh();
+    }
+
+    /**
+     * Normalise acquisition fields by source before saving:
+     * - Rented: copy vendor, lease dates and value from the linked contract, and
+     *   clear purchase/warranty fields (a lease has none of its own).
+     * - Purchased: clear lease/contract fields; a lifetime warranty has no end date.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizeAcquisition(array $data): array
+    {
+        if (($data['source'] ?? null) === AssetSource::Rented->value) {
+            $contract = ! blank($data['contract_id'] ?? null) ? Contract::find($data['contract_id']) : null;
+            if ($contract) {
+                $data['supplier'] = $contract->vendor;
+                $data['lease_start'] = $contract->start_date?->toDateString();
+                $data['lease_end'] = $contract->end_date?->toDateString();
+                $data['value'] = $contract->value;
+            }
+            $data['purchase_date'] = null;
+            $data['warranty_end'] = null;
+            $data['warranty_lifetime'] = false;
+
+            return $data;
+        }
+
+        // Purchased: no lease or contract; a lifetime warranty carries no end date.
+        $data['contract_id'] = null;
+        $data['lease_start'] = null;
+        $data['lease_end'] = null;
+        if (! empty($data['warranty_lifetime'])) {
+            $data['warranty_end'] = null;
+        }
+
+        return $data;
     }
 
     /**
      * Hand an asset to a new owner. It enters "pending acceptance" until the
      * recipient confirms receipt.
      */
-    public function transfer(Asset $asset, string $newOwner, ?string $reason = null, ?string $performedBy = null): Asset
+    public function transfer(Asset $asset, string $newOwner, ?string $location = null, ?string $reason = null, ?string $performedBy = null): Asset
     {
-        $from = $asset->owner;
+        // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
+        // warehouse as the custody-trail origin instead of a blank sender.
+        $from = $asset->owner ?: $asset->warehouse;
         $asset->update([
             'owner' => $newOwner,
+            'location' => $location,
             'status' => AssetStatus::PendingAcceptance,
             'last_reason' => $reason,
         ]);
         $this->logTransfer($asset, $from, $newOwner, $reason, $performedBy);
+        $this->notifyRecipient($asset, $newOwner, $from);
 
         return $asset->fresh();
     }
 
-    /** Recipient confirms receipt: pending acceptance → deployed. */
+    /**
+     * Bell alert to the recipient when an asset is handed over — only if the new
+     * owner is an employee with a login account (pools / free-text owners get none).
+     */
+    private function notifyRecipient(Asset $asset, string $newOwner, ?string $from): void
+    {
+        $employee = Employee::where('code', $newOwner)->first();
+        if (! $employee) {
+            return;
+        }
+
+        // Only notify a recipient who can actually use My Assets (permission gates the bell).
+        $user = User::where('employee_id', $employee->id)->first();
+        if ($user && $user->hasPermission('assets.my')) {
+            $user->notify(new AssetAssignedNotification($asset, $from));
+        }
+    }
+
+    /** Recipient confirms receipt: pending acceptance → deployed, stamping the possession date. */
     public function accept(Asset $asset): Asset
     {
-        $asset->update(['status' => AssetStatus::Deployed]);
+        $asset->update([
+            'status' => AssetStatus::Deployed,
+            'owned_since' => now(),
+        ]);
 
         return $asset->fresh();
     }
 
-    /** Begin returning a deployed asset: deployed → pending return. */
+    /** Begin returning a deployed asset: deployed → pending return; alert IT to receive it. */
     public function requestReturn(Asset $asset, ?string $reason = null): Asset
     {
+        $holder = $asset->owner;
         $asset->update([
             'status' => AssetStatus::PendingReturn,
             'last_reason' => $reason,
         ]);
+
+        // Bell alert to everyone who can receive assets back into the pool (permission gates the bell).
+        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
+        }
 
         return $asset->fresh();
     }
@@ -103,22 +178,17 @@ class AssetService
     public function markReceived(Asset $asset, ?string $performedBy = null, ?string $warehouse = null): Asset
     {
         $from = $asset->owner;
+        // Back in the pool = no owner (same as a freshly registered asset); its physical
+        // whereabouts are the warehouse — which is also stamped as the custody-trail destination.
+        $dest = filled($warehouse) ? $warehouse : $asset->warehouse;
         $asset->update([
             'status' => AssetStatus::Ready,
-            'owner' => 'Pool — IT',
-            'warehouse' => filled($warehouse) ? $warehouse : $asset->warehouse,
+            'owner' => null,
+            // No holder in the pool → no possession date.
+            'owned_since' => null,
+            'warehouse' => $dest,
         ]);
-        $this->logTransfer($asset, $from, 'Pool — IT', 'Returned to pool', $performedBy);
-
-        return $asset->fresh();
-    }
-
-    /** Toggle maintenance: into Maintenance, or back to Deployed when leaving it. */
-    public function toggleMaintenance(Asset $asset): Asset
-    {
-        $asset->update([
-            'status' => $asset->status === AssetStatus::Maintenance ? AssetStatus::Deployed : AssetStatus::Maintenance,
-        ]);
+        $this->logTransfer($asset, $from, (string) $dest, 'Returned to pool', $performedBy);
 
         return $asset->fresh();
     }
@@ -135,40 +205,8 @@ class AssetService
     }
 
     /**
-     * Move an asset into the Stock module: create a stock item seeded from the
-     * asset's details and mark the asset as pending-stock.
-     *
-     * @param  array{sku: string, qty: int, warehouse?: ?string, reason?: ?string}  $data
-     */
-    public function convertToStock(Asset $asset, array $data): StockItem
-    {
-        $item = StockItem::create([
-            'sku' => $data['sku'],
-            'name' => $asset->model,
-            'serial' => $asset->serial,
-            'brand' => $asset->brand,
-            'model' => $asset->model,
-            'unit' => 'unit',
-            'cost' => $asset->value,
-            'current_stock' => $data['qty'],
-            'min_stock' => 0,
-            'max_stock' => $data['qty'],
-            'warehouse' => $data['warehouse'] ?? null,
-            'supplier' => $asset->supplier,
-            'last_move_at' => now(),
-        ]);
-
-        $asset->update([
-            'status' => AssetStatus::PendingStock,
-            'last_reason' => $data['reason'] ?? null,
-        ]);
-
-        return $item;
-    }
-
-    /**
-     * Apply a single status to many assets at once (used by bulk Maintenance /
-     * Write-off). Returns the number of assets updated.
+     * Apply a single status to many assets at once (used by bulk Write-off).
+     * Returns the number of assets updated.
      *
      * @param  list<int>  $ids
      */

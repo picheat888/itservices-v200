@@ -32,6 +32,7 @@ class UserResource extends JsonResource
             // prefer that. Fall back to any group, then null for system accounts.
             'group_name' => $this->resolveGroupName($employee),
             'employee_id' => $employee?->id,
+            'employee_code' => $employee?->code,
             'photo_url' => $employee && $employee->photo_path ? Storage::disk('public')->url($employee->photo_path) : null,
             'phone' => $employee?->phone,
             'name_th' => $employee?->name_th,

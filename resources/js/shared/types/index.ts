@@ -24,6 +24,7 @@ export interface User {
     role_label: string;
     group_name: string | null;
     employee_id: number | null;
+    employee_code: string | null;
     photo_url: string | null;
     phone: string | null;
     name_th: string | null;
@@ -211,13 +212,17 @@ export interface ContractSummary {
 }
 
 // Assets Management module
-export type AssetType = 'laptop' | 'desktop' | 'mobile' | 'printer' | 'server' | 'network' | 'other';
+// Asset type is a free Master Data category (managed under Settings → Master Data).
+// The known device names below still map to specific icons; anything else falls back to a generic icon.
+export type AssetType = string;
 export type AssetSource = 'purchased' | 'rented';
-export type AssetStatus = 'ready' | 'pending_acceptance' | 'deployed' | 'pending_return' | 'maintenance' | 'writeoff' | 'pending_stock';
+export type AssetStatus = 'ready' | 'pending_acceptance' | 'deployed' | 'pending_return' | 'writeoff';
 
 export interface Asset {
     id: number;
     tag: string;
+    /** User-given nickname ("Tag") to recognise the asset, separate from the Asset ID. */
+    nickname: string | null;
     type: AssetType;
     brand: string | null;
     model: string;
@@ -234,12 +239,14 @@ export interface Asset {
     supplier: string | null;
     purchase_date: string | null;
     warranty_end: string | null;
+    warranty_lifetime: boolean;
     contract_id: number | null;
     contract_code?: string | null;
     lease_start: string | null;
     lease_end: string | null;
     cover_end: string | null;
     registered_date: string | null;
+    owned_since: string | null;
     notes: string | null;
     last_reason: string | null;
     created_at: string | null;
@@ -290,7 +297,6 @@ export interface AssetSummary {
     ready: number;
     pending_acceptance: number;
     pending_return: number;
-    maintenance: number;
     writeoff: number;
     total_value: number;
     by_type: { type: AssetType; count: number }[];
@@ -383,6 +389,8 @@ export interface Category {
     id: number;
     name: string;
     name_th?: string | null;
+    /** Lucide icon name (e.g. "Laptop") used when this category is an asset type. */
+    icon?: string | null;
     description?: string | null;
 }
 

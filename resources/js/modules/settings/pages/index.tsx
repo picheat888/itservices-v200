@@ -11,6 +11,7 @@ import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { getLucideIcon } from '@/shared/lib/lucide-icons';
 import { TicketPriorityBadge } from '@/modules/ticket';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -624,7 +625,15 @@ function CategoriesList() {
         {
             key: 'name',
             header: t('md_category_name'),
-            render: (c) => <span className="text-sm font-medium">{displayName(c)}</span>,
+            render: (c) => {
+                const Icon = getLucideIcon(c.icon);
+                return (
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                        {Icon && <Icon className="text-muted-foreground h-4 w-4 shrink-0" />}
+                        {displayName(c)}
+                    </span>
+                );
+            },
         },
         {
             key: 'description',
@@ -1328,7 +1337,6 @@ const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
     { key: 'ready', labelKey: 'asset_ready' },
     { key: 'pending_acceptance', labelKey: 'asset_pending_accept' },
     { key: 'pending_return', labelKey: 'asset_pending_return' },
-    { key: 'maintenance', labelKey: 'asset_maintenance' },
     { key: 'writeoff', labelKey: 'asset_writeoff' },
 ];
 

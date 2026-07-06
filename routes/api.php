@@ -143,12 +143,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
     Route::get('assets/linkable', [AssetController::class, 'linkable'])->name('api.assets.linkable');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
+    Route::get('assets/mine', [AssetController::class, 'mine'])->name('api.assets.mine');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
     Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');
     Route::post('assets/{asset}/accept', [AssetController::class, 'accept'])->name('api.assets.accept');
+    Route::post('assets/{asset}/request-return', [AssetController::class, 'requestReturn'])->name('api.assets.request-return');
     Route::post('assets/{asset}/receive', [AssetController::class, 'markReceived'])->name('api.assets.receive');
-    Route::post('assets/{asset}/maintenance', [AssetController::class, 'toggleMaintenance'])->name('api.assets.maintenance');
-    Route::post('assets/{asset}/to-stock', [AssetController::class, 'toStock'])->name('api.assets.to-stock');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module

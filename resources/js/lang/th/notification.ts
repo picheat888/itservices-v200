@@ -23,4 +23,6 @@ export const notification: Dict = {
     "notif_stock_req_rejected": "คำขอของคุณถูกปฏิเสธ",
     "notif_stock_req_fulfilled": "คำขอของคุณถูกจ่ายแล้ว",
     "notif_stock_count_draft": "การนับสต็อกยังเป็นฉบับร่าง",
+    "notif_asset_assigned": "มอบหมายให้คุณ — แตะเพื่อกดรับ",
+    "notif_asset_return_requested": "มีการขอส่งคืน — รอคุณยืนยันรับ",
 };

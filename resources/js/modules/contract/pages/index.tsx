@@ -1,18 +1,16 @@
-import { ContractDetailDrawer } from '../components/contract-detail-drawer';
-import { ContractFormDrawer } from '../components/contract-form-drawer';
-import { ImportContractDialog } from '../components/import-contract-dialog';
-import { StatusBadge } from '@/shared/components/status-badge';
+import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
+import { useCurrency } from '@/modules/settings';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { SearchableSelect } from '@/shared/components/searchable-select';
+import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { cn } from '@/shared/lib/utils';
+import type { Contract, ContractStatus, ContractType, Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAuth } from '@/modules/auth';
-import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
-import { useCurrency } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Contract, ContractStatus, ContractType, Role } from '@/shared/types';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -32,6 +30,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { ContractDetailDrawer } from '../components/contract-detail-drawer';
+import { ContractFormDrawer } from '../components/contract-form-drawer';
+import { ImportContractDialog } from '../components/import-contract-dialog';
+import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
 // and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
@@ -137,7 +139,11 @@ export default function ContractsPage() {
     // The list endpoint's `tab` param doubles as the status filter: '' → all contracts,
     // 'expiring'/'expired' → the matching backend filter.
     const listEnabledTab = statusFilter || 'all';
-    const { data: listData, isLoading, isFetching } = useContracts({
+    const {
+        data: listData,
+        isLoading,
+        isFetching,
+    } = useContracts({
         page,
         per_page: perPage,
         search,
@@ -161,6 +167,14 @@ export default function ContractsPage() {
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
+
+    // Pagination footer values with fallbacks so the footer (incl. "Rows per page") can render
+    // even during the initial load on a fresh reload, when `meta` is not yet available — matching
+    // the Stock table, whose shared DataTable footer is always visible.
+    const totalRows = meta?.total ?? 0;
+    const perPageDisplay = meta?.per_page ?? perPage;
+    const currentPage = meta?.current_page ?? page;
+    const lastPage = meta?.last_page ?? 1;
 
     // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
     // localStorage (so navigating away and back — which clears the URL — restores it).
@@ -207,9 +221,11 @@ export default function ContractsPage() {
     // Whether either alert banner is showing — used to tighten the gap (≈10px) above the table.
     const hasBanners = !!summary?.expiring || !!summary?.expired;
 
-    // True when any list control differs from its default — drives the "Clear filters" button.
+    // Set filters (type/status/sort ≠ default) — drives the FilterPopover count badge.
     const DEFAULT_SORT = 'end_asc';
-    const hasActiveFilters = !!search || !!typeFilter || !!statusFilter || sort !== DEFAULT_SORT;
+    const activeFilterCount = (typeFilter ? 1 : 0) + (statusFilter ? 1 : 0) + (sort !== DEFAULT_SORT ? 1 : 0);
+    // True when any list control differs from its default — drives the quick "Clear filters" pill.
+    const hasActiveFilters = !!search || activeFilterCount > 0;
 
     /** Reset search, type/status filters and sort back to their defaults. */
     const clearFilters = () => {
@@ -355,139 +371,133 @@ export default function ContractsPage() {
                                     className="pl-9"
                                 />
                             </div>
-                            <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
-                                {hasActiveFilters && (
-                                    <button
-                                        type="button"
-                                        onClick={clearFilters}
-                                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
-                                    >
-                                        <X className="h-3 w-3" />
-                                        {t('reset_filters')}
-                                    </button>
-                                )}
-                                <div className="flex items-center gap-1.5">
-                                    <Filter className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">
-                                        {lang === 'th' ? 'ประเภท:' : 'Filter:'}
-                                    </span>
-                                    <Select
-                                        value={typeFilter || ALL_TYPES}
-                                        onValueChange={(v) => {
-                                            setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-40">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL_TYPES}>
-                                                <span className="flex items-center gap-2">
-                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
-                                                    {lang === 'th' ? 'ทุกประเภท' : 'All types'}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="software">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />
-                                                    {t('contract_type_software')}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="hardware">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
-                                                    {t('contract_type_hardware')}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="service">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-                                                    {t('contract_type_service')}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="connectivity">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                                                    {t('contract_type_connectivity')}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="other">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="bg-muted-foreground/40 h-2 w-2 shrink-0 rounded-full" />
-                                                    {t('contract_type_other')}
-                                                </span>
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Clock className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">{lang === 'th' ? 'สถานะ:' : 'Status:'}</span>
-                                    <Select
-                                        value={statusFilter || ALL_STATUS}
-                                        onValueChange={(v) => {
-                                            setStatusFilter(v === ALL_STATUS ? '' : (v as 'expiring' | 'expired'));
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-40">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value={ALL_STATUS}>
-                                                <span className="flex items-center gap-2">
-                                                    <span className="bg-muted-foreground/50 h-2 w-2 shrink-0 rounded-full" />
-                                                    {lang === 'th' ? 'ทุกสถานะ' : 'All statuses'}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="expiring">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
-                                                    {t('expiring_soon')}
-                                                </span>
-                                            </SelectItem>
-                                            <SelectItem value="expired">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
-                                                    {t('expired_contracts')}
-                                                </span>
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <ArrowUpDown className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                                    <span className="text-muted-foreground shrink-0 text-sm font-medium">
-                                        {lang === 'th' ? 'เรียงตาม:' : 'Sort by:'}
-                                    </span>
-                                    <Select
-                                        value={sort}
-                                        onValueChange={(v) => {
-                                            setSort(v);
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-48">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="end_asc">
-                                                {lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first'}
-                                            </SelectItem>
-                                            <SelectItem value="end_desc">
-                                                {lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first'}
-                                            </SelectItem>
-                                            <SelectItem value="created_desc">{lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added'}</SelectItem>
-                                            <SelectItem value="created_asc">{lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added'}</SelectItem>
-                                            <SelectItem value="value_desc">
-                                                {lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first'}
-                                            </SelectItem>
-                                            <SelectItem value="value_asc">{lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first'}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
+                            <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={totalRows}>
+                                {() => {
+                                    const sortOptions = [
+                                        { value: 'end_asc', label: lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first' },
+                                        { value: 'end_desc', label: lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first' },
+                                        { value: 'created_desc', label: lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added' },
+                                        { value: 'created_asc', label: lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added' },
+                                        { value: 'value_desc', label: lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first' },
+                                        { value: 'value_asc', label: lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first' },
+                                    ];
+                                    return (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Filter className="h-3.5 w-3.5" />
+                                                    {lang === 'th' ? 'ประเภท' : 'Type'}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={!!typeFilter}
+                                                    value={typeFilter || ALL_TYPES}
+                                                    onChange={(v) => {
+                                                        setTypeFilter(v === ALL_TYPES ? '' : (v as ContractType));
+                                                        setPage(1);
+                                                    }}
+                                                    options={[
+                                                        {
+                                                            value: ALL_TYPES,
+                                                            label: lang === 'th' ? 'ทุกประเภท' : 'All types',
+                                                            search: lang === 'th' ? 'ทุกประเภท' : 'All types',
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
+                                                        {
+                                                            value: 'software',
+                                                            label: t('contract_type_software'),
+                                                            search: t('contract_type_software'),
+                                                            icon: <ToneDot tone="blue" />,
+                                                        },
+                                                        {
+                                                            value: 'hardware',
+                                                            label: t('contract_type_hardware'),
+                                                            search: t('contract_type_hardware'),
+                                                            icon: <ToneDot tone="violet" />,
+                                                        },
+                                                        {
+                                                            value: 'service',
+                                                            label: t('contract_type_service'),
+                                                            search: t('contract_type_service'),
+                                                            icon: <ToneDot tone="amber" />,
+                                                        },
+                                                        {
+                                                            value: 'connectivity',
+                                                            label: t('contract_type_connectivity'),
+                                                            search: t('contract_type_connectivity'),
+                                                            icon: <ToneDot tone="green" />,
+                                                        },
+                                                        {
+                                                            value: 'other',
+                                                            label: t('contract_type_other'),
+                                                            search: t('contract_type_other'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Clock className="h-3.5 w-3.5" />
+                                                    {lang === 'th' ? 'สถานะ' : 'Status'}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={!!statusFilter}
+                                                    value={statusFilter || ALL_STATUS}
+                                                    onChange={(v) => {
+                                                        setStatusFilter(v === ALL_STATUS ? '' : (v as 'expiring' | 'expired'));
+                                                        setPage(1);
+                                                    }}
+                                                    options={[
+                                                        {
+                                                            value: ALL_STATUS,
+                                                            label: lang === 'th' ? 'ทุกสถานะ' : 'All statuses',
+                                                            search: lang === 'th' ? 'ทุกสถานะ' : 'All statuses',
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
+                                                        {
+                                                            value: 'expiring',
+                                                            label: t('expiring_soon'),
+                                                            search: t('expiring_soon'),
+                                                            icon: <ToneDot tone="amber" />,
+                                                        },
+                                                        {
+                                                            value: 'expired',
+                                                            label: t('expired_contracts'),
+                                                            search: t('expired_contracts'),
+                                                            icon: <ToneDot tone="red" />,
+                                                        },
+                                                    ]}
+                                                />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                                    {lang === 'th' ? 'เรียงตาม' : 'Sort by'}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={sort !== DEFAULT_SORT}
+                                                    value={sort}
+                                                    onChange={(v) => {
+                                                        setSort(v);
+                                                        setPage(1);
+                                                    }}
+                                                    options={sortOptions.map((o) => ({ ...o, search: o.label }))}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                }}
+                            </FilterPopover>
+                            {hasActiveFilters && (
+                                <button
+                                    type="button"
+                                    onClick={clearFilters}
+                                    className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex shrink-0 items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+                                >
+                                    <X className="h-3 w-3" />
+                                    {t('reset_filters')}
+                                </button>
+                            )}
                         </div>
 
                         <div className="border-border overflow-hidden rounded-xl border">
@@ -542,57 +552,55 @@ export default function ContractsPage() {
                             </div>
                         </div>
 
-                        {meta && rows.length > 0 && (
-                            <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                                    <Select
-                                        value={String(perPage)}
-                                        onValueChange={(v) => {
-                                            setPerPage(Number(v));
-                                            setPage(1);
-                                        }}
-                                    >
-                                        <SelectTrigger className="h-8 w-[72px]">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {[20, 50, 100].map((n) => (
-                                                <SelectItem key={n} value={String(n)}>
-                                                    {n}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                        <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
+                            <div className="flex items-center gap-2">
+                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                                <Select
+                                    value={String(perPage)}
+                                    onValueChange={(v) => {
+                                        setPerPage(Number(v));
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[72px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[20, 50, 100].map((n) => (
+                                            <SelectItem key={n} value={String(n)}>
+                                                {n}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                                <div className="flex items-center gap-3">
-                                    <span>
-                                        {meta.total === 0 ? 0 : (meta.current_page - 1) * meta.per_page + 1}–
-                                        {Math.min(meta.current_page * meta.per_page, meta.total)} {lang === 'th' ? 'จาก' : 'of'} {meta.total}
+                            <div className="flex items-center gap-3">
+                                <span>
+                                    {totalRows === 0 ? 0 : (currentPage - 1) * perPageDisplay + 1}–{Math.min(currentPage * perPageDisplay, totalRows)}{' '}
+                                    {lang === 'th' ? 'จาก' : 'of'} {totalRows}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={page <= 1}
+                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    <span className="text-foreground px-1 font-medium">
+                                        {currentPage} / {lastPage}
                                     </span>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                            disabled={page <= 1}
-                                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </button>
-                                        <span className="text-foreground px-1 font-medium">
-                                            {meta.current_page} / {meta.last_page}
-                                        </span>
-                                        <button
-                                            onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-                                            disabled={page >= meta.last_page}
-                                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                                        disabled={page >= lastPage}
+                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
                                 </div>
                             </div>
-                        )}
+                        </div>
                     </div>
                 )}
             </Card>

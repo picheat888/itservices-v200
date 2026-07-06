@@ -9,7 +9,7 @@ import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { useHydrateSettings, SettingsPage } from '@/modules/settings';
 import { queryClient } from '@/shared/lib/query-client';
 import { AccessControlPage } from '@/modules/access';
-import { AssetsPage } from '@/modules/asset';
+import { AssetsPage, MyAssetsPage } from '@/modules/asset';
 import { ContractsPage } from '@/modules/contract';
 import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
@@ -42,6 +42,15 @@ function App() {
                 <Route element={<ProtectedRoute />}>
                     <Route element={<AppShell />}>
                         <Route index element={<DashboardPage />} />
+                        {/* Employee self-service — gated by the My Assets permission (not assets.view). */}
+                        <Route
+                            path="my-assets"
+                            element={
+                                <RequirePermission anyOf={['assets.my']}>
+                                    <MyAssetsPage />
+                                </RequirePermission>
+                            }
+                        />
                         <Route
                             path="employees"
                             element={

@@ -1,5 +1,5 @@
 import type { AppNotification } from '@/modules/notification';
-import { Boxes, CalendarClock, ClipboardList, Inbox, PackageMinus, PackagePlus, UserMinus, UserPlus } from 'lucide-react';
+import { Boxes, CalendarClock, ClipboardList, Inbox, PackageCheck, PackageMinus, PackagePlus, Undo2, UserMinus, UserPlus } from 'lucide-react';
 
 /**
  * Shared presentation helpers for notifications, used by both the bell dropdown
@@ -47,6 +47,12 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     if (n.data.type === 'stock_count') {
         return { Icon: ClipboardList, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
+    if (n.data.type === 'asset_assigned') {
+        return { Icon: PackageCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+    }
+    if (n.data.type === 'asset_return_requested') {
+        return { Icon: Undo2, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
     if (n.data.subtype === 'offboarding') {
         return { Icon: UserMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
     }
@@ -59,6 +65,7 @@ export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
+    if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested') return `${n.data.asset_model} (${n.data.asset_tag})`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
@@ -72,11 +79,16 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
+    if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
+    if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');
     return n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required');
 }
 
 /** SPA route a notification should open when clicked. */
 export function notificationTarget(n: AppNotification): string {
+    // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
+    if (n.data.type === 'asset_assigned') return '/my-assets';
+    if (n.data.type === 'asset_return_requested') return '/assets';
     const mod = moduleOf(n.data.type);
     if (mod === 'contracts') return `/contracts?view=${n.data.contract_id}`;
     if (mod === 'stock') {

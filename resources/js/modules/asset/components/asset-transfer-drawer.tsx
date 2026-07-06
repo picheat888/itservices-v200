@@ -1,40 +1,48 @@
 import { Field } from '@/shared/components/field';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useAssetMutations } from '../hooks/use-assets';
+import { useLocations } from '@/modules/employee';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Asset } from '@/shared/types';
 import { Loader2, Share2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 /** Hand an asset to a new owner; it becomes "pending acceptance" until confirmed. */
 export function AssetTransferDrawer({ asset, onClose }: { asset: Asset | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { transfer } = useAssetMutations();
+    const { data: locations = [] } = useLocations();
+    const locationOptions = useMemo(() => locations.map((l) => ({ value: l.name, label: l.name, search: l.name })), [locations]);
     const [owner, setOwner] = useState('');
+    const [location, setLocation] = useState('');
     const [reason, setReason] = useState('');
-    const [err, setErr] = useState('');
+    const [err, setErr] = useState<{ owner?: string; location?: string }>({});
 
     useEffect(() => {
         setOwner('');
+        setLocation('');
         setReason('');
-        setErr('');
+        setErr({});
     }, [asset]);
 
     const submit = async () => {
-        if (!owner.trim()) {
-            setErr(lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required');
-            return;
-        }
-        if (!asset) return;
+        const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
+        const e: { owner?: string; location?: string } = {};
+        if (!owner.trim()) e.owner = required;
+        if (!location.trim()) e.location = required;
+        setErr(e);
+        if (Object.keys(e).length || !asset) return;
+
         try {
-            await transfer.mutateAsync({ id: asset.id, owner: owner.trim(), reason: reason.trim() || undefined });
+            await transfer.mutateAsync({ id: asset.id, owner: owner.trim(), location: location.trim(), reason: reason.trim() || undefined });
             onClose();
         } catch {
-            setErr(lang === 'th' ? 'โอนไม่สำเร็จ' : 'Transfer failed');
+            setErr({ owner: lang === 'th' ? 'โอนไม่สำเร็จ' : 'Transfer failed' });
         }
     };
 
@@ -50,8 +58,16 @@ export function AssetTransferDrawer({ asset, onClose }: { asset: Asset | null; o
                     <Field label={lang === 'th' ? 'ผู้ถือครองปัจจุบัน' : 'Current owner'}>
                         <Input value={asset?.owner ?? '—'} disabled className="opacity-70" />
                     </Field>
-                    <Field label={t('asset_new_owner')} required error={err}>
+                    <Field label={t('asset_new_owner')} required error={err.owner}>
                         <Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="EMP-2000 / Pool — Sales" autoFocus />
+                    </Field>
+                    <Field label={t('asset_location')} required error={err.location}>
+                        <SearchableSelect
+                            value={location}
+                            onChange={setLocation}
+                            options={locationOptions}
+                            placeholder={lang === 'th' ? 'เลือกที่ตั้งปลายทาง' : 'Select destination location'}
+                        />
                     </Field>
                     <Field label={t('asset_transfer_reason')}>
                         <textarea

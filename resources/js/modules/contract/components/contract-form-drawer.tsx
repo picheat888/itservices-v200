@@ -668,15 +668,15 @@ export function ContractFormDrawer({
                                         />
                                     </Field>
                                     <Field label={t('contract_billing')}>
-                                        <select
+                                        <SearchableSelect
                                             value={form.billing_cycle}
-                                            onChange={(e) => upd('billing_cycle', e.target.value as BillingCycle)}
-                                            className="border-input bg-background focus:border-brand h-10 w-full rounded-md border px-3 text-sm outline-none"
-                                        >
-                                            <option value="monthly">{t('contract_billing_monthly')}</option>
-                                            <option value="quarterly">{t('contract_billing_quarterly')}</option>
-                                            <option value="yearly">{t('contract_billing_yearly')}</option>
-                                        </select>
+                                            onChange={(v) => upd('billing_cycle', v as BillingCycle)}
+                                            options={[
+                                                { value: 'monthly', label: t('contract_billing_monthly'), search: t('contract_billing_monthly') },
+                                                { value: 'quarterly', label: t('contract_billing_quarterly'), search: t('contract_billing_quarterly') },
+                                                { value: 'yearly', label: t('contract_billing_yearly'), search: t('contract_billing_yearly') },
+                                            ]}
+                                        />
                                     </Field>
                                 </div>
 

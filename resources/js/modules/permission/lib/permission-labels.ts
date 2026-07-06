@@ -15,6 +15,13 @@ export const actionLabel = (module: string, action: string, lang: Lang) => {
     return v === k ? action : v;
 };
 
+/** Optional extra info shown behind an (i) icon; '' when the permission has no description. */
+export const actionDescription = (module: string, action: string, lang: Lang) => {
+    const k = `perm_desc_${module}.${action}`;
+    const v = translate(lang, k);
+    return v === k ? '' : v;
+};
+
 // Permission keys whose enforcement is actually live today. Everything else is
 // shown with a "(Coming soon)" tag in the matrix (toggle still persists).
 const LIVE = new Set<string>([
@@ -26,8 +33,10 @@ const LIVE = new Set<string>([
     'assets.view',
     'assets.register',
     'assets.transfer',
+    'assets.receive',
     'assets.retire',
     'assets.edit',
+    'assets.my',
     'contracts.view',
     'contracts.create',
     'contracts.edit',

@@ -25,8 +25,8 @@ export const assetModelApi = {
 
 export const categoryApi = {
     list: () => http.get<ApiEnvelope<Category[]>>('/categories').then((r) => r.data.data),
-    create: (payload: { name: string; name_th?: string; description?: string }) => mutate<Category>('post', '/categories', payload),
-    update: (id: number, payload: { name: string; name_th?: string; description?: string }) =>
+    create: (payload: { name: string; name_th?: string; icon?: string | null; description?: string }) => mutate<Category>('post', '/categories', payload),
+    update: (id: number, payload: { name: string; name_th?: string; icon?: string | null; description?: string }) =>
         mutate<Category>('put', `/categories/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/categories/${id}`),
 };

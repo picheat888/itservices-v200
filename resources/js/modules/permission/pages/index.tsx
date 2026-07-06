@@ -25,7 +25,8 @@ import {
 import { useDateTime } from '@/modules/settings';
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { useT } from '@/lang';
-import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';
@@ -368,14 +369,16 @@ function RolesTab() {
                                                         {group.keys.map((key) => {
                                                             const [mod, action] = key.split('.');
                                                             const live = isLivePermission(key);
+                                                            const info = actionDescription(mod, action, lang);
                                                             // Coming-soon permissions are shown off and locked — the
                                                             // feature isn't built yet, so the switch can't be turned on.
                                                             const on = live && (role.is_super || draft.has(key));
                                                             const locked = role.is_super || !live;
                                                             return (
                                                                 <div key={key} className="flex items-center justify-between gap-2">
-                                                                    <span className={cn('text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
+                                                                    <span className={cn('flex items-center gap-1 text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
                                                                         {actionLabel(mod, action, lang)}
+                                                                        {info && <InfoHint text={info} />}
                                                                         {!live && (
                                                                             <span className="ml-1 text-[11px] italic opacity-70">
                                                                                 ({t('coming_soon_tag')})

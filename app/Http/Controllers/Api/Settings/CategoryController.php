@@ -22,6 +22,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
+            'icon' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $category = Category::create($data);
@@ -36,6 +37,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'name_th' => ['nullable', 'string', 'max:120'],
+            'icon' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
         $before = $category->getOriginal();

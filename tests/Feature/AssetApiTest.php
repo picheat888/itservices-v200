@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
+use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
+use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -55,18 +58,49 @@ class AssetApiTest extends TestCase
         $this->postJson('/api/assets', [
             'type' => 'laptop', 'source' => 'purchased', 'model' => 'X', 'value' => 100,
         ])->assertCreated()
-            ->assertJsonPath('data.tag', fn ($tag) => is_string($tag) && str_starts_with($tag, 'INB-LA-'));
+            ->assertJsonPath('data.tag', fn ($tag) => is_string($tag) && str_starts_with($tag, 'INK-IT-'));
     }
 
-    public function test_rented_asset_value_display_is_monthly(): void
+    public function test_rented_asset_derives_value_and_dates_from_contract(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create([
+            'vendor' => 'SVOA', 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
+            'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+
+        $this->postJson('/api/assets', [
+            'type' => 'network', 'source' => 'rented', 'model' => 'Cisco 9300', 'contract_id' => $contract->id,
+        ])->assertCreated()
+            ->assertJsonPath('data.value_display', '฿8,500/mo')
+            ->assertJsonPath('data.supplier', 'SVOA')
+            ->assertJsonPath('data.lease_start', '2026-01-01')
+            ->assertJsonPath('data.lease_end', '2027-12-31')
+            ->assertJsonPath('data.contract_id', $contract->id)
+            ->assertJsonPath('data.tag', fn ($tag) => str_starts_with($tag, 'INK-IT-'));
+    }
+
+    public function test_rented_asset_requires_a_contract(): void
     {
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'type' => 'network', 'source' => 'rented', 'model' => 'Cisco 9300', 'value' => 8500,
+            'type' => 'network', 'source' => 'rented', 'model' => 'Cisco 9300',
+        ])->assertStatus(422)->assertJsonValidationErrors('contract_id');
+    }
+
+    public function test_lifetime_warranty_clears_the_end_date(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/assets', [
+            'type' => 'printer', 'source' => 'purchased', 'model' => 'Brother HL', 'value' => 5000,
+            'warranty_end' => '2030-01-01', 'warranty_lifetime' => true,
         ])->assertCreated()
-            ->assertJsonPath('data.value_display', '฿8,500/mo')
-            ->assertJsonPath('data.tag', fn ($tag) => str_starts_with($tag, 'RNT-NE-'));
+            ->assertJsonPath('data.warranty_lifetime', true)
+            ->assertJsonPath('data.warranty_end', null);
     }
 
     public function test_value_display_uses_the_configured_currency_symbol(): void
@@ -102,10 +136,65 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'reason' => 'New hire'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ Floor 3', 'reason' => 'New hire'])
             ->assertOk()
             ->assertJsonPath('data.status', 'pending_acceptance')
-            ->assertJsonPath('data.owner', 'EMP-2000');
+            ->assertJsonPath('data.owner', 'EMP-2000')
+            ->assertJsonPath('data.location', 'HQ Floor 3');
+    }
+
+    public function test_transfer_requires_a_location(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000'])
+            ->assertStatus(422)->assertJsonValidationErrors('location');
+    }
+
+    public function test_my_assets_returns_only_the_users_own_assets(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-7001', 'first_name' => 'Me', 'last_name' => 'User']);
+        $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
+        Asset::factory()->create(['owner' => 'EMP-7001']);
+        Asset::factory()->create(['owner' => 'EMP-7001']);
+        Asset::factory()->create(['owner' => 'EMP-9999']);
+
+        $this->actingAs($user);
+        $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(2, 'data');
+    }
+
+    public function test_only_the_recipient_employee_can_accept_a_handover(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'Rec', 'last_name' => 'Ipient']);
+        $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-9001']);
+
+        // IT / anyone who is not the recipient cannot accept on their behalf.
+        $this->actingAs($this->super());
+        $this->postJson("/api/assets/{$asset->id}/accept")->assertForbidden();
+
+        // The recipient can accept — the asset deploys and gets a possession date.
+        $this->actingAs($recipient);
+        $this->postJson("/api/assets/{$asset->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'deployed')
+            ->assertJsonPath('data.owned_since', fn ($d) => is_string($d) && $d !== '');
+    }
+
+    public function test_transfer_notifies_the_recipient_employee(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-8001', 'first_name' => 'New', 'last_name' => 'Owner']);
+        $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        RolePermission::create(['role_id' => $recipient->role_id, 'permission' => 'assets.my', 'allowed' => true]);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+
+        $this->actingAs($this->super());
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-8001', 'location' => 'HQ'])->assertOk();
+
+        $this->assertSame(1, $recipient->fresh()->notifications()->count());
+        $this->assertSame('asset_assigned', $recipient->notifications()->first()->data['type']);
     }
 
     public function test_cannot_transfer_a_deployed_asset(): void
@@ -113,8 +202,40 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-1042']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ'])
             ->assertStatus(422);
+    }
+
+    public function test_holder_can_request_return_of_their_asset(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-6001', 'first_name' => 'Hold', 'last_name' => 'Er']);
+        $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6001']);
+
+        // Anyone who is not the holder cannot request its return.
+        $this->actingAs($this->super());
+        $this->postJson("/api/assets/{$asset->id}/request-return")->assertForbidden();
+
+        // The holder can — it goes to pending return (still theirs until IT receives it).
+        $this->actingAs($holder);
+        $this->postJson("/api/assets/{$asset->id}/request-return")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending_return')
+            ->assertJsonPath('data.owner', 'EMP-6001');
+    }
+
+    public function test_return_request_notifies_it_receivers(): void
+    {
+        $it = $this->super(); // super holds assets.transfer → an IT receiver
+        $employee = Employee::create(['code' => 'EMP-6100', 'first_name' => 'H', 'last_name' => 'R']);
+        $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6100']);
+
+        $this->actingAs($holder);
+        $this->postJson("/api/assets/{$asset->id}/request-return")->assertOk();
+
+        $this->assertSame(1, $it->fresh()->notifications()->count());
+        $this->assertSame('asset_return_requested', $it->notifications()->first()->data['type']);
     }
 
     public function test_mark_received_returns_asset_to_pool(): void
@@ -122,10 +243,11 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500']);
 
-        $this->postJson("/api/assets/{$asset->id}/receive")
+        $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
             ->assertOk()
             ->assertJsonPath('data.status', 'ready')
-            ->assertJsonPath('data.owner', 'Pool — IT');
+            ->assertJsonPath('data.owner', null)
+            ->assertJsonPath('data.owned_since', null);
     }
 
     public function test_mark_received_stores_asset_in_chosen_warehouse(): void
@@ -136,18 +258,17 @@ class AssetApiTest extends TestCase
         $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
             ->assertOk()
             ->assertJsonPath('data.status', 'ready')
-            ->assertJsonPath('data.owner', 'Pool — IT')
+            ->assertJsonPath('data.owner', null)
             ->assertJsonPath('data.warehouse', 'Central IT');
     }
 
-    public function test_mark_received_keeps_existing_warehouse_when_none_given(): void
+    public function test_mark_received_requires_a_destination_warehouse(): void
     {
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'pending_return', 'warehouse' => 'Branch A']);
 
         $this->postJson("/api/assets/{$asset->id}/receive")
-            ->assertOk()
-            ->assertJsonPath('data.warehouse', 'Branch A');
+            ->assertStatus(422)->assertJsonValidationErrors('warehouse');
     }
 
     public function test_asset_can_be_created_and_filtered_by_warehouse(): void
@@ -171,14 +292,14 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         Asset::factory()->create(['status' => 'deployed', 'value' => 40000]);
         Asset::factory()->create(['status' => 'ready', 'value' => 20000]);
-        Asset::factory()->create(['status' => 'maintenance', 'value' => 10000]);
+        Asset::factory()->create(['status' => 'pending_return', 'value' => 10000]);
 
         $this->getJson('/api/assets/summary')
             ->assertOk()
             ->assertJsonPath('total', 3)
             ->assertJsonPath('deployed', 1)
             ->assertJsonPath('ready', 1)
-            ->assertJsonPath('maintenance', 1);
+            ->assertJsonPath('pending_return', 1);
     }
 
     public function test_bulk_writeoff_updates_many_assets(): void
@@ -197,27 +318,17 @@ class AssetApiTest extends TestCase
     public function test_transfer_is_recorded_in_the_transfer_log(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+        // Pooled asset (no owner) stored in a warehouse.
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'reason' => 'New hire'])->assertOk();
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ', 'reason' => 'New hire'])->assertOk();
 
+        // The custody trail stamps the origin warehouse as the "from" when it leaves the pool.
         $this->getJson('/api/assets/transfers')
             ->assertOk()
             ->assertJsonPath('data.0.to_owner', 'EMP-2000')
-            ->assertJsonPath('data.0.from_owner', 'Pool — IT')
+            ->assertJsonPath('data.0.from_owner', 'Central IT')
             ->assertJsonPath('data.0.reason', 'New hire');
-    }
-
-    public function test_convert_to_stock_creates_a_stock_item(): void
-    {
-        $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'model' => 'Dell Latitude', 'value' => 30000]);
-
-        $this->postJson("/api/assets/{$asset->id}/to-stock", ['sku' => 'STK-TEST-1', 'qty' => 2, 'warehouse' => 'Central IT'])
-            ->assertOk()
-            ->assertJsonPath('data.status', 'pending_stock');
-
-        $this->assertDatabaseHas('stock_items', ['sku' => 'STK-TEST-1', 'current_stock' => 2, 'name' => 'Dell Latitude']);
     }
 
     public function test_show_includes_transfer_history_and_related_tickets(): void

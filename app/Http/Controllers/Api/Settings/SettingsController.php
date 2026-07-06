@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\Settings\AppSetting;
 use App\Models\AuditLog;
-use App\Models\Settings\MailSetting;
 use App\Models\Permission\Role;
+use App\Models\Settings\AppSetting;
+use App\Models\Settings\MailSetting;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
@@ -45,7 +45,6 @@ class SettingsController extends Controller
         'ready' => '#059669',
         'pending_acceptance' => '#d97706',
         'pending_return' => '#d97706',
-        'maintenance' => '#d97706',
         'writeoff' => '#dc2626',
     ];
 

@@ -1,6 +1,6 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -14,6 +14,9 @@ export interface SearchOption {
     hint?: string;
     /** Optional avatar URL; when the field is present an avatar slot renders (initials fallback). */
     avatar?: string | null;
+    /** Optional leading visual (e.g. a type icon or status color dot). When any option
+     *  has one, every row reserves the slot so labels stay aligned. */
+    icon?: React.ReactNode;
     search: string;
 }
 
@@ -27,8 +30,12 @@ function optionInitials(label: string): string {
         .toUpperCase();
 }
 
-// Approx. menu height (search box + max-h-56 list + padding) used to decide drop direction.
-const MENU_MAX = 300;
+// Prefer dropping down; only flip up when there's less than this much room below.
+const FLIP_THRESHOLD = 180;
+// Default option-list height (matches the old max-h-56) when there's ample room.
+const LIST_MAX = 224;
+// Chrome outside the list (search box + paddings/borders) — reserved when capping height.
+const LIST_CHROME = 56;
 
 export function SearchableSelect({
     value,
@@ -36,6 +43,7 @@ export function SearchableSelect({
     options,
     placeholder,
     clearable = false,
+    active = false,
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -43,12 +51,16 @@ export function SearchableSelect({
     placeholder?: string;
     /** Show an inline clear (×) button when a value is selected. */
     clearable?: boolean;
+    /** Brand-tinted trigger — marks a filter field whose value differs from its default. */
+    active?: boolean;
 }) {
     const t = useT();
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
-    // Open upward when the trigger sits too close to the viewport bottom.
+    // Open upward when the trigger sits too close to the bottom.
     const [dropUp, setDropUp] = useState(false);
+    // Option-list max height, capped to the room available so the menu is never clipped.
+    const [listMaxH, setListMaxH] = useState<number>(LIST_MAX);
     // When the select lives inside a dialog, the menu is portaled into the dialog
     // content (escaping the body's overflow-y-auto clip) and positioned absolutely
     // relative to it. Outside a dialog it stays inline, exactly as before.
@@ -78,13 +90,22 @@ export function SearchableSelect({
             return;
         }
         const rect = el.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const up = spaceBelow < MENU_MAX && rect.top > spaceBelow;
         const dlg = el.closest('[role="dialog"]') as HTMLElement | null;
+        // Decide drop direction against the dialog's box (not the viewport) when inside one,
+        // so a field near the dialog footer flips up instead of opening into / behind it.
+        const c = dlg?.getBoundingClientRect();
+        const topLimit = c ? c.top : 0;
+        const bottomLimit = c ? c.bottom : window.innerHeight;
+        const spaceBelow = bottomLimit - rect.bottom;
+        const spaceAbove = rect.top - topLimit;
+        // Drop down by default; flip up only when the room below is too small AND there's more above.
+        const up = spaceBelow < FLIP_THRESHOLD && spaceAbove > spaceBelow;
+        // Cap the list to the room in the chosen direction so it never spills past the dialog/footer.
+        const room = (up ? spaceAbove : spaceBelow) - LIST_CHROME - 8;
+        setListMaxH(Math.max(120, Math.min(LIST_MAX, room)));
         setDropUp(up);
         setDialogEl(dlg);
-        if (dlg) {
-            const c = dlg.getBoundingClientRect();
+        if (dlg && c) {
             setCoords({
                 left: rect.left - c.left,
                 width: rect.width,
@@ -125,6 +146,9 @@ export function SearchableSelect({
 
     const selected = options.find((o) => o.value === value);
     const filtered = q ? options.filter((o) => o.search.toLowerCase().includes(q.toLowerCase())) : options;
+    // Reserve the leading icon slot on every row when at least one option supplies one,
+    // so rows without an icon (e.g. the "All" entry) keep their labels aligned.
+    const hasIcons = options.some((o) => o.icon !== undefined);
 
     // The menu body — shared between the inline and portaled wrappers.
     const menu = (
@@ -138,7 +162,7 @@ export function SearchableSelect({
                     className="w-full bg-transparent px-1 text-sm outline-none"
                 />
             </div>
-            <div className="max-h-56 overflow-y-auto py-1">
+            <div className="overflow-y-auto py-1" style={{ maxHeight: listMaxH }}>
                 {filtered.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
                 {filtered.map((o) => (
                     <button
@@ -162,6 +186,7 @@ export function SearchableSelect({
                                 </AvatarFallback>
                             </Avatar>
                         )}
+                        {hasIcons && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{o.icon}</span>}
                         <span className="min-w-0 flex-1">
                             <span className="block truncate">{o.label}</span>
                             {o.hint && <span className="text-muted-foreground block truncate text-xs">{o.hint}</span>}
@@ -178,7 +203,10 @@ export function SearchableSelect({
             <button
                 type="button"
                 onClick={toggle}
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
+                className={cn(
+                    'ring-offset-background focus-visible:ring-ring flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden',
+                    active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background',
+                )}
             >
                 <span className="flex min-w-0 items-center gap-2">
                     {/* Avatar slot renders only for option sets that supply the field (e.g. people pickers). */}
@@ -190,6 +218,8 @@ export function SearchableSelect({
                             </AvatarFallback>
                         </Avatar>
                     )}
+                    {/* Leading icon of the selected option (e.g. type icon / status dot). */}
+                    {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
                     {/* Label truncates; the sub (e.g. on-hand qty) stays pinned so it never gets cut. */}
                     <span className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
                         {selected ? selected.label : (placeholder ?? t('select_placeholder'))}
