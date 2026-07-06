@@ -26,10 +26,10 @@ const empty: StockItemPayload = {
     category: '',
     brand: '',
     model: '',
-    unit: 'unit',
+    unit_id: null,
     min_stock: 0,
     max_stock: 0,
-    warranty: '',
+    warranty_type_id: null,
 };
 
 /** Map an existing item onto the editable form payload (keys ordered to match
@@ -43,10 +43,10 @@ function itemToForm(item: StockItem): StockItemPayload {
         category: item.category ?? '',
         brand: item.brand ?? '',
         model: item.model ?? '',
-        unit: item.unit,
+        unit_id: item.unit_id,
         min_stock: item.min_stock,
         max_stock: item.max_stock,
-        warranty: item.warranty ?? '',
+        warranty_type_id: item.warranty_type_id,
     };
 }
 
@@ -91,7 +91,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         !!form.category?.trim() &&
         !!form.brand?.trim() &&
         !!form.model?.trim() &&
-        !!form.warranty?.trim() &&
+        form.warranty_type_id != null &&
         // Max must be at least Min.
         Number(form.max_stock) >= Number(form.min_stock);
 
@@ -183,10 +183,10 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         </Field>
                         <Field label={t('stock_unit')}>
                             <SearchableSelect
-                                value={form.unit || ''}
-                                onChange={(v) => set('unit', v)}
+                                value={form.unit_id != null ? String(form.unit_id) : ''}
+                                onChange={(v) => set('unit_id', v ? Number(v) : null)}
                                 placeholder="unit"
-                                options={units.map((u) => ({ value: u.name, label: u.name, search: u.name }))}
+                                options={units.map((u) => ({ value: String(u.id), label: u.name, search: u.name }))}
                             />
                         </Field>
                     </div>
@@ -232,10 +232,10 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     {Number(form.max_stock) < Number(form.min_stock) && <p className="text-destructive text-xs">{t('stock_minmax_invalid')}</p>}
                     <Field label={t('stock_warranty')} required>
                         <SearchableSelect
-                            value={form.warranty ?? ''}
-                            onChange={(v) => set('warranty', v)}
+                            value={form.warranty_type_id != null ? String(form.warranty_type_id) : ''}
+                            onChange={(v) => set('warranty_type_id', v ? Number(v) : null)}
                             placeholder="—"
-                            options={warranties.map((w) => ({ value: w.name, label: w.name, search: w.name }))}
+                            options={warranties.map((w) => ({ value: String(w.id), label: w.name, search: w.name }))}
                         />
                     </Field>
                 </div>

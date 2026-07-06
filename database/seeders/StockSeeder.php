@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Settings\Unit;
+use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockMovement;
@@ -53,6 +55,11 @@ class StockSeeder extends Seeder
         foreach ($items as $row) {
             [$sku, $name, $serial, $category, $brand, $model, $unit, $cost, $current, $min, $max, $warehouse, $supplier, $lastMove, $warranty, $trackSerial] = $row;
 
+            // Unit / warranty are FK ids now (Master Data). Resolve the demo name to
+            // its master row (creating it if MasterDataSeeder hasn't, for robustness).
+            $unitId = Unit::firstOrCreate(['name' => $unit])->id;
+            $warrantyTypeId = WarrantyType::firstOrCreate(['name' => $warranty])->id;
+
             $item = StockItem::updateOrCreate(['sku' => $sku], [
                 'name' => $name,
                 'serial' => $serial,
@@ -60,12 +67,12 @@ class StockSeeder extends Seeder
                 'category' => $category,
                 'brand' => $brand,
                 'model' => $model,
-                'unit' => $unit,
+                'unit_id' => $unitId,
                 'cost' => $cost,
                 'current_stock' => $current,
                 'min_stock' => $min,
                 'max_stock' => $max,
-                'warranty' => $warranty,
+                'warranty_type_id' => $warrantyTypeId,
                 'last_move_at' => $lastMove,
             ]);
 

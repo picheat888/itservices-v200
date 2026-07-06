@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockRequest;
@@ -35,10 +36,12 @@ class StockFifoCostingTest extends TestCase
 
     public function test_new_sku_ignores_current_and_cost_and_starts_empty(): void
     {
+        $warranty = WarrantyType::create(['name' => '1y']);
+
         $this->actingAs($this->super())
             ->postJson('/api/stock-items', [
-                'sku' => 'SK-NEW-1', 'name' => 'Fresh', 'unit' => 'unit', 'min_stock' => 1, 'max_stock' => 10,
-                'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
+                'sku' => 'SK-NEW-1', 'name' => 'Fresh', 'min_stock' => 1, 'max_stock' => 10,
+                'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id,
                 // even if a client sends these, they must be ignored now
                 'current_stock' => 99, 'cost' => 555,
             ])

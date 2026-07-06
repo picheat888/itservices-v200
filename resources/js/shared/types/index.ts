@@ -466,12 +466,14 @@ export interface StockItem {
     category: string | null;
     brand: string | null;
     model: string | null;
-    unit: string;
+    unit: string | null;
+    unit_id: number | null;
     cost: number;
     current_stock: number;
     min_stock: number;
     max_stock: number;
     warranty: string | null;
+    warranty_type_id: number | null;
     last_move_at: string | null;
     days_since_move: number | null;
     status: StockItemStatus;

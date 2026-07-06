@@ -36,12 +36,13 @@ class StoreStockItemRequest extends FormRequest
             'category' => ['required', 'string', 'max:120'],
             'brand' => ['required', 'string', 'max:120'],
             'model' => ['required', 'string', 'max:120'],
-            'unit' => ['required', 'string', 'max:40'],
+            // Unit is optional (the form does not force it); warranty type is required.
+            'unit_id' => ['nullable', 'integer', 'exists:units,id'],
             // current_stock and cost are no longer set on the SKU — stock arrives
             // via Receive (per-lot cost), and value is derived from FIFO lots.
             'min_stock' => ['required', 'integer', 'min:0'],
             'max_stock' => ['required', 'integer', 'min:0', 'gte:min_stock'],
-            'warranty' => ['required', 'string', 'max:120'],
+            'warranty_type_id' => ['required', 'integer', 'exists:warranty_types,id'],
         ];
     }
 }

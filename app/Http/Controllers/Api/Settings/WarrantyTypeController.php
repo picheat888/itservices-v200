@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Settings\WarrantyType;
+use App\Models\Stock\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,9 +44,12 @@ class WarrantyTypeController extends Controller
         return response()->json(['data' => $warrantyType, 'message' => 'success']);
     }
 
-    /** Delete a warranty type. */
+    /** Delete a warranty type — blocked (409) while any stock item still references it. */
     public function destroy(WarrantyType $warrantyType): JsonResponse
     {
+        if (StockItem::where('warranty_type_id', $warrantyType->id)->exists()) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted warranty type', $warrantyType->name);
         $warrantyType->delete();
 

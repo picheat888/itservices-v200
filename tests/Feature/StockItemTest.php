@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Settings\Unit;
+use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockRequest;
@@ -153,21 +155,28 @@ class StockItemTest extends TestCase
         // The SKU is now generated server-side (SKU-#######); any sku sent by the
         // client is ignored. A new SKU starts empty — stock and cost are no longer
         // set here, they arrive via Receive (per-lot). So it's created "out".
+        $unit = Unit::create(['name' => 'drive']);
+        $warranty = WarrantyType::create(['name' => '1y']);
+
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
                 'name' => 'New SSD',
-                'unit' => 'drive',
+                'unit_id' => $unit->id,
                 'category' => 'Cable',
                 'brand' => 'Acme',
                 'model' => 'M1',
-                'warranty' => '1y',
+                'warranty_type_id' => $warranty->id,
                 'min_stock' => 2,
                 'max_stock' => 12,
             ])
             ->assertCreated()
             ->assertJsonPath('data.sku', 'SKU-0000001')
             ->assertJsonPath('data.current_stock', 0)
-            ->assertJsonPath('data.status', 'out');
+            ->assertJsonPath('data.status', 'out')
+            ->assertJsonPath('data.unit', 'drive')
+            ->assertJsonPath('data.unit_id', $unit->id)
+            ->assertJsonPath('data.warranty', '1y')
+            ->assertJsonPath('data.warranty_type_id', $warranty->id);
 
         $this->assertDatabaseHas('stock_items', ['sku' => 'SKU-0000001', 'current_stock' => 0]);
     }
@@ -175,12 +184,13 @@ class StockItemTest extends TestCase
     public function test_new_sku_is_auto_generated_and_sequential(): void
     {
         $super = $this->superUser();
+        $warranty = WarrantyType::create(['name' => '1y']);
 
         $first = $this->actingAs($super)
-            ->postJson('/api/stock-items', ['name' => 'Item A', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item A', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
         $second = $this->actingAs($super)
-            ->postJson('/api/stock-items', ['name' => 'Item B', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item B', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
 
         $this->assertSame('SKU-0000001', $first);
@@ -192,9 +202,10 @@ class StockItemTest extends TestCase
         // A legacy/manual SKU that doesn't match the SKU-####### pattern must not
         // feed the running sequence, so the first auto SKU is still SKU-0000001.
         $this->makeItem(['sku' => 'SK-NB-099']);
+        $warranty = WarrantyType::create(['name' => '1y']);
 
         $sku = $this->actingAs($this->superUser())
-            ->postJson('/api/stock-items', ['name' => 'Item', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y', 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
 
         $this->assertSame('SKU-0000001', $sku);
@@ -216,16 +227,18 @@ class StockItemTest extends TestCase
     public function test_create_requires_category_brand_model_warranty(): void
     {
         $this->actingAs($this->superUser())
-            ->postJson('/api/stock-items', ['name' => 'X', 'unit' => 'unit', 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'X', 'min_stock' => 0, 'max_stock' => 5])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['category', 'brand', 'model', 'warranty']);
+            ->assertJsonValidationErrors(['category', 'brand', 'model', 'warranty_type_id']);
     }
 
     public function test_create_rejects_negative_min_max(): void
     {
+        $warranty = WarrantyType::create(['name' => '1y']);
+
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
-                'name' => 'X', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
+                'name' => 'X', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id,
                 'min_stock' => -1, 'max_stock' => -2,
             ])
             ->assertStatus(422)
@@ -234,9 +247,11 @@ class StockItemTest extends TestCase
 
     public function test_create_rejects_max_less_than_min(): void
     {
+        $warranty = WarrantyType::create(['name' => '1y']);
+
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
-                'name' => 'X', 'unit' => 'unit', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty' => '1y',
+                'name' => 'X', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id,
                 'min_stock' => 10, 'max_stock' => 5,
             ])
             ->assertStatus(422)
@@ -298,5 +313,53 @@ class StockItemTest extends TestCase
         $this->actingAs($this->regularUser())
             ->deleteJson("/api/stock-items/{$item->id}")
             ->assertForbidden();
+    }
+
+    public function test_renaming_a_unit_propagates_to_stock_items(): void
+    {
+        $unit = Unit::create(['name' => 'box']);
+        $item = $this->makeItem(['unit_id' => $unit->id]);
+
+        $unit->update(['name' => 'carton']);
+
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.unit', 'carton');
+    }
+
+    public function test_renaming_a_warranty_type_propagates_to_stock_items(): void
+    {
+        $warranty = WarrantyType::create(['name' => '1 Year']);
+        $item = $this->makeItem(['warranty_type_id' => $warranty->id]);
+
+        $warranty->update(['name' => '2 Years']);
+
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.warranty', '2 Years');
+    }
+
+    public function test_unit_in_use_cannot_be_deleted(): void
+    {
+        $unit = Unit::create(['name' => 'In Use Unit']);
+        $this->makeItem(['unit_id' => $unit->id]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/units/{$unit->id}")
+            ->assertStatus(409);
+        $this->assertDatabaseHas('units', ['id' => $unit->id]);
+    }
+
+    public function test_warranty_type_in_use_cannot_be_deleted(): void
+    {
+        $warranty = WarrantyType::create(['name' => 'In Use Warranty']);
+        $this->makeItem(['warranty_type_id' => $warranty->id]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/warranty-types/{$warranty->id}")
+            ->assertStatus(409);
+        $this->assertDatabaseHas('warranty_types', ['id' => $warranty->id]);
     }
 }

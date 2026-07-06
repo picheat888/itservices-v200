@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Settings\Unit;
+use App\Models\Stock\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,9 +44,12 @@ class UnitController extends Controller
         return response()->json(['data' => $unit, 'message' => 'success']);
     }
 
-    /** Delete a unit. */
+    /** Delete a unit — blocked (409) while any stock item still references it. */
     public function destroy(Unit $unit): JsonResponse
     {
+        if (StockItem::where('unit_id', $unit->id)->exists()) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted unit', $unit->name);
         $unit->delete();
 
