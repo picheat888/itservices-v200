@@ -16,6 +16,10 @@ return new class extends Migration
             ->distinct()
             ->pluck('location')
             ->each(function (string $name) {
+                // Skip whitespace-only values (e.g. "   ") — trimming them would seed a blank-named location.
+                if (trim($name) === '') {
+                    return;
+                }
                 DB::table('locations')->updateOrInsert(['name' => trim($name)], []);
             });
 

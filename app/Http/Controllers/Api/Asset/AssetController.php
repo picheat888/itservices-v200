@@ -59,7 +59,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with('contract')->latest('id');
+        $query = Asset::query()->with(['contract', 'location'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -106,7 +106,8 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $assets = Asset::all();
+        // Eager-load location: top_value below builds AssetResource, which resolves location?->name.
+        $assets = Asset::with('location')->get();
 
         $byType = $assets->groupBy(fn (Asset $a) => $a->type)
             ->map(fn ($group, $type) => [
@@ -141,7 +142,7 @@ class AssetController extends Controller
             return response()->json(['data' => []]);
         }
 
-        $assets = Asset::query()->with('contract')->where('owner', $code)->latest('id')->get();
+        $assets = Asset::query()->with(['contract', 'location'])->where('owner', $code)->latest('id')->get();
 
         return response()->json(['data' => AssetResource::collection($assets)]);
     }
