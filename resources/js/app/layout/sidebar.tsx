@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/modules/settings';
 import { useContractSidebarBadge } from '@/modules/contract';
+import { useAssetsSidebarBadge, useMyAssetsSidebarBadge } from '@/modules/asset';
 import { useStockSidebarBadge } from '@/modules/stock';
 import { useT } from '@/lang';
 import { navGroups } from '@/app/nav';
@@ -37,7 +38,9 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     // "Needs attention" counts shown as a sidebar badge, keyed by nav item id.
     const stockBadge = useStockSidebarBadge(perms.includes('stock.view'));
     const contractBadge = useContractSidebarBadge(perms.includes('contracts.view'));
-    const badges: Record<string, number> = { stock: stockBadge, contracts: contractBadge };
+    const myAssetsBadge = useMyAssetsSidebarBadge(perms.includes('assets.my'));
+    const assetsBadge = useAssetsSidebarBadge(perms.includes('assets.receive'));
+    const badges: Record<string, number> = { stock: stockBadge, contracts: contractBadge, 'my-assets': myAssetsBadge, assets: assetsBadge };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
         if (i.permission) return perms.includes(i.permission);

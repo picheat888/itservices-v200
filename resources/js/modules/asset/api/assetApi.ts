@@ -15,20 +15,20 @@ export interface AssetPageResponse {
 
 export interface AssetPayload {
     tag?: string | null;
+    nickname?: string | null;
     type: Asset['type'];
     brand?: string | null;
     model: string;
     serial?: string | null;
     source: Asset['source'];
     status?: Asset['status'];
-    owner?: string | null;
-    department?: string | null;
-    location?: string | null;
     warehouse?: string | null;
-    value: number;
+    // Sent only for purchased assets; rented assets derive value from the contract.
+    value?: number | null;
     supplier?: string | null;
     purchase_date?: string | null;
     warranty_end?: string | null;
+    warranty_lifetime?: boolean;
     contract_id?: number | null;
     lease_start?: string | null;
     lease_end?: string | null;
@@ -52,15 +52,17 @@ export const assetApi = {
             .then((r) => r.data.data),
     transfers: () => http.get<{ data: AssetTransferLog[] }>('/assets/transfers').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
+    // Assets assigned to the current user (employee self-service; no assets.view needed).
+    mine: () => http.get<ApiEnvelope<Asset[]>>('/assets/mine').then((r) => r.data.data),
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
     update: (id: number, payload: AssetPayload) => mutate<Asset>('put', `/assets/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/assets/${id}`),
-    transfer: (id: number, owner: string, reason?: string) => mutate<Asset>('post', `/assets/${id}/transfer`, { owner, reason }),
+    transfer: (id: number, owner: string, location: string, reason?: string) =>
+        mutate<Asset>('post', `/assets/${id}/transfer`, { owner, location, reason }),
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
+    requestReturn: (id: number, reason?: string) => mutate<Asset>('post', `/assets/${id}/request-return`, reason ? { reason } : {}),
     receive: (id: number, warehouse?: string) => mutate<Asset>('post', `/assets/${id}/receive`, warehouse ? { warehouse } : {}),
-    toggleMaintenance: (id: number) => mutate<Asset>('post', `/assets/${id}/maintenance`),
-    toStock: (id: number, body: { sku: string; warehouse?: string; qty: number; reason?: string }) => mutate<Asset>('post', `/assets/${id}/to-stock`, body),
-    bulk: async (ids: number[], op: 'maintenance' | 'writeoff', reason?: string): Promise<{ updated: number }> => {
+    bulk: async (ids: number[], op: 'writeoff', reason?: string): Promise<{ updated: number }> => {
         await ensureCsrf();
         const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, reason });
         return data;

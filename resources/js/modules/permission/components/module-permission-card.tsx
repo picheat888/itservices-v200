@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
-import { actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
@@ -65,13 +66,28 @@ function MasterBand({ title, subtitle, on, locked, onToggle }: { title: string; 
     );
 }
 
-/** A single permission row (label + optional coming-soon tag + switch). */
-function PermissionRow({ label, comingSoon, on, locked, onToggle }: { label: string; comingSoon: boolean; on: boolean; locked: boolean; onToggle: () => void }) {
+/** A single permission row (label + optional (i) info + coming-soon tag + switch). */
+function PermissionRow({
+    label,
+    info,
+    comingSoon,
+    on,
+    locked,
+    onToggle,
+}: {
+    label: string;
+    info?: string;
+    comingSoon: boolean;
+    on: boolean;
+    locked: boolean;
+    onToggle: () => void;
+}) {
     const t = useT();
     return (
         <div className="flex min-h-[34px] items-center gap-2 py-0.5">
-            <span className={cn('text-sm', on ? 'text-foreground font-medium' : 'text-muted-foreground')}>
+            <span className={cn('flex items-center gap-1 text-sm', on ? 'text-foreground font-medium' : 'text-muted-foreground')}>
                 {label}
+                {info && <InfoHint text={info} />}
                 {comingSoon && <span className="ml-1 text-[11px] italic opacity-70">({t('coming_soon_tag')})</span>}
             </span>
             <span className="ml-auto">
@@ -111,6 +127,10 @@ export function ModulePermissionCard({
     const label = (key: string) => {
         const [mod, action] = key.split('.');
         return actionLabel(mod, action, lang);
+    };
+    const desc = (key: string) => {
+        const [mod, action] = key.split('.');
+        return actionDescription(mod, action, lang);
     };
 
     // ── Real-master mode: one key gates the rest (cascade), like Stock ──────────
@@ -164,6 +184,7 @@ export function ModulePermissionCard({
                             <PermissionRow
                                 key={key}
                                 label={label(key)}
+                                info={desc(key)}
                                 comingSoon={!live}
                                 on={live && masterOn && has(key)}
                                 locked={isSuper || !masterOn || !live}
@@ -222,6 +243,7 @@ export function ModulePermissionCard({
                         <PermissionRow
                             key={key}
                             label={label(key)}
+                            info={desc(key)}
                             comingSoon={!live}
                             on={live && has(key)}
                             locked={isSuper || !live}

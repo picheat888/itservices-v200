@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
-use App\Enums\Asset\AssetType;
 use App\Models\Asset\Asset;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,7 +25,7 @@ class AssetFactory extends Factory
      */
     public function definition(): array
     {
-        $type = fake()->randomElement(AssetType::cases());
+        $type = fake()->randomElement(['laptop', 'desktop', 'mobile', 'printer', 'server', 'network', 'other']);
         $purchase = fake()->dateTimeBetween('-3 years', '-2 months');
 
         return [

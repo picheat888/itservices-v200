@@ -30,8 +30,9 @@ export function AssetReceiveModal({ asset, onClose }: { asset: Asset | null; onC
     const options = warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name }));
 
     const submit = async () => {
-        if (!asset) return;
-        await receive.mutateAsync({ id: asset.id, warehouse: warehouse.trim() || undefined });
+        // A destination warehouse is required so a returned (pooled) asset's location is known.
+        if (!asset || !warehouse.trim()) return;
+        await receive.mutateAsync({ id: asset.id, warehouse: warehouse.trim() });
         onClose();
     };
 
@@ -62,13 +63,12 @@ export function AssetReceiveModal({ asset, onClose }: { asset: Asset | null; onC
                         </div>
                     )}
 
-                    <Field label={t('asset_warehouse')}>
+                    <Field label={t('asset_warehouse')} required>
                         <SearchableSelect
                             value={warehouse}
                             onChange={setWarehouse}
                             options={options}
                             placeholder={lang === 'th' ? 'เลือกคลังปลายทาง' : 'Select destination warehouse'}
-                            clearable
                         />
                     </Field>
                     <p className="text-muted-foreground text-xs">{t('asset_receive_hint')}</p>
@@ -78,7 +78,7 @@ export function AssetReceiveModal({ asset, onClose }: { asset: Asset | null; onC
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={receive.isPending}>
+                    <Button onClick={submit} disabled={receive.isPending || !warehouse.trim()}>
                         {receive.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                         {t('asset_receive_title')}
                     </Button>

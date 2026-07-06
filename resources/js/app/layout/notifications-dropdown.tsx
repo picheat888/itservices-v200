@@ -13,7 +13,7 @@ const NOTIF_TABS: { id: string; label: string; live: boolean }[] = [
     { id: 'employees', label: 'employees', live: true },
     { id: 'tickets', label: 'tickets', live: false },
     { id: 'requests', label: 'requests', live: false },
-    { id: 'assets', label: 'assets', live: false },
+    { id: 'assets', label: 'assets', live: true },
     { id: 'contracts', label: 'contracts', live: true },
     { id: 'stock', label: 'stock', live: true },
 ];
@@ -43,6 +43,9 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     const visibleItems = tab === 'all' ? items : items.filter((n) => moduleOf(n.data.type) === tab);
 
     const tabCount = (id: string) => (id === 'all' ? items.length : items.filter((n) => moduleOf(n.data.type) === id).length);
+    // Show "All" plus only the module tabs this user actually has notifications in —
+    // each role sees just its relevant categories instead of every possible type.
+    const shownTabs = NOTIF_TABS.filter((tb) => tb.id === 'all' || tabCount(tb.id) > 0);
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
@@ -110,7 +113,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                 ref={tabsRef}
                 className="border-border [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 flex gap-1 overflow-x-auto scroll-smooth border-b px-2 pt-2 pb-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
             >
-                {NOTIF_TABS.map((tb) => {
+                {shownTabs.map((tb) => {
                     const count = tabCount(tb.id);
                     const active = tab === tb.id;
                     return (

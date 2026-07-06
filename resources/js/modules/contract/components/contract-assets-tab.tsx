@@ -13,7 +13,6 @@ const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = 
     ready: 'green',
     pending_acceptance: 'amber',
     pending_return: 'amber',
-    maintenance: 'amber',
     writeoff: 'red',
 };
 
@@ -68,6 +67,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
                 onTransfer={() => {}}
                 onReceive={() => {}}
                 canTransfer={false}
+                canReceive={false}
             />
         </div>
     );

@@ -1,4 +1,5 @@
 import { Field } from '@/shared/components/field';
+import { IconPicker } from '@/shared/components/icon-picker';
 import { SaveButton } from '@/shared/components/save-button';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -21,6 +22,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const { create, update } = useCategoryMutations();
     const [name, setName] = useState('');
     const [nameTh, setNameTh] = useState('');
+    const [icon, setIcon] = useState<string | null>(null);
     const [description, setDescription] = useState('');
     const saving = create.isPending || update.isPending;
 
@@ -28,6 +30,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
         if (open) {
             setName(category?.name ?? '');
             setNameTh(category?.name_th ?? '');
+            setIcon(category?.icon ?? null);
             setDescription(category?.description ?? '');
         }
     }, [open, category]);
@@ -39,6 +42,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
         const payload = {
             name: name.trim(),
             name_th: nameTh.trim() || undefined,
+            icon: icon || null,
             description: description.trim() || undefined,
         };
         try {
@@ -79,6 +83,9 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                             />
                         </Field>
                     </div>
+                    <Field label={t('md_category_icon')} help={t('md_category_icon_help')}>
+                        <IconPicker value={icon} onChange={setIcon} placeholder={t('md_category_icon_pick')} />
+                    </Field>
                     <Field label={t('md_description')}>
                         <Input
                             value={description}

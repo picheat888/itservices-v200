@@ -12,7 +12,6 @@ use App\Models\AuditLog;
 use App\Services\Asset\AssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
@@ -45,8 +44,8 @@ class AssetController extends Controller
             'data' => $assets->map(fn (Asset $a) => [
                 'id' => $a->id,
                 'tag' => $a->tag,
-                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type->value,
-                'type' => $a->type->value,
+                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type,
+                'type' => $a->type,
                 'status' => $a->status->value,
             ])->all(),
         ]);
@@ -66,6 +65,7 @@ class AssetController extends Controller
             $q = '%'.$request->query('search').'%';
             $query->where(function ($w) use ($q) {
                 $w->where('tag', 'like', $q)
+                    ->orWhere('nickname', 'like', $q)
                     ->orWhere('model', 'like', $q)
                     ->orWhere('owner', 'like', $q)
                     ->orWhere('serial', 'like', $q);
@@ -108,7 +108,7 @@ class AssetController extends Controller
 
         $assets = Asset::all();
 
-        $byType = $assets->groupBy(fn (Asset $a) => $a->type?->value)
+        $byType = $assets->groupBy(fn (Asset $a) => $a->type)
             ->map(fn ($group, $type) => [
                 'type' => $type,
                 'count' => $group->count(),
@@ -122,12 +122,28 @@ class AssetController extends Controller
             'ready' => $assets->where('status', AssetStatus::Ready)->count(),
             'pending_acceptance' => $assets->where('status', AssetStatus::PendingAcceptance)->count(),
             'pending_return' => $assets->where('status', AssetStatus::PendingReturn)->count(),
-            'maintenance' => $assets->where('status', AssetStatus::Maintenance)->count(),
             'writeoff' => $assets->where('status', AssetStatus::Writeoff)->count(),
             'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue())),
             'by_type' => $byType,
             'top_value' => AssetResource::collection($topValue),
         ]);
+    }
+
+    /**
+     * Assets assigned to the authenticated user (matched by their employee code).
+     * Employee self-service — no assets.view needed, only a linked employee record.
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('assets.my'), 403);
+        $code = $request->user()?->linkedEmployee()?->code;
+        if ($code === null) {
+            return response()->json(['data' => []]);
+        }
+
+        $assets = Asset::query()->with('contract')->where('owner', $code)->latest('id')->get();
+
+        return response()->json(['data' => AssetResource::collection($assets)]);
     }
 
     /** Recent ownership-change history across all assets (newest first). */
@@ -193,11 +209,13 @@ class AssetController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
         $data = $request->validate([
             'owner' => ['required', 'string', 'max:200'],
+            // IT must record where the asset will physically go when handed over.
+            'location' => ['required', 'string', 'max:200'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         abort_if($asset->isDeployed(), 422, 'Asset is deployed — mark it returned first.');
 
-        $asset = $this->service->transfer($asset, $data['owner'], $data['reason'] ?? null, $request->user()?->name);
+        $asset = $this->service->transfer($asset, $data['owner'], $data['location'], $data['reason'] ?? null, $request->user()?->name);
         AuditLog::record('Transferred asset', "{$asset->tag} → {$data['owner']}");
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
@@ -206,66 +224,58 @@ class AssetController extends Controller
     /** Recipient accepts a pending-acceptance asset (requires assets.transfer). */
     public function accept(Request $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
+        // Only the recipient may confirm receipt — IT can hand over but not accept on their behalf.
+        $code = $request->user()?->linkedEmployee()?->code;
+        abort_unless($code !== null && $code === $asset->owner, 403);
         $asset = $this->service->accept($asset);
         AuditLog::record('Accepted asset', $asset->tag);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
 
-    /** Mark a returned asset as received back into the pool (requires assets.transfer). */
+    /**
+     * Holder requests to return an asset they currently hold: deployed → pending return.
+     * Only the current holder (matched by employee code) may request it.
+     */
+    public function requestReturn(Request $request, Asset $asset): JsonResponse
+    {
+        $code = $request->user()?->linkedEmployee()?->code;
+        abort_unless($code !== null && $code === $asset->owner && $asset->status === AssetStatus::Deployed, 403);
+        $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
+        $asset = $this->service->requestReturn($asset, $data['reason'] ?? null);
+        AuditLog::record('Requested asset return', $asset->tag);
+
+        return (new AssetResource($asset))->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * Mark a returned asset as received back into the pool (requires assets.transfer).
+     * A destination warehouse is required so a pooled asset's physical location is always known.
+     */
     public function markReceived(Request $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('assets.receive'), 403);
         $data = $request->validate([
-            'warehouse' => ['nullable', 'string', 'max:120'],
+            'warehouse' => ['required', 'string', 'max:120'],
         ]);
-        $asset = $this->service->markReceived($asset, $request->user()?->name, $data['warehouse'] ?? null);
+        $asset = $this->service->markReceived($asset, $request->user()?->name, $data['warehouse']);
         AuditLog::record('Received asset', $asset->tag);
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
 
-    /** Toggle an asset in/out of maintenance (requires assets.edit). */
-    public function toggleMaintenance(Request $request, Asset $asset): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->hasPermission('assets.edit'), 403);
-        $asset = $this->service->toggleMaintenance($asset);
-        AuditLog::record('Asset maintenance toggled', "{$asset->tag} → {$asset->status?->value}");
-
-        return (new AssetResource($asset))->additional(['message' => 'success'])->response();
-    }
-
-    /** Convert an asset into a stock item and mark it pending-stock (requires assets.retire). */
-    public function toStock(Request $request, Asset $asset): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
-        $data = $request->validate([
-            'sku' => ['required', 'string', 'max:60', Rule::unique('stock_items', 'sku')],
-            'warehouse' => ['nullable', 'string', 'max:120'],
-            'qty' => ['required', 'integer', 'min:1'],
-            'reason' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $item = $this->service->convertToStock($asset, $data);
-        AuditLog::record('Converted asset to stock', "{$asset->tag} → {$item->sku}");
-
-        return (new AssetResource($asset->fresh()))->additional(['message' => 'success'])->response();
-    }
-
-    /** Bulk-apply maintenance or write-off to many assets (requires assets.retire). */
+    /** Bulk write-off many assets (requires assets.retire). */
     public function bulk(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
-            'op' => ['required', 'in:maintenance,writeoff'],
+            'op' => ['required', 'in:writeoff'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $status = $data['op'] === 'writeoff' ? AssetStatus::Writeoff : AssetStatus::Maintenance;
-        $count = $this->service->bulkSetStatus($data['ids'], $status, $data['reason'] ?? null);
+        $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null);
         AuditLog::record('Bulk asset '.$data['op'], "{$count} assets");
 
         return response()->json(['message' => 'success', 'updated' => $count]);

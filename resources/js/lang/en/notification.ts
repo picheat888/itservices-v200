@@ -23,4 +23,6 @@ export const notification: Dict = {
     "notif_stock_req_rejected": "Your request was rejected",
     "notif_stock_req_fulfilled": "Your request was fulfilled",
     "notif_stock_count_draft": "Stock count still in draft",
+    "notif_asset_assigned": "Assigned to you — tap to accept",
+    "notif_asset_return_requested": "Return requested — awaiting your receipt",
 };

@@ -4,7 +4,6 @@ namespace App\Http\Requests\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
-use App\Enums\Asset\AssetType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -31,7 +30,9 @@ class StoreAssetRequest extends FormRequest
 
         return [
             'tag' => ['nullable', 'string', 'max:60', Rule::unique('assets', 'tag')->ignore($assetId)],
-            'type' => ['required', Rule::enum(AssetType::class)],
+            'nickname' => ['nullable', 'string', 'max:120'],
+            // Asset type is a free Master Data category (managed under Settings → Master Data).
+            'type' => ['required', 'string', 'max:120'],
             'brand' => ['nullable', 'string', 'max:120'],
             'model' => ['required', 'string', 'max:200'],
             'serial' => ['nullable', 'string', 'max:120'],
@@ -42,11 +43,14 @@ class StoreAssetRequest extends FormRequest
             'department' => ['nullable', 'string', 'max:120'],
             'location' => ['nullable', 'string', 'max:200'],
             'warehouse' => ['nullable', 'string', 'max:120'],
-            'value' => ['required', 'numeric', 'min:0'],
+            // Purchased assets carry their own price; rented assets derive value from the contract.
+            'value' => ['nullable', 'required_if:source,purchased', 'numeric', 'min:0'],
             'supplier' => ['nullable', 'string', 'max:200'],
             'purchase_date' => ['nullable', 'date'],
             'warranty_end' => ['nullable', 'date'],
-            'contract_id' => ['nullable', 'integer', 'exists:contracts,id'],
+            'warranty_lifetime' => ['sometimes', 'boolean'],
+            // A rented asset must be linked to the vendor contract it's billed under.
+            'contract_id' => ['nullable', 'required_if:source,rented', 'integer', 'exists:contracts,id'],
             'lease_start' => ['nullable', 'date'],
             'lease_end' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],

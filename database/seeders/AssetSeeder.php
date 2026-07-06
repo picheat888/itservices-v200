@@ -27,10 +27,10 @@ class AssetSeeder extends Seeder
             ['INB-LT-00214', 'laptop',  'Apple',  'MacBook Pro 14"',           'EMP-1213', 'Operations',         'deployed',           78900,  'purchased', '2023-12-12', '2026-12-12', null],
             ['INB-LT-00198', 'laptop',  'Dell',   'Dell Latitude 5440',        'EMP-1422', 'Logistics',          'deployed',           32100,  'purchased', '2023-07-22', '2026-07-22', null],
             ['INB-MB-00074', 'mobile',  'Samsung', 'Samsung Galaxy S24',       'EMP-1422', 'Logistics',          'deployed',           28500,  'purchased', '2024-03-01', '2026-03-01', null],
-            ['INB-LT-00150', 'laptop',  'Lenovo', 'Lenovo IdeaPad 5',          'Pool — IT', 'IT',                'ready',              24200,  'purchased', '2024-08-12', '2027-08-12', null],
+            ['INB-LT-00150', 'laptop',  'Lenovo', 'Lenovo IdeaPad 5',          null,        'IT',                'ready',              24200,  'purchased', '2024-08-12', '2027-08-12', null],
             ['INB-LT-00141', 'laptop',  'HP',     'HP EliteBook 840',          'EMP-2003', 'Engineering',        'deployed',           42000,  'purchased', '2023-05-18', '2026-05-18', null],
             ['RNT-LT-00027', 'laptop',  'Dell',   'Dell Latitude (rental)',    'EMP-1901', 'Sales',              'deployed',           1800,   'rented',    '2024-04-01', '2026-04-01', null],
-            ['INB-PR-00118', 'printer', 'Canon',  'Canon imageRUNNER 2630',    'Shared — Plant 1', 'Production',  'maintenance',        58000,  'purchased', '2022-08-15', '2025-08-15', 'Paper feed jamming — sent to vendor'],
+            ['INB-PR-00118', 'printer', 'Canon',  'Canon imageRUNNER 2630',    'Shared — Plant 1', 'Production',  'deployed',           58000,  'purchased', '2022-08-15', '2025-08-15', 'Paper feed jamming — sent to vendor'],
             ['INB-LT-00251', 'laptop',  'Dell',   'Dell Latitude 5440',        'EMP-2115', 'Sales',              'pending_acceptance', 32100,  'purchased', '2025-09-01', '2028-09-01', 'New hire onboarding'],
             ['INB-MB-00080', 'mobile',  'Apple',  'iPhone 14 (128GB)',         'EMP-1500', 'Marketing',          'pending_return',     30000,  'purchased', '2024-02-01', '2026-02-01', 'Employee resignation'],
         ];

@@ -56,8 +56,8 @@ class ContractResource extends JsonResource
             'linked_assets' => $this->whenLoaded('assets', fn () => $this->assets->map(fn (Asset $a) => [
                 'id' => $a->id,
                 'tag' => $a->tag,
-                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type?->value,
-                'type' => $a->type?->value,
+                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type,
+                'type' => $a->type,
                 'serial' => $a->serial,
                 'status' => $a->status?->value,
                 'owner' => $a->owner,

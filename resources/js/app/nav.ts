@@ -1,11 +1,15 @@
 import type { NavGroup } from '@/shared/types';
-import { Box, FileText, Inbox, KeyRound, LayoutDashboard, LineChart, Mail, Settings, Shield, Ticket, Users, Warehouse } from 'lucide-react';
+import { Box, FileText, Inbox, KeyRound, LayoutDashboard, LineChart, Mail, PackageCheck, Settings, Shield, Ticket, Users, Warehouse } from 'lucide-react';
 
 // Nav definition. `label` holds an i18n key resolved at render time.
 export const navGroups: NavGroup[] = [
     {
         label: 'nav_overview',
-        items: [{ id: 'overall', label: 'overall', to: '/', icon: LayoutDashboard }],
+        items: [
+            { id: 'overall', label: 'overall', to: '/', icon: LayoutDashboard },
+            // Employee self-service — gated by the My Assets permission.
+            { id: 'my-assets', label: 'my_assets', to: '/my-assets', icon: PackageCheck, permission: 'assets.my' },
+        ],
     },
     {
         label: 'nav_workspace',
