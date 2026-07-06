@@ -23,7 +23,7 @@ const empty: StockItemPayload = {
     name: '',
     serial: '',
     track_serial: false,
-    category: '',
+    category_id: null,
     brand_id: null,
     model_id: null,
     unit_id: null,
@@ -40,7 +40,7 @@ function itemToForm(item: StockItem): StockItemPayload {
         name: item.name,
         serial: item.serial ?? '',
         track_serial: item.track_serial,
-        category: item.category ?? '',
+        category_id: item.category_id,
         brand_id: item.brand_id,
         model_id: item.model_id,
         unit_id: item.unit_id,
@@ -91,7 +91,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     // SKU is auto-generated on create; everything else below is required.
     const isValid =
         !!form.name.trim() &&
-        !!form.category?.trim() &&
+        form.category_id != null &&
         form.brand_id != null &&
         form.model_id != null &&
         form.warranty_type_id != null &&
@@ -178,10 +178,10 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_category')} required>
                             <SearchableSelect
-                                value={form.category ?? ''}
-                                onChange={(v) => set('category', v)}
+                                value={form.category_id != null ? String(form.category_id) : ''}
+                                onChange={(v) => set('category_id', v ? Number(v) : null)}
                                 placeholder="—"
-                                options={categories.map((c) => ({ value: c.name, label: c.name, search: c.name }))}
+                                options={categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name }))}
                             />
                         </Field>
                         <Field label={t('stock_unit')}>

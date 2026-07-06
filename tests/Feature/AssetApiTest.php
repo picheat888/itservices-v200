@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
 use App\Models\Settings\Location;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -31,6 +32,12 @@ class AssetApiTest extends TestCase
         return AssetModel::create(['name' => $name])->id;
     }
 
+    /** Create a category (Master Data) and return its id — asset POSTs now send category_id. */
+    private function categoryId(string $name = 'Laptop'): int
+    {
+        return Category::create(['name' => $name])->id;
+    }
+
     public function test_guests_cannot_list_assets(): void
     {
         $this->getJson('/api/assets')->assertUnauthorized();
@@ -41,7 +48,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $payload = [
-            'type' => 'laptop',
+            'category_id' => $this->categoryId('laptop'),
             'source' => 'purchased',
             'model_id' => $this->modelId('Dell Latitude 5440'),
             'owner' => 'EMP-1042',
@@ -65,7 +72,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'type' => 'laptop', 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'value' => 100,
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'value' => 100,
         ])->assertCreated()
             ->assertJsonPath('data.tag', fn ($tag) => is_string($tag) && str_starts_with($tag, 'INK-IT-'));
     }
@@ -81,7 +88,7 @@ class AssetApiTest extends TestCase
         ]);
 
         $this->postJson('/api/assets', [
-            'type' => 'network', 'source' => 'rented', 'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $contract->id,
+            'category_id' => $this->categoryId('network'), 'source' => 'rented', 'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $contract->id,
         ])->assertCreated()
             ->assertJsonPath('data.value_display', '฿8,500/mo')
             ->assertJsonPath('data.supplier', 'SVOA')
@@ -105,7 +112,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'type' => 'printer', 'source' => 'purchased', 'model_id' => $this->modelId('Brother HL'), 'value' => 5000,
+            'category_id' => $this->categoryId('printer'), 'source' => 'purchased', 'model_id' => $this->modelId('Brother HL'), 'value' => 5000,
             'warranty_end' => '2030-01-01', 'warranty_lifetime' => true,
         ])->assertCreated()
             ->assertJsonPath('data.warranty_lifetime', true)
@@ -118,7 +125,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'type' => 'laptop', 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'value' => 32100,
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('MacBook Pro'), 'value' => 32100,
         ])->assertCreated()
             ->assertJsonPath('data.value_display', '$32,100');
     }
@@ -172,6 +179,28 @@ class AssetApiTest extends TestCase
 
         $this->deleteJson("/api/asset-models/{$model->id}")->assertStatus(409);
         $this->assertDatabaseHas('asset_models', ['id' => $model->id]);
+    }
+
+    public function test_renaming_a_category_propagates_to_assets(): void
+    {
+        $this->actingAs($this->super());
+        // Name outside AssetFactory's random type set to avoid a duplicate-name clash.
+        $category = Category::create(['name' => 'Widgets']);
+        $asset = Asset::factory()->create(['category_id' => $category->id]);
+
+        $category->update(['name' => 'Gadgets']);
+
+        $this->getJson("/api/assets/{$asset->id}")->assertOk()->assertJsonPath('data.type', 'Gadgets');
+    }
+
+    public function test_category_in_use_by_an_asset_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $category = Category::create(['name' => 'In Use Category']);
+        Asset::factory()->create(['category_id' => $category->id]);
+
+        $this->deleteJson("/api/categories/{$category->id}")->assertStatus(409);
+        $this->assertDatabaseHas('categories', ['id' => $category->id]);
     }
 
     public function test_user_without_permission_cannot_register(): void
@@ -332,7 +361,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'type' => 'laptop', 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'value' => 100, 'warehouse' => 'Central IT',
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'value' => 100, 'warehouse' => 'Central IT',
         ])->assertCreated()->assertJsonPath('data.warehouse', 'Central IT');
 
         Asset::factory()->create(['warehouse' => 'Branch A']);

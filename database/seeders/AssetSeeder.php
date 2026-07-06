@@ -6,6 +6,7 @@ use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
 use Illuminate\Database\Seeder;
 
 class AssetSeeder extends Seeder
@@ -37,17 +38,25 @@ class AssetSeeder extends Seeder
             ['INB-MB-00080', 'mobile',  'Apple',  'iPhone 14 (128GB)',         'EMP-1500', 'Marketing',          'pending_return',     30000,  'purchased', '2024-02-01', '2026-02-01', 'Employee resignation'],
         ];
 
+        // Legacy English asset "type" → canonical Thai category name (mirrors the FK migration).
+        $typeMap = [
+            'laptop' => 'แล็ปท็อป', 'desktop' => 'เดสก์ท็อป', 'mobile' => 'Mobile',
+            'printer' => 'เครื่องพิมพ์', 'server' => 'เซิร์ฟเวอร์', 'network' => 'สวิตช์ / เราเตอร์',
+            'other' => 'อุปกรณ์อื่น ๆ',
+        ];
+
         foreach ($assets as $row) {
             [$tag, $type, $brand, $model, $owner, $dept, $status, $value, $source, $startDate, $endDate, $reason] = $row;
             $rented = $source === 'rented';
 
-            // Brand / model are FK ids now (Master Data). Resolve the demo name to its
-            // master row (creating it if MasterDataSeeder hasn't), model scoped to the brand.
+            // Category / brand / model are FK ids now (Master Data). Map the legacy type to
+            // its Thai category, then resolve (or create) the master rows (model scoped to brand).
+            $categoryId = Category::firstOrCreate(['name' => $typeMap[$type] ?? $type])->id;
             $brandId = Brand::firstOrCreate(['name' => $brand])->id;
             $modelId = AssetModel::firstOrCreate(['name' => $model, 'brand_id' => $brandId])->id;
 
             Asset::updateOrCreate(['tag' => $tag], [
-                'type' => $type,
+                'category_id' => $categoryId,
                 'brand_id' => $brandId,
                 'model_id' => $modelId,
                 'owner' => $owner,

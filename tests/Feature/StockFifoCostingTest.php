@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
@@ -41,11 +42,12 @@ class StockFifoCostingTest extends TestCase
         $warranty = WarrantyType::create(['name' => '1y']);
         $brand = Brand::create(['name' => 'Acme']);
         $model = AssetModel::create(['name' => 'M1', 'brand_id' => $brand->id]);
+        $category = Category::create(['name' => 'Cable']);
 
         $this->actingAs($this->super())
             ->postJson('/api/stock-items', [
                 'sku' => 'SK-NEW-1', 'name' => 'Fresh', 'min_stock' => 1, 'max_stock' => 10,
-                'category' => 'Cable', 'brand_id' => $brand->id, 'model_id' => $model->id, 'warranty_type_id' => $warranty->id,
+                'category_id' => $category->id, 'brand_id' => $brand->id, 'model_id' => $model->id, 'warranty_type_id' => $warranty->id,
                 // even if a client sends these, they must be ignored now
                 'current_stock' => 99, 'cost' => 555,
             ])

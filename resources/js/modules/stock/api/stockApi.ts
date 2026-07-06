@@ -28,7 +28,7 @@ export interface StockItemPayload {
     name: string;
     serial?: string | null;
     track_serial?: boolean;
-    category?: string | null;
+    category_id: number | null;
     brand_id: number | null;
     model_id: number | null;
     unit_id: number | null;

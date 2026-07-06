@@ -31,8 +31,8 @@ class StoreAssetRequest extends FormRequest
         return [
             'tag' => ['nullable', 'string', 'max:60', Rule::unique('assets', 'tag')->ignore($assetId)],
             'nickname' => ['nullable', 'string', 'max:120'],
-            // Asset type is a free Master Data category (managed under Settings → Master Data).
-            'type' => ['required', 'string', 'max:120'],
+            // Asset type is a Master Data category (managed under Settings → Master Data).
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
             'model_id' => ['required', 'integer', 'exists:asset_models,id'],
             'serial' => ['nullable', 'string', 'max:120'],

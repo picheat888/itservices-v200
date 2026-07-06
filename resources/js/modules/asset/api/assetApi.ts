@@ -16,7 +16,7 @@ export interface AssetPageResponse {
 export interface AssetPayload {
     tag?: string | null;
     nickname?: string | null;
-    type: Asset['type'];
+    category_id: number;
     brand_id?: number | null;
     model_id: number;
     serial?: string | null;

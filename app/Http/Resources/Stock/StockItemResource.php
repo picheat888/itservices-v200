@@ -22,7 +22,8 @@ class StockItemResource extends JsonResource
             'name' => $this->name,
             'serial' => $this->serial,
             'track_serial' => (bool) $this->track_serial,
-            'category' => $this->category,
+            'category' => $this->category?->name,
+            'category_id' => $this->category_id,
             // Brand / model / unit / warranty names are resolved through their master
             // relations so renaming a master propagates here; the *_id feeds the forms/filters.
             'brand' => $this->brand?->name,

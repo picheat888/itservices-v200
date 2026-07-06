@@ -35,7 +35,7 @@ class AssetController extends Controller
         $contractId = $request->integer('contract_id') ?: null;
 
         $assets = Asset::query()
-            ->with(['brand', 'model'])
+            ->with(['brand', 'model', 'category'])
             ->where(fn ($q) => $q->whereNull('contract_id')
                 ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)))
             ->orderBy('tag')
@@ -45,8 +45,8 @@ class AssetController extends Controller
             'data' => $assets->map(fn (Asset $a) => [
                 'id' => $a->id,
                 'tag' => $a->tag,
-                'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->type,
-                'type' => $a->type,
+                'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->category?->name,
+                'type' => $a->category?->name,
                 'status' => $a->status->value,
             ])->all(),
         ]);
@@ -60,7 +60,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract', 'location', 'brand', 'model'])->latest('id');
+        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -73,7 +73,8 @@ class AssetController extends Controller
             });
         }
         if ($request->filled('type')) {
-            $query->where('type', $request->query('type'));
+            // The filter still sends the category name; match it through the relation.
+            $query->whereHas('category', fn ($c) => $c->where('name', $request->query('type')));
         }
         if ($request->filled('source')) {
             $query->where('source', $request->query('source'));
@@ -107,10 +108,11 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        // Eager-load location: top_value below builds AssetResource, which resolves location?->name.
-        $assets = Asset::with('location')->get();
+        // Eager-load location + category: top_value builds AssetResource (location?->name)
+        // and the by-type breakdown groups on the category name.
+        $assets = Asset::with(['location', 'category'])->get();
 
-        $byType = $assets->groupBy(fn (Asset $a) => $a->type)
+        $byType = $assets->groupBy(fn (Asset $a) => $a->category?->name)
             ->map(fn ($group, $type) => [
                 'type' => $type,
                 'count' => $group->count(),
@@ -172,7 +174,7 @@ class AssetController extends Controller
         $asset = $this->service->create($request->validated());
         AuditLog::record('Registered asset', "{$asset->tag} — {$asset->model?->name}");
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -180,7 +182,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model']);
+        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category']);
 
         return (new AssetResource($asset))->response();
     }
@@ -191,7 +193,7 @@ class AssetController extends Controller
         $asset = $this->service->update($asset, $request->validated());
         AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model?->name}", AuditLog::changes($before, $asset));
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category')))
             ->additional(['message' => 'success'])->response();
     }
 

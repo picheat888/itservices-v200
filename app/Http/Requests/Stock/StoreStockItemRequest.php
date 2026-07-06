@@ -33,7 +33,7 @@ class StoreStockItemRequest extends FormRequest
             'name' => ['required', 'string', 'max:200'],
             'serial' => ['nullable', 'string', 'max:120'],
             'track_serial' => ['boolean'],
-            'category' => ['required', 'string', 'max:120'],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
             'brand_id' => ['required', 'integer', 'exists:brands,id'],
             'model_id' => ['required', 'integer', 'exists:asset_models,id'],
             // Unit is optional (the form does not force it); warranty type is required.

@@ -39,7 +39,7 @@ class ContractController extends Controller
         $this->gateView($request);
 
         $query = Contract::query()
-            ->with(['attachments', 'assets']);
+            ->with(['attachments', 'assets.brand', 'assets.model', 'assets.category']);
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {
@@ -176,7 +176,7 @@ class ContractController extends Controller
         $contract = $this->service->create($request->validated());
         AuditLog::record('Created contract', "{$contract->name} ({$contract->code})");
 
-        return (new ContractResource($contract->load('assets')))
+        return (new ContractResource($contract->load(['assets.brand', 'assets.model', 'assets.category'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -184,7 +184,7 @@ class ContractController extends Controller
     {
         $this->gateView($request);
 
-        return (new ContractResource($contract->load(['attachments', 'assets'])))->response();
+        return (new ContractResource($contract->load(['attachments', 'assets.brand', 'assets.model', 'assets.category'])))->response();
     }
 
     public function update(StoreContractRequest $request, Contract $contract): JsonResponse
@@ -193,7 +193,7 @@ class ContractController extends Controller
         $contract = $this->service->update($contract, $request->validated());
         AuditLog::record('Updated contract', "{$contract->name} ({$contract->code})", AuditLog::changes($before, $contract));
 
-        return (new ContractResource($contract->load('assets')))
+        return (new ContractResource($contract->load(['assets.brand', 'assets.model', 'assets.category'])))
             ->additional(['message' => 'success'])->response();
     }
 

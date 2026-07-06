@@ -44,7 +44,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['lots', 'balances', 'unit', 'warrantyType', 'brand', 'model'])
+            ->with(['lots', 'balances', 'unit', 'warrantyType', 'brand', 'model', 'category'])
             // Reserved = qty committed by approved-but-unfulfilled requests (not yet
             // deducted from on-hand). Used to show "available to request" in New Request.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
@@ -63,7 +63,8 @@ class StockItemController extends Controller
             });
         }
         if ($request->filled('category')) {
-            $query->where('category', $request->query('category'));
+            // The filter still sends the category name; match it through the relation.
+            $query->whereHas('category', fn ($c) => $c->where('name', $request->query('category')));
         }
         if ($request->filled('warehouse')) {
             // Warehouse is no longer a SKU attribute — filter by where stock
@@ -117,7 +118,7 @@ class StockItemController extends Controller
     {
         $this->gateDashboard($request);
 
-        $items = StockItem::with(['lots', 'balances'])->get();
+        $items = StockItem::with(['lots', 'balances', 'category'])->get();
 
         $out = $items->filter(fn (StockItem $i) => $i->status() === 'out');
         $low = $items->filter(fn (StockItem $i) => $i->status() === 'low');
@@ -138,7 +139,7 @@ class StockItemController extends Controller
             ])
             ->values();
 
-        $byCategory = $items->groupBy('category')->map(fn ($group, $name) => [
+        $byCategory = $items->groupBy(fn (StockItem $i) => $i->category?->name)->map(fn ($group, $name) => [
             'category' => $name ?: '—',
             'skus' => $group->count(),
             'units' => $group->sum('current_stock'),
@@ -194,6 +195,7 @@ class StockItemController extends Controller
             'warrantyType',
             'brand',
             'model',
+            'category',
         ]);
 
         return (new StockItemResource($stockItem))->response();

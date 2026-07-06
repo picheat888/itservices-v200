@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
+use App\Models\Settings\Category;
 use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
@@ -64,12 +65,13 @@ class StockSeeder extends Seeder
             $warrantyTypeId = WarrantyType::firstOrCreate(['name' => $warranty])->id;
             $brandId = Brand::firstOrCreate(['name' => $brand])->id;
             $modelId = AssetModel::firstOrCreate(['name' => $model, 'brand_id' => $brandId])->id;
+            $categoryId = Category::firstOrCreate(['name' => $category])->id;
 
             $item = StockItem::updateOrCreate(['sku' => $sku], [
                 'name' => $name,
                 'serial' => $serial,
                 'track_serial' => $trackSerial,
-                'category' => $category,
+                'category_id' => $categoryId,
                 'brand_id' => $brandId,
                 'model_id' => $modelId,
                 'unit_id' => $unitId,
