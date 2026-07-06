@@ -106,14 +106,14 @@ class AssetService
      * Hand an asset to a new owner. It enters "pending acceptance" until the
      * recipient confirms receipt.
      */
-    public function transfer(Asset $asset, string $newOwner, ?string $location = null, ?string $reason = null, ?string $performedBy = null): Asset
+    public function transfer(Asset $asset, string $newOwner, ?int $locationId = null, ?string $reason = null, ?string $performedBy = null): Asset
     {
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
         $from = $asset->owner ?: $asset->warehouse;
         $asset->update([
             'owner' => $newOwner,
-            'location' => $location,
+            'location_id' => $locationId,
             'status' => AssetStatus::PendingAcceptance,
             'last_reason' => $reason,
         ]);

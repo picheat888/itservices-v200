@@ -8,6 +8,7 @@ use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\Location;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,21 +136,23 @@ class AssetApiTest extends TestCase
     {
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+        $location = Location::create(['name' => 'HQ Floor 3']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ Floor 3', 'reason' => 'New hire'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id, 'reason' => 'New hire'])
             ->assertOk()
             ->assertJsonPath('data.status', 'pending_acceptance')
             ->assertJsonPath('data.owner', 'EMP-2000')
-            ->assertJsonPath('data.location', 'HQ Floor 3');
+            ->assertJsonPath('data.location', 'HQ Floor 3')
+            ->assertJsonPath('data.location_id', $location->id);
     }
 
     public function test_transfer_requires_a_location(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
 
         $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000'])
-            ->assertStatus(422)->assertJsonValidationErrors('location');
+            ->assertStatus(422)->assertJsonValidationErrors('location_id');
     }
 
     public function test_my_assets_returns_only_the_users_own_assets(): void
@@ -189,9 +192,10 @@ class AssetApiTest extends TestCase
         $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
         RolePermission::create(['role_id' => $recipient->role_id, 'permission' => 'assets.my', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+        $location = Location::create(['name' => 'HQ']);
 
         $this->actingAs($this->super());
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-8001', 'location' => 'HQ'])->assertOk();
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-8001', 'location_id' => $location->id])->assertOk();
 
         $this->assertSame(1, $recipient->fresh()->notifications()->count());
         $this->assertSame('asset_assigned', $recipient->notifications()->first()->data['type']);
@@ -201,8 +205,9 @@ class AssetApiTest extends TestCase
     {
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-1042']);
+        $location = Location::create(['name' => 'HQ']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id])
             ->assertStatus(422);
     }
 
@@ -320,8 +325,9 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         // Pooled asset (no owner) stored in a warehouse.
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+        $location = Location::create(['name' => 'HQ']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location' => 'HQ', 'reason' => 'New hire'])->assertOk();
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id, 'reason' => 'New hire'])->assertOk();
 
         // The custody trail stamps the origin warehouse as the "from" when it leaves the pool.
         $this->getJson('/api/assets/transfers')
@@ -375,5 +381,28 @@ class AssetApiTest extends TestCase
             ->assertOk()
             ->assertJsonMissingPath('data.0.transfers')
             ->assertJsonMissingPath('data.0.tickets');
+    }
+
+    public function test_renaming_a_location_propagates_to_assets(): void
+    {
+        $this->actingAs($this->super());
+        $location = Location::create(['name' => 'Old Wing']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-1', 'location_id' => $location->id]);
+
+        $location->update(['name' => 'New Wing']);
+
+        $this->getJson("/api/assets/{$asset->id}")
+            ->assertOk()
+            ->assertJsonPath('data.location', 'New Wing');
+    }
+
+    public function test_location_in_use_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $location = Location::create(['name' => 'In Use']);
+        Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-1', 'location_id' => $location->id]);
+
+        $this->deleteJson("/api/locations/{$location->id}")->assertStatus(409);
+        $this->assertDatabaseHas('locations', ['id' => $location->id]);
     }
 }
