@@ -12,12 +12,12 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { AssetPayload } from '../api/assetApi';
-import type { Asset, AssetSource, AssetType } from '@/shared/types';
+import type { Asset, AssetSource } from '@/shared/types';
 import { Calendar, Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 interface FormState {
-    type: AssetType;
+    category_id: string;
     source: AssetSource;
     model_id: string;
     brand_id: string;
@@ -34,7 +34,7 @@ interface FormState {
 }
 
 const EMPTY: FormState = {
-    type: '',
+    category_id: '',
     source: 'purchased',
     model_id: '',
     brand_id: '',
@@ -88,7 +88,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         setSaveState('idle');
         if (editing) {
             setForm({
-                type: editing.type,
+                category_id: editing.category_id ? String(editing.category_id) : '',
                 source: editing.source,
                 model_id: editing.model_id ? String(editing.model_id) : '',
                 brand_id: editing.brand_id ? String(editing.brand_id) : '',
@@ -112,7 +112,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const rented = form.source === 'rented';
 
     // Asset type, brand and model are all picked from the shared Master Data lists.
-    const typeOptions = useMemo(() => categories.map((c) => ({ value: c.name, label: c.name, search: c.name })), [categories]);
+    const typeOptions = useMemo(() => categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name })), [categories]);
     // Models are scoped to the chosen brand; with no brand picked, show them all.
     const selectedBrand = brands.find((b) => b.id === Number(form.brand_id));
     const modelOptions = useMemo(() => {
@@ -136,7 +136,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         const e: Record<string, string> = {};
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         // Everything is required except Notes.
-        if (!form.type) e.type = required;
+        if (!form.category_id) e.type = required;
         if (!form.brand_id) e.brand = required;
         if (!form.model_id) e.model = required;
         if (!form.serial.trim()) e.serial = required;
@@ -154,7 +154,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
 
         // Shared fields; acquisition fields differ by source (rented ones are derived server-side).
         const payload: AssetPayload = {
-            type: form.type,
+            category_id: Number(form.category_id),
             source: form.source,
             model_id: Number(form.model_id),
             brand_id: form.brand_id ? Number(form.brand_id) : null,
@@ -258,8 +258,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                             <div className="grid grid-cols-2 gap-4">
                                 <Field label={t('asset_type')} required error={err.type} name="type">
                                     <SearchableSelect
-                                        value={form.type}
-                                        onChange={(v) => upd('type', v as AssetType)}
+                                        value={form.category_id}
+                                        onChange={(v) => upd('category_id', v)}
                                         options={typeOptions}
                                         placeholder={lang === 'th' ? 'เลือกประเภท' : 'Select type'}
                                     />

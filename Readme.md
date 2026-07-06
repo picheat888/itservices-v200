@@ -975,7 +975,7 @@ employees.module               ← MASTER (คุมโมดูล + ไอค�
 
 ---
 
-## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–3)
+## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–4)
 
 Master data ที่เคยถูก **ก๊อปเป็น string** ลงตารางอ้างอิง (เช่น `assets.location`, `stock_items.unit`) เปลี่ยนมา **ผูกด้วย FK id** ไปตาราง master — แก้ชื่อ master ที่เดียวสะท้อนทุกที่, ลบ master ที่ยังถูกใช้ไม่ได้, ไม่มีข้อมูลค้าง/สะกดเพี้ยน แผนเต็ม 6 เฟสอยู่ที่ `docs/superpowers/plans/2026-07-06-master-data-fk-normalization.md`
 
@@ -1005,7 +1005,15 @@ Master data ที่เคยถูก **ก๊อปเป็น string** ล�
 - ตัวอ่านชื่อ brand/model ทั้ง backend เปลี่ยนเป็น `?->name`: AssetResource · StockItemResource · AssetService (snapshot โอน) · AssetController (picker/search `whereHas`/AuditLog) · ContractResource (linked assets) · 2 Notifications · TicketResource; search เปลี่ยนเป็น `orWhereHas` + eager-load กัน N+1
 - `BrandController`/`AssetModelController` `destroy` → 409 เมื่อมี asset **หรือ** stock item อ้างอิง; `AssetFactory`/`AssetSeeder`/`StockSeeder` resolve ชื่อ→id (model scoped ต่อ brand)
 
+### Phase 4 — Categories (`assets.type` + `stock_items.category` → `category_id`)
+plan: `docs/superpowers/plans/2026-07-06-phase4-categories-fk.md`
+- `Asset`/`StockItem` เพิ่ม relation `category()`; resource ส่ง `type`/`category` (ชื่อผ่าน relation) + `category_id`; ฟอร์ม asset/stock เลือกด้วย id
+- **`AssetTypeIcon` อ่าน icon จาก `categories.icon` อยู่แล้ว** (match ตามชื่อ) — resource คืนชื่อ category จึงทำงานต่อได้ทันที
+- `assets.type` เดิมปนค่า enum อังกฤษ (`laptop`…) กับชื่อ category ไทย — เจ้าของเลือก **map enum→category ไทยที่มีอยู่** ใน migration (laptop→แล็ปท็อป …) → **ไม่เกิด category ซ้ำ** (คงที่ 20 ตัว); `stock_items.category` ตรง master 100% อยู่แล้ว
+- filter (asset type / stock category) **ยังส่งชื่อ** → backend match ผ่าน `whereHas('category', name)` (UI filter/chip ไม่ต้องแก้); dashboard by-type/by-category group ตามชื่อ category ผ่าน relation
+- `CategoryController::destroy` → 409 เมื่อมี asset **หรือ** stock อ้างอิง; ContractController eager-load `assets.{brand,model,category}` กัน N+1
+
 ### Verification
-- **Backend**: `php artisan test --compact` = **498 passed / 0 failed** (เพิ่ม rename + delete-restrict ต่อ master ทั้ง asset & stock) · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
-- **รัน migration บน DB จริงแล้ว** (Phase 1×2 + Phase 2 + Phase 3): backfill ครบ 100% — assets 21/21 + stock 16/16 มี brand_id+model_id; brands 10→17, asset_models 21→50
-- **Phase 4–6 ยังไม่ทำ**: Categories · Vendors · Warehouses (แต่ละเฟสมี plan doc ของตัวเอง)
+- **Backend**: `php artisan test --compact` = **502 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **รัน migration บน DB จริงแล้ว** (Phase 1–4): backfill ครบ 100% — assets 21/21 + stock 16/16 ผูก category_id/brand_id/model_id; categories คงที่ 20 (mapping ไม่สร้างซ้ำ), brands 10→17, asset_models 21→50
+- **Phase 5–6 ยังไม่ทำ**: Vendors (`assets.supplier` + `contracts.vendor`) · Warehouses (ตัวใหญ่สุด — หลายตาราง)

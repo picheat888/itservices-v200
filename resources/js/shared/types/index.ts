@@ -224,6 +224,7 @@ export interface Asset {
     /** User-given nickname ("Tag") to recognise the asset, separate from the Asset ID. */
     nickname: string | null;
     type: AssetType;
+    category_id: number | null;
     brand: string | null;
     brand_id: number | null;
     model: string | null;
@@ -466,6 +467,7 @@ export interface StockItem {
     serial: string | null;
     track_serial: boolean;
     category: string | null;
+    category_id: number | null;
     brand: string | null;
     brand_id: number | null;
     model: string | null;
