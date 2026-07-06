@@ -18,7 +18,7 @@ class LocationController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
+        $data = $request->validate(['name' => ['required', 'string', 'max:120', 'unique:locations,name']]);
         $location = Location::create($data);
         AuditLog::record('Created location', $location->name);
 
@@ -27,7 +27,9 @@ class LocationController extends Controller
 
     public function update(Request $request, Location $location): JsonResponse
     {
-        $data = $request->validate(['name' => ['required', 'string', 'max:120']]);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120', 'unique:locations,name,'.$location->id],
+        ]);
         $before = $location->getOriginal();
         $location->update($data);
         AuditLog::record('Updated location', $location->name, AuditLog::changes($before, $location));
