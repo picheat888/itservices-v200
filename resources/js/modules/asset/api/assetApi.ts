@@ -17,8 +17,8 @@ export interface AssetPayload {
     tag?: string | null;
     nickname?: string | null;
     type: Asset['type'];
-    brand?: string | null;
-    model: string;
+    brand_id?: number | null;
+    model_id: number;
     serial?: string | null;
     source: Asset['source'];
     status?: Asset['status'];

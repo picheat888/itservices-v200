@@ -21,8 +21,12 @@ class AssetResource extends JsonResource
             'tag' => $this->tag,
             'nickname' => $this->nickname,
             'type' => $this->type,
-            'brand' => $this->brand,
-            'model' => $this->model,
+            // Brand / model names resolved through their master relations (auto-reflect renames);
+            // the *_id feed the forms.
+            'brand' => $this->brand?->name,
+            'brand_id' => $this->brand_id,
+            'model' => $this->model?->name,
+            'model_id' => $this->model_id,
             'serial' => $this->serial,
             'source' => $this->source?->value,
             'status' => $this->status?->value,

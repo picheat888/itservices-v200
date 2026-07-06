@@ -35,7 +35,7 @@ class TicketResource extends JsonResource
 
             'related_asset_id' => $this->related_asset_id,
             'related_asset_tag' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->tag),
-            'related_asset_model' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->model),
+            'related_asset_model' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->model?->name),
 
             'take_note' => $this->take_note,
             'resolution' => $this->resolution,

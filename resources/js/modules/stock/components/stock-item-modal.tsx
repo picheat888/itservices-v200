@@ -24,8 +24,8 @@ const empty: StockItemPayload = {
     serial: '',
     track_serial: false,
     category: '',
-    brand: '',
-    model: '',
+    brand_id: null,
+    model_id: null,
     unit_id: null,
     min_stock: 0,
     max_stock: 0,
@@ -41,8 +41,8 @@ function itemToForm(item: StockItem): StockItemPayload {
         serial: item.serial ?? '',
         track_serial: item.track_serial,
         category: item.category ?? '',
-        brand: item.brand ?? '',
-        model: item.model ?? '',
+        brand_id: item.brand_id,
+        model_id: item.model_id,
         unit_id: item.unit_id,
         min_stock: item.min_stock,
         max_stock: item.max_stock,
@@ -74,9 +74,12 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
         setAutoName(false);
     }, [open, item]);
 
-    // Auto item name = "Brand Model" (whichever parts exist). Kept in sync while
-    // the Auto switch is on; turning it off leaves the last value editable.
-    const autoItemName = [form.brand, form.model].filter(Boolean).join(' ').trim();
+    // Auto item name = "Brand Model" (whichever parts exist), resolved from the
+    // selected master ids. Kept in sync while the Auto switch is on; turning it off
+    // leaves the last value editable.
+    const brandName = brands.find((b) => b.id === form.brand_id)?.name;
+    const modelName = models.find((m) => m.id === form.model_id)?.name;
+    const autoItemName = [brandName, modelName].filter(Boolean).join(' ').trim();
     useEffect(() => {
         if (autoName) {
             setForm((f) => ({ ...f, name: autoItemName }));
@@ -89,8 +92,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const isValid =
         !!form.name.trim() &&
         !!form.category?.trim() &&
-        !!form.brand?.trim() &&
-        !!form.model?.trim() &&
+        form.brand_id != null &&
+        form.model_id != null &&
         form.warranty_type_id != null &&
         // Max must be at least Min.
         Number(form.max_stock) >= Number(form.min_stock);
@@ -98,7 +101,7 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
     const set = <K extends keyof StockItemPayload>(k: K, v: StockItemPayload[K]) => setForm((f) => ({ ...f, [k]: v }));
 
     // Models are scoped to the chosen brand; with no brand picked, show them all.
-    const selectedBrand = brands.find((b) => b.name === form.brand);
+    const selectedBrand = brands.find((b) => b.id === form.brand_id);
     const modelOptions = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
 
     const submit = async () => {
@@ -194,18 +197,18 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                     <div className="grid grid-cols-2 gap-3">
                         <Field label={t('stock_brand')} required>
                             <SearchableSelect
-                                value={form.brand ?? ''}
-                                onChange={(v) => setForm((f) => ({ ...f, brand: v, model: '' }))}
+                                value={form.brand_id != null ? String(form.brand_id) : ''}
+                                onChange={(v) => setForm((f) => ({ ...f, brand_id: v ? Number(v) : null, model_id: null }))}
                                 placeholder="—"
-                                options={brands.map((b) => ({ value: b.name, label: b.name, search: b.name }))}
+                                options={brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name }))}
                             />
                         </Field>
                         <Field label={t('stock_model')} required>
                             <SearchableSelect
-                                value={form.model ?? ''}
-                                onChange={(v) => set('model', v)}
+                                value={form.model_id != null ? String(form.model_id) : ''}
+                                onChange={(v) => set('model_id', v ? Number(v) : null)}
                                 placeholder="—"
-                                options={modelOptions.map((m) => ({ value: m.name, label: m.name, search: m.name }))}
+                                options={modelOptions.map((m) => ({ value: String(m.id), label: m.name, search: m.name }))}
                             />
                         </Field>
                     </div>

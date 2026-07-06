@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -58,12 +60,14 @@ class ContractApiTest extends TestCase
             'code' => 'CT-LINK-1', 'vendor' => 'Dell', 'name' => 'Server support', 'type' => 'hardware',
             'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100000, 'billing_cycle' => 'yearly',
         ]);
+        $dell = Brand::create(['name' => 'Dell']);
+        $r750 = AssetModel::create(['name' => 'PowerEdge R750', 'brand_id' => $dell->id]);
         Asset::create([
-            'tag' => 'INB-SV-01', 'type' => 'server', 'brand' => 'Dell', 'model' => 'PowerEdge R750',
+            'tag' => 'INB-SV-01', 'type' => 'server', 'brand_id' => $dell->id, 'model_id' => $r750->id,
             'status' => 'deployed', 'owner' => 'Rack 2', 'contract_id' => $contract->id,
         ]);
         // An unlinked asset must NOT appear under this contract.
-        Asset::create(['tag' => 'INB-LT-01', 'type' => 'laptop', 'brand' => 'HP', 'model' => 'EliteBook', 'status' => 'ready']);
+        Asset::create(['tag' => 'INB-LT-01', 'type' => 'laptop', 'status' => 'ready']);
 
         $this->getJson('/api/contracts')
             ->assertOk()

@@ -225,7 +225,9 @@ export interface Asset {
     nickname: string | null;
     type: AssetType;
     brand: string | null;
-    model: string;
+    brand_id: number | null;
+    model: string | null;
+    model_id: number | null;
     serial: string | null;
     source: AssetSource;
     status: AssetStatus;
@@ -465,7 +467,9 @@ export interface StockItem {
     track_serial: boolean;
     category: string | null;
     brand: string | null;
+    brand_id: number | null;
     model: string | null;
+    model_id: number | null;
     unit: string | null;
     unit_id: number | null;
     cost: number;

@@ -21,7 +21,7 @@ class AssetService
         AssetTransfer::create([
             'asset_id' => $asset->id,
             'asset_tag' => $asset->tag,
-            'asset_model' => $asset->model,
+            'asset_model' => $asset->model?->name,
             'from_owner' => $from,
             'to_owner' => $to,
             'reason' => $reason,

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
@@ -157,14 +159,16 @@ class StockItemTest extends TestCase
         // set here, they arrive via Receive (per-lot). So it's created "out".
         $unit = Unit::create(['name' => 'drive']);
         $warranty = WarrantyType::create(['name' => '1y']);
+        $brand = Brand::create(['name' => 'Acme']);
+        $model = AssetModel::create(['name' => 'M1', 'brand_id' => $brand->id]);
 
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', [
                 'name' => 'New SSD',
                 'unit_id' => $unit->id,
                 'category' => 'Cable',
-                'brand' => 'Acme',
-                'model' => 'M1',
+                'brand_id' => $brand->id,
+                'model_id' => $model->id,
                 'warranty_type_id' => $warranty->id,
                 'min_stock' => 2,
                 'max_stock' => 12,
@@ -175,6 +179,10 @@ class StockItemTest extends TestCase
             ->assertJsonPath('data.status', 'out')
             ->assertJsonPath('data.unit', 'drive')
             ->assertJsonPath('data.unit_id', $unit->id)
+            ->assertJsonPath('data.brand', 'Acme')
+            ->assertJsonPath('data.brand_id', $brand->id)
+            ->assertJsonPath('data.model', 'M1')
+            ->assertJsonPath('data.model_id', $model->id)
             ->assertJsonPath('data.warranty', '1y')
             ->assertJsonPath('data.warranty_type_id', $warranty->id);
 
@@ -185,12 +193,14 @@ class StockItemTest extends TestCase
     {
         $super = $this->superUser();
         $warranty = WarrantyType::create(['name' => '1y']);
+        $brand = Brand::create(['name' => 'Acme']);
+        $model = AssetModel::create(['name' => 'M1', 'brand_id' => $brand->id]);
 
         $first = $this->actingAs($super)
-            ->postJson('/api/stock-items', ['name' => 'Item A', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item A', 'category' => 'Cable', 'brand_id' => $brand->id, 'model_id' => $model->id, 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
         $second = $this->actingAs($super)
-            ->postJson('/api/stock-items', ['name' => 'Item B', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item B', 'category' => 'Cable', 'brand_id' => $brand->id, 'model_id' => $model->id, 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
 
         $this->assertSame('SKU-0000001', $first);
@@ -203,9 +213,11 @@ class StockItemTest extends TestCase
         // feed the running sequence, so the first auto SKU is still SKU-0000001.
         $this->makeItem(['sku' => 'SK-NB-099']);
         $warranty = WarrantyType::create(['name' => '1y']);
+        $brand = Brand::create(['name' => 'Acme']);
+        $model = AssetModel::create(['name' => 'M1', 'brand_id' => $brand->id]);
 
         $sku = $this->actingAs($this->superUser())
-            ->postJson('/api/stock-items', ['name' => 'Item', 'category' => 'Cable', 'brand' => 'Acme', 'model' => 'M1', 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
+            ->postJson('/api/stock-items', ['name' => 'Item', 'category' => 'Cable', 'brand_id' => $brand->id, 'model_id' => $model->id, 'warranty_type_id' => $warranty->id, 'min_stock' => 0, 'max_stock' => 5])
             ->assertCreated()->json('data.sku');
 
         $this->assertSame('SKU-0000001', $sku);
@@ -229,7 +241,7 @@ class StockItemTest extends TestCase
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-items', ['name' => 'X', 'min_stock' => 0, 'max_stock' => 5])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['category', 'brand', 'model', 'warranty_type_id']);
+            ->assertJsonValidationErrors(['category', 'brand_id', 'model_id', 'warranty_type_id']);
     }
 
     public function test_create_rejects_negative_min_max(): void
@@ -361,5 +373,53 @@ class StockItemTest extends TestCase
             ->deleteJson("/api/warranty-types/{$warranty->id}")
             ->assertStatus(409);
         $this->assertDatabaseHas('warranty_types', ['id' => $warranty->id]);
+    }
+
+    public function test_renaming_a_brand_propagates_to_stock_items(): void
+    {
+        $brand = Brand::create(['name' => 'Acmee']);
+        $item = $this->makeItem(['brand_id' => $brand->id]);
+
+        $brand->update(['name' => 'Acme']);
+
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.brand', 'Acme');
+    }
+
+    public function test_renaming_a_model_propagates_to_stock_items(): void
+    {
+        $model = AssetModel::create(['name' => 'Old Part']);
+        $item = $this->makeItem(['model_id' => $model->id]);
+
+        $model->update(['name' => 'New Part']);
+
+        $this->actingAs($this->superUser())
+            ->getJson("/api/stock-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('data.model', 'New Part');
+    }
+
+    public function test_brand_in_use_by_a_stock_item_cannot_be_deleted(): void
+    {
+        $brand = Brand::create(['name' => 'In Use Brand']);
+        $this->makeItem(['brand_id' => $brand->id]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/brands/{$brand->id}")
+            ->assertStatus(409);
+        $this->assertDatabaseHas('brands', ['id' => $brand->id]);
+    }
+
+    public function test_asset_model_in_use_by_a_stock_item_cannot_be_deleted(): void
+    {
+        $model = AssetModel::create(['name' => 'In Use Part']);
+        $this->makeItem(['model_id' => $model->id]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/asset-models/{$model->id}")
+            ->assertStatus(409);
+        $this->assertDatabaseHas('asset_models', ['id' => $model->id]);
     }
 }

@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use Illuminate\Database\Seeder;
 
 class AssetSeeder extends Seeder
@@ -39,10 +41,15 @@ class AssetSeeder extends Seeder
             [$tag, $type, $brand, $model, $owner, $dept, $status, $value, $source, $startDate, $endDate, $reason] = $row;
             $rented = $source === 'rented';
 
+            // Brand / model are FK ids now (Master Data). Resolve the demo name to its
+            // master row (creating it if MasterDataSeeder hasn't), model scoped to the brand.
+            $brandId = Brand::firstOrCreate(['name' => $brand])->id;
+            $modelId = AssetModel::firstOrCreate(['name' => $model, 'brand_id' => $brandId])->id;
+
             Asset::updateOrCreate(['tag' => $tag], [
                 'type' => $type,
-                'brand' => $brand,
-                'model' => $model,
+                'brand_id' => $brandId,
+                'model_id' => $modelId,
                 'owner' => $owner,
                 'initial_owner' => $owner,
                 'department' => $dept,

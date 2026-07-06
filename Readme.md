@@ -975,7 +975,7 @@ employees.module               ← MASTER (คุมโมดูล + ไอค�
 
 ---
 
-## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–2)
+## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–3)
 
 Master data ที่เคยถูก **ก๊อปเป็น string** ลงตารางอ้างอิง (เช่น `assets.location`, `stock_items.unit`) เปลี่ยนมา **ผูกด้วย FK id** ไปตาราง master — แก้ชื่อ master ที่เดียวสะท้อนทุกที่, ลบ master ที่ยังถูกใช้ไม่ได้, ไม่มีข้อมูลค้าง/สะกดเพี้ยน แผนเต็ม 6 เฟสอยู่ที่ `docs/superpowers/plans/2026-07-06-master-data-fk-normalization.md`
 
@@ -997,7 +997,15 @@ Master data ที่เคยถูก **ก๊อปเป็น string** ล�
 - `StockSeeder` resolve ชื่อ→id ด้วย `firstOrCreate`; `LocationFkMigrationTest` เปลี่ยน rollback เป็น loop-จนกว่า `assets.location` กลับมา (robust ต่อ migration เฟสถัดไป)
 - Tests: rename propagation + delete-restrict (unit/warranty) ใน `StockItemTest`
 
+### Phase 3 — Brands + Asset Models (`assets`+`stock_items` `.brand`/`.model` → `brand_id`/`model_id`)
+เฟสใหญ่สุด — แตะ **สองตาราง** และ model ผูกกับ brand (cascade). plan: `docs/superpowers/plans/2026-07-06-phase3-brands-models-fk.md`
+- `Asset`/`StockItem` เพิ่ม relation `brand()` (→Brand) + `model()` (→AssetModel); resource ส่ง `brand`/`model` (ชื่อผ่าน relation) + `brand_id`/`model_id`; ฟอร์ม `asset-form-drawer`/`stock-item-modal` เลือกด้วย id พร้อม **cascade** (เลือกยี่ห้อ → กรองรุ่นตาม `brand_id`)
+- **Model backfill ด้วย (name + brand_id) null-safe** เพราะชื่อรุ่นไม่ unique ทั้งตาราง (scoped ต่อ brand) — ไม่ match ชื่อเดี่ยว
+- **ข้อมูลจริง model เป็น free-text ที่ไม่ align กับ master** (asset 6/21, stock 0/16 ตรง) — เจ้าของระบบเลือกทำเต็มแบบ create-missing → migration auto-สร้าง brand ที่ขาด 7 ยี่ห้อ (Canon/Belkin/Kingston/Logitech/…) + asset_models เพิ่ม ~29 แถวจากค่าเดิม
+- ตัวอ่านชื่อ brand/model ทั้ง backend เปลี่ยนเป็น `?->name`: AssetResource · StockItemResource · AssetService (snapshot โอน) · AssetController (picker/search `whereHas`/AuditLog) · ContractResource (linked assets) · 2 Notifications · TicketResource; search เปลี่ยนเป็น `orWhereHas` + eager-load กัน N+1
+- `BrandController`/`AssetModelController` `destroy` → 409 เมื่อมี asset **หรือ** stock item อ้างอิง; `AssetFactory`/`AssetSeeder`/`StockSeeder` resolve ชื่อ→id (model scoped ต่อ brand)
+
 ### Verification
-- **Backend**: `php artisan test --compact` = **490 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
-- **รัน migration บน DB จริงแล้ว** (3 ตัว): backfill ครบ 100% (16/16 stock items มี unit_id + warranty_type_id)
-- **Phase 3–6 ยังไม่ทำ**: Brands+Models · Categories · Vendors · Warehouses (แต่ละเฟสมี plan doc ของตัวเอง)
+- **Backend**: `php artisan test --compact` = **498 passed / 0 failed** (เพิ่ม rename + delete-restrict ต่อ master ทั้ง asset & stock) · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **รัน migration บน DB จริงแล้ว** (Phase 1×2 + Phase 2 + Phase 3): backfill ครบ 100% — assets 21/21 + stock 16/16 มี brand_id+model_id; brands 10→17, asset_models 21→50
+- **Phase 4–6 ยังไม่ทำ**: Categories · Vendors · Warehouses (แต่ละเฟสมี plan doc ของตัวเอง)

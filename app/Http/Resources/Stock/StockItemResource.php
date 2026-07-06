@@ -23,10 +23,12 @@ class StockItemResource extends JsonResource
             'serial' => $this->serial,
             'track_serial' => (bool) $this->track_serial,
             'category' => $this->category,
-            'brand' => $this->brand,
-            'model' => $this->model,
-            // Unit / warranty names are resolved through their master relations so
-            // renaming a master propagates here; the *_id feeds the forms/filters.
+            // Brand / model / unit / warranty names are resolved through their master
+            // relations so renaming a master propagates here; the *_id feeds the forms/filters.
+            'brand' => $this->brand?->name,
+            'brand_id' => $this->brand_id,
+            'model' => $this->model?->name,
+            'model_id' => $this->model_id,
             'unit' => $this->unit?->name,
             'unit_id' => $this->unit_id,
             // Cost is the weighted-average of open FIFO lots (no longer a fixed SKU field).

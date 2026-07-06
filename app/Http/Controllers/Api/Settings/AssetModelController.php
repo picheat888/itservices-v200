@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Models\Settings\AssetModel;
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Settings\AssetModel;
+use App\Models\Stock\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,9 +49,12 @@ class AssetModelController extends Controller
         return response()->json(['data' => $assetModel, 'message' => 'success']);
     }
 
-    /** Delete an asset model. */
+    /** Delete an asset model — blocked (409) while any asset or stock item still references it. */
     public function destroy(AssetModel $assetModel): JsonResponse
     {
+        if (Asset::where('model_id', $assetModel->id)->exists() || StockItem::where('model_id', $assetModel->id)->exists()) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted asset model', $assetModel->name);
         $assetModel->delete();
 

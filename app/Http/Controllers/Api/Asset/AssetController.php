@@ -35,6 +35,7 @@ class AssetController extends Controller
         $contractId = $request->integer('contract_id') ?: null;
 
         $assets = Asset::query()
+            ->with(['brand', 'model'])
             ->where(fn ($q) => $q->whereNull('contract_id')
                 ->when($contractId, fn ($w) => $w->orWhere('contract_id', $contractId)))
             ->orderBy('tag')
@@ -44,7 +45,7 @@ class AssetController extends Controller
             'data' => $assets->map(fn (Asset $a) => [
                 'id' => $a->id,
                 'tag' => $a->tag,
-                'name' => trim(($a->brand ?? '').' '.($a->model ?? '')) ?: $a->type,
+                'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->type,
                 'type' => $a->type,
                 'status' => $a->status->value,
             ])->all(),
@@ -59,14 +60,14 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract', 'location'])->latest('id');
+        $query = Asset::query()->with(['contract', 'location', 'brand', 'model'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
             $query->where(function ($w) use ($q) {
                 $w->where('tag', 'like', $q)
                     ->orWhere('nickname', 'like', $q)
-                    ->orWhere('model', 'like', $q)
+                    ->orWhereHas('model', fn ($m) => $m->where('name', 'like', $q))
                     ->orWhere('owner', 'like', $q)
                     ->orWhere('serial', 'like', $q);
             });
@@ -169,9 +170,9 @@ class AssetController extends Controller
     public function store(StoreAssetRequest $request): JsonResponse
     {
         $asset = $this->service->create($request->validated());
-        AuditLog::record('Registered asset', "{$asset->tag} — {$asset->model}");
+        AuditLog::record('Registered asset', "{$asset->tag} — {$asset->model?->name}");
 
-        return (new AssetResource($asset->load('contract')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -179,7 +180,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract', 'transfers', 'tickets.assignee']);
+        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model']);
 
         return (new AssetResource($asset))->response();
     }
@@ -188,9 +189,9 @@ class AssetController extends Controller
     {
         $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
-        AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model}", AuditLog::changes($before, $asset));
+        AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model?->name}", AuditLog::changes($before, $asset));
 
-        return (new AssetResource($asset->load('contract')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model')))
             ->additional(['message' => 'success'])->response();
     }
 
@@ -198,7 +199,7 @@ class AssetController extends Controller
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
-        AuditLog::record('Deleted asset', "{$asset->tag} — {$asset->model}");
+        AuditLog::record('Deleted asset', "{$asset->tag} — {$asset->model?->name}");
         $asset->delete();
 
         return response()->json(['message' => 'success']);
