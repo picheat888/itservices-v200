@@ -26,7 +26,7 @@ class AssetAssignedNotification extends Notification
             'type' => 'asset_assigned',
             'asset_id' => $this->asset->id,
             'asset_tag' => $this->asset->tag,
-            'asset_model' => $this->asset->model,
+            'asset_model' => $this->asset->model?->name,
             'asset_nickname' => $this->asset->nickname,
             'from' => $this->from,
         ];

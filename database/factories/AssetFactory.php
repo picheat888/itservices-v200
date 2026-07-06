@@ -5,6 +5,8 @@ namespace Database\Factories;
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -28,10 +30,15 @@ class AssetFactory extends Factory
         $type = fake()->randomElement(['laptop', 'desktop', 'mobile', 'printer', 'server', 'network', 'other']);
         $purchase = fake()->dateTimeBetween('-3 years', '-2 months');
 
+        // Brand + model are FK ids now (Master Data). Resolve/create a brand, then a
+        // brand-scoped model, so every factory-built asset links to real master rows.
+        $brand = Brand::firstOrCreate(['name' => fake()->randomElement(['Dell', 'HP', 'Lenovo', 'Apple', 'Cisco', 'Samsung'])]);
+        $model = AssetModel::create(['name' => ucwords(fake()->unique()->words(2, true)), 'brand_id' => $brand->id]);
+
         return [
             'type' => $type,
-            'brand' => fake()->randomElement(['Dell', 'HP', 'Lenovo', 'Apple', 'Cisco', 'Samsung']),
-            'model' => fake()->words(2, true),
+            'brand_id' => $brand->id,
+            'model_id' => $model->id,
             'serial' => strtoupper(fake()->bothify('??######')),
             'source' => AssetSource::Purchased,
             'status' => fake()->randomElement(AssetStatus::cases()),

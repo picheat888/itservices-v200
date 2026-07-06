@@ -2,6 +2,8 @@
 
 namespace App\Models\Stock;
 
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class StockItem extends Model
 {
     protected $fillable = [
-        'sku', 'name', 'serial', 'track_serial', 'category', 'brand', 'model', 'unit_id',
+        'sku', 'name', 'serial', 'track_serial', 'category', 'brand_id', 'model_id', 'unit_id',
         'cost', 'current_stock', 'min_stock', 'max_stock',
         'warranty_type_id', 'last_move_at',
     ];
@@ -47,6 +49,18 @@ class StockItem extends Model
             ->max() ?? 0;
 
         return 'SKU-'.str_pad((string) ($seq + 1), 7, '0', STR_PAD_LEFT);
+    }
+
+    /** Manufacturer brand (Master Data). */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    /** Model/product line, scoped to the brand (Master Data). */
+    public function model(): BelongsTo
+    {
+        return $this->belongsTo(AssetModel::class, 'model_id');
     }
 
     /** Unit of measure for this item (Master Data). */

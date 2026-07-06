@@ -34,8 +34,8 @@ class StoreStockItemRequest extends FormRequest
             'serial' => ['nullable', 'string', 'max:120'],
             'track_serial' => ['boolean'],
             'category' => ['required', 'string', 'max:120'],
-            'brand' => ['required', 'string', 'max:120'],
-            'model' => ['required', 'string', 'max:120'],
+            'brand_id' => ['required', 'integer', 'exists:brands,id'],
+            'model_id' => ['required', 'integer', 'exists:asset_models,id'],
             // Unit is optional (the form does not force it); warranty type is required.
             'unit_id' => ['nullable', 'integer', 'exists:units,id'],
             // current_stock and cost are no longer set on the SKU — stock arrives

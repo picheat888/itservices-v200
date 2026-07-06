@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Settings\Brand;
+use App\Models\Stock\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -43,9 +45,12 @@ class BrandController extends Controller
         return response()->json(['data' => $brand, 'message' => 'success']);
     }
 
-    /** Delete a brand. */
+    /** Delete a brand — blocked (409) while any asset or stock item still references it. */
     public function destroy(Brand $brand): JsonResponse
     {
+        if (Asset::where('brand_id', $brand->id)->exists() || StockItem::where('brand_id', $brand->id)->exists()) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted brand', $brand->name);
         $brand->delete();
 

@@ -33,8 +33,8 @@ class StoreAssetRequest extends FormRequest
             'nickname' => ['nullable', 'string', 'max:120'],
             // Asset type is a free Master Data category (managed under Settings → Master Data).
             'type' => ['required', 'string', 'max:120'],
-            'brand' => ['nullable', 'string', 'max:120'],
-            'model' => ['required', 'string', 'max:200'],
+            'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'model_id' => ['required', 'integer', 'exists:asset_models,id'],
             'serial' => ['nullable', 'string', 'max:120'],
             'source' => ['required', Rule::enum(AssetSource::class)],
             'status' => ['sometimes', Rule::enum(AssetStatus::class)],

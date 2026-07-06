@@ -44,7 +44,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['lots', 'balances', 'unit', 'warrantyType'])
+            ->with(['lots', 'balances', 'unit', 'warrantyType', 'brand', 'model'])
             // Reserved = qty committed by approved-but-unfulfilled requests (not yet
             // deducted from on-hand). Used to show "available to request" in New Request.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
@@ -58,8 +58,8 @@ class StockItemController extends Controller
             $query->where(function ($w) use ($q) {
                 $w->where('name', 'like', $q)
                     ->orWhere('sku', 'like', $q)
-                    ->orWhere('brand', 'like', $q)
-                    ->orWhere('model', 'like', $q);
+                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', $q))
+                    ->orWhereHas('model', fn ($m) => $m->where('name', 'like', $q));
             });
         }
         if ($request->filled('category')) {
@@ -192,6 +192,8 @@ class StockItemController extends Controller
             'balances' => fn ($q) => $q->orderBy('warehouse'),
             'unit',
             'warrantyType',
+            'brand',
+            'model',
         ]);
 
         return (new StockItemResource($stockItem))->response();

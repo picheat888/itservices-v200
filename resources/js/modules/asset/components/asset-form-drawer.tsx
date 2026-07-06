@@ -19,8 +19,8 @@ import { useEffect, useMemo, useState } from 'react';
 interface FormState {
     type: AssetType;
     source: AssetSource;
-    model: string;
-    brand: string;
+    model_id: string;
+    brand_id: string;
     serial: string;
     nickname: string;
     warehouse: string;
@@ -36,8 +36,8 @@ interface FormState {
 const EMPTY: FormState = {
     type: '',
     source: 'purchased',
-    model: '',
-    brand: '',
+    model_id: '',
+    brand_id: '',
     serial: '',
     nickname: '',
     warehouse: '',
@@ -76,7 +76,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const { data: categories = [] } = useCategories();
     const { data: vendors = [] } = useVendors();
     const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })), [warehouses]);
-    const brandOptions = useMemo(() => brands.map((b) => ({ value: b.name, label: b.name, search: b.name })), [brands]);
+    const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
     const vendorOptions = useMemo(() => vendors.map((v) => ({ value: v.name, label: v.name, search: v.name })), [vendors]);
     const [form, setForm] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
@@ -90,8 +90,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             setForm({
                 type: editing.type,
                 source: editing.source,
-                model: editing.model,
-                brand: editing.brand ?? '',
+                model_id: editing.model_id ? String(editing.model_id) : '',
+                brand_id: editing.brand_id ? String(editing.brand_id) : '',
                 serial: editing.serial ?? '',
                 nickname: editing.nickname ?? '',
                 warehouse: editing.warehouse ?? '',
@@ -114,10 +114,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     // Asset type, brand and model are all picked from the shared Master Data lists.
     const typeOptions = useMemo(() => categories.map((c) => ({ value: c.name, label: c.name, search: c.name })), [categories]);
     // Models are scoped to the chosen brand; with no brand picked, show them all.
-    const selectedBrand = brands.find((b) => b.name === form.brand);
+    const selectedBrand = brands.find((b) => b.id === Number(form.brand_id));
     const modelOptions = useMemo(() => {
         const list = selectedBrand ? models.filter((m) => m.brand_id === selectedBrand.id) : models;
-        return list.map((m) => ({ value: m.name, label: m.name, search: m.name }));
+        return list.map((m) => ({ value: String(m.id), label: m.name, search: m.name }));
     }, [models, selectedBrand]);
 
     // Contracts to choose from when linking a rented asset to its vendor contract.
@@ -137,8 +137,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         // Everything is required except Notes.
         if (!form.type) e.type = required;
-        if (!form.brand.trim()) e.brand = required;
-        if (!form.model.trim()) e.model = required;
+        if (!form.brand_id) e.brand = required;
+        if (!form.model_id) e.model = required;
         if (!form.serial.trim()) e.serial = required;
         if (!form.warehouse.trim()) e.warehouse = required;
         if (rented) {
@@ -156,8 +156,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         const payload: AssetPayload = {
             type: form.type,
             source: form.source,
-            model: form.model.trim(),
-            brand: form.brand.trim() || null,
+            model_id: Number(form.model_id),
+            brand_id: form.brand_id ? Number(form.brand_id) : null,
             serial: form.serial.trim() || null,
             nickname: form.nickname.trim() || null,
             warehouse: form.warehouse.trim() || null,
@@ -266,8 +266,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                 </Field>
                                 <Field label={t('asset_brand')} required error={err.brand} name="brand">
                                     <SearchableSelect
-                                        value={form.brand}
-                                        onChange={(v) => setForm((f) => ({ ...f, brand: v, model: '' }))}
+                                        value={form.brand_id}
+                                        onChange={(v) => setForm((f) => ({ ...f, brand_id: v, model_id: '' }))}
                                         options={brandOptions}
                                         placeholder={lang === 'th' ? 'เลือกยี่ห้อ' : 'Select brand'}
                                     />
@@ -276,8 +276,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                             <div className="grid grid-cols-2 gap-4">
                                 <Field label={t('asset_model')} required error={err.model} name="model">
                                     <SearchableSelect
-                                        value={form.model}
-                                        onChange={(v) => upd('model', v)}
+                                        value={form.model_id}
+                                        onChange={(v) => upd('model_id', v)}
                                         options={modelOptions}
                                         placeholder={lang === 'th' ? 'เลือกรุ่น' : 'Select model'}
                                     />

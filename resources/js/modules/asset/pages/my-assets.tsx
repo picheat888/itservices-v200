@@ -149,7 +149,7 @@ export default function MyAssetsPage() {
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => onReturn(a.id, a.model, a.tag)}
+                                                onClick={() => onReturn(a.id, a.model ?? '', a.tag)}
                                                 disabled={requestReturn.isPending && requestReturn.variables?.id === a.id}
                                             >
                                                 <Undo2 className="h-4 w-4" />

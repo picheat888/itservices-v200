@@ -5,6 +5,8 @@ namespace App\Models\Asset;
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Contract\Contract;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use App\Models\Settings\Location;
 use App\Models\Ticket\Ticket;
 use Database\Factories\AssetFactory;
@@ -29,7 +31,7 @@ class Asset extends Model
     }
 
     protected $fillable = [
-        'tag', 'nickname', 'type', 'brand', 'model', 'serial', 'source', 'status',
+        'tag', 'nickname', 'type', 'brand_id', 'model_id', 'serial', 'source', 'status',
         'owner', 'initial_owner', 'department', 'location_id', 'warehouse', 'value', 'supplier',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
         'registered_date', 'owned_since', 'notes', 'last_reason',
@@ -61,6 +63,18 @@ class Asset extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    /** Manufacturer brand (Master Data). */
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
+    /** Model/product line, scoped to the brand (Master Data). */
+    public function model(): BelongsTo
+    {
+        return $this->belongsTo(AssetModel::class, 'model_id');
     }
 
     /** Ownership/custody trail — transfers and returns-to-pool, most recent first. */

@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Brand;
 use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
@@ -55,18 +57,21 @@ class StockSeeder extends Seeder
         foreach ($items as $row) {
             [$sku, $name, $serial, $category, $brand, $model, $unit, $cost, $current, $min, $max, $warehouse, $supplier, $lastMove, $warranty, $trackSerial] = $row;
 
-            // Unit / warranty are FK ids now (Master Data). Resolve the demo name to
-            // its master row (creating it if MasterDataSeeder hasn't, for robustness).
+            // Unit / warranty / brand / model are FK ids now (Master Data). Resolve each
+            // demo name to its master row (creating it if MasterDataSeeder hasn't);
+            // model is scoped to the brand.
             $unitId = Unit::firstOrCreate(['name' => $unit])->id;
             $warrantyTypeId = WarrantyType::firstOrCreate(['name' => $warranty])->id;
+            $brandId = Brand::firstOrCreate(['name' => $brand])->id;
+            $modelId = AssetModel::firstOrCreate(['name' => $model, 'brand_id' => $brandId])->id;
 
             $item = StockItem::updateOrCreate(['sku' => $sku], [
                 'name' => $name,
                 'serial' => $serial,
                 'track_serial' => $trackSerial,
                 'category' => $category,
-                'brand' => $brand,
-                'model' => $model,
+                'brand_id' => $brandId,
+                'model_id' => $modelId,
                 'unit_id' => $unitId,
                 'cost' => $cost,
                 'current_stock' => $current,
