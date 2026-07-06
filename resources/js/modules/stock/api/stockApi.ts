@@ -31,10 +31,10 @@ export interface StockItemPayload {
     category?: string | null;
     brand?: string | null;
     model?: string | null;
-    unit: string;
+    unit_id: number | null;
     min_stock: number;
     max_stock: number;
-    warranty?: string | null;
+    warranty_type_id: number | null;
 }
 
 /** Standard server-pagination meta returned by the Stock list endpoints. */

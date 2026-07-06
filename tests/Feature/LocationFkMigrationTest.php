@@ -25,9 +25,14 @@ class LocationFkMigrationTest extends TestCase
 
     public function test_migration_dedups_pre_existing_duplicate_location_names(): void
     {
-        // These are the last two migrations to run (filename order), so --step=2
-        // rolls back exactly them: the unique index migration, then the FK migration.
-        Artisan::call('migrate:rollback', ['--step' => 2]);
+        // Roll back one migration at a time until the pre-FK location schema
+        // (assets.location as a plain string) is restored. A fixed --step count
+        // would break whenever a later phase adds migrations on top of the
+        // location ones (e.g. the stock unit/warranty FK migration), so we stop
+        // exactly when the location FK migration's down() has run.
+        while (! Schema::hasColumn('assets', 'location')) {
+            Artisan::call('migrate:rollback', ['--step' => 1]);
+        }
 
         $this->assertTrue(
             Schema::hasColumn('assets', 'location'),
