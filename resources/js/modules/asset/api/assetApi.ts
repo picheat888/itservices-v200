@@ -57,8 +57,8 @@ export const assetApi = {
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
     update: (id: number, payload: AssetPayload) => mutate<Asset>('put', `/assets/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/assets/${id}`),
-    transfer: (id: number, owner: string, location: string, reason?: string) =>
-        mutate<Asset>('post', `/assets/${id}/transfer`, { owner, location, reason }),
+    transfer: (id: number, owner: string, locationId: number, reason?: string) =>
+        mutate<Asset>('post', `/assets/${id}/transfer`, { owner, location_id: locationId, reason }),
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
     requestReturn: (id: number, reason?: string) => mutate<Asset>('post', `/assets/${id}/request-return`, reason ? { reason } : {}),
     receive: (id: number, warehouse?: string) => mutate<Asset>('post', `/assets/${id}/receive`, warehouse ? { warehouse } : {}),

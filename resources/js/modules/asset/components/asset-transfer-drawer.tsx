@@ -17,7 +17,7 @@ export function AssetTransferDrawer({ asset, onClose }: { asset: Asset | null; o
     const lang = useUiStore((s) => s.lang);
     const { transfer } = useAssetMutations();
     const { data: locations = [] } = useLocations();
-    const locationOptions = useMemo(() => locations.map((l) => ({ value: l.name, label: l.name, search: l.name })), [locations]);
+    const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
     const [owner, setOwner] = useState('');
     const [location, setLocation] = useState('');
     const [reason, setReason] = useState('');
@@ -39,7 +39,7 @@ export function AssetTransferDrawer({ asset, onClose }: { asset: Asset | null; o
         if (Object.keys(e).length || !asset) return;
 
         try {
-            await transfer.mutateAsync({ id: asset.id, owner: owner.trim(), location: location.trim(), reason: reason.trim() || undefined });
+            await transfer.mutateAsync({ id: asset.id, owner: owner.trim(), locationId: Number(location), reason: reason.trim() || undefined });
             onClose();
         } catch {
             setErr({ owner: lang === 'th' ? 'โอนไม่สำเร็จ' : 'Transfer failed' });
