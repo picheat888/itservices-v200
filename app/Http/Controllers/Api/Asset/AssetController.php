@@ -210,12 +210,12 @@ class AssetController extends Controller
         $data = $request->validate([
             'owner' => ['required', 'string', 'max:200'],
             // IT must record where the asset will physically go when handed over.
-            'location' => ['required', 'string', 'max:200'],
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         abort_if($asset->isDeployed(), 422, 'Asset is deployed — mark it returned first.');
 
-        $asset = $this->service->transfer($asset, $data['owner'], $data['location'], $data['reason'] ?? null, $request->user()?->name);
+        $asset = $this->service->transfer($asset, $data['owner'], $data['location_id'], $data['reason'] ?? null, $request->user()?->name);
         AuditLog::record('Transferred asset', "{$asset->tag} → {$data['owner']}");
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
