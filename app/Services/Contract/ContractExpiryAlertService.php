@@ -53,6 +53,7 @@ class ContractExpiryAlertService
         }
 
         $contracts = Contract::whereNull('cancelled_at')
+            ->whereNull('expired_at')
             ->get()
             ->filter(fn (Contract $c) => $c->enabledReminderDays() !== [])
             ->filter(fn (Contract $c) => $c->isInReminder() || $c->daysRemaining() <= 0);
