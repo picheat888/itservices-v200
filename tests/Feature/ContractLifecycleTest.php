@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
+use App\Models\User;
 use App\Services\Contract\ContractService;
 use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,5 +61,36 @@ class ContractLifecycleTest extends TestCase
         $adminDefaults = Permissions::defaults()['admin'];
         $this->assertNotContains('contracts.cancel', $adminDefaults);
         $this->assertNotContains('contracts.expire', $adminDefaults);
+    }
+
+    public function test_expire_endpoint_requires_permission(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']); // admin ไม่มี contracts.expire
+        $c = $this->contract(['end_date' => now()->subDay()]);
+        $this->actingAs($user)->postJson("/api/contracts/{$c->id}/expire")->assertForbidden();
+    }
+
+    public function test_super_can_expire_and_it_is_permanent(): void
+    {
+        $super = User::factory()->create(['role' => 'super']);
+        $c = $this->contract(['end_date' => now()->subDay()]);
+
+        $this->actingAs($super)->postJson("/api/contracts/{$c->id}/expire")
+            ->assertOk()->assertJsonPath('data.status', 'expired');
+
+        // second attempt is rejected (permanent)
+        $this->actingAs($super)->postJson("/api/contracts/{$c->id}/expire")->assertStatus(422);
+    }
+
+    public function test_summary_separates_overdue_and_expired(): void
+    {
+        $super = User::factory()->create(['role' => 'super']);
+        $this->contract(['end_date' => now()->subDay()]);                      // overdue
+        $this->contract(['end_date' => now()->subDay(), 'expired_at' => now()]); // expired
+
+        $this->actingAs($super)->getJson('/api/contracts/summary')
+            ->assertOk()
+            ->assertJsonPath('overdue', 1)
+            ->assertJsonPath('expired', 1);
     }
 }
