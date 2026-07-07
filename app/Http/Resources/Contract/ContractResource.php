@@ -33,7 +33,6 @@ class ContractResource extends JsonResource
             'value' => (float) $this->value,
             'value_display' => $this->valueDisplay(),
             'billing_cycle' => $this->billing_cycle,
-            'auto_renew' => $this->auto_renew,
             'status' => $this->status,
             'days_remaining' => $this->daysRemaining(),
             'in_reminder' => $this->isInReminder(),
@@ -64,6 +63,7 @@ class ContractResource extends JsonResource
                 'owner' => $a->owner,
             ])->all(), []),
             'cancelled_at' => $this->cancelled_at?->toDateString(),
+            'expired_at' => $this->expired_at?->toDateString(),
             'created_at' => $this->created_at?->toDateString(),
             'updated_at' => $this->updated_at?->toDateString(),
         ];

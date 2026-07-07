@@ -378,4 +378,19 @@ class ContractApiTest extends TestCase
         $this->deleteJson("/api/vendors/{$vendor->id}")->assertStatus(409);
         $this->assertDatabaseHas('vendors', ['id' => $vendor->id]);
     }
+
+    public function test_contract_json_has_expired_at_and_no_auto_renew(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'ACME Co']);
+        $c = Contract::create([
+            'vendor_id' => $vendor->id, 'name' => 'X', 'title' => 'X', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100, 'billing_cycle' => 'yearly',
+        ]);
+
+        $this->getJson("/api/contracts/{$c->id}")
+            ->assertOk()
+            ->assertJsonPath('data.expired_at', null)
+            ->assertJsonMissingPath('data.auto_renew');
+    }
 }
