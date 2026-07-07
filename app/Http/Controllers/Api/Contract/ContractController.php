@@ -43,12 +43,12 @@ class ContractController extends Controller
 
         // Sort order — cancelled contracts always sink to the bottom regardless of the chosen sort.
         match ($request->query('sort', 'end_asc')) {
-            'end_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('end_date', 'desc'),
-            'created_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('created_at', 'desc'),
-            'created_asc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('created_at', 'asc'),
-            'value_desc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('value', 'desc'),
-            'value_asc' => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('value', 'asc'),
-            default => $query->orderByRaw('cancelled_at IS NOT NULL')->orderBy('end_date', 'asc'),
+            'end_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('end_date', 'desc'),
+            'created_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('created_at', 'desc'),
+            'created_asc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('created_at', 'asc'),
+            'value_desc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('value', 'desc'),
+            'value_asc' => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('value', 'asc'),
+            default => $query->orderByRaw('(cancelled_at IS NOT NULL OR expired_at IS NOT NULL)')->orderBy('end_date', 'asc'),
         };
 
         if ($request->filled('search')) {
@@ -66,8 +66,9 @@ class ContractController extends Controller
         }
 
         if ($request->query('tab') === 'expiring') {
-            // In reminder window = still active (not cancelled) AND some enabled threshold reached.
+            // In reminder window = still active (not cancelled, not expired) AND some enabled threshold reached.
             $query->whereNull('cancelled_at')
+                ->whereNull('expired_at')
                 ->whereDate('end_date', '>', now())
                 ->where(function ($w) {
                     foreach (Contract::REMINDER_DAYS as $d) {
@@ -80,8 +81,9 @@ class ContractController extends Controller
         }
 
         if ($request->query('tab') === 'expired') {
-            // Expired = still live (not cancelled) but the end date has already passed.
+            // Overdue = still live (not cancelled, not expired) but the end date has already passed.
             $query->whereNull('cancelled_at')
+                ->whereNull('expired_at')
                 ->whereDate('end_date', '<=', now());
         }
 
@@ -109,13 +111,15 @@ class ContractController extends Controller
 
         $contracts = Contract::with('vendor')->get();
 
-        $live = $contracts->filter(fn ($c) => $c->cancelled_at === null);
+        $terminal = fn ($c) => $c->cancelled_at !== null || $c->expired_at !== null;
+        $live = $contracts->reject($terminal);
         $expiring = $live->filter(fn ($c) => $c->isInReminder());
-        $expired = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
+        $overdue = $live->filter(fn ($c) => $c->daysRemaining() <= 0);
         // "Active" = healthy contracts only — exclude those already inside their
-        // reminder window so active/expiring/expired stay mutually exclusive.
+        // reminder window so active/expiring/overdue stay mutually exclusive.
         $active = $live->filter(fn ($c) => $c->daysRemaining() > 0 && ! $c->isInReminder());
-        $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null);
+        $cancelled = $contracts->filter(fn ($c) => $c->cancelled_at !== null && $c->expired_at === null);
+        $expired = $contracts->filter(fn ($c) => $c->expired_at !== null);
 
         $annual = $live->sum('value');
 
@@ -162,6 +166,7 @@ class ContractController extends Controller
             'total' => $contracts->count(),
             'active' => $active->count(),
             'expiring' => $expiring->count(),
+            'overdue' => $overdue->count(),
             'expired' => $expired->count(),
             'cancelled' => $cancelled->count(),
             'annual_value' => $this->formatMoney($annual),
@@ -211,14 +216,26 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Toggles a contract's cancelled state. Requires the contracts.edit permission. */
+    /** Toggles a contract's cancelled state. Requires the contracts.cancel permission. */
     public function cancel(Request $request, Contract $contract): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('contracts.cancel'), 403);
 
         $contract = $this->service->toggleCancel($contract);
         $action = $contract->cancelled_at !== null ? 'Cancelled contract' : 'Reactivated contract';
         AuditLog::record($action, "{$contract->name} ({$contract->code})");
+
+        return (new ContractResource($contract))
+            ->additional(['message' => 'success'])->response();
+    }
+
+    /** Permanently marks a contract as expired (admin close-out). Requires contracts.expire. */
+    public function expire(Request $request, Contract $contract): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('contracts.expire'), 403);
+
+        $contract = $this->service->expire($contract);
+        AuditLog::record('Expired contract', "{$contract->name} ({$contract->code})");
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -246,8 +263,8 @@ class ContractController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.import'), 403);
 
-        $headers = ['code', 'vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle', 'auto_renew', 'notes'];
-        $sample = ['', 'Microsoft', 'Microsoft 365 — 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', '0', ''];
+        $headers = ['code', 'vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle', 'notes'];
+        $sample = ['', 'Microsoft', 'Microsoft 365 — 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', ''];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
