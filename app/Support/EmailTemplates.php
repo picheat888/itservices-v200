@@ -134,10 +134,10 @@ class EmailTemplates
             ],
             [
                 'key' => 'contract.expired_alert',
-                'name' => 'Contract expired',
-                'subject' => 'Contract {{contract.vendor}} has expired ({{contract.days_overdue}} days ago)',
+                'name' => 'Contract overdue',
+                'subject' => 'Contract {{contract.vendor}} is overdue ({{contract.days_overdue}} days past end date)',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>The contract <strong>{{contract.name}}</strong> with {{contract.vendor}} expired <strong>{{contract.days_overdue}}</strong> days ago (on {{contract.end_date}}). Please review and renew or close it out.</p>
+<p>The contract <strong>{{contract.name}}</strong> with {{contract.vendor}} passed its end date <strong>{{contract.days_overdue}}</strong> days ago (on {{contract.end_date}}) and is still open. Please renew it or close it out (mark as expired).</p>
 <p style="color:#64748b">Reference: <strong>{{contract.code}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'daily',
