@@ -6,6 +6,7 @@ use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
 use App\Services\Contract\ContractService;
+use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -45,5 +46,19 @@ class ContractLifecycleTest extends TestCase
         Asset::create(['tag' => 'A-1', 'category_id' => null, 'status' => 'deployed', 'contract_id' => $c->id]);
         $this->expectException(ValidationException::class);
         app(ContractService::class)->expire($c);
+    }
+
+    public function test_new_contract_permissions_exist(): void
+    {
+        $all = Permissions::all();
+        $this->assertContains('contracts.cancel', $all);
+        $this->assertContains('contracts.expire', $all);
+    }
+
+    public function test_admin_default_excludes_cancel_and_expire(): void
+    {
+        $adminDefaults = Permissions::defaults()['admin'];
+        $this->assertNotContains('contracts.cancel', $adminDefaults);
+        $this->assertNotContains('contracts.expire', $adminDefaults);
     }
 }

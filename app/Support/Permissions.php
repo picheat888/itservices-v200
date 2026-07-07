@@ -17,7 +17,7 @@ class Permissions
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my'],
-            'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts'],
+            'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts', 'cancel', 'expire'],
             'stock' => [
                 'module',
                 'view_dashboard', 'view', 'view_request', 'view_count', 'view_events',
