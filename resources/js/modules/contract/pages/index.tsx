@@ -82,12 +82,13 @@ function StatCard({
     );
 }
 
-/** Days-remaining cell: gray when cancelled, blue far out, amber inside the reminder window, red once expired. */
+/** Days-remaining cell: gray when cancelled/expired, blue far out, amber inside the reminder window, red once overdue. */
 function DaysCell({ days, inReminder, status }: { days: number; inReminder: boolean; status: ContractStatus }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
-    if (days <= 0) return <StatusBadge tone="red">{lang === 'th' ? `หมดอายุไป ${-days} วัน` : `Expired ${-days}d ago`}</StatusBadge>;
+    if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
+    if (days <= 0) return <StatusBadge tone="red">{lang === 'th' ? `เกินกำหนด ${-days} วัน` : `${-days}d overdue`}</StatusBadge>;
     if (inReminder)
         return (
             <StatusBadge tone="amber">
@@ -115,6 +116,8 @@ export default function ContractsPage() {
     const canCreate = isSuper || perms.includes('contracts.create');
     const canEdit = isSuper || perms.includes('contracts.edit');
     const canImport = isSuper || perms.includes('contracts.import');
+    const canCancel = isSuper || perms.includes('contracts.cancel');
+    const canExpire = isSuper || perms.includes('contracts.expire');
 
     const [tab, setTab] = useState<Tab>(initialContractTab);
     const [search, setSearch] = useState('');
@@ -610,6 +613,8 @@ export default function ContractsPage() {
                 onClose={() => setSelectedId(null)}
                 onEdit={openEdit}
                 canEdit={canEdit}
+                canCancel={canCancel}
+                canExpire={canExpire}
             />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
@@ -651,16 +656,20 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
             </td>
             <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
             <td className="px-4 py-2.5">
-                <StatusBadge tone={c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'red' : 'green'}>
+                <StatusBadge
+                    tone={
+                        c.status === 'cancelled' || c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : 'green'
+                    }
+                >
                     {c.status === 'cancelled'
                         ? t('contract_cancelled')
                         : c.status === 'expired'
-                          ? lang === 'th'
-                              ? 'หมดอายุ'
-                              : 'Expired'
-                          : lang === 'th'
-                            ? 'ใช้งาน'
-                            : 'Active'}
+                          ? t('contract_expired')
+                          : c.status === 'overdue'
+                            ? t('contract_overdue')
+                            : lang === 'th'
+                              ? 'ใช้งาน'
+                              : 'Active'}
                 </StatusBadge>
             </td>
         </tr>
