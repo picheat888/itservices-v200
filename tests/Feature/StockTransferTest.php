@@ -6,6 +6,7 @@ use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockLot;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,8 +46,8 @@ class StockTransferTest extends TestCase
         $item->refresh();
         $this->assertSame(10, $item->current_stock, 'transfer must not change total');
         $this->assertSame(10, (int) StockLot::where('stock_item_id', $item->id)->sum('qty_remaining'), 'transfer must not consume lots');
-        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
-        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-B'])->value('qty'));
+        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-A')->value('id')])->value('qty'));
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-B')->value('id')])->value('qty'));
     }
 
     public function test_transfer_rejects_over_source_balance(): void
@@ -86,9 +87,9 @@ class StockTransferTest extends TestCase
             'serial_ids' => [$serialId],
         ])->assertCreated();
 
-        $this->assertSame('WH-B', StockItemSerial::find($serialId)->warehouse);
-        $this->assertSame('WH-A', StockItemSerial::where('serial', 'SNT-2')->value('warehouse'));
-        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-B'])->value('qty'));
+        $this->assertSame(Warehouse::where('name', 'WH-B')->value('id'), StockItemSerial::find($serialId)->warehouse_id);
+        $this->assertSame(Warehouse::where('name', 'WH-A')->value('id'), StockItemSerial::where('serial', 'SNT-2')->value('warehouse_id'));
+        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-B')->value('id')])->value('qty'));
     }
 
     public function test_transfer_requires_from_and_to_warehouse(): void
@@ -109,7 +110,8 @@ class StockTransferTest extends TestCase
         $this->postJson('/api/stock-movements', ['type' => 'receive', 'stock_item_id' => $item->id, 'qty' => 4])->assertCreated();
 
         // With no SKU-level home warehouse, an unspecified destination parks under 'Unassigned' (never '').
-        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'])->value('qty'));
-        $this->assertSame(0, StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => ''])->count());
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => null])->value('qty'));
+        // Blank sentinel is impossible now; the item has exactly one (Unassigned) balance row.
+        $this->assertSame(1, StockBalance::where('stock_item_id', $item->id)->count());
     }
 }

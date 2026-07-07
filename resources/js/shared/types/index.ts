@@ -239,6 +239,7 @@ export interface Asset {
     location: string | null;
     location_id: number | null;
     warehouse: string | null;
+    warehouse_id: number | null;
     value: number;
     value_display: string;
     supplier: string | null;

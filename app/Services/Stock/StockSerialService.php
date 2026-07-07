@@ -46,7 +46,7 @@ class StockSerialService
             StockItemSerialEvent::log($row, 'issued', [
                 'stock_movement_id' => $movement?->id,
                 'reference' => $reference,
-                'warehouse' => $row->warehouse,
+                'warehouse' => $row->warehouse?->name,
                 'to_label' => $movement?->to_label ?? $reference,
                 'user_id' => $user?->id,
                 'recorded_by' => $user?->name,

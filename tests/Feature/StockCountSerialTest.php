@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -23,9 +24,10 @@ class StockCountSerialTest extends TestCase
             'sku' => $sku, 'name' => $sku, 'unit' => 'pcs',
             'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100, 'track_serial' => true,
         ]);
-        $item->balances()->create(['warehouse' => $wh, 'qty' => $stock]);
+        $whId = Warehouse::firstOrCreate(['name' => $wh])->id;
+        $item->balances()->create(['warehouse_id' => $whId, 'qty' => $stock]);
         for ($i = 1; $i <= $stock; $i++) {
-            $item->serials()->create(['serial' => "{$sku}-SN{$i}", 'status' => 'in_stock', 'warehouse' => $wh]);
+            $item->serials()->create(['serial' => "{$sku}-SN{$i}", 'status' => 'in_stock', 'warehouse_id' => $whId]);
         }
 
         return $item;

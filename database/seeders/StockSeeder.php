@@ -11,6 +11,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Support\DocNumber;
 use Illuminate\Database\Seeder;
@@ -89,7 +90,8 @@ class StockSeeder extends Seeder
             // Warehouse is warehouse-aware now: park the on-hand quantity as a
             // per-warehouse balance (the SKU itself no longer stores a warehouse).
             if ($current > 0) {
-                $item->balances()->updateOrCreate(['warehouse' => $warehouse], ['qty' => $current]);
+                $warehouseId = Warehouse::firstOrCreate(['name' => $warehouse])->id;
+                $item->balances()->updateOrCreate(['warehouse_id' => $warehouseId], ['qty' => $current]);
             }
 
             // Seed one FIFO lot holding the on-hand quantity at the row's cost,
@@ -144,7 +146,7 @@ class StockSeeder extends Seeder
                     'stock_item_id' => $info['id'],
                     'serial' => $serial,
                     'status' => 'in_stock',
-                    'warehouse' => $info['warehouse'],
+                    'warehouse_id' => Warehouse::firstOrCreate(['name' => $info['warehouse']])->id,
                     'received_at' => $info['lastMove'],
                 ]);
             }

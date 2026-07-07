@@ -8,6 +8,7 @@ use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -178,8 +179,8 @@ class StockWorkflowTest extends TestCase
         $this->postJson("/api/stock-requests/{$req->id}/fulfill", ['from_warehouse' => 'WH-2'])->assertOk();
 
         $this->assertSame(11, $item->fresh()->current_stock);
-        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-2'])->value('qty'));
-        $this->assertSame(10, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-HQ'])->value('qty'));
+        $this->assertSame(1, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-2')->value('id')])->value('qty'));
+        $this->assertSame(10, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-HQ')->value('id')])->value('qty'));
         $this->assertDatabaseHas('stock_movements', ['type' => 'issue', 'stock_item_id' => $item->id, 'from_label' => 'WH-2']);
     }
 
@@ -204,8 +205,8 @@ class StockWorkflowTest extends TestCase
         ])->assertOk()->assertJsonPath('data.status', 'fulfilled');
 
         $this->assertSame(0, $item->fresh()->current_stock);
-        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-1'])->value('qty'));
-        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-2'])->value('qty'));
+        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-1')->value('id')])->value('qty'));
+        $this->assertSame(0, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-2')->value('id')])->value('qty'));
         // One issue movement per source warehouse.
         $this->assertSame(2, StockMovement::where(['stock_item_id' => $item->id, 'type' => 'issue'])->count());
     }

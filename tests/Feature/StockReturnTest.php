@@ -7,6 +7,7 @@ use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -78,7 +79,7 @@ class StockReturnTest extends TestCase
         ])->assertCreated();
 
         // SN-A is back in stock, in "Main".
-        $this->assertDatabaseHas('stock_item_serials', ['id' => $snA, 'status' => 'in_stock', 'warehouse' => 'Main']);
+        $this->assertDatabaseHas('stock_item_serials', ['id' => $snA, 'status' => 'in_stock', 'warehouse_id' => Warehouse::where('name', 'Main')->value('id')]);
         // On-hand incremented back to 2.
         $this->assertSame(2, $item->fresh()->current_stock);
         // A 'returned' event linked to the return movement exists.

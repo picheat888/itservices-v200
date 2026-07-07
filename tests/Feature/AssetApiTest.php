@@ -13,6 +13,7 @@ use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
+use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -232,6 +233,27 @@ class AssetApiTest extends TestCase
         $this->assertDatabaseHas('vendors', ['id' => $vendor->id]);
     }
 
+    public function test_renaming_a_warehouse_propagates_to_assets(): void
+    {
+        $this->actingAs($this->super());
+        $warehouse = Warehouse::create(['name' => 'Old Store']);
+        $asset = Asset::factory()->create(['warehouse_id' => $warehouse->id]);
+
+        $warehouse->update(['name' => 'New Store']);
+
+        $this->getJson("/api/assets/{$asset->id}")->assertOk()->assertJsonPath('data.warehouse', 'New Store');
+    }
+
+    public function test_warehouse_in_use_by_an_asset_cannot_be_deleted(): void
+    {
+        $this->actingAs($this->super());
+        $warehouse = Warehouse::create(['name' => 'In Use Store']);
+        Asset::factory()->create(['warehouse_id' => $warehouse->id]);
+
+        $this->deleteJson("/api/warehouses/{$warehouse->id}")->assertStatus(409);
+        $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id]);
+    }
+
     public function test_user_without_permission_cannot_register(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'user']));
@@ -258,7 +280,7 @@ class AssetApiTest extends TestCase
     public function test_transfer_requires_a_location(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
 
         $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000'])
             ->assertStatus(422)->assertJsonValidationErrors('location_id');
@@ -300,7 +322,7 @@ class AssetApiTest extends TestCase
         $employee = Employee::create(['code' => 'EMP-8001', 'first_name' => 'New', 'last_name' => 'Owner']);
         $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
         RolePermission::create(['role_id' => $recipient->role_id, 'permission' => 'assets.my', 'allowed' => true]);
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
         $location = Location::create(['name' => 'HQ']);
 
         $this->actingAs($this->super());
@@ -367,7 +389,7 @@ class AssetApiTest extends TestCase
     public function test_mark_received_stores_asset_in_chosen_warehouse(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'warehouse' => 'Branch A']);
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch A'])->id]);
 
         $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
             ->assertOk()
@@ -379,7 +401,7 @@ class AssetApiTest extends TestCase
     public function test_mark_received_requires_a_destination_warehouse(): void
     {
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'pending_return', 'warehouse' => 'Branch A']);
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch A'])->id]);
 
         $this->postJson("/api/assets/{$asset->id}/receive")
             ->assertStatus(422)->assertJsonValidationErrors('warehouse');
@@ -390,10 +412,10 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
-            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'vendor_id' => $this->vendorId(), 'value' => 100, 'warehouse' => 'Central IT',
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('Dell 5440'), 'vendor_id' => $this->vendorId(), 'value' => 100, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id,
         ])->assertCreated()->assertJsonPath('data.warehouse', 'Central IT');
 
-        Asset::factory()->create(['warehouse' => 'Branch A']);
+        Asset::factory()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch A'])->id]);
 
         $this->getJson('/api/assets?warehouse=Central IT')
             ->assertOk()
@@ -433,7 +455,7 @@ class AssetApiTest extends TestCase
     {
         $this->actingAs($this->super());
         // Pooled asset (no owner) stored in a warehouse.
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse' => 'Central IT']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
         $location = Location::create(['name' => 'HQ']);
 
         $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id, 'reason' => 'New hire'])->assertOk();

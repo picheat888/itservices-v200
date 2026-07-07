@@ -10,6 +10,7 @@ use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
+use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use Database\Factories\AssetFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,7 +35,7 @@ class Asset extends Model
 
     protected $fillable = [
         'tag', 'nickname', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
-        'owner', 'initial_owner', 'department', 'location_id', 'warehouse', 'value', 'vendor_id',
+        'owner', 'initial_owner', 'department', 'location_id', 'warehouse_id', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
         'registered_date', 'owned_since', 'notes', 'last_reason',
     ];
@@ -77,6 +78,12 @@ class Asset extends Model
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
+    }
+
+    /** Warehouse a pooled asset is stored in (Master Data). */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     /** Manufacturer brand (Master Data). */

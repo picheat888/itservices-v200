@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Stock\StockBalanceService;
 use App\Services\Stock\StockLotService;
@@ -86,7 +87,7 @@ class DemoUpsManyLotsSeeder extends Seeder
                         'stock_movement_id' => $movement->id,
                         'serial' => sprintf('BX1100C-%04d', $serialNo),
                         'status' => 'in_stock',
-                        'warehouse' => $warehouse,
+                        'warehouse_id' => Warehouse::resolveId($warehouse),
                         'reference' => $po,
                         'received_at' => $when,
                     ]);

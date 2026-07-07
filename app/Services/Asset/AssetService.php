@@ -8,6 +8,7 @@ use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Notifications\AssetAssignedNotification;
 use App\Notifications\AssetReturnRequestedNotification;
@@ -110,7 +111,7 @@ class AssetService
     {
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
-        $from = $asset->owner ?: $asset->warehouse;
+        $from = $asset->owner ?: $asset->warehouse?->name;
         $asset->update([
             'owner' => $newOwner,
             'location_id' => $locationId,
@@ -180,15 +181,15 @@ class AssetService
         $from = $asset->owner;
         // Back in the pool = no owner (same as a freshly registered asset); its physical
         // whereabouts are the warehouse — which is also stamped as the custody-trail destination.
-        $dest = filled($warehouse) ? $warehouse : $asset->warehouse;
+        $destName = filled($warehouse) ? $warehouse : $asset->warehouse?->name;
         $asset->update([
             'status' => AssetStatus::Ready,
             'owner' => null,
             // No holder in the pool → no possession date.
             'owned_since' => null,
-            'warehouse' => $dest,
+            'warehouse_id' => Warehouse::resolveId($destName),
         ]);
-        $this->logTransfer($asset, $from, (string) $dest, 'Returned to pool', $performedBy);
+        $this->logTransfer($asset, $from, (string) $destName, 'Returned to pool', $performedBy);
 
         return $asset->fresh();
     }

@@ -9,6 +9,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Services\Stock\StockBalanceService;
 use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
@@ -332,7 +333,7 @@ class StockMovementController extends Controller
                 $this->balances->move($item, (string) $fromWh, (string) $toWh, $qty);
                 if ($item->track_serial && $serialIds !== []) {
                     $moved = StockItemSerial::whereIn('id', $serialIds)->where('stock_item_id', $item->id)->get();
-                    StockItemSerial::whereIn('id', $moved->pluck('id'))->update(['warehouse' => $toWh]);
+                    StockItemSerial::whereIn('id', $moved->pluck('id'))->update(['warehouse_id' => Warehouse::resolveId((string) $toWh)]);
                     foreach ($moved as $row) {
                         StockItemSerialEvent::log($row, 'transferred', [
                             'stock_movement_id' => $movement->id,
@@ -379,7 +380,7 @@ class StockMovementController extends Controller
                         'stock_movement_id' => $movement->id,
                         'serial' => $serial,
                         'status' => 'in_stock',
-                        'warehouse' => $inboundWarehouse,
+                        'warehouse_id' => Warehouse::resolveId($inboundWarehouse),
                         'reference' => $data['reference'] ?? null,
                         'received_at' => $movement->moved_at,
                     ]);
@@ -422,7 +423,7 @@ class StockMovementController extends Controller
 
         StockItemSerial::whereIn('id', $serials->pluck('id'))->update([
             'status' => 'in_stock',
-            'warehouse' => $warehouse,
+            'warehouse_id' => Warehouse::resolveId($warehouse),
         ]);
 
         // Reopen one FIFO lot per distinct original receive cost. The serial's
