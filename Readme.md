@@ -1033,3 +1033,16 @@ plan: `docs/superpowers/plans/2026-07-07-phase6-warehouses-fk.md`
 - **Backend**: `php artisan test --compact` = **509 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
 - **รัน migration บน DB จริงแล้ว** (Phase 1–6 ครบ): backfill สมบูรณ์ — assets 7 + serials 22/22 + balances 14/14 ผูก warehouse_id; warehouses คงที่ 5 (ข้อมูลสะอาด ไม่สร้างซ้ำ)
 - **🎉 Master Data FK Normalization เสร็จครบทั้ง 6 เฟส** — location · unit · warranty_type · brand · asset_model · category · vendor · warehouse ทั้งหมดผูกด้วย FK id แล้ว (rename propagate + delete-guard 409 ทุกตัว)
+
+---
+
+## 📄 Contract Lifecycle Rework — อัปเดต 2026-07-07
+
+เปลี่ยนสถานะสัญญาที่เลย `end_date` จาก auto-"expired" เป็น **overdue** (ยังเปิดอยู่ ยังแก้ไข/ต่ออายุได้) และเพิ่ม action **Expired** ที่ admin สั่งเองแบบถาวร แยกจากการหมดอายุตามวันที่ plan: `docs/superpowers/plans/2026-07-07-contract-lifecycle-rework.md`
+
+- **Derived status ใหม่ 4 ค่า** — `active` (ยังไม่ถึงกำหนด) › `overdue` (เลย end_date แต่ยังไม่ถูกปิด) › `cancelled` (`cancelled_at`, ยกเลิกได้/reactivate ได้) › `expired` (`expired_at`, admin สั่งปิดถาวร — ไม่มี un-expire) ลำดับความสำคัญ: `expired` > `cancelled` > `active`/`overdue` ตามวันที่ — ยังเป็น derived attribute บน model ไม่มีคอลัมน์ status เก็บตาย
+- **Action ใหม่ "Expired"** ในหน้า detail drawer — ปิดสัญญาถาวรแยกจาก Cancel (reversible) คุมด้วย permission ใหม่ `contracts.cancel` (คุม Cancel/Reactivate) และ `contracts.expire` (คุม Expired) — role `admin` **ไม่ได้รับ** 2 สิทธิ์นี้โดยดีฟอลต์ (ต้องมอบสิทธิ์เพิ่มเอง), `super` bypass เสมอ
+- **Write-off guard generalize ทุกประเภทสัญญา** — เดิมกันเฉพาะสัญญา hardware ตอนนี้สัญญาทุกประเภทที่มี asset ผูกอยู่ (status ≠ `writeoff`) จะถูกกันทั้ง Cancel และ Expired (422) จนกว่าจะ write-off asset ที่ผูกอยู่ให้ครบก่อน
+- **ตัด `auto_renew`** ออกทั้งระบบ — drop คอลัมน์ + ฟอร์ม + import template + i18n hint ไม่มีการต่ออายุอัตโนมัติอีกต่อไป (ต่ออายุทำผ่าน action Renew เท่านั้น)
+- **Alert เตือนหมดอายุ relabel เป็น "overdue"** — เทมเพลตอีเมล `contract.expired_alert` (คีย์เดิม, wording ใหม่) และ `ContractExpiryAlertService` เปลี่ยนไปไม่แจ้งเตือนสัญญาที่ถูก admin สั่ง expired ไปแล้ว (กันเตือนซ้ำสัญญาที่ปิดไปแล้ว)
+- **Verification**: `php artisan test --compact` = **524 passed / 0 failed** · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
