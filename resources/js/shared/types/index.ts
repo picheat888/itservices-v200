@@ -205,6 +205,7 @@ export interface ContractSummary {
     active: number;
     expiring: number;
     expired: number;
+    overdue: number;
     cancelled: number;
     annual_value: string;
     top_vendors: { vendor: string; amount: number }[];

@@ -239,7 +239,7 @@ export function ContractDetailDrawer({
                                 <KV
                                     label={t('contract_days_remaining')}
                                     value={
-                                        cancelled
+                                        terminal
                                             ? '—'
                                             : days >= 0
                                               ? `${days} ${lang === 'th' ? 'วัน' : 'days'}`
@@ -257,6 +257,7 @@ export function ContractDetailDrawer({
                                     }
                                 />
                                 {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
+                                {c.status === 'expired' && c.expired_at && <KV label={t('contract_expired_on')} value={c.expired_at} mono />}
                                 <KV label={t('contract_created')} value={c.created_at ?? '—'} mono />
                                 <KV label={t('contract_updated')} value={c.updated_at ?? '—'} mono />
                             </div>
