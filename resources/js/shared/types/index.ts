@@ -138,7 +138,7 @@ export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' 
 /** Contract types whose contracts can have leased/owned assets linked to them. */
 export const ASSET_LINKABLE_CONTRACT_TYPES: ContractType[] = ['hardware', 'connectivity', 'other'];
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
-export type ContractStatus = 'active' | 'expired' | 'cancelled';
+export type ContractStatus = 'active' | 'overdue' | 'cancelled' | 'expired';
 
 export interface ContractAttachment {
     id: number;
@@ -180,7 +180,6 @@ export interface Contract {
     value: number;
     value_display: string;
     billing_cycle: BillingCycle;
-    auto_renew: boolean;
     status: ContractStatus;
     days_remaining: number;
     in_reminder: boolean;
@@ -196,6 +195,7 @@ export interface Contract {
     attachments: ContractAttachment[];
     linked_assets: ContractLinkedAsset[];
     cancelled_at: string | null;
+    expired_at: string | null;
     created_at: string | null;
     updated_at: string | null;
 }
