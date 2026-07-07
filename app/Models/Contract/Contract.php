@@ -32,7 +32,7 @@ class Contract extends Model
 
     protected $fillable = [
         'code', 'vendor_id', 'name', 'title', 'type', 'start_date', 'end_date',
-        'value', 'billing_cycle', 'auto_renew', 'cancelled_at',
+        'value', 'billing_cycle', 'cancelled_at', 'expired_at',
         'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];
 
@@ -42,8 +42,8 @@ class Contract extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'value' => 'decimal:2',
-            'auto_renew' => 'boolean',
             'cancelled_at' => 'datetime',
+            'expired_at' => 'datetime',
             'notify_150' => 'boolean',
             'notify_120' => 'boolean',
             'notify_90' => 'boolean',
@@ -103,7 +103,7 @@ class Contract extends Model
      */
     public function isInReminder(): bool
     {
-        if ($this->cancelled_at !== null) {
+        if ($this->cancelled_at !== null || $this->expired_at !== null) {
             return false;
         }
 
@@ -113,15 +113,19 @@ class Contract extends Model
         return $threshold !== null && $days > 0 && $days <= $threshold;
     }
 
-    /** Derived lifecycle status: cancelled takes precedence, then active/expired by date. */
+    /** Derived lifecycle status: expired (manual, permanent) › cancelled › active/overdue by date. */
     protected function status(): Attribute
     {
         return Attribute::get(function () {
+            if ($this->expired_at !== null) {
+                return 'expired';
+            }
+
             if ($this->cancelled_at !== null) {
                 return 'cancelled';
             }
 
-            return $this->daysRemaining() > 0 ? 'active' : 'expired';
+            return $this->daysRemaining() > 0 ? 'active' : 'overdue';
         });
     }
 
