@@ -91,13 +91,20 @@ class ContractApiTest extends TestCase
 
         Contract::create(['vendor' => 'A', 'name' => 'Active', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addYears(1), 'value' => 100000, 'billing_cycle' => 'yearly', 'notify_60' => true]);
         Contract::create(['vendor' => 'B', 'name' => 'Expiring', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(20), 'value' => 10000, 'billing_cycle' => 'monthly', 'notify_30' => true]);
-        Contract::create(['vendor' => 'C', 'name' => 'Expired', 'type' => 'connectivity', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 50000, 'billing_cycle' => 'yearly']);
+        // Past its end date with no admin action taken — this is "overdue" under the
+        // new semantics, not "expired" (which is now reserved for the permanent,
+        // admin-set `expired_at` action).
+        Contract::create(['vendor' => 'C', 'name' => 'Overdue', 'type' => 'connectivity', 'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 50000, 'billing_cycle' => 'yearly']);
+        // Explicitly marked expired by an admin — permanent, counted separately.
+        $expired = Contract::create(['vendor' => 'D', 'name' => 'Closed out', 'type' => 'software', 'start_date' => now()->subYears(3), 'end_date' => now()->subYears(2), 'value' => 20000, 'billing_cycle' => 'yearly']);
+        $expired->update(['expired_at' => now()]);
 
         $this->getJson('/api/contracts/summary')
             ->assertOk()
-            ->assertJsonPath('total', 3)
+            ->assertJsonPath('total', 4)
             ->assertJsonPath('active', 1)
             ->assertJsonPath('expiring', 1)
+            ->assertJsonPath('overdue', 1)
             ->assertJsonPath('expired', 1);
     }
 
@@ -292,12 +299,23 @@ class ContractApiTest extends TestCase
         $this->assertNotNull($contract->fresh()->cancelled_at);
     }
 
-    public function test_non_hardware_contract_cancels_regardless_of_linked_assets(): void
+    public function test_non_hardware_contract_is_blocked_from_cancel_until_linked_asset_is_written_off(): void
     {
         $this->actingAs($this->super());
 
+        // The write-off guard used to be hardware-only; it now applies to every
+        // contract type, so a non-hardware contract with a live linked asset is
+        // blocked from cancellation too.
         $contract = Contract::create(['vendor' => 'X', 'name' => 'Service plan', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
-        Asset::create(['tag' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
+        $asset = Asset::create(['tag' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('contract');
+        $this->assertNull($contract->fresh()->cancelled_at);
+
+        // Once the linked asset is written off, cancellation proceeds normally.
+        $asset->update(['status' => 'writeoff']);
 
         $this->postJson("/api/contracts/{$contract->id}/cancel")
             ->assertOk()
