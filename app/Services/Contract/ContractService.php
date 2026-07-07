@@ -3,7 +3,6 @@
 namespace App\Services\Contract;
 
 use App\Enums\Asset\AssetStatus;
-use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
@@ -176,7 +175,6 @@ class ContractService
                 'end_date' => $row['end_date'],
                 'value' => (float) $row['value'],
                 'billing_cycle' => $row['billing_cycle'],
-                'auto_renew' => in_array(strtolower(trim($row['auto_renew'] ?? '')), ['1', 'true', 'yes'], true),
                 'notes' => blank($row['notes'] ?? null) ? null : trim($row['notes']),
                 'notify_60' => true,
                 'notify_30' => true,
@@ -199,7 +197,7 @@ class ContractService
     {
         // Guard only the active → cancelled transition; reactivation is always allowed.
         if ($contract->cancelled_at === null) {
-            $this->assertCancellable($contract);
+            $this->assertNoPendingAssets($contract);
         }
 
         $contract->update([
@@ -210,23 +208,40 @@ class ContractService
     }
 
     /**
-     * A Hardware contract can only be cancelled once every linked asset has been
-     * written off — otherwise leased hardware would be left tracked against a dead
-     * contract. Other contract types carry no such restriction.
+     * Mark a contract as expired — a permanent, admin-driven close-out. Unlike
+     * cancel this cannot be undone. Every linked asset must be written off first.
      *
      * @throws ValidationException
      */
-    private function assertCancellable(Contract $contract): void
+    public function expire(Contract $contract): Contract
     {
-        if ($contract->type !== ContractType::Hardware) {
-            return;
+        if ($contract->expired_at !== null) {
+            throw ValidationException::withMessages([
+                'contract' => 'This contract has already been marked as expired.',
+            ]);
         }
 
+        $this->assertNoPendingAssets($contract);
+
+        $contract->update(['expired_at' => Carbon::now()]);
+
+        return $contract->fresh();
+    }
+
+    /**
+     * A contract with linked assets can only be closed (cancelled or expired)
+     * once every linked asset has been written off — otherwise tracked hardware
+     * would be left pointing at a dead contract. Applies to all contract types.
+     *
+     * @throws ValidationException
+     */
+    private function assertNoPendingAssets(Contract $contract): void
+    {
         $pending = $contract->assets()->where('status', '!=', AssetStatus::Writeoff->value)->count();
 
         if ($pending > 0) {
             throw ValidationException::withMessages([
-                'contract' => "All {$pending} linked asset(s) must be written off before this hardware contract can be cancelled.",
+                'contract' => "All {$pending} linked asset(s) must be written off before this contract can be closed.",
             ]);
         }
     }

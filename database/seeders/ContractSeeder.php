@@ -43,24 +43,24 @@ class ContractSeeder extends Seeder
         // Group 2 — coverage set, end dates relative to today.
         $today = Carbon::now();
 
-        // [code, vendor, title, name, type, billing, value, days_to_end, auto_renew, [reminders]]
+        // [code, vendor, title, name, type, billing, value, days_to_end, [reminders]]
         $coverage = [
-            ['CT-DEMO-150', 'Oracle',            'Oracle Database Enterprise License', 'Oracle DB enterprise — 8 cores',    'software',     'yearly',    1450000, 150,  true,  [150, 60, 30]],
-            ['CT-DEMO-120', 'True Corporation',  'True MPLS Link HQ–Plant 2',          'MPLS link — HQ ↔ Plant 2',          'connectivity', 'quarterly', 168000,  120,  false, [120, 60, 30, 7]],
-            ['CT-DEMO-075', 'Fortinet',          'Fortinet FortiGate Subscription',    'FortiGate firewall subscription',   'service',      'yearly',    240000,  75,   true,  [60, 30, 7]],
-            ['CT-DEMO-045', 'Zoom',              'Zoom One Business License',          'Zoom One Business — 50 hosts',      'software',     'monthly',   38000,   45,   false, [45, 30, 7]],
-            ['CT-DEMO-030', 'Iron Mountain',     'Iron Mountain Records Storage',      'Off-site records storage',          'other',        'yearly',    96000,   30,   false, [30, 7]],
-            ['CT-DEMO-007', 'Lenovo',            'Lenovo Workstation Lease — Design',  'Workstation lease — design team',   'hardware',     'monthly',   54000,   7,    false, [30, 7]],
-            ['CT-DEMO-365', 'Atlassian',         'Atlassian Jira + Confluence License', 'Jira + Confluence — 120 users',     'software',     'yearly',    198000,  365,  true,  [60]],
-            ['CT-DEMO-240', 'Veeam',             'Veeam Backup & Replication License', 'Backup & replication — 6 sockets',  'service',      'quarterly', 132000,  240,  true,  [60, 30]],
+            ['CT-DEMO-150', 'Oracle',            'Oracle Database Enterprise License', 'Oracle DB enterprise — 8 cores',    'software',     'yearly',    1450000, 150,  [150, 60, 30]],
+            ['CT-DEMO-120', 'True Corporation',  'True MPLS Link HQ–Plant 2',          'MPLS link — HQ ↔ Plant 2',          'connectivity', 'quarterly', 168000,  120,  [120, 60, 30, 7]],
+            ['CT-DEMO-075', 'Fortinet',          'Fortinet FortiGate Subscription',    'FortiGate firewall subscription',   'service',      'yearly',    240000,  75,   [60, 30, 7]],
+            ['CT-DEMO-045', 'Zoom',              'Zoom One Business License',          'Zoom One Business — 50 hosts',      'software',     'monthly',   38000,   45,   [45, 30, 7]],
+            ['CT-DEMO-030', 'Iron Mountain',     'Iron Mountain Records Storage',      'Off-site records storage',          'other',        'yearly',    96000,   30,   [30, 7]],
+            ['CT-DEMO-007', 'Lenovo',            'Lenovo Workstation Lease — Design',  'Workstation lease — design team',   'hardware',     'monthly',   54000,   7,    [30, 7]],
+            ['CT-DEMO-365', 'Atlassian',         'Atlassian Jira + Confluence License', 'Jira + Confluence — 120 users',     'software',     'yearly',    198000,  365,  [60]],
+            ['CT-DEMO-240', 'Veeam',             'Veeam Backup & Replication License', 'Backup & replication — 6 sockets',  'service',      'quarterly', 132000,  240,  [60, 30]],
             // Delayed / overdue (expired) contracts awaiting renewal action.
-            ['CT-DEMO-D10', 'Sophos',            'Sophos Email Gateway Subscription',  'Email gateway — overdue renewal',   'service',      'yearly',    144000,  -10,  false, [60, 30, 7]],
-            ['CT-DEMO-D60', 'Canon Marketing',   'Canon Printer Fleet Lease',          'Printer fleet lease — lapsed',      'hardware',     'monthly',   28000,   -60,  false, [30, 7]],
-            ['CT-DEMO-D200', 'Symantec',          'Symantec Legacy Antivirus',          'Legacy AV — decommissioning',       'software',     'yearly',    72000,   -200, false, [30]],
+            ['CT-DEMO-D10', 'Sophos',            'Sophos Email Gateway Subscription',  'Email gateway — overdue renewal',   'service',      'yearly',    144000,  -10,  [60, 30, 7]],
+            ['CT-DEMO-D60', 'Canon Marketing',   'Canon Printer Fleet Lease',          'Printer fleet lease — lapsed',      'hardware',     'monthly',   28000,   -60,  [30, 7]],
+            ['CT-DEMO-D200', 'Symantec',          'Symantec Legacy Antivirus',          'Legacy AV — decommissioning',       'software',     'yearly',    72000,   -200, [30]],
         ];
 
         foreach ($coverage as $row) {
-            [$code, $vendor, $title, $name, $type, $billing, $value, $daysToEnd, $autoRenew, $reminders] = $row;
+            [$code, $vendor, $title, $name, $type, $billing, $value, $daysToEnd, $reminders] = $row;
 
             $end = $today->copy()->addDays($daysToEnd);
             $start = $end->copy()->subYear();
@@ -74,7 +74,6 @@ class ContractSeeder extends Seeder
                 'end_date' => $end->toDateString(),
                 'value' => $value,
                 'billing_cycle' => $billing,
-                'auto_renew' => $autoRenew,
                 'notify_150' => in_array(150, $reminders, true),
                 'notify_120' => in_array(120, $reminders, true),
                 'notify_90' => in_array(90, $reminders, true),
