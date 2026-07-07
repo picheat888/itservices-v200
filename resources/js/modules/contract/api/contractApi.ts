@@ -22,7 +22,6 @@ export interface ContractPayload {
     end_date: string;
     value: number;
     billing_cycle: Contract['billing_cycle'];
-    auto_renew?: boolean;
     notify_150?: boolean;
     notify_120?: boolean;
     notify_60?: boolean;
@@ -58,6 +57,7 @@ export const contractApi = {
     update: (id: number, payload: ContractPayload) => mutate<Contract>('put', `/contracts/${id}`, payload),
     renew: (id: number, months = 12) => mutate<Contract>('post', `/contracts/${id}/renew`, { months }),
     cancel: (id: number) => mutate<Contract>('post', `/contracts/${id}/cancel`),
+    expire: (id: number) => mutate<Contract>('post', `/contracts/${id}/expire`),
     remove: (id: number) => mutate<void>('delete', `/contracts/${id}`),
     uploadAttachments: async (id: number, files: File[]): Promise<Contract> => {
         await ensureCsrf();
