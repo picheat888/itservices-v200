@@ -222,7 +222,7 @@ export default function ContractsPage() {
 
     const maxVendor = summary?.top_vendors?.[0]?.amount ?? 1;
     // Whether either alert banner is showing — used to tighten the gap (≈10px) above the table.
-    const hasBanners = !!summary?.expiring || !!summary?.expired;
+    const hasBanners = !!summary?.expiring || !!summary?.overdue;
 
     // Set filters (type/status/sort ≠ default) — drives the FilterPopover count badge.
     const DEFAULT_SORT = 'end_asc';
@@ -296,7 +296,7 @@ export default function ContractsPage() {
                         </div>
                     )}
 
-                    {!!summary?.expired && (
+                    {!!summary?.overdue && (
                         <div className="rounded-md bg-red-50 p-4 dark:bg-red-500/10">
                             <div className="flex">
                                 <div className="shrink-0">
@@ -305,8 +305,8 @@ export default function ContractsPage() {
                                 <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
                                     <p className="text-foreground text-sm font-medium">
                                         {lang === 'th'
-                                            ? `หมดอายุแล้ว : ${summary.expired} สัญญา`
-                                            : `Expired : ${summary.expired} Contract${summary.expired !== 1 ? 's' : ''}`}
+                                            ? `เกินกำหนด : ${summary.overdue} สัญญา`
+                                            : `Overdue : ${summary.overdue} Contract${summary.overdue !== 1 ? 's' : ''}`}
                                     </p>
                                     <p className="mt-3 text-sm md:mt-0 md:ml-6">
                                         <button
