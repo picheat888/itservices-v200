@@ -13,7 +13,7 @@ export const notification: Dict = {
     "notif_cred_required": "ยังไม่มีบัญชี — กรุณาตั้ง Username/Password",
     "notif_resigned": "ลาออก — โปรดเพิกถอนบัญชีและเรียกคืนทรัพย์สิน",
     "notif_contract_expiring": "หมดอายุในอีก {days} วัน",
-    "notif_contract_expired": "หมดอายุไปแล้ว {days} วัน — โปรดตรวจสอบและต่ออายุ",
+    "notif_contract_expired": "เกินกำหนดมาแล้ว {days} วัน — โปรดตรวจสอบ ต่ออายุ หรือปิดสัญญา",
     "notif_stock_out": "สินค้าหมดสต็อก",
     "notif_stock_low": "ต่ำกว่าขั้นต่ำ — ควรเติม",
     "notif_stock_over": "สต็อกเกิน",

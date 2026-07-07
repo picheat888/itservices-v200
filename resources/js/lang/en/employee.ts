@@ -48,7 +48,7 @@ export const employee: Dict = {
     "import_desc": "Bulk-import employees from a CSV file.",
     "import_contract": "Import",
     "import_contract_desc": "Bulk-import contracts from a CSV file.",
-    "import_contract_hint": "Columns: code (optional), vendor, name, type, start_date, end_date, value, billing_cycle, auto_renew (1/0), notes",
+    "import_contract_hint": "Columns: code (optional), vendor, name, type, start_date, end_date, value, billing_cycle, notes",
     "import_download_template": "Download CSV template",
     "import_choose_file": "Click to choose a CSV file",
     "import_hint": "Columns: code, name, name_th, email, phone, department, position, joined_at — department/position use code; code blank = auto.",

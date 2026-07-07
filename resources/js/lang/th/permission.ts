@@ -76,6 +76,8 @@ export const permission: Dict = {
     "perm_act_contracts.import": "นำเข้าข้อมูลสัญญา (CSV)",
     "perm_act_contracts.renew": "ต่ออายุสัญญา",
     "perm_act_contracts.alerts": "การแจ้งเตือนสัญญาหมดอายุ",
+    "perm_act_contracts.cancel": "ยกเลิก/เปิดใช้สัญญาอีกครั้ง",
+    "perm_act_contracts.expire": "สิ้นสุดสัญญา (ปิดถาวร)",
     "perm_act_stock.module": "การเข้าถึงคลังพัสดุ",
     "perm_act_stock.view_dashboard": "แดชบอร์ด",
     "perm_act_stock.view": "รายการพัสดุ",

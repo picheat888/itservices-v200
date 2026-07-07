@@ -13,7 +13,7 @@ export const notification: Dict = {
     "notif_cred_required": "Needs login account — set username & password",
     "notif_resigned": "Resigned — revoke login account & reclaim assets",
     "notif_contract_expiring": "Expires in {days} days",
-    "notif_contract_expired": "Expired {days} days ago — review & renew",
+    "notif_contract_expired": "Overdue by {days} days — review, renew or close",
     "notif_stock_out": "Out of stock",
     "notif_stock_low": "Below minimum — reorder",
     "notif_stock_over": "Overstock",
