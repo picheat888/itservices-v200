@@ -10,7 +10,7 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { type Contract, type ContractType } from '@/shared/types';
-import { Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, SquarePen, Wifi } from 'lucide-react';
+import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, SquarePen, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 /** Icon per contract type — mirrors the icons used by the Edit wizard's type cards. */
@@ -48,16 +48,20 @@ export function ContractDetailDrawer({
     onClose,
     onEdit,
     canEdit,
+    canCancel,
+    canExpire,
 }: {
     contract: Contract | null;
     onClose: () => void;
     onEdit: (c: Contract) => void;
     canEdit: boolean;
+    canCancel: boolean;
+    canExpire: boolean;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { cancel } = useContractMutations();
+    const { cancel, expire } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
 
     // Retain the last contract so the dialog can keep rendering its content while it
@@ -78,27 +82,28 @@ export function ContractDetailDrawer({
     const c = contract ?? shown;
     if (!c) return null;
 
-    /**
-     * Cancel flow. Hardware contracts may only be cancelled once every linked asset is
-     * written off — otherwise warn and stop. All cancels then require a final confirmation.
-     */
-    const handleCancel = async () => {
-        if (c.type === 'hardware') {
-            const pending = c.linked_assets.filter((a) => a.status !== 'writeoff');
-            if (pending.length > 0) {
-                await confirm({
-                    variant: 'warn',
-                    hideCancel: true,
-                    title: lang === 'th' ? 'ยังยกเลิกสัญญาไม่ได้' : 'Cannot cancel yet',
-                    description:
-                        lang === 'th'
-                            ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก ${pending.length} รายการ`
-                            : `Every linked asset must be written off first. ${pending.length} asset(s) still need write-off.`,
-                    confirmText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
-                });
-                return;
-            }
+    /** Any contract with linked assets must have them all written off before it can be closed. */
+    const assertAssetsClear = async (): Promise<boolean> => {
+        const pending = c.linked_assets.filter((a) => a.status !== 'writeoff');
+        if (pending.length > 0) {
+            await confirm({
+                variant: 'warn',
+                hideCancel: true,
+                title: lang === 'th' ? 'ยังปิดสัญญาไม่ได้' : 'Cannot close yet',
+                description:
+                    lang === 'th'
+                        ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก ${pending.length} รายการ`
+                        : `Every linked asset must be written off first. ${pending.length} asset(s) still need write-off.`,
+                confirmText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
+            });
+            return false;
         }
+        return true;
+    };
+
+    /** Cancel = reversible early termination. */
+    const handleCancel = async () => {
+        if (!(await assertAssetsClear())) return;
         await confirm({
             variant: 'danger',
             title: lang === 'th' ? 'ยืนยันยกเลิกสัญญา?' : 'Cancel this contract?',
@@ -111,22 +116,42 @@ export function ContractDetailDrawer({
         });
     };
 
+    /** Expired = permanent admin close-out; warn extra when ending before the end date. */
+    const handleExpire = async () => {
+        if (!(await assertAssetsClear())) return;
+        const early = c.status !== 'overdue'; // not yet past end date
+        await confirm({
+            variant: 'danger',
+            title: t('contract_expire'),
+            entity: { name: c.name, sub: c.code },
+            description: early ? t('contract_expire_early_warn') : t('contract_expire_permanent_note'),
+            confirmText: t('contract_expire'),
+            action: async () => {
+                await expire.mutateAsync(c.id);
+                onClose();
+            },
+        });
+    };
+
     const days = c.days_remaining;
     const cancelled = c.status === 'cancelled';
-    const tone = cancelled ? 'gray' : c.status === 'expired' ? 'red' : c.in_reminder ? 'amber' : 'green';
-    const statusLabel = cancelled
-        ? t('contract_cancelled')
-        : c.status === 'expired'
-          ? lang === 'th'
-              ? 'หมดอายุ'
-              : 'Expired'
-          : lang === 'th'
-            ? 'ใช้งาน'
-            : 'Active';
+    const terminal = c.status === 'cancelled' || c.status === 'expired';
+    const tone =
+        c.status === 'cancelled' ? 'gray' : c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : c.in_reminder ? 'amber' : 'green';
+    const statusLabel =
+        c.status === 'cancelled'
+            ? t('contract_cancelled')
+            : c.status === 'expired'
+              ? t('contract_expired')
+              : c.status === 'overdue'
+                ? t('contract_overdue')
+                : lang === 'th'
+                  ? 'ใช้งาน'
+                  : 'Active';
     const TypeIcon = TYPE_ICON[c.type] ?? FileText;
 
-    // Days-remaining badge (header titleSuffix): hidden when cancelled; colored by state.
-    const daysBadge = cancelled ? null : (
+    // Days-remaining badge (header titleSuffix): hidden once terminal; colored by state.
+    const daysBadge = terminal ? null : (
         <span
             className={cn(
                 'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-semibold',
@@ -224,10 +249,6 @@ export function ContractDetailDrawer({
                                     }
                                 />
                                 <KV
-                                    label={t('contract_auto_renew')}
-                                    value={c.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
-                                />
-                                <KV
                                     label={t('contract_reminder_threshold')}
                                     value={
                                         c.reminder_days
@@ -283,17 +304,27 @@ export function ContractDetailDrawer({
                     {tab === 'attachments' && <ContractAttachmentsTab attachments={c.attachments} />}
                 </div>
 
-                {/* Footer — Cancel (left) / Edit (right); the ✕ handles closing. */}
-                {canEdit && !cancelled && (
+                {/* Footer — Cancel / Expired (left) · Edit (right). Hidden entirely once terminal. */}
+                {c.status !== 'cancelled' && c.status !== 'expired' && (canCancel || canExpire || canEdit) && (
                     <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                        <Button variant="destructive" className="mr-auto" onClick={handleCancel} disabled={cancel.isPending}>
-                            <Ban className="h-4 w-4" />
-                            {t('contract_cancel')}
-                        </Button>
-                        <Button variant="outline" onClick={() => onEdit(c)}>
-                            <SquarePen className="h-4 w-4" />
-                            {t('edit')}
-                        </Button>
+                        {canCancel && (
+                            <Button variant="destructive" onClick={handleCancel} disabled={cancel.isPending}>
+                                <Ban className="h-4 w-4" />
+                                {t('contract_cancel')}
+                            </Button>
+                        )}
+                        {canExpire && (
+                            <Button variant="outline" onClick={handleExpire} disabled={expire.isPending}>
+                                <Archive className="h-4 w-4" />
+                                {t('contract_expire')}
+                            </Button>
+                        )}
+                        {canEdit && (
+                            <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
+                                <SquarePen className="h-4 w-4" />
+                                {t('edit')}
+                            </Button>
+                        )}
                     </div>
                 )}
             </DialogContent>
