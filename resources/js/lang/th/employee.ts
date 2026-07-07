@@ -48,7 +48,7 @@ export const employee: Dict = {
     "import_desc": "นำเข้าพนักงานจำนวนมากจากไฟล์ CSV",
     "import_contract": "นำเข้า",
     "import_contract_desc": "นำเข้าสัญญาจำนวนมากจากไฟล์ CSV",
-    "import_contract_hint": "คอลัมน์: code (ไม่บังคับ), vendor, name, type, start_date, end_date, value, billing_cycle, auto_renew (1/0), notes",
+    "import_contract_hint": "คอลัมน์: code (ไม่บังคับ), vendor, name, type, start_date, end_date, value, billing_cycle, notes",
     "import_download_template": "ดาวน์โหลด Template (CSV)",
     "import_choose_file": "คลิกเพื่อเลือกไฟล์ CSV",
     "import_hint": "คอลัมน์: code, name, name_th, email, phone, department, position, joined_at — แผนก/ตำแหน่งใช้ code; เว้น code ว่าง = สร้างอัตโนมัติ",

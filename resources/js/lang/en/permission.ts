@@ -76,6 +76,8 @@ export const permission: Dict = {
     "perm_act_contracts.import": "Import contracts (CSV)",
     "perm_act_contracts.renew": "Renew contracts",
     "perm_act_contracts.alerts": "Contract Expiry Notification",
+    "perm_act_contracts.cancel": "Cancel/reactivate contracts",
+    "perm_act_contracts.expire": "Mark contracts as expired",
     "perm_act_stock.module": "Stock access",
     "perm_act_stock.view_dashboard": "Dashboard",
     "perm_act_stock.view": "Stock item",
