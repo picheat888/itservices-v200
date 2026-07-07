@@ -52,13 +52,13 @@ class StockItemResource extends JsonResource
                 'id' => $s->id,
                 'serial' => $s->serial,
                 'status' => $s->status,
-                'warehouse' => $s->warehouse,
+                'warehouse' => $s->warehouse?->name,
                 'reference' => $s->reference,
                 'received_at' => $s->received_at?->toDateTimeString(),
             ])),
             // Per-warehouse balances (eager-loaded on show). Used in the detail modal.
             'balances' => $this->whenLoaded('balances', fn () => $this->balances->map(fn ($b) => [
-                'warehouse' => $b->warehouse,
+                'warehouse' => $b->warehouse?->name ?? 'Unassigned',
                 'qty' => $b->qty,
             ])->values()),
             // FIFO cost lots (eager-loaded). `value` is the remaining-on-hand worth of the lot.

@@ -161,7 +161,8 @@ class StockRequestController extends Controller
             // Build the per-warehouse allocation map (warehouse => qty).
             $serials = collect();
             if ($item->track_serial) {
-                $serials = StockItemSerial::where('stock_item_id', $item->id)
+                $serials = StockItemSerial::with('warehouse')
+                    ->where('stock_item_id', $item->id)
                     ->where('status', 'in_stock')
                     ->whereIn('id', $data['serial_ids'] ?? [])
                     ->get();
@@ -170,7 +171,7 @@ class StockRequestController extends Controller
                         'serial_ids' => "Select exactly {$stockRequest->qty} in-stock serial(s) to issue.",
                     ]);
                 }
-                $allocation = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse ?: 'Unassigned')->map->count();
+                $allocation = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse?->name ?: 'Unassigned')->map->count();
             } elseif (! empty($data['allocations'])) {
                 $allocation = collect($data['allocations'])
                     ->groupBy('warehouse')
@@ -190,7 +191,7 @@ class StockRequestController extends Controller
 
             // Group the chosen serials by their source warehouse so each issue movement
             // can claim — and link its events to — exactly the serials drawn from it.
-            $serialsByWarehouse = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse ?: 'Unassigned');
+            $serialsByWarehouse = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse?->name ?: 'Unassigned');
 
             // One issue movement + per-warehouse balance deduction per source warehouse.
             foreach ($allocation as $warehouse => $qty) {

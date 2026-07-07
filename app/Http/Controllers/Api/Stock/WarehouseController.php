@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\Stock;
 
 use App\Http\Controllers\Controller;
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Stock\StockBalance;
+use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -43,9 +46,15 @@ class WarehouseController extends Controller
         return response()->json(['data' => $warehouse, 'message' => 'success']);
     }
 
-    /** Delete a warehouse. */
+    /** Delete a warehouse — blocked (409) while any asset, serial, or stock balance references it. */
     public function destroy(Warehouse $warehouse): JsonResponse
     {
+        $inUse = Asset::where('warehouse_id', $warehouse->id)->exists()
+            || StockItemSerial::where('warehouse_id', $warehouse->id)->exists()
+            || StockBalance::where('warehouse_id', $warehouse->id)->exists();
+        if ($inUse) {
+            return response()->json(['message' => 'in_use'], 409);
+        }
         AuditLog::record('Deleted warehouse', $warehouse->name);
         $warehouse->delete();
 

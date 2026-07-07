@@ -975,7 +975,7 @@ employees.module               ← MASTER (คุมโมดูล + ไอค�
 
 ---
 
-## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-06 (Phase 1–5)
+## 🔗 Master Data → FK Normalization — อัปเดต 2026-07-07 (Phase 1–6 ✅ ครบทุกเฟส)
 
 Master data ที่เคยถูก **ก๊อปเป็น string** ลงตารางอ้างอิง (เช่น `assets.location`, `stock_items.unit`) เปลี่ยนมา **ผูกด้วย FK id** ไปตาราง master — แก้ชื่อ master ที่เดียวสะท้อนทุกที่, ลบ master ที่ยังถูกใช้ไม่ได้, ไม่มีข้อมูลค้าง/สะกดเพี้ยน แผนเต็ม 6 เฟสอยู่ที่ `docs/superpowers/plans/2026-07-06-master-data-fk-normalization.md`
 
@@ -1022,7 +1022,14 @@ master ร่วม 2 โมดูล; plan: `docs/superpowers/plans/2026-07-06-
 - **Contract import (CSV ยังเป็นชื่อ)** — `ContractService::importRows` validate ชื่อใน master แล้ว resolve → vendor_id; `VendorController::destroy` → 409 เมื่อมี asset **หรือ** contract อ้างอิง
 - `AssetService::create` rented → คัด `vendor_id` จาก contract; seeders (ContractSeeder) resolve ชื่อ→id
 
+### Phase 6 — Warehouses (`assets`/`serials`/`balances`.`warehouse` → `warehouse_id`) — เฟสสุดท้าย
+plan: `docs/superpowers/plans/2026-07-07-phase6-warehouses-fk.md`
+- **หลักการ current vs log:** FK เฉพาะตาราง current-state — `assets.warehouse`, `stock_item_serials.warehouse`, `stock_balances.warehouse` (+ เปลี่ยน unique เป็น `(stock_item_id, warehouse_id)`); **คง string** ตาราง log/snapshot — `stock_item_serial_events.warehouse`, `stock_counts.warehouse` (audit log ควรบันทึกชื่อ ณ เวลานั้น ไม่ให้ rename ย้อนหลัง). `stock_items` ไม่มีคอลัมน์ warehouse อยู่แล้ว; `stock_movements.from_label/to_label` เป็น free-text — ไม่แตะ
+- **sentinel `'Unassigned'` → `warehouse_id = NULL`** ทุกที่ (ไม่สร้างคลังปลอมใน master); `Warehouse::resolveId()` เป็นตัวแปลงชื่อ→id กลาง
+- **`StockBalanceService` คง API รับชื่อ** แล้ว resolve เป็น id ภายใน → call-site ใน movement/request/count flow ไม่ต้องแก้ (ลดความเสี่ยง); serial `->warehouse` (relation) readers เปลี่ยนเป็น `?->name`; filter/summary by-warehouse ใช้ join/whereHas by name
+- `WarehouseController::destroy` → 409 เมื่อมี asset/serial/balance อ้างอิง; models เพิ่ม `warehouse()` relation; asset form เลือกด้วย id (stock/receive drawers คงส่งชื่อ)
+
 ### Verification
-- **Backend**: `php artisan test --compact` = **506 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
-- **รัน migration บน DB จริงแล้ว** (Phase 1–5): backfill ครบ — contracts 22/22 + (assets ที่มี supplier) 6/6 ผูก vendor_id; vendors 10→31; categories 20, brands 17, asset_models 50
-- **Phase 6 ยังไม่ทำ**: Warehouses (ตัวใหญ่สุด — assets/stock_items/serials/counts/balances(+unique index)/serial_events)
+- **Backend**: `php artisan test --compact` = **509 passed / 0 failed** · **Frontend**: `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **รัน migration บน DB จริงแล้ว** (Phase 1–6 ครบ): backfill สมบูรณ์ — assets 7 + serials 22/22 + balances 14/14 ผูก warehouse_id; warehouses คงที่ 5 (ข้อมูลสะอาด ไม่สร้างซ้ำ)
+- **🎉 Master Data FK Normalization เสร็จครบทั้ง 6 เฟส** — location · unit · warranty_type · brand · asset_model · category · vendor · warehouse ทั้งหมดผูกด้วย FK id แล้ว (rename propagate + delete-guard 409 ทุกตัว)

@@ -23,7 +23,7 @@ interface FormState {
     brand_id: string;
     serial: string;
     nickname: string;
-    warehouse: string;
+    warehouse_id: string;
     value: string;
     vendor_id: string;
     purchase_date: string;
@@ -40,7 +40,7 @@ const EMPTY: FormState = {
     brand_id: '',
     serial: '',
     nickname: '',
-    warehouse: '',
+    warehouse_id: '',
     value: '',
     vendor_id: '',
     purchase_date: '',
@@ -75,7 +75,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const { data: models = [] } = useAssetModels();
     const { data: categories = [] } = useCategories();
     const { data: vendors = [] } = useVendors();
-    const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: w.name, label: w.name, search: w.name })), [warehouses]);
+    const warehouseOptions = useMemo(() => warehouses.map((w) => ({ value: String(w.id), label: w.name, search: w.name })), [warehouses]);
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
     const vendorOptions = useMemo(() => vendors.map((v) => ({ value: String(v.id), label: v.name, search: v.name })), [vendors]);
     const [form, setForm] = useState<FormState>(EMPTY);
@@ -94,7 +94,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                 brand_id: editing.brand_id ? String(editing.brand_id) : '',
                 serial: editing.serial ?? '',
                 nickname: editing.nickname ?? '',
-                warehouse: editing.warehouse ?? '',
+                warehouse_id: editing.warehouse_id ? String(editing.warehouse_id) : '',
                 value: String(editing.value ?? ''),
                 vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
                 purchase_date: editing.purchase_date ?? '',
@@ -140,7 +140,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         if (!form.brand_id) e.brand = required;
         if (!form.model_id) e.model = required;
         if (!form.serial.trim()) e.serial = required;
-        if (!form.warehouse.trim()) e.warehouse = required;
+        if (!form.warehouse_id) e.warehouse = required;
         if (rented) {
             if (!form.contract_id) e.contract_id = required;
         } else {
@@ -160,7 +160,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             brand_id: form.brand_id ? Number(form.brand_id) : null,
             serial: form.serial.trim() || null,
             nickname: form.nickname.trim() || null,
-            warehouse: form.warehouse.trim() || null,
+            warehouse_id: form.warehouse_id ? Number(form.warehouse_id) : null,
             notes: form.notes.trim() || null,
             ...(rented
                 ? { contract_id: form.contract_id ? Number(form.contract_id) : null }
@@ -289,8 +289,8 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                             <div className="grid grid-cols-2 gap-4">
                                 <Field label={t('asset_warehouse')} required error={err.warehouse} name="warehouse">
                                     <SearchableSelect
-                                        value={form.warehouse}
-                                        onChange={(v) => upd('warehouse', v)}
+                                        value={form.warehouse_id}
+                                        onChange={(v) => upd('warehouse_id', v)}
                                         options={warehouseOptions}
                                         placeholder={lang === 'th' ? 'เลือกคลัง' : 'Select warehouse'}
                                         clearable

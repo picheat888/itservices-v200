@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Services\Stock\StockBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,8 +27,8 @@ class StockBalanceTest extends TestCase
     public function test_item_has_many_balances(): void
     {
         $item = $this->item();
-        StockBalance::create(['stock_item_id' => $item->id, 'warehouse' => 'WH-A', 'qty' => 5]);
-        StockBalance::create(['stock_item_id' => $item->id, 'warehouse' => 'WH-B', 'qty' => 3]);
+        StockBalance::create(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'WH-A'])->id, 'qty' => 5]);
+        StockBalance::create(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'WH-B'])->id, 'qty' => 3]);
 
         $this->assertSame(8, (int) $item->balances()->sum('qty'));
         $this->assertCount(2, $item->balances);
@@ -41,7 +42,7 @@ class StockBalanceTest extends TestCase
         $svc->add($item, 'WH-A', 5);
         $svc->add($item, 'WH-A', 3);
 
-        $this->assertSame(8, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        $this->assertSame(8, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-A')->value('id')])->value('qty'));
     }
 
     public function test_remove_decrements_and_rejects_negative(): void
@@ -51,7 +52,7 @@ class StockBalanceTest extends TestCase
         $svc->add($item, 'WH-A', 5);
 
         $svc->remove($item, 'WH-A', 2);
-        $this->assertSame(3, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
+        $this->assertSame(3, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-A')->value('id')])->value('qty'));
 
         $this->expectException(ValidationException::class);
         $svc->remove($item, 'WH-A', 99);
@@ -65,8 +66,8 @@ class StockBalanceTest extends TestCase
 
         $svc->move($item, 'WH-A', 'WH-B', 4);
 
-        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-A'])->value('qty'));
-        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'WH-B'])->value('qty'));
+        $this->assertSame(6, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-A')->value('id')])->value('qty'));
+        $this->assertSame(4, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::where('name', 'WH-B')->value('id')])->value('qty'));
     }
 
     public function test_move_rejects_same_warehouse(): void
@@ -102,6 +103,18 @@ class StockBalanceTest extends TestCase
         $svc->rebuildFor($item);
 
         // SKUs no longer carry a home warehouse → backfilled stock parks under 'Unassigned'.
-        $this->assertSame(12, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'])->value('qty'));
+        $this->assertSame(12, (int) StockBalance::where(['stock_item_id' => $item->id, 'warehouse_id' => null])->value('qty'));
+    }
+
+    public function test_warehouse_in_use_by_a_balance_cannot_be_deleted(): void
+    {
+        $item = $this->item();
+        $warehouse = Warehouse::create(['name' => 'In Use WH']);
+        StockBalance::create(['stock_item_id' => $item->id, 'warehouse_id' => $warehouse->id, 'qty' => 5]);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']))
+            ->deleteJson("/api/warehouses/{$warehouse->id}")
+            ->assertStatus(409);
+        $this->assertDatabaseHas('warehouses', ['id' => $warehouse->id]);
     }
 }

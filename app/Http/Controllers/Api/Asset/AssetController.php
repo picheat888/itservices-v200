@@ -60,7 +60,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor'])->latest('id');
+        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -83,7 +83,8 @@ class AssetController extends Controller
             $query->where('status', $request->query('status'));
         }
         if ($request->filled('warehouse')) {
-            $query->where('warehouse', $request->query('warehouse'));
+            // The filter still sends the warehouse name; match it through the relation.
+            $query->whereHas('warehouse', fn ($w) => $w->where('name', $request->query('warehouse')));
         }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -145,7 +146,7 @@ class AssetController extends Controller
             return response()->json(['data' => []]);
         }
 
-        $assets = Asset::query()->with(['contract', 'location'])->where('owner', $code)->latest('id')->get();
+        $assets = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse'])->where('owner', $code)->latest('id')->get();
 
         return response()->json(['data' => AssetResource::collection($assets)]);
     }
@@ -174,7 +175,7 @@ class AssetController extends Controller
         $asset = $this->service->create($request->validated());
         AuditLog::record('Registered asset', "{$asset->tag} — {$asset->model?->name}");
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor', 'warehouse')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
@@ -182,7 +183,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor']);
+        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse']);
 
         return (new AssetResource($asset))->response();
     }
@@ -193,7 +194,7 @@ class AssetController extends Controller
         $asset = $this->service->update($asset, $request->validated());
         AuditLog::record('Updated asset', "{$asset->tag} — {$asset->model?->name}", AuditLog::changes($before, $asset));
 
-        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor')))
+        return (new AssetResource($asset->load('contract', 'brand', 'model', 'category', 'vendor', 'warehouse')))
             ->additional(['message' => 'success'])->response();
     }
 

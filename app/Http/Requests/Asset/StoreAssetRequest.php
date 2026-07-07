@@ -42,7 +42,7 @@ class StoreAssetRequest extends FormRequest
             'initial_owner' => ['nullable', 'string', 'max:200'],
             'department' => ['nullable', 'string', 'max:120'],
             'location_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'warehouse' => ['nullable', 'string', 'max:120'],
+            'warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
             // Purchased assets carry their own price; rented assets derive value from the contract.
             'value' => ['nullable', 'required_if:source,purchased', 'numeric', 'min:0'],
             'vendor_id' => ['nullable', 'required_if:source,purchased', 'integer', 'exists:vendors,id'],

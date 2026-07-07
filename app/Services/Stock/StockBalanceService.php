@@ -4,12 +4,17 @@ namespace App\Services\Stock;
 
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Owns per-warehouse on-hand quantities (stock_balances). Callers run these inside
  * the movement transaction; current_stock (the cached total) is maintained by the
  * caller. Removals are guarded so a warehouse balance can never go negative.
+ *
+ * The public API still speaks warehouse *names* (the movement flows pass names,
+ * including the 'Unassigned' sentinel); each name is resolved to warehouse_id here.
+ * 'Unassigned' / blank → null (no fake master row).
  */
 class StockBalanceService
 {
@@ -20,7 +25,7 @@ class StockBalanceService
             return;
         }
         $balance = StockBalance::lockForUpdate()->firstOrCreate(
-            ['stock_item_id' => $item->id, 'warehouse' => $warehouse],
+            ['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::resolveId($warehouse)],
             ['qty' => 0],
         );
         $balance->qty += $qty;
@@ -34,7 +39,7 @@ class StockBalanceService
             return;
         }
         $balance = StockBalance::lockForUpdate()
-            ->where(['stock_item_id' => $item->id, 'warehouse' => $warehouse])
+            ->where(['stock_item_id' => $item->id, 'warehouse_id' => Warehouse::resolveId($warehouse)])
             ->first();
         $available = (int) ($balance->qty ?? 0);
         if ($available < $qty) {
@@ -62,7 +67,7 @@ class StockBalanceService
     public function rebuildFor(StockItem $item): void
     {
         StockBalance::updateOrCreate(
-            ['stock_item_id' => $item->id, 'warehouse' => 'Unassigned'],
+            ['stock_item_id' => $item->id, 'warehouse_id' => null],
             ['qty' => $item->current_stock],
         );
     }

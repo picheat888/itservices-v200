@@ -10,13 +10,19 @@ class StockItemSerial extends Model
 {
     protected $fillable = [
         'stock_item_id', 'stock_movement_id', 'serial',
-        'status', 'warehouse', 'reference', 'received_at',
+        'status', 'warehouse_id', 'reference', 'received_at',
     ];
 
     /** @return BelongsTo<StockItem, $this> */
     public function item(): BelongsTo
     {
         return $this->belongsTo(StockItem::class, 'stock_item_id');
+    }
+
+    /** The warehouse this unit currently sits in (null = unassigned). */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     /** @return BelongsTo<StockMovement, $this> */

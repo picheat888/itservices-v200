@@ -22,7 +22,7 @@ export interface AssetPayload {
     serial?: string | null;
     source: Asset['source'];
     status?: Asset['status'];
-    warehouse?: string | null;
+    warehouse_id?: number | null;
     // Sent only for purchased assets; rented assets derive value from the contract.
     value?: number | null;
     vendor_id?: number | null;

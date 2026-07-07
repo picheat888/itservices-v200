@@ -39,8 +39,8 @@ class StockCountService
             if (! empty($filters['stock_item_ids'])) {
                 $query->whereIn('id', $filters['stock_item_ids']);
             } else {
-                $query->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->whereHas('balances', fn ($b) => $b->where('warehouse', $w)))
-                    ->when($filters['category'] ?? null, fn ($q, $c) => $q->where('category', $c));
+                $query->when($filters['warehouse'] ?? null, fn ($q, $w) => $q->whereHas('balances', fn ($b) => $b->whereHas('warehouse', fn ($wh) => $wh->where('name', $w))))
+                    ->when($filters['category'] ?? null, fn ($q, $c) => $q->whereHas('category', fn ($cat) => $cat->where('name', $c)));
             }
             $items = $query->orderBy('sku')->get(['id', 'current_stock', 'track_serial']);
 
@@ -191,7 +191,7 @@ class StockCountService
         foreach ($serials as $row) {
             StockItemSerialEvent::log($row, 'adjusted', [
                 'reference' => $reference,
-                'warehouse' => $row->warehouse,
+                'warehouse' => $row->warehouse?->name,
                 'user_id' => $user->id,
                 'recorded_by' => $user->name,
             ]);

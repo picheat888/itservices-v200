@@ -44,7 +44,7 @@ class StockItemController extends Controller
 
         $query = StockItem::query()
             ->select('stock_items.*')
-            ->with(['lots', 'balances', 'unit', 'warrantyType', 'brand', 'model', 'category'])
+            ->with(['lots', 'balances.warehouse', 'unit', 'warrantyType', 'brand', 'model', 'category'])
             // Reserved = qty committed by approved-but-unfulfilled requests (not yet
             // deducted from on-hand). Used to show "available to request" in New Request.
             ->withSum(['requests as reserved_qty' => fn ($q) => $q->where('status', 'approved')], 'qty')
@@ -70,7 +70,7 @@ class StockItemController extends Controller
             // Warehouse is no longer a SKU attribute — filter by where stock
             // actually sits (per-warehouse balances).
             $warehouse = $request->query('warehouse');
-            $query->whereHas('balances', fn ($q) => $q->where('warehouse', $warehouse));
+            $query->whereHas('balances', fn ($q) => $q->whereHas('warehouse', fn ($w) => $w->where('name', $warehouse)));
         }
         if ($request->filled('status')) {
             $query->withDerivedStatus($request->query('status'));
@@ -129,11 +129,12 @@ class StockItemController extends Controller
         // split across multiple warehouses are counted accurately.
         // Per-warehouse cost (value) is out of scope for FIFO lot costing.
         $byWarehouse = StockBalance::query()
-            ->selectRaw('warehouse, COUNT(DISTINCT stock_item_id) as skus, SUM(qty) as units')
-            ->groupBy('warehouse')
+            ->leftJoin('warehouses', 'warehouses.id', '=', 'stock_balances.warehouse_id')
+            ->selectRaw('warehouses.name as warehouse, COUNT(DISTINCT stock_item_id) as skus, SUM(qty) as units')
+            ->groupBy('warehouses.name')
             ->get()
             ->map(fn ($row) => [
-                'warehouse' => $row->warehouse ?: '—',
+                'warehouse' => $row->warehouse ?: 'Unassigned',
                 'skus' => (int) $row->skus,
                 'units' => (int) $row->units,
             ])
@@ -189,8 +190,8 @@ class StockItemController extends Controller
 
         $stockItem->load([
             'lots' => fn ($q) => $q->with('movement')->orderBy('received_at')->orderBy('id'),
-            'serials' => fn ($q) => $q->orderBy('serial'),
-            'balances' => fn ($q) => $q->orderBy('warehouse'),
+            'serials' => fn ($q) => $q->with('warehouse')->orderBy('serial'),
+            'balances' => fn ($q) => $q->with('warehouse')->orderBy('warehouse_id'),
             'unit',
             'warrantyType',
             'brand',
@@ -267,6 +268,7 @@ class StockItemController extends Controller
             'movements',
             'lots' => fn ($q) => $q->latest('received_at'),
             'lots.movement',
+            'serials.warehouse',
             'serials.events.movement',
         ]);
 
@@ -304,7 +306,7 @@ class StockItemController extends Controller
             'serials' => $stockItem->serials->map(fn ($s) => [
                 'serial' => $s->serial,
                 'status' => $s->status,
-                'warehouse' => $s->warehouse,
+                'warehouse' => $s->warehouse?->name,
                 'events' => $s->events->map(fn ($e) => [
                     'event' => $e->event,
                     'occurred_at' => $e->occurred_at?->toIso8601String(),

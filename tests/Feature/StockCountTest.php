@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Permission\RolePermission;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,7 +23,7 @@ class StockCountTest extends TestCase
     {
         $item = StockItem::create(['sku' => $sku, 'name' => $sku, 'unit' => 'pcs', 'current_stock' => $stock, 'min_stock' => 1, 'max_stock' => 100]);
         // Warehouse scoping is balance-based now โ€” park the stock in the given warehouse.
-        $item->balances()->create(['warehouse' => $wh, 'qty' => $stock]);
+        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => $wh])->id, 'qty' => $stock]);
 
         return $item;
     }
