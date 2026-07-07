@@ -69,7 +69,6 @@ interface FormState {
     end_date: string;
     value: string;
     billing_cycle: BillingCycle;
-    auto_renew: boolean;
     notify_150: boolean;
     notify_120: boolean;
     notify_90: boolean;
@@ -93,7 +92,6 @@ const EMPTY: FormState = {
     end_date: '',
     value: '',
     billing_cycle: 'yearly',
-    auto_renew: false,
     notify_150: false,
     notify_120: false,
     notify_90: false,
@@ -172,7 +170,6 @@ export function ContractFormDrawer({
                 end_date: editing.end,
                 value: String(editing.value),
                 billing_cycle: editing.billing_cycle,
-                auto_renew: editing.auto_renew,
                 notify_150: editing.notify_150,
                 notify_120: editing.notify_120,
                 notify_90: editing.notify_90,
@@ -319,7 +316,6 @@ export function ContractFormDrawer({
             end_date: form.end_date,
             value: Number(form.value),
             billing_cycle: form.billing_cycle,
-            auto_renew: form.auto_renew,
             notify_150: form.notify_150,
             notify_120: form.notify_120,
             notify_90: form.notify_90,
@@ -674,35 +670,6 @@ export function ContractFormDrawer({
                                         />
                                     </Field>
                                 </div>
-
-                                <Field label={t('contract_auto_renew')}>
-                                    <label className="flex h-10 items-center gap-3 text-sm">
-                                        <button
-                                            type="button"
-                                            onClick={() => upd('auto_renew', !form.auto_renew)}
-                                            className={cn(
-                                                'relative h-5 w-9 shrink-0 rounded-full transition-colors',
-                                                form.auto_renew ? 'bg-brand' : 'bg-muted',
-                                            )}
-                                        >
-                                            <span
-                                                className={cn(
-                                                    'absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all',
-                                                    form.auto_renew ? 'left-[1.125rem]' : 'left-0.5',
-                                                )}
-                                            />
-                                        </button>
-                                        <span className="text-muted-foreground">
-                                            {form.auto_renew
-                                                ? lang === 'th'
-                                                    ? 'ต่ออายุอัตโนมัติ'
-                                                    : 'Will renew automatically'
-                                                : lang === 'th'
-                                                  ? 'ต้องต่ออายุด้วยตนเอง'
-                                                  : 'Manual renewal required'}
-                                        </span>
-                                    </label>
-                                </Field>
                             </div>
                         )}
 
@@ -870,10 +837,6 @@ export function ContractFormDrawer({
                                         k={t('contract_value')}
                                         v={`${symbol}${form.value ? Number(form.value).toLocaleString() : '0'} · ${t(`contract_billing_${form.billing_cycle}`)}`}
                                         mono
-                                    />
-                                    <ReviewRow
-                                        k={t('contract_auto_renew')}
-                                        v={form.auto_renew ? (lang === 'th' ? 'ใช่' : 'Yes') : lang === 'th' ? 'ไม่' : 'No'}
                                     />
                                     <ReviewRow
                                         k={t('contract_notify')}
