@@ -368,6 +368,13 @@ In `importRows()` ลบบรรทัด:
                 'auto_renew' => in_array(strtolower(trim($row['auto_renew'] ?? '')), ['1', 'true', 'yes'], true),
 ```
 
+- [ ] **Step 4b: Clean the demo seeder (references the dropped column)**
+
+In `database/seeders/ContractSeeder.php`:
+- ลบ key `'auto_renew' => $autoRenew,` ในบล็อก insert (`Contract::create([...])` / array ที่ส่งเข้า) — ราวบรรทัด 77.
+- ตัวแปร `$autoRenew` ที่ destructure มาจาก `$coverage` แต่ละแถวจะกลายเป็น unused. เพื่อไม่ให้เหลือ dead var: เอา element `auto_renew` ออกจากทุกแถวของ `$coverage` **และ** ออกจาก destructuring pattern (ปรับ comment บรรทัด 46 ให้ตรง). ถ้าเสี่ยงพลาด ให้เก็บ element ไว้แต่เปลี่ยนตัวรับเป็น placeholder ที่ไม่ถูกใช้ต่อ — ขอแค่ **ไม่มี** key `auto_renew` ไปถึง `Contract::create()` อีก.
+- ตรวจว่าไม่มีคำว่า `auto_renew` เหลือในไฟล์: `grep -n auto_renew database/seeders/ContractSeeder.php` → ต้องว่าง.
+
 - [ ] **Step 5: Run test to verify it passes**
 
 Run: `php artisan test --compact tests/Feature/ContractLifecycleTest.php`
@@ -377,7 +384,7 @@ Expected: PASS (3 tests).
 
 ```bash
 vendor/bin/pint --dirty --format agent
-git add app/Services/Contract/ContractService.php tests/Feature/ContractLifecycleTest.php
+git add app/Services/Contract/ContractService.php database/seeders/ContractSeeder.php tests/Feature/ContractLifecycleTest.php
 git commit -m "feat(contract): add expire() service + generalize write-off guard to all types"
 ```
 
@@ -570,6 +577,15 @@ In `index()` เปลี่ยนทุก `orderByRaw('cancelled_at IS NOT NUL
 ```
 
 และในบล็อก `tab === 'expiring'` เพิ่ม `->whereNull('expired_at')` ต่อจาก `->whereNull('cancelled_at')`.
+
+- [ ] **Step 5b: Drop auto_renew from the import-template CSV**
+
+In `ContractController.php` ราวบรรทัด 249-250 (method download import-template) เอา `'auto_renew'` ออกจาก `$headers` และเอาค่าที่ตรงกัน (`'0'`) ออกจาก `$sample` เพื่อให้จำนวน column ตรงกัน:
+
+```php
+        $headers = ['code', 'vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle', 'notes'];
+        $sample = ['', 'Microsoft', 'Microsoft 365 — 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', ''];
+```
 
 - [ ] **Step 6: Run to verify pass**
 
@@ -1179,6 +1195,18 @@ In `resources/js/lang/th/notification.ts`:
     "notif_contract_expired": "เกินกำหนดมาแล้ว {days} วัน — โปรดตรวจสอบ ต่ออายุ หรือปิดสัญญา",
 ```
 
+- [ ] **Step 5b: Update the contract-import hint (drops auto_renew column)**
+
+คีย์ `import_contract_hint` อยู่ใน `resources/js/lang/en/employee.ts` และ `resources/js/lang/th/employee.ts` (บรรทัด ~51) และยังระบุคอลัมน์ `auto_renew (1/0)`. เอา `auto_renew (1/0)` ออกให้ตรงกับ import-template ใหม่:
+
+en:
+```ts
+    "import_contract_hint": "Columns: code (optional), vendor, name, type, start_date, end_date, value, billing_cycle, notes",
+```
+th: แก้สตริงเดียวกันให้ตัดคอลัมน์ auto_renew ออกด้วย (คงรูปแบบภาษาไทยเดิม).
+
+ตรวจว่าไม่มี `auto_renew` เหลือใน `lang/` เลย: `grep -rn auto_renew resources/js/lang` → ต้องว่าง (รวมถึง `contract_auto_renew` ที่ลบไปแล้วใน Step 1-2).
+
 - [ ] **Step 6: Typecheck + build**
 
 Run: `npx tsc --noEmit && npm run build`
@@ -1187,7 +1215,7 @@ Expected: ผ่าน (ทุกคีย์ที่อ้างมีคร�
 - [ ] **Step 7: Commit**
 
 ```bash
-git add resources/js/lang/en/contract.ts resources/js/lang/th/contract.ts resources/js/lang/en/permission.ts resources/js/lang/th/permission.ts resources/js/lang/en/notification.ts resources/js/lang/th/notification.ts resources/js/modules/permission/lib/permission-labels.ts
+git add resources/js/lang/en/contract.ts resources/js/lang/th/contract.ts resources/js/lang/en/permission.ts resources/js/lang/th/permission.ts resources/js/lang/en/notification.ts resources/js/lang/th/notification.ts resources/js/lang/en/employee.ts resources/js/lang/th/employee.ts resources/js/modules/permission/lib/permission-labels.ts
 git commit -m "feat(contract-ui): i18n for overdue/expired + cancel/expire permission labels"
 ```
 
