@@ -213,6 +213,23 @@ class ContractExpiryAlertTest extends TestCase
         $this->assertSame(0, ContractBellLog::count());
     }
 
+    public function test_expired_contracts_do_not_alert(): void
+    {
+        Notification::fake();
+        Bus::fake();
+        $this->alertedUser();
+        // Overdue (past end_date) with reminders enabled, but admin already marked it expired.
+        $expired = $this->contractExpiringIn(-5, [30]);
+        $expired->update(['expired_at' => now()]);
+
+        $belled = $this->service()->run(true);
+
+        $this->assertSame(0, $belled);
+        Notification::assertNothingSent();
+        $this->assertSame(0, ContractBellLog::count());
+        $this->assertSame(0, ContractAlertLog::count());
+    }
+
     public function test_user_without_permission_is_not_notified(): void
     {
         Notification::fake();
