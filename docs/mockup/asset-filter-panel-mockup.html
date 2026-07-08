@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Asset · Filter Panel — redesign mockup (A: Command panel / B: Quick-pick)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --brand:#2563eb; --brand-700:#1d4ed8;
+    --bg:#fff; --canvas:#f6f8fb;
+    --fg:hsl(222,30%,12%); --muted:hsl(215,16%,47%); --muted-2:hsl(215,18%,62%);
+    --border:hsl(214,20%,90%); --border-soft:hsl(214,22%,93%);
+    --accent:hsl(210,24%,95%);
+    --green:#10b981; --amber:#f59e0b; --violet:#8b5cf6; --blue:#3b82f6; --gray:hsl(215,16%,65%);
+    --radius:14px;
+    --shadow-pop:0 12px 32px -8px rgba(16,24,40,.28), 0 0 0 1px rgba(16,24,40,.06);
+    --font:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;background:var(--canvas);padding:64px 0 60px}
+
+  .chooser{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 20px;background:rgba(11,18,32,.94);backdrop-filter:blur(8px);color:#e7ecf5;border-bottom:1px solid rgba(255,255,255,.08)}
+  .chooser .brandmark{display:flex;align-items:center;gap:9px;font-weight:800;padding-right:14px;border-right:1px solid rgba(255,255,255,.12)}
+  .chooser .brandmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,99,235,.25)}
+  .chooser .vbtn{border:1px solid rgba(255,255,255,.18);background:transparent;color:#cdd6e4;font-family:var(--font);font-size:12.5px;font-weight:600;border-radius:999px;padding:6px 14px;cursor:pointer}
+  .chooser .vbtn.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .chooser .hint{margin-left:auto;font-size:12px;color:#7e8aa1}
+
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px}
+  .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;position:relative}
+
+  /* toolbar */
+  .toolbar{display:flex;align-items:center;gap:8px}
+  .search{position:relative;width:100%;max-width:20rem}
+  .search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted)}
+  .search input{width:100%;height:40px;border:1px solid var(--border);border-radius:9px;padding:0 12px 0 34px;font-family:var(--font);font-size:14px;outline:none;background:#fff}
+  .fbtn{display:inline-flex;align-items:center;gap:8px;height:40px;border:1px solid rgba(37,99,235,.5);background:rgba(37,99,235,.05);color:var(--brand);border-radius:9px;padding:0 12px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer}
+  .fbtn svg{width:16px;height:16px}
+  .fbtn .cnt{min-width:20px;height:20px;border-radius:999px;background:var(--brand);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 5px}
+
+  /* ghost table behind, for context */
+  .ghost{margin-top:14px;border:1px solid var(--border-soft);border-radius:10px;overflow:hidden;opacity:.5;pointer-events:none}
+  .ghost .row{display:flex;gap:14px;padding:11px 14px;border-bottom:1px solid var(--border-soft)}
+  .ghost .row:last-child{border-bottom:0}
+  .ghost .cell{height:10px;border-radius:5px;background:var(--accent)}
+  .ghost .hrow .cell{background:hsl(214,20%,88%)}
+
+  /* ============ the panel ============ */
+  .panel{position:absolute;top:62px;left:14px;width:460px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow-pop);z-index:50;animation:pop .28s cubic-bezier(.16,1,.3,1)}
+  @keyframes pop{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){.panel{animation:none}}
+
+  .p-head{display:flex;align-items:center;gap:8px;padding:12px 14px 10px;border-bottom:1px solid var(--border-soft)}
+  .p-head svg{width:15px;height:15px;color:var(--muted)}
+  .p-head .ttl{font-size:13.5px;font-weight:700}
+  .p-head .cnt{min-width:19px;height:19px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--brand-700);font-family:var(--mono);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px}
+  .p-head .clear{margin-left:auto;border:0;background:transparent;font-family:var(--font);font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 6px;border-radius:7px}
+  .p-head .clear:hover{background:var(--accent);color:var(--fg)}
+  .p-head .clear svg{width:12px;height:12px}
+  .p-head .clear[disabled]{opacity:.4;cursor:default}
+
+  .p-body{padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .fld .lbl{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+  .fld .lbl svg{width:13px;height:13px}
+
+  /* select */
+  .sel{position:relative}
+  .sel .trg{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:38px;border:1px solid var(--border);border-radius:9px;background:#fff;padding:0 10px;font-family:var(--font);font-size:13.5px;cursor:pointer}
+  .sel.active .trg{border-color:rgba(37,99,235,.5);background:rgba(37,99,235,.05);color:var(--brand-700);font-weight:600}
+  .sel .cur{display:flex;align-items:center;gap:8px;min-width:0}
+  .sel .cur span.txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sel .chev{width:15px;height:15px;color:var(--muted);flex:none}
+  .menu{position:absolute;z-index:60;top:calc(100% + 5px);left:0;min-width:100%;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-pop);padding:5px;display:none}
+  .menu.open{display:block}
+  .opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;font-size:13.5px;cursor:pointer;white-space:nowrap}
+  .opt:hover{background:var(--accent)}
+  .opt.sel-on{background:rgba(37,99,235,.08);color:var(--brand-700);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .icn{width:15px;height:15px;color:var(--muted);flex:none}
+  .dot-blue{background:var(--blue)} .dot-violet{background:var(--violet)} .dot-amber{background:var(--amber)}
+  .dot-green{background:var(--green)} .dot-gray{background:var(--gray)}
+
+  /* variant B — segmented + chips */
+  .seg{display:flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;height:38px}
+  .seg button{flex:1;border:0;background:#fff;font-family:var(--font);font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+  .seg button + button{border-left:1px solid var(--border)}
+  .seg button.on{background:rgba(37,99,235,.08);color:var(--brand-700);font-weight:700}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 11px;font-family:var(--font);font-size:12.5px;font-weight:500;color:var(--fg);cursor:pointer}
+  .chip:hover{background:var(--accent)}
+  .chip.on{border-color:rgba(37,99,235,.55);background:rgba(37,99,235,.07);color:var(--brand-700);font-weight:700}
+  .fld.span2{grid-column:1 / -1}
+
+  .p-foot{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--border-soft)}
+  .p-foot .found{font-size:12.5px;color:var(--muted)}
+  .p-foot .found b{font-family:var(--mono);font-size:13px;color:var(--fg);font-weight:700}
+  .p-foot .done{margin-left:auto;border:0;background:var(--brand);color:#fff;font-family:var(--font);font-size:13px;font-weight:700;border-radius:8px;padding:8px 16px;cursor:pointer}
+  .p-foot .done:hover{background:var(--brand-700)}
+
+  .note{max-width:980px;margin:330px auto 0;padding:0 24px}
+  .note .callout{padding:10px 14px;border:1px dashed var(--border);border-radius:10px;background:hsl(214,40%,98%);font-size:12.5px;color:var(--muted);line-height:1.7}
+  .note b{color:var(--brand-700)}
+</style>
+</head>
+<body>
+
+<div class="chooser">
+  <span class="brandmark"><span class="dot"></span> Inaba IT — Asset Filter Panel</span>
+  <button class="vbtn on" data-v="a">A · Command panel (dropdown เดิม + หัว/ท้าย)</button>
+  <button class="vbtn" data-v="b">B · Quick-pick (แหล่งที่มา/สถานะกดเลือกได้เลย)</button>
+  <span class="hint">คลิกลองเล่นได้ · ตัวเลขผลลัพธ์เป็นตัวอย่าง</span>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input placeholder="ค้นหาทรัพย์สิน…" />
+      </div>
+      <button class="fbtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+        ตัวกรอง <span class="cnt" id="btnCnt">2</span>
+      </button>
+    </div>
+
+    <!-- ================= PANEL ================= -->
+    <div class="panel" id="panel">
+      <div class="p-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+        <span class="ttl">ตัวกรอง</span>
+        <span class="cnt" id="headCnt">2</span>
+        <button class="clear" id="clearBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          ล้างทั้งหมด
+        </button>
+      </div>
+
+      <!-- ===== Variant A body ===== -->
+      <div class="p-body" id="bodyA">
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg> ประเภท</div>
+          <div class="sel active" data-sel>
+            <div class="trg"><span class="cur"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></svg><span class="txt">แล็ปท็อป</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt sel-on"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></svg>แล็ปท็อป</div>
+              <div class="opt"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>เดสก์ท็อป</div>
+              <div class="opt"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>มือถือ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> แหล่งที่มา</div>
+          <div class="sel" data-sel>
+            <div class="trg"><span class="cur"><span class="dot dot-gray"></span><span class="txt">ทั้งหมด</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt sel-on"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt"><span class="dot dot-blue"></span>ซื้อ</div>
+              <div class="opt"><span class="dot dot-violet"></span>เช่า</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg> สถานะ</div>
+          <div class="sel active" data-sel>
+            <div class="trg"><span class="cur"><span class="dot dot-blue"></span><span class="txt">พร้อมใช้งาน</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt sel-on"><span class="dot dot-blue"></span>พร้อมใช้งาน</div>
+              <div class="opt"><span class="dot dot-green"></span>ใช้งานอยู่</div>
+              <div class="opt"><span class="dot dot-amber"></span>รอตรวจรับ</div>
+              <div class="opt"><span class="dot dot-amber"></span>รอรับคืน</div>
+              <div class="opt"><span class="dot dot-violet"></span>ซ่อมบำรุง</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12M6 14h12M6 22V10"/></svg> คลัง</div>
+          <div class="sel" data-sel>
+            <div class="trg"><span class="cur"><span class="dot dot-gray"></span><span class="txt">ทั้งหมด</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt sel-on"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12M6 14h12M6 22V10"/></svg>คลัง IT สำนักงานใหญ่</div>
+              <div class="opt"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12M6 14h12M6 22V10"/></svg>คลังซ่อม</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Variant B body ===== -->
+      <div class="p-body" id="bodyB" style="display:none">
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg> ประเภท</div>
+          <div class="sel active" data-sel>
+            <div class="trg"><span class="cur"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="12" x="3" y="4" rx="2" ry="2"/><line x1="2" x2="22" y1="20" y2="20"/></svg><span class="txt">แล็ปท็อป</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt sel-on">แล็ปท็อป</div><div class="opt">เดสก์ท็อป</div><div class="opt">มือถือ</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12M6 14h12M6 22V10"/></svg> คลัง</div>
+          <div class="sel" data-sel>
+            <div class="trg"><span class="cur"><span class="dot dot-gray"></span><span class="txt">ทั้งหมด</span></span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="menu">
+              <div class="opt sel-on"><span class="dot dot-gray"></span>ทั้งหมด</div>
+              <div class="opt">คลัง IT สำนักงานใหญ่</div><div class="opt">คลังซ่อม</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld span2">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg> แหล่งที่มา</div>
+          <div class="seg" data-seg>
+            <button class="on">ทั้งหมด</button>
+            <button><span class="dot dot-blue"></span> ซื้อ</button>
+            <button><span class="dot dot-violet"></span> เช่า</button>
+          </div>
+        </div>
+
+        <div class="fld span2">
+          <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg> สถานะ</div>
+          <div class="chips" data-chips>
+            <button class="chip"><span class="dot dot-gray"></span>ทั้งหมด</button>
+            <button class="chip on"><span class="dot dot-blue"></span>พร้อมใช้งาน</button>
+            <button class="chip"><span class="dot dot-green"></span>ใช้งานอยู่</button>
+            <button class="chip"><span class="dot dot-amber"></span>รอตรวจรับ</button>
+            <button class="chip"><span class="dot dot-amber"></span>รอรับคืน</button>
+            <button class="chip"><span class="dot dot-violet"></span>ซ่อมบำรุง</button>
+            <button class="chip"><span class="dot dot-gray"></span>ตัดจำหน่าย</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-foot">
+        <span class="found">พบ <b id="found">37</b> รายการ</span>
+        <button class="done">เสร็จสิ้น</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="callout">
+    <b>สิ่งที่เพิ่มจาก panel ปัจจุบัน (ทั้ง 2 แบบ):</b>
+    ① หัว panel มีชื่อ "ตัวกรอง" + badge จำนวนตัวกรองที่ใช้อยู่ + ปุ่ม <b>ล้างทั้งหมด</b> ย้ายเข้ามาในตัว panel ·
+    ② ช่องที่ถูกตั้งค่า (≠ ทั้งหมด) ขอบ+พื้นเป็นสี brand ให้เห็นทันทีว่ากรองอะไรอยู่ ·
+    ③ ท้าย panel แสดง <b>ผลลัพธ์สด "พบ N รายการ"</b> (ตัวเลขจาก meta.total ที่มีอยู่แล้ว) + ปุ่มเสร็จสิ้นปิด panel ·
+    ④ เปิดด้วยอนิเมชัน pop สั้น ๆ เหมือน dialog อื่นในระบบ (ปิดเมื่อ prefers-reduced-motion)
+    <br /><b>ต่างกันตรง:</b> แบบ A คง dropdown 2×2 เดิมทั้งหมด · แบบ B เปลี่ยนแหล่งที่มาเป็น segmented (กดทีเดียว) และสถานะเป็นชิปจุดสีเห็นครบทุกตัวเลือกโดยไม่ต้องเปิดเมนู
+  </div>
+</div>
+
+<script>
+  // fake counts so the footer feels alive
+  const found = document.getElementById('found');
+  const rnd = () => { found.textContent = 12 + Math.floor(Math.random() * 140); };
+
+  // dropdowns
+  const closeAll = () => document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('[data-sel]').forEach(sel => {
+    const trg = sel.querySelector('.trg'), menu = sel.querySelector('.menu'), cur = sel.querySelector('.cur');
+    trg.addEventListener('click', e => { e.stopPropagation(); const was = menu.classList.contains('open'); closeAll(); if (!was) menu.classList.add('open'); });
+    menu.querySelectorAll('.opt').forEach(opt => opt.addEventListener('click', e => {
+      e.stopPropagation();
+      menu.querySelectorAll('.opt').forEach(o => o.classList.remove('sel-on'));
+      opt.classList.add('sel-on');
+      cur.innerHTML = opt.innerHTML.replace('class="icn"', 'class="icn"');
+      if (!cur.querySelector('.txt')) { // wrap trailing text for ellipsis
+        const last = cur.lastChild; const s = document.createElement('span'); s.className = 'txt'; s.textContent = last.textContent; cur.replaceChild(s, last);
+      }
+      sel.classList.toggle('active', !opt.textContent.trim().startsWith('ทั้งหมด'));
+      menu.classList.remove('open'); rnd(); syncCount();
+    }));
+  });
+  document.addEventListener('click', closeAll);
+
+  // segmented + chips (variant B)
+  document.querySelectorAll('[data-seg]').forEach(seg => seg.querySelectorAll('button').forEach(b =>
+    b.addEventListener('click', () => { seg.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); rnd(); syncCount(); })));
+  document.querySelectorAll('[data-chips]').forEach(w => w.querySelectorAll('.chip').forEach(c =>
+    c.addEventListener('click', () => { w.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); c.classList.add('on'); rnd(); syncCount(); })));
+
+  // active-count badges = fields not on "ทั้งหมด" in the visible body
+  function syncCount() {
+    const body = document.getElementById('bodyA').style.display !== 'none' ? '#bodyA' : '#bodyB';
+    let n = document.querySelectorAll(body + ' .sel.active').length;
+    document.querySelectorAll(body + ' .seg').forEach(s => { const on = s.querySelector('button.on'); if (on && !on.textContent.trim().startsWith('ทั้งหมด')) n++; });
+    document.querySelectorAll(body + ' [data-chips]').forEach(s => { const on = s.querySelector('.chip.on'); if (on && !on.textContent.trim().startsWith('ทั้งหมด')) n++; });
+    document.getElementById('headCnt').textContent = n;
+    document.getElementById('btnCnt').textContent = n;
+  }
+
+  // clear all
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.querySelectorAll('.sel').forEach(sel => {
+      const all = [...sel.querySelectorAll('.opt')].find(o => o.textContent.trim().startsWith('ทั้งหมด'));
+      if (!all) return;
+      sel.querySelectorAll('.opt').forEach(o => o.classList.remove('sel-on')); all.classList.add('sel-on');
+      sel.querySelector('.cur').innerHTML = all.innerHTML; sel.classList.remove('active');
+    });
+    document.querySelectorAll('[data-seg]').forEach(s => { s.querySelectorAll('button').forEach(x => x.classList.remove('on')); s.querySelector('button').classList.add('on'); });
+    document.querySelectorAll('[data-chips]').forEach(s => { s.querySelectorAll('.chip').forEach(x => x.classList.remove('on')); s.querySelector('.chip').classList.add('on'); });
+    rnd(); syncCount();
+  });
+
+  // variant switch
+  document.querySelectorAll('.vbtn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.vbtn').forEach(x => x.classList.remove('on')); b.classList.add('on');
+    const isA = b.dataset.v === 'a';
+    document.getElementById('bodyA').style.display = isA ? 'grid' : 'none';
+    document.getElementById('bodyB').style.display = isA ? 'none' : 'grid';
+    const p = document.getElementById('panel'); p.style.animation = 'none'; void p.offsetWidth; p.style.animation = '';
+    syncCount();
+  }));
+
+  syncCount();
+</script>
+
+<!-- ghost table for context -->
+<script>
+  const card = document.querySelector('.card');
+  const ghost = document.createElement('div'); ghost.className = 'ghost';
+  let rows = '<div class="row hrow">' + [70,90,150,110,90,80].map(w => `<div class="cell" style="width:${w}px"></div>`).join('') + '</div>';
+  for (let i = 0; i < 6; i++) rows += '<div class="row">' + [70,90,150,110,90,80].map(w => `<div class="cell" style="width:${w - 10 + ((i * 13) % 30)}px"></div>`).join('') + '</div>';
+  ghost.innerHTML = rows; card.appendChild(ghost);
+</script>
+</body>
+</html>
