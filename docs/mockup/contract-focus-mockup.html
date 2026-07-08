@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Contract · New / Edit — Focus Dialog Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Design tokens — mirrored from resources/css/app.css
+     ============================================================ */
+  :root{
+    --brand:#2563eb; --brand-700:#1d4ed8; --brand-foreground:#fff;
+    --bg:#fff; --canvas:#f6f8fb;
+    --fg:hsl(222,30%,12%); --muted:hsl(215,16%,47%); --muted-2:hsl(215,18%,62%);
+    --border:hsl(214,20%,90%); --border-soft:hsl(214,22%,93%); --input:hsl(214,20%,86%);
+    --accent:hsl(210,24%,95%); --destructive:hsl(0,72%,51%);
+    --radius:16px; --radius-sm:8px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow-dialog:0 32px 80px -20px rgba(16,24,40,.45), 0 0 0 1px rgba(16,24,40,.04);
+    --font:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:var(--canvas)}
+
+  /* ---------- Mockup chooser toolbar (NOT part of product) ---------- */
+  .chooser{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:11px 20px;background:rgba(11,18,32,.94);backdrop-filter:blur(8px);color:#e7ecf5;border-bottom:1px solid rgba(255,255,255,.08)}
+  .chooser .brandmark{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.01em;padding-right:14px;margin-right:2px;border-right:1px solid rgba(255,255,255,.12)}
+  .chooser .brandmark .dot{width:9px;height:9px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px rgba(37,99,235,.25)}
+  .chooser .label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#8b96ab;margin-right:-6px}
+  .seg{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:3px}
+  .seg button{appearance:none;border:0;background:transparent;color:#aeb8ca;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;padding:7px 14px;border-radius:7px;transition:.18s;white-space:nowrap}
+  .seg button:hover{color:#fff}
+  .seg button.active{background:var(--brand);color:#fff;box-shadow:0 4px 12px -3px rgba(37,99,235,.6)}
+  .chooser .hint{margin-left:auto;font-size:12px;color:#7e8aa1}
+
+  /* ---------- Faux app backdrop (dimmed behind the dialog) ---------- */
+  .appbg{position:fixed;inset:56px 0 0;overflow:hidden;background:var(--canvas)}
+  .appbg .sidebar{position:absolute;left:0;top:0;bottom:0;width:240px;background:#fff;border-right:1px solid var(--border)}
+  .appbg .topbar{position:absolute;left:240px;right:0;top:0;height:60px;background:#fff;border-bottom:1px solid var(--border)}
+  .appbg .content{position:absolute;left:272px;right:32px;top:96px;bottom:32px}
+  .appbg .skeleton{height:14px;border-radius:6px;background:#e9eef5;margin-bottom:14px}
+  .appbg .card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+  .appbg::after{content:"";position:absolute;inset:0;background:rgba(11,18,32,.46);backdrop-filter:blur(3px)}
+
+  /* ---------- Dialog scaffolding ---------- */
+  .overlay{position:fixed;inset:56px 0 0;z-index:100;display:none;align-items:center;justify-content:center;padding:30px}
+  .overlay.show{display:flex}
+  .dialog{position:relative;background:var(--bg);border-radius:var(--radius);box-shadow:var(--shadow-dialog);width:100%;display:flex;flex-direction:column;max-height:calc(100vh - 56px - 60px);animation:pop .32s cubic-bezier(.16,1,.3,1);overflow:hidden}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  /* dialog header */
+  .dlg-head{display:flex;align-items:center;gap:14px;padding:20px 24px;border-bottom:1px solid var(--border-soft)}
+  .dlg-head .ico{width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,.1);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex:none}
+  .dlg-head h2{margin:0;font-size:17px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+  .dlg-head h2 .code{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--brand-700);background:rgba(37,99,235,.08);padding:2px 8px;border-radius:6px}
+  .dlg-head p{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+  .dlg-head .x{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+  .dlg-head .x:hover{background:var(--accent);color:var(--fg)}
+
+  .dlg-body{flex:1;overflow:auto;padding:24px}
+  .dlg-foot{display:flex;align-items:center;gap:12px;padding:16px 24px;border-top:1px solid var(--border-soft);background:#fcfdff}
+
+  /* ---------- Form primitives ---------- */
+  .field-label{font-size:12.5px;font-weight:700;color:var(--fg);display:flex;align-items:center;gap:6px;margin-bottom:7px}
+  .field-label .req{color:var(--destructive)}
+  .field-help{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .inp,.sel{width:100%;height:42px;border:1.5px solid var(--input);border-radius:10px;background:#fff;padding:0 13px;font-family:var(--font);font-size:14px;color:var(--fg);outline:none;transition:border-color .15s,box-shadow .15s}
+  .inp::placeholder{color:var(--muted-2)}
+  .inp:focus,.sel:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+  .inp.mono{font-family:var(--mono)}
+  .sel{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .stack{display:flex;flex-direction:column;gap:18px}
+
+  .type-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+  .type-card{display:flex;flex-direction:column;align-items:center;gap:8px;border:1.5px solid var(--border);border-radius:11px;background:#fff;padding:13px 6px;cursor:pointer;transition:.16s;text-align:center}
+  .type-card svg{width:20px;height:20px;color:var(--muted);transition:.16s}
+  .type-card span{font-size:11.5px;font-weight:600;color:var(--fg);line-height:1.15}
+  .type-card:hover{border-color:var(--brand);background:#fafcff}
+  .type-card.active{border-color:var(--brand);background:rgba(37,99,235,.06);box-shadow:inset 0 0 0 1px var(--brand)}
+  .type-card.active svg{color:var(--brand)}
+  .type-card.active span{color:var(--brand-700)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{appearance:none;border:1.5px solid var(--border);background:#fff;color:var(--muted);font-family:var(--font);font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 13px;border-radius:999px;transition:.15s}
+  .chip:hover{border-color:var(--brand);color:var(--brand-700)}
+  .chip.on{border-color:var(--brand);background:rgba(37,99,235,.1);color:var(--brand-700)}
+
+  .switch{position:relative;width:40px;height:23px;border-radius:999px;border:0;background:var(--input);cursor:pointer;transition:.18s;flex:none}
+  .switch i{position:absolute;top:3px;left:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);transition:.18s}
+  .switch.on{background:var(--brand)}
+  .switch.on i{left:20px}
+
+  .picker{border:1.5px solid var(--border);border-radius:11px;overflow:hidden;background:#fff}
+  .picker .search{position:relative;border-bottom:1px solid var(--border-soft)}
+  .picker .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+  .picker .search input{width:100%;height:40px;border:0;outline:none;padding:0 12px 0 36px;font-family:var(--font);font-size:13.5px;background:transparent}
+  .picker .list{max-height:170px;overflow:auto}
+  .asset-row{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;border-bottom:1px solid var(--border-soft);padding:9px 13px;cursor:pointer;text-align:left;font-family:var(--font)}
+  .asset-row:last-child{border-bottom:0}
+  .asset-row:hover{background:var(--accent)}
+  .asset-row .box{width:17px;height:17px;border-radius:5px;border:1.6px solid var(--input);display:flex;align-items:center;justify-content:center;flex:none;color:#fff;transition:.14s}
+  .asset-row.sel .box{background:var(--brand);border-color:var(--brand)}
+  .asset-row .tag{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .asset-row .nm{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .asset-row .st{font-size:11px;color:var(--muted-2);text-transform:capitalize}
+  .picker .foot{border-top:1px solid var(--border-soft);padding:7px 13px;font-size:12px;color:var(--muted);background:#fcfdff}
+
+  .att{display:flex;align-items:center;gap:10px;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;background:#fff}
+  .att .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .att .sz{font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .att .x{border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;padding:3px;border-radius:6px}
+  .att .x:hover{color:var(--destructive);background:var(--accent)}
+  .dropzone{display:flex;flex-direction:column;align-items:center;gap:5px;border:1.6px dashed var(--input);border-radius:11px;padding:16px;color:var(--muted);font-size:13px;cursor:pointer;transition:.15s}
+  .dropzone:hover{border-color:var(--brand);color:var(--brand-700);background:#fafcff}
+
+  .btn{appearance:none;border:0;font-family:var(--font);font-weight:700;font-size:14px;cursor:pointer;border-radius:10px;padding:0 18px;height:42px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.16s}
+  .btn-primary{background:var(--brand);color:#fff;box-shadow:0 8px 18px -6px rgba(37,99,235,.5)}
+  .btn-primary:hover{background:var(--brand-700)}
+  .btn-ghost{background:#fff;color:var(--fg);border:1.5px solid var(--border)}
+  .btn-ghost:hover{background:var(--accent)}
+
+  .section-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);display:flex;align-items:center;gap:8px;margin:4px 0 2px}
+  .section-label::after{content:"";flex:1;height:1px;background:var(--border-soft)}
+
+  /* ============================================================
+     VARIANT A — Single focus dialog (compact, scrollable)
+     ============================================================ */
+  #dlgA .dialog{max-width:600px}
+
+  /* ============================================================
+     VARIANT B — Stepped dialog (rail inside the box)
+     ============================================================ */
+  /* Fixed height so the box doesn't jump between steps — only the body scrolls */
+  #dlgB .dialog{max-width:1100px;height:min(860px,calc(100vh - 72px))}
+  /* Header: icon + title + close */
+  .vb-head{display:flex;align-items:center;gap:13px;padding:18px 22px 16px}
+  .vb-head .ico{width:40px;height:40px;border-radius:11px;background:rgba(37,99,235,.1);color:var(--brand-700);display:flex;align-items:center;justify-content:center;flex:none}
+  .vb-head .eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);font-weight:700}
+  .vb-head h3{font-size:17px;font-weight:800;letter-spacing:-.01em;margin:1px 0 0;color:var(--fg);display:flex;align-items:center;gap:9px}
+  .vb-head h3 .code{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--brand-700);background:rgba(37,99,235,.08);padding:2px 8px;border-radius:6px}
+  .vb-head .x{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+  .vb-head .x:hover{background:var(--accent);color:var(--fg)}
+  /* Horizontal stepper across the top */
+  .vb-steps{display:flex;align-items:flex-start;padding:4px 26px 18px;border-bottom:1px solid var(--border-soft)}
+  .vb-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;position:relative;text-align:center;min-width:0}
+  .vb-step .num{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--input);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);background:#fff;transition:.15s;z-index:1}
+  .vb-step .tx{font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.25;transition:.15s}
+  .vb-step .tx small{display:none}
+  .vb-step:not(:last-child)::after{content:"";position:absolute;top:13px;left:calc(50% + 17px);right:calc(-50% + 17px);height:2px;background:var(--border);border-radius:2px}
+  .vb-step.active .num{background:var(--brand);border-color:var(--brand);color:#fff}
+  .vb-step.active .tx{color:var(--brand-700);font-weight:700}
+  .vb-step.done .num{background:rgba(37,99,235,.1);border-color:rgba(37,99,235,.4);color:var(--brand-700)}
+  .vb-step.done .tx{color:var(--fg)}
+  .vb-step.done::after{background:var(--brand)}
+  /* Body */
+  .vb-body{flex:1;overflow:auto;padding:26px 26px 8px}
+  .vbpane{display:none;animation:rise .32s cubic-bezier(.16,1,.3,1)}
+  .vbpane.show{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .vbpane .eye{font-size:11.5px;font-weight:700;color:var(--brand-700);letter-spacing:.04em;text-transform:uppercase}
+  .vbpane h1{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:7px 0 5px}
+  .vbpane .lead{font-size:13.5px;color:var(--muted);margin:0 0 22px;line-height:1.55}
+  .vb-foot{display:flex;align-items:center;gap:12px;padding:14px 22px;border-top:1px solid var(--border-soft);background:#fcfdff}
+  .vb-foot .dots{display:flex;gap:6px;margin:0 auto}
+  .vb-foot .dots i{width:7px;height:7px;border-radius:50%;background:var(--border);transition:.2s}
+  .vb-foot .dots i.on{background:var(--brand);width:20px;border-radius:999px}
+
+  /* review block — plain, theme-matched card */
+  .review{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
+  .review .rhead{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:14px 16px;border-bottom:1px solid var(--border-soft)}
+  .review .rhead > div:last-child{text-align:right}
+  .review .rhead .lbl{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted-2);margin-bottom:3px}
+  .review .rhead .code{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--fg)}
+  .review .rhead .tt{font-size:13.5px;font-weight:600;color:var(--fg)}
+  .review .rrow{display:flex;justify-content:space-between;gap:12px;padding:8px 16px;font-size:13px}
+  .review .rrow:nth-child(even){background:#fafbfd}
+  .review .rrow .k{color:var(--muted)}
+  .review .rrow .v{font-weight:600;text-align:right;color:var(--fg)}
+  .review .rrow .v.mono{font-family:var(--mono)}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ============ Mockup chooser ============ -->
+<div class="chooser">
+  <div class="brandmark"><span class="dot"></span> IT Service Desk</div>
+  <span class="label">Mockup</span>
+  <div class="seg" id="variantSeg">
+    <button data-variant="A" class="active">Variant A · Focus Dialog</button>
+    <button data-variant="B">Variant B · Stepped Dialog</button>
+  </div>
+  <div class="seg" id="modeSeg">
+    <button data-mode="new" class="active">New</button>
+    <button data-mode="edit">Edit</button>
+  </div>
+  <span class="hint">Focus dialog box · เปิดทับหน้าจอแบบ modal</span>
+</div>
+
+<!-- ============ Faux dimmed app behind the dialog ============ -->
+<div class="appbg">
+  <div class="sidebar"></div>
+  <div class="topbar"></div>
+  <div class="content">
+    <div class="card"><div class="skeleton" style="width:30%"></div><div class="skeleton" style="width:80%"></div><div class="skeleton" style="width:60%;margin-bottom:0"></div></div>
+    <div class="card"><div class="skeleton" style="width:24%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:70%;margin-bottom:0"></div></div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- VARIANT A — Single focus dialog                                         -->
+<!-- ====================================================================== -->
+<div class="overlay show" id="dlgA">
+  <div class="dialog">
+    <div class="dlg-head">
+      <div class="ico">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      </div>
+      <div>
+        <h2><span class="a-title">เพิ่มสัญญาใหม่</span> <span class="code a-code" style="display:none"></span></h2>
+        <p class="a-sub">กรอกข้อมูลสัญญา ระบบจะแจ้งเตือนล่วงหน้าก่อนหมดอายุ</p>
+      </div>
+      <button class="x"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <div class="dlg-body">
+      <div class="stack">
+        <div>
+          <div class="field-label">ประเภทสัญญา <span class="req">*</span></div>
+          <div class="type-grid" data-typegrid>
+            <button class="type-card active" data-type="software"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span>Software</span></button>
+            <button class="type-card" data-type="hardware"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Hardware</span></button>
+            <button class="type-card" data-type="service"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.61.79 1 1.41 1H21a2 2 0 1 1 0 4h-.09c-.62 0-1.21.39-1.41 1z"/></svg><span>Service</span></button>
+            <button class="type-card" data-type="connectivity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><span>Connectivity</span></button>
+            <button class="type-card" data-type="other"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12"/></svg><span>Other</span></button>
+          </div>
+        </div>
+
+        <div class="section-label">ข้อมูลสัญญา</div>
+        <div>
+          <div class="field-label">รหัสสัญญา <span class="req">*</span></div>
+          <input class="inp mono" data-bind="code" placeholder="CT-2026-001" />
+          <div class="field-help">ใช้เป็นรหัสอ้างอิงภายใน เช่น CT-2026-001</div>
+        </div>
+        <div>
+          <div class="field-label">หัวข้อสัญญา <span class="req">*</span></div>
+          <input class="inp" data-bind="title" placeholder="เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี" />
+        </div>
+        <div class="row2">
+          <div>
+            <div class="field-label">ผู้จำหน่าย <span class="req">*</span></div>
+            <select class="sel" data-bind="vendor"><option value="">เลือกผู้จำหน่าย</option><option>Microsoft (Thailand)</option><option>Cisco Systems</option><option>Dell Technologies</option><option>AIS Business</option><option>True Corporation</option></select>
+          </div>
+          <div>
+            <div class="field-label">ชื่อรายการ <span class="req">*</span></div>
+            <input class="inp" data-bind="name" placeholder="Microsoft 365 — 320 สิทธิ์" />
+          </div>
+        </div>
+
+        <div class="section-label">ระยะเวลาและมูลค่า</div>
+        <div class="row2">
+          <div><div class="field-label">วันเริ่มสัญญา <span class="req">*</span></div><input class="inp mono" type="date" data-bind="start" /></div>
+          <div><div class="field-label">วันสิ้นสุดสัญญา <span class="req">*</span></div><input class="inp mono" type="date" data-bind="end" /></div>
+        </div>
+        <div class="row2">
+          <div><div class="field-label">มูลค่าสัญญา (฿) <span class="req">*</span></div><input class="inp mono" data-bind="value" placeholder="2,140,000" inputmode="numeric" /></div>
+          <div><div class="field-label">รอบการเรียกเก็บ</div><select class="sel" data-bind="billing"><option value="monthly">รายเดือน</option><option value="quarterly">รายไตรมาส</option><option value="yearly" selected>รายปี</option></select></div>
+        </div>
+        <div>
+          <div class="field-label">การต่ออายุอัตโนมัติ</div>
+          <label style="display:flex;align-items:center;gap:11px;height:28px;font-size:13px;color:var(--muted);cursor:pointer">
+            <button class="switch" data-switch="ar" type="button"><i></i></button>
+            <span data-switch-label="ar">ต้องต่ออายุด้วยตนเอง</span>
+          </label>
+        </div>
+
+        <div class="section-label">แจ้งเตือนก่อนหมดอายุ <span style="text-transform:none;font-weight:600;letter-spacing:0;color:var(--muted-2)">— เลือกอย่างน้อย 1</span></div>
+        <div class="chips" data-chips>
+          <button class="chip" data-chip="150">150 วัน</button><button class="chip" data-chip="120">120 วัน</button><button class="chip" data-chip="90">90 วัน</button><button class="chip on" data-chip="60">60 วัน</button><button class="chip" data-chip="45">45 วัน</button><button class="chip on" data-chip="30">30 วัน</button><button class="chip on" data-chip="7">7 วัน</button>
+        </div>
+
+        <div data-assets-section style="display:none">
+          <div class="section-label" style="margin-bottom:10px">เชื่อมโยงทรัพย์สิน</div>
+          <div class="picker">
+            <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="ค้นหา tag / ชื่อ" /></div>
+            <div class="list">
+              <button class="asset-row sel"><span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="tag">PRT-0142</span><span class="nm">HP LaserJet M610 — ชั้น 3</span><span class="st">in use</span></button>
+              <button class="asset-row"><span class="box"></span><span class="tag">PRT-0143</span><span class="nm">HP LaserJet M610 — ชั้น 4</span><span class="st">in use</span></button>
+              <button class="asset-row"><span class="box"></span><span class="tag">SW-0090</span><span class="nm">Cisco Catalyst 9300 — Core</span><span class="st">in use</span></button>
+            </div>
+            <div class="foot"><span data-asset-count>เลือกแล้ว 1 รายการ</span></div>
+          </div>
+        </div>
+
+        <div class="section-label">เอกสารแนบ <span style="text-transform:none;font-weight:600;letter-spacing:0;color:var(--muted-2)">— PDF · สูงสุด 10 ไฟล์</span></div>
+        <div class="stack" style="gap:9px">
+          <div class="att" data-edit-only style="display:none">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            <span class="nm">contract-signed-2026.pdf</span><span class="sz">1.4 MB</span>
+            <button class="x"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <label class="dropzone"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>คลิกเพื่อแนบไฟล์ PDF</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <button class="btn btn-ghost" style="flex:1">ยกเลิก</button>
+      <button class="btn btn-primary" style="flex:1">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="a-save">บันทึกสัญญา</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================================================================== -->
+<!-- VARIANT B — Stepped dialog                                              -->
+<!-- ====================================================================== -->
+<div class="overlay" id="dlgB">
+  <div class="dialog">
+      <div class="vb-head">
+        <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg></div>
+        <div>
+          <div class="eyebrow b-eyebrow">New Contract</div>
+          <h3><span class="b-title">สร้างสัญญาใหม่</span> <span class="code b-code" style="display:none"></span></h3>
+        </div>
+        <button class="x"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+
+      <div class="vb-steps" data-vbsteps>
+        <div class="vb-step active" data-step="0"><span class="num">1</span><span class="tx">ประเภท</span></div>
+        <div class="vb-step" data-step="1"><span class="num">2</span><span class="tx">ข้อมูลสัญญา</span></div>
+        <div class="vb-step" data-step="2"><span class="num">3</span><span class="tx">ระยะเวลา &amp; มูลค่า</span></div>
+        <div class="vb-step" data-step="3"><span class="num">4</span><span class="tx">แจ้งเตือน</span></div>
+        <div class="vb-step" data-step="4"><span class="num">5</span><span class="tx">เชื่อมโยงทรัพย์สิน</span></div>
+        <div class="vb-step" data-step="5"><span class="num">6</span><span class="tx">ตรวจสอบ</span></div>
+      </div>
+
+      <div class="vb-body">
+          <!-- Step 1 -->
+          <div class="vbpane show" data-pane="0">
+            <div class="eye">ขั้นที่ 1</div><h1>นี่คือสัญญาประเภทใด?</h1>
+            <p class="lead">เลือกหมวดหมู่ เพื่อให้ระบบแสดงเฉพาะฟิลด์ที่จำเป็น</p>
+            <div class="type-grid" data-typegrid style="grid-template-columns:repeat(5,1fr);gap:12px">
+              <button class="type-card active" data-type="software" style="padding:20px 10px;gap:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span style="font-size:13px">Software<small style="display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px">License / SaaS</small></span></button>
+              <button class="type-card" data-type="hardware" style="padding:20px 10px;gap:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span style="font-size:13px">Hardware<small style="display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px">เช่า / บำรุงรักษา</small></span></button>
+              <button class="type-card" data-type="service" style="padding:20px 10px;gap:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.61.79 1 1.41 1H21a2 2 0 1 1 0 4h-.09c-.62 0-1.21.39-1.41 1z"/></svg><span style="font-size:13px">Service<small style="display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px">บริการ / สนับสนุน</small></span></button>
+              <button class="type-card" data-type="connectivity" style="padding:20px 10px;gap:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><span style="font-size:13px">Connectivity<small style="display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px">อินเทอร์เน็ต / วงจร</small></span></button>
+              <button class="type-card" data-type="other" style="padding:20px 10px;gap:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12"/></svg><span style="font-size:13px">Other<small style="display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:3px">อื่น ๆ</small></span></button>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="vbpane" data-pane="1">
+            <div class="eye">ขั้นที่ 2</div><h1>ข้อมูลสัญญา</h1>
+            <p class="lead">ระบุรหัสอ้างอิง หัวข้อ ผู้จำหน่าย ชื่อรายการ และแนบเอกสารสัญญา</p>
+            <div class="stack">
+              <div><div class="field-label">รหัสสัญญา <span class="req">*</span></div><input class="inp mono" data-bind="code" placeholder="CT-2026-001" /><div class="field-help">ใช้เป็นรหัสอ้างอิงภายใน</div></div>
+              <div><div class="field-label">หัวข้อสัญญา <span class="req">*</span></div><input class="inp" data-bind="title" placeholder="เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี" /></div>
+              <div><div class="field-label">ผู้จำหน่าย <span class="req">*</span></div><select class="sel" data-bind="vendor"><option value="">เลือกผู้จำหน่าย</option><option>Microsoft (Thailand)</option><option>Cisco Systems</option><option>Dell Technologies</option><option>AIS Business</option><option>True Corporation</option></select></div>
+              <div><div class="field-label">ชื่อรายการ <span class="req">*</span></div><input class="inp" data-bind="name" placeholder="Microsoft 365 — 320 สิทธิ์" /></div>
+              <div>
+                <div class="field-label">เอกสารแนบ <span style="font-weight:500;color:var(--muted-2)">— PDF · สูงสุด 10 ไฟล์</span></div>
+                <div class="stack" style="gap:9px">
+                  <div class="att" data-edit-only style="display:none">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                    <span class="nm">contract-signed-2026.pdf</span><span class="sz">1.4 MB</span>
+                    <button class="x"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  </div>
+                  <label class="dropzone"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>คลิกเพื่อแนบไฟล์ PDF</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="vbpane" data-pane="2">
+            <div class="eye">ขั้นที่ 3</div><h1>ระยะเวลาและมูลค่า</h1>
+            <p class="lead">กำหนดวันเริ่ม–สิ้นสุด มูลค่า และรอบการเรียกเก็บ</p>
+            <div class="stack">
+              <div class="row2"><div><div class="field-label">วันเริ่มสัญญา <span class="req">*</span></div><input class="inp mono" type="date" data-bind="start" /></div><div><div class="field-label">วันสิ้นสุดสัญญา <span class="req">*</span></div><input class="inp mono" type="date" data-bind="end" /></div></div>
+              <div class="row2"><div><div class="field-label">มูลค่าสัญญา (฿) <span class="req">*</span></div><input class="inp mono" data-bind="value" placeholder="2,140,000" inputmode="numeric" /></div><div><div class="field-label">รอบการเรียกเก็บ</div><select class="sel" data-bind="billing"><option value="monthly">รายเดือน</option><option value="quarterly">รายไตรมาส</option><option value="yearly" selected>รายปี</option></select></div></div>
+              <div><div class="field-label">การต่ออายุอัตโนมัติ</div><label style="display:flex;align-items:center;gap:11px;height:28px;font-size:13px;color:var(--muted);cursor:pointer"><button class="switch" data-switch="ar2" type="button"><i></i></button><span data-switch-label="ar2">ต้องต่ออายุด้วยตนเอง</span></label></div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="vbpane" data-pane="3">
+            <div class="eye">ขั้นที่ 4</div><h1>แจ้งเตือนก่อนหมดอายุ</h1>
+            <p class="lead">เลือกอย่างน้อย 1 ช่วง ระบบจะส่งอีเมลและแจ้งเตือนในระบบ</p>
+            <div class="chips" data-chips style="gap:10px">
+              <button class="chip" data-chip="150">150 วัน</button><button class="chip" data-chip="120">120 วัน</button><button class="chip" data-chip="90">90 วัน</button><button class="chip on" data-chip="60">60 วัน</button><button class="chip" data-chip="45">45 วัน</button><button class="chip on" data-chip="30">30 วัน</button><button class="chip on" data-chip="7">7 วัน</button>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="vbpane" data-pane="4">
+            <div class="eye">ขั้นที่ 5</div><h1>เชื่อมโยงทรัพย์สิน</h1>
+            <p class="lead">ผูกสัญญานี้กับ asset ที่เกี่ยวข้อง — รองรับเฉพาะ hardware / connectivity / other</p>
+            <div class="stack">
+              <div data-no-assets style="display:none">
+                <div class="att" style="border-style:dashed;color:var(--muted);justify-content:center;background:#fafbfd">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                  สัญญาประเภทนี้ไม่ต้องผูกทรัพย์สิน — ข้ามไปขั้นถัดไปได้เลย
+                </div>
+              </div>
+              <div data-assets-section style="display:none">
+                <div class="field-label">เลือกทรัพย์สินที่จะผูก</div>
+                <div class="picker">
+                  <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="ค้นหา tag / ชื่อ" /></div>
+                  <div class="list">
+                    <button class="asset-row sel"><span class="box"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span><span class="tag">PRT-0142</span><span class="nm">HP LaserJet M610 — ชั้น 3</span><span class="st">in use</span></button>
+                    <button class="asset-row"><span class="box"></span><span class="tag">PRT-0143</span><span class="nm">HP LaserJet M610 — ชั้น 4</span><span class="st">in use</span></button>
+                    <button class="asset-row"><span class="box"></span><span class="tag">SW-0090</span><span class="nm">Cisco Catalyst 9300 — Core</span><span class="st">in use</span></button>
+                  </div>
+                  <div class="foot"><span data-asset-count>เลือกแล้ว 1 รายการ</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 6 -->
+          <div class="vbpane" data-pane="5">
+            <div class="eye">ขั้นที่ 6</div><h1>ตรวจสอบก่อนบันทึก</h1>
+            <p class="lead">ตรวจสอบความถูกต้อง แก้ไขขั้นใดก็ได้จากแถบด้านซ้าย</p>
+            <div class="review">
+              <div class="rhead"><div><div class="lbl">Contract No</div><div class="code b-rev-code">CT-2026-001</div></div><div><div class="lbl">Contract name</div><div class="tt b-rev-title">Microsoft 365 — 320 สิทธิ์</div></div></div>
+              <div class="rrow"><span class="k">ประเภท</span><span class="v b-rev-type">Software</span></div>
+              <div class="rrow"><span class="k">ผู้จำหน่าย</span><span class="v b-rev-vendor">Microsoft (Thailand)</span></div>
+              <div class="rrow"><span class="k">ระยะเวลา</span><span class="v mono b-rev-term">2026-01-01 → 2026-12-31</span></div>
+              <div class="rrow"><span class="k">มูลค่า</span><span class="v mono b-rev-value">฿2,140,000 · รายปี</span></div>
+              <div class="rrow"><span class="k">แจ้งเตือน</span><span class="v b-rev-notify">60 · 30 · 7 วัน</span></div>
+              <div class="rrow"><span class="k">เอกสารแนบ</span><span class="v b-rev-files">1 ไฟล์</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vb-foot">
+          <button class="btn btn-ghost" data-vbback><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>ย้อนกลับ</button>
+          <div class="dots" data-vbdots><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+          <button class="btn btn-primary" data-vbnext><span>ถัดไป</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+  </div>
+</div>
+
+<script>
+const SAMPLE_EDIT={code:'CT-2026-014',title:'สัญญาเช่าเครื่องพิมพ์ HP ประจำปี',vendor:'Dell Technologies',name:'HP LaserJet M610 — 8 เครื่อง',start:'2026-01-01',end:'2026-12-31',value:'480000',type:'hardware'};
+const TYPE_LABEL={software:'Software',hardware:'Hardware',service:'Service',connectivity:'Connectivity',other:'Other'};
+const ASSET_LINKABLE=['hardware','connectivity','other'];
+let variant='A',mode='new';
+
+document.querySelectorAll('#variantSeg button').forEach(b=>{b.onclick=()=>{document.querySelectorAll('#variantSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');variant=b.dataset.variant;document.getElementById('dlgA').classList.toggle('show',variant==='A');document.getElementById('dlgB').classList.toggle('show',variant==='B');};});
+document.querySelectorAll('#modeSeg button').forEach(b=>{b.onclick=()=>{document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');mode=b.dataset.mode;applyMode();};});
+
+function selectType(t){document.querySelectorAll('[data-typegrid] .type-card').forEach(c=>c.classList.toggle('active',c.dataset.type===t));const link=ASSET_LINKABLE.includes(t);document.querySelectorAll('[data-assets-section]').forEach(s=>s.style.display=link?'block':'none');document.querySelectorAll('[data-no-assets]').forEach(s=>s.style.display=link?'none':'block');}
+document.querySelectorAll('[data-typegrid] .type-card').forEach(c=>c.addEventListener('click',()=>selectType(c.dataset.type)));
+document.querySelectorAll('[data-chips] .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+document.querySelectorAll('[data-switch]').forEach(sw=>sw.addEventListener('click',()=>{sw.classList.toggle('on');const lbl=document.querySelector(`[data-switch-label="${sw.dataset.switch}"]`);if(lbl)lbl.textContent=sw.classList.contains('on')?'ต่ออายุอัตโนมัติ':'ต้องต่ออายุด้วยตนเอง';}));
+document.querySelectorAll('.asset-row').forEach(r=>r.addEventListener('click',()=>{r.classList.toggle('sel');r.querySelector('.box').innerHTML=r.classList.contains('sel')?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>':'';const p=r.closest('.picker');p.querySelector('[data-asset-count]').textContent='เลือกแล้ว '+p.querySelectorAll('.asset-row.sel').length+' รายการ';}));
+
+function fmtMoney(v){const n=Number(String(v).replace(/[^\d]/g,''));return n?('฿'+n.toLocaleString()):'฿0';}
+
+/* Stepped dialog nav */
+let step=0;const TOTAL=6;
+function goStep(n){step=Math.max(0,Math.min(TOTAL-1,n));document.querySelectorAll('#dlgB .vbpane').forEach(p=>p.classList.toggle('show',+p.dataset.pane===step));document.querySelectorAll('#dlgB .vb-step').forEach(s=>{const i=+s.dataset.step;s.classList.toggle('active',i===step);s.classList.toggle('done',i<step);});document.querySelectorAll('#dlgB [data-vbdots] i').forEach((d,i)=>d.classList.toggle('on',i===step));document.querySelector('[data-vbback]').style.visibility=step===0?'hidden':'visible';document.querySelector('[data-vbnext] span').textContent=step===TOTAL-1?(mode==='edit'?'บันทึกการแก้ไข':'บันทึกสัญญา'):'ถัดไป';}
+document.querySelector('[data-vbnext]').onclick=()=>{if(step<TOTAL-1)goStep(step+1);};
+document.querySelector('[data-vbback]').onclick=()=>goStep(step-1);
+document.querySelectorAll('#dlgB .vb-step').forEach(s=>s.addEventListener('click',()=>goStep(+s.dataset.step)));
+
+function setBinds(scopeSel,data){const scope=document.querySelector(scopeSel);if(!scope)return;['code','title','vendor','name','start','end','value'].forEach(k=>{const el=scope.querySelector(`[data-bind="${k}"]`);if(el)el.value=data?(data[k]??''):'';});}
+function applyMode(){
+  const editing=mode==='edit',data=editing?SAMPLE_EDIT:null;
+  // Variant A
+  document.querySelector('.a-title').textContent=editing?'แก้ไขสัญญา':'เพิ่มสัญญาใหม่';
+  const aCode=document.querySelector('.a-code');aCode.style.display=editing?'inline-block':'none';aCode.textContent=editing?SAMPLE_EDIT.code:'';
+  document.querySelector('.a-sub').textContent=editing?'ปรับปรุงรายละเอียดสัญญา การเปลี่ยนแปลงมีผลทันทีหลังบันทึก':'กรอกข้อมูลสัญญา ระบบจะแจ้งเตือนล่วงหน้าก่อนหมดอายุ';
+  document.querySelector('.a-save').textContent=editing?'บันทึกการแก้ไข':'บันทึกสัญญา';
+  document.querySelectorAll('[data-edit-only]').forEach(e=>e.style.display=editing?'flex':'none');
+  // Variant B
+  document.querySelector('.b-eyebrow').textContent=editing?'Edit Contract':'New Contract';
+  document.querySelector('.b-title').textContent=editing?'แก้ไขสัญญา':'สร้างสัญญาใหม่';
+  const bCode=document.querySelector('.b-code');bCode.style.display=editing?'inline-block':'none';bCode.textContent=editing?SAMPLE_EDIT.code:'';
+  setBinds('#dlgA',data);setBinds('#dlgB',data);selectType(editing?SAMPLE_EDIT.type:'software');
+  if(editing){document.querySelector('.b-rev-code').textContent=SAMPLE_EDIT.code;document.querySelector('.b-rev-title').textContent=SAMPLE_EDIT.name;document.querySelector('.b-rev-type').textContent=TYPE_LABEL[SAMPLE_EDIT.type];document.querySelector('.b-rev-vendor').textContent=SAMPLE_EDIT.vendor;document.querySelector('.b-rev-term').textContent=SAMPLE_EDIT.start+' → '+SAMPLE_EDIT.end;document.querySelector('.b-rev-value').textContent=fmtMoney(SAMPLE_EDIT.value)+' · รายปี';}
+  goStep(0);
+}
+applyMode();
+</script>
+</body>
+</html>
