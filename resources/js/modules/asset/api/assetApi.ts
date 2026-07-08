@@ -35,6 +35,14 @@ export interface AssetPayload {
     notes?: string | null;
 }
 
+export interface AssetTransferPayload {
+    mode: 'employee' | 'shared';
+    owner_employee_id?: number;
+    owner_label?: string;
+    location_id: number;
+    reason?: string;
+}
+
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
     const { data } = await http.request<ApiEnvelope<T>>({ method, url, data: body });
@@ -57,8 +65,7 @@ export const assetApi = {
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
     update: (id: number, payload: AssetPayload) => mutate<Asset>('put', `/assets/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/assets/${id}`),
-    transfer: (id: number, owner: string, locationId: number, reason?: string) =>
-        mutate<Asset>('post', `/assets/${id}/transfer`, { owner, location_id: locationId, reason }),
+    transfer: (id: number, payload: AssetTransferPayload) => mutate<Asset>('post', `/assets/${id}/transfer`, payload),
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
     requestReturn: (id: number, reason?: string) => mutate<Asset>('post', `/assets/${id}/request-return`, reason ? { reason } : {}),
     receive: (id: number, warehouse?: string) => mutate<Asset>('post', `/assets/${id}/receive`, warehouse ? { warehouse } : {}),

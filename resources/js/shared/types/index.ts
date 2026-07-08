@@ -235,6 +235,9 @@ export interface Asset {
     source: AssetSource;
     status: AssetStatus;
     owner: string | null;
+    owner_employee_id: number | null;
+    /** Display name of the holder: employee full name, shared label, or null (pool). */
+    owner_name: string | null;
     initial_owner: string | null;
     department: string | null;
     location: string | null;

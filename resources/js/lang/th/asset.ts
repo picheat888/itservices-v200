@@ -103,4 +103,11 @@ export const asset: Dict = {
     "asset_type_server": "เซิร์ฟเวอร์",
     "asset_type_network": "อุปกรณ์เครือข่าย",
     "asset_type_other": "อื่นๆ",
+    "asset_current_owner": "ผู้ถือครองปัจจุบัน",
+    "transfer_mode_employee": "พนักงาน",
+    "transfer_mode_shared": "ของกลาง",
+    "transfer_pick_employee": "เลือกพนักงาน",
+    "transfer_shared_label": "ชื่อเรียกของกลาง",
+    "transfer_shared_label_ph": "เช่น Rack 2, เครื่องพิมพ์ส่วนกลาง HR",
+    "asset_transfer_failed": "โอนไม่สำเร็จ",
 };

@@ -1,4 +1,4 @@
-import { assetApi, type AssetPayload } from '../api/assetApi';
+import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ASSETS = ['assets'] as const;
@@ -107,8 +107,7 @@ export function useAssetMutations() {
         }),
         remove: useMutation({ mutationFn: (id: number) => assetApi.remove(id), onSuccess: invalidate }),
         transfer: useMutation({
-            mutationFn: (v: { id: number; owner: string; locationId: number; reason?: string }) =>
-                assetApi.transfer(v.id, v.owner, v.locationId, v.reason),
+            mutationFn: (v: { id: number; payload: AssetTransferPayload }) => assetApi.transfer(v.id, v.payload),
             onSuccess: invalidate,
         }),
         accept: useMutation({ mutationFn: (id: number) => assetApi.accept(id), onSuccess: invalidate }),
