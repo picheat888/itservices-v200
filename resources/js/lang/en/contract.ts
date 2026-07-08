@@ -65,4 +65,9 @@ export const contract: Dict = {
     "contract_action_queue": "Action queue",
     "contract_none": "No contracts yet",
     "contract_delete_confirm": "Delete this contract?",
+    "contract_cancel_confirm_title": "Cancel this contract?",
+    "contract_cancel_reason": "Reason for cancellation",
+    "contract_cancel_reason_ph": "e.g. Vendor no longer used, replaced by a new contract…",
+    "contract_cancel_reason_required": "Please provide a reason",
+    "contract_cancel_failed": "Cancellation failed",
 };

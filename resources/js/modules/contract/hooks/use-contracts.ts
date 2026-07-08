@@ -55,7 +55,7 @@ export function useContractMutations() {
             mutationFn: (v: { id: number; payload: ContractPayload }) => contractApi.update(v.id, v.payload),
             onSuccess: invalidate,
         }),
-        cancel: useMutation({ mutationFn: (id: number) => contractApi.cancel(id), onSuccess: invalidate }),
+        cancel: useMutation({ mutationFn: (v: { id: number; reason?: string }) => contractApi.cancel(v.id, v.reason), onSuccess: invalidate }),
         expire: useMutation({ mutationFn: (id: number) => contractApi.expire(id), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => contractApi.remove(id), onSuccess: invalidate }),
         import: useMutation({ mutationFn: (file: File) => contractApi.import(file), onSuccess: invalidate }),
