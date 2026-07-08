@@ -206,6 +206,8 @@ class AssetService
         $asset->update([
             'status' => AssetStatus::Ready,
             'owner' => null,
+            // Back in the pool → no employee holds it (clears the write-off block).
+            'owner_employee_id' => null,
             // No holder in the pool → no possession date.
             'owned_since' => null,
             'warehouse_id' => Warehouse::resolveId($destName),

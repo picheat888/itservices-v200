@@ -60,7 +60,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse'])->latest('id');
+        $query = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee'])->latest('id');
 
         if ($request->filled('search')) {
             $q = '%'.$request->query('search').'%';
@@ -135,18 +135,22 @@ class AssetController extends Controller
     }
 
     /**
-     * Assets assigned to the authenticated user (matched by their employee code).
+     * Assets assigned to the authenticated user (matched by owner_employee_id).
      * Employee self-service — no assets.view needed, only a linked employee record.
      */
     public function mine(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.my'), 403);
-        $code = $request->user()?->linkedEmployee()?->code;
-        if ($code === null) {
+        $employee = $request->user()?->linkedEmployee();
+        if ($employee === null) {
             return response()->json(['data' => []]);
         }
 
-        $assets = Asset::query()->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse'])->where('owner', $code)->latest('id')->get();
+        $assets = Asset::query()
+            ->with(['contract', 'location', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee'])
+            ->where('owner_employee_id', $employee->id)
+            ->latest('id')
+            ->get();
 
         return response()->json(['data' => AssetResource::collection($assets)]);
     }
@@ -183,7 +187,7 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse']);
+        $asset->load(['contract', 'transfers', 'tickets.assignee', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee']);
 
         return (new AssetResource($asset))->response();
     }
@@ -229,12 +233,12 @@ class AssetController extends Controller
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
 
-    /** Recipient accepts a pending-acceptance asset (requires assets.transfer). */
+    /** Recipient accepts a pending-acceptance asset (only the employee who holds it). */
     public function accept(Request $request, Asset $asset): JsonResponse
     {
         // Only the recipient may confirm receipt — IT can hand over but not accept on their behalf.
-        $code = $request->user()?->linkedEmployee()?->code;
-        abort_unless($code !== null && $code === $asset->owner, 403);
+        $employeeId = $request->user()?->linkedEmployee()?->id;
+        abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id, 403);
         $asset = $this->service->accept($asset);
         AuditLog::record('Accepted asset', $asset->tag);
 
@@ -243,12 +247,12 @@ class AssetController extends Controller
 
     /**
      * Holder requests to return an asset they currently hold: deployed → pending return.
-     * Only the current holder (matched by employee code) may request it.
+     * Only the current holder (matched by owner_employee_id) may request it.
      */
     public function requestReturn(Request $request, Asset $asset): JsonResponse
     {
-        $code = $request->user()?->linkedEmployee()?->code;
-        abort_unless($code !== null && $code === $asset->owner && $asset->status === AssetStatus::Deployed, 403);
+        $employeeId = $request->user()?->linkedEmployee()?->id;
+        abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);
         $asset = $this->service->requestReturn($asset, $data['reason'] ?? null);
         AuditLog::record('Requested asset return', $asset->tag);
