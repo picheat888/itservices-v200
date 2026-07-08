@@ -1046,3 +1046,19 @@ plan: `docs/superpowers/plans/2026-07-07-phase6-warehouses-fk.md`
 - **ตัด `auto_renew`** ออกทั้งระบบ — drop คอลัมน์ + ฟอร์ม + import template + i18n hint ไม่มีการต่ออายุอัตโนมัติอีกต่อไป (ต่ออายุทำผ่าน action Renew เท่านั้น)
 - **Alert เตือนหมดอายุ relabel เป็น "overdue"** — เทมเพลตอีเมล `contract.expired_alert` (คีย์เดิม, wording ใหม่) และ `ContractExpiryAlertService` เปลี่ยนไปไม่แจ้งเตือนสัญญาที่ถูก admin สั่ง expired ไปแล้ว (กันเตือนซ้ำสัญญาที่ปิดไปแล้ว)
 - **Verification**: `php artisan test --compact` = **524 passed / 0 failed** · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+
+---
+
+## 🔄 Transfer Asset Redesign — อัปเดต 2026-07-08
+
+เลิกผูกเจ้าของทรัพย์สินด้วย string อิสระ เปลี่ยนมาใช้ FK `assets.owner_employee_id` เป็น "ข้อเท็จจริงว่าใครถือครองอยู่" + หน้าโอนเป็น Dialog 2 โหมด + กันการ write-off ทรัพย์สินที่ยังมีพนักงานถือครอง
+spec: `docs/superpowers/specs/2026-07-08-transfer-asset-redesign-design.md` · plan: `docs/superpowers/plans/2026-07-08-transfer-asset-redesign.md`
+
+- **Data model** — เพิ่มคอลัมน์ `assets.owner_employee_id` (FK → `employees`, nullable, `nullOnDelete`) + **backfill** จาก `owner` ที่ตรง `employees.code` ใน migration เดียว (label ที่ไม่ตรง = ของกลาง คง FK เป็น null); คง `owner` string ไว้เป็น **display label** (โหมดพนักงาน = code, ของกลาง = ชื่อเรียก, pool = null) — หลัก current-vs-log เดิม (`initial_owner`/`asset_transfers` ยังเป็น snapshot string)
+- **Model** — `Asset::ownerEmployee()` relation (ตั้งชื่อไม่ชน column `owner`), helper `heldByEmployee()`; resource เพิ่ม `owner_employee_id` + `owner_name` (ชื่อพนักงานในโหมดพนักงาน / label ของกลาง / null) โดย `owner` เดิมคงไว้ back-compat
+- **Transfer 2 โหมด** — `AssetService::transfer(Asset, array, ?string)`: **พนักงาน** → เลือกจากรายการ (ไม่พิมพ์ ID), status `pending_acceptance`, ตั้ง FK, แจ้งเตือนผู้รับ (resolve email ผ่าน FK) · **ของกลาง (ของส่วนกลาง)** → Location + ชื่อเรียก, status `deployed` ทันที (ไม่มีคนกดรับ), FK = null, ไม่แจ้งเตือน; validate แบบ mutually-exclusive (`mode` + `required_if`)
+- **Consumer ผูกกับ FK** — `mine`/`accept`/`requestReturn` เช็คจาก `owner_employee_id` แทน string; `markReceived` (คืนเข้า pool) เคลียร์ FK; `create()`/`update()` resolve FK จาก `owner` code ที่ตรง master ด้วย (กัน API/import สร้างของกำพร้า); คง `orWhere('owner','like')` เป็น search แบบ display เท่านั้น; eager-load `ownerEmployee` ใน index/show/mine
+- **Write-off guard** — `bulkSetStatus(writeoff)` (+ `retire()` เชิงป้องกัน) reject 422 เมื่อ asset ใดถูกพนักงานถือครองอยู่ (`owner_employee_id != null`) โดยยกเลิกทั้ง batch พร้อมลิสต์ tag ที่ติด; ของกลาง/pool/คืนแล้ว (FK null) write-off ได้ — **ประกอบกับกฎ contract เดิม** (ต้อง write-off asset ที่ผูกให้ครบก่อนปิดสัญญา): asset พนักงานต้องคืนก่อน, ของกลาง write-off ได้เลย
+- **UI** — เปลี่ยน `asset-transfer-drawer.tsx` (Sheet) → `asset-transfer-dialog.tsx` (Dialog กลางจอ) มี segmented toggle พนักงาน/ของกลาง, โหมดพนักงานใช้ `SearchableSelect` (ค้นด้วยชื่อ/รหัส/แผนก), reuse form-validation UX; types/api/hook/barrel/i18n (en+th) อัปเดต ไม่มี hardcode string
+- **Verification**: `php artisan test --compact --filter=AssetApiTest` = **51 passed / 0 failed** (159 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
+- **Rollout**: migration additive + backfill (`down()` สะอาด rollback ได้) — **ยังไม่ได้รันบน DB จริง** รอยืนยันจากเจ้าของ; หลังรันควรตรวจ assets ที่ `owner IS NOT NULL AND owner_employee_id IS NULL` (label ของกลาง = ปกติ; ถ้าเป็นพนักงานจริงที่ code ไม่ตรงต้องแก้)
