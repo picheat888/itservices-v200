@@ -88,7 +88,15 @@ export const employeeApi = {
     resign: (id: number, reason: string, lastDay: string | null) =>
         mutate<Employee>('post', `/employees/${id}/resign`, { reason, last_day: lastDay }),
     cancelResign: (id: number) => mutate<Employee>('post', `/employees/${id}/cancel-resign`),
-    resetPassword: (id: number) => mutate<{ new_password: string }>('post', `/employees/${id}/reset-password`),
+    resetPassword: async (id: number) => {
+        // NOTE: this endpoint returns { message, new_password } at the top level
+        // (not wrapped in an ApiEnvelope `data` key), so it must NOT go through
+        // mutate() — that unwraps `.data` and would yield undefined, making the
+        // modal throw and mislabel every reset as "no linked system account".
+        await ensureCsrf();
+        const { data } = await http.post<{ message: string; new_password: string }>(`/employees/${id}/reset-password`);
+        return data;
+    },
     setCredentials: async (id: number, payload: { username: string; password: string; password_confirmation: string }) => {
         await ensureCsrf();
         const { data } = await http.post<ApiEnvelope<{ message: string }>>(`/employees/${id}/credentials`, payload);
