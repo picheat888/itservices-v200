@@ -208,20 +208,23 @@ class AssetController extends Controller
         return response()->json(['message' => 'success']);
     }
 
-    /** Transfer an asset to a new owner (requires assets.transfer). */
+    /** Transfer an asset to a new owner — an employee (pending acceptance) or a shared label (deployed). */
     public function transfer(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
         $data = $request->validate([
-            'owner' => ['required', 'string', 'max:200'],
+            'mode' => ['required', 'in:employee,shared'],
+            // Employee mode: pick a real employee. Shared mode: a short free-text label.
+            'owner_employee_id' => ['required_if:mode,employee', 'integer', 'exists:employees,id'],
+            'owner_label' => ['required_if:mode,shared', 'string', 'max:200'],
             // IT must record where the asset will physically go when handed over.
             'location_id' => ['required', 'integer', 'exists:locations,id'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         abort_if($asset->isDeployed(), 422, 'Asset is deployed — mark it returned first.');
 
-        $asset = $this->service->transfer($asset, $data['owner'], $data['location_id'], $data['reason'] ?? null, $request->user()?->name);
-        AuditLog::record('Transferred asset', "{$asset->tag} → {$data['owner']}");
+        $asset = $this->service->transfer($asset, $data, $request->user()?->name);
+        AuditLog::record('Transferred asset', "{$asset->tag} → {$asset->owner}");
 
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }

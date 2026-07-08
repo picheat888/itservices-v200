@@ -104,38 +104,59 @@ class AssetService
     }
 
     /**
-     * Hand an asset to a new owner. It enters "pending acceptance" until the
-     * recipient confirms receipt.
+     * Hand an asset to a new owner. Employee mode assigns a real employee and enters
+     * "pending acceptance" until they confirm; shared mode assigns a free-text label
+     * (ของกลาง) and deploys immediately since there is no person to accept it.
+     *
+     * @param  array{mode: string, owner_employee_id?: int|null, owner_label?: string|null, location_id: int, reason?: string|null}  $data
      */
-    public function transfer(Asset $asset, string $newOwner, ?int $locationId = null, ?string $reason = null, ?string $performedBy = null): Asset
+    public function transfer(Asset $asset, array $data, ?string $performedBy = null): Asset
     {
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
         $from = $asset->owner ?: $asset->warehouse?->name;
+        $reason = $data['reason'] ?? null;
+
+        if ($data['mode'] === 'employee') {
+            $employee = Employee::findOrFail($data['owner_employee_id']);
+            $asset->update([
+                'owner' => $employee->code,
+                'owner_employee_id' => $employee->id,
+                'location_id' => $data['location_id'],
+                'status' => AssetStatus::PendingAcceptance,
+                'last_reason' => $reason,
+            ]);
+            $this->logTransfer($asset, $from, $employee->code, $reason, $performedBy);
+            $this->notifyRecipient($asset->fresh('ownerEmployee'), $from);
+
+            return $asset->fresh();
+        }
+
+        // Shared / common use: no person to accept, so it deploys straight away.
         $asset->update([
-            'owner' => $newOwner,
-            'location_id' => $locationId,
-            'status' => AssetStatus::PendingAcceptance,
+            'owner' => $data['owner_label'],
+            'owner_employee_id' => null,
+            'location_id' => $data['location_id'],
+            'status' => AssetStatus::Deployed,
             'last_reason' => $reason,
         ]);
-        $this->logTransfer($asset, $from, $newOwner, $reason, $performedBy);
-        $this->notifyRecipient($asset, $newOwner, $from);
+        $this->logTransfer($asset, $from, $data['owner_label'], $reason, $performedBy);
 
         return $asset->fresh();
     }
 
     /**
-     * Bell alert to the recipient when an asset is handed over — only if the new
-     * owner is an employee with a login account (pools / free-text owners get none).
+     * Bell alert to the recipient when an asset is handed over — resolved through the
+     * owner_employee_id FK. Only fires if the employee has a login account that can use
+     * My Assets (permission gates the bell).
      */
-    private function notifyRecipient(Asset $asset, string $newOwner, ?string $from): void
+    private function notifyRecipient(Asset $asset, ?string $from): void
     {
-        $employee = Employee::where('code', $newOwner)->first();
+        $employee = $asset->ownerEmployee;
         if (! $employee) {
             return;
         }
 
-        // Only notify a recipient who can actually use My Assets (permission gates the bell).
         $user = User::where('employee_id', $employee->id)->first();
         if ($user && $user->hasPermission('assets.my')) {
             $user->notify(new AssetAssignedNotification($asset, $from));
