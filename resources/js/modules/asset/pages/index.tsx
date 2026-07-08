@@ -41,7 +41,7 @@ import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
-import { AssetTransferDrawer } from '../components/asset-transfer-drawer';
+import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
@@ -874,7 +874,7 @@ export default function AssetsPage() {
                 canReceive={canReceive}
             />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
-            <AssetTransferDrawer asset={transferAsset} onClose={() => setTransferAsset(null)} />
+            <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
         </div>
     );

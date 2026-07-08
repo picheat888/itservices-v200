@@ -103,4 +103,11 @@ export const asset: Dict = {
     "asset_type_server": "Server",
     "asset_type_network": "Network",
     "asset_type_other": "Other",
+    "asset_current_owner": "Current owner",
+    "transfer_mode_employee": "Employee",
+    "transfer_mode_shared": "Shared / common use",
+    "transfer_pick_employee": "Select an employee",
+    "transfer_shared_label": "Shared label",
+    "transfer_shared_label_ph": "e.g. Rack 2, HR shared printer",
+    "asset_transfer_failed": "Transfer failed",
 };
