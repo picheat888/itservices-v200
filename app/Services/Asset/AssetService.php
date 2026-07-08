@@ -48,6 +48,8 @@ class AssetService
             $data['initial_owner'] = $data['owner'];
         }
 
+        $data = $this->resolveOwnerEmployee($data);
+
         return Asset::create($this->normalizeAcquisition($data));
     }
 
@@ -61,9 +63,31 @@ class AssetService
         if (blank($data['tag'] ?? null)) {
             unset($data['tag']);
         }
+        $data = $this->resolveOwnerEmployee($data);
         $asset->update($this->normalizeAcquisition($data));
 
         return $asset->fresh();
+    }
+
+    /**
+     * Keep owner_employee_id in step with a directly-supplied owner string on
+     * register/edit. When the owner text matches an employee code, link the FK;
+     * a non-matching label (shared/common use) or a blank owner clears it. Leaves
+     * the FK untouched when the payload carries no `owner` key at all (the normal
+     * form path, where ownership is assigned only via Transfer).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function resolveOwnerEmployee(array $data): array
+    {
+        if (array_key_exists('owner', $data)) {
+            $data['owner_employee_id'] = filled($data['owner'])
+                ? Employee::where('code', $data['owner'])->value('id')
+                : null;
+        }
+
+        return $data;
     }
 
     /**

@@ -675,4 +675,47 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owner_employee_id', $employee->id)
             ->assertJsonPath('data.owner_name', 'Han Solo');
     }
+
+    public function test_registering_with_an_employee_owner_code_links_the_fk(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-4242', 'first_name' => 'Reg', 'last_name' => 'Owner']);
+
+        $this->postJson('/api/assets', [
+            'category_id' => $this->categoryId('laptop'), 'source' => 'purchased',
+            'model_id' => $this->modelId('Dell 7420'), 'vendor_id' => $this->vendorId(), 'value' => 100,
+            'owner' => 'EMP-4242',
+        ])->assertCreated()
+            ->assertJsonPath('data.owner', 'EMP-4242')
+            ->assertJsonPath('data.owner_employee_id', $employee->id);
+    }
+
+    public function test_registering_with_a_shared_label_owner_leaves_the_fk_null(): void
+    {
+        $this->actingAs($this->super());
+
+        $this->postJson('/api/assets', [
+            'category_id' => $this->categoryId('printer'), 'source' => 'purchased',
+            'model_id' => $this->modelId('Brother X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
+            'owner' => 'Rack 2',
+        ])->assertCreated()
+            ->assertJsonPath('data.owner', 'Rack 2')
+            ->assertJsonPath('data.owner_employee_id', null);
+    }
+
+    public function test_my_assets_and_accept_follow_the_fk_not_the_owner_string(): void
+    {
+        // FK points at the caller's employee, but the owner string points elsewhere —
+        // the consumer paths must trust the FK, not the display string.
+        $me = Employee::create(['code' => 'EMP-FK-1', 'first_name' => 'Fk', 'last_name' => 'Me']);
+        $user = User::factory()->create(['role' => 'user', 'employee_id' => $me->id]);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
+        $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-STALE-STRING', 'owner_employee_id' => $me->id]);
+
+        $this->actingAs($user);
+        $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson("/api/assets/{$asset->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'deployed');
+    }
 }
