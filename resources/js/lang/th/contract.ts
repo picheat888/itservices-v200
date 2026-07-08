@@ -65,4 +65,9 @@ export const contract: Dict = {
     "contract_action_queue": "ต้องดำเนินการ",
     "contract_none": "ยังไม่มีสัญญา",
     "contract_delete_confirm": "ลบสัญญานี้?",
+    "contract_cancel_confirm_title": "ยืนยันยกเลิกสัญญา?",
+    "contract_cancel_reason": "เหตุผลการยกเลิก",
+    "contract_cancel_reason_ph": "เช่น เลิกใช้ผู้ให้บริการ, เปลี่ยนไปใช้สัญญาใหม่ ฯลฯ",
+    "contract_cancel_reason_required": "กรุณาระบุเหตุผล",
+    "contract_cancel_failed": "ยกเลิกไม่สำเร็จ",
 };

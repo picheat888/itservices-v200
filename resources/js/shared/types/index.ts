@@ -196,6 +196,7 @@ export interface Contract {
     linked_assets: ContractLinkedAsset[];
     cancelled_at: string | null;
     expired_at: string | null;
+    cancel_reason: string | null;
     created_at: string | null;
     updated_at: string | null;
 }

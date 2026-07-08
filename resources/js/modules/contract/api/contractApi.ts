@@ -56,7 +56,7 @@ export const contractApi = {
     create: (payload: ContractPayload) => mutate<Contract>('post', '/contracts', payload),
     update: (id: number, payload: ContractPayload) => mutate<Contract>('put', `/contracts/${id}`, payload),
     renew: (id: number, months = 12) => mutate<Contract>('post', `/contracts/${id}/renew`, { months }),
-    cancel: (id: number) => mutate<Contract>('post', `/contracts/${id}/cancel`),
+    cancel: (id: number, reason?: string) => mutate<Contract>('post', `/contracts/${id}/cancel`, reason !== undefined ? { reason } : {}),
     expire: (id: number) => mutate<Contract>('post', `/contracts/${id}/expire`),
     remove: (id: number) => mutate<void>('delete', `/contracts/${id}`),
     uploadAttachments: async (id: number, files: File[]): Promise<Contract> => {
