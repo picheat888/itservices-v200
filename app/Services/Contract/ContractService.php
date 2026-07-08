@@ -190,18 +190,22 @@ class ContractService
     }
 
     /**
-     * Toggle a contract's cancelled state: cancel an active contract, or
-     * reactivate one that was previously cancelled. Used by the detail drawer.
+     * Toggle a contract's cancelled state: cancel an active contract (storing the
+     * given reason), or reactivate a cancelled one (clearing the reason). Used by
+     * the detail drawer.
      */
-    public function toggleCancel(Contract $contract): Contract
+    public function toggleCancel(Contract $contract, ?string $reason = null): Contract
     {
+        $cancelling = $contract->cancelled_at === null;
+
         // Guard only the active → cancelled transition; reactivation is always allowed.
-        if ($contract->cancelled_at === null) {
+        if ($cancelling) {
             $this->assertNoPendingAssets($contract);
         }
 
         $contract->update([
-            'cancelled_at' => $contract->cancelled_at === null ? Carbon::now() : null,
+            'cancelled_at' => $cancelling ? Carbon::now() : null,
+            'cancel_reason' => $cancelling ? $reason : null,
         ]);
 
         return $contract->fresh();
