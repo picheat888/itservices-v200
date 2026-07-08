@@ -64,6 +64,7 @@ class ContractResource extends JsonResource
             ])->all(), []),
             'cancelled_at' => $this->cancelled_at?->toDateString(),
             'expired_at' => $this->expired_at?->toDateString(),
+            'cancel_reason' => $this->cancel_reason,
             'created_at' => $this->created_at?->toDateString(),
             'updated_at' => $this->updated_at?->toDateString(),
         ];

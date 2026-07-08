@@ -216,14 +216,28 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Toggles a contract's cancelled state. Requires the contracts.cancel permission. */
+    /**
+     * Toggles a contract's cancelled state. Requires the contracts.cancel permission.
+     * Cancelling requires a reason (stored on the contract); reactivating takes none.
+     */
     public function cancel(Request $request, Contract $contract): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.cancel'), 403);
 
-        $contract = $this->service->toggleCancel($contract);
-        $action = $contract->cancelled_at !== null ? 'Cancelled contract' : 'Reactivated contract';
-        AuditLog::record($action, "{$contract->name} ({$contract->code})");
+        // Reason is mandatory only in the active → cancelled direction.
+        $isCancelling = $contract->cancelled_at === null;
+        $validated = $request->validate([
+            'reason' => [$isCancelling ? 'required' : 'nullable', 'string', 'max:500'],
+        ]);
+        $reason = $isCancelling ? $validated['reason'] : null;
+
+        $contract = $this->service->toggleCancel($contract, $reason);
+
+        if ($contract->cancelled_at !== null) {
+            AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) — {$reason}");
+        } else {
+            AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})");
+        }
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();

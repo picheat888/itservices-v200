@@ -244,7 +244,7 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
 
         // Cancel.
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'No longer needed'])
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
         $this->assertNotNull($contract->fresh()->cancelled_at);
@@ -278,7 +278,7 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
         Asset::create(['tag' => 'RNT-LT-01', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
 
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Ending lease'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('contract');
 
@@ -292,7 +292,7 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
         Asset::create(['tag' => 'RNT-LT-02', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'writeoff', 'source' => 'rented', 'contract_id' => $contract->id]);
 
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Ending lease'])
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
 
@@ -309,7 +309,7 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'X', 'name' => 'Service plan', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
         $asset = Asset::create(['tag' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
 
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Service ended'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('contract');
         $this->assertNull($contract->fresh()->cancelled_at);
@@ -317,7 +317,7 @@ class ContractApiTest extends TestCase
         // Once the linked asset is written off, cancellation proceeds normally.
         $asset->update(['status' => 'writeoff']);
 
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Service ended'])
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
     }
@@ -410,5 +410,53 @@ class ContractApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.expired_at', null)
             ->assertJsonMissingPath('data.auto_renew');
+    }
+
+    public function test_cancel_requires_a_reason(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertStatus(422)->assertJsonValidationErrors('reason');
+        $this->assertNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_cancel_with_a_reason_stores_it(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Vendor no longer used'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled')
+            ->assertJsonPath('data.cancel_reason', 'Vendor no longer used');
+        $this->assertSame('Vendor no longer used', $contract->fresh()->cancel_reason);
+    }
+
+    public function test_cancel_rejects_a_whitespace_only_reason(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        // TrimStrings + ConvertEmptyStringsToNull turn "   " into null → required fails.
+        $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => '   '])
+            ->assertStatus(422)->assertJsonValidationErrors('reason');
+        $this->assertNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_reactivate_clears_the_reason_and_needs_none(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $contract->update(['cancelled_at' => now(), 'cancel_reason' => 'Old reason']);
+
+        // Reactivation (already cancelled) takes no reason and clears the stored one.
+        $this->postJson("/api/contracts/{$contract->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.cancel_reason', null);
+        $this->assertNull($contract->fresh()->cancelled_at);
+        $this->assertNull($contract->fresh()->cancel_reason);
     }
 }
