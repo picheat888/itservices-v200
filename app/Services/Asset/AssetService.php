@@ -217,9 +217,11 @@ class AssetService
         return $asset->fresh();
     }
 
-    /** Retire / write off an asset. */
+    /** Retire / write off a single asset — blocked while an employee still holds it. */
     public function retire(Asset $asset, ?string $reason = null): Asset
     {
+        abort_if($asset->heldByEmployee(), 422, "Return {$asset->tag} from the employee before writing it off.");
+
         $asset->update([
             'status' => AssetStatus::Writeoff,
             'last_reason' => $reason,
@@ -230,12 +232,22 @@ class AssetService
 
     /**
      * Apply a single status to many assets at once (used by bulk Write-off).
-     * Returns the number of assets updated.
+     * When writing off, the whole batch is rejected if any selected asset is still
+     * held by an employee — return it first. Returns the number of assets updated.
      *
      * @param  list<int>  $ids
      */
     public function bulkSetStatus(array $ids, AssetStatus $status, ?string $reason = null): int
     {
+        if ($status === AssetStatus::Writeoff) {
+            $held = Asset::whereIn('id', $ids)->whereNotNull('owner_employee_id')->pluck('tag');
+            abort_if(
+                $held->isNotEmpty(),
+                422,
+                'Return these from their employees before writing them off: '.$held->implode(', ').'.'
+            );
+        }
+
         return Asset::whereIn('id', $ids)->update([
             'status' => $status->value,
             'last_reason' => $reason,

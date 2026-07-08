@@ -500,14 +500,55 @@ class AssetApiTest extends TestCase
     public function test_bulk_writeoff_updates_many_assets(): void
     {
         $this->actingAs($this->super());
-        $a = Asset::factory()->create(['status' => 'ready']);
-        $b = Asset::factory()->create(['status' => 'ready']);
+        $a = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $b = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
         $this->postJson('/api/assets/bulk', ['ids' => [$a->id, $b->id], 'op' => 'writeoff', 'reason' => 'EOL'])
             ->assertOk()
             ->assertJsonPath('updated', 2);
 
         $this->assertSame('writeoff', $a->fresh()->status->value);
+    }
+
+    public function test_bulk_writeoff_blocked_while_an_asset_is_employee_held(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-5001', 'first_name' => 'Hol', 'last_name' => 'Der']);
+        $this->actingAs($this->super());
+        $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5001', 'owner_employee_id' => $employee->id]);
+        $free = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$held->id, $free->id], 'op' => 'writeoff', 'reason' => 'EOL'])
+            ->assertStatus(422);
+
+        // No partial write-off — the whole batch is rejected.
+        $this->assertSame('deployed', $held->fresh()->status->value);
+        $this->assertSame('ready', $free->fresh()->status->value);
+    }
+
+    public function test_single_writeoff_blocked_while_employee_held(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-5002', 'first_name' => 'Hol', 'last_name' => 'Der']);
+        $this->actingAs($this->super());
+        $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5002', 'owner_employee_id' => $employee->id]);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff'])
+            ->assertStatus(422);
+
+        $this->assertSame('deployed', $held->fresh()->status->value);
+    }
+
+    public function test_writeoff_allowed_for_shared_or_pooled_assets(): void
+    {
+        $this->actingAs($this->super());
+        $shared = Asset::factory()->create(['status' => 'deployed', 'owner' => 'Rack 2', 'owner_employee_id' => null]);
+        $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$shared->id, $ready->id], 'op' => 'writeoff'])
+            ->assertOk()
+            ->assertJsonPath('updated', 2);
+
+        $this->assertSame('writeoff', $shared->fresh()->status->value);
+        $this->assertSame('writeoff', $ready->fresh()->status->value);
     }
 
     public function test_transfer_is_recorded_in_the_transfer_log(): void
