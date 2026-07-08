@@ -344,11 +344,12 @@ class AssetApiTest extends TestCase
     public function test_my_assets_returns_only_the_users_own_assets(): void
     {
         $employee = Employee::create(['code' => 'EMP-7001', 'first_name' => 'Me', 'last_name' => 'User']);
+        $other = Employee::create(['code' => 'EMP-9999', 'first_name' => 'Not', 'last_name' => 'Me']);
         $user = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
         RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.my', 'allowed' => true]);
-        Asset::factory()->create(['owner' => 'EMP-7001']);
-        Asset::factory()->create(['owner' => 'EMP-7001']);
-        Asset::factory()->create(['owner' => 'EMP-9999']);
+        Asset::factory()->create(['owner' => 'EMP-7001', 'owner_employee_id' => $employee->id]);
+        Asset::factory()->create(['owner' => 'EMP-7001', 'owner_employee_id' => $employee->id]);
+        Asset::factory()->create(['owner' => 'EMP-9999', 'owner_employee_id' => $other->id]);
 
         $this->actingAs($user);
         $this->getJson('/api/assets/mine')->assertOk()->assertJsonCount(2, 'data');
@@ -358,7 +359,7 @@ class AssetApiTest extends TestCase
     {
         $employee = Employee::create(['code' => 'EMP-9001', 'first_name' => 'Rec', 'last_name' => 'Ipient']);
         $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-9001']);
+        $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-9001', 'owner_employee_id' => $employee->id]);
 
         // IT / anyone who is not the recipient cannot accept on their behalf.
         $this->actingAs($this->super());
@@ -402,7 +403,7 @@ class AssetApiTest extends TestCase
     {
         $employee = Employee::create(['code' => 'EMP-6001', 'first_name' => 'Hold', 'last_name' => 'Er']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6001']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6001', 'owner_employee_id' => $employee->id]);
 
         // Anyone who is not the holder cannot request its return.
         $this->actingAs($this->super());
@@ -421,7 +422,7 @@ class AssetApiTest extends TestCase
         $it = $this->super(); // super holds assets.transfer → an IT receiver
         $employee = Employee::create(['code' => 'EMP-6100', 'first_name' => 'H', 'last_name' => 'R']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
-        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6100']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6100', 'owner_employee_id' => $employee->id]);
 
         $this->actingAs($holder);
         $this->postJson("/api/assets/{$asset->id}/request-return")->assertOk();
@@ -432,13 +433,15 @@ class AssetApiTest extends TestCase
 
     public function test_mark_received_returns_asset_to_pool(): void
     {
+        $employee = Employee::create(['code' => 'EMP-1500', 'first_name' => 'Ret', 'last_name' => 'Urn']);
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500']);
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-1500', 'owner_employee_id' => $employee->id]);
 
         $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
             ->assertOk()
             ->assertJsonPath('data.status', 'ready')
             ->assertJsonPath('data.owner', null)
+            ->assertJsonPath('data.owner_employee_id', null)
             ->assertJsonPath('data.owned_since', null);
     }
 
