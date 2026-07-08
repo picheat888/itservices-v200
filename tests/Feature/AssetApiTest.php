@@ -17,6 +17,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class AssetApiTest extends TestCase
@@ -535,5 +536,43 @@ class AssetApiTest extends TestCase
 
         $this->deleteJson("/api/locations/{$location->id}")->assertStatus(409);
         $this->assertDatabaseHas('locations', ['id' => $location->id]);
+    }
+
+    public function test_migration_backfills_owner_employee_id_from_owner_code(): void
+    {
+        // Simulate legacy data: an asset whose owner string is an employee code but whose
+        // FK was never populated. Insert directly so the model's transfer flow doesn't set it.
+        $employee = Employee::create(['code' => 'EMP-3300', 'first_name' => 'Legacy', 'last_name' => 'Owner']);
+        $asset = Asset::factory()->create(['owner' => 'EMP-3300']);
+        Asset::whereKey($asset->id)->update(['owner_employee_id' => null]);
+
+        // Re-run the exact backfill the migration performs (SQLite-safe correlated subquery).
+        DB::statement(
+            'UPDATE assets SET owner_employee_id = (SELECT id FROM employees WHERE employees.code = assets.owner) '
+            .'WHERE owner_employee_id IS NULL AND owner IS NOT NULL'
+        );
+
+        $this->assertSame($employee->id, $asset->fresh()->owner_employee_id);
+    }
+
+    public function test_held_by_employee_reflects_the_fk(): void
+    {
+        $held = Asset::factory()->create(['owner_employee_id' => Employee::create(['code' => 'EMP-3301', 'first_name' => 'A', 'last_name' => 'B'])->id]);
+        $pool = Asset::factory()->create(['owner_employee_id' => null]);
+
+        $this->assertTrue($held->heldByEmployee());
+        $this->assertFalse($pool->heldByEmployee());
+    }
+
+    public function test_resource_exposes_owner_employee_id_and_owner_name(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-3302', 'first_name' => 'Han', 'last_name' => 'Solo']);
+        $asset = Asset::factory()->create(['owner' => 'EMP-3302', 'owner_employee_id' => $employee->id]);
+
+        $this->getJson("/api/assets/{$asset->id}")
+            ->assertOk()
+            ->assertJsonPath('data.owner_employee_id', $employee->id)
+            ->assertJsonPath('data.owner_name', 'Han Solo');
     }
 }

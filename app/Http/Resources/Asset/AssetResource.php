@@ -32,6 +32,10 @@ class AssetResource extends JsonResource
             'source' => $this->source?->value,
             'status' => $this->status?->value,
             'owner' => $this->owner,
+            'owner_employee_id' => $this->owner_employee_id,
+            // Display name of the holder: the employee's full name in employee mode,
+            // else the free-text shared label, else null (pool).
+            'owner_name' => $this->owner_employee_id ? $this->ownerEmployee?->name : $this->owner,
             'initial_owner' => $this->initial_owner,
             'department' => $this->department,
             'location' => $this->location?->name,
