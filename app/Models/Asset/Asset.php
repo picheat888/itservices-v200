@@ -5,6 +5,7 @@ namespace App\Models\Asset;
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
@@ -35,7 +36,7 @@ class Asset extends Model
 
     protected $fillable = [
         'tag', 'nickname', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
-        'owner', 'initial_owner', 'department', 'location_id', 'warehouse_id', 'value', 'vendor_id',
+        'owner', 'owner_employee_id', 'initial_owner', 'department', 'location_id', 'warehouse_id', 'value', 'vendor_id',
         'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
         'registered_date', 'owned_since', 'notes', 'last_reason',
     ];
@@ -98,6 +99,16 @@ class Asset extends Model
         return $this->belongsTo(AssetModel::class, 'model_id');
     }
 
+    /**
+     * The employee who currently holds this asset (null for pooled or shared assets).
+     * Named ownerEmployee, not owner, because the `owner` string column would shadow
+     * an owner() relation.
+     */
+    public function ownerEmployee(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'owner_employee_id');
+    }
+
     /** Ownership/custody trail — transfers and returns-to-pool, most recent first. */
     public function transfers(): HasMany
     {
@@ -144,6 +155,12 @@ class Asset extends Model
     public function isDeployed(): bool
     {
         return $this->status === AssetStatus::Deployed;
+    }
+
+    /** True when an employee currently holds this asset — blocks write-off until returned. */
+    public function heldByEmployee(): bool
+    {
+        return $this->owner_employee_id !== null;
     }
 
     /** The relevant cover end date: lease end for rented assets, warranty end otherwise. */
