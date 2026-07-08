@@ -110,4 +110,7 @@ export const asset: Dict = {
     "transfer_shared_label": "ชื่อเรียกของกลาง",
     "transfer_shared_label_ph": "เช่น Rack 2, เครื่องพิมพ์ส่วนกลาง HR",
     "asset_transfer_failed": "โอนไม่สำเร็จ",
+    "asset_err_required": "จำเป็นต้องกรอก",
+    "transfer_location_ph": "เลือกที่ตั้งปลายทาง",
+    "asset_transfer_reason_ph": "เช่น พนักงานใหม่",
 };

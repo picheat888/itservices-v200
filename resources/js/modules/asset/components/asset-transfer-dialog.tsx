@@ -7,7 +7,6 @@ import { useAssetMutations } from '../hooks/use-assets';
 import { useEmployees, useLocations } from '@/modules/employee';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import type { Asset } from '@/shared/types';
 import { Loader2, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -17,7 +16,6 @@ type Mode = 'employee' | 'shared';
 /** Hand an asset to a new owner — an employee (pending acceptance) or a shared label (deployed). */
 export function AssetTransferDialog({ asset, onClose }: { asset: Asset | null; onClose: () => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { transfer } = useAssetMutations();
     const { data: locations = [] } = useLocations();
     const { data: employees = [] } = useEmployees();
@@ -55,7 +53,7 @@ export function AssetTransferDialog({ asset, onClose }: { asset: Asset | null; o
 
     const submit = async () => {
         if (!asset) return;
-        const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
+        const required = t('asset_err_required');
         const e: { employee?: string; shared?: string; location?: string } = {};
         if (mode === 'employee' && !employeeId) e.employee = required;
         if (mode === 'shared' && !sharedLabel.trim()) e.shared = required;
@@ -125,7 +123,7 @@ export function AssetTransferDialog({ asset, onClose }: { asset: Asset | null; o
                             value={location}
                             onChange={setLocation}
                             options={locationOptions}
-                            placeholder={lang === 'th' ? 'เลือกที่ตั้งปลายทาง' : 'Select destination location'}
+                            placeholder={t('transfer_location_ph')}
                         />
                     </Field>
 
@@ -135,7 +133,7 @@ export function AssetTransferDialog({ asset, onClose }: { asset: Asset | null; o
                             onChange={(ev) => setReason(ev.target.value)}
                             rows={3}
                             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-brand"
-                            placeholder={lang === 'th' ? 'เช่น พนักงานใหม่' : 'e.g. New hire onboarding'}
+                            placeholder={t('asset_transfer_reason_ph')}
                         />
                     </Field>
                 </div>
