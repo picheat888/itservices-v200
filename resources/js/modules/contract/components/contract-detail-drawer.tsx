@@ -249,6 +249,7 @@ export function ContractDetailDrawer({
                                         }
                                     />
                                     {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
+                                    {cancelled && c.cancel_reason && <KV label={t('contract_cancel_reason')} value={c.cancel_reason} />}
                                     {c.status === 'expired' && c.expired_at && <KV label={t('contract_expired_on')} value={c.expired_at} mono />}
                                     <KV label={t('contract_created')} value={c.created_at ?? '—'} mono />
                                     <KV label={t('contract_updated')} value={c.updated_at ?? '—'} mono />
