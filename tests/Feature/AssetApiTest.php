@@ -264,13 +264,66 @@ class AssetApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_transfer_moves_asset_to_pending_acceptance(): void
+    public function test_transfer_employee_mode_sets_fk_and_pends_acceptance(): void
     {
+        $employee = Employee::create(['code' => 'EMP-4001', 'first_name' => 'New', 'last_name' => 'Hire']);
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT', 'owner_employee_id' => null]);
         $location = Location::create(['name' => 'HQ Floor 3']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id, 'reason' => 'New hire'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", [
+            'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id, 'reason' => 'New hire',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'pending_acceptance')
+            ->assertJsonPath('data.owner', 'EMP-4001')
+            ->assertJsonPath('data.owner_employee_id', $employee->id)
+            ->assertJsonPath('data.location', 'HQ Floor 3');
+    }
+
+    public function test_transfer_shared_mode_deploys_without_an_employee(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]);
+        $location = Location::create(['name' => 'Server Room']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", [
+            'mode' => 'shared', 'owner_label' => 'Rack 2', 'location_id' => $location->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'deployed')
+            ->assertJsonPath('data.owner', 'Rack 2')
+            ->assertJsonPath('data.owner_employee_id', null);
+    }
+
+    public function test_transfer_employee_mode_requires_owner_employee_id(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready']);
+        $location = Location::create(['name' => 'HQ']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'location_id' => $location->id])
+            ->assertStatus(422)->assertJsonValidationErrors('owner_employee_id');
+    }
+
+    public function test_transfer_shared_mode_requires_owner_label(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready']);
+        $location = Location::create(['name' => 'HQ']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'shared', 'location_id' => $location->id])
+            ->assertStatus(422)->assertJsonValidationErrors('owner_label');
+    }
+
+    public function test_transfer_moves_asset_to_pending_acceptance(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-2000', 'first_name' => 'Trans', 'last_name' => 'Fer']);
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => 'Pool — IT', 'owner_employee_id' => null]);
+        $location = Location::create(['name' => 'HQ Floor 3']);
+
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id, 'reason' => 'New hire'])
             ->assertOk()
             ->assertJsonPath('data.status', 'pending_acceptance')
             ->assertJsonPath('data.owner', 'EMP-2000')
@@ -280,10 +333,11 @@ class AssetApiTest extends TestCase
 
     public function test_transfer_requires_a_location(): void
     {
+        $employee = Employee::create(['code' => 'EMP-2000', 'first_name' => 'Trans', 'last_name' => 'Fer']);
         $this->actingAs($this->super());
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000'])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $employee->id])
             ->assertStatus(422)->assertJsonValidationErrors('location_id');
     }
 
@@ -323,11 +377,11 @@ class AssetApiTest extends TestCase
         $employee = Employee::create(['code' => 'EMP-8001', 'first_name' => 'New', 'last_name' => 'Owner']);
         $recipient = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
         RolePermission::create(['role_id' => $recipient->role_id, 'permission' => 'assets.my', 'allowed' => true]);
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
         $location = Location::create(['name' => 'HQ']);
 
         $this->actingAs($this->super());
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-8001', 'location_id' => $location->id])->assertOk();
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id])->assertOk();
 
         $this->assertSame(1, $recipient->fresh()->notifications()->count());
         $this->assertSame('asset_assigned', $recipient->notifications()->first()->data['type']);
@@ -335,11 +389,12 @@ class AssetApiTest extends TestCase
 
     public function test_cannot_transfer_a_deployed_asset(): void
     {
+        $employee = Employee::create(['code' => 'EMP-2000', 'first_name' => 'Trans', 'last_name' => 'Fer']);
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-1042']);
         $location = Location::create(['name' => 'HQ']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id])
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id])
             ->assertStatus(422);
     }
 
@@ -454,12 +509,13 @@ class AssetApiTest extends TestCase
 
     public function test_transfer_is_recorded_in_the_transfer_log(): void
     {
+        $employee = Employee::create(['code' => 'EMP-2000', 'first_name' => 'Trans', 'last_name' => 'Fer']);
         $this->actingAs($this->super());
         // Pooled asset (no owner) stored in a warehouse.
-        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null, 'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id]);
         $location = Location::create(['name' => 'HQ']);
 
-        $this->postJson("/api/assets/{$asset->id}/transfer", ['owner' => 'EMP-2000', 'location_id' => $location->id, 'reason' => 'New hire'])->assertOk();
+        $this->postJson("/api/assets/{$asset->id}/transfer", ['mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id, 'reason' => 'New hire'])->assertOk();
 
         // The custody trail stamps the origin warehouse as the "from" when it leaves the pool.
         $this->getJson('/api/assets/transfers')
