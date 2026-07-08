@@ -56,7 +56,6 @@ export const asset: Dict = {
     "my_assets_return_confirm": "ส่งทรัพย์สินนี้คืน IT? จะขึ้นสถานะรอรับคืนจนกว่า IT จะยืนยันรับ",
     "my_assets_empty": "คุณยังไม่มีทรัพย์สินที่ถือครอง",
     "my_assets_no_link": "บัญชีของคุณยังไม่ได้ผูกกับข้อมูลพนักงาน",
-    "asset_new_owner": "ผู้ถือครองใหม่",
     "asset_transfer_reason": "เหตุผลการโอน",
     "asset_mark_received": "ยืนยันรับคืน",
     "asset_accept": "รับมอบ",

@@ -56,7 +56,6 @@ export const asset: Dict = {
     "my_assets_return_confirm": "Send this asset back to IT? It will show as pending return until IT confirms receipt.",
     "my_assets_empty": "You don't hold any assets yet.",
     "my_assets_no_link": "Your account isn't linked to an employee record yet.",
-    "asset_new_owner": "New owner",
     "asset_transfer_reason": "Reason for transfer",
     "asset_mark_received": "Mark received",
     "asset_accept": "Accept",
