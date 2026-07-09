@@ -47,8 +47,9 @@ class WarrantyTypeController extends Controller
     /** Delete a warranty type — blocked (409) while any stock item still references it. */
     public function destroy(WarrantyType $warrantyType): JsonResponse
     {
-        if (StockItem::where('warranty_type_id', $warrantyType->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = StockItem::where('warranty_type_id', $warrantyType->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted warranty type', $warrantyType->name);
         $warrantyType->delete();

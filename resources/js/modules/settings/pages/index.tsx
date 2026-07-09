@@ -52,6 +52,7 @@ import { countryOptions, currencyOptions, timezoneOptions } from '@/shared/lib/l
 import { cn } from '@/shared/lib/utils';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { useToastStore } from '@/stores/toast';
+import { toastDeleteError } from '@/shared/lib/api-errors';
 import { useUiStore } from '@/stores/ui';
 import type { AssetModel, Brand, Category, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -369,8 +370,7 @@ function BrandsList() {
                         try {
                             await remove.mutateAsync(b.id);
                         } catch (e) {
-                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            toastDeleteError(e, t);
                         }
                     }}
                 />
@@ -451,8 +451,7 @@ function ModelsList() {
                         try {
                             await remove.mutateAsync(m.id);
                         } catch (e) {
-                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            toastDeleteError(e, t);
                         }
                     }}
                 />
@@ -533,8 +532,7 @@ function CategoriesList() {
                         try {
                             await remove.mutateAsync(c.id);
                         } catch (e) {
-                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            toastDeleteError(e, t);
                         }
                     }}
                 />
@@ -625,8 +623,7 @@ function VendorsList() {
                             try {
                                 await remove.mutateAsync(v.id);
                             } catch (e) {
-                                const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                                useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                                toastDeleteError(e, t);
                             }
                         }}
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
@@ -699,8 +696,7 @@ function WarehousesList() {
                         try {
                             await remove.mutateAsync(w.id);
                         } catch (e) {
-                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            toastDeleteError(e, t);
                         }
                     }}
                 />
@@ -767,8 +763,7 @@ function LocationsList() {
                         try {
                             await remove.mutateAsync(loc.id);
                         } catch (e) {
-                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('location_in_use') : t('cd_error'), 'error', inUse ? t('location_in_use_title') : undefined);
+                            toastDeleteError(e, t, 'location_in_use', 'location_in_use_title');
                         }
                     }}
                 />

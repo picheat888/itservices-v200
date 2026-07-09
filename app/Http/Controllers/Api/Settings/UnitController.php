@@ -47,8 +47,9 @@ class UnitController extends Controller
     /** Delete a unit — blocked (409) while any stock item still references it. */
     public function destroy(Unit $unit): JsonResponse
     {
-        if (StockItem::where('unit_id', $unit->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = StockItem::where('unit_id', $unit->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted unit', $unit->name);
         $unit->delete();

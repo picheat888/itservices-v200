@@ -52,8 +52,9 @@ class CategoryController extends Controller
     /** Delete a category — blocked (409) while any asset or stock item still references it. */
     public function destroy(Category $category): JsonResponse
     {
-        if (Asset::where('category_id', $category->id)->exists() || StockItem::where('category_id', $category->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('category_id', $category->id)->count() + StockItem::where('category_id', $category->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted category', $category->name);
         $category->delete();

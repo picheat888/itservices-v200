@@ -1,6 +1,7 @@
 /**
  * Helpers for reading Laravel API error responses on the client.
  */
+import { useToastStore } from '@/stores/toast';
 
 interface ApiErrorShape {
     response?: {
@@ -22,4 +23,23 @@ export function hasFieldError(error: unknown, field: string): boolean {
 export function fieldError(error: unknown, field: string): string | undefined {
     const e = error as ApiErrorShape;
     return e?.response?.data?.errors?.[field]?.[0];
+}
+
+/**
+ * Show the standard toast for a failed master-data delete. A 409 means the item
+ * is still referenced — the body shows the {count} of records still using it;
+ * anything else falls back to a generic error toast.
+ */
+export function toastDeleteError(
+    error: unknown,
+    t: (key: string) => string,
+    bodyKey = 'md_in_use',
+    titleKey = 'md_in_use_title',
+): void {
+    const res = (error as { response?: { status?: number; data?: { count?: number } } })?.response;
+    if (res?.status === 409) {
+        useToastStore.getState().push(t(bodyKey).replace('{count}', String(res.data?.count ?? 0)), 'error', t(titleKey));
+    } else {
+        useToastStore.getState().push(t('cd_error'), 'error');
+    }
 }

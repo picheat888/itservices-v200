@@ -53,8 +53,9 @@ class AssetModelController extends Controller
     /** Delete an asset model — blocked (409) while any asset or stock item still references it. */
     public function destroy(AssetModel $assetModel): JsonResponse
     {
-        if (Asset::where('model_id', $assetModel->id)->exists() || StockItem::where('model_id', $assetModel->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('model_id', $assetModel->id)->count() + StockItem::where('model_id', $assetModel->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted asset model', $assetModel->name);
         $assetModel->delete();

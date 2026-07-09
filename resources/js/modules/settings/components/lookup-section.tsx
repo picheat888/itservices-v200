@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
-import { hasFieldError } from '@/shared/lib/api-errors';
+import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -79,8 +79,7 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                             try {
                                 await remove.mutateAsync(r.id as never);
                             } catch (e) {
-                                const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                                useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                                toastDeleteError(e, t);
                             }
                         }}
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"

@@ -49,11 +49,11 @@ class WarehouseController extends Controller
     /** Delete a warehouse — blocked (409) while any asset, serial, or stock balance references it. */
     public function destroy(Warehouse $warehouse): JsonResponse
     {
-        $inUse = Asset::where('warehouse_id', $warehouse->id)->exists()
-            || StockItemSerial::where('warehouse_id', $warehouse->id)->exists()
-            || StockBalance::where('warehouse_id', $warehouse->id)->exists();
-        if ($inUse) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('warehouse_id', $warehouse->id)->count()
+            + StockItemSerial::where('warehouse_id', $warehouse->id)->count()
+            + StockBalance::where('warehouse_id', $warehouse->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted warehouse', $warehouse->name);
         $warehouse->delete();
