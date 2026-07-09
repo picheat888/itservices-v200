@@ -1078,7 +1078,7 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **Verification**: `php artisan test --compact --filter=ContractApiTest` = **26 passed / 0 failed** (101 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
 - **Rollout**: migration additive (`down()` drop คอลัมน์ rollback ได้) — รันบน DB จริงได้เลย ไม่มี backfill; สัญญาที่ยกเลิกไปก่อนหน้านี้ `cancel_reason` เป็น null (ปกติ)
 
-## Contract — rename `title`→`details` + จัด View Details เป็น 4 การ์ด (2026-07-09)
+## Contract — rename `title`→`details` + จัด View Details เป็นกลุ่มสัดส่วน (2026-07-09)
 
 **เหตุผล:** คอลัมน์ `contracts.title` จริง ๆ ถือ "รายละเอียด" (คำอธิบายยาว) ส่วน `name` คือ "ชื่อสัญญา" — แต่ทั้งชื่อคอลัมน์และ label เดิมสลับ/ชวนสับสน
 
@@ -1088,9 +1088,9 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **Frontend** — `Contract` type, `ContractPayload` (เพิ่ม `details` ที่เดิมตกหล่น), form/drawer/list + `asset-form-drawer` (cross-module)
 - **แก้ label ที่สลับ** — `name`="ชื่อสัญญา"/Contract name, `details`="รายละเอียด"/Details (en+th); dialog header โชว์ `name` เป็นหัวข้อ
 
-**Phase 2 — จัด Contract View Details (drawer) เป็น 4 การ์ด:**
-- **การ์ด 1 ข้อมูลสัญญา** (ประเภท · เลขที่/ผู้ขาย · ชื่อสัญญา/รายละเอียด) · **การ์ด 2 ระยะเวลา & มูลค่า** (เริ่ม/สิ้นสุด · คงเหลือ/รอบเรียกเก็บ · มูลค่า) · **การ์ด 3 การแจ้งเตือน** (pills + เริ่มแจ้งเตือนเมื่อ) · **การ์ด 4 ยกเลิก & สิ้นสุดสัญญา** (แสดงเฉพาะ cancelled/expired)
-- **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; **หมายเหตุ (notes)** เป็นบล็อกเต็มแถวด้านล่าง
-- Layout responsive 2 คอลัมน์; หัวข้อการ์ดใช้ i18n `contract_section_*` (en+th) ไม่มี hardcode string
+**Phase 2 — จัด Contract View Details (drawer) เป็นกลุ่ม section แบบไม่มีกรอบ (คงสไตล์เดิม):**
+- 4 กลุ่มมีหัวข้อ (SectionLabel): **ข้อมูลสัญญา** (ประเภท · เลขที่/ผู้ขาย · ชื่อสัญญา · รายละเอียด) · **ระยะเวลา & มูลค่า** (เริ่ม/สิ้นสุด · คงเหลือ/รอบเรียกเก็บ · มูลค่า) · **การแจ้งเตือน** (pills + เริ่มแจ้งเตือนเมื่อ) · **ยกเลิก & สิ้นสุดสัญญา** (แสดงเฉพาะ cancelled/expired)
+- Layout 2 คอลัมน์ responsive (ไม่มีเส้นขอบการ์ด): ซ้าย = ข้อมูลสัญญา + ระยะเวลา&มูลค่า, ขวา = การแจ้งเตือน + ยกเลิก&สิ้นสุด + หมายเหตุ
+- **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; หัวข้อกลุ่มใช้ i18n `contract_section_*` (en+th) ไม่มี hardcode string
 
 **Verification**: full suite **541 passed / 0 failed** · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
