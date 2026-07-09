@@ -532,4 +532,18 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.duration_months', 18)
             ->assertJsonPath('data.duration_days', 15);
     }
+
+    public function test_cannot_cancel_a_contract_whose_term_has_ended(): void
+    {
+        $this->actingAs($this->super());
+        $overdue = Contract::create([
+            'vendor_id' => $this->vendorId('OD'), 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => now()->subYears(2), 'end_date' => now()->subDays(5), 'value' => 1, 'billing_cycle' => 'yearly',
+        ]);
+
+        // Overdue (term ended) → cancel is rejected; only Expire is valid.
+        $this->postJson("/api/contracts/{$overdue->id}/cancel", ['reason' => 'Too late'])
+            ->assertStatus(422)->assertJsonValidationErrors('contract');
+        $this->assertNull($overdue->fresh()->cancelled_at);
+    }
 }

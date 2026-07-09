@@ -358,10 +358,12 @@ export function ContractDetailDrawer({
                         {tab === 'attachments' && <ContractAttachmentsTab attachments={c.attachments} />}
                     </div>
 
-                    {/* Footer — Cancel / Expired (left) · Edit (right). Hidden entirely once terminal. */}
-                    {c.status !== 'cancelled' && c.status !== 'expired' && (canCancel || canExpire || canEdit) && (
+                    {/* Footer — Cancel / Expired (left) · Edit (right). Hidden entirely once terminal.
+                        Cancel = early termination, only while still active; an ended (overdue)
+                        contract can only be marked Expired. */}
+                    {c.status !== 'cancelled' && c.status !== 'expired' && ((canCancel && c.status === 'active') || canExpire || canEdit) && (
                         <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                            {canCancel && (
+                            {canCancel && c.status === 'active' && (
                                 <Button variant="destructive" onClick={handleCancel}>
                                     <Ban className="h-4 w-4" />
                                     {t('contract_cancel')}
