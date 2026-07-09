@@ -54,6 +54,7 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.vendor', 'Microsoft Thailand')
             ->assertJsonPath('data.value_display', '฿2,140,000.00/yr')
             ->assertJsonPath('data.duration_months', 24)
+            ->assertJsonPath('data.duration_days', 0)
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.cancelled_at', null)
             ->assertJsonStructure(['data' => ['created_at', 'updated_at']]);
@@ -508,5 +509,27 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.value_display', '฿1,234.56/mo')
             ->assertJsonPath('data.total_value_display', '฿14,814.72');
         $this->assertDatabaseHas('contracts', ['code' => 'CT-DEC-1', 'value' => 1234.56, 'total_value' => 14814.72]);
+    }
+
+    public function test_duration_reports_months_and_leftover_days(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'Dur Co']);
+
+        // A 1-day contract must read as 0 months / 1 day (not "1 month").
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-DUR-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2025-01-02', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
+        ])->assertCreated()
+            ->assertJsonPath('data.duration_months', 0)
+            ->assertJsonPath('data.duration_days', 1);
+
+        // 1 year 6 months 15 days → 18 months, 15 days.
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-DUR-2', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-07-16', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
+        ])->assertCreated()
+            ->assertJsonPath('data.duration_months', 18)
+            ->assertJsonPath('data.duration_days', 15);
     }
 }
