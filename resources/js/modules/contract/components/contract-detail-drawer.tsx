@@ -112,12 +112,11 @@ export function ContractDetailDrawer({
     /** Expired = permanent admin close-out; warn extra when ending before the end date. */
     const handleExpire = async () => {
         if (!(await assertAssetsClear())) return;
-        const early = c.status !== 'overdue'; // not yet past end date
         await confirm({
             variant: 'danger',
             title: t('contract_expire'),
             entity: { name: c.name, sub: c.code },
-            description: early ? t('contract_expire_early_warn') : t('contract_expire_permanent_note'),
+            description: t('contract_expire_permanent_note'),
             confirmText: t('contract_expire'),
             action: async () => {
                 await expire.mutateAsync(c.id);
@@ -361,20 +360,22 @@ export function ContractDetailDrawer({
                     {/* Footer — Cancel / Expired (left) · Edit (right). Hidden entirely once terminal.
                         Cancel = early termination, only while still active; an ended (overdue)
                         contract can only be marked Expired. */}
-                    {c.status !== 'cancelled' && c.status !== 'expired' && ((canCancel && c.status === 'active') || canExpire || canEdit) && (
-                        <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                            {canCancel && c.status === 'active' && (
-                                <Button variant="destructive" onClick={handleCancel}>
-                                    <Ban className="h-4 w-4" />
-                                    {t('contract_cancel')}
-                                </Button>
-                            )}
-                            {canExpire && (
-                                <Button variant="outline" onClick={handleExpire} disabled={expire.isPending}>
-                                    <Archive className="h-4 w-4" />
-                                    {t('contract_expire')}
-                                </Button>
-                            )}
+                    {c.status !== 'cancelled' &&
+                        c.status !== 'expired' &&
+                        ((canCancel && c.status === 'active') || (canExpire && c.status === 'overdue') || canEdit) && (
+                            <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                                {canCancel && c.status === 'active' && (
+                                    <Button variant="destructive" onClick={handleCancel}>
+                                        <Ban className="h-4 w-4" />
+                                        {t('contract_cancel')}
+                                    </Button>
+                                )}
+                                {canExpire && c.status === 'overdue' && (
+                                    <Button variant="outline" onClick={handleExpire} disabled={expire.isPending}>
+                                        <Archive className="h-4 w-4" />
+                                        {t('contract_expire')}
+                                    </Button>
+                                )}
                             {canEdit && (
                                 <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
                                     <SquarePen className="h-4 w-4" />

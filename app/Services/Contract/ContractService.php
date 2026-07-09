@@ -233,6 +233,14 @@ class ContractService
             ]);
         }
 
+        // Expire = end-of-term close-out — only once the contract term has ended.
+        // A still-running contract is ended early via cancel, not expire.
+        if ($contract->daysRemaining() > 0) {
+            throw ValidationException::withMessages([
+                'contract' => 'This contract term has not ended yet; cancel it instead of marking it expired.',
+            ]);
+        }
+
         $this->assertNoPendingAssets($contract);
 
         $contract->update(['expired_at' => Carbon::now()]);
