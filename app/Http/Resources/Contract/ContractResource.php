@@ -26,7 +26,7 @@ class ContractResource extends JsonResource
             'vendor' => $this->vendor?->name,
             'vendor_id' => $this->vendor_id,
             'name' => $this->name,
-            'title' => $this->title,
+            'details' => $this->details,
             'type' => $type?->value ?? ContractType::Software->value,
             'start' => $this->start_date?->toDateString(),
             'end' => $this->end_date?->toDateString(),

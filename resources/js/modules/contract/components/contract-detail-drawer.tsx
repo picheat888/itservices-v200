@@ -183,7 +183,7 @@ export function ContractDetailDrawer({
                     <ContractDialogHeader
                         icon={TypeIcon}
                         eyebrow={lang === 'th' ? 'สัญญา' : 'Contract'}
-                        title={c.title || c.name}
+                        title={c.name || c.details || ''}
                         code={c.code}
                         srDescription={c.vendor}
                         titleSuffix={daysBadge}
@@ -220,7 +220,7 @@ export function ContractDetailDrawer({
                                     <KV label={t('contract_code')} value={c.code} mono />
                                     <KV label={t('contract_vendor')} value={c.vendor} />
                                     <div className="col-span-2">
-                                        <KV label={t('contract_title')} value={c.title || '—'} />
+                                        <KV label={t('contract_details')} value={c.details || '—'} />
                                     </div>
                                     <div className="col-span-2">
                                         <KV label={t('contract_name')} value={c.name} />

@@ -370,7 +370,7 @@ export default function ContractsPage() {
                                         setSearch(e.target.value);
                                         setPage(1);
                                     }}
-                                    placeholder={`${t('contract_vendor')} / ${t('contract_title')}`}
+                                    placeholder={`${t('contract_vendor')} / ${t('contract_details')}`}
                                     className="pl-9"
                                 />
                             </div>
@@ -509,7 +509,7 @@ export default function ContractsPage() {
                                     <thead>
                                         <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                             <th className="px-4 py-2.5">{t('contract_code')}</th>
-                                            <th className="px-4 py-2.5">{t('contract_title')}</th>
+                                            <th className="px-4 py-2.5">{t('contract_details')}</th>
                                             <th className="px-4 py-2.5">{t('contract_vendor')}</th>
                                             <th className="px-4 py-2.5">{t('contract_type')}</th>
                                             <th className="px-4 py-2.5">{t('contract_start')}</th>
@@ -644,7 +644,7 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
                     )}
                 </div>
             </td>
-            <td className="max-w-[280px] truncate px-4 py-2.5">{c.title || <span className="text-muted-foreground">—</span>}</td>
+            <td className="max-w-[280px] truncate px-4 py-2.5">{c.details || <span className="text-muted-foreground">—</span>}</td>
             <td className="px-4 py-2.5 font-medium">{c.vendor}</td>
             <td className="px-4 py-2.5">
                 <StatusBadge tone={TYPE_TONE[c.type]}>{t(`contract_type_${c.type}`)}</StatusBadge>
