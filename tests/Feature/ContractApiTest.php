@@ -45,6 +45,7 @@ class ContractApiTest extends TestCase
             'start_date' => '2025-01-01',
             'end_date' => '2027-01-01',
             'value' => 2140000,
+            'total_value' => 4280000,
             'billing_cycle' => 'yearly',
         ];
 
@@ -169,7 +170,7 @@ class ContractApiTest extends TestCase
 
         $base = [
             'code' => 'CT-LINK-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
-            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'total_value' => 1000, 'billing_cycle' => 'yearly',
         ];
 
         // Create linking both assets.
@@ -196,7 +197,7 @@ class ContractApiTest extends TestCase
 
         $this->postJson('/api/contracts', [
             'code' => 'CT-LINK-2', 'vendor_id' => $this->vendorId('V2'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
-            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'total_value' => 1000, 'billing_cycle' => 'yearly',
             'asset_ids' => [$owned->id],
         ])->assertStatus(201);
 
@@ -460,22 +461,37 @@ class ContractApiTest extends TestCase
         $this->assertNull($contract->fresh()->cancel_reason);
     }
 
-    public function test_total_value_is_stored_and_optional(): void
+    public function test_total_value_is_required_on_create_and_stored(): void
     {
         $this->actingAs($this->super());
         $vendor = Vendor::create(['name' => 'TV Co']);
 
-        // Manually-entered total is stored and formatted for display.
+        // Required on create — missing total_value fails validation.
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-TV-0', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
+        ])->assertStatus(422)->assertJsonValidationErrors('total_value');
+
+        // Provided → stored and formatted for display.
         $this->postJson('/api/contracts', [
             'code' => 'CT-TV-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'total_value' => 1250000, 'billing_cycle' => 'monthly',
         ])->assertCreated()->assertJsonPath('data.total_value_display', '฿1,250,000');
         $this->assertDatabaseHas('contracts', ['code' => 'CT-TV-1', 'total_value' => 1250000]);
+    }
 
-        // total_value is optional — omitting it stores null.
-        $this->postJson('/api/contracts', [
-            'code' => 'CT-TV-2', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+    public function test_total_value_is_optional_on_update(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create([
+            'code' => 'CT-TV-UPD', 'vendor_id' => $this->vendorId('UpdV'), 'name' => 'N', 'details' => 'D', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
-        ])->assertCreated()->assertJsonPath('data.total_value', null)->assertJsonPath('data.total_value_display', null);
+        ]);
+
+        // Editing a legacy contract without a total_value is not blocked.
+        $this->putJson("/api/contracts/{$contract->id}", [
+            'code' => $contract->code, 'vendor_id' => $contract->vendor_id, 'name' => 'N2', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
+        ])->assertOk()->assertJsonPath('data.name', 'N2');
     }
 }
