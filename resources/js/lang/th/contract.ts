@@ -64,7 +64,7 @@ export const contract: Dict = {
     "contract_link_assets_sub": "เชื่อมโยงทรัพย์สินที่เช่าใช้กับสัญญานี้",
     "contract_renew": "ต่ออายุ",
     "contract_cancel": "ยกเลิกสัญญา",
-    "contract_reactivate": "คืนสถานะสัญญา",
+    "contract_reactivate": "เปิดใช้อีกครั้ง",
     "contract_cancelled": "ยกเลิกแล้ว",
     "contract_notification_schedule": "กำหนดการแจ้งเตือน",
     "contract_register_sub": "ลงทะเบียนสัญญากับผู้ขายหรือผู้ให้บริการ",
