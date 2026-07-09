@@ -36,6 +36,7 @@ class StoreContractRequest extends FormRequest
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'value' => ['required', 'numeric', 'min:0'],
+            'total_value' => ['nullable', 'numeric', 'min:0'],
             'billing_cycle' => ['required', Rule::in(['monthly', 'quarterly', 'yearly'])],
             'notify_150' => ['sometimes', 'boolean'],
             'notify_120' => ['sometimes', 'boolean'],

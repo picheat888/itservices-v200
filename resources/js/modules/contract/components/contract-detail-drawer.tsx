@@ -275,7 +275,7 @@ export function ContractDetailDrawer({
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
                                         <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />
-                                        <KV label={t('contract_total_value')} value={c.total_value_display} mono />
+                                        <KV label={t('contract_total_value')} value={c.total_value_display || '—'} mono />
                                     </div>
                                 </div>
 

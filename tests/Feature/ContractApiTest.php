@@ -459,4 +459,23 @@ class ContractApiTest extends TestCase
         $this->assertNull($contract->fresh()->cancelled_at);
         $this->assertNull($contract->fresh()->cancel_reason);
     }
+
+    public function test_total_value_is_stored_and_optional(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'TV Co']);
+
+        // Manually-entered total is stored and formatted for display.
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-TV-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'total_value' => 1250000, 'billing_cycle' => 'monthly',
+        ])->assertCreated()->assertJsonPath('data.total_value_display', '฿1,250,000');
+        $this->assertDatabaseHas('contracts', ['code' => 'CT-TV-1', 'total_value' => 1250000]);
+
+        // total_value is optional — omitting it stores null.
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-TV-2', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
+        ])->assertCreated()->assertJsonPath('data.total_value', null)->assertJsonPath('data.total_value_display', null);
+    }
 }

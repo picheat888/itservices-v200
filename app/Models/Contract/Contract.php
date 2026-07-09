@@ -32,7 +32,7 @@ class Contract extends Model
 
     protected $fillable = [
         'code', 'vendor_id', 'name', 'details', 'type', 'start_date', 'end_date',
-        'value', 'billing_cycle', 'cancelled_at', 'expired_at', 'cancel_reason',
+        'value', 'total_value', 'billing_cycle', 'cancelled_at', 'expired_at', 'cancel_reason',
         'notify_150', 'notify_120', 'notify_90', 'notify_60', 'notify_45', 'notify_30', 'notify_7', 'notes',
     ];
 
@@ -42,6 +42,7 @@ class Contract extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'value' => 'decimal:2',
+            'total_value' => 'decimal:2',
             'cancelled_at' => 'datetime',
             'expired_at' => 'datetime',
             'notify_150' => 'boolean',
@@ -139,22 +140,5 @@ class Contract extends Model
         };
 
         return (float) $this->value * $multiplier;
-    }
-
-    /**
-     * Whole-term contract value: the per-cycle value multiplied by the number of
-     * billing cycles between start and end date (at least one). Used for the
-     * "Total value" figure in the detail view.
-     */
-    public function totalValue(): float
-    {
-        $months = $this->start_date->diffInMonths($this->end_date);
-        $cycles = match ($this->billing_cycle) {
-            'monthly' => $months,
-            'quarterly' => $months / 3,
-            default => $months / 12, // yearly
-        };
-
-        return (float) $this->value * max(1, (int) round($cycles));
     }
 }

@@ -68,6 +68,7 @@ interface FormState {
     start_date: string;
     end_date: string;
     value: string;
+    total_value: string;
     billing_cycle: BillingCycle;
     notify_150: boolean;
     notify_120: boolean;
@@ -91,6 +92,7 @@ const EMPTY: FormState = {
     start_date: '',
     end_date: '',
     value: '',
+    total_value: '',
     billing_cycle: 'yearly',
     notify_150: false,
     notify_120: false,
@@ -169,6 +171,7 @@ export function ContractFormDrawer({
                 start_date: editing.start,
                 end_date: editing.end,
                 value: String(editing.value),
+                total_value: editing.total_value != null ? String(editing.total_value) : '',
                 billing_cycle: editing.billing_cycle,
                 notify_150: editing.notify_150,
                 notify_120: editing.notify_120,
@@ -315,6 +318,7 @@ export function ContractFormDrawer({
             start_date: form.start_date,
             end_date: form.end_date,
             value: Number(form.value),
+            total_value: form.total_value ? Number(form.total_value) : null,
             billing_cycle: form.billing_cycle,
             notify_150: form.notify_150,
             notify_120: form.notify_120,
@@ -648,7 +652,7 @@ export function ContractFormDrawer({
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Field label={`${t('contract_value')} (${symbol})`} required error={err.value} name="value">
+                                    <Field label={`${t('contract_value_per_cycle')} (${symbol})`} required error={err.value} name="value">
                                         <Input
                                             type="text"
                                             inputMode="numeric"
@@ -670,6 +674,16 @@ export function ContractFormDrawer({
                                         />
                                     </Field>
                                 </div>
+                                <Field label={`${t('contract_total_value')} (${symbol})`} error={err.total_value} name="total_value">
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        className="font-mono"
+                                        value={form.total_value ? Number(form.total_value).toLocaleString() : ''}
+                                        onChange={(e) => upd('total_value', e.target.value.replace(/[^\d]/g, ''))}
+                                        placeholder={lang === 'th' ? 'ยอดรวมทั้งสัญญา (ไม่บังคับ)' : 'Whole-contract total (optional)'}
+                                    />
+                                </Field>
                             </div>
                         )}
 
@@ -834,10 +848,13 @@ export function ContractFormDrawer({
                                         mono
                                     />
                                     <ReviewRow
-                                        k={t('contract_value')}
+                                        k={t('contract_value_per_cycle')}
                                         v={`${symbol}${form.value ? Number(form.value).toLocaleString() : '0'} · ${t(`contract_billing_${form.billing_cycle}`)}`}
                                         mono
                                     />
+                                    {form.total_value && (
+                                        <ReviewRow k={t('contract_total_value')} v={`${symbol}${Number(form.total_value).toLocaleString()}`} mono />
+                                    )}
                                     <ReviewRow
                                         k={t('contract_notify')}
                                         v={selectedNotify.length ? `${selectedNotify.join(' · ')} ${lang === 'th' ? 'วัน' : 'days'}` : '—'}
