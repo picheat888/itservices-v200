@@ -6,6 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { useBrandMutations } from '../hooks/use-master-data';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Brand } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
@@ -21,12 +22,14 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
     const { create, update } = useBrandMutations();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (open) {
             setName(brand?.name ?? '');
             setDescription(brand?.description ?? '');
+            setNameError(undefined);
         }
     }, [open, brand]);
 
@@ -34,6 +37,7 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
         if (!name.trim()) {
             return;
         }
+        setNameError(undefined);
         const payload = { name: name.trim(), description: description.trim() || undefined };
         try {
             if (brand) {
@@ -42,8 +46,12 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                 await create.mutateAsync(payload);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -54,10 +62,13 @@ export function BrandModal({ open, brand, onClose }: { open: boolean; brand?: Br
                     <DialogTitle>{brand ? t('md_edit_brand') : t('md_add_brand')}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                    <Field label={t('md_brand_name')} required>
+                    <Field label={t('md_brand_name')} required error={nameError}>
                         <Input
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                setNameError(undefined);
+                            }}
                             autoFocus
                             placeholder={t('md_brand_name')}
                             onKeyDown={(e) => e.key === 'Enter' && submit()}

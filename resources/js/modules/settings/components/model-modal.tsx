@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAssetModelMutations, useBrands } from '../hooks/use-master-data';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import type { AssetModel, Brand } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
@@ -26,12 +27,14 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
     const { data: brands = [] } = useBrands();
     const [name, setName] = useState('');
     const [brandId, setBrandId] = useState<string>(NO_BRAND);
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (open) {
             setName(model?.name ?? '');
             setBrandId(model?.brand_id ? String(model.brand_id) : NO_BRAND);
+            setNameError(undefined);
         }
     }, [open, model]);
 
@@ -39,6 +42,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
         if (!name.trim()) {
             return;
         }
+        setNameError(undefined);
         const payload = { name: name.trim(), brand_id: brandId === NO_BRAND ? null : Number(brandId) };
         try {
             if (model) {
@@ -47,8 +51,12 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                 await create.mutateAsync(payload);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -74,10 +82,13 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
                             </SelectContent>
                         </Select>
                     </Field>
-                    <Field label={t('md_model_name')} required>
+                    <Field label={t('md_model_name')} required error={nameError}>
                         <Input
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                setNameError(undefined);
+                            }}
                             autoFocus
                             placeholder={t('md_model_name')}
                             onKeyDown={(e) => e.key === 'Enter' && submit()}
