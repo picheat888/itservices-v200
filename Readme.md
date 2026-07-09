@@ -1095,6 +1095,7 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **Validate** — `total_value` **required ตอนเพิ่มใหม่ (POST)**, optional ตอนแก้ไข (PUT) เพื่อไม่บล็อกสัญญาเดิมที่ยังไม่มียอดรวม; numeric ≥ 0. ฟอร์ม required เฉพาะตอน add (`required={!editing}`)
 - **ประมาณการช่วยกรอก (ตอนเพิ่ม)** — หลังกรอกมูลค่า/รอบ + วันที่ ฟอร์มโชว์ **ประมาณการ Total คร่าว ๆ** (value × จำนวนรอบจาก start→end) ใต้ช่อง กดใช้ค่านี้เพื่อเติมได้ ให้ admin เช็ค/ปรับก่อนบันทึก — ช่อง Total value ยังเป็นค่าที่กรอกเองเสมอ
 - **ฟอร์ม Add/Edit** — ช่องมูลค่าเดิม label "มูลค่า/รอบ" + ช่อง "มูลค่าทั้งหมด" (กรอกเอง) ในสเต็ป Term & Value และแสดงในสเต็ป Review
+- **รองรับทศนิยม** — ช่องมูลค่าทั้งสอง (value/รอบ + total) พิมพ์ทศนิยมได้สูงสุด 2 ตำแหน่ง (`sanitizeMoney`/`displayMoney` — คั่นหลักพัน + คงจุดทศนิยมระหว่างพิมพ์, `inputMode=decimal`); ฝั่งแสดงผล `value_display`/`total_value_display` เป็น `number_format(x, 2)` (2 ตำแหน่งเสมอ)
 - **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; หัวข้อกลุ่ม + field ใหม่ใช้ i18n (`contract_section_*`, `contract_total_value`, `contract_value_per_cycle`, `contract_notes`) en+th ไม่มี hardcode
 - **Sidebar badge fix** — ตัวเลข "ต้องจัดการ" ข้าง sidebar Contracts เปลี่ยนจากนับ `expired` → `overdue` (สัญญาที่ปิดถาวรแล้วไม่นับ) ให้ตรงกับ dashboard banner
 
