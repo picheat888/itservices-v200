@@ -375,21 +375,14 @@ export function ContractDetailDrawer({
                         </div>
                     )}
 
-                    {/* Cancelled contracts can be reopened (expired is permanent — no footer). */}
-                    {c.status === 'cancelled' && (canCancel || canEdit) && (
+                    {/* Cancelled contracts are read-only — reopen (reactivate) before editing.
+                        Expired is permanent — no footer. */}
+                    {c.status === 'cancelled' && canCancel && (
                         <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                            {canCancel && (
-                                <Button variant="outline" onClick={handleReactivate} disabled={cancel.isPending}>
-                                    <RotateCcw className="h-4 w-4" />
-                                    {t('contract_reactivate')}
-                                </Button>
-                            )}
-                            {canEdit && (
-                                <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
-                                    <SquarePen className="h-4 w-4" />
-                                    {t('edit')}
-                                </Button>
-                            )}
+                            <Button variant="outline" onClick={handleReactivate} disabled={cancel.isPending}>
+                                <RotateCcw className="h-4 w-4" />
+                                {t('contract_reactivate')}
+                            </Button>
                         </div>
                     )}
                 </DialogContent>
