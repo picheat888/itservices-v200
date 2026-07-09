@@ -881,15 +881,15 @@ function LocationsList() {
             render: (loc) => (
                 <RowActions
                     onEdit={() => setEditLocation(loc)}
-                    onDelete={() =>
-                        confirm({
-                            variant: 'danger',
-                            entity: { name: loc.name },
-                            action: async () => {
-                                await remove.mutateAsync(loc.id);
-                            },
-                        })
-                    }
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: loc.name } }))) return;
+                        try {
+                            await remove.mutateAsync(loc.id);
+                        } catch (e) {
+                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                            useToastStore.getState().push(inUse ? t('location_in_use') : t('cd_error'), 'error');
+                        }
+                    }}
                 />
             ),
         },

@@ -7,6 +7,7 @@ export const settings: Dict = {
     "set_display": "การแสดงผล",
     "set_display_desc": "ปรับแต่งการแสดงผลส่วนตัว — บันทึกไว้กับบัญชีของคุณ",
     "set_locations": "สถานที่",
+    "location_in_use": "ลบไม่ได้ — ยังมีทรัพย์สินใช้สถานที่นี้อยู่",
     "set_locations_desc": "จัดการสถานที่ที่ใช้ร่วมกับทรัพย์สิน แผนก และโมดูลอื่น ๆ",
     "loc_name": "ชื่อสถานที่",
     "set_master_data": "ข้อมูลหลัก",
