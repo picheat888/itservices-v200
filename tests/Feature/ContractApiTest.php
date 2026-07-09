@@ -52,7 +52,7 @@ class ContractApiTest extends TestCase
         $this->postJson('/api/contracts', $payload)
             ->assertCreated()
             ->assertJsonPath('data.vendor', 'Microsoft Thailand')
-            ->assertJsonPath('data.value_display', '฿2,140,000/yr')
+            ->assertJsonPath('data.value_display', '฿2,140,000.00/yr')
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.cancelled_at', null)
             ->assertJsonStructure(['data' => ['created_at', 'updated_at']]);
@@ -476,7 +476,7 @@ class ContractApiTest extends TestCase
         $this->postJson('/api/contracts', [
             'code' => 'CT-TV-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'total_value' => 1250000, 'billing_cycle' => 'monthly',
-        ])->assertCreated()->assertJsonPath('data.total_value_display', '฿1,250,000');
+        ])->assertCreated()->assertJsonPath('data.total_value_display', '฿1,250,000.00');
         $this->assertDatabaseHas('contracts', ['code' => 'CT-TV-1', 'total_value' => 1250000]);
     }
 
@@ -493,5 +493,19 @@ class ContractApiTest extends TestCase
             'code' => $contract->code, 'vendor_id' => $contract->vendor_id, 'name' => 'N2', 'details' => 'D', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 100000, 'billing_cycle' => 'monthly',
         ])->assertOk()->assertJsonPath('data.name', 'N2');
+    }
+
+    public function test_value_and_total_accept_two_decimals(): void
+    {
+        $this->actingAs($this->super());
+        $vendor = Vendor::create(['name' => 'Dec Co']);
+
+        $this->postJson('/api/contracts', [
+            'code' => 'CT-DEC-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
+            'start_date' => '2025-01-01', 'end_date' => '2026-01-01', 'value' => 1234.56, 'total_value' => 14814.72, 'billing_cycle' => 'monthly',
+        ])->assertCreated()
+            ->assertJsonPath('data.value_display', '฿1,234.56/mo')
+            ->assertJsonPath('data.total_value_display', '฿14,814.72');
+        $this->assertDatabaseHas('contracts', ['code' => 'CT-DEC-1', 'value' => 1234.56, 'total_value' => 14814.72]);
     }
 }

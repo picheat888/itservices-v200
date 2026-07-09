@@ -60,6 +60,24 @@ const FIELD_STEP: Record<string, number> = {
     notify: 3,
 };
 
+/** Keep digits + a single decimal point, capped at 2 decimal places (money input). */
+function sanitizeMoney(raw: string): string {
+    let s = raw.replace(/[^\d.]/g, '');
+    const dot = s.indexOf('.');
+    if (dot !== -1) {
+        s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+    }
+    return s;
+}
+
+/** Group the integer part with commas while preserving a typed dot / decimals. */
+function displayMoney(s: string): string {
+    if (!s) return '';
+    const [intPart, decPart] = s.split('.');
+    const intFmt = intPart ? Number(intPart).toLocaleString('en-US') : '';
+    return s.includes('.') ? `${intFmt}.${decPart ?? ''}` : intFmt;
+}
+
 interface FormState {
     code: string;
     type: ContractType;
@@ -146,7 +164,7 @@ export function ContractFormDrawer({
             (end.getMonth() - start.getMonth()) +
             (end.getDate() >= start.getDate() ? 0 : -1);
         const raw = form.billing_cycle === 'monthly' ? months : form.billing_cycle === 'quarterly' ? months / 3 : months / 12;
-        return v * Math.max(1, Math.round(raw));
+        return Math.round(v * Math.max(1, Math.round(raw)) * 100) / 100;
     })();
 
     // Attachments: already-saved files (with pending removals) + newly picked files
@@ -674,10 +692,10 @@ export function ContractFormDrawer({
                                     <Field label={`${t('contract_value_per_cycle')} (${symbol})`} required error={err.value} name="value">
                                         <Input
                                             type="text"
-                                            inputMode="numeric"
+                                            inputMode="decimal"
                                             className="font-mono"
-                                            value={form.value ? Number(form.value).toLocaleString() : ''}
-                                            onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
+                                            value={displayMoney(form.value)}
+                                            onChange={(e) => upd('value', sanitizeMoney(e.target.value))}
                                             placeholder="0.00"
                                         />
                                     </Field>
@@ -696,10 +714,10 @@ export function ContractFormDrawer({
                                 <Field label={`${t('contract_total_value')} (${symbol})`} required={!editing} error={err.total_value} name="total_value">
                                     <Input
                                         type="text"
-                                        inputMode="numeric"
+                                        inputMode="decimal"
                                         className="font-mono"
-                                        value={form.total_value ? Number(form.total_value).toLocaleString() : ''}
-                                        onChange={(e) => upd('total_value', e.target.value.replace(/[^\d]/g, ''))}
+                                        value={displayMoney(form.total_value)}
+                                        onChange={(e) => upd('total_value', sanitizeMoney(e.target.value))}
                                         placeholder="0.00"
                                     />
                                     {totalValueEstimate != null && (
