@@ -226,10 +226,10 @@ export function ContractDetailDrawer({
                     {/* Body — the active panel. Assets/Attachments fill & manage their own layout. */}
                     <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>
                         {tab === 'overview' && (
-                            <div className="space-y-5">
-                                <div className="grid gap-5 md:grid-cols-2">
-                                    {/* Card 1 — Contract info */}
-                                    <section className="border-border/60 rounded-xl border p-4">
+                            <div className="grid gap-x-10 gap-y-7 md:grid-cols-2">
+                                {/* Left column — contract particulars, then term & value */}
+                                <div className="space-y-7">
+                                    <div>
                                         <SectionLabel>{t('contract_section_info')}</SectionLabel>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="col-span-2">
@@ -237,13 +237,16 @@ export function ContractDetailDrawer({
                                             </div>
                                             <KV label={t('contract_code')} value={c.code} mono />
                                             <KV label={t('contract_vendor')} value={c.vendor} />
-                                            <KV label={t('contract_name')} value={c.name} />
-                                            <KV label={t('contract_details')} value={c.details || '—'} />
+                                            <div className="col-span-2">
+                                                <KV label={t('contract_name')} value={c.name} />
+                                            </div>
+                                            <div className="col-span-2">
+                                                <KV label={t('contract_details')} value={c.details || '—'} />
+                                            </div>
                                         </div>
-                                    </section>
+                                    </div>
 
-                                    {/* Card 2 — Term & value */}
-                                    <section className="border-border/60 rounded-xl border p-4">
+                                    <div>
                                         <SectionLabel>{t('contract_section_term')}</SectionLabel>
                                         <div className="grid grid-cols-2 gap-4">
                                             <KV label={t('contract_start')} value={c.start} mono />
@@ -265,10 +268,12 @@ export function ContractDetailDrawer({
                                                 <KV label={t('contract_value')} value={c.value_display} mono />
                                             </div>
                                         </div>
-                                    </section>
+                                    </div>
+                                </div>
 
-                                    {/* Card 3 — Notification */}
-                                    <section className="border-border/60 rounded-xl border p-4">
+                                {/* Right column — reminders, closure (terminal only), notes */}
+                                <div className="space-y-7">
+                                    <div>
                                         <SectionLabel>{t('contract_section_notify')}</SectionLabel>
                                         <div className="space-y-4">
                                             <div>
@@ -307,11 +312,10 @@ export function ContractDetailDrawer({
                                                 }
                                             />
                                         </div>
-                                    </section>
+                                    </div>
 
-                                    {/* Card 4 — Cancellation & closure (terminal contracts only) */}
                                     {terminal && (
-                                        <section className="border-border/60 rounded-xl border p-4">
+                                        <div>
                                             <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                             <div className="grid grid-cols-2 gap-4">
                                                 {cancelled && c.cancelled_at && (
@@ -326,17 +330,16 @@ export function ContractDetailDrawer({
                                                     </div>
                                                 )}
                                             </div>
-                                        </section>
+                                        </div>
+                                    )}
+
+                                    {c.notes && (
+                                        <div>
+                                            <SectionLabel>{lang === 'th' ? 'หมายเหตุ' : 'Notes'}</SectionLabel>
+                                            <p className="text-sm whitespace-pre-wrap">{c.notes}</p>
+                                        </div>
                                     )}
                                 </div>
-
-                                {/* Notes — full width */}
-                                {c.notes && (
-                                    <section className="border-border/60 rounded-xl border p-4">
-                                        <SectionLabel>{lang === 'th' ? 'หมายเหตุ' : 'Notes'}</SectionLabel>
-                                        <p className="text-sm whitespace-pre-wrap">{c.notes}</p>
-                                    </section>
-                                )}
                             </div>
                         )}
 
