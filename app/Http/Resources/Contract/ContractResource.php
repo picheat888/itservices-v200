@@ -32,6 +32,7 @@ class ContractResource extends JsonResource
             'end' => $this->end_date?->toDateString(),
             'value' => (float) $this->value,
             'value_display' => $this->valueDisplay(),
+            'total_value_display' => AppSetting::currencySymbol().number_format($this->totalValue()),
             'billing_cycle' => $this->billing_cycle,
             'status' => $this->status,
             'days_remaining' => $this->daysRemaining(),

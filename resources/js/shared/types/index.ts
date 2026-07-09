@@ -179,6 +179,7 @@ export interface Contract {
     end: string;
     value: number;
     value_display: string;
+    total_value_display: string;
     billing_cycle: BillingCycle;
     status: ContractStatus;
     days_remaining: number;
