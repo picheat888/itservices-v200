@@ -56,6 +56,7 @@ const FIELD_STEP: Record<string, number> = {
     start_date: 2,
     end_date: 2,
     value: 2,
+    total_value: 2,
     notify: 3,
 };
 
@@ -130,6 +131,23 @@ export function ContractFormDrawer({
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
     const [step, setStep] = useState(0);
+
+    // Rough auto-estimate of the whole-contract total (value/cycle × billing
+    // cycles between start & end) — a reference the admin can check against or
+    // click to fill. The saved total is whatever they type into the manual field.
+    const totalValueEstimate = (() => {
+        const v = Number(form.value);
+        if (!v || !form.start_date || !form.end_date) return null;
+        const start = new Date(form.start_date);
+        const end = new Date(form.end_date);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
+        const months =
+            (end.getFullYear() - start.getFullYear()) * 12 +
+            (end.getMonth() - start.getMonth()) +
+            (end.getDate() >= start.getDate() ? 0 : -1);
+        const raw = form.billing_cycle === 'monthly' ? months : form.billing_cycle === 'quarterly' ? months / 3 : months / 12;
+        return v * Math.max(1, Math.round(raw));
+    })();
 
     // Attachments: already-saved files (with pending removals) + newly picked files
     // not yet uploaded. Both are applied when the form is saved.
@@ -265,6 +283,7 @@ export function ContractFormDrawer({
         if (!form.start_date) e.start_date = required;
         if (!form.end_date) e.end_date = required;
         if (!form.value.trim()) e.value = required;
+        if (!editing && !form.total_value.trim()) e.total_value = required;
         if (form.start_date && form.end_date && form.end_date < form.start_date) {
             e.end_date = lang === 'th' ? 'ต้องไม่ก่อนวันเริ่ม' : 'Must be after start';
         }
@@ -674,15 +693,29 @@ export function ContractFormDrawer({
                                         />
                                     </Field>
                                 </div>
-                                <Field label={`${t('contract_total_value')} (${symbol})`} error={err.total_value} name="total_value">
+                                <Field label={`${t('contract_total_value')} (${symbol})`} required={!editing} error={err.total_value} name="total_value">
                                     <Input
                                         type="text"
                                         inputMode="numeric"
                                         className="font-mono"
                                         value={form.total_value ? Number(form.total_value).toLocaleString() : ''}
                                         onChange={(e) => upd('total_value', e.target.value.replace(/[^\d]/g, ''))}
-                                        placeholder={lang === 'th' ? 'ยอดรวมทั้งสัญญา (ไม่บังคับ)' : 'Whole-contract total (optional)'}
+                                        placeholder="3,600,000"
                                     />
+                                    {totalValueEstimate != null && (
+                                        <button
+                                            type="button"
+                                            onClick={() => upd('total_value', String(totalValueEstimate))}
+                                            className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
+                                        >
+                                            {lang === 'th' ? 'ประมาณการ' : 'Est.'} ≈{' '}
+                                            <span className="text-foreground font-mono font-semibold">
+                                                {symbol}
+                                                {totalValueEstimate.toLocaleString()}
+                                            </span>{' '}
+                                            · {lang === 'th' ? 'ใช้ค่านี้' : 'use this'}
+                                        </button>
+                                    )}
                                 </Field>
                             </div>
                         )}

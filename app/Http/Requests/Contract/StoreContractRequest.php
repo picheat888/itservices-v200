@@ -36,7 +36,10 @@ class StoreContractRequest extends FormRequest
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'value' => ['required', 'numeric', 'min:0'],
-            'total_value' => ['nullable', 'numeric', 'min:0'],
+            // Required when creating (admins set the whole-contract total up front,
+            // with an on-screen estimate to check against); optional on edit so
+            // legacy contracts without a total aren't blocked from other changes.
+            'total_value' => [$this->isMethod('post') ? 'required' : 'nullable', 'numeric', 'min:0'],
             'billing_cycle' => ['required', Rule::in(['monthly', 'quarterly', 'yearly'])],
             'notify_150' => ['sometimes', 'boolean'],
             'notify_120' => ['sometimes', 'boolean'],
