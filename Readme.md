@@ -1091,7 +1091,8 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 **Phase 2 — จัด Contract View Details (drawer) เป็นกลุ่มเรียงเต็มกว้าง + แยกแท็บการแจ้งเตือน:**
 - **Overview** เรียงกลุ่มลงมาเต็มความกว้าง (ไม่มีเส้นขอบการ์ด, field จัดแถวละ 3 ช่อง): **ข้อมูลสัญญา** (ประเภท / เลขที่·ผู้ขาย·ชื่อสัญญา / รายละเอียด / หมายเหตุ) → **ระยะเวลา & มูลค่า** (เริ่ม·สิ้นสุด·คงเหลือ / รอบเรียกเก็บ·มูลค่าต่อรอบ·มูลค่าทั้งหมด) → **ยกเลิก & สิ้นสุดสัญญา** (เฉพาะ cancelled/expired)
 - **การแจ้งเตือน** ย้ายไปเป็น **แท็บใหม่** (แท็บ: ภาพรวม / การแจ้งเตือน / ทรัพย์สิน / เอกสารแนบ) — Overview ไม่ยาวเกิน
-- **มูลค่าทั้งหมด** = มูลค่ารวมตลอดอายุสัญญา — `Contract::totalValue()` (value × จำนวนรอบจาก start→end, ขั้นต่ำ 1 รอบ) → ส่งออกเป็น `total_value_display`; คู่กับ `value_display` = มูลค่าต่อรอบ
+- **มูลค่าทั้งหมด = ช่องกรอกเอง (manual)** ไม่ใช่คำนวณ — ยอดรวมจริงของแต่ละสัญญาไม่ตายตัว (ขึ้นกับดีลผู้ให้บริการ) จึงให้ผู้ใช้กรอกเอง. คอลัมน์ใหม่ `contracts.total_value` (decimal nullable, optional) → `total_value` + `total_value_display` (null = แสดง "—"); คู่กับ `value_display` = มูลค่าต่อรอบ
+- **ฟอร์ม Add/Edit** — ช่องมูลค่าเดิม label เป็น "มูลค่า/รอบ" + เพิ่มช่อง **"มูลค่าทั้งหมด" (กรอกเอง, ไม่บังคับ)** ในสเต็ป Term & Value และแสดงในสเต็ป Review; validate `nullable|numeric|min:0`
 - **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; หัวข้อกลุ่ม + field ใหม่ใช้ i18n (`contract_section_*`, `contract_total_value`, `contract_value_per_cycle`, `contract_notes`) en+th ไม่มี hardcode
 - **Sidebar badge fix** — ตัวเลข "ต้องจัดการ" ข้าง sidebar Contracts เปลี่ยนจากนับ `expired` → `overdue` (สัญญาที่ปิดถาวรแล้วไม่นับ) ให้ตรงกับ dashboard banner
 

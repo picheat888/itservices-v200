@@ -22,6 +22,7 @@ export interface ContractPayload {
     start_date: string;
     end_date: string;
     value: number;
+    total_value?: number | null;
     billing_cycle: Contract['billing_cycle'];
     notify_150?: boolean;
     notify_120?: boolean;
