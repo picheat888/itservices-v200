@@ -39,6 +39,7 @@ class ContractResource extends JsonResource
             'billing_cycle' => $this->billing_cycle,
             'status' => $this->status,
             'days_remaining' => $this->daysRemaining(),
+            'duration_months' => $this->durationMonths(),
             'in_reminder' => $this->isInReminder(),
             'reminder_days' => $this->reminderThreshold(),
             'notify_150' => $this->notify_150,

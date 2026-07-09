@@ -141,4 +141,13 @@ class Contract extends Model
 
         return (float) $this->value * $multiplier;
     }
+
+    /**
+     * Contract term length in whole months (rounded to the nearest month, min 1),
+     * e.g. 12 / 24 / 36. Shown in the detail view instead of days-remaining.
+     */
+    public function durationMonths(): int
+    {
+        return max(1, (int) round($this->start_date->diffInDays($this->end_date) / (365.25 / 12)));
+    }
 }

@@ -30,6 +30,7 @@ export const contract: Dict = {
     "contract_end": "สิ้นสุด",
     "contract_value": "มูลค่า",
     "contract_days_remaining": "วันที่เหลือ",
+    "contract_duration": "ระยะเวลาสัญญา",
     "contract_reminder_threshold": "เริ่มแจ้งเตือน",
     "contract_created": "สร้างเมื่อ",
     "contract_updated": "อัปเดตล่าสุด",

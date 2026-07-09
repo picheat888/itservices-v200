@@ -262,16 +262,8 @@ export function ContractDetailDrawer({
                                         <KV label={t('contract_start')} value={c.start} mono />
                                         <KV label={t('contract_end')} value={c.end} mono />
                                         <KV
-                                            label={t('contract_days_remaining')}
-                                            value={
-                                                terminal
-                                                    ? '—'
-                                                    : days >= 0
-                                                      ? `${days} ${lang === 'th' ? 'วัน' : 'days'}`
-                                                      : lang === 'th'
-                                                        ? `เกินกำหนด ${-days} วัน`
-                                                        : `${-days} days overdue`
-                                            }
+                                            label={t('contract_duration')}
+                                            value={`${c.duration_months} ${lang === 'th' ? 'เดือน' : 'months'}`}
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
                                         <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />
