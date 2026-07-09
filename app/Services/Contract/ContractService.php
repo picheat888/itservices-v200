@@ -200,6 +200,14 @@ class ContractService
 
         // Guard only the active → cancelled transition; reactivation is always allowed.
         if ($cancelling) {
+            // Cancel = early termination — only valid while the contract is still
+            // running. Once the term has ended (overdue) it can only be expired.
+            if ($contract->daysRemaining() <= 0) {
+                throw ValidationException::withMessages([
+                    'contract' => 'This contract term has already ended; mark it as expired instead of cancelling.',
+                ]);
+            }
+
             $this->assertNoPendingAssets($contract);
         }
 
