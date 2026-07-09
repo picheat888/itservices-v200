@@ -43,7 +43,7 @@ class ContractApiTest extends TestCase
             'details' => 'Microsoft 365 Enterprise Agreement',
             'type' => 'software',
             'start_date' => '2025-01-01',
-            'end_date' => '2027-01-01',
+            'end_date' => '2026-12-31',
             'value' => 2140000,
             'total_value' => 4280000,
             'billing_cycle' => 'yearly',
@@ -516,18 +516,18 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
         $vendor = Vendor::create(['name' => 'Dur Co']);
 
-        // A 1-day contract must read as 0 months / 1 day (not "1 month").
+        // A single-day contract (start = end, inclusive) reads as 0 months / 1 day.
         $this->postJson('/api/contracts', [
             'code' => 'CT-DUR-1', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
-            'start_date' => '2025-01-01', 'end_date' => '2025-01-02', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
+            'start_date' => '2025-01-01', 'end_date' => '2025-01-01', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
         ])->assertCreated()
             ->assertJsonPath('data.duration_months', 0)
             ->assertJsonPath('data.duration_days', 1);
 
-        // 1 year 6 months 15 days → 18 months, 15 days.
+        // 1 Jan 2025 – 15 Jul 2026 (inclusive) → 18 months, 15 days.
         $this->postJson('/api/contracts', [
             'code' => 'CT-DUR-2', 'vendor_id' => $vendor->id, 'name' => 'N', 'details' => 'D', 'type' => 'software',
-            'start_date' => '2025-01-01', 'end_date' => '2026-07-16', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
+            'start_date' => '2025-01-01', 'end_date' => '2026-07-15', 'value' => 1, 'total_value' => 1, 'billing_cycle' => 'monthly',
         ])->assertCreated()
             ->assertJsonPath('data.duration_months', 18)
             ->assertJsonPath('data.duration_days', 15);
