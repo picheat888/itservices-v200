@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -143,17 +144,20 @@ function LookupModal({
     const t = useT();
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (open) {
             setName(item?.name ?? '');
             setDescription(item?.description ?? '');
+            setNameError(undefined);
         }
     }, [open, item]);
 
     const submit = async () => {
         if (!name.trim()) return;
+        setNameError(undefined);
         const payload = { name: name.trim(), description: description.trim() || undefined };
         try {
             if (item) {
@@ -162,8 +166,12 @@ function LookupModal({
                 await create.mutateAsync(payload as never);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -174,10 +182,13 @@ function LookupModal({
                     <DialogTitle>{item ? editLabel : addLabel}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                    <Field label={nameLabel} required>
+                    <Field label={nameLabel} required error={nameError}>
                         <Input
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                setNameError(undefined);
+                            }}
                             autoFocus
                             placeholder={nameLabel}
                             onKeyDown={(e) => e.key === 'Enter' && submit()}

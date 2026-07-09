@@ -6,6 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { useVendorMutations } from '../hooks/use-master-data';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Vendor } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
@@ -23,6 +24,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
     const t = useT();
     const { create, update } = useVendorMutations();
     const [form, setForm] = useState(emptyForm);
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -39,6 +41,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                       }
                     : emptyForm,
             );
+            setNameError(undefined);
         }
     }, [open, vendor]);
 
@@ -48,6 +51,7 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
         if (!form.name.trim() || !form.name_th.trim()) {
             return;
         }
+        setNameError(undefined);
         const payload = {
             name: form.name.trim(),
             name_th: form.name_th.trim() || undefined,
@@ -63,8 +67,12 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                 await create.mutateAsync(payload);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -76,8 +84,16 @@ export function VendorModal({ open, vendor, onClose }: { open: boolean; vendor?:
                 </DialogHeader>
                 <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('md_vendor_name_en')} required>
-                            <Input value={form.name} onChange={(e) => set('name', e.target.value)} autoFocus placeholder={t('md_vendor_name_en')} />
+                        <Field label={t('md_vendor_name_en')} required error={nameError}>
+                            <Input
+                                value={form.name}
+                                onChange={(e) => {
+                                    set('name', e.target.value);
+                                    setNameError(undefined);
+                                }}
+                                autoFocus
+                                placeholder={t('md_vendor_name_en')}
+                            />
                         </Field>
                         <Field label={t('md_vendor_name_th')} required>
                             <Input value={form.name_th} onChange={(e) => set('name_th', e.target.value)} placeholder={t('md_vendor_name_th')} />

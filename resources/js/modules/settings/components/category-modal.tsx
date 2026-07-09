@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/input';
 import { useCategoryMutations } from '../hooks/use-master-data';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import type { Category } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
@@ -24,6 +25,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
     const [nameTh, setNameTh] = useState('');
     const [icon, setIcon] = useState<string | null>(null);
     const [description, setDescription] = useState('');
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
@@ -32,6 +34,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             setNameTh(category?.name_th ?? '');
             setIcon(category?.icon ?? null);
             setDescription(category?.description ?? '');
+            setNameError(undefined);
         }
     }, [open, category]);
 
@@ -39,6 +42,7 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
         if (!name.trim()) {
             return;
         }
+        setNameError(undefined);
         const payload = {
             name: name.trim(),
             name_th: nameTh.trim() || undefined,
@@ -52,8 +56,12 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                 await create.mutateAsync(payload);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -65,10 +73,13 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
                 </DialogHeader>
                 <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                        <Field label={t('md_category_name_en')} required>
+                        <Field label={t('md_category_name_en')} required error={nameError}>
                             <Input
                                 value={name}
-                                onChange={(e) => setName(e.target.value)}
+                                onChange={(e) => {
+                                    setName(e.target.value);
+                                    setNameError(undefined);
+                                }}
                                 autoFocus
                                 placeholder={t('md_category_name_en')}
                                 onKeyDown={(e) => e.key === 'Enter' && submit()}

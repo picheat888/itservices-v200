@@ -6,6 +6,7 @@ import { Input } from '@/shared/ui/input';
 import { useLocationMutations } from '@/modules/employee';
 import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
+import { hasFieldError } from '@/shared/lib/api-errors';
 import type { LocationItem } from '@/shared/types';
 import { useEffect, useState } from 'react';
 
@@ -20,11 +21,13 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
     const t = useT();
     const { create, update } = useLocationMutations();
     const [name, setName] = useState('');
+    const [nameError, setNameError] = useState<string | undefined>();
     const saving = create.isPending || update.isPending;
 
     useEffect(() => {
         if (open) {
             setName(location?.name ?? '');
+            setNameError(undefined);
         }
     }, [open, location]);
 
@@ -32,6 +35,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
         if (!name.trim()) {
             return;
         }
+        setNameError(undefined);
         try {
             if (location) {
                 await update.mutateAsync({ id: location.id, name: name.trim() });
@@ -39,8 +43,12 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
                 await create.mutateAsync(name.trim());
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push(t('cd_error'), 'error');
+        } catch (err) {
+            if (hasFieldError(err, 'name')) {
+                setNameError(t('md_name_taken'));
+            } else {
+                useToastStore.getState().push(t('cd_error'), 'error');
+            }
         }
     };
 
@@ -50,10 +58,13 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
                 <DialogHeader>
                     <DialogTitle>{location ? t('edit_location') : t('add_location')}</DialogTitle>
                 </DialogHeader>
-                <Field label={t('set_locations')} required>
+                <Field label={t('set_locations')} required error={nameError}>
                     <Input
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                            setName(e.target.value);
+                            setNameError(undefined);
+                        }}
                         autoFocus
                         placeholder={t('add_location')}
                         onKeyDown={(e) => e.key === 'Enter' && submit()}
