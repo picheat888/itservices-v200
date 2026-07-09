@@ -23,14 +23,14 @@ class ContractSeeder extends Seeder
     {
         // Group 1 — the original design contracts (fixed dates).
         $design = [
-            ['code' => 'CT-2024-018', 'vendor' => 'Microsoft Thailand', 'title' => 'Microsoft 365 E3 License Agreement',   'name' => 'Microsoft 365 E3 — 320 seats',       'type' => 'software',     'start_date' => '2024-07-01', 'end_date' => '2026-06-30', 'value' => 2140000, 'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2024-022', 'vendor' => 'AIS Business',        'title' => 'AIS Dedicated Fiber — Plant 1',        'name' => 'Fiber dedicated — Plant 1',          'type' => 'connectivity', 'start_date' => '2024-01-01', 'end_date' => '2026-06-15', 'value' => 42000,   'billing_cycle' => 'monthly'],
-            ['code' => 'CT-2023-041', 'vendor' => 'SAP SE',              'title' => 'SAP Business One Support Agreement',   'name' => 'SAP Business One support',           'type' => 'service',      'start_date' => '2023-10-01', 'end_date' => '2026-09-30', 'value' => 820000,  'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2023-008', 'vendor' => 'Cisco Meraki',        'title' => 'Cisco Meraki Cloud Network License',   'name' => 'Cloud network license — 18 APs',     'type' => 'connectivity', 'start_date' => '2023-04-15', 'end_date' => '2026-04-14', 'value' => 196000,  'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2024-005', 'vendor' => 'Adobe',               'title' => 'Adobe Creative Cloud Subscription',    'name' => 'Creative Cloud — 12 seats',          'type' => 'software',     'start_date' => '2024-03-01', 'end_date' => '2027-02-28', 'value' => 324000,  'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2025-001', 'vendor' => 'Dell Technologies',   'title' => 'Dell Server Hardware Support',         'name' => 'Server hardware support — 4 nodes',  'type' => 'hardware',     'start_date' => '2025-01-15', 'end_date' => '2027-01-14', 'value' => 412000,  'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2024-031', 'vendor' => 'Trend Micro',         'title' => 'Trend Micro Endpoint Security',        'name' => 'Endpoint security — 380 seats',      'type' => 'software',     'start_date' => '2024-08-01', 'end_date' => '2026-07-31', 'value' => 285000,  'billing_cycle' => 'yearly'],
-            ['code' => 'CT-2023-019', 'vendor' => 'AutoDesk',            'title' => 'AutoCAD LT License',                   'name' => 'AutoCAD LT — 6 seats',               'type' => 'software',     'start_date' => '2023-06-01', 'end_date' => '2026-05-31', 'value' => 126000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2024-018', 'vendor' => 'Microsoft Thailand', 'details' => 'Microsoft 365 E3 License Agreement',   'name' => 'Microsoft 365 E3 — 320 seats',       'type' => 'software',     'start_date' => '2024-07-01', 'end_date' => '2026-06-30', 'value' => 2140000, 'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2024-022', 'vendor' => 'AIS Business',        'details' => 'AIS Dedicated Fiber — Plant 1',        'name' => 'Fiber dedicated — Plant 1',          'type' => 'connectivity', 'start_date' => '2024-01-01', 'end_date' => '2026-06-15', 'value' => 42000,   'billing_cycle' => 'monthly'],
+            ['code' => 'CT-2023-041', 'vendor' => 'SAP SE',              'details' => 'SAP Business One Support Agreement',   'name' => 'SAP Business One support',           'type' => 'service',      'start_date' => '2023-10-01', 'end_date' => '2026-09-30', 'value' => 820000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2023-008', 'vendor' => 'Cisco Meraki',        'details' => 'Cisco Meraki Cloud Network License',   'name' => 'Cloud network license — 18 APs',     'type' => 'connectivity', 'start_date' => '2023-04-15', 'end_date' => '2026-04-14', 'value' => 196000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2024-005', 'vendor' => 'Adobe',               'details' => 'Adobe Creative Cloud Subscription',    'name' => 'Creative Cloud — 12 seats',          'type' => 'software',     'start_date' => '2024-03-01', 'end_date' => '2027-02-28', 'value' => 324000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2025-001', 'vendor' => 'Dell Technologies',   'details' => 'Dell Server Hardware Support',         'name' => 'Server hardware support — 4 nodes',  'type' => 'hardware',     'start_date' => '2025-01-15', 'end_date' => '2027-01-14', 'value' => 412000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2024-031', 'vendor' => 'Trend Micro',         'details' => 'Trend Micro Endpoint Security',        'name' => 'Endpoint security — 380 seats',      'type' => 'software',     'start_date' => '2024-08-01', 'end_date' => '2026-07-31', 'value' => 285000,  'billing_cycle' => 'yearly'],
+            ['code' => 'CT-2023-019', 'vendor' => 'AutoDesk',            'details' => 'AutoCAD LT License',                   'name' => 'AutoCAD LT — 6 seats',               'type' => 'software',     'start_date' => '2023-06-01', 'end_date' => '2026-05-31', 'value' => 126000,  'billing_cycle' => 'yearly'],
         ];
 
         foreach ($design as $c) {
@@ -43,7 +43,7 @@ class ContractSeeder extends Seeder
         // Group 2 — coverage set, end dates relative to today.
         $today = Carbon::now();
 
-        // [code, vendor, title, name, type, billing, value, days_to_end, [reminders]]
+        // [code, vendor, details, name, type, billing, value, days_to_end, [reminders]]
         $coverage = [
             ['CT-DEMO-150', 'Oracle',            'Oracle Database Enterprise License', 'Oracle DB enterprise — 8 cores',    'software',     'yearly',    1450000, 150,  [150, 60, 30]],
             ['CT-DEMO-120', 'True Corporation',  'True MPLS Link HQ–Plant 2',          'MPLS link — HQ ↔ Plant 2',          'connectivity', 'quarterly', 168000,  120,  [120, 60, 30, 7]],
@@ -60,14 +60,14 @@ class ContractSeeder extends Seeder
         ];
 
         foreach ($coverage as $row) {
-            [$code, $vendor, $title, $name, $type, $billing, $value, $daysToEnd, $reminders] = $row;
+            [$code, $vendor, $details, $name, $type, $billing, $value, $daysToEnd, $reminders] = $row;
 
             $end = $today->copy()->addDays($daysToEnd);
             $start = $end->copy()->subYear();
 
             Contract::updateOrCreate(['code' => $code], [
                 'vendor_id' => Vendor::firstOrCreate(['name' => $vendor])->id,
-                'title' => $title,
+                'details' => $details,
                 'name' => $name,
                 'type' => $type,
                 'start_date' => $start->toDateString(),

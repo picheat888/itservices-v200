@@ -127,7 +127,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             (contractData?.data ?? []).map((c) => ({
                 value: String(c.id),
                 label: `${c.code} — ${c.vendor}`,
-                search: `${c.code} ${c.vendor} ${c.title ?? ''}`,
+                search: `${c.code} ${c.vendor} ${c.details ?? ''}`,
             })),
         [contractData],
     );

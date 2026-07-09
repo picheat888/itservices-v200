@@ -21,7 +21,7 @@ class ContractLifecycleTest extends TestCase
         $vendor = Vendor::create(['name' => 'V-'.uniqid()]);
 
         return Contract::create(array_merge([
-            'vendor_id' => $vendor->id, 'name' => 'T', 'title' => 'T', 'type' => 'software',
+            'vendor_id' => $vendor->id, 'name' => 'T', 'details' => 'T', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100, 'billing_cycle' => 'yearly',
         ], $overrides));
     }

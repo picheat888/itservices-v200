@@ -55,7 +55,7 @@ class ContractController extends Controller
             $q = '%'.$request->query('search').'%';
             $query->where(function ($w) use ($q) {
                 $w->whereHas('vendor', fn ($v) => $v->where('name', 'like', $q))
-                    ->orWhere('title', 'like', $q)
+                    ->orWhere('details', 'like', $q)
                     ->orWhere('name', 'like', $q)
                     ->orWhere('code', 'like', $q);
             });

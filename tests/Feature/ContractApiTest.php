@@ -40,7 +40,7 @@ class ContractApiTest extends TestCase
             'code' => 'CT-TEST-001',
             'vendor_id' => $vendor->id,
             'name' => 'Microsoft 365 — 320 seats',
-            'title' => 'Microsoft 365 Enterprise Agreement',
+            'details' => 'Microsoft 365 Enterprise Agreement',
             'type' => 'software',
             'start_date' => '2025-01-01',
             'end_date' => '2027-01-01',
@@ -168,7 +168,7 @@ class ContractApiTest extends TestCase
         $a2 = Asset::factory()->create();
 
         $base = [
-            'code' => 'CT-LINK-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'code' => 'CT-LINK-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
         ];
 
@@ -195,7 +195,7 @@ class ContractApiTest extends TestCase
         $owned = Asset::factory()->create(['contract_id' => $other->id]);
 
         $this->postJson('/api/contracts', [
-            'code' => 'CT-LINK-2', 'vendor_id' => $this->vendorId('V2'), 'name' => 'N', 'title' => 'T', 'type' => 'hardware',
+            'code' => 'CT-LINK-2', 'vendor_id' => $this->vendorId('V2'), 'name' => 'N', 'details' => 'T', 'type' => 'hardware',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'billing_cycle' => 'yearly',
             'asset_ids' => [$owned->id],
         ])->assertStatus(201);
@@ -215,7 +215,7 @@ class ContractApiTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('code');
     }
 
-    public function test_contract_title_is_required(): void
+    public function test_contract_details_is_required(): void
     {
         $this->actingAs($this->super());
 
@@ -223,7 +223,7 @@ class ContractApiTest extends TestCase
             'code' => 'CT-TEST-002', 'vendor' => 'X', 'name' => 'Y', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2026-01-01',
             'value' => 1000, 'billing_cycle' => 'yearly',
-        ])->assertStatus(422)->assertJsonValidationErrors('title');
+        ])->assertStatus(422)->assertJsonValidationErrors('details');
     }
 
     public function test_user_without_permission_cannot_create_contract(): void
@@ -346,14 +346,14 @@ class ContractApiTest extends TestCase
 
         $contract = Contract::create([
             'code' => 'CT-NOTES-01', 'vendor_id' => $this->vendorId('TestVendor'), 'name' => 'Notes test contract',
-            'title' => 'Notes Round-trip', 'type' => 'software',
+            'details' => 'Notes Round-trip', 'type' => 'software',
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
             'value' => 50000, 'billing_cycle' => 'yearly', 'notes' => null,
         ]);
 
         $payload = [
             'code' => $contract->code, 'vendor_id' => $contract->vendor_id, 'name' => $contract->name,
-            'title' => $contract->title, 'type' => $contract->type,
+            'details' => $contract->details, 'type' => $contract->type,
             'start_date' => '2026-01-01', 'end_date' => '2027-01-01',
             'value' => $contract->value, 'billing_cycle' => $contract->billing_cycle,
             'notes' => 'Renewed with vendor on 2026-06-30.',
@@ -402,7 +402,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
         $vendor = Vendor::create(['name' => 'ACME Co']);
         $c = Contract::create([
-            'vendor_id' => $vendor->id, 'name' => 'X', 'title' => 'X', 'type' => 'software',
+            'vendor_id' => $vendor->id, 'name' => 'X', 'details' => 'X', 'type' => 'software',
             'start_date' => '2025-01-01', 'end_date' => '2027-01-01', 'value' => 100, 'billing_cycle' => 'yearly',
         ]);
 

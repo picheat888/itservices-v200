@@ -41,7 +41,7 @@ const LAST_STEP = 5;
 /** Required fields owned by each step — used to validate on "Next" and to jump to the first error on Save. */
 const STEP_FIELDS: string[][] = [
     [], // 0 · type (always valid — has a default)
-    ['code', 'title', 'vendor_id', 'name'], // 1 · contract info
+    ['code', 'details', 'vendor_id', 'name'], // 1 · contract info
     ['start_date', 'end_date', 'value'], // 2 · term & value
     ['notify'], // 3 · reminders
     [], // 4 · link assets (optional)
@@ -50,7 +50,7 @@ const STEP_FIELDS: string[][] = [
 /** Maps an error field back to the step that owns it, so Save can jump there. */
 const FIELD_STEP: Record<string, number> = {
     code: 1,
-    title: 1,
+    details: 1,
     vendor_id: 1,
     name: 1,
     start_date: 2,
@@ -63,7 +63,7 @@ interface FormState {
     code: string;
     type: ContractType;
     vendor_id: string;
-    title: string;
+    details: string;
     name: string;
     start_date: string;
     end_date: string;
@@ -86,7 +86,7 @@ const EMPTY: FormState = {
     code: '',
     type: 'software',
     vendor_id: '',
-    title: '',
+    details: '',
     name: '',
     start_date: '',
     end_date: '',
@@ -164,7 +164,7 @@ export function ContractFormDrawer({
                 code: editing.code,
                 type: editing.type,
                 vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
-                title: editing.title ?? '',
+                details: editing.details ?? '',
                 name: editing.name,
                 start_date: editing.start,
                 end_date: editing.end,
@@ -257,7 +257,7 @@ export function ContractFormDrawer({
         const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
         if (!form.code.trim()) e.code = required;
         if (!form.vendor_id) e.vendor_id = required;
-        if (!form.title.trim()) e.title = required;
+        if (!form.details.trim()) e.details = required;
         if (!form.name.trim()) e.name = required;
         if (!form.start_date) e.start_date = required;
         if (!form.end_date) e.end_date = required;
@@ -310,7 +310,7 @@ export function ContractFormDrawer({
             code: form.code.trim(),
             type: form.type,
             vendor_id: Number(form.vendor_id),
-            title: form.title.trim(),
+            details: form.details.trim(),
             name: form.name.trim(),
             start_date: form.start_date,
             end_date: form.end_date,
@@ -475,8 +475,8 @@ export function ContractFormDrawer({
                                     num={2}
                                     thTitle="ข้อมูลสัญญา"
                                     enTitle="Contract details"
-                                    thSub="ระบุรหัสอ้างอิง หัวข้อ ผู้จำหน่าย ชื่อรายการ และแนบเอกสารสัญญา"
-                                    enSub="Reference code, title, vendor, item name, and attach the contract file."
+                                    thSub="ระบุรหัสอ้างอิง รายละเอียด ผู้จำหน่าย ชื่อสัญญา และแนบเอกสารสัญญา"
+                                    enSub="Reference code, details, vendor, contract name, and attach the contract file."
                                 />
 
                                 <div className="grid grid-cols-2 gap-6">
@@ -491,10 +491,10 @@ export function ContractFormDrawer({
                                             />
                                         </Field>
 
-                                        <Field label={t('contract_title')} required error={err.title} name="title">
+                                        <Field label={t('contract_details')} required error={err.details} name="details">
                                             <Input
-                                                value={form.title}
-                                                onChange={(e) => upd('title', e.target.value)}
+                                                value={form.details}
+                                                onChange={(e) => upd('details', e.target.value)}
                                                 placeholder={
                                                     lang === 'th' ? 'เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี' : 'e.g. Annual printer lease agreement'
                                                 }
@@ -823,7 +823,7 @@ export function ContractFormDrawer({
                                             <div className="text-muted-foreground mb-0.5 text-[10.5px] font-bold tracking-wide uppercase">
                                                 Contract name
                                             </div>
-                                            <div className="text-sm font-semibold">{form.name || form.title || '—'}</div>
+                                            <div className="text-sm font-semibold">{form.name || form.details || '—'}</div>
                                         </div>
                                     </div>
                                     <ReviewRow k={lang === 'th' ? 'ประเภท' : 'Type'} v={t(TYPE_META.find((m) => m.value === form.type)!.labelKey)} />

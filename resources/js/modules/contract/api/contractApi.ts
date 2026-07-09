@@ -17,6 +17,7 @@ export interface ContractPayload {
     code?: string | null;
     vendor_id: number;
     name: string;
+    details: string;
     type: Contract['type'];
     start_date: string;
     end_date: string;

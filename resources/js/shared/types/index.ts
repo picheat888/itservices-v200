@@ -172,8 +172,8 @@ export interface Contract {
     code: string;
     vendor: string;
     vendor_id: number | null;
-    title: string | null;
     name: string;
+    details: string | null;
     type: ContractType;
     start: string;
     end: string;
