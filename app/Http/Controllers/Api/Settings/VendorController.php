@@ -22,7 +22,7 @@ class VendorController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', 'unique:vendors,name'],
             'name_th' => ['required', 'string', 'max:120'],
             'contact' => ['nullable', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -39,7 +39,7 @@ class VendorController extends Controller
     public function update(Request $request, Vendor $vendor): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', 'unique:vendors,name,'.$vendor->id],
             'name_th' => ['required', 'string', 'max:120'],
             'contact' => ['nullable', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:50'],

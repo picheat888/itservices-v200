@@ -9,6 +9,7 @@ use App\Models\Settings\AssetModel;
 use App\Models\Stock\StockItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AssetModelController extends Controller
 {
@@ -22,7 +23,7 @@ class AssetModelController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', Rule::unique('asset_models', 'name')->where(fn ($q) => $q->where('brand_id', $request->input('brand_id')))],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
@@ -37,7 +38,7 @@ class AssetModelController extends Controller
     public function update(Request $request, AssetModel $assetModel): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', Rule::unique('asset_models', 'name')->where(fn ($q) => $q->where('brand_id', $request->input('brand_id')))->ignore($assetModel->id)],
             'brand_id' => ['nullable', 'exists:brands,id'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
