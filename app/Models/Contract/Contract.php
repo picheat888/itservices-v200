@@ -144,19 +144,20 @@ class Contract extends Model
 
     /**
      * Whole-months part of the contract term (calendar-accurate, e.g. 24), paired
-     * with durationDays() for the leftover days. A 40-day contract = 1 month 9 days;
-     * a 1-day contract = 0 months 1 day.
+     * with durationDays() for the leftover days. The end date is inclusive (the
+     * last active day), so the term is counted through end + 1 day: a contract
+     * 1 Jan–31 Dec = 12 months; a single-day contract (start = end) = 0 months 1 day.
      */
     public function durationMonths(): int
     {
-        $diff = $this->start_date->diff($this->end_date);
+        $diff = $this->start_date->diff($this->end_date->copy()->addDay());
 
         return $diff->y * 12 + $diff->m;
     }
 
-    /** Leftover days after whole months in the contract term (0–30). */
+    /** Leftover days after whole months in the contract term (0–30, end-inclusive). */
     public function durationDays(): int
     {
-        return $this->start_date->diff($this->end_date)->d;
+        return $this->start_date->diff($this->end_date->copy()->addDay())->d;
     }
 }
