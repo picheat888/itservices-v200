@@ -40,8 +40,9 @@ class LocationController extends Controller
     /** Block deleting a location still referenced by an asset (guarded at the app layer; FK is defense-in-depth). */
     public function destroy(Location $location): JsonResponse
     {
-        if (Asset::where('location_id', $location->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('location_id', $location->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted location', $location->name);
         $location->delete();

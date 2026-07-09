@@ -48,8 +48,9 @@ class BrandController extends Controller
     /** Delete a brand — blocked (409) while any asset or stock item still references it. */
     public function destroy(Brand $brand): JsonResponse
     {
-        if (Asset::where('brand_id', $brand->id)->exists() || StockItem::where('brand_id', $brand->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('brand_id', $brand->id)->count() + StockItem::where('brand_id', $brand->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted brand', $brand->name);
         $brand->delete();

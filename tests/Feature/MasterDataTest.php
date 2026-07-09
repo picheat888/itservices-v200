@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset\Asset;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
@@ -397,6 +398,19 @@ class MasterDataTest extends TestCase
             ->postJson('/api/vendors', ['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป 2'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('name');
+    }
+
+    public function test_delete_in_use_master_data_returns_the_reference_count(): void
+    {
+        $this->actingAs($this->superUser());
+        $brand = Brand::create(['name' => 'Dell']);
+        Asset::create(['tag' => 'A-1', 'brand_id' => $brand->id, 'status' => 'deployed']);
+        Asset::create(['tag' => 'A-2', 'brand_id' => $brand->id, 'status' => 'deployed']);
+
+        $this->deleteJson("/api/brands/{$brand->id}")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'in_use')
+            ->assertJsonPath('count', 2);
     }
 
     public function test_asset_model_name_is_unique_per_brand(): void

@@ -56,8 +56,9 @@ class VendorController extends Controller
     /** Delete a vendor — blocked (409) while any asset or contract still references it. */
     public function destroy(Vendor $vendor): JsonResponse
     {
-        if (Asset::where('vendor_id', $vendor->id)->exists() || Contract::where('vendor_id', $vendor->id)->exists()) {
-            return response()->json(['message' => 'in_use'], 409);
+        $count = Asset::where('vendor_id', $vendor->id)->count() + Contract::where('vendor_id', $vendor->id)->count();
+        if ($count > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }
         AuditLog::record('Deleted vendor', $vendor->name);
         $vendor->delete();
