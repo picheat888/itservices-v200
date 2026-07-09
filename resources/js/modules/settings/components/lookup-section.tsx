@@ -74,13 +74,15 @@ export function LookupSection({ rows, mutations, addLabel, editLabel, nameLabel,
                         <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                        onClick={() =>
-                            confirm({
-                                variant: 'danger',
-                                entity: { name: r.name, sub: r.description || undefined },
-                                action: () => remove.mutateAsync(r.id as never).then(() => undefined),
-                            })
-                        }
+                        onClick={async () => {
+                            if (!(await confirm({ variant: 'danger', entity: { name: r.name, sub: r.description || undefined } }))) return;
+                            try {
+                                await remove.mutateAsync(r.id as never);
+                            } catch (e) {
+                                const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                                useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            }
+                        }}
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -167,11 +169,7 @@ function LookupModal({
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
-            if (hasFieldError(err, 'name')) {
-                setNameError(t('md_name_taken'));
-            } else {
-                useToastStore.getState().push(t('cd_error'), 'error');
-            }
+            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error');
         }
     };
 

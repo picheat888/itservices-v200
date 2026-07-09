@@ -96,7 +96,7 @@ export const stock: Dict = {
     "stock_item": "สินค้า",
     "stock_category": "หมวด",
     "stock_unit": "หน่วย",
-    "stock_brand": "แบรนด์",
+    "stock_brand": "ยี่ห้อ",
     "stock_model": "รุ่น",
     "stock_current": "ปัจจุบัน",
     "stock_cost": "ต้นทุน",
