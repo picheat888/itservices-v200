@@ -184,6 +184,7 @@ export interface Contract {
     billing_cycle: BillingCycle;
     status: ContractStatus;
     days_remaining: number;
+    duration_months: number;
     in_reminder: boolean;
     reminder_days: number | null;
     notify_150: boolean;

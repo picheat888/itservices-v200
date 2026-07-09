@@ -30,6 +30,7 @@ export const contract: Dict = {
     "contract_end": "End",
     "contract_value": "Value",
     "contract_days_remaining": "Days remaining",
+    "contract_duration": "Contract term",
     "contract_reminder_threshold": "Reminder starts",
     "contract_created": "Created",
     "contract_updated": "Last updated",

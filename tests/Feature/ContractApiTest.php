@@ -53,6 +53,7 @@ class ContractApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.vendor', 'Microsoft Thailand')
             ->assertJsonPath('data.value_display', '฿2,140,000.00/yr')
+            ->assertJsonPath('data.duration_months', 24)
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.cancelled_at', null)
             ->assertJsonStructure(['data' => ['created_at', 'updated_at']]);
