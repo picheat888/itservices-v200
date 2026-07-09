@@ -140,4 +140,21 @@ class Contract extends Model
 
         return (float) $this->value * $multiplier;
     }
+
+    /**
+     * Whole-term contract value: the per-cycle value multiplied by the number of
+     * billing cycles between start and end date (at least one). Used for the
+     * "Total value" figure in the detail view.
+     */
+    public function totalValue(): float
+    {
+        $months = $this->start_date->diffInMonths($this->end_date);
+        $cycles = match ($this->billing_cycle) {
+            'monthly' => $months,
+            'quarterly' => $months / 3,
+            default => $months / 12, // yearly
+        };
+
+        return (float) $this->value * max(1, (int) round($cycles));
+    }
 }

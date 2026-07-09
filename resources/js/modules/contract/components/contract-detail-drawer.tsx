@@ -23,7 +23,7 @@ const TYPE_ICON: Record<ContractType, LucideIcon> = {
     other: Package,
 };
 
-type TabId = 'overview' | 'assets' | 'attachments';
+type TabId = 'overview' | 'notify' | 'assets' | 'attachments';
 
 /** A single label/value pair in the Overview particulars grid. */
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
@@ -172,6 +172,7 @@ export function ContractDetailDrawer({
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
         { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
+        { id: 'notify', label: lang === 'th' ? 'การแจ้งเตือน' : 'Notifications' },
         { id: 'assets', label: lang === 'th' ? 'ทรัพย์สิน' : 'Assets', count: c.linked_assets.length },
         { id: 'attachments', label: lang === 'th' ? 'เอกสารแนบ' : 'Attachments', count: c.attachments.length },
     ];
@@ -224,122 +225,119 @@ export function ContractDetailDrawer({
                     </div>
 
                     {/* Body — the active panel. Assets/Attachments fill & manage their own layout. */}
-                    <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>
+                    <div
+                        className={cn(
+                            'min-h-0 flex-1',
+                            tab === 'overview' || tab === 'notify' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6',
+                        )}
+                    >
                         {tab === 'overview' && (
-                            <div className="grid gap-x-10 gap-y-7 md:grid-cols-2">
-                                {/* Left column — contract particulars, then term & value */}
-                                <div className="space-y-7">
-                                    <div>
-                                        <SectionLabel>{t('contract_section_info')}</SectionLabel>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="col-span-2">
-                                                <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
-                                            </div>
-                                            <KV label={t('contract_code')} value={c.code} mono />
-                                            <KV label={t('contract_vendor')} value={c.vendor} />
-                                            <div className="col-span-2">
-                                                <KV label={t('contract_name')} value={c.name} />
-                                            </div>
-                                            <div className="col-span-2">
-                                                <KV label={t('contract_details')} value={c.details || '—'} />
-                                            </div>
+                            <div className="space-y-7">
+                                {/* ข้อมูลสัญญา */}
+                                <div>
+                                    <SectionLabel>{t('contract_section_info')}</SectionLabel>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <div className="sm:col-span-3">
+                                            <KV label={t('contract_type')} value={t(`contract_type_${c.type}`)} />
                                         </div>
-                                    </div>
-
-                                    <div>
-                                        <SectionLabel>{t('contract_section_term')}</SectionLabel>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <KV label={t('contract_start')} value={c.start} mono />
-                                            <KV label={t('contract_end')} value={c.end} mono />
+                                        <KV label={t('contract_code')} value={c.code} mono />
+                                        <KV label={t('contract_vendor')} value={c.vendor} />
+                                        <KV label={t('contract_name')} value={c.name} />
+                                        <div className="sm:col-span-3">
+                                            <KV label={t('contract_details')} value={c.details || '—'} />
+                                        </div>
+                                        <div className="sm:col-span-3">
                                             <KV
-                                                label={t('contract_days_remaining')}
-                                                value={
-                                                    terminal
-                                                        ? '—'
-                                                        : days >= 0
-                                                          ? `${days} ${lang === 'th' ? 'วัน' : 'days'}`
-                                                          : lang === 'th'
-                                                            ? `เกินกำหนด ${-days} วัน`
-                                                            : `${-days} days overdue`
-                                                }
+                                                label={t('contract_notes')}
+                                                value={c.notes ? <span className="whitespace-pre-wrap">{c.notes}</span> : '—'}
                                             />
-                                            <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
-                                            <div className="col-span-2">
-                                                <KV label={t('contract_value')} value={c.value_display} mono />
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Right column — reminders, closure (terminal only), notes */}
-                                <div className="space-y-7">
+                                {/* ระยะเวลา & มูลค่า */}
+                                <div>
+                                    <SectionLabel>{t('contract_section_term')}</SectionLabel>
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <KV label={t('contract_start')} value={c.start} mono />
+                                        <KV label={t('contract_end')} value={c.end} mono />
+                                        <KV
+                                            label={t('contract_days_remaining')}
+                                            value={
+                                                terminal
+                                                    ? '—'
+                                                    : days >= 0
+                                                      ? `${days} ${lang === 'th' ? 'วัน' : 'days'}`
+                                                      : lang === 'th'
+                                                        ? `เกินกำหนด ${-days} วัน`
+                                                        : `${-days} days overdue`
+                                            }
+                                        />
+                                        <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
+                                        <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />
+                                        <KV label={t('contract_total_value')} value={c.total_value_display} mono />
+                                    </div>
+                                </div>
+
+                                {/* ยกเลิก & สิ้นสุดสัญญา — terminal contracts only */}
+                                {terminal && (
                                     <div>
-                                        <SectionLabel>{t('contract_section_notify')}</SectionLabel>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <div className="text-muted-foreground mb-1.5 text-xs">{t('contract_notification_schedule')}</div>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {[
-                                                        { d: 150, on: c.notify_150 },
-                                                        { d: 120, on: c.notify_120 },
-                                                        { d: 90, on: c.notify_90 },
-                                                        { d: 60, on: c.notify_60 },
-                                                        { d: 45, on: c.notify_45 },
-                                                        { d: 30, on: c.notify_30 },
-                                                        { d: 7, on: c.notify_7 },
-                                                    ].map((n) => (
-                                                        <span
-                                                            key={n.d}
-                                                            className={cn(
-                                                                'rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                                                                n.on
-                                                                    ? 'border-brand/30 bg-brand/10 text-brand'
-                                                                    : 'border-border text-muted-foreground/40 line-through',
-                                                            )}
-                                                        >
-                                                            {n.d}
-                                                            {lang === 'th' ? ' วัน' : 'd'}
-                                                        </span>
-                                                    ))}
+                                        <SectionLabel>{t('contract_section_closure')}</SectionLabel>
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                            {cancelled && c.cancelled_at && (
+                                                <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />
+                                            )}
+                                            {c.status === 'expired' && c.expired_at && (
+                                                <KV label={t('contract_expired_on')} value={c.expired_at} mono />
+                                            )}
+                                            {cancelled && c.cancel_reason && (
+                                                <div className="sm:col-span-3">
+                                                    <KV label={t('contract_cancel_reason')} value={c.cancel_reason} />
                                                 </div>
-                                            </div>
-                                            <KV
-                                                label={t('contract_reminder_threshold')}
-                                                value={
-                                                    c.reminder_days
-                                                        ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
-                                                        : '—'
-                                                }
-                                            />
+                                            )}
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        )}
 
-                                    {terminal && (
-                                        <div>
-                                            <SectionLabel>{t('contract_section_closure')}</SectionLabel>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                {cancelled && c.cancelled_at && (
-                                                    <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />
+                        {tab === 'notify' && (
+                            <div className="space-y-5">
+                                <div>
+                                    <SectionLabel>{t('contract_notification_schedule')}</SectionLabel>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {[
+                                            { d: 150, on: c.notify_150 },
+                                            { d: 120, on: c.notify_120 },
+                                            { d: 90, on: c.notify_90 },
+                                            { d: 60, on: c.notify_60 },
+                                            { d: 45, on: c.notify_45 },
+                                            { d: 30, on: c.notify_30 },
+                                            { d: 7, on: c.notify_7 },
+                                        ].map((n) => (
+                                            <span
+                                                key={n.d}
+                                                className={cn(
+                                                    'rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                                                    n.on
+                                                        ? 'border-brand/30 bg-brand/10 text-brand'
+                                                        : 'border-border text-muted-foreground/40 line-through',
                                                 )}
-                                                {c.status === 'expired' && c.expired_at && (
-                                                    <KV label={t('contract_expired_on')} value={c.expired_at} mono />
-                                                )}
-                                                {cancelled && c.cancel_reason && (
-                                                    <div className="col-span-2">
-                                                        <KV label={t('contract_cancel_reason')} value={c.cancel_reason} />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {c.notes && (
-                                        <div>
-                                            <SectionLabel>{lang === 'th' ? 'หมายเหตุ' : 'Notes'}</SectionLabel>
-                                            <p className="text-sm whitespace-pre-wrap">{c.notes}</p>
-                                        </div>
-                                    )}
+                                            >
+                                                {n.d}
+                                                {lang === 'th' ? ' วัน' : 'd'}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
+                                <KV
+                                    label={t('contract_reminder_threshold')}
+                                    value={
+                                        c.reminder_days
+                                            ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
+                                            : '—'
+                                    }
+                                />
                             </div>
                         )}
 

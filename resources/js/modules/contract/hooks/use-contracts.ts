@@ -24,13 +24,16 @@ export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMA
 
 /**
  * "Needs attention" count for the Contracts sidebar badge: contracts inside their
- * reminder window (expiring soon) plus contracts already expired. Pass enabled=false
- * to skip the query for users without contracts access.
+ * reminder window (expiring soon) plus contracts already overdue (past the end date
+ * but still live and needing renewal). Mirrors the two alert banners on the Contracts
+ * page. Note this uses `overdue`, not `expired` — `expired` is the terminal, admin
+ * closed-out state with nothing left to action. Pass enabled=false to skip the query
+ * for users without contracts access.
  */
 export function useContractSidebarBadge(enabled = true): number {
     const { data: summary } = useContractSummary(enabled);
 
-    return summary ? summary.expiring + summary.expired : 0;
+    return summary ? summary.expiring + summary.overdue : 0;
 }
 
 /** Fetches one full contract by id — used when opening the detail drawer. */
