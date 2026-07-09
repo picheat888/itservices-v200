@@ -63,7 +63,7 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                 </Field>
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={onClose} disabled={cancel.isPending}>
                         {t('cancel')}
                     </Button>
                     <Button variant="destructive" onClick={submit} disabled={cancel.isPending}>

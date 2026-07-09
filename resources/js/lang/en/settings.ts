@@ -7,6 +7,7 @@ export const settings: Dict = {
     "set_display": "Display",
     "set_display_desc": "Personalize the look & feel. Saved to your account.",
     "set_locations": "Locations",
+    "location_in_use": "Can't delete — assets are still assigned to this location.",
     "set_locations_desc": "Manage locations used across assets, departments and more.",
     "loc_name": "Location name",
     "set_master_data": "Master Data",

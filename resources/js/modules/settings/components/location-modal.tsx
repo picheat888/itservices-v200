@@ -40,7 +40,7 @@ export function LocationModal({ open, location, onClose }: { open: boolean; loca
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+            useToastStore.getState().push(t('cd_error'), 'error');
         }
     };
 
