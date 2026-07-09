@@ -28,10 +28,18 @@ class ContractLifecycleTest extends TestCase
 
     public function test_expire_sets_expired_at(): void
     {
-        $c = $this->contract();
+        $c = $this->contract(['end_date' => now()->subDay()]); // ended (overdue)
         $c = app(ContractService::class)->expire($c);
         $this->assertNotNull($c->expired_at);
         $this->assertSame('expired', $c->status);
+    }
+
+    public function test_cannot_expire_a_contract_still_running(): void
+    {
+        // Active (term not ended yet) — expire is rejected; cancel is the early-exit path.
+        $c = $this->contract(['end_date' => now()->addMonth()]);
+        $this->expectException(ValidationException::class);
+        app(ContractService::class)->expire($c);
     }
 
     public function test_expire_twice_throws(): void
@@ -43,7 +51,7 @@ class ContractLifecycleTest extends TestCase
 
     public function test_expire_blocked_by_pending_assets_any_type(): void
     {
-        $c = $this->contract(['type' => 'software']);
+        $c = $this->contract(['type' => 'software', 'end_date' => now()->subDay()]); // ended, so it reaches the asset guard
         Asset::create(['tag' => 'A-1', 'category_id' => null, 'status' => 'deployed', 'contract_id' => $c->id]);
         $this->expectException(ValidationException::class);
         app(ContractService::class)->expire($c);

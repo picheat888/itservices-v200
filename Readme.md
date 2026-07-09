@@ -1080,7 +1080,10 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - เดิม `contracts.cancel` ครอบทั้ง "ยกเลิก/เปิดใช้อีกครั้ง" แต่ **มีแค่ปุ่มยกเลิก** — พอสัญญาถูก cancel แล้ว footer ของ detail drawer ถูกซ่อน เลยไม่มีทางกดเปิดใช้ใหม่ (backend `toggleCancel` + endpoint + mutation รองรับอยู่แล้ว)
 - เพิ่ม **footer เฉพาะสัญญา cancelled** ในdrawer: ปุ่ม **"เปิดใช้อีกครั้ง"** (`RotateCcw`, gate `canCancel`) → confirm → `cancel.mutateAsync({ id })` (ไม่ส่ง reason = reactivate, เคลียร์ `cancelled_at`+เหตุผล); expired = ปิดถาวร ไม่มีปุ่ม (ตามดีไซน์)
 - **สัญญา cancelled = อ่านอย่างเดียว (แก้ไขไม่ได้)** — ไม่มีปุ่ม Edit ในสถานะนี้ ต้อง **Reactivate ก่อน** สัญญาจึงกลับมาแก้ไขได้ (ปุ่ม Edit อยู่เฉพาะ footer ของสัญญา active/overdue)
-- **Cancel เฉพาะตอน active** — Cancel = ยุติก่อนกำหนด ใช้ได้เฉพาะสัญญาที่ยัง `active`; สัญญาที่ **หมดอายุแล้ว (overdue)** กด Cancel ไม่ได้ กดได้แค่ **Expired** (ปุ่ม Cancel ซ่อนตอน overdue + backend `toggleCancel` โยน 422 ถ้าสั่ง cancel สัญญาที่ `daysRemaining() <= 0`)
+- **Cancel เฉพาะตอน active, Expired เฉพาะตอน overdue** — แยกหน้าที่ชัดเจนตามช่วงชีวิตสัญญา:
+  - `active` (ยังไม่ครบ period) → กดได้แค่ **Cancel** (ยุติก่อนกำหนด) + Edit
+  - `overdue` (ครบ period แล้ว) → กดได้แค่ **Expired** (ปิดเมื่อจบเทอม) + Edit
+  - บังคับ 2 ชั้น: ปุ่มโชว์ตามสถานะ + backend `toggleCancel` โยน 422 ถ้า cancel สัญญาที่ `daysRemaining() <= 0`, และ `expire()` โยน 422 ถ้า expire สัญญาที่ `daysRemaining() > 0` (ยังไม่ครบ period)
 - i18n `contract_reactivate` (en "Reactivate" / th "เปิดใช้อีกครั้ง"); backend reactivate test เดิมยังเขียว
 - **Verification**: `php artisan test --compact --filter=ContractApiTest` = **26 passed / 0 failed** (101 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
 - **Rollout**: migration additive (`down()` drop คอลัมน์ rollback ได้) — รันบน DB จริงได้เลย ไม่มี backfill; สัญญาที่ยกเลิกไปก่อนหน้านี้ `cancel_reason` เป็น null (ปกติ)
