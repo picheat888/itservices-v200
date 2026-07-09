@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, SquarePen, Wifi } from 'lucide-react';
+import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 import { ContractAssetsTab } from './contract-assets-tab';
@@ -62,7 +62,7 @@ export function ContractDetailDrawer({
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { expire } = useContractMutations();
+    const { cancel, expire } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
     const [cancelling, setCancelling] = useState(false);
 
@@ -121,6 +121,20 @@ export function ContractDetailDrawer({
             confirmText: t('contract_expire'),
             action: async () => {
                 await expire.mutateAsync(c.id);
+                onClose();
+            },
+        });
+    };
+
+    /** Reactivate a cancelled contract — reopens it (clears cancelled_at + reason). */
+    const handleReactivate = async () => {
+        await confirm({
+            variant: 'edit',
+            title: lang === 'th' ? 'เปิดใช้สัญญาอีกครั้ง?' : 'Reactivate this contract?',
+            entity: { name: c.name, sub: c.code },
+            confirmText: t('contract_reactivate'),
+            action: async () => {
+                await cancel.mutateAsync({ id: c.id });
                 onClose();
             },
         });
@@ -350,6 +364,24 @@ export function ContractDetailDrawer({
                                 <Button variant="outline" onClick={handleExpire} disabled={expire.isPending}>
                                     <Archive className="h-4 w-4" />
                                     {t('contract_expire')}
+                                </Button>
+                            )}
+                            {canEdit && (
+                                <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
+                                    <SquarePen className="h-4 w-4" />
+                                    {t('edit')}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Cancelled contracts can be reopened (expired is permanent — no footer). */}
+                    {c.status === 'cancelled' && (canCancel || canEdit) && (
+                        <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
+                            {canCancel && (
+                                <Button variant="outline" onClick={handleReactivate} disabled={cancel.isPending}>
+                                    <RotateCcw className="h-4 w-4" />
+                                    {t('contract_reactivate')}
                                 </Button>
                             )}
                             {canEdit && (

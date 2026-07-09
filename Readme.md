@@ -1074,7 +1074,12 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **Validation แบบ direction-aware** — endpoint `cancel` เป็น toggle: ตอน**ยกเลิก** (`cancelled_at === null`) `reason` = `required|string|max:500` (whitespace-only ถูก TrimStrings ตัดเหลือ null → required ไม่ผ่าน = 422); ตอน**เปิดใช้ใหม่** (reactivate) ไม่ต้องมี reason และ**เคลียร์** `cancel_reason` กลับเป็น null → ยกเลิกครั้งใหม่ต้องกรอกเหตุผลใหม่เสมอ
 - **Service** — `ContractService::toggleCancel(Contract, ?string $reason)` คำนวณทิศทางครั้งเดียว เซ็ต `cancelled_at` + `cancel_reason` พร้อมกัน (ไม่มี state ที่ค้างครึ่ง ๆ); guard เดิม (`assertNoPendingAssets` — asset ที่ผูกต้อง write-off ครบก่อน) ยังทำงานเฉพาะทิศ active→cancelled; **Expire ไม่แตะ** (ตามที่เจ้าของเลือก เฉพาะ Cancel)
 - **Audit log** — บันทึกเหตุผลไปกับ entry "Cancelled contract"
-- **UI** — เปลี่ยนจาก confirm dialog เดิมเป็น `contract-cancel-dialog.tsx` (Dialog เฉพาะ มี textarea เหตุผล **บังคับ** ตามสไตล์ resign-modal); guard เช็ก asset ยังทำงานก่อนเปิด dialog; reactivate ยังเป็น toggle ธรรมดา (ปัจจุบันยังไม่มีปุ่มใน UI — ยกเลิกเป็นทางเดียวจากหน้าจอ); types/api/hook + i18n (en+th) อัปเดต ไม่มี hardcode string
+- **UI** — เปลี่ยนจาก confirm dialog เดิมเป็น `contract-cancel-dialog.tsx` (Dialog เฉพาะ มี textarea เหตุผล **บังคับ** ตามสไตล์ resign-modal); guard เช็ก asset ยังทำงานก่อนเปิด dialog; types/api/hook + i18n (en+th) อัปเดต ไม่มี hardcode string
+
+## Contract — ปุ่มเปิดใช้สัญญาอีกครั้ง (Reactivate) ใน UI (2026-07-09)
+- เดิม `contracts.cancel` ครอบทั้ง "ยกเลิก/เปิดใช้อีกครั้ง" แต่ **มีแค่ปุ่มยกเลิก** — พอสัญญาถูก cancel แล้ว footer ของ detail drawer ถูกซ่อน เลยไม่มีทางกดเปิดใช้ใหม่ (backend `toggleCancel` + endpoint + mutation รองรับอยู่แล้ว)
+- เพิ่ม **footer เฉพาะสัญญา cancelled** ในdrawer: ปุ่ม **"เปิดใช้อีกครั้ง"** (`RotateCcw`, gate `canCancel`) → confirm → `cancel.mutateAsync({ id })` (ไม่ส่ง reason = reactivate, เคลียร์ `cancelled_at`+เหตุผล) + ปุ่ม Edit; expired = ปิดถาวร ไม่มีปุ่ม (ตามดีไซน์)
+- i18n `contract_reactivate` (en "Reactivate" / th "เปิดใช้อีกครั้ง"); backend reactivate test เดิมยังเขียว
 - **Verification**: `php artisan test --compact --filter=ContractApiTest` = **26 passed / 0 failed** (101 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
 - **Rollout**: migration additive (`down()` drop คอลัมน์ rollback ได้) — รันบน DB จริงได้เลย ไม่มี backfill; สัญญาที่ยกเลิกไปก่อนหน้านี้ `cancel_reason` เป็น null (ปกติ)
 
