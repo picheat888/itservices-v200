@@ -678,7 +678,7 @@ export function ContractFormDrawer({
                                             className="font-mono"
                                             value={form.value ? Number(form.value).toLocaleString() : ''}
                                             onChange={(e) => upd('value', e.target.value.replace(/[^\d]/g, ''))}
-                                            placeholder="2,140,000"
+                                            placeholder="0.00"
                                         />
                                     </Field>
                                     <Field label={t('contract_billing')}>
@@ -700,7 +700,7 @@ export function ContractFormDrawer({
                                         className="font-mono"
                                         value={form.total_value ? Number(form.total_value).toLocaleString() : ''}
                                         onChange={(e) => upd('total_value', e.target.value.replace(/[^\d]/g, ''))}
-                                        placeholder="3,600,000"
+                                        placeholder="0.00"
                                     />
                                     {totalValueEstimate != null && (
                                         <button
