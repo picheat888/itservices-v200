@@ -277,7 +277,14 @@ export function ContractDetailDrawer({
                                         <KV label={t('contract_end')} value={c.end} mono />
                                         <KV
                                             label={t('contract_duration')}
-                                            value={`${c.duration_months} ${lang === 'th' ? 'เดือน' : 'months'}`}
+                                            value={(() => {
+                                                const mo = lang === 'th' ? 'เดือน' : c.duration_months === 1 ? 'month' : 'months';
+                                                const dy = lang === 'th' ? 'วัน' : c.duration_days === 1 ? 'day' : 'days';
+                                                if (c.duration_months > 0 && c.duration_days > 0)
+                                                    return `${c.duration_months} ${mo} ${c.duration_days} ${dy}`;
+                                                if (c.duration_months > 0) return `${c.duration_months} ${mo}`;
+                                                return `${c.duration_days} ${dy}`;
+                                            })()}
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
                                         <KV label={t('contract_value_per_cycle')} value={c.value_display} mono />

@@ -40,6 +40,7 @@ class ContractResource extends JsonResource
             'status' => $this->status,
             'days_remaining' => $this->daysRemaining(),
             'duration_months' => $this->durationMonths(),
+            'duration_days' => $this->durationDays(),
             'in_reminder' => $this->isInReminder(),
             'reminder_days' => $this->reminderThreshold(),
             'notify_150' => $this->notify_150,

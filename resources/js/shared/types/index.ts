@@ -185,6 +185,7 @@ export interface Contract {
     status: ContractStatus;
     days_remaining: number;
     duration_months: number;
+    duration_days: number;
     in_reminder: boolean;
     reminder_days: number | null;
     notify_150: boolean;
