@@ -22,7 +22,7 @@ class CategoryController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', 'unique:categories,name'],
             'name_th' => ['nullable', 'string', 'max:120'],
             'icon' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:255'],
@@ -37,7 +37,7 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): JsonResponse
     {
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
+            'name' => ['required', 'string', 'max:120', 'unique:categories,name,'.$category->id],
             'name_th' => ['nullable', 'string', 'max:120'],
             'icon' => ['nullable', 'string', 'max:60'],
             'description' => ['nullable', 'string', 'max:255'],

@@ -376,4 +376,44 @@ class MasterDataTest extends TestCase
 
         $this->assertDatabaseMissing('warehouses', ['id' => $warehouse->id]);
     }
+
+    // ── Uniqueness (category / vendor global · model per-brand) ──────────────
+
+    public function test_category_name_must_be_unique(): void
+    {
+        Category::create(['name' => 'Laptop']);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/categories', ['name' => 'Laptop'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+    }
+
+    public function test_vendor_name_must_be_unique(): void
+    {
+        Vendor::create(['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป']);
+
+        $this->actingAs($this->superUser())
+            ->postJson('/api/vendors', ['name' => 'TechCorp', 'name_th' => 'เทคคอร์ป 2'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+    }
+
+    public function test_asset_model_name_is_unique_per_brand(): void
+    {
+        $dell = Brand::create(['name' => 'Dell']);
+        $hp = Brand::create(['name' => 'HP']);
+        AssetModel::create(['name' => 'X1', 'brand_id' => $dell->id]);
+
+        // Same name under the same brand → rejected.
+        $this->actingAs($this->superUser())
+            ->postJson('/api/asset-models', ['name' => 'X1', 'brand_id' => $dell->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+
+        // Same name under a different brand → allowed.
+        $this->actingAs($this->superUser())
+            ->postJson('/api/asset-models', ['name' => 'X1', 'brand_id' => $hp->id])
+            ->assertCreated();
+    }
 }
