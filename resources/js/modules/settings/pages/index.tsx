@@ -53,7 +53,7 @@ import { cn } from '@/shared/lib/utils';
 import { settingsApi, type BrandingPayload, type CompanyPayload, type MailSettingsPayload, type SecuritySettings } from '../api/settingsApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import type { AssetModel, Brand, Category, Density, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
+import type { AssetModel, Brand, Category, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     AlertCircle,
@@ -64,7 +64,6 @@ import {
     Info,
     Mail,
     MapPin,
-    MonitorCog,
     Pencil,
     Plus,
     Send,
@@ -80,7 +79,8 @@ import { useEffect, useRef, useState } from 'react';
 
 type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'security';
 
-const ACCENTS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
+// Theme accent options — kept to Blue / Purple / Black per branding guidelines.
+const ACCENTS = ['#2563eb', '#7c3aed', '#0f172a'];
 
 // Bundled default web logo (public/logo.svg) — shown when no custom logo is set.
 const DEFAULT_LOGO = '/logo.svg';
@@ -231,125 +231,6 @@ export default function SettingsPage() {
     );
 }
 
-function DisplayTab({ embedded = false }: { embedded?: boolean }) {
-    const t = useT();
-    const storeAccent = useUiStore((s) => s.accent);
-    const storeDensity = useUiStore((s) => s.density);
-    const storeRadius = useUiStore((s) => s.radius);
-    const dark = useUiStore((s) => s.dark);
-    const updateDisplay = useUpdateDisplay();
-
-    // Local draft — only committed (and persisted system-wide) when Save is pressed.
-    const [accent, setAccent] = useState(storeAccent);
-    const [density, setDensity] = useState<Density>(storeDensity);
-    const [radius, setRadius] = useState(storeRadius);
-    const [saved, setSaved] = useState(false);
-
-    useEffect(() => {
-        setAccent(storeAccent);
-        setDensity(storeDensity);
-        setRadius(storeRadius);
-    }, [storeAccent, storeDensity, storeRadius]);
-
-    const dirty = accent !== storeAccent || density !== storeDensity || radius !== storeRadius;
-    const touch = () => setSaved(false);
-
-    const save = () => {
-        // System-wide display theme: persist to app_settings; the mutation's
-        // onSuccess syncs the UI store so the change applies immediately.
-        updateDisplay.mutate({ theme_accent: accent, theme_density: density, theme_radius: radius }, { onSuccess: () => setSaved(true) });
-    };
-
-    const densityOpts: { value: Density; label: string }[] = [
-        { value: 'compact', label: t('density_compact') },
-        { value: 'normal', label: t('density_normal') },
-        { value: 'cozy', label: t('density_cozy') },
-    ];
-
-    const body = (
-        <div className="space-y-6">
-            <div className="space-y-2">
-                <div className="text-sm font-medium">{t('set_theme_color')}</div>
-                <div className="flex gap-2">
-                    {ACCENTS.map((c) => (
-                        <button
-                            key={c}
-                            onClick={() => {
-                                setAccent(c);
-                                touch();
-                            }}
-                            className={cn(
-                                'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
-                                accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
-                            )}
-                            style={{ background: resolveBrand(c, dark) }}
-                            aria-label={c}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <div className="text-sm font-medium">{t('tweaks_density')}</div>
-                <div className="bg-muted flex gap-1 rounded-lg p-1">
-                    {densityOpts.map((o) => (
-                        <button
-                            key={o.value}
-                            onClick={() => {
-                                setDensity(o.value);
-                                touch();
-                            }}
-                            className={cn(
-                                'flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-                                density === o.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            {o.label}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <div className="text-sm font-medium">
-                    {t('tweaks_radius')} · {radius}px
-                </div>
-                <input
-                    type="range"
-                    min={0}
-                    max={20}
-                    value={radius}
-                    onChange={(e) => {
-                        setRadius(Number(e.target.value));
-                        touch();
-                    }}
-                    className="accent-brand w-full"
-                />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
-                <SaveButton onClick={save} loading={updateDisplay.isPending} success={saved} disabled={!dirty}>
-                    {t('save')}
-                </SaveButton>
-            </div>
-        </div>
-    );
-
-    if (embedded) {
-        return body;
-    }
-
-    return (
-        <div className="max-w-xl">
-            <div className="mb-5">
-                <h2 className="text-lg font-semibold">{t('set_display')}</h2>
-                <p className="text-muted-foreground text-sm">{t('set_display_desc')}</p>
-            </div>
-            {body}
-        </div>
-    );
-}
-
 // ─── Master Data Tab ─────────────────────────────────────────────────────────
 
 type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types';
@@ -483,15 +364,15 @@ function BrandsList() {
             render: (b) => (
                 <RowActions
                     onEdit={() => setEditBrand(b)}
-                    onDelete={() =>
-                        confirm({
-                            variant: 'danger',
-                            entity: { name: b.name },
-                            action: async () => {
-                                await remove.mutateAsync(b.id);
-                            },
-                        })
-                    }
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: b.name } }))) return;
+                        try {
+                            await remove.mutateAsync(b.id);
+                        } catch (e) {
+                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                        }
+                    }}
                 />
             ),
         },
@@ -565,15 +446,15 @@ function ModelsList() {
             render: (m) => (
                 <RowActions
                     onEdit={() => setEditModel(m)}
-                    onDelete={() =>
-                        confirm({
-                            variant: 'danger',
-                            entity: { name: m.name },
-                            action: async () => {
-                                await remove.mutateAsync(m.id);
-                            },
-                        })
-                    }
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: m.name } }))) return;
+                        try {
+                            await remove.mutateAsync(m.id);
+                        } catch (e) {
+                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                        }
+                    }}
                 />
             ),
         },
@@ -647,15 +528,15 @@ function CategoriesList() {
             render: (c) => (
                 <RowActions
                     onEdit={() => setEditCategory(c)}
-                    onDelete={() =>
-                        confirm({
-                            variant: 'danger',
-                            entity: { name: c.name },
-                            action: async () => {
-                                await remove.mutateAsync(c.id);
-                            },
-                        })
-                    }
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: c.name } }))) return;
+                        try {
+                            await remove.mutateAsync(c.id);
+                        } catch (e) {
+                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                        }
+                    }}
                 />
             ),
         },
@@ -739,15 +620,15 @@ function VendorsList() {
                         <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                        onClick={() =>
-                            confirm({
-                                variant: 'danger',
-                                entity: { name: v.name },
-                                action: async () => {
-                                    await remove.mutateAsync(v.id);
-                                },
-                            })
-                        }
+                        onClick={async () => {
+                            if (!(await confirm({ variant: 'danger', entity: { name: v.name } }))) return;
+                            try {
+                                await remove.mutateAsync(v.id);
+                            } catch (e) {
+                                const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                                useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                            }
+                        }}
                         className="text-destructive hover:bg-destructive/10 flex h-8 w-8 items-center justify-center rounded-md"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -813,15 +694,15 @@ function WarehousesList() {
             render: (w) => (
                 <RowActions
                     onEdit={() => setEditWarehouse(w)}
-                    onDelete={() =>
-                        confirm({
-                            variant: 'danger',
-                            entity: { name: w.name },
-                            action: async () => {
-                                await remove.mutateAsync(w.id);
-                            },
-                        })
-                    }
+                    onDelete={async () => {
+                        if (!(await confirm({ variant: 'danger', entity: { name: w.name } }))) return;
+                        try {
+                            await remove.mutateAsync(w.id);
+                        } catch (e) {
+                            const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
+                            useToastStore.getState().push(inUse ? t('md_in_use') : t('cd_error'), 'error', inUse ? t('md_in_use_title') : undefined);
+                        }
+                    }}
                 />
             ),
         },
@@ -887,7 +768,7 @@ function LocationsList() {
                             await remove.mutateAsync(loc.id);
                         } catch (e) {
                             const inUse = (e as { response?: { status?: number } })?.response?.status === 409;
-                            useToastStore.getState().push(inUse ? t('location_in_use') : t('cd_error'), 'error');
+                            useToastStore.getState().push(inUse ? t('location_in_use') : t('cd_error'), 'error', inUse ? t('location_in_use_title') : undefined);
                         }
                     }}
                 />
@@ -1725,39 +1606,51 @@ function SystemSectionHead({ icon: Icon, title, desc }: { icon: typeof Sparkles;
 }
 
 /**
- * Settings → System: Branding and Display grouped on one page as two stacked
- * sections separated by a divider. Reuses BrandingTab/DisplayTab in `embedded`
- * mode (each keeps its own Save button and endpoint).
+ * Settings → System: a single Branding section covering brand name, logo and
+ * the system-wide theme color — all saved with one button. Corner radius and
+ * density are fixed (no per-user controls).
  */
 function SystemTab({ form, set, logoUrl }: { form: SettingsForm; set: SetFn; logoUrl: string | null }) {
     const t = useT();
     return (
-        <div className="max-w-2xl space-y-8">
-            <section>
-                <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
-                <BrandingTab form={form} set={set} logoUrl={logoUrl} embedded />
-            </section>
-
-            <div className="border-border border-t" />
-
-            <section>
-                <SystemSectionHead icon={MonitorCog} title={t('set_display')} desc={t('set_display_desc')} />
-                <DisplayTab embedded />
-            </section>
+        <div className="max-w-2xl">
+            <SystemSectionHead icon={Sparkles} title={t('set_branding')} desc={t('set_branding_desc')} />
+            <BrandingTab form={form} set={set} logoUrl={logoUrl} embedded />
         </div>
     );
 }
 
 function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsForm; set: SetFn; logoUrl: string | null; embedded?: boolean }) {
     const t = useT();
+    const { data } = useSettings();
     const update = useUpdateBranding();
+    const updateDisplay = useUpdateDisplay();
     const uploadLogo = useUploadLogo();
     const resetLogo = useResetLogo();
+    const storeAccent = useUiStore((s) => s.accent);
+    const dark = useUiStore((s) => s.dark);
     const inputRef = useRef<HTMLInputElement>(null);
     const [file, setFile] = useState<File | null>(null);
     const [pendingReset, setPendingReset] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saved, setSaved] = useState(false);
+    // Local theme-color draft — committed system-wide only when Save is pressed.
+    const [accent, setAccent] = useState(storeAccent);
+
+    // Keep the accent draft in sync if the stored theme changes elsewhere.
+    useEffect(() => {
+        setAccent(storeAccent);
+    }, [storeAccent]);
+
+    // Save is enabled once a branding field, the theme color, the logo file, or a
+    // pending reset differs from what was loaded — an untouched form stays disabled.
+    const dirty =
+        !!data &&
+        (form.brand_name !== data.brand_name ||
+            form.brand_sub !== data.brand_sub ||
+            accent !== storeAccent ||
+            !!file ||
+            pendingReset);
 
     // When pendingReset is true, show no logo (as if already cleared).
     // When a new file is picked after reset, cancel the pending reset.
@@ -1801,11 +1694,15 @@ function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsF
             await uploadLogo.mutateAsync(file);
         }
         await update.mutateAsync({ brand_name: form.brand_name, brand_sub: form.brand_sub });
+        // Persist the theme color only when it changed (density/radius stay fixed).
+        if (accent !== storeAccent) {
+            await updateDisplay.mutateAsync({ theme_accent: accent });
+        }
         setFile(null);
         setSaved(true);
     };
 
-    const busy = update.isPending || uploadLogo.isPending || resetLogo.isPending;
+    const busy = update.isPending || uploadLogo.isPending || resetLogo.isPending || updateDisplay.isPending;
     // Show reset button only when there is something to reset (logo exists or file selected) and reset not already pending.
     const showReset = (logoUrl || file) && !pendingReset;
 
@@ -1853,8 +1750,29 @@ function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsF
                 </div>
             </Field>
 
+            <Field label={t('set_theme_color')}>
+                <div className="flex gap-2">
+                    {ACCENTS.map((c) => (
+                        <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                                setAccent(c);
+                                setSaved(false);
+                            }}
+                            className={cn(
+                                'ring-offset-background h-8 w-8 rounded-full ring-2 ring-offset-2 transition-all',
+                                accent.toLowerCase() === c.toLowerCase() ? 'ring-foreground' : 'ring-transparent',
+                            )}
+                            style={{ background: resolveBrand(c, dark) }}
+                            aria-label={c}
+                        />
+                    ))}
+                </div>
+            </Field>
+
             <div className="flex items-center justify-end gap-3 pt-2">
-                <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim()}>
+                <SaveButton onClick={save} loading={busy} success={saved} disabled={!form.brand_name.trim() || !dirty}>
                     {t('save')}
                 </SaveButton>
             </div>

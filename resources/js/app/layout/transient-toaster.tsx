@@ -102,7 +102,10 @@ function ToastItem({ toast }: { toast: Toast }) {
                 </span>
             </span>
 
-            <div className="min-w-0 flex-1 text-sm leading-snug font-medium">{toast.message}</div>
+            <div className="min-w-0 flex-1 text-sm leading-snug">
+                {toast.title && <div className="font-semibold">{toast.title}</div>}
+                <div className={cn(toast.title ? 'font-normal' : 'font-medium')}>{toast.message}</div>
+            </div>
 
             <button
                 onClick={beginClose}

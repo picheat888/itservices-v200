@@ -52,11 +52,7 @@ export function ModelModal({ open, model, onClose }: { open: boolean; model?: As
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
-            if (hasFieldError(err, 'name')) {
-                setNameError(t('md_name_taken'));
-            } else {
-                useToastStore.getState().push(t('cd_error'), 'error');
-            }
+            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error');
         }
     };
 

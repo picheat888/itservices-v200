@@ -11,11 +11,13 @@ export interface Toast {
     id: number;
     message: string;
     tone: ToastTone;
+    // Optional bold heading rendered above the message on its own line.
+    title?: string;
 }
 
 interface ToastState {
     toasts: Toast[];
-    push: (message: string, tone?: ToastTone) => void;
+    push: (message: string, tone?: ToastTone, title?: string) => void;
     dismiss: (id: number) => void;
 }
 
@@ -24,12 +26,12 @@ let nextId = 1;
 export const useToastStore = create<ToastState>((set) => ({
     toasts: [],
     /** Add a toast. Collapses duplicates of the same message still on screen. */
-    push: (message, tone = 'error') =>
+    push: (message, tone = 'error', title) =>
         set((s) => {
             if (s.toasts.some((t) => t.message === message)) {
                 return s;
             }
-            return { toasts: [...s.toasts, { id: nextId++, message, tone }] };
+            return { toasts: [...s.toasts, { id: nextId++, message, tone, title }] };
         }),
     dismiss: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }));

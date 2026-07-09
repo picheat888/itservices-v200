@@ -47,10 +47,12 @@ export interface AssetColorsPayload {
 }
 
 // Display (theme) payload — system-wide, saved via PUT /settings/display.
+// Only the theme color is user-editable now; density and radius are fixed, so
+// they're optional here (the endpoint validates each field with `sometimes`).
 export interface DisplayPayload {
     theme_accent: string;
-    theme_density: 'compact' | 'normal' | 'cozy';
-    theme_radius: number;
+    theme_density?: 'compact' | 'normal' | 'cozy';
+    theme_radius?: number;
 }
 
 // Security policy — 0 disables the respective rule.
