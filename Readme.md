@@ -1077,3 +1077,20 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **UI** — เปลี่ยนจาก confirm dialog เดิมเป็น `contract-cancel-dialog.tsx` (Dialog เฉพาะ มี textarea เหตุผล **บังคับ** ตามสไตล์ resign-modal); guard เช็ก asset ยังทำงานก่อนเปิด dialog; reactivate ยังเป็น toggle ธรรมดา (ปัจจุบันยังไม่มีปุ่มใน UI — ยกเลิกเป็นทางเดียวจากหน้าจอ); types/api/hook + i18n (en+th) อัปเดต ไม่มี hardcode string
 - **Verification**: `php artisan test --compact --filter=ContractApiTest` = **26 passed / 0 failed** (101 assertions) · `tsc --noEmit` (0) + `npm run build` (green) · `pint` passed
 - **Rollout**: migration additive (`down()` drop คอลัมน์ rollback ได้) — รันบน DB จริงได้เลย ไม่มี backfill; สัญญาที่ยกเลิกไปก่อนหน้านี้ `cancel_reason` เป็น null (ปกติ)
+
+## Contract — rename `title`→`details` + จัด View Details เป็น 4 การ์ด (2026-07-09)
+
+**เหตุผล:** คอลัมน์ `contracts.title` จริง ๆ ถือ "รายละเอียด" (คำอธิบายยาว) ส่วน `name` คือ "ชื่อสัญญา" — แต่ทั้งชื่อคอลัมน์และ label เดิมสลับ/ชวนสับสน
+
+**Phase 1 — rename end-to-end (แก้ DB ก่อน):**
+- **Migration** `renameColumn('title','details')` (rename ตรง ๆ ไม่มี backfill, `down()` rollback ได้; รันบน DB จริงแล้ว ข้อมูลอยู่ครบ)
+- **Backend** — model fillable, ค้นหาใน `ContractController::index`, `StoreContractRequest` rule, `ContractResource`, `ContractSeeder`
+- **Frontend** — `Contract` type, `ContractPayload` (เพิ่ม `details` ที่เดิมตกหล่น), form/drawer/list + `asset-form-drawer` (cross-module)
+- **แก้ label ที่สลับ** — `name`="ชื่อสัญญา"/Contract name, `details`="รายละเอียด"/Details (en+th); dialog header โชว์ `name` เป็นหัวข้อ
+
+**Phase 2 — จัด Contract View Details (drawer) เป็น 4 การ์ด:**
+- **การ์ด 1 ข้อมูลสัญญา** (ประเภท · เลขที่/ผู้ขาย · ชื่อสัญญา/รายละเอียด) · **การ์ด 2 ระยะเวลา & มูลค่า** (เริ่ม/สิ้นสุด · คงเหลือ/รอบเรียกเก็บ · มูลค่า) · **การ์ด 3 การแจ้งเตือน** (pills + เริ่มแจ้งเตือนเมื่อ) · **การ์ด 4 ยกเลิก & สิ้นสุดสัญญา** (แสดงเฉพาะ cancelled/expired)
+- **created/updated** ย้ายไปมุมขวาบนใต้ StatusBadge; **หมายเหตุ (notes)** เป็นบล็อกเต็มแถวด้านล่าง
+- Layout responsive 2 คอลัมน์; หัวข้อการ์ดใช้ i18n `contract_section_*` (en+th) ไม่มี hardcode string
+
+**Verification**: full suite **541 passed / 0 failed** · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
