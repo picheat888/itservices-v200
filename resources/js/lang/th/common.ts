@@ -16,6 +16,7 @@ export const common: Dict = {
     assets: 'ทรัพย์สิน',
     my_assets: 'ทรัพย์สินของฉัน',
     register_asset: 'ลงทะเบียนทรัพย์สิน',
+    register: 'ลงทะเบียน',
     edit_asset: 'แก้ไขทรัพย์สิน',
     contracts: 'สัญญา',
     stock: 'คลังอะไหล่',

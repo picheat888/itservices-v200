@@ -16,6 +16,7 @@ export const common: Dict = {
     assets: 'Assets',
     my_assets: 'My assets',
     register_asset: 'Register asset',
+    register: 'Register',
     edit_asset: 'Edit asset',
     contracts: 'Contracts',
     stock: 'Stock',
