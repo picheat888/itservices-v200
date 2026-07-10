@@ -423,7 +423,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                   : 'Saved!'
                               : editing
                                 ? t('save')
-                                : t('register_asset')}
+                                : t('register')}
                     </Button>
                 </div>
             </DialogContent>
