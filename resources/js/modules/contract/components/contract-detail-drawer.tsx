@@ -35,11 +35,12 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
     );
 }
 
-/** Small uppercase section heading with a hairline underline dividing it from its content. */
+/** Small uppercase section heading with a short brand accent underline. */
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="text-muted-foreground border-border/60 mb-3 flex items-center gap-2 border-b pb-1.5 text-xs font-semibold tracking-wide uppercase">
-            {children}
+        <div className="mb-3">
+            <div className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">{children}</div>
+            <div className="bg-brand/70 mt-1.5 h-0.5 w-8 rounded-full" />
         </div>
     );
 }
