@@ -39,7 +39,7 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
         <div className="mb-3">
-            <div className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">{children}</div>
+            <div className="flex items-center gap-2 text-xs font-bold tracking-wide text-[#2f2f2f] uppercase dark:text-foreground">{children}</div>
             <div className="bg-brand/70 mt-1.5 h-0.5 w-8 rounded-full" />
         </div>
     );
