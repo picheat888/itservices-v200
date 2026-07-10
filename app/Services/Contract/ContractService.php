@@ -104,22 +104,6 @@ class ContractService
     }
 
     /**
-     * Renew a contract by extending its end date forward by the given number of
-     * months from whichever is later: today or the current end date. Used by the
-     * "Renew" action in the detail drawer.
-     */
-    public function renew(Contract $contract, int $months = 12): Contract
-    {
-        $base = $contract->end_date->isPast() ? Carbon::now() : $contract->end_date;
-        $contract->update([
-            'start_date' => $contract->end_date,
-            'end_date' => $base->copy()->addMonths($months),
-        ]);
-
-        return $contract->fresh();
-    }
-
-    /**
      * Bulk-import contracts from parsed CSV rows. Validates all rows first;
      * returns errors (all-or-nothing) or persists and returns the imported count.
      *
@@ -190,30 +174,43 @@ class ContractService
     }
 
     /**
-     * Toggle a contract's cancelled state: cancel an active contract (storing the
-     * given reason), or reactivate a cancelled one (clearing the reason). Used by
-     * the detail drawer.
+     * Cancel a contract — early termination while it's still running. Only valid
+     * before the term ends (an overdue contract can only be expired), and every
+     * linked asset must be written off first.
+     *
+     * @throws ValidationException
      */
-    public function toggleCancel(Contract $contract, ?string $reason = null): Contract
+    public function cancel(Contract $contract, string $reason): Contract
     {
-        $cancelling = $contract->cancelled_at === null;
-
-        // Guard only the active → cancelled transition; reactivation is always allowed.
-        if ($cancelling) {
-            // Cancel = early termination — only valid while the contract is still
-            // running. Once the term has ended (overdue) it can only be expired.
-            if ($contract->daysRemaining() <= 0) {
-                throw ValidationException::withMessages([
-                    'contract' => 'This contract term has already ended; mark it as expired instead of cancelling.',
-                ]);
-            }
-
-            $this->assertNoPendingAssets($contract);
+        // Cancel = early termination — only valid while the contract is still
+        // running. Once the term has ended (overdue) it can only be expired.
+        if ($contract->daysRemaining() <= 0) {
+            throw ValidationException::withMessages([
+                'contract' => 'This contract term has already ended; mark it as expired instead of cancelling.',
+            ]);
         }
 
+        $this->assertNoPendingAssets($contract);
+
         $contract->update([
-            'cancelled_at' => $cancelling ? Carbon::now() : null,
-            'cancel_reason' => $cancelling ? $reason : null,
+            'cancelled_at' => Carbon::now(),
+            'cancel_reason' => $reason,
+        ]);
+
+        return $contract->fresh();
+    }
+
+    /**
+     * Reactivate a cancelled or expired contract — reopens it by clearing whichever
+     * lifecycle timestamp is set (cancelled_at / expired_at) plus the cancel reason,
+     * so the contract returns to its date-derived active/overdue state.
+     */
+    public function reactivate(Contract $contract): Contract
+    {
+        $contract->update([
+            'cancelled_at' => null,
+            'cancel_reason' => null,
+            'expired_at' => null,
         ]);
 
         return $contract->fresh();

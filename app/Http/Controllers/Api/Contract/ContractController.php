@@ -202,42 +202,36 @@ class ContractController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Extends a contract's term. Requires the contracts.renew permission. */
-    public function renew(Request $request, Contract $contract): JsonResponse
+    /**
+     * Cancel a contract — early termination while it's still running. Requires the
+     * contracts.cancel permission and a reason (stored on the contract).
+     */
+    public function cancel(Request $request, Contract $contract): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('contracts.renew'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('contracts.cancel'), 403);
 
-        $months = (int) $request->input('months', 12);
-        $contract = $this->service->renew($contract, $months > 0 ? $months : 12);
-        $this->alertService->resetForContract($contract);
-        AuditLog::record('Renewed contract', "{$contract->name} ({$contract->code})");
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $contract = $this->service->cancel($contract, $validated['reason']);
+        AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) — {$validated['reason']}");
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
     }
 
     /**
-     * Toggles a contract's cancelled state. Requires the contracts.cancel permission.
-     * Cancelling requires a reason (stored on the contract); reactivating takes none.
+     * Reactivate a cancelled or expired contract — reopens it by clearing the
+     * cancelled/expired timestamps. Requires the contracts.reactivate permission.
      */
-    public function cancel(Request $request, Contract $contract): JsonResponse
+    public function reactivate(Request $request, Contract $contract): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('contracts.cancel'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('contracts.reactivate'), 403);
 
-        // Reason is mandatory only in the active → cancelled direction.
-        $isCancelling = $contract->cancelled_at === null;
-        $validated = $request->validate([
-            'reason' => [$isCancelling ? 'required' : 'nullable', 'string', 'max:500'],
-        ]);
-        $reason = $isCancelling ? $validated['reason'] : null;
-
-        $contract = $this->service->toggleCancel($contract, $reason);
-
-        if ($contract->cancelled_at !== null) {
-            AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) — {$reason}");
-        } else {
-            AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})");
-        }
+        $contract = $this->service->reactivate($contract);
+        $this->alertService->resetForContract($contract);
+        AuditLog::record('Reactivated contract', "{$contract->name} ({$contract->code})");
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -257,7 +251,14 @@ class ContractController extends Controller
 
     public function destroy(Request $request, Contract $contract): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('contracts.delete'), 403);
+
+        // Hard-delete is only for a freshly-created contract added by mistake: it must
+        // still be active (not cancelled/expired/overdue) and have no linked assets.
+        // Anything past that is lifecycle-managed via Cancel/Expire instead.
+        abort_unless($contract->status === 'active', 422, 'Only a newly created (active) contract can be deleted.');
+        abort_if($contract->assets()->exists(), 422, 'Detach the linked assets before deleting this contract.');
+
         AuditLog::record('Deleted contract', "{$contract->name} ({$contract->code})");
 
         // Remove the attachment files; the DB rows go via cascade on delete.

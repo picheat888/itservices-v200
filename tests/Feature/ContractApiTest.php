@@ -240,7 +240,7 @@ class ContractApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_cancel_toggles_the_contract_status(): void
+    public function test_cancel_then_reactivate_restores_the_contract(): void
     {
         $this->actingAs($this->super());
 
@@ -258,11 +258,36 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('active', 0)
             ->assertJsonPath('cancelled', 1);
 
-        // Toggling again reactivates it.
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        // Reactivate (separate endpoint) reopens it.
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")
             ->assertOk()
             ->assertJsonPath('data.status', 'active');
         $this->assertNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_reactivate_reopens_an_expired_contract(): void
+    {
+        $this->actingAs($this->super());
+
+        // Ended term, then admin-closed (expired) — reactivate clears expired_at.
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDay(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $contract->update(['expired_at' => now()]);
+
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'overdue'); // term still ended, but reopened
+        $this->assertNull($contract->fresh()->expired_at);
+    }
+
+    public function test_user_without_permission_cannot_reactivate_contract(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $contract->update(['cancelled_at' => now()]);
+
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")->assertForbidden();
+        $this->assertNotNull($contract->fresh()->cancelled_at);
     }
 
     public function test_user_without_permission_cannot_cancel_contract(): void
@@ -286,6 +311,53 @@ class ContractApiTest extends TestCase
             ->assertJsonValidationErrors('contract');
 
         $this->assertNull($contract->fresh()->cancelled_at);
+    }
+
+    public function test_super_can_delete_a_freshly_created_active_contract(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'Added by mistake', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->deleteJson("/api/contracts/{$contract->id}")->assertOk();
+        $this->assertDatabaseMissing('contracts', ['id' => $contract->id]);
+    }
+
+    public function test_cannot_delete_a_contract_with_linked_assets(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        Asset::create(['tag' => 'RNT-LT-09', 'type' => 'laptop', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->deleteJson("/api/contracts/{$contract->id}")->assertStatus(422);
+        $this->assertDatabaseHas('contracts', ['id' => $contract->id]);
+    }
+
+    public function test_cannot_delete_an_overdue_or_cancelled_contract(): void
+    {
+        $this->actingAs($this->super());
+
+        // Overdue — past its end date but never closed out; lifecycle-managed via Expire.
+        $overdue = Contract::create(['vendor' => 'B', 'name' => 'Overdue', 'type' => 'software', 'start_date' => now()->subYears(2), 'end_date' => now()->subDay(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $this->deleteJson("/api/contracts/{$overdue->id}")->assertStatus(422);
+        $this->assertDatabaseHas('contracts', ['id' => $overdue->id]);
+
+        // Cancelled — not deletable either.
+        $cancelled = Contract::create(['vendor' => 'C', 'name' => 'Cancelled', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+        $cancelled->update(['cancelled_at' => now()]);
+        $this->deleteJson("/api/contracts/{$cancelled->id}")->assertStatus(422);
+        $this->assertDatabaseHas('contracts', ['id' => $cancelled->id]);
+    }
+
+    public function test_user_without_permission_cannot_delete_contract(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+
+        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
+
+        $this->deleteJson("/api/contracts/{$contract->id}")->assertForbidden();
+        $this->assertDatabaseHas('contracts', ['id' => $contract->id]);
     }
 
     public function test_hardware_contract_cancels_once_every_linked_asset_is_written_off(): void
@@ -323,19 +395,6 @@ class ContractApiTest extends TestCase
         $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Service ended'])
             ->assertOk()
             ->assertJsonPath('data.status', 'cancelled');
-    }
-
-    public function test_renew_extends_the_contract_term(): void
-    {
-        $this->actingAs($this->super());
-
-        $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(10), 'value' => 1, 'billing_cycle' => 'yearly']);
-        $oldEnd = $contract->end_date;
-
-        $this->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
-            ->assertOk();
-
-        $this->assertTrue($contract->fresh()->end_date->gt($oldEnd));
     }
 
     /**
@@ -454,8 +513,8 @@ class ContractApiTest extends TestCase
         $contract = Contract::create(['vendor' => 'A', 'name' => 'N', 'type' => 'software', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
         $contract->update(['cancelled_at' => now(), 'cancel_reason' => 'Old reason']);
 
-        // Reactivation (already cancelled) takes no reason and clears the stored one.
-        $this->postJson("/api/contracts/{$contract->id}/cancel")
+        // Reactivation uses its own endpoint (no reason) and clears the stored one.
+        $this->postJson("/api/contracts/{$contract->id}/reactivate")
             ->assertOk()
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.cancel_reason', null);

@@ -3,6 +3,7 @@ import { ModulePermissionCard, type ModuleMaster } from '../components/module-pe
 import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
+import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { Button } from '@/shared/ui/button';
@@ -325,6 +326,17 @@ function RolesTab() {
                                             if (group.module === 'employees') {
                                                 return (
                                                     <EmployeePermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'contracts') {
+                                                return (
+                                                    <ContractPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}

@@ -17,7 +17,13 @@ class Permissions
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my'],
-            'contracts' => ['view', 'create', 'edit', 'import', 'renew', 'alerts', 'cancel', 'expire'],
+            'contracts' => [
+                'module',
+                'view_dashboard', 'view', 'view_lifecycle',
+                'create', 'edit', 'delete', 'import',
+                'cancel', 'expire', 'reactivate',
+                'alerts',
+            ],
             'stock' => [
                 'module',
                 'view_dashboard', 'view', 'view_request', 'view_count', 'view_events',
@@ -69,7 +75,9 @@ class Permissions
                 'tickets.view_all', 'tickets.create', 'tickets.assign', 'tickets.resolve',
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
                 'assets.view', 'assets.register', 'assets.transfer', 'assets.receive', 'assets.retire', 'assets.edit', 'assets.my',
-                'contracts.view', 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.renew', 'contracts.alerts',
+                // Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
+                'contracts.module', 'contracts.view_dashboard', 'contracts.view',
+                'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.alerts',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
                 'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
@@ -192,6 +200,54 @@ class Permissions
                 $granted,
                 fn ($key) => ! str_starts_with($key, 'employees.') || isset($standalone[$key]),
             ));
+        }
+
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
+    }
+
+    /**
+     * Contract permission tree used for client cascade and server normalization.
+     * Mirrors the stock/employee hierarchy: master gates the module + sidebar; each
+     * group's view key gates its management children (cascade).
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function contractHierarchy(): array
+    {
+        return [
+            'master' => 'contracts.module',
+            'groups' => [
+                'contracts.view_dashboard' => [],
+                'contracts.view' => ['contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.import'],
+                'contracts.view_lifecycle' => ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'],
+                'contracts.alerts' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the contract hierarchy on a granted set: a management child requires its
+     * group's view key; every group key requires the master. Non-contract keys pass
+     * through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeContracts(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::contractHierarchy();
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'contracts.')));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {

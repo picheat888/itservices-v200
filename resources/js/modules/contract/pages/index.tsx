@@ -115,9 +115,11 @@ export default function ContractsPage() {
     const isSuper = role === 'super';
     const canCreate = isSuper || perms.includes('contracts.create');
     const canEdit = isSuper || perms.includes('contracts.edit');
+    const canDelete = isSuper || perms.includes('contracts.delete');
     const canImport = isSuper || perms.includes('contracts.import');
     const canCancel = isSuper || perms.includes('contracts.cancel');
     const canExpire = isSuper || perms.includes('contracts.expire');
+    const canReactivate = isSuper || perms.includes('contracts.reactivate');
 
     const [tab, setTab] = useState<Tab>(initialContractTab);
     const [search, setSearch] = useState('');
@@ -615,6 +617,8 @@ export default function ContractsPage() {
                 canEdit={canEdit}
                 canCancel={canCancel}
                 canExpire={canExpire}
+                canReactivate={canReactivate}
+                canDelete={canDelete}
             />
             <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />

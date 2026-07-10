@@ -57,9 +57,9 @@ export const contractApi = {
     get: (id: number) => http.get<ApiEnvelope<Contract>>(`/contracts/${id}`).then((r) => r.data.data),
     create: (payload: ContractPayload) => mutate<Contract>('post', '/contracts', payload),
     update: (id: number, payload: ContractPayload) => mutate<Contract>('put', `/contracts/${id}`, payload),
-    renew: (id: number, months = 12) => mutate<Contract>('post', `/contracts/${id}/renew`, { months }),
-    cancel: (id: number, reason?: string) => mutate<Contract>('post', `/contracts/${id}/cancel`, reason !== undefined ? { reason } : {}),
+    cancel: (id: number, reason: string) => mutate<Contract>('post', `/contracts/${id}/cancel`, { reason }),
     expire: (id: number) => mutate<Contract>('post', `/contracts/${id}/expire`),
+    reactivate: (id: number) => mutate<Contract>('post', `/contracts/${id}/reactivate`),
     remove: (id: number) => mutate<void>('delete', `/contracts/${id}`),
     uploadAttachments: async (id: number, files: File[]): Promise<Contract> => {
         await ensureCsrf();
