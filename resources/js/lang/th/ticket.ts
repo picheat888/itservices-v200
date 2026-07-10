@@ -3,7 +3,7 @@ import type { Dict } from '@/lang/types';
 export const ticket: Dict = {
     "tickets_title": "แจ้งปัญหา IT",
     "tickets_sub": "แจ้งและติดตามปัญหาด้านไอทีทั่วทั้งองค์กร",
-    "ticket_tab_dashboard": "ภาพรวม",
+    "ticket_tab_dashboard": "Dashboard",
     "ticket_tab_all": "ตั๋วทั้งหมด",
     "ticket_tab_mine": "งานที่รับผิดชอบ",
     "ticket_open": "เปิด",

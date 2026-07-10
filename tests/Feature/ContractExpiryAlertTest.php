@@ -264,17 +264,23 @@ class ContractExpiryAlertTest extends TestCase
         $this->assertSame(0, ContractAlertLog::count());
     }
 
-    public function test_renewing_via_api_resets_the_ledgers(): void
+    public function test_reactivating_via_api_resets_the_ledgers(): void
     {
         Notification::fake();
         Bus::fake();
-        $this->grant('itrole', 'contracts.renew');
+        $this->grant('itrole', 'contracts.cancel');
+        $this->grant('itrole', 'contracts.reactivate');
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(30, [30]);
         $this->service()->run(); // logs bell + threshold 30
 
+        // Cancel then reactivate — reactivate clears the alert ledgers so the reopened
+        // contract alerts afresh (the same reset the removed Renew action used to do).
         $this->actingAs($user)
-            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
+            ->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Pausing'])
+            ->assertOk();
+        $this->actingAs($user)
+            ->postJson("/api/contracts/{$contract->id}/reactivate")
             ->assertOk();
 
         $this->assertSame(0, ContractAlertLog::where('contract_id', $contract->id)->count());
@@ -347,17 +353,21 @@ class ContractExpiryAlertTest extends TestCase
         $this->assertSame(1, $this->bellsFor($user, $contract));
     }
 
-    public function test_renew_removes_the_bell_notification(): void
+    public function test_reactivate_removes_the_bell_notification(): void
     {
         Bus::fake();
-        $this->grant('itrole', 'contracts.renew');
+        $this->grant('itrole', 'contracts.cancel');
+        $this->grant('itrole', 'contracts.reactivate');
         $user = $this->alertedUser();
         $contract = $this->contractExpiringIn(30, [30]);
         $this->service()->run();
         $this->assertSame(1, $this->bellsFor($user, $contract));
 
         $this->actingAs($user)
-            ->postJson("/api/contracts/{$contract->id}/renew", ['months' => 12])
+            ->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Pausing'])
+            ->assertOk();
+        $this->actingAs($user)
+            ->postJson("/api/contracts/{$contract->id}/reactivate")
             ->assertOk();
 
         $this->assertSame(0, $this->bellsFor($user, $contract));
