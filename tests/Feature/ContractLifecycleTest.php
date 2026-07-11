@@ -52,7 +52,7 @@ class ContractLifecycleTest extends TestCase
     public function test_expire_blocked_by_pending_assets_any_type(): void
     {
         $c = $this->contract(['type' => 'software', 'end_date' => now()->subDay()]); // ended, so it reaches the asset guard
-        Asset::create(['tag' => 'A-1', 'category_id' => null, 'status' => 'deployed', 'contract_id' => $c->id]);
+        Asset::create(['asset_code' => 'A-1', 'category_id' => null, 'status' => 'deployed', 'contract_id' => $c->id]);
         $this->expectException(ValidationException::class);
         app(ContractService::class)->expire($c);
     }

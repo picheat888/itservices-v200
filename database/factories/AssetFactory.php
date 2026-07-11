@@ -5,9 +5,11 @@ namespace Database\Factories;
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
+use App\Models\Contract\Contract;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
+use App\Models\Settings\Vendor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -45,22 +47,39 @@ class AssetFactory extends Factory
             'source' => AssetSource::Purchased,
             'status' => fake()->randomElement(AssetStatus::cases()),
             'owner' => 'EMP-'.fake()->numberBetween(1000, 2200),
-            'department' => fake()->randomElement(['IT', 'Finance', 'Sales', 'Production', 'HR']),
             'value' => fake()->numberBetween(10000, 90000),
             'purchase_date' => $purchase->format('Y-m-d'),
             'warranty_end' => fake()->dateTimeBetween('+1 month', '+3 years')->format('Y-m-d'),
-            'registered_date' => $purchase->format('Y-m-d'),
         ];
     }
 
-    /** A rented asset billed monthly, optionally linked to a contract. */
+    /**
+     * A rented asset billed monthly. Fee, vendor and lease term are NOT stored on the
+     * asset — they live on the linked contract and are read from it live — so this state
+     * creates a real contract and leaves the asset's own value / lease columns empty.
+     */
     public function rented(): static
     {
-        return $this->state(fn () => [
-            'source' => AssetSource::Rented,
-            'value' => fake()->numberBetween(1500, 9000),
-            'lease_start' => fake()->dateTimeBetween('-2 years', '-2 months')->format('Y-m-d'),
-            'lease_end' => fake()->dateTimeBetween('+2 months', '+2 years')->format('Y-m-d'),
-        ]);
+        return $this->state(function () {
+            $vendor = Vendor::firstOrCreate(['name' => 'Lease Vendor']);
+            $contract = Contract::create([
+                'vendor_id' => $vendor->id,
+                'name' => 'Equipment lease',
+                'type' => 'hardware',
+                'start_date' => fake()->dateTimeBetween('-2 years', '-2 months')->format('Y-m-d'),
+                'end_date' => fake()->dateTimeBetween('+2 months', '+2 years')->format('Y-m-d'),
+                'value' => fake()->numberBetween(1500, 9000),
+                'billing_cycle' => 'monthly',
+            ]);
+
+            return [
+                'source' => AssetSource::Rented,
+                'contract_id' => $contract->id,
+                'value' => 0,
+                'vendor_id' => null,
+                'purchase_date' => null,
+                'warranty_end' => null,
+            ];
+        });
     }
 }

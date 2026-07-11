@@ -57,6 +57,8 @@ class LocationFkMigrationTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        // At this rolled-back state the ID column is still named `tag` (the renames to
+        // asset_id then asset_code are later migrations, undone by the rollback above).
         DB::table('assets')->insert([
             'tag' => 'TEST-DEDUP-0001',
             'model' => 'Dedup Test Model',
@@ -75,7 +77,8 @@ class LocationFkMigrationTest extends TestCase
         $this->assertSame((int) $keepId, (int) $locations->first()->id, 'the lowest id must be the survivor');
         $this->assertDatabaseMissing('locations', ['id' => $dropId]);
 
-        $asset = DB::table('assets')->where('tag', 'TEST-DEDUP-0001')->first();
+        // After re-running the migrations the ID column has been renamed to asset_code.
+        $asset = DB::table('assets')->where('asset_code', 'TEST-DEDUP-0001')->first();
         $this->assertNotNull($asset->location_id, 'the asset must be backfilled onto a location');
         $this->assertSame((int) $keepId, (int) $asset->location_id, 'the asset must be backfilled onto the surviving location');
     }

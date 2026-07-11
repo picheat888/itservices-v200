@@ -8,6 +8,7 @@ use App\Http\Requests\Employee\StoreEmployeeRequest;
 use App\Http\Resources\Employee\ApproverNodeResource;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\OrgChartNodeResource;
+use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\User;
@@ -230,6 +231,38 @@ class EmployeeController extends Controller
     public function show(Employee $employee): JsonResponse
     {
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->response();
+    }
+
+    /**
+     * Read-only list of the assets this employee currently holds, for the Employee detail's
+     * Assets tab. Gated by employees.view (an Employee-module read) — NOT assets.view — since
+     * it only surfaces what the person holds, scoped to that one employee. Mirrors the
+     * own-module "peek" pattern used by the asset → contract view.
+     *
+     * @return array<string, mixed>
+     */
+    public function assets(Request $request, Employee $employee): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        $assets = Asset::query()
+            ->with(['category', 'model'])
+            ->where('owner_employee_id', $employee->id)
+            ->orderByDesc('owned_since')
+            ->get()
+            ->map(fn (Asset $a) => [
+                'id' => $a->id,
+                'asset_code' => $a->asset_code,
+                'tag' => $a->tag,
+                'model' => $a->model?->name,
+                'type' => $a->category?->name,
+                'type_th' => $a->category?->name_th,
+                'serial' => $a->serial,
+                'status' => $a->status->value,
+                'owned_since' => $a->owned_since?->toDateString(),
+            ]);
+
+        return response()->json(['data' => $assets]);
     }
 
     /**

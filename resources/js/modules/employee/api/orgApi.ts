@@ -1,10 +1,23 @@
-import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/shared/types';
 
 export interface EmployeeSummary {
     total: number;
     new_hires: number;
     recent: Employee[];
+}
+
+/** A read-only asset row held by an employee — for the Employee detail's Assets tab. */
+export interface EmployeeHeldAsset {
+    id: number;
+    asset_code: string;
+    tag: string | null;
+    model: string | null;
+    type: string | null;
+    type_th: string | null;
+    serial: string | null;
+    status: string;
+    owned_since: string | null;
 }
 
 export interface EmployeePageMeta {
@@ -60,6 +73,8 @@ function withoutPhoto(payload: EmployeePayload): Omit<EmployeePayload, 'photo'> 
 export const employeeApi = {
     list: () => http.get<ApiEnvelope<Employee[]>>('/employees').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Employee>>(`/employees/${id}`).then((r) => r.data.data),
+    // Assets the employee currently holds (read-only, gated by employees.view).
+    assets: (id: number) => http.get<ApiEnvelope<EmployeeHeldAsset[]>>(`/employees/${id}/assets`).then((r) => r.data.data),
     summary: () => http.get<EmployeeSummary>('/employees/summary').then((r) => r.data),
     listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string; status?: string }) =>
         http.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),

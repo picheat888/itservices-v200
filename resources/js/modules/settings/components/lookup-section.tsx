@@ -168,7 +168,7 @@ function LookupModal({
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
-            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error');
+            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error', hasFieldError(err, 'name') ? undefined : t('cd_error_title'));
         }
     };
 

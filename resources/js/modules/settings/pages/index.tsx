@@ -888,11 +888,13 @@ function EmailTab() {
     const test = useMutation({
         mutationFn: () => settingsApi.testMail(),
         onSuccess: (res) => {
-            useToastStore.getState().push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error');
+            useToastStore
+                .getState()
+                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error', res.sent ? undefined : t('email_test_failed_title'));
         },
         onError: (e: unknown) => {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error');
+            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
         },
     });
 
@@ -1212,6 +1214,7 @@ const ASSET_STATUS_ROWS: { key: string; labelKey: string }[] = [
     { key: 'deployed', labelKey: 'asset_deployed' },
     { key: 'ready', labelKey: 'asset_ready' },
     { key: 'pending_acceptance', labelKey: 'asset_pending_accept' },
+    { key: 'common', labelKey: 'asset_common' },
     { key: 'pending_return', labelKey: 'asset_pending_return' },
     { key: 'writeoff', labelKey: 'asset_writeoff' },
 ];

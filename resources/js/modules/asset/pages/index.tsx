@@ -8,6 +8,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetType, Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
@@ -23,6 +24,7 @@ import {
     Clock,
     Download,
     Filter,
+    PackageCheck,
     Plus,
     RefreshCcw,
     Search,
@@ -40,6 +42,7 @@ import { assetApi } from '../api/assetApi';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
+import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
@@ -93,6 +96,8 @@ export default function AssetsPage() {
     const canTransfer = isSuper || perms.includes('assets.transfer');
     const canReceive = isSuper || perms.includes('assets.receive');
     const canRetire = isSuper || perms.includes('assets.retire');
+    const canForceRecall = isSuper || perms.includes('assets.force_recall');
+    const canCancelWriteoff = isSuper || perms.includes('assets.cancel_writeoff');
     // Accepting a hand-over is the recipient's action only — matched by their employee code.
     const myEmpCode = user?.employee_code ?? null;
 
@@ -125,6 +130,9 @@ export default function AssetsPage() {
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    // Multi-select is locked to one status group; `selectionStatus` is that group.
+    const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
+    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive'>(null);
     const [detail, setDetail] = useState<Asset | null>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
 
@@ -160,6 +168,7 @@ export default function AssetsPage() {
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Asset | null>(null);
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);
+    const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
     const { data: summary } = useAssetSummary();
     const { data: listData, isLoading } = useAssets({
@@ -203,12 +212,60 @@ export default function AssetsPage() {
         setFormOpen(true);
     };
 
-    const toggleRow = (id: number, on: boolean) => setSelectedIds((prev) => (on ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
-    const allOnPage = rows.length > 0 && rows.every((a) => selectedIds.includes(a.id));
+    // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
+    const bulkActionFor = useCallback(
+        (status: AssetStatus | null): 'transfer' | 'recall' | 'force_recall' | 'receive' | null => {
+            switch (status) {
+                case 'ready':
+                    return canTransfer ? 'transfer' : null;
+                case 'pending_acceptance':
+                    return canTransfer || canForceRecall ? 'recall' : null;
+                case 'common':
+                    return canTransfer || canForceRecall ? 'recall' : null;
+                case 'deployed':
+                    return canForceRecall ? 'force_recall' : null;
+                case 'pending_return':
+                    return canReceive ? 'receive' : null;
+                default:
+                    return null;
+            }
+        },
+        [canTransfer, canReceive, canForceRecall],
+    );
+
+    const clearSelection = () => {
+        setSelectedIds([]);
+        setSelectionStatus(null);
+    };
+
+    // A row is tickable only if it starts (or matches) the active status group.
+    const rowSelectable = (a: Asset) => (selectionStatus ? a.status === selectionStatus : bulkActionFor(a.status) != null);
+
+    const toggleRow = (a: Asset, on: boolean) => {
+        setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
+        if (on) setSelectionStatus((s) => s ?? a.status);
+    };
+
+    // Reset the locked status once the selection empties.
+    useEffect(() => {
+        if (selectedIds.length === 0 && selectionStatus !== null) setSelectionStatus(null);
+    }, [selectedIds, selectionStatus]);
+
+    // The status group "select all" acts on: the active group, or the first bulk-actionable row.
+    const eligibleStatus: AssetStatus | null = selectionStatus ?? rows.find((a) => bulkActionFor(a.status) != null)?.status ?? null;
+    const groupRows = eligibleStatus ? rows.filter((a) => a.status === eligibleStatus) : [];
+    const allGroupSelected = groupRows.length > 0 && groupRows.every((a) => selectedIds.includes(a.id));
+
+    const toggleAllOnPage = (on: boolean) => {
+        if (!eligibleStatus) return;
+        const groupIds = groupRows.map((a) => a.id);
+        setSelectedIds((prev) => (on ? [...new Set([...prev, ...groupIds])] : prev.filter((id) => !groupIds.includes(id))));
+        setSelectionStatus(on ? eligibleStatus : null);
+    };
 
     const runBulk = (op: 'writeoff') => {
         if (selectedIds.length === 0) return;
-        bulk.mutate({ ids: selectedIds, op }, { onSuccess: () => setSelectedIds([]) });
+        bulk.mutate({ ids: selectedIds, op }, { onSuccess: clearSelection });
     };
 
     // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
@@ -262,47 +319,57 @@ export default function AssetsPage() {
 
             {/* Admin warning — assets a holder has sent back, awaiting IT receipt into a warehouse. */}
             {canReceive && pendingReturns.length > 0 && (
-                <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-3">
-                    <div className="mb-2 flex items-center gap-2 text-xs font-bold tracking-wide text-amber-600 uppercase dark:text-amber-400">
-                        <Undo2 className="h-4 w-4" />
-                        {t('asset_pending_return_title')}
-                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[11px]">{pendingReturns.length}</span>
+                <div className="bg-card overflow-hidden rounded-xl border border-amber-500/30 shadow-xs">
+                    {/* Banner: a bare amber icon anchors the return queue; "Receiving: N Unit" on the right. */}
+                    <div className="flex items-center gap-3 border-b border-amber-500/25 bg-amber-500/10 px-4 py-3.5">
+                        <Undo2 className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <div className="text-sm font-extrabold tracking-tight">{t('asset_pending_return_title')}</div>
+                        <span className="ml-auto shrink-0 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-400">
+                            {t('asset_receiving_count').replace('{count}', String(pendingReturns.length))}
+                        </span>
                     </div>
-                    <div className="space-y-1.5">
-                        {pendingReturns.map((a) => (
-                            <div key={a.id} className="bg-background/60 flex items-center gap-3 rounded-lg px-3 py-2">
-                                <AssetTypeIcon type={a.type} className="text-muted-foreground h-4 w-4 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm font-medium">
-                                        {a.model}
-                                        {a.nickname && <span className="text-muted-foreground"> · {a.nickname}</span>}
-                                    </div>
-                                    <div className="text-muted-foreground truncate font-mono text-xs">
-                                        {a.tag}
-                                        {a.owner ? ` · ${lang === 'th' ? 'จาก' : 'from'} ${a.owner}` : ''}
-                                    </div>
-                                </div>
-                                <Button size="sm" onClick={() => setReceiveAsset(a)}>
-                                    <Check className="h-4 w-4" />
-                                    {t('asset_mark_received')}
-                                </Button>
+
+                    {pendingReturns.map((a, i) => (
+                        <div
+                            key={a.id}
+                            className={cn(
+                                'flex items-center gap-3 px-4 py-3 transition-colors hover:bg-amber-500/[0.06]',
+                                i > 0 && 'border-border border-t',
+                            )}
+                        >
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                <AssetTypeIcon type={a.type} className="h-4 w-4" />
                             </div>
-                        ))}
-                    </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex min-w-0 items-center gap-2">
+                                    <span className="truncate text-sm font-semibold">{a.model}</span>
+                                    {a.tag && <AssetTagBadge tag={a.tag} className="shrink-0" />}
+                                </div>
+                                <div className="text-muted-foreground truncate font-mono text-xs">
+                                    {a.asset_code}
+                                    {a.owner_name ? ` · ${lang === 'th' ? 'จาก' : 'from'} ${a.owner_name}` : ''}
+                                </div>
+                            </div>
+                            {/* Receive action: a solid amber icon button (opens the receive-to-warehouse
+                                modal). Icon mirrors the header's Undo2 → received. */}
+                            <button
+                                type="button"
+                                onClick={() => setReceiveAsset(a)}
+                                title={t('asset_mark_received')}
+                                aria-label={t('asset_mark_received')}
+                                className={cn(
+                                    'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm',
+                                    'transition-all duration-150 hover:bg-amber-600 hover:shadow-md',
+                                    'focus-visible:ring-2 focus-visible:ring-amber-500/50 focus-visible:ring-offset-1 focus-visible:outline-none',
+                                    'active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100',
+                                )}
+                            >
+                                <PackageCheck className="h-[18px] w-[18px]" />
+                            </button>
+                        </div>
+                    ))}
                 </div>
             )}
-
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
-                <StatCard
-                    label={t('asset_deployed')}
-                    value={summary?.deployed ?? 0}
-                    hint={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
-                    icon={CheckCircle2}
-                />
-                <StatCard label={t('asset_pending_accept')} value={summary?.pending_acceptance ?? 0} icon={Clock} />
-                <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
-            </div>
 
             <Card className="overflow-hidden">
                 <div className="border-border flex gap-1 border-b px-2">
@@ -323,6 +390,19 @@ export default function AssetsPage() {
 
                 {tab === 'dashboard' && (
                     <div className="space-y-6 p-5">
+                        {/* Summary stats live on the Dashboard tab. */}
+                        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                            <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
+                            <StatCard
+                                label={t('asset_deployed')}
+                                value={summary?.deployed ?? 0}
+                                hint={`${summary?.ready ?? 0} ${t('asset_ready').toLowerCase()}`}
+                                icon={CheckCircle2}
+                            />
+                            <StatCard label={t('asset_pending_accept')} value={summary?.pending_acceptance ?? 0} icon={Clock} />
+                            <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
+                        </div>
+
                         <div>
                             <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('asset_by_type')}</div>
                             <div className="space-y-2">
@@ -362,9 +442,9 @@ export default function AssetsPage() {
                                                 className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
                                                 onClick={() => setDetail(a)}
                                             >
-                                                <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{a.tag}</td>
+                                                <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{a.asset_code}</td>
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
-                                                <td className="px-3 py-2">{a.owner}</td>
+                                                <td className="px-3 py-2">{a.owner_name}</td>
                                                 <td className="px-3 py-2">
                                                     <AssetStatusBadge status={a.status} t={t} />
                                                 </td>
@@ -532,11 +612,46 @@ export default function AssetsPage() {
                                         ? `${t('asset_selected')} ${selectedIds.length} ${lang === 'th' ? 'รายการ' : ''}`
                                         : `${selectedIds.length} ${t('asset_selected')}`}
                                 </span>
-                                <button className="text-muted-foreground text-xs hover:underline" onClick={() => setSelectedIds([])}>
+                                <button className="text-muted-foreground text-xs hover:underline" onClick={clearSelection}>
                                     {t('asset_clear')}
                                 </button>
                                 <div className="flex-1" />
-                                {canRetire && (
+                                {/* Contextual bulk actions per locked status group. A Common (shared)
+                                    group can be re-assigned to a person (Transfer) or pulled to the pool (Recall). */}
+                                {(selectionStatus === 'ready' || selectionStatus === 'common') && canTransfer && (
+                                    <Button size="sm" onClick={() => setBulkDialog('transfer')}>
+                                        <Share2 className="h-4 w-4" />
+                                        {t('asset_transfer_action')}
+                                    </Button>
+                                )}
+                                {/* Pending acceptance → cancel the not-yet-accepted hand-over (recall to pool). */}
+                                {selectionStatus === 'pending_acceptance' && (canTransfer || canForceRecall) && (
+                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
+                                        <RefreshCcw className="h-4 w-4" />
+                                        {t('asset_recall')}
+                                    </Button>
+                                )}
+                                {selectionStatus === 'common' && (canTransfer || canForceRecall) && (
+                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('recall')}>
+                                        <RefreshCcw className="h-4 w-4" />
+                                        {t('asset_recall_action')}
+                                    </Button>
+                                )}
+                                {selectionStatus === 'deployed' && canForceRecall && (
+                                    <Button size="sm" className="bg-amber-500 text-white hover:bg-amber-600" onClick={() => setBulkDialog('recall')}>
+                                        <RefreshCcw className="h-4 w-4" />
+                                        {t('asset_force_recall')}
+                                    </Button>
+                                )}
+                                {selectionStatus === 'pending_return' && canReceive && (
+                                    <Button size="sm" onClick={() => setBulkDialog('receive')}>
+                                        <Check className="h-4 w-4" />
+                                        {t('asset_mark_received')}
+                                    </Button>
+                                )}
+                                {/* Write-off only once back in the pool (Ready) — anything still out must be
+                                    recalled / returned to Ready first. */}
+                                {canRetire && selectionStatus === 'ready' && (
                                     <Button size="sm" variant="destructive" onClick={() => runBulk('writeoff')} disabled={bulk.isPending}>
                                         <Trash2 className="h-4 w-4" />
                                         {t('asset_writeoff')}
@@ -550,18 +665,21 @@ export default function AssetsPage() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                            <th className="w-8 px-4 py-2.5">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={allOnPage}
-                                                    onChange={(e) =>
-                                                        setSelectedIds(
-                                                            e.target.checked
-                                                                ? [...new Set([...selectedIds, ...rows.map((a) => a.id)])]
-                                                                : selectedIds.filter((id) => !rows.some((a) => a.id === id)),
-                                                        )
-                                                    }
-                                                />
+                                            <th
+                                                className={cn('w-10 px-2 py-2.5', eligibleStatus ? 'cursor-pointer' : 'cursor-not-allowed')}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (eligibleStatus) toggleAllOnPage(!allGroupSelected);
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-center px-2 py-1.5">
+                                                    <Checkbox
+                                                        checked={allGroupSelected}
+                                                        disabled={!eligibleStatus}
+                                                        onCheckedChange={(v) => toggleAllOnPage(v === true)}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                </div>
                                             </th>
                                             <th className="px-4 py-2.5">{t('asset_tag')}</th>
                                             <th className="px-4 py-2.5">{t('asset_type')}</th>
@@ -601,21 +719,25 @@ export default function AssetsPage() {
                                                         selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
                                                     )}
                                                 >
-                                                    <td className="px-4 py-2.5">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedIds.includes(a.id)}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onChange={(e) => toggleRow(a.id, e.target.checked)}
-                                                        />
+                                                    <td
+                                                        className={cn('px-2 py-2.5', rowSelectable(a) ? 'cursor-pointer' : 'cursor-not-allowed')}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (rowSelectable(a)) toggleRow(a, !selectedIds.includes(a.id));
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-center px-2 py-1.5">
+                                                            <Checkbox
+                                                                checked={selectedIds.includes(a.id)}
+                                                                disabled={!rowSelectable(a)}
+                                                                onCheckedChange={(v) => toggleRow(a, v === true)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-2.5">
-                                                        <div className="text-muted-foreground font-mono text-xs">{a.tag}</div>
-                                                        {a.nickname && (
-                                                            <span className="bg-brand/10 text-brand mt-1 inline-block max-w-[140px] truncate rounded px-1.5 py-0.5 text-[10px] font-medium">
-                                                                {a.nickname}
-                                                            </span>
-                                                        )}
+                                                        <div className="text-muted-foreground font-mono text-xs">{a.asset_code}</div>
+                                                        {a.tag && <AssetTagBadge tag={a.tag} className="mt-1 max-w-[140px]" />}
                                                     </td>
                                                     <td className="px-4 py-2.5">
                                                         <span className="flex items-center gap-2">
@@ -624,7 +746,7 @@ export default function AssetsPage() {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-2.5 font-medium">{a.model}</td>
-                                                    <td className="px-4 py-2.5">{a.owner}</td>
+                                                    <td className="px-4 py-2.5">{a.owner_name}</td>
                                                     <td className="px-4 py-2.5">{a.department}</td>
                                                     <td className="px-4 py-2.5">
                                                         {a.warehouse ? (
@@ -678,7 +800,7 @@ export default function AssetsPage() {
                                                                     <Share2 className="h-4 w-4" />
                                                                 </button>
                                                             )}
-                                                            {canEdit && (
+                                                            {canEdit && a.status !== 'writeoff' && (
                                                                 <button
                                                                     className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
                                                                     title={t('edit_asset')}
@@ -869,13 +991,52 @@ export default function AssetsPage() {
                     setDetail(null);
                     setReceiveAsset(a);
                 }}
+                onRecall={(a) => {
+                    setDetail(null);
+                    setRecallAsset(a);
+                }}
                 onEdit={canEdit ? openEdit : undefined}
                 canTransfer={canTransfer}
                 canReceive={canReceive}
+                canForceRecall={canForceRecall}
+                canCancelWriteoff={canCancelWriteoff}
             />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
+            <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />
+
+            {/* Bulk actions on the current selection (locked to one status group) — reuse the
+                single-asset dialogs in their `ids` mode. */}
+            <AssetTransferDialog
+                ids={selectedIds}
+                open={bulkDialog === 'transfer'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetReceiveModal
+                ids={selectedIds}
+                mode="recall"
+                open={bulkDialog === 'recall'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetReceiveModal
+                ids={selectedIds}
+                mode="receive"
+                open={bulkDialog === 'receive'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
         </div>
     );
 }

@@ -116,6 +116,13 @@
     --border: hsl(214, 20%, 90%);
     --input: hsl(214, 20%, 88%);
     --ring: var(--brand);
+    /* Toast card elevation (bottom-right pop-ups). Kept soft and low-offset so the
+       shadow reads as a single lift — a large Y-offset + tight spread makes the shadow
+       peek out below the card and look like a second toast stacked behind it. */
+    --shadow-toast: 0 8px 24px -14px rgba(15, 23, 42, 0.22), 0 1px 3px rgba(15, 23, 42, 0.05);
+    --shadow-toast-hover: 0 14px 32px -14px rgba(15, 23, 42, 0.28), 0 2px 8px rgba(15, 23, 42, 0.09);
+    --toast-top: rgba(255, 255, 255, 0);
+    --toast-ring: transparent;
     --chart-1: hsl(217, 91%, 60%);
     --chart-2: hsl(160, 60%, 45%);
     --chart-3: hsl(38, 92%, 50%);
@@ -159,6 +166,11 @@
     --border: hsl(217, 19%, 20%);
     --input: hsl(217, 19%, 22%);
     --ring: var(--brand);
+    /* Dark: stronger ambient shadow + a faint edge ring & top highlight so the near-black card lifts off the page */
+    --shadow-toast: 0 10px 30px -14px rgba(0, 0, 0, 0.62), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-toast-hover: 0 16px 40px -14px rgba(0, 0, 0, 0.75), 0 3px 10px rgba(0, 0, 0, 0.5);
+    --toast-top: rgba(255, 255, 255, 0.06);
+    --toast-ring: hsl(217, 19%, 30%);
     --chart-1: hsl(217, 91%, 60%);
     --chart-2: hsl(160, 60%, 45%);
     --chart-3: hsl(38, 92%, 50%);
@@ -254,6 +266,17 @@
     stroke-dasharray: 113;
     animation: toast-ring-deplete 6s linear forwards;
 }
+/* Card elevation: a soft ambient shadow, plus a faint edge ring + top highlight in dark
+   mode so the near-black card separates from the page. Hover deepens the shadow (no lift —
+   the enter/leave animations own `transform`). */
+.toast-card {
+    box-shadow: 0 0 0 1px var(--toast-ring), var(--shadow-toast), inset 0 1px 0 var(--toast-top);
+    transition: box-shadow 0.18s ease;
+}
+.toast-card:hover {
+    box-shadow: 0 0 0 1px var(--toast-ring), var(--shadow-toast-hover), inset 0 1px 0 var(--toast-top);
+}
+
 /* Pause the countdown (ring + the JS dismiss timer is paused in parallel) while hovered. */
 .toast-card:hover .toast-ring-fg {
     animation-play-state: paused;

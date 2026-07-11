@@ -336,8 +336,8 @@ export default function ContractsPage() {
                     {(
                         [
                             { id: 'dashboard', label: t('sub_dashboard') },
-                            { id: 'all', label: t('all_contracts'), count: summary?.total },
-                        ] as { id: Tab; label: string; count?: number }[]
+                            { id: 'all', label: t('all_contracts') },
+                        ] as { id: Tab; label: string }[]
                     ).map((tb) => (
                         <button
                             key={tb.id}
@@ -353,7 +353,6 @@ export default function ContractsPage() {
                             )}
                         >
                             {tb.label}
-                            {tb.count != null && <span className="ml-1.5 font-mono text-xs opacity-60">{tb.count}</span>}
                             {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
                         </button>
                     ))}

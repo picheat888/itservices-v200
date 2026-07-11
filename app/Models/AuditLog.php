@@ -48,8 +48,8 @@ class AuditLog extends Model
         'group_role_id' => [GroupRole::class, 'name'],
         'contract_id' => [Contract::class, 'name'],
         'brand_id' => [Brand::class, 'name'],
-        'asset_id' => [Asset::class, 'tag'],
-        'related_asset_id' => [Asset::class, 'tag'],
+        'asset_id' => [Asset::class, 'asset_code'],
+        'related_asset_id' => [Asset::class, 'asset_code'],
         'stock_item_id' => [StockItem::class, 'name'],
     ];
 

@@ -150,7 +150,7 @@ export interface ContractAttachment {
 
 export interface ContractLinkedAsset {
     id: number;
-    tag: string;
+    asset_code: string;
     name: string;
     type: string | null;
     serial: string | null;
@@ -161,7 +161,7 @@ export interface ContractLinkedAsset {
 /** Asset offered by the contract form's link picker (free assets + the ones already linked here). */
 export interface ContractLinkableAsset {
     id: number;
-    tag: string;
+    asset_code: string;
     name: string;
     type: string;
     status: string;
@@ -223,14 +223,17 @@ export interface ContractSummary {
 // The known device names below still map to specific icons; anything else falls back to a generic icon.
 export type AssetType = string;
 export type AssetSource = 'purchased' | 'rented';
-export type AssetStatus = 'ready' | 'pending_acceptance' | 'deployed' | 'pending_return' | 'writeoff';
+export type AssetStatus = 'ready' | 'pending_acceptance' | 'deployed' | 'common' | 'pending_return' | 'writeoff';
 
 export interface Asset {
     id: number;
-    tag: string;
-    /** User-given nickname ("Tag") to recognise the asset, separate from the Asset ID. */
-    nickname: string | null;
+    /** The generated Asset code, e.g. INK-IT-26-0001. */
+    asset_code: string;
+    /** User-given "Tag" nickname to recognise the asset, separate from the Asset code. */
+    tag: string | null;
     type: AssetType;
+    /** Thai category name for locale-aware display; falls back to `type` when null. */
+    type_th?: string | null;
     category_id: number | null;
     brand: string | null;
     brand_id: number | null;
@@ -243,7 +246,9 @@ export interface Asset {
     owner_employee_id: number | null;
     /** Display name of the holder: employee full name, shared label, or null (pool). */
     owner_name: string | null;
-    initial_owner: string | null;
+    /** Job title of the holding employee (null for pool / shared assets). */
+    owner_position: string | null;
+    /** Department of the holding employee (read from the employee; null for pool / shared). */
     department: string | null;
     location: string | null;
     location_id: number | null;

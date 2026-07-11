@@ -35,10 +35,10 @@ class Asset extends Model
     }
 
     protected $fillable = [
-        'tag', 'nickname', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
-        'owner', 'owner_employee_id', 'initial_owner', 'department', 'location_id', 'warehouse_id', 'value', 'vendor_id',
-        'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id', 'lease_start', 'lease_end',
-        'registered_date', 'owned_since', 'notes', 'last_reason',
+        'asset_code', 'tag', 'category_id', 'brand_id', 'model_id', 'serial', 'source', 'status',
+        'owner', 'owner_employee_id', 'location_id', 'warehouse_id', 'value', 'vendor_id',
+        'purchase_date', 'warranty_end', 'warranty_lifetime', 'contract_id',
+        'owned_since', 'notes', 'last_reason',
     ];
 
     protected function casts(): array
@@ -50,9 +50,6 @@ class Asset extends Model
             'purchase_date' => 'date',
             'warranty_end' => 'date',
             'warranty_lifetime' => 'boolean',
-            'lease_start' => 'date',
-            'lease_end' => 'date',
-            'registered_date' => 'date',
             'owned_since' => 'date',
         ];
     }
@@ -121,31 +118,28 @@ class Asset extends Model
         return $this->hasMany(Ticket::class, 'related_asset_id')->latest();
     }
 
-    /** Auto-generate an INB-XX-NNNNN / RNT-XX-NNNNN tag and registration date on create. */
+    /** Auto-generate an INK-IT-YY-NNNN Asset code on create. */
     protected static function booted(): void
     {
         static::creating(function (Asset $asset) {
-            if (blank($asset->tag)) {
-                $asset->tag = $asset->generateTag();
-            }
-            if (blank($asset->registered_date)) {
-                $asset->registered_date = now();
+            if (blank($asset->asset_code)) {
+                $asset->asset_code = $asset->generateAssetCode();
             }
         });
     }
 
     /**
-     * Build the Asset ID as INK-IT-YY-NNNN: a fixed INK-IT prefix, the 2-digit
+     * Build the Asset code as INK-IT-YY-NNNN: a fixed INK-IT prefix, the 2-digit
      * year, and a 4-digit running number that restarts each year.
      */
-    public function generateTag(): string
+    public function generateAssetCode(): string
     {
         $prefix = 'INK-IT-'.now()->format('y').'-';
 
         // Highest sequence already issued under this year's prefix, then +1.
-        $last = static::where('tag', 'like', $prefix.'%')
-            ->pluck('tag')
-            ->map(fn (string $tag) => (int) substr($tag, strlen($prefix)))
+        $last = static::where('asset_code', 'like', $prefix.'%')
+            ->pluck('asset_code')
+            ->map(fn (string $assetCode) => (int) substr($assetCode, strlen($prefix)))
             ->max() ?? 0;
 
         return sprintf('%s%04d', $prefix, $last + 1);
@@ -163,15 +157,32 @@ class Asset extends Model
         return $this->owner_employee_id !== null;
     }
 
-    /** The relevant cover end date: lease end for rented assets, warranty end otherwise. */
-    public function coverEndsOn(): ?Carbon
+    /**
+     * The current holder's identifier for display: the employee's code when an employee
+     * holds it (read from the FK — never stored), else the free-text shared/common-use
+     * label, else null (pooled). Employee data is never duplicated onto the asset.
+     */
+    public function ownerCode(): ?string
     {
-        return $this->source === AssetSource::Rented ? $this->lease_end : $this->warranty_end;
+        return $this->owner_employee_id ? $this->ownerEmployee?->code : $this->owner;
     }
 
-    /** Annualised value: a rented asset's monthly fee ×12, otherwise the raw purchase price. */
+    /**
+     * The relevant cover end date: for a rented asset this is the linked contract's
+     * end date (read live — never stored on the asset); for a purchased asset it's
+     * the warranty end.
+     */
+    public function coverEndsOn(): ?Carbon
+    {
+        return $this->source === AssetSource::Rented ? $this->contract?->end_date : $this->warranty_end;
+    }
+
+    /**
+     * Annualised value: a rented asset's monthly fee ×12 (taken from the linked
+     * contract), otherwise the raw purchase price stored on the asset.
+     */
     public function annualValue(): float
     {
-        return $this->source === AssetSource::Rented ? (float) $this->value * 12 : (float) $this->value;
+        return $this->source === AssetSource::Rented ? (float) ($this->contract?->value ?? 0) * 12 : (float) $this->value;
     }
 }

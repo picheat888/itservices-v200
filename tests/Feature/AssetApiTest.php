@@ -72,19 +72,20 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.model', 'Dell Latitude 5440')
             ->assertJsonPath('data.value_display', '฿32,100')
             ->assertJsonPath('data.status', 'ready')
-            ->assertJsonPath('data.initial_owner', 'EMP-1042');
+            // "Registered" reflects when the row was created in this system (created_at).
+            ->assertJsonPath('data.registered_date', now()->toDateString());
 
         $this->getJson('/api/assets')->assertOk()->assertJsonCount(1, 'data');
     }
 
-    public function test_tag_is_auto_generated_when_blank(): void
+    public function test_asset_code_is_auto_generated_when_blank(): void
     {
         $this->actingAs($this->super());
 
         $this->postJson('/api/assets', [
             'category_id' => $this->categoryId('laptop'), 'source' => 'purchased', 'model_id' => $this->modelId('X'), 'vendor_id' => $this->vendorId(), 'value' => 100,
         ])->assertCreated()
-            ->assertJsonPath('data.tag', fn ($tag) => is_string($tag) && str_starts_with($tag, 'INK-IT-'));
+            ->assertJsonPath('data.asset_code', fn ($assetCode) => is_string($assetCode) && str_starts_with($assetCode, 'INK-IT-'));
     }
 
     public function test_rented_asset_derives_value_and_dates_from_contract(): void
@@ -105,7 +106,54 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.lease_start', '2026-01-01')
             ->assertJsonPath('data.lease_end', '2027-12-31')
             ->assertJsonPath('data.contract_id', $contract->id)
-            ->assertJsonPath('data.tag', fn ($tag) => str_starts_with($tag, 'INK-IT-'));
+            ->assertJsonPath('data.asset_code', fn ($assetCode) => str_starts_with($assetCode, 'INK-IT-'));
+    }
+
+    public function test_rented_asset_does_not_snapshot_lease_fields_on_its_own_row(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
+            'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+
+        // Even when a client sends a fee / vendor, they must not be persisted onto the
+        // rented asset — the contract is the single source of truth.
+        $this->postJson('/api/assets', [
+            'category_id' => $this->categoryId('network'), 'source' => 'rented',
+            'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $contract->id,
+            'value' => 999, 'vendor_id' => $this->vendorId('Sneaky'),
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('assets', [
+            'source' => 'rented',
+            'contract_id' => $contract->id,
+            'value' => 0,
+            'vendor_id' => null,
+        ]);
+    }
+
+    public function test_summary_total_value_counts_a_rented_fee_from_the_contract(): void
+    {
+        $this->actingAs($this->super());
+
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('Lease Co'), 'name' => 'Rack lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
+            'value' => 1000, 'billing_cycle' => 'monthly',
+        ]);
+        // Asset stores no fee of its own; annualValue must read 1000/mo ×12 from the contract.
+        Asset::factory()->create([
+            'source' => 'rented', 'contract_id' => $contract->id,
+            'value' => 0, 'vendor_id' => null,
+        ]);
+
+        $this->getJson('/api/assets/summary')
+            ->assertOk()
+            ->assertJsonPath('total', 1)
+            ->assertJsonPath('total_value', 12000);
     }
 
     public function test_rented_asset_requires_a_contract(): void
@@ -281,17 +329,56 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.location', 'HQ Floor 3');
     }
 
+    public function test_transfer_to_employee_clears_the_warehouse(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-7700', 'first_name' => 'Ware', 'last_name' => 'House']);
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create([
+            'status' => 'ready', 'owner' => null, 'owner_employee_id' => null,
+            'warehouse_id' => Warehouse::firstOrCreate(['name' => 'Central IT'])->id,
+        ]);
+        $location = Location::create(['name' => 'HQ Floor 3']);
+
+        // Deploying to an employee moves the asset out of the pool: it's now at a
+        // usage location, so the warehouse must be cleared.
+        $this->postJson("/api/assets/{$asset->id}/transfer", [
+            'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.owner', 'EMP-7700')
+            ->assertJsonPath('data.location', 'HQ Floor 3')
+            ->assertJsonPath('data.warehouse', null);
+    }
+
+    public function test_receiving_to_pool_clears_the_usage_location(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-7701', 'first_name' => 'Back', 'last_name' => 'Pool']);
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create([
+            'status' => 'pending_return', 'owner' => 'EMP-7701', 'owner_employee_id' => $employee->id,
+            'location_id' => Location::create(['name' => 'HQ Floor 3'])->id,
+        ]);
+
+        // Back in a warehouse → it is no longer deployed at a usage location.
+        $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.warehouse', 'Central IT')
+            ->assertJsonPath('data.location', null);
+    }
+
     public function test_transfer_shared_mode_deploys_without_an_employee(): void
     {
         $this->actingAs($this->super());
         $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]);
         $location = Location::create(['name' => 'Server Room']);
 
+        // Shared / common-use goes to the distinct `common` status (not `deployed`).
         $this->postJson("/api/assets/{$asset->id}/transfer", [
             'mode' => 'shared', 'owner_label' => 'Rack 2', 'location_id' => $location->id,
         ])
             ->assertOk()
-            ->assertJsonPath('data.status', 'deployed')
+            ->assertJsonPath('data.status', 'common')
             ->assertJsonPath('data.owner', 'Rack 2')
             ->assertJsonPath('data.owner_employee_id', null);
     }
@@ -537,18 +624,51 @@ class AssetApiTest extends TestCase
         $this->assertSame('deployed', $held->fresh()->status->value);
     }
 
-    public function test_writeoff_allowed_for_shared_or_pooled_assets(): void
+    public function test_writeoff_requires_ready_status(): void
     {
         $this->actingAs($this->super());
-        $shared = Asset::factory()->create(['status' => 'deployed', 'owner' => 'Rack 2', 'owner_employee_id' => null]);
+        $common = Asset::factory()->create(['status' => 'common', 'owner' => 'Rack 2', 'owner_employee_id' => null]);
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$shared->id, $ready->id], 'op' => 'writeoff'])
-            ->assertOk()
-            ->assertJsonPath('updated', 2);
+        // A Common (shared) asset must be recalled to Ready first — the whole batch is rejected.
+        $this->postJson('/api/assets/bulk', ['ids' => [$common->id, $ready->id], 'op' => 'writeoff'])
+            ->assertStatus(422);
+        $this->assertSame('common', $common->fresh()->status->value);
+        $this->assertSame('ready', $ready->fresh()->status->value);
 
-        $this->assertSame('writeoff', $shared->fresh()->status->value);
+        // A Ready asset writes off fine.
+        $this->postJson('/api/assets/bulk', ['ids' => [$ready->id], 'op' => 'writeoff'])
+            ->assertOk()->assertJsonPath('updated', 1);
         $this->assertSame('writeoff', $ready->fresh()->status->value);
+    }
+
+    public function test_super_can_force_recall_an_employee_held_asset(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $employee = Employee::create(['code' => 'EMP-FR1', 'first_name' => 'Held', 'last_name' => 'One']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-FR1', 'owner_employee_id' => $employee->id]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner_employee_id', null);
+    }
+
+    public function test_force_recall_permission_recalls_an_employee_held_asset(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.force_recall', 'allowed' => true]);
+        $this->actingAs($user);
+
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $employee = Employee::create(['code' => 'EMP-FR3', 'first_name' => 'Held', 'last_name' => 'Three']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-FR3', 'owner_employee_id' => $employee->id]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner_employee_id', null);
     }
 
     public function test_transfer_is_recorded_in_the_transfer_log(): void
@@ -576,7 +696,7 @@ class AssetApiTest extends TestCase
 
         AssetTransfer::create([
             'asset_id' => $asset->id,
-            'asset_tag' => $asset->tag,
+            'asset_tag' => $asset->asset_code,
             'asset_model' => $asset->model?->name,
             'from_owner' => 'Pool — IT',
             'to_owner' => 'EMP-2000',
@@ -717,5 +837,353 @@ class AssetApiTest extends TestCase
         $this->postJson("/api/assets/{$asset->id}/accept")
             ->assertOk()
             ->assertJsonPath('data.status', 'deployed');
+    }
+
+    /**
+     * The linked-contract "peek" endpoint is gated by assets.view — NOT contracts.view — so a
+     * user who can view assets can read the contract of an asset they can already see, without
+     * any contract-module permission.
+     */
+    public function test_asset_viewer_can_peek_linked_contract_without_contract_permission(): void
+    {
+        $viewer = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'assets.view', 'allowed' => true]);
+
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
+            'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+        $asset = Asset::factory()->create(['source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->actingAs($viewer);
+        $this->getJson("/api/assets/{$asset->id}/contract")
+            ->assertOk()
+            ->assertJsonPath('data.id', $contract->id)
+            ->assertJsonPath('data.name', 'Network lease');
+    }
+
+    /** Without assets.view the peek endpoint is forbidden. */
+    public function test_peek_linked_contract_requires_assets_view(): void
+    {
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31',
+            'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+        $asset = Asset::factory()->create(['source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->getJson("/api/assets/{$asset->id}/contract")->assertForbidden();
+    }
+
+    /** An asset with no linked contract returns 404 from the peek endpoint. */
+    public function test_peek_linked_contract_returns_404_when_asset_has_no_contract(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['source' => 'purchased', 'contract_id' => null]);
+
+        $this->getJson("/api/assets/{$asset->id}/contract")->assertNotFound();
+    }
+
+    /**
+     * Recall pulls a not-yet-accepted hand-over back into the pool: pending_acceptance → ready,
+     * clearing the intended holder and stamping the chosen warehouse.
+     */
+    public function test_recall_pulls_a_pending_acceptance_asset_back_into_the_pool(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-RCL-1', 'first_name' => 'Wrong', 'last_name' => 'Person']);
+        $asset = Asset::factory()->create([
+            'status' => 'pending_acceptance',
+            'owner' => null,
+            'owner_employee_id' => $employee->id,
+            'warehouse_id' => null,
+        ]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner_employee_id', null);
+
+        $this->assertDatabaseHas('assets', [
+            'id' => $asset->id,
+            'status' => 'ready',
+            'owner_employee_id' => null,
+            'location_id' => null,
+        ]);
+    }
+
+    /** Recall is gated by assets.transfer. */
+    public function test_recall_requires_assets_transfer_permission(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-RCL-2', 'first_name' => 'Wrong', 'last_name' => 'Person']);
+        $asset = Asset::factory()->create(['status' => 'pending_acceptance', 'owner_employee_id' => $employee->id]);
+
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertForbidden();
+    }
+
+    /** Only a pending hand-over can be recalled — a ready asset is rejected. */
+    public function test_recall_rejects_an_asset_that_is_not_pending_acceptance(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422);
+    }
+
+    /** A shared / common-use asset (deployed, no employee holder) can be recalled back into the pool. */
+    public function test_recall_pulls_a_shared_deployed_asset_back_into_the_pool(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create([
+            'status' => 'deployed',
+            'owner' => 'Rack 2 — HR shared printer',
+            'owner_employee_id' => null,
+        ]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready')
+            ->assertJsonPath('data.owner', null);
+    }
+
+    /** Ordinary recall (assets.transfer) rejects an employee-held deployed asset — it returns via
+     *  the holder's Request-return flow. Only a force recall (assets.force_recall) overrides this. */
+    public function test_recall_rejects_an_employee_held_deployed_asset(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.transfer', 'allowed' => true]);
+        $this->actingAs($user);
+        $employee = Employee::create(['code' => 'EMP-RCL-3', 'first_name' => 'Holder', 'last_name' => 'Person']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => null, 'owner_employee_id' => $employee->id]);
+
+        $this->postJson("/api/assets/{$asset->id}/recall", ['warehouse' => 'Central IT'])->assertStatus(422);
+    }
+
+    /**
+     * The rented-asset form's contract picker is gated by assets.register/edit — NOT
+     * contracts.view — so an asset admin without any Contract-module access can still see
+     * the contract list to link a rented asset.
+     */
+    public function test_asset_registrar_can_list_contract_options_without_contract_permission(): void
+    {
+        $registrar = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $registrar->role_id, 'permission' => 'assets.register', 'allowed' => true]);
+
+        Contract::create([
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+
+        $this->actingAs($registrar);
+        $this->getJson('/api/assets/contract-options')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.vendor', 'SVOA');
+    }
+
+    /** Contract options require an asset-management permission (register or edit). */
+    public function test_contract_options_forbidden_without_register_or_edit(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->getJson('/api/assets/contract-options')->assertForbidden();
+    }
+
+    /**
+     * A deployed asset has left the pool (no warehouse), so editing it must succeed without a
+     * warehouse — the form no longer forces one for non-pool assets, and the server allows null.
+     */
+    public function test_editing_a_deployed_asset_saves_without_a_warehouse(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create([
+            'status' => 'deployed',
+            'source' => 'purchased',
+            'warehouse_id' => null,
+            'owner' => 'Rack A',
+            'owner_employee_id' => null,
+        ]);
+
+        $this->putJson("/api/assets/{$asset->id}", [
+            'category_id' => $this->categoryId('laptop'),
+            'model_id' => $this->modelId('X1 Carbon'),
+            'source' => 'purchased',
+            'value' => 1000,
+            'vendor_id' => $this->vendorId('Acme'),
+            'purchase_date' => '2026-01-01',
+            'warranty_lifetime' => true,
+            'tag' => 'edited-tag',
+            // no warehouse_id — a deployed asset isn't in a warehouse
+        ])->assertOk();
+
+        $this->assertDatabaseHas('assets', ['id' => $asset->id, 'tag' => 'edited-tag', 'warehouse_id' => null]);
+    }
+
+    public function test_bulk_transfer_assigns_ready_assets_to_one_employee(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-BT1', 'first_name' => 'Bulk', 'last_name' => 'Target']);
+        $location = Location::create(['name' => 'HQ']);
+        $a = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $b = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk-transfer', [
+            'ids' => [$a->id, $b->id], 'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id,
+        ])->assertOk()->assertJsonPath('updated', 2);
+
+        $this->assertSame('pending_acceptance', $a->fresh()->status->value);
+        $this->assertSame($employee->id, $b->fresh()->owner_employee_id);
+    }
+
+    public function test_bulk_transfer_reassigns_common_assets_to_an_employee(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-CT1', 'first_name' => 'C', 'last_name' => 'T']);
+        $location = Location::create(['name' => 'HQ']);
+        $a = Asset::factory()->create(['status' => 'common', 'owner' => 'Rack 1', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk-transfer', [
+            'ids' => [$a->id], 'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id,
+        ])->assertOk()->assertJsonPath('updated', 1);
+
+        $fresh = $a->fresh();
+        $this->assertSame('pending_acceptance', $fresh->status->value);
+        $this->assertSame($employee->id, $fresh->owner_employee_id);
+        $this->assertNull($fresh->owner); // the shared label is cleared on re-assignment
+    }
+
+    public function test_bulk_transfer_shared_mode_marks_assets_common(): void
+    {
+        $this->actingAs($this->super());
+        $location = Location::create(['name' => 'HQ']);
+        $a = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $b = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk-transfer', [
+            'ids' => [$a->id, $b->id], 'mode' => 'shared', 'owner_label' => 'Meeting Room', 'location_id' => $location->id,
+        ])->assertOk()->assertJsonPath('updated', 2);
+
+        $this->assertSame('common', $a->fresh()->status->value);
+        $this->assertSame('Meeting Room', $b->fresh()->owner);
+    }
+
+    public function test_bulk_transfer_rejects_employee_held_assets(): void
+    {
+        $this->actingAs($this->super());
+        $target = Employee::create(['code' => 'EMP-BT2', 'first_name' => 'B', 'last_name' => 'T']);
+        $holder = Employee::create(['code' => 'EMP-BT3', 'first_name' => 'H', 'last_name' => 'D']);
+        $location = Location::create(['name' => 'HQ']);
+        $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-BT3', 'owner_employee_id' => $holder->id]);
+
+        $this->postJson('/api/assets/bulk-transfer', [
+            'ids' => [$ready->id, $held->id], 'mode' => 'employee', 'owner_employee_id' => $target->id, 'location_id' => $location->id,
+        ])->assertStatus(422);
+        $this->assertSame('ready', $ready->fresh()->status->value);
+    }
+
+    public function test_bulk_recall_returns_common_assets_to_the_pool(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $a = Asset::factory()->create(['status' => 'common', 'owner' => 'Rack 1', 'owner_employee_id' => null]);
+        $b = Asset::factory()->create(['status' => 'common', 'owner' => 'Rack 2', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk-recall', ['ids' => [$a->id, $b->id], 'warehouse' => 'Central IT'])
+            ->assertOk()->assertJsonPath('updated', 2);
+        $this->assertSame('ready', $a->fresh()->status->value);
+    }
+
+    public function test_bulk_recall_cancels_pending_acceptance_hand_overs(): void
+    {
+        // Cancel a batch of not-yet-accepted hand-overs — normal recall, only needs assets.transfer.
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.transfer', 'allowed' => true]);
+        $this->actingAs($user);
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $employee = Employee::create(['code' => 'EMP-PA1', 'first_name' => 'P', 'last_name' => 'A']);
+        $a = Asset::factory()->create(['status' => 'pending_acceptance', 'owner' => 'EMP-PA1', 'owner_employee_id' => $employee->id]);
+
+        $this->postJson('/api/assets/bulk-recall', ['ids' => [$a->id], 'warehouse' => 'Central IT'])
+            ->assertOk()->assertJsonPath('updated', 1);
+        $this->assertSame('ready', $a->fresh()->status->value);
+    }
+
+    public function test_bulk_recall_of_employee_held_needs_force_permission(): void
+    {
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $employee = Employee::create(['code' => 'EMP-BR1', 'first_name' => 'H', 'last_name' => 'E']);
+
+        // A transfer-only user cannot bulk-recall an employee-held asset.
+        $u1 = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $u1->role_id, 'permission' => 'assets.transfer', 'allowed' => true]);
+        $a = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-BR1', 'owner_employee_id' => $employee->id]);
+        $this->actingAs($u1)->postJson('/api/assets/bulk-recall', ['ids' => [$a->id], 'warehouse' => 'Central IT'])->assertStatus(422);
+
+        // assets.force_recall unlocks it.
+        $u2 = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $u2->role_id, 'permission' => 'assets.force_recall', 'allowed' => true]);
+        $b = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-BR1', 'owner_employee_id' => $employee->id]);
+        $this->actingAs($u2)->postJson('/api/assets/bulk-recall', ['ids' => [$b->id], 'warehouse' => 'Central IT'])->assertOk();
+        $this->assertSame('ready', $b->fresh()->status->value);
+    }
+
+    public function test_bulk_receive_returns_pending_return_assets(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $employee = Employee::create(['code' => 'EMP-BRC', 'first_name' => 'P', 'last_name' => 'R']);
+        $a = Asset::factory()->create(['status' => 'pending_return', 'owner' => 'EMP-BRC', 'owner_employee_id' => $employee->id]);
+
+        $this->postJson('/api/assets/bulk-receive', ['ids' => [$a->id], 'warehouse' => 'Central IT'])
+            ->assertOk()->assertJsonPath('updated', 1);
+        $this->assertSame('ready', $a->fresh()->status->value);
+    }
+
+    public function test_bulk_receive_rejects_non_pending_return(): void
+    {
+        $this->actingAs($this->super());
+        Warehouse::firstOrCreate(['name' => 'Central IT']);
+        $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+        $this->postJson('/api/assets/bulk-receive', ['ids' => [$ready->id], 'warehouse' => 'Central IT'])->assertStatus(422);
+    }
+
+    public function test_written_off_asset_cannot_be_edited(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'writeoff']);
+
+        $this->putJson("/api/assets/{$asset->id}", [
+            'category_id' => $this->categoryId('laptop'),
+            'model_id' => $this->modelId('X'),
+            'source' => 'purchased',
+            'value' => 1000,
+            'vendor_id' => $this->vendorId(),
+            'tag' => 'nope',
+        ])->assertStatus(422);
+    }
+
+    public function test_cancel_writeoff_restores_asset_to_ready(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.cancel_writeoff', 'allowed' => true]);
+        $this->actingAs($user);
+        $asset = Asset::factory()->create(['status' => 'writeoff']);
+
+        $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'ready');
+        $this->assertSame('ready', $asset->fresh()->status->value);
+    }
+
+    public function test_cancel_writeoff_requires_permission(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $asset = Asset::factory()->create(['status' => 'writeoff']);
+
+        $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")->assertForbidden();
+        $this->assertSame('writeoff', $asset->fresh()->status->value);
     }
 }

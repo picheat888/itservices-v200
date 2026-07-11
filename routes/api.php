@@ -90,6 +90,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name('api.employees.reset-password');
     Route::post('employees/{employee}/credentials', [EmployeeController::class, 'credentials'])->name('api.employees.credentials');
     Route::get('employees/{employee}/approval-chain', [EmployeeController::class, 'approvalChain'])->name('api.employees.approval-chain');
+    Route::get('employees/{employee}/assets', [EmployeeController::class, 'assets'])->name('api.employees.assets');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
     Route::apiResource('employees', EmployeeController::class);
     Route::get('positions/{position}/members', [PositionController::class, 'members'])->name('api.positions.members');
@@ -143,13 +144,20 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     // Assets Management module
     Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
     Route::get('assets/linkable', [AssetController::class, 'linkable'])->name('api.assets.linkable');
+    Route::get('assets/contract-options', [AssetController::class, 'contractOptions'])->name('api.assets.contract-options');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
     Route::get('assets/mine', [AssetController::class, 'mine'])->name('api.assets.mine');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
+    Route::post('assets/bulk-transfer', [AssetController::class, 'bulkTransfer'])->name('api.assets.bulk-transfer');
+    Route::post('assets/bulk-recall', [AssetController::class, 'bulkRecall'])->name('api.assets.bulk-recall');
+    Route::post('assets/bulk-receive', [AssetController::class, 'bulkReceive'])->name('api.assets.bulk-receive');
     Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');
     Route::post('assets/{asset}/accept', [AssetController::class, 'accept'])->name('api.assets.accept');
     Route::post('assets/{asset}/request-return', [AssetController::class, 'requestReturn'])->name('api.assets.request-return');
     Route::post('assets/{asset}/receive', [AssetController::class, 'markReceived'])->name('api.assets.receive');
+    Route::post('assets/{asset}/recall', [AssetController::class, 'recall'])->name('api.assets.recall');
+    Route::post('assets/{asset}/cancel-writeoff', [AssetController::class, 'cancelWriteoff'])->name('api.assets.cancel-writeoff');
+    Route::get('assets/{asset}/contract', [AssetController::class, 'contract'])->name('api.assets.contract');
     Route::apiResource('assets', AssetController::class);
 
     // Stock / Inventory module

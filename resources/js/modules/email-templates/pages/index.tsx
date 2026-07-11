@@ -230,10 +230,12 @@ export default function EmailTemplatesPage() {
         setPageTesting(true);
         try {
             const res = await settingsApi.testMail();
-            useToastStore.getState().push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error');
+            useToastStore
+                .getState()
+                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error', res.sent ? undefined : t('email_test_failed_title'));
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error');
+            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
         } finally {
             setPageTesting(false);
         }
@@ -733,7 +735,7 @@ function EditorDialog({
             setSentOk(true);
             window.setTimeout(() => setSentOk(false), 1600);
         } catch {
-            useToastStore.getState().push(t('email_test_failed'), 'error');
+            useToastStore.getState().push(t('email_test_failed'), 'error', t('email_test_failed_title'));
         }
     };
 

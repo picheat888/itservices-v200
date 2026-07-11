@@ -404,8 +404,8 @@ class MasterDataTest extends TestCase
     {
         $this->actingAs($this->superUser());
         $brand = Brand::create(['name' => 'Dell']);
-        Asset::create(['tag' => 'A-1', 'brand_id' => $brand->id, 'status' => 'deployed']);
-        Asset::create(['tag' => 'A-2', 'brand_id' => $brand->id, 'status' => 'deployed']);
+        Asset::create(['asset_code' => 'A-1', 'brand_id' => $brand->id, 'status' => 'deployed']);
+        Asset::create(['asset_code' => 'A-2', 'brand_id' => $brand->id, 'status' => 'deployed']);
 
         $this->deleteJson("/api/brands/{$brand->id}")
             ->assertStatus(409)

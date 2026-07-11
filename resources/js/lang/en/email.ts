@@ -49,6 +49,7 @@ export const email: Dict = {
     "email_create": "Create template",
     "email_never_sent": "Never",
     "email_test_sent": "Test email sent to",
-    "email_test_failed": "Send failed — check Email Setting",
+    "email_test_failed_title": "Send failed",
+    "email_test_failed": "Check your email settings.",
     "email_no_account_email": "Your account has no email address",
 };

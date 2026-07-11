@@ -27,7 +27,7 @@ class Contract extends Model
     /** Assets linked to this contract (e.g. leased hardware), ordered by tag. */
     public function assets(): HasMany
     {
-        return $this->hasMany(Asset::class)->orderBy('tag');
+        return $this->hasMany(Asset::class)->orderBy('asset_code');
     }
 
     protected $fillable = [
