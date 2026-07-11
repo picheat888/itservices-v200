@@ -38,7 +38,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
     }
 
     const columns: Column<ContractLinkedAsset>[] = [
-        { key: 'tag', header: 'Tag', render: (a) => <span className="font-mono text-xs">{a.tag}</span> },
+        { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="font-mono text-xs">{a.asset_code}</span> },
         { key: 'name', header: lang === 'th' ? 'ชื่อ' : 'Name', render: (a) => <span className="font-medium">{a.name}</span> },
         { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => a.type ?? '—' },
         { key: 'serial', header: 'Serial', render: (a) => <span className="font-mono text-xs">{a.serial ?? '—'}</span> },
@@ -58,7 +58,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
                 columns={columns}
                 rows={assets}
                 rowKey={(a) => a.id}
-                searchable={(a) => `${a.tag} ${a.name} ${a.serial ?? ''}`}
+                searchable={(a) => `${a.asset_code} ${a.name} ${a.serial ?? ''}`}
                 onRowClick={(a) => setAssetId(a.id)}
             />
             <AssetDetailDrawer

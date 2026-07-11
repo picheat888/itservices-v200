@@ -74,7 +74,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                                 <option value="">{t('ticket_no_related_asset')}</option>
                                 {(assetData?.data ?? []).map((a) => (
                                     <option key={a.id} value={a.id}>
-                                        {a.tag} · {a.model}
+                                        {a.asset_code} · {a.model}
                                     </option>
                                 ))}
                             </select>

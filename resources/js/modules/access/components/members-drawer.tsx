@@ -1,14 +1,14 @@
-import { AccessBadge } from './access-badge';
+import { useT } from '@/lang';
+import { useEmployees } from '@/modules/employee';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
+import type { AccessKind } from '@/shared/types';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAccessMutations, useResourceMembers } from '../hooks/use-access';
-import { useEmployees } from '@/modules/employee';
-import { useT } from '@/lang';
-import type { AccessKind } from '@/shared/types';
 import { Folder, Globe, Plus, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useAccessMutations, useResourceMembers } from '../hooks/use-access';
+import { AccessBadge } from './access-badge';
 
 /** The resource a member drawer is bound to, with enough detail for the header card. */
 export type MemberTarget = {
@@ -27,7 +27,11 @@ export type MemberTarget = {
 };
 
 // Access levels offered per kind; social platforms grant no level (free-text purpose instead).
-const LEVELS: Record<AccessKind, string[]> = { 'email-groups': ['Owner', 'Member'], 'file-shares': ['Full', 'Write', 'Read'], 'social-platforms': [] };
+const LEVELS: Record<AccessKind, string[]> = {
+    'email-groups': ['Owner', 'Member'],
+    'file-shares': ['Full', 'Write', 'Read'],
+    'social-platforms': [],
+};
 
 // Per-kind icon tile accent (matches the registry tables / design tokens).
 const KIND_META: Record<AccessKind, { icon: typeof Users; color: string }> = {
@@ -65,7 +69,10 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
 
     const takenIds = useMemo(() => new Set(members.map((m) => m.employee_id)), [members]);
     const opts = useMemo<SearchOption[]>(
-        () => employees.filter((e) => !takenIds.has(e.id)).map((e) => ({ value: String(e.id), label: e.name, sub: e.code, search: `${e.name} ${e.code}` })),
+        () =>
+            employees
+                .filter((e) => !takenIds.has(e.id))
+                .map((e) => ({ value: String(e.id), label: e.name, sub: e.code, search: `${e.name} ${e.name_th ?? ''} ${e.code}` })),
         [employees, takenIds],
     );
     const levels = LEVELS[kind];
@@ -78,7 +85,11 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
         if (!empId || !target) return;
         await addMember.mutateAsync({
             id: target.id,
-            payload: { employee_id: Number(empId), access_level: levels.length ? level || levels[levels.length - 1] : null, purpose: purpose || null },
+            payload: {
+                employee_id: Number(empId),
+                access_level: levels.length ? level || levels[levels.length - 1] : null,
+                purpose: purpose || null,
+            },
         });
         setEmpId('');
         setLevel('');
@@ -90,7 +101,9 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
         if (kind === 'email-groups') {
             const isOwner = accessLevel === 'Owner';
             return (
-                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isOwner ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}>
+                <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${isOwner ? 'bg-brand/15 text-brand' : 'bg-muted text-muted-foreground'}`}
+                >
                     {isOwner ? t('access_role_owner') : t('access_role_member')}
                 </span>
             );
@@ -118,7 +131,9 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
                                 {isSocial ? target.name[0]?.toUpperCase() : <Icon className="h-5 w-5" />}
                             </span>
                             <div className="min-w-0 flex-1">
-                                {target.metaLabel && <div className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">{target.metaLabel}</div>}
+                                {target.metaLabel && (
+                                    <div className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">{target.metaLabel}</div>
+                                )}
                                 <div className="truncate text-sm font-semibold">{target.metaValue || target.detail || '—'}</div>
                             </div>
                             {!isSocial && target.owner && (
@@ -172,7 +187,13 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
                         {canManage && (
                             <div className="border-border mt-5 flex items-end gap-2 border-t pt-5">
                                 <div className="flex-1">
-                                    <SearchableSelect value={empId} onChange={setEmpId} options={opts} placeholder={t('access_pick_employee')} clearable />
+                                    <SearchableSelect
+                                        value={empId}
+                                        onChange={setEmpId}
+                                        options={opts}
+                                        placeholder={t('access_pick_employee')}
+                                        clearable
+                                    />
                                 </div>
                                 {levels.length > 0 && (
                                     <select
@@ -195,7 +216,13 @@ export function MembersDrawer({ target, canManage, onClose }: { target: MemberTa
                                         onChange={(e) => setPurpose(e.target.value)}
                                     />
                                 )}
-                                <Button size="icon" className="h-10 w-10 shrink-0" disabled={!empId || addMember.isPending} onClick={add} title={t('access_add_member')}>
+                                <Button
+                                    size="icon"
+                                    className="h-10 w-10 shrink-0"
+                                    disabled={!empId || addMember.isPending}
+                                    onClick={add}
+                                    title={t('access_add_member')}
+                                >
                                     <Plus className="h-4 w-4" />
                                 </Button>
                             </div>

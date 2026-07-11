@@ -1,20 +1,19 @@
+import { useT } from '@/lang';
+import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { cn } from '@/shared/lib/utils';
+import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
-import { useAssetMutations } from '../hooks/use-assets';
-import { useContracts } from '@/modules/contract';
-import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { AssetPayload } from '../api/assetApi';
-import type { Asset, AssetSource } from '@/shared/types';
 import { Calendar, Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { AssetPayload } from '../api/assetApi';
+import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
 
 interface FormState {
     category_id: string;
@@ -22,7 +21,7 @@ interface FormState {
     model_id: string;
     brand_id: string;
     serial: string;
-    nickname: string;
+    tag: string;
     warehouse_id: string;
     value: string;
     vendor_id: string;
@@ -39,7 +38,7 @@ const EMPTY: FormState = {
     model_id: '',
     brand_id: '',
     serial: '',
-    nickname: '',
+    tag: '',
     warehouse_id: '',
     value: '',
     vendor_id: '',
@@ -79,6 +78,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const brandOptions = useMemo(() => brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name })), [brands]);
     const vendorOptions = useMemo(() => vendors.map((v) => ({ value: String(v.id), label: v.name, search: v.name })), [vendors]);
     const [form, setForm] = useState<FormState>(EMPTY);
+    const [initial, setInitial] = useState<FormState>(EMPTY);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
 
@@ -86,30 +86,38 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         if (!open) return;
         setErr({});
         setSaveState('idle');
-        if (editing) {
-            setForm({
-                category_id: editing.category_id ? String(editing.category_id) : '',
-                source: editing.source,
-                model_id: editing.model_id ? String(editing.model_id) : '',
-                brand_id: editing.brand_id ? String(editing.brand_id) : '',
-                serial: editing.serial ?? '',
-                nickname: editing.nickname ?? '',
-                warehouse_id: editing.warehouse_id ? String(editing.warehouse_id) : '',
-                value: String(editing.value ?? ''),
-                vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
-                purchase_date: editing.purchase_date ?? '',
-                warranty_end: editing.warranty_end ?? '',
-                warranty_lifetime: editing.warranty_lifetime ?? false,
-                contract_id: editing.contract_id ? String(editing.contract_id) : '',
-                notes: editing.notes ?? '',
-            });
-        } else {
-            setForm(EMPTY);
-        }
+        const next: FormState = editing
+            ? {
+                  category_id: editing.category_id ? String(editing.category_id) : '',
+                  source: editing.source,
+                  model_id: editing.model_id ? String(editing.model_id) : '',
+                  brand_id: editing.brand_id ? String(editing.brand_id) : '',
+                  serial: editing.serial ?? '',
+                  tag: editing.tag ?? '',
+                  warehouse_id: editing.warehouse_id ? String(editing.warehouse_id) : '',
+                  value: String(editing.value ?? ''),
+                  vendor_id: editing.vendor_id ? String(editing.vendor_id) : '',
+                  purchase_date: editing.purchase_date ?? '',
+                  warranty_end: editing.warranty_end ?? '',
+                  warranty_lifetime: editing.warranty_lifetime ?? false,
+                  contract_id: editing.contract_id ? String(editing.contract_id) : '',
+                  notes: editing.notes ?? '',
+              }
+            : EMPTY;
+        setForm(next);
+        // Snapshot the initial values so the Save button can stay disabled until the user
+        // actually changes something (edit mode only — a new asset is always "dirty").
+        setInitial(next);
     }, [open, editing]);
 
     const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
     const rented = form.source === 'rented';
+    // In edit mode, disable Save until the form differs from the loaded asset.
+    const isDirty = JSON.stringify(form) !== JSON.stringify(initial);
+    // A warehouse only applies while the asset sits in the pool: on registration (it enters as
+    // Ready) or when editing a Ready asset. Once deployed/pending it has left the pool and its
+    // location is driven by transfer/receive — so the field is neither shown nor required there.
+    const warehouseApplies = !editing || editing.status === 'ready';
 
     // Asset type, brand and model are all picked from the shared Master Data lists.
     const typeOptions = useMemo(() => categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name })), [categories]);
@@ -121,15 +129,17 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     }, [models, selectedBrand]);
 
     // Contracts to choose from when linking a rented asset to its vendor contract.
-    const { data: contractData } = useContracts({ page: 1, per_page: 100, search: '', tab: 'all' });
+    // Uses the asset-scoped endpoint (gated by assets.register/edit), so an asset admin
+    // without contracts.view still gets the picker. Fetched only while the drawer is open.
+    const { data: contracts = [] } = useAssetContractOptions(open);
     const contractOptions = useMemo(
         () =>
-            (contractData?.data ?? []).map((c) => ({
+            contracts.map((c) => ({
                 value: String(c.id),
-                label: `${c.code} — ${c.vendor}`,
-                search: `${c.code} ${c.vendor} ${c.details ?? ''}`,
+                label: `${c.code} — ${c.vendor ?? ''}`,
+                search: `${c.code} ${c.vendor ?? ''} ${c.details ?? ''}`,
             })),
-        [contractData],
+        [contracts],
     );
 
     const submit = async () => {
@@ -140,7 +150,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         if (!form.brand_id) e.brand = required;
         if (!form.model_id) e.model = required;
         if (!form.serial.trim()) e.serial = required;
-        if (!form.warehouse_id) e.warehouse = required;
+        if (warehouseApplies && !form.warehouse_id) e.warehouse = required;
         if (rented) {
             if (!form.contract_id) e.contract_id = required;
         } else {
@@ -159,7 +169,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
             model_id: Number(form.model_id),
             brand_id: form.brand_id ? Number(form.brand_id) : null,
             serial: form.serial.trim() || null,
-            nickname: form.nickname.trim() || null,
+            tag: form.tag.trim() || null,
             warehouse_id: form.warehouse_id ? Number(form.warehouse_id) : null,
             notes: form.notes.trim() || null,
             ...(rented
@@ -191,7 +201,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex max-h-[92vh] w-full max-w-[880px] top-[4vh] translate-y-0 flex-col gap-0 overflow-hidden p-0">
+            {/* Fixed height + centered: same size for rented & purchased, and tall enough that the
+                (taller) purchased form shows in full on desktop without an inner scroll. Caps at 92vh
+                on short viewports so it never spills off-screen. */}
+            <DialogContent className="!flex h-[min(880px,92vh)] w-full max-w-[880px] flex-col gap-0 overflow-hidden p-0">
                 {/* Header */}
                 <div className="flex items-center gap-3 px-6 pt-4 pb-3">
                     <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
@@ -204,7 +217,9 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                         <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                             <span>{editing ? t('edit_asset') : t('register_asset')}</span>
                             {editing && (
-                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">{editing.tag}</span>
+                                <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
+                                    {editing.asset_code}
+                                </span>
                             )}
                         </DialogTitle>
                     </div>
@@ -283,23 +298,37 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                     />
                                 </Field>
                                 <Field label={t('asset_serial')} required error={err.serial} name="serial">
-                                    <Input value={form.serial} onChange={(e) => upd('serial', e.target.value)} className="font-mono" placeholder="SN-XXXXXXXX" />
+                                    <Input
+                                        value={form.serial}
+                                        onChange={(e) => upd('serial', e.target.value)}
+                                        className="font-mono"
+                                        placeholder="SN-XXXXXXXX"
+                                    />
                                 </Field>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <Field label={t('asset_warehouse')} required error={err.warehouse} name="warehouse">
-                                    <SearchableSelect
-                                        value={form.warehouse_id}
-                                        onChange={(v) => upd('warehouse_id', v)}
-                                        options={warehouseOptions}
-                                        placeholder={lang === 'th' ? 'เลือกคลัง' : 'Select warehouse'}
-                                        clearable
-                                    />
-                                </Field>
+                                {warehouseApplies ? (
+                                    <Field label={t('asset_warehouse')} required error={err.warehouse} name="warehouse">
+                                        <SearchableSelect
+                                            value={form.warehouse_id}
+                                            onChange={(v) => upd('warehouse_id', v)}
+                                            options={warehouseOptions}
+                                            placeholder={lang === 'th' ? 'เลือกคลัง' : 'Select warehouse'}
+                                            clearable
+                                        />
+                                    </Field>
+                                ) : (
+                                    // Deployed / pending asset: it's out of the pool, so warehouse doesn't apply here.
+                                    <Field label={t('asset_warehouse')}>
+                                        <div className="border-input bg-muted/40 text-muted-foreground flex h-10 items-center rounded-md border px-3 text-sm">
+                                            {t('asset_warehouse_na')}
+                                        </div>
+                                    </Field>
+                                )}
                                 <Field label={t('asset_nickname')} help={t('asset_nickname_help')}>
                                     <Input
-                                        value={form.nickname}
-                                        onChange={(e) => upd('nickname', e.target.value)}
+                                        value={form.tag}
+                                        onChange={(e) => upd('tag', e.target.value)}
                                         placeholder={lang === 'th' ? 'เช่น เครื่องพี่สมชาย' : 'e.g. Reception PC'}
                                     />
                                 </Field>
@@ -350,7 +379,12 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 </Label>
                                             </div>
                                             <div className="relative">
-                                                <Input type="date" className={DATE_CLS} value={form.purchase_date} onChange={(e) => upd('purchase_date', e.target.value)} />
+                                                <Input
+                                                    type="date"
+                                                    className={DATE_CLS}
+                                                    value={form.purchase_date}
+                                                    onChange={(e) => upd('purchase_date', e.target.value)}
+                                                />
                                                 <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
                                             </div>
                                             {err.purchase_date && <p className="text-destructive text-xs">{err.purchase_date}</p>}
@@ -361,16 +395,24 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                     {t('asset_warranty_end')}
                                                     {!form.warranty_lifetime && <span className="text-destructive ml-0.5">*</span>}
                                                 </Label>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => upd('warranty_lifetime', !form.warranty_lifetime)}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <span className={cn('text-[11px] font-semibold', form.warranty_lifetime ? 'text-brand' : 'text-muted-foreground')}>
+                                                {/* Label + switch are siblings (not a button-in-button, which is invalid HTML). */}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => upd('warranty_lifetime', !form.warranty_lifetime)}
+                                                        className={cn(
+                                                            'text-[11px] font-semibold',
+                                                            form.warranty_lifetime ? 'text-brand' : 'text-muted-foreground',
+                                                        )}
+                                                    >
                                                         {t('asset_lifetime')}
-                                                    </span>
-                                                    <Switch checked={form.warranty_lifetime} onChange={(v) => upd('warranty_lifetime', v)} aria-label={t('asset_warranty_lifetime')} />
-                                                </button>
+                                                    </button>
+                                                    <Switch
+                                                        checked={form.warranty_lifetime}
+                                                        onChange={(v) => upd('warranty_lifetime', v)}
+                                                        aria-label={t('asset_warranty_lifetime')}
+                                                    />
+                                                </div>
                                             </div>
                                             {form.warranty_lifetime ? (
                                                 <div className="flex h-10 items-center gap-2 rounded-md border border-dashed border-amber-500/40 bg-amber-500/10 px-3 text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -379,7 +421,12 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 </div>
                                             ) : (
                                                 <div className="relative">
-                                                    <Input type="date" className={DATE_CLS} value={form.warranty_end} onChange={(e) => upd('warranty_end', e.target.value)} />
+                                                    <Input
+                                                        type="date"
+                                                        className={DATE_CLS}
+                                                        value={form.warranty_end}
+                                                        onChange={(e) => upd('warranty_end', e.target.value)}
+                                                    />
                                                     <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
                                                 </div>
                                             )}
@@ -398,7 +445,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                             value={form.notes}
                             onChange={(e) => upd('notes', e.target.value)}
                             rows={2}
-                            className="border-input focus:border-brand w-full rounded-md border bg-background px-3 py-2 text-sm outline-none"
+                            className="border-input focus:border-brand bg-background w-full rounded-md border px-3 py-2 text-sm outline-none"
                         />
                     </div>
                 </div>
@@ -411,7 +458,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     <Button variant="outline" onClick={onClose}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving || saveState === 'done'}>
+                    <Button onClick={submit} disabled={saving || saveState === 'done' || (!!editing && !isDirty)}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                         {saving
                             ? lang === 'th'

@@ -1,5 +1,13 @@
-import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, ContractLinkableAsset } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type { ApiEnvelope, Asset, AssetSummary, AssetTransferLog, Contract, ContractLinkableAsset } from '@/shared/types';
+
+/** Minimal contract row for the rented-asset form picker (from /assets/contract-options). */
+export interface AssetContractOption {
+    id: number;
+    code: string;
+    vendor: string | null;
+    details: string | null;
+}
 
 export interface AssetPageMeta {
     total: number;
@@ -14,8 +22,8 @@ export interface AssetPageResponse {
 }
 
 export interface AssetPayload {
+    asset_code?: string | null;
     tag?: string | null;
-    nickname?: string | null;
     category_id: number;
     brand_id?: number | null;
     model_id: number;
@@ -60,6 +68,10 @@ export const assetApi = {
             .then((r) => r.data.data),
     transfers: () => http.get<{ data: AssetTransferLog[] }>('/assets/transfers').then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
+    // The contract linked to an asset (read-only "peek"); gated by assets.view, not contracts.view.
+    getContract: (id: number) => http.get<ApiEnvelope<Contract>>(`/assets/${id}/contract`).then((r) => r.data.data),
+    // Minimal contract list for the rented-asset form picker; gated by assets.register/edit.
+    contractOptions: () => http.get<ApiEnvelope<AssetContractOption[]>>('/assets/contract-options').then((r) => r.data.data),
     // Assets assigned to the current user (employee self-service; no assets.view needed).
     mine: () => http.get<ApiEnvelope<Asset[]>>('/assets/mine').then((r) => r.data.data),
     create: (payload: AssetPayload) => mutate<Asset>('post', '/assets', payload),
@@ -69,9 +81,27 @@ export const assetApi = {
     accept: (id: number) => mutate<Asset>('post', `/assets/${id}/accept`),
     requestReturn: (id: number, reason?: string) => mutate<Asset>('post', `/assets/${id}/request-return`, reason ? { reason } : {}),
     receive: (id: number, warehouse?: string) => mutate<Asset>('post', `/assets/${id}/receive`, warehouse ? { warehouse } : {}),
+    // Cancel a not-yet-accepted hand-over and pull the asset back into the pool (pending_acceptance → ready).
+    recall: (id: number, warehouse: string, reason?: string) =>
+        mutate<Asset>('post', `/assets/${id}/recall`, reason ? { warehouse, reason } : { warehouse }),
+    // Undo a write-off — restore a retired asset to the Ready pool.
+    cancelWriteoff: (id: number) => mutate<Asset>('post', `/assets/${id}/cancel-writeoff`),
     bulk: async (ids: number[], op: 'writeoff', reason?: string): Promise<{ updated: number }> => {
         await ensureCsrf();
         const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, reason });
         return data;
     },
+    // Bulk transfer many Ready/Common assets to one owner — an employee or a shared label.
+    bulkTransfer: (payload: {
+        ids: number[];
+        mode: 'employee' | 'shared';
+        owner_employee_id?: number;
+        owner_label?: string;
+        location_id: number;
+        reason?: string;
+    }) => mutate<void>('post', '/assets/bulk-transfer', payload),
+    // Bulk recall (Common → pool, or force-recall any out asset) into a warehouse.
+    bulkRecall: (ids: number[], warehouse: string, reason?: string) => mutate<void>('post', '/assets/bulk-recall', { ids, warehouse, reason }),
+    // Bulk receive many pending-return assets back into a warehouse.
+    bulkReceive: (ids: number[], warehouse: string) => mutate<void>('post', '/assets/bulk-receive', { ids, warehouse }),
 };

@@ -34,6 +34,13 @@ interface DataTableProps<T> {
      *  the rows-per-page picker is hidden, and the body never scrolls (page over instead).
      *  Opt-in; requires the parent to give the table a definite height. */
     fillHeight?: boolean;
+    /** Approx rendered row height in px, used only by `fillHeight` to derive rows-per-page.
+     *  Defaults to 45 (compact single-line rows); raise it for taller rows (icons / two-line
+     *  cells) so the count never over-estimates and clips rows under `overflow-hidden`. */
+    rowHeight?: number;
+    /** Fixed client-side rows per page (hides the rows-per-page picker). Ignored when
+     *  `server` or `fillHeight` is set. */
+    pageSize?: number;
     /**
      * Server-side pagination. When provided, the table renders `rows` as the current
      * page (no client slicing/searching) and delegates page/size changes to the parent.
@@ -62,12 +69,14 @@ export function DataTable<T>({
     loading,
     maxBodyHeight,
     fillHeight,
+    rowHeight,
+    pageSize: fixedPageSize,
     server,
 }: DataTableProps<T>) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [query, setQuery] = useState('');
-    const [clientPageSize, setClientPageSize] = useState(20);
+    const [clientPageSize, setClientPageSize] = useState(fixedPageSize ?? 20);
     const [clientPage, setClientPage] = useState(1);
 
     // fillHeight: measure the body container and derive how many rows fit.
@@ -77,7 +86,7 @@ export function DataTable<T>({
         if (!fillHeight) return;
         const el = bodyRef.current;
         if (!el) return;
-        const ROW_H = 45; // approx rendered row height (slightly over-estimated so rows never clip)
+        const ROW_H = rowHeight ?? 45; // approx rendered row height (over-estimate → clip, so err high)
         const THEAD_H = 40; // approx header row height
         const compute = () => {
             const h = el.clientHeight;
@@ -87,7 +96,7 @@ export function DataTable<T>({
         const ro = new ResizeObserver(compute);
         ro.observe(el);
         return () => ro.disconnect();
-    }, [fillHeight]);
+    }, [fillHeight, rowHeight]);
 
     const filtered = useMemo(() => {
         if (!query || !searchable) return rows;
@@ -144,7 +153,9 @@ export function DataTable<T>({
                 )}
                 style={maxBodyHeight && !fillHeight ? { maxHeight: maxBodyHeight } : undefined}
             >
-                <table className="w-full text-sm">
+                {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
+                    so the floored row count never leaves a gap under the last row. */}
+                <table className={cn('w-full text-sm', fillHeight && 'h-full')}>
                     <thead className={cn(maxBodyHeight && 'bg-card sticky top-0 z-10')}>
                         <tr className="border-border bg-muted/40 border-b">
                             {columns.map((c) => (
@@ -201,61 +212,78 @@ export function DataTable<T>({
                                     ))}
                                 </tr>
                             ))}
+                        {/* Fixed / fill height: pad short pages with empty rows so the table height
+                            (and the pagination bar below it) never shifts between pages, and the last
+                            page doesn't leave a big gap under the final row. In fillHeight mode each
+                            filler is pinned to `rowHeight` so it matches the real rows exactly. */}
+                        {!loading &&
+                            (fixedPageSize || fillHeight) &&
+                            pageRows.length > 0 &&
+                            pageRows.length < pageSize &&
+                            Array.from({ length: pageSize - pageRows.length }).map((_, i) => (
+                                <tr key={`filler-${i}`} aria-hidden style={fillHeight && rowHeight ? { height: rowHeight } : undefined}>
+                                    {columns.map((c) => (
+                                        <td key={c.key} className="px-[var(--row-px)] py-[var(--row-py)]">
+                                            <span className="invisible text-sm">–</span>
+                                        </td>
+                                    ))}
+                                </tr>
+                            ))}
                     </tbody>
                 </table>
             </div>
 
             {!hidePagination && (
                 <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-sm">
-                    {fillHeight ? (
-                        <span />
-                    ) : (
-                        <div className="flex items-center gap-2">
-                            <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                            <Select
-                                value={String(pageSize)}
-                                onValueChange={(v) => {
-                                    setPageSize(Number(v));
-                                    setPage(1);
-                                }}
-                            >
-                                <SelectTrigger className="h-8 w-[72px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {PAGE_SIZES.map((s) => (
-                                        <SelectItem key={s} value={String(s)}>
-                                            {s}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-
+                    {/* Left: rows-per-page (when adjustable) + the range summary — kept separate from the pager. */}
                     <div className="flex items-center gap-3">
+                        {!(fillHeight || fixedPageSize) && (
+                            <div className="flex items-center gap-2">
+                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                                <Select
+                                    value={String(pageSize)}
+                                    onValueChange={(v) => {
+                                        setPageSize(Number(v));
+                                        setPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 w-[72px]">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PAGE_SIZES.map((s) => (
+                                            <SelectItem key={s} value={String(s)}>
+                                                {s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <span>
                             {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {lang === 'th' ? 'จาก' : 'of'} {total}
                         </span>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => setPage(Math.max(1, safePage - 1))}
-                                disabled={safePage <= 1}
-                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <span className="text-foreground px-1 font-medium">
-                                {safePage} / {pageCount}
-                            </span>
-                            <button
-                                onClick={() => setPage(Math.min(pageCount, safePage + 1))}
-                                disabled={safePage >= pageCount}
-                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
-                        </div>
+                    </div>
+
+                    {/* Right: page navigation only. */}
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setPage(Math.max(1, safePage - 1))}
+                            disabled={safePage <= 1}
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="text-foreground px-1 font-medium">
+                            {safePage} / {pageCount}
+                        </span>
+                        <button
+                            onClick={() => setPage(Math.min(pageCount, safePage + 1))}
+                            disabled={safePage >= pageCount}
+                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             )}

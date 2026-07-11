@@ -22,16 +22,6 @@ function Party({ name, muted }: { name: string | null; muted?: boolean }) {
 export function AssetHistoryTab({ transfers }: { transfers: AssetTransferEntry[] }) {
     const t = useT();
 
-    if (transfers.length === 0) {
-        return (
-            <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-center text-sm">
-                <History className="text-muted-foreground/50 h-8 w-8" />
-                <div>{t('asset_history_empty')}</div>
-                <div className="text-xs">{t('asset_history_empty_hint')}</div>
-            </div>
-        );
-    }
-
     const columns: Column<AssetTransferEntry>[] = [
         {
             key: 'date',
@@ -54,8 +44,23 @@ export function AssetHistoryTab({ transfers }: { transfers: AssetTransferEntry[]
     ];
 
     return (
-        <div className="h-full">
-            <DataTable fillHeight columns={columns} rows={transfers} rowKey={(r) => r.id} />
+        <div className="space-y-3">
+            {/* Table title + what this history means */}
+            <div>
+                <div className="text-foreground text-sm font-semibold">{t('asset_history_title')}</div>
+                <p className="text-muted-foreground text-xs">{t('asset_history_desc')}</p>
+            </div>
+
+            {transfers.length === 0 ? (
+                <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-16 text-center text-sm">
+                    <History className="text-muted-foreground/50 h-8 w-8" />
+                    <div>{t('asset_history_empty')}</div>
+                    <div className="text-xs">{t('asset_history_empty_hint')}</div>
+                </div>
+            ) : (
+                // Fixed 12 rows per page, paged with Prev/Next.
+                <DataTable pageSize={12} columns={columns} rows={transfers} rowKey={(r) => r.id} />
+            )}
         </div>
     );
 }

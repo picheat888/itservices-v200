@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Asset\Asset;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -164,5 +166,31 @@ class EmployeeApiTest extends TestCase
 
         $this->putJson("/api/employees/{$e->id}", ['first_name' => 'A', 'last_name' => 'Test', 'department_id' => $dept->id, 'section_id' => null])
             ->assertOk();
+    }
+
+    /**
+     * The Employee detail's Assets tab reads the held-assets list — gated by employees.view
+     * (an Employee-module read), so an employee viewer needs no asset permission.
+     */
+    public function test_employees_view_can_list_an_employees_held_assets(): void
+    {
+        $viewer = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'employees.view', 'allowed' => true]);
+        $emp = Employee::create(['first_name' => 'Holder', 'last_name' => 'Person']);
+        Asset::factory()->create(['status' => 'deployed', 'owner_employee_id' => $emp->id, 'tag' => 'NB-1']);
+
+        $this->actingAs($viewer);
+        $this->getJson("/api/employees/{$emp->id}/assets")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.tag', 'NB-1');
+    }
+
+    /** Listing an employee's held assets requires employees.view. */
+    public function test_held_assets_require_employees_view(): void
+    {
+        $emp = Employee::create(['first_name' => 'X', 'last_name' => 'Y']);
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->getJson("/api/employees/{$emp->id}/assets")->assertForbidden();
     }
 }

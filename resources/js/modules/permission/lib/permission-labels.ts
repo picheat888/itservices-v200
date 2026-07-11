@@ -37,6 +37,8 @@ const LIVE = new Set<string>([
     'assets.retire',
     'assets.edit',
     'assets.my',
+    'assets.force_recall',
+    'assets.cancel_writeoff',
     'contracts.module',
     'contracts.view_dashboard',
     'contracts.view',

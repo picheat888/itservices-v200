@@ -1,12 +1,18 @@
-import { useMarkRead, useNotifications } from '@/modules/notification';
 import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import type { AppNotification } from '@/modules/notification';
+import { useMarkRead, useNotifications } from '@/modules/notification';
+import { cn } from '@/shared/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { iconMeta, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
+
+/** Asset query keys refreshed the instant an asset notification arrives, so the
+ *  My Assets list (and the admin lists) update in step with the toast rather than
+ *  lagging behind on their own separate poll cycle. */
+const ASSET_QUERY_KEYS = [['assets-mine'], ['assets-list'], ['assets-pending-return'], ['assets-summary']] as const;
 
 /** How long a toast stays before it auto-dismisses (must match the 6s ring animation in app.css). */
 const TOAST_LIFE_MS = 6000;
@@ -20,6 +26,7 @@ const MAX_VISIBLE = 3;
  */
 export function NotificationToaster() {
     const { data } = useNotifications();
+    const qc = useQueryClient();
     // Ids we've already reacted to. Seeded from the first fetch so pre-existing
     // notifications never pop on page load — only genuinely new ones do.
     const seen = useRef<Set<string> | null>(null);
@@ -47,10 +54,24 @@ export function NotificationToaster() {
 
         fresh.forEach((n) => seen.current!.add(n.id));
         setQueue((prev) => [...prev, ...fresh]);
-    }, [data]);
+
+        // A fresh asset hand-over / return alert means the asset lists just changed —
+        // refresh them now so they update alongside the toast, not on their own poll.
+        if (fresh.some((n) => n.data.type?.startsWith('asset'))) {
+            ASSET_QUERY_KEYS.forEach((queryKey) => qc.invalidateQueries({ queryKey }));
+        }
+    }, [data, qc]);
 
     const remove = useCallback((id: string) => {
         setQueue((prev) => prev.filter((n) => n.id !== id));
+    }, []);
+
+    // Dismiss every queued toast that opens the same destination — tapping one asset
+    // hand-over sends you to My Assets, so the sibling toasts shouldn't keep popping in
+    // behind you one after another. `exceptId` keeps the tapped toast in the queue so it
+    // can play its own slide-out (beginClose) instead of being yanked instantly.
+    const dismissGroup = useCallback((target: string, exceptId: string) => {
+        setQueue((prev) => prev.filter((n) => n.id === exceptId || notificationTarget(n) !== target));
     }, []);
 
     if (queue.length === 0) return null;
@@ -58,7 +79,7 @@ export function NotificationToaster() {
     return createPortal(
         <div className="pointer-events-none fixed right-5 bottom-5 z-[60] flex w-80 max-w-[calc(100vw-2.5rem)] flex-col items-end gap-3">
             {queue.slice(0, MAX_VISIBLE).map((n) => (
-                <ToastItem key={n.id} n={n} onClose={remove} />
+                <ToastItem key={n.id} n={n} onClose={remove} onActivateGroup={dismissGroup} />
             ))}
         </div>,
         document.body,
@@ -70,17 +91,26 @@ export function NotificationToaster() {
  * hovered so it stays in sync with the depleting progress ring), plays a
  * slide-out on close, then asks the parent to drop it from the stack.
  */
-function ToastItem({ n, onClose }: { n: AppNotification; onClose: (id: string) => void }) {
+function ToastItem({
+    n,
+    onClose,
+    onActivateGroup,
+}: {
+    n: AppNotification;
+    onClose: (id: string) => void;
+    onActivateGroup: (target: string, exceptId: string) => void;
+}) {
     const t = useT();
     const navigate = useNavigate();
     const markRead = useMarkRead();
     const { Icon, color } = iconMeta(n);
 
     const [leaving, setLeaving] = useState(false);
-
-    const timer = useRef<number | undefined>(undefined);
-    const remaining = useRef(TOAST_LIFE_MS);
-    const startedAt = useRef(0);
+    // The depleting ring IS the countdown: the toast closes when the ring's CSS animation
+    // ends, and hover pauses that animation (see app.css), so the toast and the ring can
+    // never drift apart. Reduced-motion users have no ring animation, so they get a plain
+    // fallback timer instead (no hover-pause, but there's no ring to sync with anyway).
+    const [reduceMotion] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
 
     // Begin the slide-out, then remove from the stack once it finishes.
     const beginClose = useCallback(() => {
@@ -91,51 +121,46 @@ function ToastItem({ n, onClose }: { n: AppNotification; onClose: (id: string) =
         });
     }, [n.id, onClose]);
 
-    // Keep the latest beginClose reachable from the one-shot timer below without
-    // re-arming the countdown on every render.
-    const closeRef = useRef(beginClose);
-    closeRef.current = beginClose;
-
     useEffect(() => {
-        startedAt.current = Date.now();
-        timer.current = window.setTimeout(() => closeRef.current(), remaining.current);
-        return () => window.clearTimeout(timer.current);
-    }, []);
+        if (!reduceMotion) return; // normal motion closes on the ring's animationend (below)
+        const id = window.setTimeout(() => beginClose(), TOAST_LIFE_MS);
+        return () => window.clearTimeout(id);
+    }, [reduceMotion, beginClose]);
 
-    /** Hover in: freeze the countdown (the ring pauses via CSS in parallel). */
-    const pause = () => {
-        window.clearTimeout(timer.current);
-        remaining.current -= Date.now() - startedAt.current;
-    };
-
-    /** Hover out: resume the countdown for whatever time is left. */
-    const resume = () => {
-        if (leaving) return;
-        startedAt.current = Date.now();
-        timer.current = window.setTimeout(() => closeRef.current(), remaining.current);
-    };
-
-    // Click the body → mark read, jump to the related record, then dismiss.
+    // Click the body → mark read, close this toast (with its slide-out) and drop every
+    // sibling heading to the same place, THEN navigate. Closing before navigating means
+    // the tap always visibly dismisses the toast instead of leaving it to run out its
+    // countdown ring if the route change re-renders mid-click.
     const handleActivate = () => {
+        if (leaving) return;
         if (!n.read) markRead.mutate(n.id);
-        navigate(notificationTarget(n));
+        const target = notificationTarget(n);
+        onActivateGroup(target, n.id);
         beginClose();
+        navigate(target);
     };
 
     return (
         <div
-            onMouseEnter={pause}
-            onMouseLeave={resume}
             onClick={handleActivate}
             className={cn(
-                'toast-card border-border bg-popover pointer-events-auto flex w-80 max-w-full cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 shadow-lg',
+                'toast-card border-border bg-popover pointer-events-auto flex w-80 max-w-full cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3',
                 leaving ? 'toast-leave' : 'toast-enter',
             )}
         >
             <span className={cn('relative h-[42px] w-[42px] shrink-0', color)}>
                 <svg viewBox="0 0 42 42" className="absolute inset-0 -rotate-90">
                     <circle cx="21" cy="21" r="18" fill="none" strokeWidth="3" className="stroke-current opacity-15" />
-                    <circle cx="21" cy="21" r="18" fill="none" strokeWidth="3" strokeLinecap="round" className="toast-ring-fg stroke-current" />
+                    <circle
+                        cx="21"
+                        cy="21"
+                        r="18"
+                        fill="none"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        className="toast-ring-fg stroke-current"
+                        onAnimationEnd={() => beginClose()}
+                    />
                 </svg>
                 <span className="absolute inset-0 grid place-items-center">
                     <Icon className="h-[18px] w-[18px]" />

@@ -12,6 +12,7 @@ export const ASSET_STATUS_META: Record<AssetStatus, { tone: Tone; key: string }>
     deployed: { tone: 'green', key: 'asset_deployed' },
     ready: { tone: 'blue', key: 'asset_ready' },
     pending_acceptance: { tone: 'amber', key: 'asset_pending_accept' },
+    common: { tone: 'gray', key: 'asset_common' },
     pending_return: { tone: 'amber', key: 'asset_pending_return' },
     writeoff: { tone: 'gray', key: 'asset_writeoff' },
 };

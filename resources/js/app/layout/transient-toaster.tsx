@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/utils';
 import { useToastStore, type Toast, type ToastTone } from '@/stores/toast';
-import { Ban, Info, X } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -9,9 +9,9 @@ const TOAST_LIFE_MS = 6000;
 /** Most toasts shown stacked at once; the rest wait in the store and pop in as slots free up. */
 const MAX_VISIBLE = 3;
 
-/** Icon + accent color per tone. */
-const TONE_META: Record<ToastTone, { Icon: typeof Ban; color: string }> = {
-    error: { Icon: Ban, color: 'text-destructive' },
+/** Icon + accent color per tone. Error uses a bold X (matches the toast mockup). */
+const TONE_META: Record<ToastTone, { Icon: typeof X; color: string; strokeWidth?: number }> = {
+    error: { Icon: X, color: 'text-destructive', strokeWidth: 2.5 },
     info: { Icon: Info, color: 'text-primary' },
 };
 
@@ -42,7 +42,7 @@ export function TransientToaster() {
  */
 function ToastItem({ toast }: { toast: Toast }) {
     const dismiss = useToastStore((s) => s.dismiss);
-    const { Icon, color } = TONE_META[toast.tone];
+    const { Icon, color, strokeWidth } = TONE_META[toast.tone];
 
     const [leaving, setLeaving] = useState(false);
 
@@ -88,7 +88,7 @@ function ToastItem({ toast }: { toast: Toast }) {
             onMouseEnter={pause}
             onMouseLeave={resume}
             className={cn(
-                'toast-card border-border bg-popover pointer-events-auto flex w-80 max-w-full items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 shadow-lg',
+                'toast-card border-border bg-popover pointer-events-auto flex w-80 max-w-full items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3',
                 leaving ? 'toast-leave' : 'toast-enter',
             )}
         >
@@ -98,7 +98,7 @@ function ToastItem({ toast }: { toast: Toast }) {
                     <circle cx="21" cy="21" r="18" fill="none" strokeWidth="3" strokeLinecap="round" className="toast-ring-fg stroke-current" />
                 </svg>
                 <span className="absolute inset-0 grid place-items-center">
-                    <Icon className="h-[18px] w-[18px]" />
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={strokeWidth} />
                 </span>
             </span>
 

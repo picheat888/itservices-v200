@@ -1,14 +1,13 @@
+import { useT } from '@/lang';
+import { useAccessMutations, useEmployeeAccess } from '@/modules/access';
+import { useAuth } from '@/modules/auth';
+import { type Column, DataTable } from '@/shared/components/data-table';
+import { cn } from '@/shared/lib/utils';
+import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
-import { useAccessMutations, useEmployeeAccess } from '@/modules/access';
-import { useAuth } from '@/modules/auth';
-import { useApprovalChain, useEmployee, useOrgChart } from '../hooks/use-org';
-import { useT } from '@/lang';
-import { deptColor } from '../lib/org-tree';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
 import {
     Ban,
     Briefcase,
@@ -33,6 +32,7 @@ import {
     Shield,
     ShieldCheck,
     SquarePen,
+    Tag,
     Ticket,
     TriangleAlert,
     UserCheck,
@@ -40,6 +40,9 @@ import {
     Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { EmployeeHeldAsset } from '../api/orgApi';
+import { useApprovalChain, useEmployee, useEmployeeAssets, useOrgChart } from '../hooks/use-org';
+import { deptColor } from '../lib/org-tree';
 
 function initials(name: string) {
     return (name || '?')
@@ -115,15 +118,13 @@ export function EmployeeViewDrawer({
     const { data: approvalChain = [] } = useApprovalChain(employee?.id ?? null);
     const { data: orgNodes = [] } = useOrgChart();
     const { data: access } = useEmployeeAccess(employee?.id ?? null);
+    const { data: heldAssets = [] } = useEmployeeAssets(employee?.id ?? null);
     // Live copy of the employee — refetched when mutations invalidate ['employee'], so
     // setting credentials reflects immediately (No-account badge/strip clears without reload).
     const { data: liveEmp } = useEmployee(employee?.id ?? null);
 
     const nodeById = useMemo(() => new Map(orgNodes.map((n) => [n.id, n])), [orgNodes]);
-    const directReports = useMemo(
-        () => (employee ? orgNodes.filter((n) => n.manager_id === employee.id) : []),
-        [orgNodes, employee],
-    );
+    const directReports = useMemo(() => (employee ? orgNodes.filter((n) => n.manager_id === employee.id) : []), [orgNodes, employee]);
 
     if (!employee) return null;
 
@@ -156,9 +157,27 @@ export function EmployeeViewDrawer({
     // ── Access revoke ──
     // Map each access group to its AccessKind + matching mutation hook.
     const accessGroups = [
-        { key: 'email_groups' as const, kind: 'email-groups' as AccessKind, mut: emailGroupMut, label: L('กลุ่มอีเมล', 'Email groups'), icon: <Mail className="h-3.5 w-3.5" /> },
-        { key: 'file_shares' as const, kind: 'file-shares' as AccessKind, mut: fileShareMut, label: L('ไฟล์แชร์', 'File shares'), icon: <Folder className="h-3.5 w-3.5" /> },
-        { key: 'social' as const, kind: 'social-platforms' as AccessKind, mut: socialMut, label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'), icon: <Globe className="h-3.5 w-3.5" /> },
+        {
+            key: 'email_groups' as const,
+            kind: 'email-groups' as AccessKind,
+            mut: emailGroupMut,
+            label: L('กลุ่มอีเมล', 'Email groups'),
+            icon: <Mail className="h-3.5 w-3.5" />,
+        },
+        {
+            key: 'file_shares' as const,
+            kind: 'file-shares' as AccessKind,
+            mut: fileShareMut,
+            label: L('ไฟล์แชร์', 'File shares'),
+            icon: <Folder className="h-3.5 w-3.5" />,
+        },
+        {
+            key: 'social' as const,
+            kind: 'social-platforms' as AccessKind,
+            mut: socialMut,
+            label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'),
+            icon: <Globe className="h-3.5 w-3.5" />,
+        },
     ];
     const mutByKey = { email_groups: emailGroupMut, file_shares: fileShareMut, social: socialMut } as const;
     const revoking = emailGroupMut.revokeMember.isPending || fileShareMut.revokeMember.isPending || socialMut.revokeMember.isPending;
@@ -178,12 +197,24 @@ export function EmployeeViewDrawer({
     };
 
     // ── Sub-components ──
-    const RailRow = ({ icon, label, value, mono, copyKey }: { icon: React.ReactNode; label: string; value?: string | null; mono?: boolean; copyKey?: string }) => (
+    const RailRow = ({
+        icon,
+        label,
+        value,
+        mono,
+        copyKey,
+    }: {
+        icon: React.ReactNode;
+        label: string;
+        value?: string | null;
+        mono?: boolean;
+        copyKey?: string;
+    }) => (
         <div className="group flex items-start gap-2.5">
             <div className="bg-muted text-muted-foreground grid h-[30px] w-[30px] shrink-0 place-items-center rounded-lg">{icon}</div>
             <div className="min-w-0 flex-1">
-                <div className="text-muted-foreground text-[10.5px] font-medium uppercase tracking-wide">{label}</div>
-                <div className={cn('mt-0.5 text-[13px] font-medium leading-snug break-words', mono && 'font-mono text-xs')}>{value || '—'}</div>
+                <div className="text-muted-foreground text-[10.5px] font-medium tracking-wide uppercase">{label}</div>
+                <div className={cn('mt-0.5 text-[13px] leading-snug font-medium break-words', mono && 'font-mono text-xs')}>{value || '—'}</div>
             </div>
             {copyKey && value && (
                 <button
@@ -203,8 +234,8 @@ export function EmployeeViewDrawer({
 
     const Kpi = ({ val, lbl, warn }: { val: React.ReactNode; lbl: string; warn?: boolean }) => (
         <div className="flex min-w-[46px] flex-col items-center px-2.5">
-            <div className={cn('text-[16px] font-extrabold leading-none tracking-tight tabular-nums', warn && 'text-amber-500')}>{val}</div>
-            <div className="text-muted-foreground mt-1 text-[9px] font-semibold uppercase tracking-wide whitespace-nowrap">{lbl}</div>
+            <div className={cn('text-[16px] leading-none font-extrabold tracking-tight tabular-nums', warn && 'text-amber-500')}>{val}</div>
+            <div className="text-muted-foreground mt-1 text-[9px] font-semibold tracking-wide whitespace-nowrap uppercase">{lbl}</div>
         </div>
     );
 
@@ -215,7 +246,7 @@ export function EmployeeViewDrawer({
 
                 {/* ── COVER ── (neutral chrome — no brand tint here) */}
                 <div
-                    className="border-border flex shrink-0 items-center gap-5 border-b px-7 pb-5 pt-6"
+                    className="border-border flex shrink-0 items-center gap-5 border-b px-7 pt-6 pb-5"
                     style={{ background: 'radial-gradient(120% 160% at 0% 0%, var(--accent) 0%, var(--card) 60%)' }}
                 >
                     {/* Avatar — minimal: soft offset ring, gentle float shadow, monochrome fallback. */}
@@ -231,11 +262,15 @@ export function EmployeeViewDrawer({
 
                     <div className="min-w-0 flex-1">
                         <div className="mb-1 flex flex-wrap items-center gap-2.5">
-                            <h2 className="text-xl font-extrabold leading-tight tracking-tight">{name}</h2>
+                            <h2 className="text-xl leading-tight font-extrabold tracking-tight">{name}</h2>
                             {resigned ? (
-                                <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-[11px] font-semibold">{t('resigned')}</span>
+                                <span className="bg-destructive/10 text-destructive rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                                    {t('resigned')}
+                                </span>
                             ) : (
-                                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">{t('active')}</span>
+                                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                    {t('active')}
+                                </span>
                             )}
                             {emp.is_super_admin && (
                                 <span className="bg-brand/10 text-brand inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium">
@@ -275,7 +310,15 @@ export function EmployeeViewDrawer({
 
                     {/* KPI strip */}
                     <div className="border-border bg-card hidden shrink-0 items-center rounded-xl border px-2.5 py-2 shadow-sm sm:flex">
-                        <Kpi val={<>{tenure.y}<small className="text-muted-foreground ml-0.5 text-[11px] font-semibold">{L('ปี', 'yr')}</small></>} lbl={L('อายุงาน', 'Tenure')} />
+                        <Kpi
+                            val={
+                                <>
+                                    {tenure.y}
+                                    <small className="text-muted-foreground ml-0.5 text-[11px] font-semibold">{L('ปี', 'yr')}</small>
+                                </>
+                            }
+                            lbl={L('อายุงาน', 'Tenure')}
+                        />
                         <div className="bg-border h-7 w-px" />
                         <Kpi val={directReports.length} lbl={L('ลูกน้อง', 'Reports')} />
                         <div className="bg-border h-7 w-px" />
@@ -288,7 +331,11 @@ export function EmployeeViewDrawer({
                     <div className="bg-destructive/10 text-destructive border-border flex shrink-0 items-center gap-2 border-b px-7 py-2 text-[12.5px] font-medium">
                         <TriangleAlert className="h-[15px] w-[15px] shrink-0" />
                         <span>{L('พนักงานคนนี้ลาออกแล้ว', 'This employee has resigned')}</span>
-                        {emp.last_day && <span className="font-mono">· {L('วันสุดท้าย', 'Last day')} {emp.last_day}</span>}
+                        {emp.last_day && (
+                            <span className="font-mono">
+                                · {L('วันสุดท้าย', 'Last day')} {emp.last_day}
+                            </span>
+                        )}
                         {emp.resign_reason && <span>· {emp.resign_reason}</span>}
                     </div>
                 )}
@@ -298,7 +345,9 @@ export function EmployeeViewDrawer({
                     <div className="flex shrink-0 items-center gap-3 border-b border-amber-200 bg-amber-50 px-7 py-2.5 dark:border-amber-800 dark:bg-amber-950/20">
                         <ShieldCheck className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
                         <div className="min-w-0 flex-1">
-                            <span className="text-[12px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">{t('cred_no_account')}</span>
+                            <span className="text-[12px] font-semibold tracking-wide text-amber-700 uppercase dark:text-amber-400">
+                                {t('cred_no_account')}
+                            </span>
                             <span className="text-muted-foreground ml-2 text-xs">{t('cred_no_account_desc')}</span>
                         </div>
                         <Button size="sm" className="shrink-0" onClick={() => onSetCredentials(emp)}>
@@ -313,43 +362,100 @@ export function EmployeeViewDrawer({
                     {/* RAIL */}
                     <aside className="border-border flex w-[300px] shrink-0 flex-col gap-5 overflow-y-auto border-r p-5">
                         <section className="flex flex-col gap-3">
-                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold uppercase tracking-wider">{L('ข้อมูลติดต่อ', 'Contact')}</div>
+                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
+                                {L('ข้อมูลติดต่อ', 'Contact')}
+                            </div>
                             <RailRow icon={<Mail className="h-3.5 w-3.5" />} label={L('อีเมล', 'Email')} value={emp.email} copyKey="email" />
                             <RailRow icon={<Phone className="h-3.5 w-3.5" />} label={L('โทรศัพท์', 'Phone')} value={emp.phone} copyKey="phone" mono />
-                            {emp.username && <RailRow icon={<Shield className="h-3.5 w-3.5" />} label={L('ชื่อผู้ใช้', 'Username')} value={emp.username} copyKey="user" mono />}
+                            {emp.username && (
+                                <RailRow
+                                    icon={<Shield className="h-3.5 w-3.5" />}
+                                    label={L('ชื่อผู้ใช้', 'Username')}
+                                    value={emp.username}
+                                    copyKey="user"
+                                    mono
+                                />
+                            )}
                         </section>
 
                         <section className="flex flex-col gap-3">
-                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold uppercase tracking-wider">{L('ข้อมูลการจ้างงาน', 'Employment')}</div>
-                            <RailRow icon={<Users className="h-3.5 w-3.5" />} label={t('emp_section')} value={lang === 'th' ? (emp.section_th ?? emp.section) : emp.section} />
-                            <RailRow icon={<Building2 className="h-3.5 w-3.5" />} label={t('department')} value={lang === 'th' ? (emp.department_th ?? emp.department) : emp.department} />
+                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
+                                {L('ข้อมูลการจ้างงาน', 'Employment')}
+                            </div>
+                            <RailRow
+                                icon={<Users className="h-3.5 w-3.5" />}
+                                label={t('emp_section')}
+                                value={lang === 'th' ? (emp.section_th ?? emp.section) : emp.section}
+                            />
+                            <RailRow
+                                icon={<Building2 className="h-3.5 w-3.5" />}
+                                label={t('department')}
+                                value={lang === 'th' ? (emp.department_th ?? emp.department) : emp.department}
+                            />
                             <RailRow icon={<Briefcase className="h-3.5 w-3.5" />} label={t('position')} value={emp.position} />
                             <RailRow icon={<UserCheck className="h-3.5 w-3.5" />} label={t('emp_manager')} value={managerName} />
                             <RailRow icon={<Clock className="h-3.5 w-3.5" />} label={t('joined')} value={emp.joined_at} mono />
                         </section>
-
                     </aside>
 
                     {/* MAIN */}
                     <div className="flex min-w-0 flex-1 flex-col">
                         {/* Tabs */}
                         <div className="border-border flex shrink-0 gap-1 border-b px-4 pt-2.5">
-                            {([
-                                { id: 'overview' as const, label: L('ภาพรวม', 'Overview'), icon: <LayoutDashboard className="h-[15px] w-[15px]" />, count: undefined as number | undefined, soon: false },
-                                { id: 'org' as const, label: L('องค์กร', 'Organization'), icon: <Users className="h-[15px] w-[15px]" />, count: undefined, soon: false },
+                            {[
+                                {
+                                    id: 'overview' as const,
+                                    label: L('ภาพรวม', 'Overview'),
+                                    icon: <LayoutDashboard className="h-[15px] w-[15px]" />,
+                                    count: undefined as number | undefined,
+                                    soon: false,
+                                },
+                                {
+                                    id: 'org' as const,
+                                    label: L('องค์กร', 'Organization'),
+                                    icon: <Users className="h-[15px] w-[15px]" />,
+                                    count: undefined,
+                                    soon: false,
+                                },
+                                {
+                                    id: 'assets' as const,
+                                    label: L('อุปกรณ์', 'Assets'),
+                                    icon: <Laptop className="h-[15px] w-[15px]" />,
+                                    count: heldAssets.length,
+                                    soon: false,
+                                },
                                 // Planned tabs from the design — not wired to data yet (Coming soon).
-                                { id: 'assets' as const, label: L('อุปกรณ์', 'Assets'), icon: <Laptop className="h-[15px] w-[15px]" />, count: undefined, soon: true },
-                                { id: 'tickets' as const, label: L('ทิกเก็ต', 'Tickets'), icon: <Ticket className="h-[15px] w-[15px]" />, count: undefined, soon: true },
-                                { id: 'requests' as const, label: L('คำขอ', 'Requests'), icon: <Inbox className="h-[15px] w-[15px]" />, count: undefined, soon: true },
+                                {
+                                    id: 'tickets' as const,
+                                    label: L('ทิกเก็ต', 'Tickets'),
+                                    icon: <Ticket className="h-[15px] w-[15px]" />,
+                                    count: undefined,
+                                    soon: true,
+                                },
+                                {
+                                    id: 'requests' as const,
+                                    label: L('คำขอ', 'Requests'),
+                                    icon: <Inbox className="h-[15px] w-[15px]" />,
+                                    count: undefined,
+                                    soon: true,
+                                },
                                 ...(canViewAccess
-                                    ? [{ id: 'access' as const, label: L('สิทธิ์เข้าถึง', 'Access'), icon: <Shield className="h-[15px] w-[15px]" />, count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0, soon: false }]
+                                    ? [
+                                          {
+                                              id: 'access' as const,
+                                              label: L('สิทธิ์เข้าถึง', 'Access'),
+                                              icon: <Shield className="h-[15px] w-[15px]" />,
+                                              count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0,
+                                              soon: false,
+                                          },
+                                      ]
                                     : []),
-                            ]).map((tb) => (
+                            ].map((tb) => (
                                 <button
                                     key={tb.id}
                                     onClick={() => setTab(tb.id)}
                                     className={cn(
-                                        'relative inline-flex items-center gap-1.5 rounded-t-lg px-3 pb-3 pt-2 text-[12.5px] font-semibold transition-colors',
+                                        'relative inline-flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-3 text-[12.5px] font-semibold transition-colors',
                                         tab === tb.id ? '' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                                     )}
                                     style={tab === tb.id ? { color: accent } : {}}
@@ -357,21 +463,30 @@ export function EmployeeViewDrawer({
                                     {tb.icon}
                                     {tb.label}
                                     {tb.count != null && tb.count > 0 && (
-                                        <span className="bg-muted text-muted-foreground inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">{tb.count}</span>
+                                        <span className="bg-muted text-muted-foreground inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">
+                                            {tb.count}
+                                        </span>
                                     )}
                                     {tb.soon && (
-                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                        <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[8.5px] font-bold tracking-wide text-amber-600 uppercase dark:text-amber-400">
                                             {L('เร็วๆนี้', 'soon')}
                                         </span>
                                     )}
-                                    {tab === tb.id && <span className="absolute inset-x-2 -bottom-px h-[2.5px] rounded" style={{ background: accent }} />}
+                                    {tab === tb.id && (
+                                        <span className="absolute inset-x-2 -bottom-px h-[2.5px] rounded" style={{ background: accent }} />
+                                    )}
                                 </button>
                             ))}
                         </div>
 
                         {/* Pane — the Organization tab fills the whole area (no padding/scroll
                             here; OrgPane manages its own layout + single scroll). */}
-                        <div className={cn('min-h-0 flex-1', tab === 'org' ? 'flex flex-col' : 'overflow-y-auto p-5')}>
+                        <div
+                            className={cn(
+                                'min-h-0 flex-1',
+                                tab === 'org' ? 'flex flex-col' : tab === 'assets' ? 'flex flex-col p-5' : 'overflow-y-auto p-5',
+                            )}
+                        >
                             {tab === 'overview' && (
                                 <OverviewPane emp={emp} tenure={tenure} reports={directReports.length} steps={approvalChain.length} L={L} />
                             )}
@@ -389,9 +504,20 @@ export function EmployeeViewDrawer({
                                     {access?.outstanding && (
                                         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium">
                                             <TriangleAlert className="h-4 w-4 shrink-0" />
-                                            <span className="flex-1">{L('พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอน', 'Resigned — these accesses are still active and should be revoked')}</span>
+                                            <span className="flex-1">
+                                                {L(
+                                                    'พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอน',
+                                                    'Resigned — these accesses are still active and should be revoked',
+                                                )}
+                                            </span>
                                             {canManageAccess && (
-                                                <Button variant="destructive" size="sm" className="shrink-0" disabled={revoking} onClick={() => revokeAll()}>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    className="shrink-0"
+                                                    disabled={revoking}
+                                                    onClick={() => revokeAll()}
+                                                >
                                                     <Ban className="h-3.5 w-3.5" />
                                                     {L('ถอนทั้งหมด', 'Revoke all')}
                                                 </Button>
@@ -406,16 +532,28 @@ export function EmployeeViewDrawer({
                                                 <div className="text-muted-foreground flex items-center gap-2 text-[12.5px] font-bold">
                                                     {grp.icon}
                                                     {grp.label}
-                                                    <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">{rows.length}</span>
+                                                    <span className="bg-muted inline-grid h-[17px] min-w-[17px] place-items-center rounded-full px-1.5 font-mono text-[10.5px] font-bold">
+                                                        {rows.length}
+                                                    </span>
                                                 </div>
                                                 {rows.map((r) => (
-                                                    <div key={r.id} className="border-border bg-card flex items-center gap-3 rounded-xl border px-3 py-2.5">
-                                                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.resource_color ?? 'var(--brand)' }} />
+                                                    <div
+                                                        key={r.id}
+                                                        className="border-border bg-card flex items-center gap-3 rounded-xl border px-3 py-2.5"
+                                                    >
+                                                        <span
+                                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                                            style={{ background: r.resource_color ?? 'var(--brand)' }}
+                                                        />
                                                         <div className="min-w-0 flex-1">
                                                             <div className="truncate text-sm font-medium">{r.resource_name}</div>
-                                                            <div className="text-muted-foreground truncate font-mono text-[11px]">{r.resource_detail ?? r.resource_code}</div>
+                                                            <div className="text-muted-foreground truncate font-mono text-[11px]">
+                                                                {r.resource_detail ?? r.resource_code}
+                                                            </div>
                                                         </div>
-                                                        <span className="text-muted-foreground shrink-0 text-xs">{r.access_level ?? r.purpose ?? '—'}</span>
+                                                        <span className="text-muted-foreground shrink-0 text-xs">
+                                                            {r.access_level ?? r.purpose ?? '—'}
+                                                        </span>
                                                         {canManageAccess && (
                                                             <button
                                                                 type="button"
@@ -434,11 +572,13 @@ export function EmployeeViewDrawer({
                                         );
                                     })}
                                     {access && access.email_groups.length + access.file_shares.length + access.social.length === 0 && (
-                                        <div className="text-muted-foreground py-12 text-center text-sm">{L('ไม่มีสิทธิ์เข้าถึง', 'No access permissions')}</div>
+                                        <div className="text-muted-foreground py-12 text-center text-sm">
+                                            {L('ไม่มีสิทธิ์เข้าถึง', 'No access permissions')}
+                                        </div>
                                     )}
                                 </div>
                             )}
-                            {tab === 'assets' && <ComingSoon icon={<Laptop className="h-6 w-6" />} title={L('อุปกรณ์', 'Assets')} L={L} />}
+                            {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} L={L} />}
                             {tab === 'tickets' && <ComingSoon icon={<Ticket className="h-6 w-6" />} title={L('ทิกเก็ต', 'Tickets')} L={L} />}
                             {tab === 'requests' && <ComingSoon icon={<Inbox className="h-6 w-6" />} title={L('คำขอ', 'Requests')} L={L} />}
                         </div>
@@ -502,6 +642,82 @@ function ComingSoon({ icon, title, L }: { icon: React.ReactNode; title: string; 
     );
 }
 
+/** Status → dot colour + label for the read-only held-assets table. */
+const HELD_STATUS_META: Record<string, { dot: string; th: string; en: string }> = {
+    deployed: { dot: 'bg-emerald-500', th: 'ใช้งานอยู่', en: 'In use' },
+    pending_acceptance: { dot: 'bg-amber-500', th: 'รอรับมอบ', en: 'Pending acceptance' },
+    pending_return: { dot: 'bg-amber-500', th: 'รอรับคืน', en: 'Returning' },
+    ready: { dot: 'bg-emerald-500', th: 'พร้อมใช้งาน', en: 'Ready' },
+    writeoff: { dot: 'bg-red-500', th: 'ตัดจำหน่าย', en: 'Written off' },
+};
+
+/**
+ * Assets tab — a read-only table of what the employee currently holds (own-module data).
+ * Reuses the shared DataTable (same Prev/Next pager as the asset History tab), 6 rows per page.
+ */
+function AssetsPane({ assets, lang, L }: { assets: EmployeeHeldAsset[]; lang: string; L: (th: string, en: string) => string }) {
+    if (assets.length === 0) {
+        return (
+            <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
+                <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
+                    <Laptop className="h-6 w-6" />
+                </div>
+                <div className="text-sm">{L('พนักงานยังไม่ถือครองทรัพย์สิน', 'This employee holds no assets')}</div>
+            </div>
+        );
+    }
+
+    const columns: Column<EmployeeHeldAsset>[] = [
+        {
+            key: 'device',
+            header: L('อุปกรณ์', 'Device'),
+            render: (a) => {
+                const meta = HELD_STATUS_META[a.status] ?? { dot: 'bg-muted-foreground', th: a.status, en: a.status };
+                const type = (lang === 'th' ? (a.type_th ?? a.type) : a.type) ?? '—';
+                return (
+                    <div className="flex min-w-0 items-center gap-3 py-1">
+                        <div className="bg-accent text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                            <Laptop className="h-[18px] w-[18px]" />
+                        </div>
+                        <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">{a.model ?? a.asset_code}</div>
+                            <div className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-[10.5px] font-medium tracking-wide uppercase">
+                                <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
+                                {type} · {L(meta.th, meta.en)}
+                            </div>
+                        </div>
+                    </div>
+                );
+            },
+        },
+        {
+            key: 'tag',
+            header: 'Tag',
+            render: (a) =>
+                a.tag ? (
+                    <span className="bg-brand/10 text-brand inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+                        <Tag className="h-3 w-3 shrink-0 opacity-70" />
+                        <span className="truncate">{a.tag}</span>
+                    </span>
+                ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                ),
+        },
+        {
+            key: 'serial',
+            header: 'Serial',
+            render: (a) => <span className="text-foreground font-mono text-xs">{a.serial ?? a.asset_code}</span>,
+        },
+        {
+            key: 'received',
+            header: L('รับเมื่อ', 'Received'),
+            render: (a) => <span className="text-muted-foreground text-xs font-semibold">{a.owned_since ?? '—'}</span>,
+        },
+    ];
+
+    return <DataTable fillHeight rowHeight={66} columns={columns} rows={assets} rowKey={(a) => a.id} />;
+}
+
 /** Overview tab — summary cards. */
 function OverviewPane({
     emp,
@@ -525,13 +741,19 @@ function OverviewPane({
     return (
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             {cards.map((c, i) => (
-                <div key={i} className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm">
-                    <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]" style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}>
+                <div
+                    key={i}
+                    className="border-border bg-muted/40 hover:border-border flex items-center gap-3 rounded-xl border p-3.5 transition hover:shadow-sm"
+                >
+                    <div
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
+                        style={{ background: 'var(--accent)', color: 'var(--accent-foreground)' }}
+                    >
                         {c.icon}
                     </div>
                     <div className="min-w-0">
-                        <div className="text-xl font-extrabold leading-none tracking-tight tabular-nums">{c.val}</div>
-                        <div className="text-muted-foreground mt-1 text-[10.5px] font-semibold uppercase tracking-wide">{c.lbl}</div>
+                        <div className="text-xl leading-none font-extrabold tracking-tight tabular-nums">{c.val}</div>
+                        <div className="text-muted-foreground mt-1 text-[10.5px] font-semibold tracking-wide uppercase">{c.lbl}</div>
                     </div>
                 </div>
             ))}
@@ -627,19 +849,18 @@ function OrgPane({
     const directCount = (id: number) => childrenOf.get(id)?.length ?? 0;
 
     // Synthetic node for the focus, falling back to rootFocus when not in the org list.
-    const focusNode: OrgChartNode =
-        nodeById.get(focusId) ?? {
-            id: rootFocus.id,
-            code: '',
-            name: rootFocus.name,
-            name_th: rootFocus.nameTh ?? null,
-            title: rootFocus.title ?? null,
-            department: null,
-            department_code: rootFocus.deptCode ?? null,
-            photo_url: null,
-            manager_id: null,
-            reports_count: 0,
-        };
+    const focusNode: OrgChartNode = nodeById.get(focusId) ?? {
+        id: rootFocus.id,
+        code: '',
+        name: rootFocus.name,
+        name_th: rootFocus.nameTh ?? null,
+        title: rootFocus.title ?? null,
+        department: null,
+        department_code: rootFocus.deptCode ?? null,
+        photo_url: null,
+        manager_id: null,
+        reports_count: 0,
+    };
 
     // Manager chain above the focus, top → direct-manager.
     const chainTopDown = useMemo(() => {
@@ -664,7 +885,17 @@ function OrgPane({
     const nameOf = (n: { name: string; name_th?: string | null }) => (lang === 'th' ? (n.name_th ?? n.name) : n.name);
 
     // ── Small building blocks ──
-    const NavBtn = ({ onClick, disabled, title, children }: { onClick: () => void; disabled?: boolean; title: string; children: React.ReactNode }) => (
+    const NavBtn = ({
+        onClick,
+        disabled,
+        title,
+        children,
+    }: {
+        onClick: () => void;
+        disabled?: boolean;
+        title: string;
+        children: React.ReactNode;
+    }) => (
         <button
             type="button"
             onClick={onClick}
@@ -679,7 +910,10 @@ function OrgPane({
     const NodeAvatar = ({ node, size }: { node: OrgChartNode; size: number }) => {
         const dc = deptColor(node.department_code);
         return (
-            <div className="shrink-0 overflow-hidden rounded-full" style={{ width: size, height: size, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}>
+            <div
+                className="shrink-0 overflow-hidden rounded-full"
+                style={{ width: size, height: size, boxShadow: 'inset 0 0 0 2px rgba(255,255,255,.18)' }}
+            >
                 {node.photo_url ? (
                     <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
                 ) : (
@@ -703,12 +937,12 @@ function OrgPane({
                 tabIndex={0}
                 onClick={() => navTo(node.id)}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), navTo(node.id))}
-                className="border-border bg-card relative flex w-full cursor-pointer items-center gap-2.5 rounded-lg border py-1.5 pl-3 pr-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                className="border-border bg-card focus-visible:ring-brand relative flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border py-1.5 pr-2.5 pl-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2"
             >
                 <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-lg" style={{ background: dc }} />
                 <NodeAvatar node={node} size={32} />
                 <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13px] font-bold leading-tight">{nameOf(node)}</div>
+                    <div className="truncate text-[13px] leading-tight font-bold">{nameOf(node)}</div>
                     <div className="text-muted-foreground truncate text-[11px]">{node.title || '—'}</div>
                 </div>
                 {total > 0 && (
@@ -774,12 +1008,15 @@ function OrgPane({
                     ))}
 
                     {/* Focused person — highlighted card */}
-                    <div className="bg-card relative rounded-lg border px-3.5 py-2.5 shadow-md" style={{ borderColor: dc, boxShadow: `0 0 0 2px color-mix(in oklch, ${dc} 16%, transparent)` }}>
-                        <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-lg" style={{ background: dc }} />
+                    <div
+                        className="bg-card relative overflow-hidden rounded-lg border px-3.5 py-2.5 shadow-md"
+                        style={{ borderColor: dc, boxShadow: `0 0 0 2px color-mix(in oklch, ${dc} 16%, transparent)` }}
+                    >
+                        <span aria-hidden className="absolute inset-y-0 left-0 w-[10px]" style={{ background: dc }} />
                         <div className="flex items-start gap-2.5">
                             <NodeAvatar node={focusNode} size={42} />
                             <div className="min-w-0 flex-1">
-                                <div className="truncate text-[14px] font-bold leading-tight">{nameOf(focusNode)}</div>
+                                <div className="truncate text-[14px] leading-tight font-bold">{nameOf(focusNode)}</div>
                                 <div className="text-muted-foreground truncate text-[12px]">{focusNode.title || '—'}</div>
                                 {focusNode.department && <div className="text-muted-foreground truncate text-[11px]">{focusNode.department}</div>}
                             </div>
@@ -811,7 +1048,8 @@ function OrgPane({
                             <div className="my-2.5 flex items-center gap-3">
                                 <div className="bg-border h-px flex-1" />
                                 <span className="text-muted-foreground text-[11px]">
-                                    {L('ผู้ใต้บังคับบัญชาของ', 'People reporting to')} <span className="text-foreground font-semibold">{nameOf(focusNode)}</span>
+                                    {L('ผู้ใต้บังคับบัญชาของ', 'People reporting to')}{' '}
+                                    <span className="text-foreground font-semibold">{nameOf(focusNode)}</span>
                                 </span>
                                 <div className="bg-border h-px flex-1" />
                             </div>

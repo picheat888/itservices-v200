@@ -1,6 +1,6 @@
-import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '../api/orgApi';
 import type { Department, Position } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { departmentApi, employeeApi, locationApi, positionApi, sectionApi, type EmployeePayload } from '../api/orgApi';
 
 const EMP = ['employees'] as const;
 const DEPT = ['departments'] as const;
@@ -15,6 +15,14 @@ export const useEmployee = (id: number | null) =>
     useQuery({
         queryKey: ['employee', id],
         queryFn: () => employeeApi.get(id as number),
+        enabled: id != null,
+    });
+
+/** Assets the employee currently holds — powers the Employee detail's read-only Assets tab. */
+export const useEmployeeAssets = (id: number | null) =>
+    useQuery({
+        queryKey: ['employee-assets', id],
+        queryFn: () => employeeApi.assets(id as number),
         enabled: id != null,
     });
 

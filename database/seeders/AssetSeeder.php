@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
@@ -55,21 +56,24 @@ class AssetSeeder extends Seeder
             $brandId = Brand::firstOrCreate(['name' => $brand])->id;
             $modelId = AssetModel::firstOrCreate(['name' => $model, 'brand_id' => $brandId])->id;
 
-            Asset::updateOrCreate(['tag' => $tag], [
+            // Employee-owned → link the FK and store no owner code (name / department /
+            // position are read from the employee); a non-matching label (shared / common
+            // use) stays in `owner`. Employee data is never duplicated onto the asset.
+            $ownerEmployeeId = Employee::where('code', $owner)->value('id');
+
+            Asset::updateOrCreate(['asset_code' => $tag], [
                 'category_id' => $categoryId,
                 'brand_id' => $brandId,
                 'model_id' => $modelId,
-                'owner' => $owner,
-                'initial_owner' => $owner,
-                'department' => $dept,
+                'owner' => $ownerEmployeeId ? null : $owner,
+                'owner_employee_id' => $ownerEmployeeId,
                 'status' => $status,
-                'value' => $value,
+                // Rented assets carry no fee / lease term of their own — those derive
+                // from the linked contract (set below). Only purchased assets store a value.
+                'value' => $rented ? 0 : $value,
                 'source' => $source,
                 'purchase_date' => $rented ? null : $startDate,
                 'warranty_end' => $rented ? null : $endDate,
-                'lease_start' => $rented ? $startDate : null,
-                'lease_end' => $rented ? $endDate : null,
-                'registered_date' => $startDate,
                 'last_reason' => $reason,
             ]);
         }
@@ -79,14 +83,15 @@ class AssetSeeder extends Seeder
         $links = [
             'INB-SV-00003' => 'CT-2025-001', // Dell server → Dell server hardware support
             'RNT-NW-00012' => 'CT-2023-008', // Cisco switch → Cisco Meraki network
+            'RNT-LT-00027' => 'CT-DEMO-007', // Dell rental laptop → monthly workstation lease
             'INB-PR-00118' => 'CT-DEMO-D60', // Canon printer → Canon printer fleet lease
             'INB-LT-00231' => 'CT-DEMO-007', // Lenovo laptop → Lenovo workstation lease
             'INB-LT-00232' => 'CT-DEMO-007',
         ];
-        foreach ($links as $tag => $code) {
+        foreach ($links as $assetId => $code) {
             $contractId = Contract::where('code', $code)->value('id');
             if ($contractId) {
-                Asset::where('tag', $tag)->update(['contract_id' => $contractId]);
+                Asset::where('asset_code', $assetId)->update(['contract_id' => $contractId]);
             }
         }
     }

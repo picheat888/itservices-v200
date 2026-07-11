@@ -6,7 +6,6 @@ use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
-use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
@@ -21,7 +20,7 @@ class AssetService
     {
         AssetTransfer::create([
             'asset_id' => $asset->id,
-            'asset_tag' => $asset->tag,
+            'asset_tag' => $asset->asset_code,
             'asset_model' => $asset->model?->name,
             'from_owner' => $from,
             'to_owner' => $to,
@@ -38,14 +37,11 @@ class AssetService
      */
     public function create(array $data): Asset
     {
-        if (blank($data['tag'] ?? null)) {
-            unset($data['tag']);
+        if (blank($data['asset_code'] ?? null)) {
+            unset($data['asset_code']);
         }
         if (blank($data['status'] ?? null)) {
             $data['status'] = AssetStatus::Ready->value;
-        }
-        if (blank($data['initial_owner'] ?? null) && ! blank($data['owner'] ?? null)) {
-            $data['initial_owner'] = $data['owner'];
         }
 
         $data = $this->resolveOwnerEmployee($data);
@@ -60,8 +56,8 @@ class AssetService
      */
     public function update(Asset $asset, array $data): Asset
     {
-        if (blank($data['tag'] ?? null)) {
-            unset($data['tag']);
+        if (blank($data['asset_code'] ?? null)) {
+            unset($data['asset_code']);
         }
         $data = $this->resolveOwnerEmployee($data);
         $asset->update($this->normalizeAcquisition($data));
@@ -71,10 +67,12 @@ class AssetService
 
     /**
      * Keep owner_employee_id in step with a directly-supplied owner string on
-     * register/edit. When the owner text matches an employee code, link the FK;
-     * a non-matching label (shared/common use) or a blank owner clears it. Leaves
-     * the FK untouched when the payload carries no `owner` key at all (the normal
-     * form path, where ownership is assigned only via Transfer).
+     * register/edit. When the owner text matches an employee code, link the FK and
+     * clear the string (an employee-owned asset stores no owner code — it's read from
+     * the employee). A non-matching label (shared/common use) is kept in `owner` with
+     * no FK; a blank owner clears both. Leaves everything untouched when the payload
+     * carries no `owner` key at all (the normal form path, where ownership is assigned
+     * only via Transfer).
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -82,9 +80,14 @@ class AssetService
     private function resolveOwnerEmployee(array $data): array
     {
         if (array_key_exists('owner', $data)) {
-            $data['owner_employee_id'] = filled($data['owner'])
+            $employeeId = filled($data['owner'])
                 ? Employee::where('code', $data['owner'])->value('id')
                 : null;
+            $data['owner_employee_id'] = $employeeId;
+            // Employee-owned → keep only the FK; the code is derived from the employee.
+            if ($employeeId !== null) {
+                $data['owner'] = null;
+            }
         }
 
         return $data;
@@ -92,8 +95,10 @@ class AssetService
 
     /**
      * Normalise acquisition fields by source before saving:
-     * - Rented: copy vendor, lease dates and value from the linked contract, and
-     *   clear purchase/warranty fields (a lease has none of its own).
+     * - Rented: fee, vendor and lease term are NOT stored on the asset — they belong
+     *   to the linked contract and are read from it live (single source of truth).
+     *   Any such snapshot fields are cleared, along with purchase/warranty (a lease
+     *   has none of its own).
      * - Purchased: clear lease/contract fields; a lifetime warranty has no end date.
      *
      * @param  array<string, mixed>  $data
@@ -102,13 +107,8 @@ class AssetService
     private function normalizeAcquisition(array $data): array
     {
         if (($data['source'] ?? null) === AssetSource::Rented->value) {
-            $contract = ! blank($data['contract_id'] ?? null) ? Contract::find($data['contract_id']) : null;
-            if ($contract) {
-                $data['vendor_id'] = $contract->vendor_id;
-                $data['lease_start'] = $contract->start_date?->toDateString();
-                $data['lease_end'] = $contract->end_date?->toDateString();
-                $data['value'] = $contract->value;
-            }
+            $data['vendor_id'] = null;
+            $data['value'] = 0;
             $data['purchase_date'] = null;
             $data['warranty_end'] = null;
             $data['warranty_lifetime'] = false;
@@ -116,10 +116,8 @@ class AssetService
             return $data;
         }
 
-        // Purchased: no lease or contract; a lifetime warranty carries no end date.
+        // Purchased: no contract; a lifetime warranty carries no end date.
         $data['contract_id'] = null;
-        $data['lease_start'] = null;
-        $data['lease_end'] = null;
         if (! empty($data['warranty_lifetime'])) {
             $data['warranty_end'] = null;
         }
@@ -138,15 +136,19 @@ class AssetService
     {
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
-        $from = $asset->owner ?: $asset->warehouse?->name;
+        $from = $asset->ownerCode() ?: $asset->warehouse?->name;
         $reason = $data['reason'] ?? null;
 
         if ($data['mode'] === 'employee') {
             $employee = Employee::findOrFail($data['owner_employee_id']);
             $asset->update([
-                'owner' => $employee->code,
+                // Employee-owned → store only the FK; the code is read from the employee.
+                'owner' => null,
                 'owner_employee_id' => $employee->id,
                 'location_id' => $data['location_id'],
+                // Deployed to a person at a location — it has left the pool, so it no
+                // longer sits in a warehouse (warehouse ↔ location are mutually exclusive).
+                'warehouse_id' => null,
                 'status' => AssetStatus::PendingAcceptance,
                 'last_reason' => $reason,
             ]);
@@ -156,12 +158,15 @@ class AssetService
             return $asset->fresh();
         }
 
-        // Shared / common use: no person to accept, so it deploys straight away.
+        // Shared / common use: no person to accept, so it goes straight to the Common
+        // (shared-deployed) state — distinct from Deployed so it can be filtered/recalled in bulk.
         $asset->update([
             'owner' => $data['owner_label'],
             'owner_employee_id' => null,
             'location_id' => $data['location_id'],
-            'status' => AssetStatus::Deployed,
+            // Out of the pool, so no warehouse (see above).
+            'warehouse_id' => null,
+            'status' => AssetStatus::Common,
             'last_reason' => $reason,
         ]);
         $this->logTransfer($asset, $from, $data['owner_label'], $reason, $performedBy);
@@ -201,7 +206,7 @@ class AssetService
     /** Begin returning a deployed asset: deployed → pending return; alert IT to receive it. */
     public function requestReturn(Asset $asset, ?string $reason = null): Asset
     {
-        $holder = $asset->owner;
+        $holder = $asset->ownerCode();
         $asset->update([
             'status' => AssetStatus::PendingReturn,
             'last_reason' => $reason,
@@ -223,7 +228,7 @@ class AssetService
      */
     public function markReceived(Asset $asset, ?string $performedBy = null, ?string $warehouse = null): Asset
     {
-        $from = $asset->owner;
+        $from = $asset->ownerCode();
         // Back in the pool = no owner (same as a freshly registered asset); its physical
         // whereabouts are the warehouse — which is also stamped as the custody-trail destination.
         $destName = filled($warehouse) ? $warehouse : $asset->warehouse?->name;
@@ -234,6 +239,8 @@ class AssetService
             'owner_employee_id' => null,
             // No holder in the pool → no possession date.
             'owned_since' => null,
+            // Stored in a warehouse again → no longer deployed at a usage location.
+            'location_id' => null,
             'warehouse_id' => Warehouse::resolveId($destName),
         ]);
         $this->logTransfer($asset, $from, (string) $destName, 'Returned to pool', $performedBy);
@@ -241,10 +248,35 @@ class AssetService
         return $asset->fresh();
     }
 
+    /**
+     * Recall a hand-over that was never accepted (pending acceptance → ready), pulling the
+     * asset back into the pool. Clears the intended holder and stamps the chosen warehouse,
+     * recording the reversal in the custody trail. Used when an asset was transferred to the
+     * wrong person by mistake, before they accepted it.
+     */
+    public function recall(Asset $asset, ?string $performedBy = null, ?string $warehouse = null, ?string $reason = null): Asset
+    {
+        // The intended (not-yet-accepted) recipient becomes the custody-trail origin.
+        $from = $asset->ownerCode();
+        $destName = filled($warehouse) ? $warehouse : $asset->warehouse?->name;
+        $asset->update([
+            'status' => AssetStatus::Ready,
+            'owner' => null,
+            'owner_employee_id' => null,
+            'owned_since' => null,
+            'location_id' => null,
+            'warehouse_id' => Warehouse::resolveId($destName),
+            'last_reason' => $reason,
+        ]);
+        $this->logTransfer($asset, $from, (string) $destName, $reason ?: 'Recalled — transfer cancelled', $performedBy);
+
+        return $asset->fresh();
+    }
+
     /** Retire / write off a single asset — blocked while an employee still holds it. */
     public function retire(Asset $asset, ?string $reason = null): Asset
     {
-        abort_if($asset->heldByEmployee(), 422, "Return {$asset->tag} from the employee before writing it off.");
+        abort_if($asset->heldByEmployee(), 422, "Return {$asset->asset_code} from the employee before writing it off.");
 
         $asset->update([
             'status' => AssetStatus::Writeoff,
@@ -254,21 +286,30 @@ class AssetService
         return $asset->fresh();
     }
 
+    /** Undo a write-off — restore a retired asset back to the Ready pool. */
+    public function cancelWriteoff(Asset $asset): Asset
+    {
+        $asset->update(['status' => AssetStatus::Ready]);
+
+        return $asset->fresh();
+    }
+
     /**
      * Apply a single status to many assets at once (used by bulk Write-off).
-     * When writing off, the whole batch is rejected if any selected asset is still
-     * held by an employee — return it first. Returns the number of assets updated.
+     * Write-off is only allowed once an asset is back in the pool (Ready) — anything
+     * still out (deployed / common / pending) must be recalled or returned first.
+     * Returns the number of assets updated.
      *
      * @param  list<int>  $ids
      */
     public function bulkSetStatus(array $ids, AssetStatus $status, ?string $reason = null): int
     {
         if ($status === AssetStatus::Writeoff) {
-            $held = Asset::whereIn('id', $ids)->whereNotNull('owner_employee_id')->pluck('tag');
+            $notReady = Asset::whereIn('id', $ids)->where('status', '!=', AssetStatus::Ready->value)->pluck('asset_code');
             abort_if(
-                $held->isNotEmpty(),
+                $notReady->isNotEmpty(),
                 422,
-                'Return these from their employees before writing them off: '.$held->implode(', ').'.'
+                'Only Ready assets can be written off — recall or return these first: '.$notReady->implode(', ').'.'
             );
         }
 

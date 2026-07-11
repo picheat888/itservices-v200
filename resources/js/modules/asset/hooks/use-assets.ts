@@ -1,5 +1,7 @@
-import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
+import { useT } from '@/lang';
+import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
 
 const ASSETS = ['assets'] as const;
 const SUMMARY = ['assets-summary'] as const;
@@ -36,6 +38,19 @@ export const useAsset = (id: number | null | undefined) =>
         queryFn: () => assetApi.get(id as number),
         enabled: id != null,
     });
+
+/** The contract linked to an asset — powers the read-only Contract peek (gated by assets.view). */
+export const useAssetContract = (assetId: number | null | undefined) =>
+    useQuery({
+        queryKey: ['asset-contract', assetId],
+        queryFn: () => assetApi.getContract(assetId as number),
+        enabled: assetId != null,
+    });
+
+/** Minimal contract list for the rented-asset form picker (gated by assets.register/edit,
+ *  so an asset admin without contracts.view can still link a rented asset to its contract). */
+export const useAssetContractOptions = (enabled = true) =>
+    useQuery({ queryKey: ['asset-contract-options'], queryFn: assetApi.contractOptions, enabled });
 
 /**
  * Assets assigned to the current user (My Assets page + sidebar badge). Polls on the
@@ -90,6 +105,7 @@ export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'],
 
 export function useAssetMutations() {
     const qc = useQueryClient();
+    const t = useT();
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ASSETS });
         qc.invalidateQueries({ queryKey: ['assets-list'] });
@@ -110,7 +126,21 @@ export function useAssetMutations() {
             mutationFn: (v: { id: number; payload: AssetTransferPayload }) => assetApi.transfer(v.id, v.payload),
             onSuccess: invalidate,
         }),
-        accept: useMutation({ mutationFn: (id: number) => assetApi.accept(id), onSuccess: invalidate }),
+        accept: useMutation({
+            mutationFn: (id: number) => assetApi.accept(id),
+            // A 403 means the hand-over is no longer this user's to accept — most often IT
+            // cancelled/recalled it while they were on the page. Surface it instead of failing
+            // silently, and refresh on settle so the stale "pending acceptance" row clears.
+            onError: (err) => {
+                const status = (err as { response?: { status?: number } }).response?.status;
+                if (status === 403) {
+                    useToastStore.getState().push(t('asset_accept_gone'), 'error', t('asset_accept_gone_title'));
+                } else {
+                    useToastStore.getState().push(t('asset_action_failed'), 'error');
+                }
+            },
+            onSettled: invalidate,
+        }),
         requestReturn: useMutation({
             mutationFn: (v: { id: number; reason?: string }) => assetApi.requestReturn(v.id, v.reason),
             onSuccess: invalidate,
@@ -119,8 +149,34 @@ export function useAssetMutations() {
             mutationFn: (v: { id: number; warehouse?: string }) => assetApi.receive(v.id, v.warehouse),
             onSuccess: invalidate,
         }),
+        recall: useMutation({
+            mutationFn: (v: { id: number; warehouse: string; reason?: string }) => assetApi.recall(v.id, v.warehouse, v.reason),
+            // Refresh on success AND failure: a 422 usually means the recipient accepted
+            // under us, so we still want the stale "pending acceptance" row to update.
+            onSettled: invalidate,
+        }),
+        cancelWriteoff: useMutation({ mutationFn: (id: number) => assetApi.cancelWriteoff(id), onSuccess: invalidate }),
         bulk: useMutation({
             mutationFn: (v: { ids: number[]; op: 'writeoff'; reason?: string }) => assetApi.bulk(v.ids, v.op, v.reason),
+            onSuccess: invalidate,
+        }),
+        bulkTransfer: useMutation({
+            mutationFn: (v: {
+                ids: number[];
+                mode: 'employee' | 'shared';
+                owner_employee_id?: number;
+                owner_label?: string;
+                location_id: number;
+                reason?: string;
+            }) => assetApi.bulkTransfer(v),
+            onSuccess: invalidate,
+        }),
+        bulkRecall: useMutation({
+            mutationFn: (v: { ids: number[]; warehouse: string; reason?: string }) => assetApi.bulkRecall(v.ids, v.warehouse, v.reason),
+            onSuccess: invalidate,
+        }),
+        bulkReceive: useMutation({
+            mutationFn: (v: { ids: number[]; warehouse: string }) => assetApi.bulkReceive(v.ids, v.warehouse),
             onSuccess: invalidate,
         }),
     };

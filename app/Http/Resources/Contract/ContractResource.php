@@ -61,7 +61,7 @@ class ContractResource extends JsonResource
             // Assets linked to this contract (only attached when eager-loaded).
             'linked_assets' => $this->whenLoaded('assets', fn () => $this->assets->map(fn (Asset $a) => [
                 'id' => $a->id,
-                'tag' => $a->tag,
+                'asset_code' => $a->asset_code,
                 'name' => trim(($a->brand?->name ?? '').' '.($a->model?->name ?? '')) ?: $a->category?->name,
                 'type' => $a->type,
                 'serial' => $a->serial,

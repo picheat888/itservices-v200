@@ -74,16 +74,16 @@ class ContractApiTest extends TestCase
         $dell = Brand::create(['name' => 'Dell']);
         $r750 = AssetModel::create(['name' => 'PowerEdge R750', 'brand_id' => $dell->id]);
         Asset::create([
-            'tag' => 'INB-SV-01', 'type' => 'server', 'brand_id' => $dell->id, 'model_id' => $r750->id,
+            'asset_code' => 'INB-SV-01', 'type' => 'server', 'brand_id' => $dell->id, 'model_id' => $r750->id,
             'status' => 'deployed', 'owner' => 'Rack 2', 'contract_id' => $contract->id,
         ]);
         // An unlinked asset must NOT appear under this contract.
-        Asset::create(['tag' => 'INB-LT-01', 'type' => 'laptop', 'status' => 'ready']);
+        Asset::create(['asset_code' => 'INB-LT-01', 'type' => 'laptop', 'status' => 'ready']);
 
         $this->getJson('/api/contracts')
             ->assertOk()
             ->assertJsonCount(1, 'data.0.linked_assets')
-            ->assertJsonPath('data.0.linked_assets.0.tag', 'INB-SV-01')
+            ->assertJsonPath('data.0.linked_assets.0.asset_code', 'INB-SV-01')
             ->assertJsonPath('data.0.linked_assets.0.name', 'Dell PowerEdge R750')
             ->assertJsonPath('data.0.linked_assets.0.status', 'deployed');
     }
@@ -304,7 +304,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
-        Asset::create(['tag' => 'RNT-LT-01', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
+        Asset::create(['asset_code' => 'RNT-LT-01', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
 
         $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Ending lease'])
             ->assertStatus(422)
@@ -328,7 +328,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now(), 'end_date' => now()->addYear(), 'value' => 1, 'billing_cycle' => 'yearly']);
-        Asset::create(['tag' => 'RNT-LT-09', 'type' => 'laptop', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
+        Asset::create(['asset_code' => 'RNT-LT-09', 'type' => 'laptop', 'status' => 'deployed', 'source' => 'rented', 'contract_id' => $contract->id]);
 
         $this->deleteJson("/api/contracts/{$contract->id}")->assertStatus(422);
         $this->assertDatabaseHas('contracts', ['id' => $contract->id]);
@@ -365,7 +365,7 @@ class ContractApiTest extends TestCase
         $this->actingAs($this->super());
 
         $contract = Contract::create(['vendor' => 'Dell', 'name' => 'Leased laptops', 'type' => 'hardware', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
-        Asset::create(['tag' => 'RNT-LT-02', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'writeoff', 'source' => 'rented', 'contract_id' => $contract->id]);
+        Asset::create(['asset_code' => 'RNT-LT-02', 'type' => 'laptop', 'brand' => 'Dell', 'model' => 'Latitude', 'status' => 'writeoff', 'source' => 'rented', 'contract_id' => $contract->id]);
 
         $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Ending lease'])
             ->assertOk()
@@ -382,7 +382,7 @@ class ContractApiTest extends TestCase
         // contract type, so a non-hardware contract with a live linked asset is
         // blocked from cancellation too.
         $contract = Contract::create(['vendor' => 'X', 'name' => 'Service plan', 'type' => 'service', 'start_date' => now()->subYear(), 'end_date' => now()->addDays(90), 'value' => 1, 'billing_cycle' => 'yearly']);
-        $asset = Asset::create(['tag' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
+        $asset = Asset::create(['asset_code' => 'INB-SV-09', 'type' => 'server', 'brand' => 'Dell', 'model' => 'R750', 'status' => 'deployed', 'contract_id' => $contract->id]);
 
         $this->postJson("/api/contracts/{$contract->id}/cancel", ['reason' => 'Service ended'])
             ->assertStatus(422)

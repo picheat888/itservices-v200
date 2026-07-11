@@ -40,6 +40,6 @@ export function toastDeleteError(
     if (res?.status === 409) {
         useToastStore.getState().push(t(bodyKey).replace('{count}', String(res.data?.count ?? 0)), 'error', t(titleKey));
     } else {
-        useToastStore.getState().push(t('cd_error'), 'error');
+        useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
     }
 }

@@ -16,7 +16,7 @@ class Permissions
         return [
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
-            'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my'],
+            'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my', 'force_recall', 'cancel_writeoff'],
             'contracts' => [
                 'module',
                 'view_dashboard', 'view', 'view_lifecycle',

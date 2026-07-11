@@ -44,6 +44,7 @@ export function SearchableSelect({
     placeholder,
     clearable = false,
     active = false,
+    preferDown = false,
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -53,6 +54,9 @@ export function SearchableSelect({
     clearable?: boolean;
     /** Brand-tinted trigger — marks a filter field whose value differs from its default. */
     active?: boolean;
+    /** Measure drop direction against the viewport instead of the enclosing dialog, so a field
+     *  near a small dialog's footer opens DOWN (overflowing the dialog) rather than flipping up. */
+    preferDown?: boolean;
 }) {
     const t = useT();
     const [open, setOpen] = useState(false);
@@ -68,6 +72,12 @@ export function SearchableSelect({
     const [coords, setCoords] = useState<{ left: number; width: number; top?: number; bottom?: number }>({ left: 0, width: 0 });
     const ref = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Clear the query whenever the menu closes, so a stale, non-matching search from a
+    // previous session doesn't persist and hide every option the next time it's opened.
+    useEffect(() => {
+        if (!open) setQ('');
+    }, [open]);
 
     // Close when clicking outside both the trigger and the (possibly portaled) menu.
     useEffect(() => {
@@ -91,11 +101,14 @@ export function SearchableSelect({
         }
         const rect = el.getBoundingClientRect();
         const dlg = el.closest('[role="dialog"]') as HTMLElement | null;
-        // Decide drop direction against the dialog's box (not the viewport) when inside one,
-        // so a field near the dialog footer flips up instead of opening into / behind it.
         const c = dlg?.getBoundingClientRect();
-        const topLimit = c ? c.top : 0;
-        const bottomLimit = c ? c.bottom : window.innerHeight;
+        // Normally we decide drop direction against the dialog's box so a field near the footer
+        // flips up instead of opening behind it. With `preferDown` we measure against the viewport
+        // instead, so the menu opens DOWN and overflows the (small) dialog — the menu is still
+        // portaled INTO the dialog content, so it stays in Radix's dismissable layer.
+        const measureDlg = c && !preferDown ? c : null;
+        const topLimit = measureDlg ? measureDlg.top : 0;
+        const bottomLimit = measureDlg ? measureDlg.bottom : window.innerHeight;
         const spaceBelow = bottomLimit - rect.bottom;
         const spaceAbove = rect.top - topLimit;
         // Drop down by default; flip up only when the room below is too small AND there's more above.

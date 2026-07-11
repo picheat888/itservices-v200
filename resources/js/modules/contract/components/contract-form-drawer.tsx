@@ -256,7 +256,7 @@ export function ContractFormDrawer({
     const filteredAssets = useMemo(() => {
         const q = assetSearch.trim().toLowerCase();
         if (!q) return linkableAssets;
-        return linkableAssets.filter((a) => `${a.tag} ${a.name}`.toLowerCase().includes(q));
+        return linkableAssets.filter((a) => `${a.asset_code} ${a.name}`.toLowerCase().includes(q));
     }, [linkableAssets, assetSearch]);
     const toggleAsset = (id: number) =>
         setForm((f) => ({ ...f, asset_ids: f.asset_ids.includes(id) ? f.asset_ids.filter((x) => x !== id) : [...f.asset_ids, id] }));
@@ -845,7 +845,7 @@ export function ContractFormDrawer({
                                                                 >
                                                                     {checked && <Check className="h-3 w-3" />}
                                                                 </span>
-                                                                <span className="font-mono text-xs">{a.tag}</span>
+                                                                <span className="font-mono text-xs">{a.asset_code}</span>
                                                                 <span className="min-w-0 flex-1 truncate text-sm">{a.name}</span>
                                                                 <span className="text-muted-foreground shrink-0 text-[11px]">
                                                                     {a.status.replace(/_/g, ' ')}
