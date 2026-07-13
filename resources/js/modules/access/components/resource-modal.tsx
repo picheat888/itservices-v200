@@ -7,12 +7,12 @@ import { useAccessMutations } from '../hooks/use-access';
 import { useDepartments, useEmployees } from '@/modules/employee';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
-import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
+import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software, SoftwareLicenseType } from '@/shared/types';
 import { useEffect, useMemo, useState } from 'react';
 
-type AnyResource = EmailGroup | FileShare | SocialPlatform;
+type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
 
-// The full form state covers every field across the three kinds; only the
+// The full form state covers every field across the four kinds; only the
 // fields relevant to the active kind are rendered and submitted.
 type FormState = {
     name: string;
@@ -25,6 +25,11 @@ type FormState = {
     policy: string;
     owner_employee_id: string;
     department_id: string;
+    publisher: string;
+    version: string;
+    license_type: SoftwareLicenseType;
+    seats: string;
+    notes: string;
 };
 
 const empty: FormState = {
@@ -38,6 +43,11 @@ const empty: FormState = {
     policy: '',
     owner_employee_id: '',
     department_id: '',
+    publisher: '',
+    version: '',
+    license_type: 'subscription',
+    seats: '',
+    notes: '',
 };
 
 /** Hydrate the form from an existing row (edit) or reset to blank (create). */
@@ -50,6 +60,19 @@ function fromRow(kind: AccessKind, row: AnyResource | null): FormState {
     if (kind === 'file-shares') {
         const r = row as FileShare;
         return { ...empty, name: r.name, path: r.path, size_label: r.size_label ?? '', owner_employee_id: r.owner_employee_id ? String(r.owner_employee_id) : '', department_id: r.department_id ? String(r.department_id) : '' };
+    }
+    if (kind === 'software') {
+        const r = row as Software;
+        return {
+            ...empty,
+            name: r.name,
+            publisher: r.publisher ?? '',
+            version: r.version ?? '',
+            license_type: r.license_type,
+            seats: r.seats != null ? String(r.seats) : '',
+            notes: '',
+            department_id: r.department_id ? String(r.department_id) : '',
+        };
     }
     const r = row as SocialPlatform;
     return { ...empty, name: r.name, url: r.url ?? '', color: r.color ?? '', policy: r.policy ?? '' };
@@ -75,6 +98,17 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
             department_id: form.department_id ? Number(form.department_id) : null,
         };
     }
+    if (kind === 'software') {
+        return {
+            name: form.name.trim(),
+            publisher: form.publisher.trim() || null,
+            version: form.version.trim() || null,
+            license_type: form.license_type,
+            seats: form.seats.trim() === '' ? null : Number(form.seats),
+            department_id: form.department_id ? Number(form.department_id) : null,
+            notes: form.notes.trim() || null,
+        };
+    }
     return {
         name: form.name.trim(),
         url: form.url.trim() || null,
@@ -85,7 +119,8 @@ function toPayload(kind: AccessKind, form: FormState): Record<string, unknown> {
 
 /**
  * Create/edit dialog for an access resource. Renders different fields per kind
- * (email group / file share / social platform) and persists via useAccessMutations.
+ * (email group / file share / social platform / software) and persists via
+ * useAccessMutations.
  */
 export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kind: AccessKind; row: AnyResource | null; onClose: () => void }) {
     const t = useT();
@@ -130,6 +165,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         'email-groups': t('access_email_groups'),
         'file-shares': t('access_file_shares'),
         'social-platforms': t('access_social'),
+        'software': t('access_software'),
     };
 
     return (
@@ -198,6 +234,38 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                             </Field>
                             <Field label={t('access_policy')}>
                                 <Input value={form.policy} onChange={(e) => set('policy', e.target.value)} />
+                            </Field>
+                        </>
+                    )}
+
+                    {kind === 'software' && (
+                        <>
+                            <Field label={t('access_publisher')}>
+                                <Input value={form.publisher} onChange={(e) => set('publisher', e.target.value)} placeholder="Adobe" />
+                            </Field>
+                            <Field label={t('access_version')}>
+                                <Input value={form.version} onChange={(e) => set('version', e.target.value)} placeholder="2024" />
+                            </Field>
+                            <Field label={t('access_license_type')}>
+                                <select
+                                    value={form.license_type}
+                                    onChange={(e) => set('license_type', e.target.value as SoftwareLicenseType)}
+                                    className="border-input bg-background h-9 w-full rounded-md border px-3 text-sm"
+                                >
+                                    <option value="subscription">{t('access_lic_subscription')}</option>
+                                    <option value="perpetual">{t('access_lic_perpetual')}</option>
+                                    <option value="free">{t('access_lic_free')}</option>
+                                    <option value="open_source">{t('access_lic_open_source')}</option>
+                                </select>
+                            </Field>
+                            <Field label={t('access_seats')}>
+                                <Input type="number" min="0" value={form.seats} onChange={(e) => set('seats', e.target.value)} placeholder="10" />
+                            </Field>
+                            <Field label={t('access_department')}>
+                                <SearchableSelect value={form.department_id} onChange={(v) => set('department_id', v)} options={departmentOptions} clearable />
+                            </Field>
+                            <Field label={t('access_notes')}>
+                                <Input value={form.notes} onChange={(e) => set('notes', e.target.value)} />
                             </Field>
                         </>
                     )}
