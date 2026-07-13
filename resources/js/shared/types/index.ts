@@ -664,6 +664,23 @@ export interface SocialPlatform {
     members_count?: number;
 }
 
+export type SoftwareLicenseType = 'perpetual' | 'subscription' | 'free' | 'open_source';
+
+export interface Software {
+    id: number;
+    code: string;
+    name: string;
+    publisher?: string | null;
+    version?: string | null;
+    license_type: SoftwareLicenseType;
+    seats?: number | null;
+    seats_used?: number;
+    department_id: number | null;
+    department?: string | null;
+    members?: AccessMemberPreview[];
+    members_count?: number;
+}
+
 /** Lightweight member preview returned inline on the index endpoints. */
 export interface AccessMemberPreview {
     id: number;
@@ -699,7 +716,8 @@ export interface EmployeeAccess {
     email_groups: EmployeeAccessRow[];
     file_shares: EmployeeAccessRow[];
     social: EmployeeAccessRow[];
+    software: EmployeeAccessRow[];
     outstanding: boolean;
 }
 
-export type AccessKind = 'email-groups' | 'file-shares' | 'social-platforms';
+export type AccessKind = 'email-groups' | 'file-shares' | 'social-platforms' | 'software';
