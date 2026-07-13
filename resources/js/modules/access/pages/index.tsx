@@ -138,7 +138,7 @@ export default function AccessControlPage() {
     const openSocial = (p: SocialPlatform) =>
         setMembers({ kind: 'social-platforms', id: p.id, name: p.name, detail: p.url, color: p.color, metaLabel: t('access_policy'), metaValue: p.policy });
     const openSoftware = (s: Software) =>
-        setMembers({ kind: 'software', id: s.id, name: s.name, detail: s.publisher, metaLabel: t('access_license_type'), metaValue: s.license_type });
+        setMembers({ kind: 'software', id: s.id, name: s.name, detail: s.publisher, metaLabel: t('access_license_type'), metaValue: t(`access_lic_${s.license_type}`) });
 
     return (
         <div className="space-y-5">

@@ -70,7 +70,7 @@ function fromRow(kind: AccessKind, row: AnyResource | null): FormState {
             version: r.version ?? '',
             license_type: r.license_type,
             seats: r.seats != null ? String(r.seats) : '',
-            notes: '',
+            notes: r.notes ?? '',
             department_id: r.department_id ? String(r.department_id) : '',
         };
     }

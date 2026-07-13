@@ -26,6 +26,7 @@ class SoftwareResource extends JsonResource
             'seats_used' => $seatsUsed,
             'department_id' => $this->department_id,
             'department' => $this->department?->name,
+            'notes' => $this->notes,
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,

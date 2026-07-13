@@ -104,6 +104,31 @@ class AccessSoftwareTest extends TestCase
         $this->getJson('/api/software')->assertOk()->assertJsonPath('data.0.seats_used', 0);
     }
 
+    public function test_notes_are_returned_and_preserved_across_an_update(): void
+    {
+        $this->actingAs($this->super());
+
+        $created = $this->postJson('/api/software', [
+            'name' => 'Notion',
+            'license_type' => 'subscription',
+            'seats' => 5,
+            'notes' => 'keep me',
+        ])->assertCreated()->json('data');
+
+        // Notes must round-trip on the list endpoint (not silently dropped by the resource).
+        $this->getJson('/api/software')->assertOk()->assertJsonPath('data.0.notes', 'keep me');
+
+        // Updating another field while resending the same notes must not wipe them out.
+        $this->putJson("/api/software/{$created['id']}", [
+            'name' => 'Notion',
+            'license_type' => 'subscription',
+            'seats' => 8,
+            'notes' => 'keep me',
+        ])->assertOk()
+            ->assertJsonPath('data.seats', 8)
+            ->assertJsonPath('data.notes', 'keep me');
+    }
+
     public function test_employee_access_endpoint_includes_software(): void
     {
         $this->actingAs($this->super());
