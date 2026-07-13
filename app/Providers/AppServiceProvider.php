@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
+use App\Models\Access\Software;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -39,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
             'email_group' => EmailGroup::class,
             'file_share' => FileShare::class,
             'social_platform' => SocialPlatform::class,
+            'software' => Software::class,
             User::class => User::class,
         ]);
     }
