@@ -15,7 +15,8 @@ class AccessController extends Controller
     {
         $grouped = $svc->employeeAccess($employee);
         $grouped['outstanding'] = $employee->status?->value === 'resigned'
-            && ($grouped['email_group']->isNotEmpty() || $grouped['file_share']->isNotEmpty() || $grouped['social_platform']->isNotEmpty());
+            && ($grouped['email_group']->isNotEmpty() || $grouped['file_share']->isNotEmpty()
+                || $grouped['social_platform']->isNotEmpty() || $grouped['software']->isNotEmpty());
 
         return (new EmployeeAccessResource($grouped))->response();
     }

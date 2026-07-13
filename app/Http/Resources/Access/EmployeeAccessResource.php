@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Expects ['email_group'=>Collection,'file_share'=>Collection,'social_platform'=>Collection,'outstanding'=>bool].
+ * Expects ['email_group'=>Collection,'file_share'=>Collection,'social_platform'=>Collection,'software'=>Collection,'outstanding'=>bool].
  */
 class EmployeeAccessResource extends JsonResource
 {
@@ -17,7 +17,7 @@ class EmployeeAccessResource extends JsonResource
             'resource_id' => $m->resource_id,
             'resource_name' => $m->resource?->name,
             'resource_code' => $m->resource?->code,
-            'resource_detail' => $m->resource?->email ?? $m->resource?->path ?? $m->resource?->url,
+            'resource_detail' => $m->resource?->email ?? $m->resource?->path ?? $m->resource?->url ?? $m->resource?->publisher,
             'resource_color' => $m->resource?->color,
             'access_level' => $m->access_level,
             'purpose' => $m->purpose,
@@ -28,6 +28,7 @@ class EmployeeAccessResource extends JsonResource
             'email_groups' => $map($this->resource['email_group']),
             'file_shares' => $map($this->resource['file_share']),
             'social' => $map($this->resource['social_platform']),
+            'software' => $map($this->resource['software']),
             'outstanding' => (bool) ($this->resource['outstanding'] ?? false),
         ];
     }

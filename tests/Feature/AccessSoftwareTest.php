@@ -103,4 +103,17 @@ class AccessSoftwareTest extends TestCase
         $this->postJson("/api/software/{$sw->id}/members/{$res}/revoke")->assertOk();
         $this->getJson('/api/software')->assertOk()->assertJsonPath('data.0.seats_used', 0);
     }
+
+    public function test_employee_access_endpoint_includes_software(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Jira', 'license_type' => 'subscription']);
+        $e = Employee::create(['code' => 'EMP-SW9', 'first_name' => 'D', 'last_name' => 'Four']);
+        $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e->id])->assertCreated();
+
+        $this->getJson("/api/employees/{$e->id}/access")
+            ->assertOk()
+            ->assertJsonPath('data.software.0.resource_name', 'Jira')
+            ->assertJsonPath('data.software.0.resource_code', fn ($c) => is_string($c) && str_starts_with($c, 'SW-'));
+    }
 }
