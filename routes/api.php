@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Access\AccessController;
 use App\Http\Controllers\Api\Access\EmailGroupController;
 use App\Http\Controllers\Api\Access\FileShareController;
 use App\Http\Controllers\Api\Access\SocialPlatformController;
+use App\Http\Controllers\Api\Access\SoftwareController;
 use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Contract\ContractAttachmentController;
@@ -204,6 +205,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         Route::get('email-groups/{emailGroup}/members', [EmailGroupController::class, 'members']);
         Route::get('file-shares/{fileShare}/members', [FileShareController::class, 'members']);
         Route::get('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'members']);
+        Route::get('software', [SoftwareController::class, 'index']);
+        Route::get('software/{software}/members', [SoftwareController::class, 'members']);
         Route::get('employees/{employee}/access', [AccessController::class, 'employee']);
     });
     Route::middleware('permission:access.manage')->group(function () {
@@ -216,5 +219,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember']);
         Route::post('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'addMember']);
         Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember']);
+        Route::apiResource('software', SoftwareController::class)->except(['index', 'show']);
+        Route::post('software/{software}/members', [SoftwareController::class, 'addMember']);
+        Route::post('software/{software}/members/{membership}/revoke', [SoftwareController::class, 'revokeMember']);
     });
 });
