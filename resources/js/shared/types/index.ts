@@ -677,6 +677,7 @@ export interface Software {
     seats_used?: number;
     department_id: number | null;
     department?: string | null;
+    notes?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
 }
