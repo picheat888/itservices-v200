@@ -5,7 +5,7 @@ import type { AccessKind } from '@/shared/types';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { Folder, Globe, Plus, Trash2, Users } from 'lucide-react';
+import { Folder, Globe, Package, Plus, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAccessMutations, useResourceMembers } from '../hooks/use-access';
 import { AccessBadge } from './access-badge';
@@ -26,11 +26,12 @@ export type MemberTarget = {
     color?: string | null;
 };
 
-// Access levels offered per kind; social platforms grant no level (free-text purpose instead).
+// Access levels offered per kind; social platforms & software grant no level (free-text purpose instead).
 const LEVELS: Record<AccessKind, string[]> = {
     'email-groups': ['Owner', 'Member'],
     'file-shares': ['Full', 'Write', 'Read'],
     'social-platforms': [],
+    software: [],
 };
 
 // Per-kind icon tile accent (matches the registry tables / design tokens).
@@ -38,6 +39,7 @@ const KIND_META: Record<AccessKind, { icon: typeof Users; color: string }> = {
     'email-groups': { icon: Users, color: '#7c3aed' },
     'file-shares': { icon: Folder, color: '#0d9488' },
     'social-platforms': { icon: Globe, color: '#6366f1' },
+    software: { icon: Package, color: '#f59e0b' },
 };
 
 /** First two initials of a name, for avatar fallbacks. */

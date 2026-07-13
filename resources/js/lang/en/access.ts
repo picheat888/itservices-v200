@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const access: Dict = {
-    "access_title": "Access Control",
+    "access_title": "Access Directory",
     "access_email_groups": "Email groups",
     "access_file_shares": "File shares",
     "access_social": "Social / internet",
@@ -22,7 +22,7 @@ export const access: Dict = {
     "access_size": "Size",
     "access_description": "Description",
     "access_name": "Name",
-    "access_sub": "Manage email groups, file shares, and social access",
+    "access_sub": "Manage email groups, file shares, social access and software licences",
     "access_manage_members": "Manage members",
     "access_check_members": "Check members",
     "access_created": "Created",
@@ -45,4 +45,16 @@ export const access: Dict = {
     "noaccess_title": "No access",
     "noaccess_desc": "You don't have permission to view this section. Contact an administrator if you think this is a mistake.",
     "noaccess_back": "Back to dashboard",
+    "access_software": "Software",
+    "access_new_software": "New Software",
+    "access_search_software": "Search software…",
+    "access_publisher": "Publisher",
+    "access_version": "Version",
+    "access_license_type": "License",
+    "access_seats": "Seats",
+    "access_notes": "Notes",
+    "access_lic_perpetual": "Perpetual",
+    "access_lic_subscription": "Subscription",
+    "access_lic_free": "Free",
+    "access_lic_open_source": "Open source",
 };

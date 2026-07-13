@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const access: Dict = {
-    "access_title": "การเข้าถึง",
+    "access_title": "ทะเบียนการเข้าถึง",
     "access_email_groups": "กลุ่มอีเมล",
     "access_file_shares": "ไฟล์แชร์",
     "access_social": "โซเชียล/อินเทอร์เน็ต",
@@ -22,7 +22,7 @@ export const access: Dict = {
     "access_size": "ขนาด",
     "access_description": "คำอธิบาย",
     "access_name": "ชื่อ",
-    "access_sub": "จัดการกลุ่มอีเมล ไฟล์แชร์ และการเข้าถึงโซเชียล",
+    "access_sub": "จัดการกลุ่มอีเมล การแชร์ไฟล์ การเข้าถึงโซเชียล และ license ซอฟต์แวร์",
     "access_manage_members": "จัดการสมาชิก",
     "access_check_members": "ดูสมาชิก",
     "access_created": "สร้างเมื่อ",
@@ -45,4 +45,16 @@ export const access: Dict = {
     "noaccess_title": "ไม่มีสิทธิ์เข้าถึง",
     "noaccess_desc": "คุณไม่มีสิทธิ์เข้าถึงส่วนนี้ หากคิดว่าเป็นข้อผิดพลาดโปรดติดต่อผู้ดูแลระบบ",
     "noaccess_back": "กลับหน้า Dashboard",
+    "access_software": "ซอฟต์แวร์",
+    "access_new_software": "เพิ่มซอฟต์แวร์",
+    "access_search_software": "ค้นหาซอฟต์แวร์…",
+    "access_publisher": "ผู้ผลิต",
+    "access_version": "เวอร์ชัน",
+    "access_license_type": "ประเภท License",
+    "access_seats": "จำนวน License",
+    "access_notes": "หมายเหตุ",
+    "access_lic_perpetual": "ซื้อขาด",
+    "access_lic_subscription": "รายเดือน/รายปี",
+    "access_lic_free": "ฟรี",
+    "access_lic_open_source": "โอเพนซอร์ส",
 };

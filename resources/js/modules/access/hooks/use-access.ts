@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 export const useEmailGroups = () => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups });
 export const useFileShares = () => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares });
 export const useSocialPlatforms = () => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms });
+export const useSoftware = () => useQuery({ queryKey: ['software'], queryFn: accessApi.software });
 
 export const useResourceMembers = (kind: AccessKind, id: number | null) =>
     useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null });
