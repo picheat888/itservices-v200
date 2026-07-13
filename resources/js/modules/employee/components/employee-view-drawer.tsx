@@ -27,6 +27,7 @@ import {
     Laptop,
     LayoutDashboard,
     Mail,
+    Package,
     Phone,
     RefreshCw,
     Shield,
@@ -108,6 +109,7 @@ export function EmployeeViewDrawer({
     const emailGroupMut = useAccessMutations('email-groups');
     const fileShareMut = useAccessMutations('file-shares');
     const socialMut = useAccessMutations('social-platforms');
+    const softwareMut = useAccessMutations('software');
 
     const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
@@ -178,15 +180,26 @@ export function EmployeeViewDrawer({
             label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'),
             icon: <Globe className="h-3.5 w-3.5" />,
         },
+        {
+            key: 'software' as const,
+            kind: 'software' as AccessKind,
+            mut: softwareMut,
+            label: t('access_software'),
+            icon: <Package className="h-3.5 w-3.5" />,
+        },
     ];
-    const mutByKey = { email_groups: emailGroupMut, file_shares: fileShareMut, social: socialMut } as const;
-    const revoking = emailGroupMut.revokeMember.isPending || fileShareMut.revokeMember.isPending || socialMut.revokeMember.isPending;
+    const mutByKey = { email_groups: emailGroupMut, file_shares: fileShareMut, social: socialMut, software: softwareMut } as const;
+    const revoking =
+        emailGroupMut.revokeMember.isPending ||
+        fileShareMut.revokeMember.isPending ||
+        socialMut.revokeMember.isPending ||
+        softwareMut.revokeMember.isPending;
 
     // Revoke one membership through the mutation matching its group.
     const revokeRow = (groupKey: keyof typeof mutByKey, row: EmployeeAccessRow) =>
         mutByKey[groupKey].revokeMember.mutateAsync({ id: row.resource_id, membershipId: row.id });
 
-    // Revoke every listed active membership across all three groups.
+    // Revoke every listed active membership across all four groups.
     const revokeAll = async () => {
         if (!access) return;
         for (const grp of accessGroups) {
@@ -445,7 +458,12 @@ export function EmployeeViewDrawer({
                                               id: 'access' as const,
                                               label: L('สิทธิ์เข้าถึง', 'Access'),
                                               icon: <Shield className="h-[15px] w-[15px]" />,
-                                              count: access ? access.email_groups.length + access.file_shares.length + access.social.length : 0,
+                                              count: access
+                                                  ? access.email_groups.length +
+                                                    access.file_shares.length +
+                                                    access.social.length +
+                                                    access.software.length
+                                                  : 0,
                                               soon: false,
                                           },
                                       ]
@@ -571,11 +589,13 @@ export function EmployeeViewDrawer({
                                             </div>
                                         );
                                     })}
-                                    {access && access.email_groups.length + access.file_shares.length + access.social.length === 0 && (
-                                        <div className="text-muted-foreground py-12 text-center text-sm">
-                                            {L('ไม่มีสิทธิ์เข้าถึง', 'No access permissions')}
-                                        </div>
-                                    )}
+                                    {access &&
+                                        access.email_groups.length + access.file_shares.length + access.social.length + access.software.length ===
+                                            0 && (
+                                            <div className="text-muted-foreground py-12 text-center text-sm">
+                                                {L('ไม่มีสิทธิ์เข้าถึง', 'No access permissions')}
+                                            </div>
+                                        )}
                                 </div>
                             )}
                             {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} L={L} />}
