@@ -6,11 +6,11 @@ import { TableSkeleton } from '@/shared/components/skeletons';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { useEmailGroups, useFileShares, useSocialPlatforms } from '../hooks/use-access';
+import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
 import { useAuth } from '@/modules/auth';
 import { useT } from '@/lang';
-import type { AccessKind, EmailGroup, FileShare, SocialPlatform } from '@/shared/types';
-import { Eye, Folder, Globe, Layers, Plus, Search, Users } from 'lucide-react';
+import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
+import { Eye, Folder, Globe, Layers, Package, Plus, Search, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 type Tab = AccessKind;
@@ -74,9 +74,10 @@ const tdClass = 'border-border border-b px-4 py-3 align-middle';
 
 /**
  * Access Control page. A header (title + context-aware "+ New …"), a KPI row
- * (group/share/social counts + total grants), and a single card with a tab row
- * that switches between the email-group / file-share registries (styled tables)
- * and the social platform card grid. Rows open the member manager drawer.
+ * (group/share/social/software counts + total grants), and a single card with
+ * a tab row that switches between the email-group / file-share / software
+ * registries (styled tables) and the social platform card grid. Rows open the
+ * member manager drawer.
  */
 export default function AccessControlPage() {
     const t = useT();
@@ -90,26 +91,30 @@ export default function AccessControlPage() {
     const emailGroups = useEmailGroups();
     const fileShares = useFileShares();
     const social = useSocialPlatforms();
+    const software = useSoftware();
 
     const egRows = useMemo(() => emailGroups.data ?? [], [emailGroups.data]);
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
+    const swRows = useMemo(() => software.data ?? [], [software.data]);
 
     const totalGrants = useMemo(
-        () => [...egRows, ...fsRows, ...spRows].reduce((sum, r) => sum + (r.members_count ?? 0), 0),
-        [egRows, fsRows, spRows],
+        () => [...egRows, ...fsRows, ...spRows, ...swRows].reduce((sum, r) => sum + (r.members_count ?? 0), 0),
+        [egRows, fsRows, spRows, swRows],
     );
 
     const tabs: { id: Tab; label: string; count: number }[] = [
         { id: 'email-groups', label: t('access_email_groups'), count: egRows.length },
         { id: 'file-shares', label: t('access_file_shares'), count: fsRows.length },
         { id: 'social-platforms', label: t('access_social'), count: spRows.length },
+        { id: 'software', label: t('access_software'), count: swRows.length },
     ];
 
     const newLabel: Record<Tab, string> = {
         'email-groups': t('access_new_group'),
         'file-shares': t('access_new_share'),
         'social-platforms': t('access_new_platform'),
+        'software': t('access_new_software'),
     };
 
     // Filter the active tab's rows by the search box.
@@ -121,6 +126,10 @@ export default function AccessControlPage() {
         const q = search.trim().toLowerCase();
         return q ? fsRows.filter((s) => `${s.name} ${s.path} ${s.department ?? ''}`.toLowerCase().includes(q)) : fsRows;
     }, [fsRows, search]);
+    const filteredSw = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return q ? swRows.filter((s) => `${s.name} ${s.publisher ?? ''} ${s.department ?? ''}`.toLowerCase().includes(q)) : swRows;
+    }, [swRows, search]);
 
     const openEmailGroup = (g: EmailGroup) =>
         setMembers({ kind: 'email-groups', id: g.id, name: g.name, detail: g.email, owner: g.owner, metaLabel: t('access_department'), metaValue: g.department });
@@ -128,6 +137,8 @@ export default function AccessControlPage() {
         setMembers({ kind: 'file-shares', id: s.id, name: s.name, detail: s.path, owner: s.owner, metaLabel: t('access_size'), metaValue: s.size_label });
     const openSocial = (p: SocialPlatform) =>
         setMembers({ kind: 'social-platforms', id: p.id, name: p.name, detail: p.url, color: p.color, metaLabel: t('access_policy'), metaValue: p.policy });
+    const openSoftware = (s: Software) =>
+        setMembers({ kind: 'software', id: s.id, name: s.name, detail: s.publisher, metaLabel: t('access_license_type'), metaValue: s.license_type });
 
     return (
         <div className="space-y-5">
@@ -145,10 +156,11 @@ export default function AccessControlPage() {
             </div>
 
             {/* KPI row */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
                 <StatCard label={t('access_email_groups')} value={egRows.length} icon={Users} />
                 <StatCard label={t('access_file_shares')} value={fsRows.length} icon={Folder} />
                 <StatCard label={t('access_social')} value={spRows.length} icon={Globe} />
+                <StatCard label={t('access_software')} value={swRows.length} icon={Package} />
                 <StatCard label={t('access_total_grants')} value={totalGrants} icon={Layers} />
             </div>
 
@@ -179,12 +191,13 @@ export default function AccessControlPage() {
                             <input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder={tab === 'email-groups' ? t('access_search_groups') : t('access_search_shares')}
+                                placeholder={tab === 'email-groups' ? t('access_search_groups') : tab === 'file-shares' ? t('access_search_shares') : t('access_search_software')}
                                 className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
                             />
                         </div>
                         <div className="text-muted-foreground ml-auto font-mono text-xs">
-                            {(tab === 'email-groups' ? filteredEg.length : filteredFs.length)} {t('access_of')} {tab === 'email-groups' ? egRows.length : fsRows.length}
+                            {(tab === 'email-groups' ? filteredEg.length : tab === 'file-shares' ? filteredFs.length : filteredSw.length)} {t('access_of')}{' '}
+                            {tab === 'email-groups' ? egRows.length : tab === 'file-shares' ? fsRows.length : swRows.length}
                         </div>
                     </div>
                 )}
@@ -285,6 +298,63 @@ export default function AccessControlPage() {
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             openFileShare(s);
+                                                        }}
+                                                    >
+                                                        <Users className="h-3.5 w-3.5" /> {t('access_manage_members')}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ))}
+
+                {/* Software table */}
+                {tab === 'software' &&
+                    (software.isLoading ? (
+                        <div className="p-4">
+                            <TableSkeleton />
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr>
+                                        <th className={thClass}>{t('access_name')}</th>
+                                        <th className={thClass}>{t('access_publisher')}</th>
+                                        <th className={thClass}>{t('access_license_type')}</th>
+                                        <th className={thClass}>{t('access_seats')}</th>
+                                        <th className={thClass}>{t('access_members')}</th>
+                                        <th className={`${thClass} text-right`}>{t('actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredSw.map((s) => {
+                                        const used = s.seats_used ?? s.members?.length ?? 0;
+                                        const over = s.seats != null && used > s.seats;
+                                        return (
+                                            <tr key={s.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => openSoftware(s)}>
+                                                <td className={tdClass}>
+                                                    <NameCell icon={Package} color="#f59e0b" name={s.name} sub={s.version} />
+                                                </td>
+                                                <td className={tdClass}>{s.publisher ?? '—'}</td>
+                                                <td className={tdClass}>{t(`access_lic_${s.license_type}`)}</td>
+                                                <td className={`${tdClass} font-mono text-[12.5px] ${over ? 'text-destructive font-semibold' : ''}`}>
+                                                    {used}
+                                                    {s.seats != null ? `/${s.seats}` : ''}
+                                                </td>
+                                                <td className={tdClass}>
+                                                    <AvatarStack members={s.members ?? []} />
+                                                </td>
+                                                <td className={`${tdClass} text-right`}>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openSoftware(s);
                                                         }}
                                                     >
                                                         <Users className="h-3.5 w-3.5" /> {t('access_manage_members')}
