@@ -45,7 +45,7 @@ class AccessService
     /**
      * Active memberships for an employee grouped by resource type, eager-loaded.
      *
-     * @return array{email_group: Collection, file_share: Collection, social_platform: Collection}
+     * @return array{email_group: Collection, file_share: Collection, social_platform: Collection, software: Collection}
      */
     public function employeeAccess(Employee $employee): array
     {
@@ -58,6 +58,7 @@ class AccessService
             'email_group' => $all->where('resource_type', 'email_group')->values(),
             'file_share' => $all->where('resource_type', 'file_share')->values(),
             'social_platform' => $all->where('resource_type', 'social_platform')->values(),
+            'software' => $all->where('resource_type', 'software')->values(),
         ];
     }
 }
