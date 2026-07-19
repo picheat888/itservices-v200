@@ -207,6 +207,45 @@ class ContractApiTest extends TestCase
         $this->assertSame($other->id, $owned->fresh()->contract_id);
     }
 
+    public function test_only_hardware_contracts_may_link_assets(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create();
+
+        $base = [
+            'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'total_value' => 1000, 'billing_cycle' => 'yearly',
+        ];
+
+        // A software contract carrying asset_ids is rejected.
+        $this->postJson('/api/contracts', [...$base, 'code' => 'CT-SW-1', 'type' => 'software', 'asset_ids' => [$asset->id]])
+            ->assertStatus(422)->assertJsonValidationErrors('asset_ids');
+
+        // An empty asset_ids on a non-hardware contract is fine (nothing to link).
+        $this->postJson('/api/contracts', [...$base, 'code' => 'CT-SW-2', 'type' => 'software', 'asset_ids' => []])
+            ->assertStatus(201);
+        $this->assertNull($asset->fresh()->contract_id);
+    }
+
+    public function test_switching_a_hardware_contract_to_another_type_detaches_its_assets(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create();
+
+        $base = [
+            'code' => 'CT-HW-1', 'vendor_id' => $this->vendorId('V'), 'name' => 'N', 'details' => 'T',
+            'start_date' => '2026-01-01', 'end_date' => '2027-01-01', 'value' => 1000, 'total_value' => 1000, 'billing_cycle' => 'yearly',
+        ];
+
+        $id = $this->postJson('/api/contracts', [...$base, 'type' => 'hardware', 'asset_ids' => [$asset->id]])
+            ->assertStatus(201)->json('data.id');
+        $this->assertSame($id, $asset->fresh()->contract_id);
+
+        // Changing the type away from hardware force-detaches every linked asset.
+        $this->putJson("/api/contracts/{$id}", [...$base, 'type' => 'service', 'asset_ids' => []])->assertOk();
+        $this->assertNull($asset->fresh()->contract_id);
+    }
+
     public function test_contract_code_is_required(): void
     {
         $this->actingAs($this->super());

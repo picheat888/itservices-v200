@@ -12,7 +12,8 @@ import { useContractMutations } from '../hooks/use-contracts';
 import { ContractAssetsTab } from './contract-assets-tab';
 import { ContractAttachmentsTab } from './contract-attachments-tab';
 import { ContractCancelDialog } from './contract-cancel-dialog';
-import { ContractDialogHeader } from './contract-dialog-header';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { SectionLabel } from '@/shared/components/section-label';
 
 /** Icon per contract type — mirrors the icons used by the Edit wizard's type cards. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -31,16 +32,6 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
         <div className="space-y-0.5">
             <div className="text-muted-foreground text-xs">{label}</div>
             <div className={mono ? 'font-mono text-sm' : 'text-sm'}>{value}</div>
-        </div>
-    );
-}
-
-/** Small uppercase section heading with a short brand accent underline. */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="mb-3">
-            <div className="flex items-center gap-2 text-xs font-bold tracking-wide text-[#2f2f2f] uppercase dark:text-foreground">{children}</div>
-            <div className="bg-brand/70 mt-1.5 h-0.5 w-8 rounded-full" />
         </div>
     );
 }
@@ -221,7 +212,7 @@ export function ContractDetailDrawer({
         <>
             <Dialog open={!!contract} onOpenChange={(o) => !o && onClose()}>
                 <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
-                    <ContractDialogHeader
+                    <FocusDialogHeader
                         icon={TypeIcon}
                         eyebrow={lang === 'th' ? 'สัญญา' : 'Contract'}
                         title={c.name || c.details || ''}
