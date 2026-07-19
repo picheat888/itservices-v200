@@ -232,7 +232,7 @@ export default function EmailTemplatesPage() {
             const res = await settingsApi.testMail();
             useToastStore
                 .getState()
-                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error', res.sent ? undefined : t('email_test_failed_title'));
+                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'success' : 'error', res.sent ? undefined : t('email_test_failed_title'));
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
             useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));

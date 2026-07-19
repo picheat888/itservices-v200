@@ -890,7 +890,7 @@ function EmailTab() {
         onSuccess: (res) => {
             useToastStore
                 .getState()
-                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'info' : 'error', res.sent ? undefined : t('email_test_failed_title'));
+                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'success' : 'error', res.sent ? undefined : t('email_test_failed_title'));
         },
         onError: (e: unknown) => {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
