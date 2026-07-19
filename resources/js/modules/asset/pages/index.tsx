@@ -24,6 +24,8 @@ import {
     Clock,
     Download,
     Filter,
+    FlaskConicalOff,
+    Lock,
     PackageCheck,
     Plus,
     RefreshCcw,
@@ -31,7 +33,6 @@ import {
     Share2,
     SquarePen,
     Tag,
-    Trash2,
     Undo2,
     Warehouse,
     X,
@@ -98,6 +99,8 @@ export default function AssetsPage() {
     const canRetire = isSuper || perms.includes('assets.retire');
     const canForceRecall = isSuper || perms.includes('assets.force_recall');
     const canCancelWriteoff = isSuper || perms.includes('assets.cancel_writeoff');
+    const canDelete = isSuper || perms.includes('assets.delete');
+    const canViewDashboard = isSuper || perms.includes('assets.view_dashboard');
     // Accepting a hand-over is the recipient's action only — matched by their employee code.
     const myEmpCode = user?.employee_code ?? null;
 
@@ -121,6 +124,13 @@ export default function AssetsPage() {
         },
         [setSearchParams],
     );
+
+    // The Dashboard tab is gated by assets.view_dashboard — bounce a role without it to Inventory.
+    useEffect(() => {
+        if (tab === 'dashboard' && !canViewDashboard) {
+            changeTab('inventory');
+        }
+    }, [tab, canViewDashboard, changeTab]);
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
@@ -240,6 +250,12 @@ export default function AssetsPage() {
 
     // A row is tickable only if it starts (or matches) the active status group.
     const rowSelectable = (a: Asset) => (selectionStatus ? a.status === selectionStatus : bulkActionFor(a.status) != null);
+    // A status that can never take part in any bulk action (e.g. written-off) shows no checkbox at all.
+    const rowActionable = (a: Asset) => bulkActionFor(a.status) != null;
+    // A group is locked and this row could normally be bulk-actioned, but its status differs from the
+    // locked group — so it is temporarily off-limits. These rows get a lock icon + dimmed treatment
+    // (as opposed to write-off rows, which are never selectable and show nothing).
+    const rowLockedOut = (a: Asset) => selectionStatus != null && rowActionable(a) && a.status !== selectionStatus;
 
     const toggleRow = (a: Asset, on: boolean) => {
         setSelectedIds((prev) => (on ? [...new Set([...prev, a.id])] : prev.filter((x) => x !== a.id)));
@@ -373,7 +389,9 @@ export default function AssetsPage() {
 
             <Card className="overflow-hidden">
                 <div className="border-border flex gap-1 border-b px-2">
-                    {(['dashboard', 'inventory', 'transfers'] as Tab[]).map((tb) => (
+                    {(['dashboard', 'inventory', 'transfers'] as Tab[])
+                        .filter((tb) => tb !== 'dashboard' || canViewDashboard)
+                        .map((tb) => (
                         <button
                             key={tb}
                             onClick={() => changeTab(tb)}
@@ -612,6 +630,14 @@ export default function AssetsPage() {
                                         ? `${t('asset_selected')} ${selectedIds.length} ${lang === 'th' ? 'รายการ' : ''}`
                                         : `${selectedIds.length} ${t('asset_selected')}`}
                                 </span>
+                                {/* Which status group the selection is locked to — explains why other rows can't be ticked. */}
+                                {selectionStatus && (
+                                    <span className="border-border bg-background inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
+                                        <AssetStatusDot status={selectionStatus} />
+                                        <span className="text-muted-foreground">{t('asset_selection_only')}</span>
+                                        <span className="text-foreground font-medium">{t(ASSET_STATUS_META[selectionStatus].key)}</span>
+                                    </span>
+                                )}
                                 <button className="text-muted-foreground text-xs hover:underline" onClick={clearSelection}>
                                     {t('asset_clear')}
                                 </button>
@@ -638,7 +664,7 @@ export default function AssetsPage() {
                                     </Button>
                                 )}
                                 {selectionStatus === 'deployed' && canForceRecall && (
-                                    <Button size="sm" className="bg-amber-500 text-white hover:bg-amber-600" onClick={() => setBulkDialog('recall')}>
+                                    <Button size="sm" variant="destructive" onClick={() => setBulkDialog('recall')}>
                                         <RefreshCcw className="h-4 w-4" />
                                         {t('asset_force_recall')}
                                     </Button>
@@ -653,7 +679,7 @@ export default function AssetsPage() {
                                     recalled / returned to Ready first. */}
                                 {canRetire && selectionStatus === 'ready' && (
                                     <Button size="sm" variant="destructive" onClick={() => runBulk('writeoff')} disabled={bulk.isPending}>
-                                        <Trash2 className="h-4 w-4" />
+                                        <FlaskConicalOff className="h-4 w-4" />
                                         {t('asset_writeoff')}
                                     </Button>
                                 )}
@@ -715,24 +741,37 @@ export default function AssetsPage() {
                                                     key={a.id}
                                                     onClick={() => setDetail(a)}
                                                     className={cn(
-                                                        'border-border/60 cursor-pointer border-b last:border-0',
+                                                        'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
                                                         selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
+                                                        rowLockedOut(a) && 'opacity-55',
                                                     )}
                                                 >
                                                     <td
-                                                        className={cn('px-2 py-2.5', rowSelectable(a) ? 'cursor-pointer' : 'cursor-not-allowed')}
+                                                        className={cn(
+                                                            'px-2 py-2.5',
+                                                            rowSelectable(a) ? 'cursor-pointer' : rowActionable(a) ? 'cursor-not-allowed' : '',
+                                                        )}
+                                                        title={rowLockedOut(a) ? t('asset_locked_hint') : undefined}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             if (rowSelectable(a)) toggleRow(a, !selectedIds.includes(a.id));
                                                         }}
                                                     >
                                                         <div className="flex items-center justify-center px-2 py-1.5">
-                                                            <Checkbox
-                                                                checked={selectedIds.includes(a.id)}
-                                                                disabled={!rowSelectable(a)}
-                                                                onCheckedChange={(v) => toggleRow(a, v === true)}
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            />
+                                                            {rowLockedOut(a) ? (
+                                                                // Locked out by the active status group — a lock reads far clearer than a faint checkbox.
+                                                                <Lock className="text-muted-foreground/60 size-4" aria-hidden />
+                                                            ) : rowActionable(a) ? (
+                                                                <Checkbox
+                                                                    checked={selectedIds.includes(a.id)}
+                                                                    disabled={!rowSelectable(a)}
+                                                                    onCheckedChange={(v) => toggleRow(a, v === true)}
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                />
+                                                            ) : (
+                                                                // Written-off (or other non-bulk-actionable) rows: no checkbox, keep the column width.
+                                                                <span className="block size-5" aria-hidden />
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2.5">
@@ -1000,6 +1039,7 @@ export default function AssetsPage() {
                 canReceive={canReceive}
                 canForceRecall={canForceRecall}
                 canCancelWriteoff={canCancelWriteoff}
+                canDelete={canDelete}
             />
             <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />

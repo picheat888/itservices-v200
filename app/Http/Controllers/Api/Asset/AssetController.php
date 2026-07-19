@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Asset;
 
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Contract\ContractType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Asset\StoreAssetRequest;
 use App\Http\Resources\Asset\AssetResource;
@@ -65,7 +66,9 @@ class AssetController extends Controller
         $user = $request->user();
         abort_unless((bool) ($user?->hasPermission('assets.register') || $user?->hasPermission('assets.edit')), 403);
 
+        // Only hardware contracts may hold assets, so only they are offered here.
         $contracts = Contract::query()
+            ->where('type', ContractType::Hardware)
             ->with('vendor')
             ->orderBy('code')
             ->get()
@@ -270,10 +273,21 @@ class AssetController extends Controller
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
 
-    /** Delete an asset (requires assets.retire). */
+    /**
+     * Permanently delete an asset (requires assets.delete — super-only by default).
+     *
+     * Guarded, not a blanket delete: only an asset that is still in the pool
+     * (Ready to deploy) and NOT tied to a vendor contract may be removed. A
+     * deployed / pending / written-off asset must be recalled or its write-off
+     * cancelled first, and a contract-linked (rented) asset must be unlinked so
+     * deleting it can never orphan a live contract line.
+     */
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('assets.delete'), 403);
+        abort_unless($asset->status === AssetStatus::Ready, 422, 'Only an asset that is Ready to deploy can be deleted.');
+        abort_if($asset->contract_id !== null, 422, 'This asset is linked to a contract — unlink it before deleting.');
+
         AuditLog::record('Deleted asset', "{$asset->asset_code} — {$asset->model?->name}");
         $asset->delete();
 
@@ -320,6 +334,9 @@ class AssetController extends Controller
      */
     public function requestReturn(Request $request, Asset $asset): JsonResponse
     {
+        // Returning one's own asset is gated by assets.return (self-service, separate
+        // from assets.my which merely opens the My Assets page).
+        abort_unless((bool) $request->user()?->hasPermission('assets.return'), 403);
         $employeeId = $request->user()?->linkedEmployee()?->id;
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id && $asset->status === AssetStatus::Deployed, 403);
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:500']]);

@@ -1,4 +1,5 @@
-import { actionLabel, moduleLabel } from '../lib/permission-labels';
+import { actionDescription, actionLabel, moduleLabel } from '../lib/permission-labels';
+import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
@@ -17,6 +18,7 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
 const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
 const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
+const info = (key: string, lang: Lang) => actionDescription('stock', key.replace('stock.', ''), lang);
 
 /** True when every ancestor (master, and the group view for a child) is on. */
 function hasAncestors(key: string, has: (k: string) => boolean): boolean {
@@ -111,7 +113,10 @@ export function StockPermissionTree({
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
-                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
+                    <div className="flex items-center gap-1 text-sm font-semibold">
+                        {label(MASTER, lang)}
+                        {info(MASTER, lang) && <InfoHint text={info(MASTER, lang)} />}
+                    </div>
                     <div className="text-muted-foreground text-[10.5px]">
                         {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
                     </div>
@@ -124,10 +129,14 @@ export function StockPermissionTree({
             <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
                 {GROUPS.map((group) => {
                     const viewOn = has(group.view) && masterOn;
+                    const viewInfo = info(group.view, lang);
                     return (
                         <div key={group.view} className="py-0.5">
                             <div className="flex min-h-[34px] items-center gap-2">
-                                <span className="text-sm font-medium">{label(group.view, lang)}</span>
+                                <span className="flex items-center gap-1 text-sm font-medium">
+                                    {label(group.view, lang)}
+                                    {viewInfo && <InfoHint text={viewInfo} />}
+                                </span>
                                 <span className="ml-auto flex items-center gap-2">
                                     {group.chip !== false && (
                                         <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
@@ -139,14 +148,20 @@ export function StockPermissionTree({
                             </div>
                             {group.children.length > 0 && (
                                 <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                                    {group.children.map((child) => (
-                                        <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                            <span className="text-muted-foreground text-[12.5px]">{label(child, lang)}</span>
-                                            <span className="ml-auto">
-                                                <Switch on={has(child) && viewOn} locked={isSuper || !viewOn} onClick={() => toggle(child)} />
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {group.children.map((child) => {
+                                        const childInfo = info(child, lang);
+                                        return (
+                                            <div key={child} className="flex min-h-[30px] items-center gap-2">
+                                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
+                                                    {label(child, lang)}
+                                                    {childInfo && <InfoHint text={childInfo} />}
+                                                </span>
+                                                <span className="ml-auto">
+                                                    <Switch on={has(child) && viewOn} locked={isSuper || !viewOn} onClick={() => toggle(child)} />
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -16,7 +16,13 @@ class Permissions
         return [
             'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
-            'assets' => ['view', 'register', 'transfer', 'receive', 'retire', 'edit', 'my', 'force_recall', 'cancel_writeoff'],
+            'assets' => [
+                'module',
+                'view_dashboard', 'view', 'register', 'edit', 'delete',
+                'manage', 'transfer', 'receive', 'retire',
+                'special', 'force_recall', 'cancel_writeoff',
+                'my', 'return',
+            ],
             'contracts' => [
                 'module',
                 'view_dashboard', 'view', 'view_lifecycle',
@@ -74,8 +80,11 @@ class Permissions
             'admin' => [
                 'tickets.view_all', 'tickets.create', 'tickets.assign', 'tickets.resolve',
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
-                'assets.view', 'assets.register', 'assets.transfer', 'assets.receive', 'assets.retire', 'assets.edit', 'assets.my',
-                // Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
+                'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
+                'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
+                'assets.my', 'assets.return',
+                // Asset hard delete + Special access (force recall / cancel write-off) stay super-only by default.
+                // Contract Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
                 'contracts.module', 'contracts.view_dashboard', 'contracts.view',
                 'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.alerts',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
@@ -94,14 +103,14 @@ class Permissions
                 'employees.view_section', 'employees.view_department', 'employees.view_position',
                 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
                 'access.view',
-                'assets.my',
+                'assets.my', 'assets.return',
                 'tickets.create', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
-                'tickets.create', 'requests.submit', 'employees.edit_own', 'assets.my',
+                'tickets.create', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
@@ -250,6 +259,78 @@ class Permissions
             return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'contracts.')));
         }
 
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
+    }
+
+    /**
+     * Asset permission tree used for client cascade and server normalization.
+     * Mirrors the contract/employee hierarchy: master gates the module + sidebar;
+     * each group's view key gates its management children (cascade). The self-service
+     * "My Assets" pair (`my` + its child `return`) is `standalone` — it survives even
+     * when the master is off, so an ordinary employee can accept/return their own
+     * assets without any Assets-module access (like employees.edit_own).
+     *
+     * @return array{master: string, standalone: array{view: string, children: list<string>}, groups: array<string, list<string>>}
+     */
+    public static function assetHierarchy(): array
+    {
+        return [
+            'master' => 'assets.module',
+            'standalone' => [
+                'view' => 'assets.my',
+                'children' => ['assets.return'],
+            ],
+            'groups' => [
+                'assets.view_dashboard' => [],
+                'assets.view' => ['assets.register', 'assets.edit', 'assets.delete'],
+                'assets.manage' => ['assets.transfer', 'assets.receive', 'assets.retire'],
+                'assets.special' => ['assets.force_recall', 'assets.cancel_writeoff'],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the asset hierarchy on a granted set: a management child requires its
+     * group's view key; every group key requires the master. The self-service pair
+     * (`assets.my` + `assets.return`) survives even when the master is off, but
+     * `assets.return` still requires `assets.my`. Non-asset keys pass through
+     * untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeAssets(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::assetHierarchy();
+        $standalone = $hierarchy['standalone'];
+
+        // Self-service is master-independent, but `return` still requires `my`.
+        if (! isset($set[$standalone['view']])) {
+            foreach ($standalone['children'] as $child) {
+                unset($set[$child]);
+            }
+        }
+
+        // Without the master, drop every asset key except the self-service pair.
+        if (! isset($set[$hierarchy['master']])) {
+            $keep = array_flip([$standalone['view'], ...$standalone['children']]);
+
+            return array_values(array_filter(
+                array_keys($set),
+                fn ($key) => ! str_starts_with($key, 'assets.') || isset($keep[$key]),
+            ));
+        }
+
+        // Master on: a management child requires its group view.
         foreach ($hierarchy['groups'] as $viewKey => $children) {
             if (! isset($set[$viewKey])) {
                 foreach ($children as $child) {

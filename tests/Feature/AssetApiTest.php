@@ -35,10 +35,14 @@ class AssetApiTest extends TestCase
         return AssetModel::create(['name' => $name])->id;
     }
 
-    /** Create a category (Master Data) and return its id — asset POSTs now send category_id. */
+    /**
+     * Resolve a category (Master Data) by name and return its id — asset POSTs send category_id.
+     * Uses firstOrCreate (idempotent, like AssetFactory) so it never collides on categories.name
+     * with a category the factory already created for the same test.
+     */
     private function categoryId(string $name = 'Laptop'): int
     {
-        return Category::create(['name' => $name])->id;
+        return Category::firstOrCreate(['name' => $name])->id;
     }
 
     /** Create a vendor (Master Data) and return its id — purchased asset POSTs now send vendor_id. */
@@ -259,6 +263,24 @@ class AssetApiTest extends TestCase
 
         $this->deleteJson("/api/categories/{$category->id}")->assertStatus(409);
         $this->assertDatabaseHas('categories', ['id' => $category->id]);
+    }
+
+    /**
+     * Regression: the categoryId() test helper must be idempotent. AssetFactory creates
+     * its category via Category::firstOrCreate over a random set that includes 'laptop';
+     * when the helper later asks for the same name it must reuse that row, not INSERT a
+     * duplicate (which threw UniqueConstraintViolationException on categories.name and made
+     * the suite flaky depending on the factory's random roll / test order).
+     */
+    public function test_category_helper_is_idempotent_with_a_preexisting_category(): void
+    {
+        // Simulate the factory having already created the 'laptop' category.
+        Category::firstOrCreate(['name' => 'laptop']);
+
+        $id = $this->categoryId('laptop');
+
+        $this->assertIsInt($id);
+        $this->assertSame(1, Category::where('name', 'laptop')->count());
     }
 
     public function test_renaming_a_vendor_propagates_to_assets(): void
@@ -490,6 +512,7 @@ class AssetApiTest extends TestCase
     {
         $employee = Employee::create(['code' => 'EMP-6001', 'first_name' => 'Hold', 'last_name' => 'Er']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'assets.return', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6001', 'owner_employee_id' => $employee->id]);
 
         // Anyone who is not the holder cannot request its return.
@@ -504,11 +527,24 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owner', 'EMP-6001');
     }
 
+    /** Requesting a return is gated by assets.return — the holder without it is forbidden. */
+    public function test_request_return_requires_the_return_permission(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-6002', 'first_name' => 'No', 'last_name' => 'Perm']);
+        $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6002', 'owner_employee_id' => $employee->id]);
+
+        $this->actingAs($holder);
+        $this->postJson("/api/assets/{$asset->id}/request-return")->assertForbidden();
+        $this->assertSame('deployed', $asset->fresh()->status->value);
+    }
+
     public function test_return_request_notifies_it_receivers(): void
     {
         $it = $this->super(); // super holds assets.transfer → an IT receiver
         $employee = Employee::create(['code' => 'EMP-6100', 'first_name' => 'H', 'last_name' => 'R']);
         $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        RolePermission::create(['role_id' => $holder->role_id, 'permission' => 'assets.return', 'allowed' => true]);
         $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-6100', 'owner_employee_id' => $employee->id]);
 
         $this->actingAs($holder);
@@ -991,6 +1027,40 @@ class AssetApiTest extends TestCase
         $this->getJson('/api/assets/contract-options')->assertForbidden();
     }
 
+    /** Only hardware contracts can hold assets, so the picker offers only those. */
+    public function test_contract_options_returns_only_hardware_contracts(): void
+    {
+        $this->actingAs($this->super());
+        Contract::create([
+            'vendor_id' => $this->vendorId('HW'), 'name' => 'Laptop lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 5000, 'billing_cycle' => 'monthly',
+        ]);
+        Contract::create([
+            'vendor_id' => $this->vendorId('SW'), 'name' => 'Office 365', 'type' => 'software',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 5000, 'billing_cycle' => 'yearly',
+        ]);
+
+        $this->getJson('/api/assets/contract-options')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.vendor', 'HW');
+    }
+
+    /** A rented asset cannot be linked to a non-hardware contract. */
+    public function test_rented_asset_rejects_a_non_hardware_contract(): void
+    {
+        $this->actingAs($this->super());
+        $software = Contract::create([
+            'vendor_id' => $this->vendorId('SW'), 'name' => 'Office 365', 'type' => 'software',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 5000, 'billing_cycle' => 'yearly',
+        ]);
+
+        $this->postJson('/api/assets', [
+            'category_id' => $this->categoryId('network'), 'source' => 'rented',
+            'model_id' => $this->modelId('Cisco 9300'), 'contract_id' => $software->id,
+        ])->assertStatus(422)->assertJsonValidationErrors('contract_id');
+    }
+
     /**
      * A deployed asset has left the pool (no warehouse), so editing it must succeed without a
      * warehouse — the form no longer forces one for non-pool assets, and the server allows null.
@@ -1185,5 +1255,54 @@ class AssetApiTest extends TestCase
 
         $this->postJson("/api/assets/{$asset->id}/cancel-writeoff")->assertForbidden();
         $this->assertSame('writeoff', $asset->fresh()->status->value);
+    }
+
+    /** Hard delete is gated by assets.delete — a bare user (or one with only assets.retire) is forbidden. */
+    public function test_delete_requires_the_delete_permission(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.retire', 'allowed' => true]);
+        $this->actingAs($user);
+        $asset = Asset::factory()->create(['status' => 'ready', 'contract_id' => null]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")->assertForbidden();
+        $this->assertDatabaseHas('assets', ['id' => $asset->id]);
+    }
+
+    /** With assets.delete a Ready, contract-free asset is permanently removed. */
+    public function test_delete_removes_a_ready_asset_with_the_permission(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        RolePermission::create(['role_id' => $user->role_id, 'permission' => 'assets.delete', 'allowed' => true]);
+        $this->actingAs($user);
+        $asset = Asset::factory()->create(['status' => 'ready', 'source' => 'purchased', 'contract_id' => null]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")->assertOk();
+        $this->assertDatabaseMissing('assets', ['id' => $asset->id]);
+    }
+
+    /** Only a Ready-to-deploy asset can be deleted — a deployed one is rejected (422) and kept. */
+    public function test_delete_blocked_when_asset_is_not_ready(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-DEL-1', 'first_name' => 'De', 'last_name' => 'Ployed']);
+        $asset = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-DEL-1', 'owner_employee_id' => $employee->id, 'contract_id' => null]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422);
+        $this->assertDatabaseHas('assets', ['id' => $asset->id]);
+    }
+
+    /** A contract-linked (rented) asset cannot be deleted even when Ready — it must be unlinked first. */
+    public function test_delete_blocked_when_asset_is_linked_to_a_contract(): void
+    {
+        $this->actingAs($this->super());
+        $contract = Contract::create([
+            'vendor_id' => $this->vendorId('SVOA'), 'name' => 'Network lease', 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => 8500, 'billing_cycle' => 'monthly',
+        ]);
+        $asset = Asset::factory()->create(['status' => 'ready', 'source' => 'rented', 'contract_id' => $contract->id]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422);
+        $this->assertDatabaseHas('assets', ['id' => $asset->id]);
     }
 }
