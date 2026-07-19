@@ -25,9 +25,10 @@ class StoreAccessMembershipRequest extends FormRequest
     {
         // The controller sets $this->resourceType before validation (see Task 6).
         $type = $this->input('_resource_type');
+        // Email-group owner now lives on the group (owner_employee_id / setOwner), so its
+        // members carry no level — only file shares still use graded access levels.
         $levels = match ($type) {
-            'email_group' => ['Owner', 'Member'],
-            'file_share' => ['Full', 'Write', 'Read'],
+            'file_share' => ['Write', 'Read'],
             default => [],
         };
 

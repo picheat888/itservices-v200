@@ -1,0 +1,456 @@
+<title>Employee Access — Option A · Register</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: hsl(212 24% 94%);
+    --panel: #ffffff;
+    --ink: hsl(222 34% 12%);
+    --ink-2: hsl(215 16% 38%);
+    --muted: hsl(215 14% 56%);
+    --line: hsl(214 24% 90%);
+    --surface: hsl(212 30% 97%);
+    --surface-2: hsl(212 24% 95.5%);
+
+    --c-email: #7c3aed;
+    --c-file: #0d9488;
+    --c-social: #6366f1;
+    --c-soft: #d97706;
+
+    --lv-full: #059669;
+    --lv-write: #2563eb;
+    --lv-read: hsl(215 14% 46%);
+
+    --danger: #dc2626;
+
+    --radius: 14px;
+    --display: 'Space Grotesk', system-ui, sans-serif;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Noto Sans Thai', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: hsl(222 24% 7%); --panel: hsl(222 22% 11%);
+      --ink: hsl(210 22% 95%); --ink-2: hsl(215 16% 70%); --muted: hsl(215 14% 52%);
+      --line: hsl(215 16% 20%); --surface: hsl(215 20% 14%); --surface-2: hsl(215 18% 16%);
+      --c-email: #a78bfa; --c-file: #2dd4bf; --c-social: #818cf8; --c-soft: #fbbf24;
+      --lv-full: #34d399; --lv-write: #60a5fa; --lv-read: hsl(215 14% 60%);
+      --danger: #f87171;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: hsl(212 24% 94%); --panel: #ffffff; --ink: hsl(222 34% 12%); --ink-2: hsl(215 16% 38%);
+    --muted: hsl(215 14% 56%); --line: hsl(214 24% 90%); --surface: hsl(212 30% 97%); --surface-2: hsl(212 24% 95.5%);
+    --c-email: #7c3aed; --c-file: #0d9488; --c-social: #6366f1; --c-soft: #d97706;
+    --lv-full: #059669; --lv-write: #2563eb; --lv-read: hsl(215 14% 46%); --danger: #dc2626;
+  }
+  :root[data-theme="dark"] {
+    --bg: hsl(222 24% 7%); --panel: hsl(222 22% 11%); --ink: hsl(210 22% 95%); --ink-2: hsl(215 16% 70%);
+    --muted: hsl(215 14% 52%); --line: hsl(215 16% 20%); --surface: hsl(215 20% 14%); --surface-2: hsl(215 18% 16%);
+    --c-email: #a78bfa; --c-file: #2dd4bf; --c-social: #818cf8; --c-soft: #fbbf24;
+    --lv-full: #34d399; --lv-write: #60a5fa; --lv-read: hsl(215 14% 60%); --danger: #f87171;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg);
+    min-height: 100vh; padding: 40px 16px 80px; -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .toolbar {
+    position: fixed; top: 14px; right: 14px; z-index: 20; display: flex; gap: 8px; align-items: center;
+  }
+  .toggle {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink);
+    border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 13px;
+  }
+  .toggle:focus-visible { outline: 2px solid var(--c-social); outline-offset: 2px; }
+
+  .stage { max-width: 760px; margin: 0 auto; }
+  .caption {
+    text-align: center; color: var(--muted); font-size: 12.5px; margin: 0 0 18px;
+  }
+  .caption b { color: var(--ink-2); font-weight: 600; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 12px 40px -12px rgba(15,23,42,.14);
+    overflow: hidden;
+  }
+
+  /* ── employee context strip ── */
+  .ctx {
+    display: flex; align-items: center; gap: 14px; padding: 18px 22px;
+    border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .ava {
+    width: 46px; height: 46px; border-radius: 13px; flex: none; display: grid; place-items: center;
+    font-family: var(--display); font-weight: 700; font-size: 16px; color: #fff; letter-spacing: .5px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    box-shadow: 0 4px 12px -4px rgba(99,102,241,.5);
+  }
+  .ctx-main { min-width: 0; flex: 1; }
+  .ctx-name { font-weight: 600; font-size: 15.5px; letter-spacing: -.01em; }
+  .ctx-name .th { color: var(--muted); font-weight: 500; margin-left: 6px; font-size: 13px; }
+  .ctx-sub { display: flex; align-items: center; gap: 8px; margin-top: 3px; color: var(--ink-2); font-size: 12.5px; }
+  .ctx-sub .code { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+  .dotsep { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); flex: none; }
+  .ctx-tab {
+    font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--c-social); background: color-mix(in srgb, var(--c-social) 12%, transparent);
+    padding: 6px 11px; border-radius: 8px; flex: none;
+  }
+
+  /* ── ledger summary header ── */
+  .ledger {
+    display: flex; align-items: stretch; gap: 20px; padding: 20px 22px; border-bottom: 1px solid var(--line);
+  }
+  .ledger-total { flex: none; }
+  .eyebrow {
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .total-num {
+    font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; letter-spacing: -.02em;
+    color: var(--ink); margin-top: 6px; font-variant-numeric: tabular-nums;
+  }
+  .total-num small { font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+  .ledger-div { width: 1px; background: var(--line); flex: none; }
+  .breakdown { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 18px; align-content: center; }
+  .bd {
+    display: flex; align-items: center; gap: 9px; font-size: 13px;
+  }
+  .bd .swatch { width: 8px; height: 8px; border-radius: 2.5px; flex: none; }
+  .bd .lbl { color: var(--ink-2); flex: 1; }
+  .bd .n { font-family: var(--mono); font-weight: 600; color: var(--ink); font-size: 12.5px; }
+
+  /* ── resigned banner (state variant) ── */
+  .banner {
+    display: flex; align-items: center; gap: 10px; margin: 16px 22px 0;
+    padding: 11px 14px; border-radius: 11px; font-size: 12.5px; font-weight: 500;
+    color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+    background: color-mix(in srgb, var(--danger) 7%, transparent);
+  }
+  .banner svg { flex: none; }
+
+  /* ── groups ── */
+  .body { padding: 6px 22px 22px; }
+  .group { margin-top: 22px; }
+  .group-head {
+    display: flex; align-items: center; gap: 10px; padding-bottom: 9px; margin-bottom: 2px;
+  }
+  .group-ic {
+    width: 26px; height: 26px; border-radius: 8px; flex: none; display: grid; place-items: center; color: #fff;
+  }
+  .group-name {
+    font-family: var(--display); font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .group-count {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--surface-2); border-radius: 999px; padding: 2px 8px;
+  }
+  .group-line { flex: 1; height: 1px; background: var(--line); }
+
+  /* grant row */
+  .grant {
+    display: grid; grid-template-columns: 1fr auto minmax(150px, 210px);
+    align-items: center; gap: 14px;
+    padding: 13px 14px 13px 15px; position: relative;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    margin-top: 8px; transition: border-color .15s, background .15s, transform .15s;
+  }
+  .grant::before {
+    content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0;
+    background: var(--spine, var(--c-social));
+  }
+  .grant:hover { border-color: color-mix(in srgb, var(--spine) 45%, var(--line)); background: var(--surface); }
+
+  .res { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .res-ic {
+    width: 34px; height: 34px; border-radius: 9px; flex: none; display: grid; place-items: center;
+    color: var(--spine); background: color-mix(in srgb, var(--spine) 13%, transparent);
+    overflow: hidden;
+  }
+  .res-ic img { width: 100%; height: 100%; object-fit: cover; }
+  .res-txt { min-width: 0; }
+  .res-name { font-weight: 600; font-size: 13.5px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-meta { display: flex; align-items: center; gap: 7px; margin-top: 2px; min-width: 0; }
+  .res-code { font-family: var(--mono); font-size: 10.5px; font-weight: 600; color: var(--spine); flex: none; }
+  .res-detail { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* level pill */
+  .lvl {
+    font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 7px; white-space: nowrap; flex: none;
+  }
+  .lvl.full  { color: #fff; background: var(--lv-full); }
+  .lvl.write { color: var(--lv-write); background: color-mix(in srgb, var(--lv-write) 14%, transparent); }
+  .lvl.read  { color: var(--lv-read); background: color-mix(in srgb, var(--lv-read) 16%, transparent); }
+  .lvl.member{ color: var(--c-email); background: color-mix(in srgb, var(--c-email) 14%, transparent); }
+  .lvl.sub   { color: var(--c-soft); background: color-mix(in srgb, var(--c-soft) 15%, transparent); }
+
+  /* accountability cell */
+  .acct { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .acct-eyebrow {
+    font-family: var(--display); font-size: 9px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .owner { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .owner-ava {
+    width: 22px; height: 22px; border-radius: 7px; flex: none; display: grid; place-items: center;
+    font-size: 9.5px; font-weight: 700; color: #fff; font-family: var(--display); letter-spacing: .3px;
+  }
+  .owner-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acct-attr { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+  .acct-attr .mono { font-family: var(--mono); font-size: 11.5px; }
+  .granted { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  /* legend footer */
+  .foot {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; justify-content: center;
+    padding: 14px 22px; border-top: 1px solid var(--line); background: var(--surface);
+    font-size: 11px; color: var(--muted);
+  }
+  .foot .k { display: inline-flex; align-items: center; gap: 6px; }
+
+  @media (max-width: 560px) {
+    .grant { grid-template-columns: 1fr auto; grid-template-areas: "res lvl" "acct acct"; row-gap: 10px; }
+    .res { grid-area: res; } .lvl { grid-area: lvl; align-self: start; }
+    .acct { grid-area: acct; flex-direction: row; align-items: center; justify-content: space-between;
+            padding-left: 46px; }
+    .ledger { flex-direction: column; gap: 14px; } .ledger-div { display: none; }
+    .breakdown { grid-template-columns: 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="toolbar">
+  <button class="toggle" id="themeBtn" type="button">◐ Theme</button>
+</div>
+
+<div class="stage">
+  <p class="caption"><b>Option A — Register.</b> Read-only access review, grouped by type. Owner is a first-class column; no revoke here.</p>
+
+  <div class="panel">
+    <!-- employee context -->
+    <div class="ctx">
+      <div class="ava">SJ</div>
+      <div class="ctx-main">
+        <div class="ctx-name">Somchai Jaidee<span class="th">สมชาย ใจดี</span></div>
+        <div class="ctx-sub">
+          <span class="code">EMP-0042</span><span class="dotsep"></span>
+          <span>IT Operations</span><span class="dotsep"></span>
+          <span>Systems Engineer</span>
+        </div>
+      </div>
+      <span class="ctx-tab">Access</span>
+    </div>
+
+    <!-- ledger summary -->
+    <div class="ledger">
+      <div class="ledger-total">
+        <div class="eyebrow">Active grants</div>
+        <div class="total-num">7<small>across 4 types</small></div>
+      </div>
+      <div class="ledger-div"></div>
+      <div class="breakdown">
+        <div class="bd"><span class="swatch" style="background:var(--c-email)"></span><span class="lbl">Email groups</span><span class="n">2</span></div>
+        <div class="bd"><span class="swatch" style="background:var(--c-file)"></span><span class="lbl">File shares</span><span class="n">2</span></div>
+        <div class="bd"><span class="swatch" style="background:var(--c-social)"></span><span class="lbl">Social / internet</span><span class="n">1</span></div>
+        <div class="bd"><span class="swatch" style="background:var(--c-soft)"></span><span class="lbl">Software</span><span class="n">2</span></div>
+      </div>
+    </div>
+
+    <div class="body">
+
+      <!-- EMAIL GROUPS -->
+      <section class="group">
+        <div class="group-head">
+          <span class="group-ic" style="background:var(--c-email)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+          </span>
+          <span class="group-name">Email Groups</span>
+          <span class="group-count">2</span>
+          <span class="group-line"></span>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-email)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">IT Support</div>
+              <div class="res-meta"><span class="res-code">MG-0001</span><span class="res-detail">it-support@inaba-foods.co.th</span></div>
+            </div>
+          </div>
+          <span class="lvl member">Member</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Owner</span>
+            <div class="owner">
+              <span class="owner-ava" style="background:#7c3aed">WP</span>
+              <span class="owner-name">Wanchai P.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-email)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">All Announcements</div>
+              <div class="res-meta"><span class="res-code">MG-0009</span><span class="res-detail">announce@inaba-foods.co.th</span></div>
+            </div>
+          </div>
+          <span class="lvl member">Member</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Owner</span>
+            <div class="owner">
+              <span class="owner-ava" style="background:#0ea5e9">PN</span>
+              <span class="owner-name">Pornpimol N.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FILE SHARES -->
+      <section class="group">
+        <div class="group-head">
+          <span class="group-ic" style="background:var(--c-file)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+          </span>
+          <span class="group-name">File Shares</span>
+          <span class="group-count">2</span>
+          <span class="group-line"></span>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-file)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">IT Tools</div>
+              <div class="res-meta"><span class="res-code">FS-0004</span><span class="res-detail">\\inb-fs01\it-tools</span></div>
+            </div>
+          </div>
+          <span class="lvl full">Full</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Owner</span>
+            <div class="owner">
+              <span class="owner-ava" style="background:#7c3aed">WP</span>
+              <span class="owner-name">Wanchai P.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-file)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">Finance Reports</div>
+              <div class="res-meta"><span class="res-code">FS-0011</span><span class="res-detail">\\inb-fs01\finance</span></div>
+            </div>
+          </div>
+          <span class="lvl read">Read</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Owner</span>
+            <div class="owner">
+              <span class="owner-ava" style="background:#e11d48">NS</span>
+              <span class="owner-name">Nida S.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOCIAL -->
+      <section class="group">
+        <div class="group-head">
+          <span class="group-ic" style="background:var(--c-social)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg>
+          </span>
+          <span class="group-name">Social / Internet</span>
+          <span class="group-count">1</span>
+          <span class="group-line"></span>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-social)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">Facebook Page</div>
+              <div class="res-meta"><span class="res-code">SM-0002</span><span class="res-detail">facebook.com/inabafoods</span></div>
+            </div>
+          </div>
+          <span class="lvl" style="color:var(--c-social);background:color-mix(in srgb,var(--c-social) 14%,transparent)">Posting</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Policy</span>
+            <span class="acct-attr">Restricted</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOFTWARE -->
+      <section class="group">
+        <div class="group-head">
+          <span class="group-ic" style="background:var(--c-soft)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          </span>
+          <span class="group-name">Software</span>
+          <span class="group-count">2</span>
+          <span class="group-line"></span>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-soft)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">Adobe Acrobat Pro</div>
+              <div class="res-meta"><span class="res-code">SW-0001</span><span class="res-detail">Seat 3 / 10</span></div>
+            </div>
+          </div>
+          <span class="lvl sub">Subscription</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Publisher</span>
+            <span class="acct-attr">Adobe</span>
+          </div>
+        </div>
+
+        <div class="grant" style="--spine:var(--c-soft)">
+          <div class="res">
+            <span class="res-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+            <div class="res-txt">
+              <div class="res-name">Microsoft 365</div>
+              <div class="res-meta"><span class="res-code">SW-0005</span><span class="res-detail">Seat 41 / 100</span></div>
+            </div>
+          </div>
+          <span class="lvl sub">Subscription</span>
+          <div class="acct">
+            <span class="acct-eyebrow">Publisher</span>
+            <span class="acct-attr">Microsoft</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="foot">
+      <span class="k"><span class="lvl full" style="padding:2px 7px">Full</span> read + write + share</span>
+      <span class="k"><span class="lvl write" style="padding:2px 7px">Write</span> read + write</span>
+      <span class="k"><span class="lvl read" style="padding:2px 7px">Read</span> view only</span>
+    </div>
+  </div>
+
+  <p class="caption" style="margin-top:18px">When the employee has resigned, a red banner replaces the ledger note — “Access still active, revoke in the Access Directory”. Revoking itself is done there, not on this review screen.</p>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById('themeBtn');
+    btn.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      var next = cur === 'dark' ? 'light' : cur === 'light' ? 'dark'
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', next);
+    });
+  })();
+</script>

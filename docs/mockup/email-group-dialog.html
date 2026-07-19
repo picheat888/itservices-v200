@@ -1,0 +1,346 @@
+<title>Email Group — Manage (centered dialog)</title>
+<style>
+  :root {
+    --bg: hsl(210 20% 94%);
+    --card: hsl(0 0% 100%);
+    --fg: hsl(222 30% 12%);
+    --muted: hsl(210 20% 96%);
+    --muted-fg: hsl(215 16% 47%);
+    --accent: hsl(210 24% 95%);
+    --border: hsl(214 20% 90%);
+    --brand: #2563eb;
+    --violet: #7c3aed;      /* email-group identity accent */
+    --violet-soft: rgba(124, 58, 237, 0.10);
+    --danger: #dc2626;
+    --radius: 12px;
+    --sans: 'Manrope', system-ui, -apple-system, 'Segoe UI', 'Noto Sans Thai', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: hsl(222 24% 7%);
+      --card: hsl(222 24% 11%);
+      --fg: hsl(210 20% 96%);
+      --muted: hsl(215 20% 16%);
+      --muted-fg: hsl(215 16% 62%);
+      --accent: hsl(215 20% 18%);
+      --border: hsl(215 18% 22%);
+      --brand: #3b82f6;
+      --violet: #a78bfa;
+      --violet-soft: rgba(167, 139, 250, 0.14);
+      --danger: #f87171;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: hsl(210 20% 94%); --card: hsl(0 0% 100%); --fg: hsl(222 30% 12%);
+    --muted: hsl(210 20% 96%); --muted-fg: hsl(215 16% 47%); --accent: hsl(210 24% 95%);
+    --border: hsl(214 20% 90%); --brand: #2563eb; --violet: #7c3aed;
+    --violet-soft: rgba(124,58,237,0.10); --danger: #dc2626;
+  }
+  :root[data-theme="dark"] {
+    --bg: hsl(222 24% 7%); --card: hsl(222 24% 11%); --fg: hsl(210 20% 96%);
+    --muted: hsl(215 20% 16%); --muted-fg: hsl(215 16% 62%); --accent: hsl(215 20% 18%);
+    --border: hsl(215 18% 22%); --brand: #3b82f6; --violet: #a78bfa;
+    --violet-soft: rgba(167,139,250,0.14); --danger: #f87171;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: var(--sans); color: var(--fg);
+    /* the dimmed app backdrop behind the modal */
+    background:
+      radial-gradient(1200px 600px at 50% -10%, color-mix(in srgb, var(--violet) 10%, transparent), transparent 60%),
+      var(--bg);
+    min-height: 100vh;
+    display: grid; place-items: center; padding: 32px 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* faint backdrop scrim ring so the "modal over page" read is clear */
+  .stage { position: relative; width: 100%; max-width: 620px; }
+
+  .toolbar {
+    position: fixed; top: 14px; right: 14px; display: flex; gap: 8px; align-items: center;
+    font-size: 12px; color: var(--muted-fg);
+  }
+  .toggle {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border); background: var(--card); color: var(--fg);
+    border-radius: 999px; padding: 6px 12px;
+  }
+  .toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .dialog {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.28), 0 8px 20px -8px rgba(15,23,42,0.18);
+    display: flex; flex-direction: column; max-height: 82vh;
+  }
+
+  /* ── Header ── */
+  .head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 22px 18px; }
+  .tile {
+    width: 44px; height: 44px; border-radius: 11px; flex: none;
+    display: grid; place-items: center; color: var(--violet);
+    background: var(--violet-soft);
+  }
+  .tile svg { width: 22px; height: 22px; }
+  .head .meta { min-width: 0; flex: 1; }
+  .eyebrow {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted-fg);
+  }
+  .title { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0 3px; }
+  .subline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .email { font-family: var(--mono); font-size: 12px; color: var(--muted-fg); }
+  .chip {
+    font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+    background: var(--accent); color: var(--muted-fg);
+  }
+  .chip.mono { font-family: var(--mono); }
+  .x {
+    flex: none; width: 30px; height: 30px; border-radius: 8px; border: 0; cursor: pointer;
+    background: transparent; color: var(--muted-fg); display: grid; place-items: center;
+  }
+  .x:hover { background: var(--accent); color: var(--fg); }
+
+  .divider { height: 1px; background: var(--border); }
+
+  /* ── Section shell ── */
+  .section { padding: 16px 22px; }
+  .section-label {
+    font-size: 10.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted-fg); display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .count {
+    font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--violet);
+    background: var(--violet-soft); border-radius: 999px; padding: 1px 8px;
+  }
+
+  /* ── Owner (approver) tier — the one deliberate emphasis ── */
+  .owner {
+    background: var(--violet-soft);
+    border: 1px solid color-mix(in srgb, var(--violet) 28%, transparent);
+    border-radius: 10px; padding: 11px 12px;
+    display: flex; align-items: center; gap: 11px;
+  }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 999px; flex: none;
+    display: grid; place-items: center; font-weight: 700; font-size: 12px;
+    background: color-mix(in srgb, var(--violet) 18%, var(--card)); color: var(--violet);
+  }
+  .who { min-width: 0; flex: 1; }
+  .who .n { font-size: 14px; font-weight: 700; }
+  .who .d { font-size: 11.5px; color: var(--muted-fg); display: flex; gap: 7px; align-items: center; }
+  .who .d .dept { font-weight: 700; color: var(--violet); }
+  .approver-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--violet); border: 1px solid color-mix(in srgb, var(--violet) 40%, transparent);
+    border-radius: 999px; padding: 3px 9px; flex: none;
+  }
+  .btn-ghost {
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; flex: none;
+    border: 1px solid var(--border); background: var(--card); color: var(--fg);
+    border-radius: 8px; padding: 6px 12px;
+  }
+  .btn-ghost:hover { border-color: var(--violet); color: var(--violet); }
+
+  /* ── Member list ── */
+  .members { padding: 0 22px 4px; overflow-y: auto; }
+  .m-row {
+    display: flex; align-items: center; gap: 11px; padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .m-row:last-child { border-bottom: 0; }
+  .m-av {
+    width: 32px; height: 32px; border-radius: 999px; flex: none; display: grid; place-items: center;
+    font-weight: 700; font-size: 11px; background: var(--accent); color: var(--muted-fg);
+  }
+  .m-name { font-size: 13.5px; font-weight: 600; }
+  .m-sub { font-size: 11.5px; color: var(--muted-fg); }
+  .m-purpose {
+    font-size: 11.5px; color: var(--muted-fg); max-width: 150px; text-align: right;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .trash {
+    width: 28px; height: 28px; border-radius: 7px; border: 0; background: transparent; cursor: pointer;
+    color: var(--muted-fg); display: grid; place-items: center; flex: none;
+  }
+  .trash:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+
+  /* ── Members rendered as the app's DataTable ── */
+  .mbox { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .dt-search {
+    display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 11px; flex: none;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--card);
+    color: var(--muted-fg); font-size: 13px; margin-bottom: 10px; max-width: 260px;
+  }
+  .dt-search svg { width: 15px; height: 15px; }
+  .dt-wrap { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+  table.dt { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.dt thead th {
+    text-align: left; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted-fg); background: color-mix(in srgb, var(--muted) 55%, var(--card));
+    padding: 9px 12px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1;
+  }
+  table.dt tbody td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  table.dt tbody tr:last-child td { border-bottom: 0; }
+  table.dt tbody tr:hover { background: var(--accent); }
+  td.col-right { text-align: right; width: 44px; }
+  td.col-muted { color: var(--muted-fg); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mcell { display: flex; align-items: center; gap: 10px; }
+  .dt-foot {
+    display: flex; justify-content: flex-end; font-size: 12px; color: var(--muted-fg);
+    padding-top: 10px; flex: none; font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Add-member row (footer) ── */
+  .foot { padding: 14px 22px 18px; border-top: 1px solid var(--border); background: var(--muted); }
+  .add { display: flex; gap: 8px; align-items: center; }
+  .field {
+    height: 38px; border: 1px solid var(--border); background: var(--card); border-radius: 8px;
+    display: flex; align-items: center; gap: 8px; padding: 0 11px; color: var(--muted-fg);
+    font-size: 13px;
+  }
+  .field.grow { flex: 1; min-width: 0; }
+  .field.purpose { width: 130px; }
+  .field svg { width: 15px; height: 15px; flex: none; }
+  .add-btn {
+    height: 38px; width: 38px; flex: none; border: 0; border-radius: 8px; cursor: pointer;
+    background: var(--brand); color: #fff; display: grid; place-items: center;
+  }
+  .add-btn svg { width: 18px; height: 18px; }
+
+  .note { margin-top: 14px; font-size: 12px; color: var(--muted-fg); text-align: center; max-width: 620px; }
+
+  @media (max-width: 520px) {
+    .add { flex-wrap: wrap; }
+    .field.purpose { width: 100%; }
+    .approver-badge { display: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .dialog { animation: pop 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+  }
+</style>
+
+<div class="toolbar">
+  <span>Mockup · centered focus dialog</span>
+  <button class="toggle" id="themeBtn" type="button">◐ Theme</button>
+</div>
+
+<div class="stage">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <!-- Header -->
+    <div class="head">
+      <span class="tile" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+      </span>
+      <div class="meta">
+        <div class="eyebrow">Email group</div>
+        <div class="title" id="dlgTitle">IT Announcements</div>
+        <div class="subline">
+          <span class="email">it-announce@inaba-foods.co.th</span>
+          <span class="chip">IT</span>
+          <span class="chip mono">MG-0007</span>
+        </div>
+      </div>
+      <button class="x" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Owner (approver) — distinct tier -->
+    <div class="section">
+      <div class="section-label">Owner · approver</div>
+      <div class="owner">
+        <span class="avatar">สช</span>
+        <div class="who">
+          <div class="n">สมชาย ใจดี</div>
+          <div class="d"><span class="dept">IT</span> · <span style="font-family:var(--mono)">EMP-1042</span></div>
+        </div>
+        <span class="approver-badge">Workflow approver</span>
+        <button class="btn-ghost" type="button">Change</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Members (DataTable) -->
+    <div class="section mbox" style="padding-bottom:16px">
+      <div class="section-label">Members <span class="count">5</span></div>
+      <div class="dt-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        Search members…
+      </div>
+      <div class="dt-wrap">
+        <table class="dt">
+          <thead>
+            <tr><th>Member</th><th>Dept</th><th>Added by</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="mcell"><span class="m-av">สญ</span><div><div class="m-name">สมหญิง รักงาน</div><div class="m-sub" style="font-family:var(--mono)">EMP-1043</div></div></div></td>
+              <td><span class="chip">ACC</span></td>
+              <td class="col-muted">สมชาย · 2026-05-02</td>
+              <td class="col-right"><button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="mcell"><span class="m-av">AW</span><div><div class="m-name">Alan Wong</div><div class="m-sub" style="font-family:var(--mono)">EMP-1050</div></div></div></td>
+              <td><span class="chip">IT</span></td>
+              <td class="col-muted">สมชาย · 2026-05-02</td>
+              <td class="col-right"><button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="mcell"><span class="m-av">ปศ</span><div><div class="m-name">ปิยะ ศรีสุข</div><div class="m-sub" style="font-family:var(--mono)">EMP-1061</div></div></div></td>
+              <td><span class="chip">PUR</span></td>
+              <td class="col-muted">สมชาย · 2026-04-18</td>
+              <td class="col-right"><button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="mcell"><span class="m-av">ML</span><div><div class="m-name">Mei Lin</div><div class="m-sub" style="font-family:var(--mono)">EMP-1072</div></div></div></td>
+              <td><span class="chip">MKT</span></td>
+              <td class="col-muted">อารดา · 2026-03-30</td>
+              <td class="col-right"><button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+            <tr>
+              <td><div class="mcell"><span class="m-av">ธว</span><div><div class="m-name">ธนา วงศ์ไพศาล</div><div class="m-sub" style="font-family:var(--mono)">EMP-1088</div></div></div></td>
+              <td><span class="chip">HR</span></td>
+              <td class="col-muted">สมชาย · 2026-02-11</td>
+              <td class="col-right"><button class="trash" type="button" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="dt-foot">1–5 of 5</div>
+    </div>
+
+    <!-- Add member -->
+    <div class="foot">
+      <div class="add">
+        <span class="field grow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          Add an employee…
+        </span>
+        <button class="add-btn" type="button" aria-label="Add member">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="note">Mockup only · centered focus dialog for “Manage email group”. Owner (workflow approver) is one tier, members another. Toggle theme top-right.</p>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var now = root.getAttribute('data-theme');
+      var dark = now ? now === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+    });
+  })();
+</script>

@@ -22,6 +22,7 @@ class SocialPlatformResource extends JsonResource
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,
                 'name' => $m->employee?->name,
+                'photo_url' => $m->employee?->photo_url,
                 'purpose' => $m->purpose,
             ])->values()),
             'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),

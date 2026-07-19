@@ -15,22 +15,29 @@ class SoftwareResource extends JsonResource
             ? $this->memberships->count()
             : $this->memberships()->active()->count();
 
+        // The product key is a secret: expose its value only to people who can
+        // manage software (who also own the edit form); everyone else just learns
+        // whether a key is on file.
+        $canManage = (bool) $request->user()?->hasPermission('access.manage');
+
         return [
             'id' => $this->id,
             'code' => $this->code,
             'name' => $this->name,
-            'publisher' => $this->publisher,
-            'version' => $this->version,
+            'publisher' => $this->brand?->name,
+            'brand_id' => $this->brand_id,
+            'logo_url' => $this->logo_url,
             'license_type' => $this->license_type?->value,
             'seats' => $this->seats,
             'seats_used' => $seatsUsed,
-            'department_id' => $this->department_id,
-            'department' => $this->department?->name,
+            'has_product_key' => filled($this->product_key),
+            'product_key' => $canManage ? $this->product_key : null,
             'notes' => $this->notes,
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,
                 'name' => $m->employee?->name,
+                'photo_url' => $m->employee?->photo_url,
                 'purpose' => $m->purpose,
             ])->values()),
             'members_count' => $seatsUsed,

@@ -19,9 +19,12 @@ class StoreEmailGroupRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('email_groups', 'email')->ignore($id)],
-            'department_id' => ['nullable', 'exists:departments,id'],
+            'department_id' => ['required', 'exists:departments,id'],
             'description' => ['nullable', 'string', 'max:500'],
-            'owner_employee_id' => ['nullable', 'exists:employees,id'],
+            // An email group must have an owner (the workflow approver) from creation.
+            // Required on create; on edit the owner is changed via the members dialog (setOwner),
+            // so the edit form doesn't send it.
+            'owner_employee_id' => [$this->isMethod('post') ? 'required' : 'nullable', 'exists:employees,id'],
         ];
     }
 }
