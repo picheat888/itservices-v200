@@ -14,7 +14,7 @@ import { SetCredentialsModal } from '../components/set-credentials-modal';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -81,15 +81,6 @@ function initialTab(): Tab {
     }
     const fromStore = localStorage.getItem(EMP_TAB_KEY);
     return isTab(fromStore) ? fromStore : 'dashboard';
-}
-
-function initials(name: string) {
-    return name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
 }
 
 export default function EmployeesPage() {
@@ -658,10 +649,7 @@ function DirectoryTab({
             header: t('sub_directory'),
             render: (e) => (
                 <div className="flex items-center gap-2.5">
-                    <Avatar className="h-8 w-8">
-                        {e.photo_url && <AvatarImage src={e.photo_url} alt="" />}
-                        <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(e.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar name={e.name} photoUrl={e.photo_url} />
                     <div className="font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
                 </div>
             ),
@@ -934,9 +922,7 @@ function Dashboard({
                     <div className="max-h-[22rem] space-y-1 overflow-y-auto">
                         {(summary?.recent ?? []).map((e) => (
                             <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
-                                <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(e.name)}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar name={e.name} />
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
                                     <div className="text-muted-foreground truncate text-xs">

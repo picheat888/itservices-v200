@@ -1,19 +1,10 @@
+import { initials } from '@/shared/components/user-avatar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import type { OrgFlowNode, OrgNodeData } from '../../lib/org-tree';
 import { NODE_W } from '../../lib/org-tree';
 import { cn } from '@/shared/lib/utils';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-
-/** Initials fallback when an employee has no photo. */
-function initials(name: string): string {
-    return name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
 
 /**
  * One person card in the org chart, styled to the approved design: a

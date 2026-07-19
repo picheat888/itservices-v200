@@ -1,15 +1,15 @@
 import { useT } from '@/lang';
-import { useAccessMutations, useEmployeeAccess } from '@/modules/access';
+import { useEmployeeAccess } from '@/modules/access';
 import { useAuth } from '@/modules/auth';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { initials } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
-import type { AccessKind, Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
+import type { Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
-    Ban,
     Briefcase,
     Building2,
     Check,
@@ -44,15 +44,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { EmployeeHeldAsset } from '../api/orgApi';
 import { useApprovalChain, useEmployee, useEmployeeAssets, useOrgChart } from '../hooks/use-org';
 import { deptColor } from '../lib/org-tree';
-
-function initials(name: string) {
-    return (name || '?')
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
 
 /** Whole-year + month tenure from a YYYY-MM-DD joined date. */
 function tenureOf(joined?: string | null) {
@@ -103,13 +94,6 @@ export function EmployeeViewDrawer({
     const L = (th: string, en: string) => (lang === 'th' ? th : en);
     const { can } = useAuth();
     const canViewAccess = can('access.view');
-    const canManageAccess = can('access.manage');
-
-    // Access mutation hooks — called unconditionally (Rules of Hooks); the right one is picked per group when revoking.
-    const emailGroupMut = useAccessMutations('email-groups');
-    const fileShareMut = useAccessMutations('file-shares');
-    const socialMut = useAccessMutations('social-platforms');
-    const softwareMut = useAccessMutations('software');
 
     const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
@@ -156,57 +140,47 @@ export function EmployeeViewDrawer({
         setTimeout(() => setCopied((c) => (c === key ? null : c)), 1500);
     };
 
-    // ── Access revoke ──
-    // Map each access group to its AccessKind + matching mutation hook.
+    // Access is shown read-only here — granting/revoking is managed in the Access Directory.
     const accessGroups = [
-        {
-            key: 'email_groups' as const,
-            kind: 'email-groups' as AccessKind,
-            mut: emailGroupMut,
-            label: L('กลุ่มอีเมล', 'Email groups'),
-            icon: <Mail className="h-3.5 w-3.5" />,
-        },
-        {
-            key: 'file_shares' as const,
-            kind: 'file-shares' as AccessKind,
-            mut: fileShareMut,
-            label: L('ไฟล์แชร์', 'File shares'),
-            icon: <Folder className="h-3.5 w-3.5" />,
-        },
-        {
-            key: 'social' as const,
-            kind: 'social-platforms' as AccessKind,
-            mut: socialMut,
-            label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'),
-            icon: <Globe className="h-3.5 w-3.5" />,
-        },
-        {
-            key: 'software' as const,
-            kind: 'software' as AccessKind,
-            mut: softwareMut,
-            label: t('access_software'),
-            icon: <Package className="h-3.5 w-3.5" />,
-        },
+        { key: 'email_groups' as const, label: L('กลุ่มอีเมล', 'Email groups'), icon: <Mail className="h-3.5 w-3.5" /> },
+        { key: 'file_shares' as const, label: L('ไฟล์แชร์', 'File shares'), icon: <Folder className="h-3.5 w-3.5" /> },
+        { key: 'social' as const, label: L('โซเชียล/อินเทอร์เน็ต', 'Social / internet'), icon: <Globe className="h-3.5 w-3.5" /> },
+        { key: 'software' as const, label: t('access_software'), icon: <Package className="h-3.5 w-3.5" /> },
     ];
-    const mutByKey = { email_groups: emailGroupMut, file_shares: fileShareMut, social: socialMut, software: softwareMut } as const;
-    const revoking =
-        emailGroupMut.revokeMember.isPending ||
-        fileShareMut.revokeMember.isPending ||
-        socialMut.revokeMember.isPending ||
-        softwareMut.revokeMember.isPending;
 
-    // Revoke one membership through the mutation matching its group.
-    const revokeRow = (groupKey: keyof typeof mutByKey, row: EmployeeAccessRow) =>
-        mutByKey[groupKey].revokeMember.mutateAsync({ id: row.resource_id, membershipId: row.id });
-
-    // Revoke every listed active membership across all four groups.
-    const revokeAll = async () => {
-        if (!access) return;
-        for (const grp of accessGroups) {
-            for (const row of access[grp.key]) {
-                await grp.mut.revokeMember.mutateAsync({ id: row.resource_id, membershipId: row.id });
-            }
+    // Right-side role/level pill per group (English, matching the Access Directory badges):
+    // Email groups → Owner / Member · File shares → Owner / Read-Write / Read · others → none.
+    const rolePill = (key: string, r: EmployeeAccessRow): { label: string; cls: string } | null => {
+        const owner = { label: 'Owner', cls: 'bg-brand/15 text-brand' };
+        const muted = 'bg-muted text-muted-foreground';
+        if (key === 'email_groups') return r.is_owner ? owner : { label: 'Member', cls: muted };
+        if (key === 'file_shares') {
+            if (r.is_owner) return owner;
+            if (r.access_level === 'Write') return { label: 'Read/Write', cls: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' };
+            if (r.access_level) return { label: r.access_level, cls: muted };
         }
+        return null;
+    };
+
+    // Leading tile per row: social/software show the resource's initial (tinted with its own
+    // colour when it has one); email groups / file shares show the group icon on a brand tint.
+    const leadingTile = (key: string, r: EmployeeAccessRow) => {
+        const color = r.resource_color ?? null;
+        const style = color ? { background: `${color}22`, color } : undefined;
+        const brandTint = color ? '' : 'bg-brand/15 text-brand';
+        const content =
+            key === 'email_groups' ? (
+                <Mail className="h-4 w-4" />
+            ) : key === 'file_shares' ? (
+                <Folder className="h-4 w-4" />
+            ) : (
+                <span className="text-[12px] font-bold">{(r.resource_name?.trim()[0] ?? '?').toUpperCase()}</span>
+            );
+        return (
+            <span className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-md', brandTint)} style={style}>
+                {content}
+            </span>
+        );
     };
 
     // ── Sub-components ──
@@ -269,7 +243,7 @@ export function EmployeeViewDrawer({
                             className="text-muted-foreground rounded-full text-2xl font-semibold tracking-tight"
                             style={{ background: 'linear-gradient(135deg, var(--muted), color-mix(in oklch, var(--foreground) 8%, var(--muted)))' }}
                         >
-                            {initials(emp.name)}
+                            {initials(emp.name || '?')}
                         </AvatarFallback>
                     </Avatar>
 
@@ -518,35 +492,28 @@ export function EmployeeViewDrawer({
                                 />
                             )}
                             {tab === 'access' && (
-                                <div className="space-y-5">
+                                <div className="space-y-4">
                                     {access?.outstanding && (
                                         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium">
                                             <TriangleAlert className="h-4 w-4 shrink-0" />
                                             <span className="flex-1">
                                                 {L(
-                                                    'พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอน',
-                                                    'Resigned — these accesses are still active and should be revoked',
+                                                    'พนักงานลาออกแล้ว — สิทธิ์เหล่านี้ยังเปิดอยู่ ควรถอนที่ Access Directory',
+                                                    'Resigned — these accesses are still active; revoke them in the Access Directory',
                                                 )}
                                             </span>
-                                            {canManageAccess && (
-                                                <Button
-                                                    variant="destructive"
-                                                    size="sm"
-                                                    className="shrink-0"
-                                                    disabled={revoking}
-                                                    onClick={() => revokeAll()}
-                                                >
-                                                    <Ban className="h-3.5 w-3.5" />
-                                                    {L('ถอนทั้งหมด', 'Revoke all')}
-                                                </Button>
-                                            )}
                                         </div>
                                     )}
                                     {accessGroups.map((grp) => {
-                                        const rows = access?.[grp.key] ?? [];
+                                        // Owners float to the top of each group; within each tier sort by name (A–Z).
+                                        const rows = [...(access?.[grp.key] ?? [])].sort(
+                                            (a, b) =>
+                                                Number(!!b.is_owner) - Number(!!a.is_owner) ||
+                                                (a.resource_name ?? '').localeCompare(b.resource_name ?? ''),
+                                        );
                                         if (rows.length === 0) return null;
                                         return (
-                                            <div key={grp.key} className="space-y-2">
+                                            <div key={grp.key} className="space-y-1">
                                                 <div className="text-muted-foreground flex items-center gap-2 text-[12.5px] font-bold">
                                                     {grp.icon}
                                                     {grp.label}
@@ -554,38 +521,56 @@ export function EmployeeViewDrawer({
                                                         {rows.length}
                                                     </span>
                                                 </div>
-                                                {rows.map((r) => (
-                                                    <div
-                                                        key={r.id}
-                                                        className="border-border bg-card flex items-center gap-3 rounded-xl border px-3 py-2.5"
-                                                    >
-                                                        <span
-                                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                                            style={{ background: r.resource_color ?? 'var(--brand)' }}
-                                                        />
-                                                        <div className="min-w-0 flex-1">
-                                                            <div className="truncate text-sm font-medium">{r.resource_name}</div>
-                                                            <div className="text-muted-foreground truncate font-mono text-[11px]">
-                                                                {r.resource_detail ?? r.resource_code}
-                                                            </div>
+                                                {rows.map((r) => {
+                                                    const pill = rolePill(grp.key, r);
+                                                    return (
+                                                        <div
+                                                            key={r.id}
+                                                            className="border-border bg-card flex items-center gap-3 rounded-lg border px-3 py-1.5"
+                                                        >
+                                                            {leadingTile(grp.key, r)}
+                                                            {grp.key === 'software' ? (
+                                                                // Software reads as a single "Brand + Name" line (brand comes via resource_detail).
+                                                                <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
+                                                                    {/* Brand bold, software name in regular weight. */}
+                                                                    {r.resource_detail && <span className="font-bold">{r.resource_detail} </span>}
+                                                                    {r.resource_name}
+                                                                </div>
+                                                            ) : grp.key === 'social' ? (
+                                                                // Single line: platform name is the label; the URL reads as technical, so it's
+                                                                // set in mono (like the paths/emails elsewhere) and split off with a middot.
+                                                                <div className="min-w-0 flex-1 truncate text-[13px] leading-tight">
+                                                                    <span className="font-semibold">{r.resource_name}</span>
+                                                                    {r.resource_detail && (
+                                                                        <span className="text-muted-foreground font-mono text-[11px]">
+                                                                            {' '}
+                                                                            · {r.resource_detail}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="truncate text-[13px] leading-tight font-medium">
+                                                                        {r.resource_name}
+                                                                    </div>
+                                                                    <div className="text-muted-foreground truncate font-mono text-[11px] leading-tight">
+                                                                        {r.resource_detail ?? r.resource_code}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {pill && (
+                                                                <span
+                                                                    className={cn(
+                                                                        'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap',
+                                                                        pill.cls,
+                                                                    )}
+                                                                >
+                                                                    {pill.label}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                        <span className="text-muted-foreground shrink-0 text-xs">
-                                                            {r.access_level ?? r.purpose ?? '—'}
-                                                        </span>
-                                                        {canManageAccess && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => revokeRow(grp.key, r)}
-                                                                disabled={revoking}
-                                                                className="text-destructive hover:bg-destructive/10 inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition disabled:opacity-50"
-                                                                title={L('ถอนสิทธิ์', 'Revoke')}
-                                                            >
-                                                                <Ban className="h-3.5 w-3.5" />
-                                                                {L('ถอนสิทธิ์', 'Revoke')}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         );
                                     })}
@@ -938,7 +923,7 @@ function OrgPane({
                     <img src={node.photo_url} alt="" className="h-full w-full object-cover" />
                 ) : (
                     <div className="grid h-full w-full place-items-center font-bold text-white" style={{ background: dc, fontSize: size * 0.36 }}>
-                        {initials(node.name)}
+                        {initials(node.name || '?')}
                     </div>
                 )}
             </div>
