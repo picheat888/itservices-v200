@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/modules/settings';
 import { useContractSidebarBadge } from '@/modules/contract';
@@ -11,15 +11,6 @@ import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/shared/types';
 import { LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
-
-function initials(name: string) {
-    return name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
 
 export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const t = useT();
@@ -131,12 +122,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                         title={t('profile')}
                         className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent"
                     >
-                        <Avatar className="h-8 w-8 shrink-0">
-                            {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
-                            <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
-                                {initials(user?.name ?? 'IN')}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-8 w-8 shrink-0" textClassName="text-xs" />
                     </button>
                     <button
                         onClick={() => logout.mutate()}
@@ -154,12 +140,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                         title={t('profile')}
                         className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent"
                     >
-                        <Avatar className="h-9 w-9 shrink-0">
-                            {user?.photo_url && <AvatarImage src={user.photo_url} alt={user.name} />}
-                            <AvatarFallback className="bg-brand/10 text-xs font-semibold text-brand">
-                                {initials(user?.name ?? 'IN')}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-9 w-9 shrink-0" textClassName="text-xs" />
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{user?.name}</div>
                             <div className="truncate text-xs text-muted-foreground">{user?.group_name ?? user?.role_label}</div>

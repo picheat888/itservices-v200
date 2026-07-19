@@ -213,6 +213,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         Route::apiResource('email-groups', EmailGroupController::class)->except(['index', 'show']);
         Route::apiResource('file-shares', FileShareController::class)->except(['index', 'show']);
         Route::apiResource('social-platforms', SocialPlatformController::class)->except(['index', 'show']);
+        Route::put('email-groups/{emailGroup}/owner', [EmailGroupController::class, 'setOwner']);
+        Route::put('file-shares/{fileShare}/owner', [FileShareController::class, 'setOwner']);
         Route::post('email-groups/{emailGroup}/members', [EmailGroupController::class, 'addMember']);
         Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember']);
         Route::post('file-shares/{fileShare}/members', [FileShareController::class, 'addMember']);

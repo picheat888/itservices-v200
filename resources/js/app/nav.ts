@@ -18,7 +18,7 @@ export const navGroups: NavGroup[] = [
             { id: 'access', label: 'access_title', to: '/access', icon: KeyRound, permission: 'access.view' },
             { id: 'tickets', label: 'tickets', to: '/tickets', icon: Ticket, permission: 'tickets.create' },
             { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, permission: 'requests.submit' },
-            { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.view' },
+            { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.module' },
             { id: 'contracts', label: 'contracts', to: '/contracts', icon: FileText, permission: 'contracts.module' },
             { id: 'stock', label: 'stock', to: '/stock', icon: Warehouse, permission: 'stock.module' },
         ],

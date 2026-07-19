@@ -1,7 +1,7 @@
-import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -28,15 +28,18 @@ interface DataTableProps<T> {
     filters?: React.ReactNode;
     /** Show shimmering skeleton rows instead of the empty state while data loads. */
     loading?: boolean;
+    /** Custom content for the empty state (defaults to a plain "No data" line). */
+    emptyState?: React.ReactNode;
     /** Cap the table body height (e.g. "55vh") so rows scroll under a sticky header — keeps search/pagination in view inside a dialog. */
     maxBodyHeight?: string;
     /** Fill the parent's height: rows-per-page is computed from the available height,
      *  the rows-per-page picker is hidden, and the body never scrolls (page over instead).
      *  Opt-in; requires the parent to give the table a definite height. */
     fillHeight?: boolean;
-    /** Approx rendered row height in px, used only by `fillHeight` to derive rows-per-page.
-     *  Defaults to 45 (compact single-line rows); raise it for taller rows (icons / two-line
-     *  cells) so the count never over-estimates and clips rows under `overflow-hidden`. */
+    /** Approx rendered row height in px. Used by `fillHeight` to derive rows-per-page, and
+     *  (whenever set) to pin filler rows so a short last page stays the same height as a full
+     *  one — keeps a fixed-`pageSize` table from resizing between pages. Match the real row's
+     *  height; raise it for taller rows (icons / two-line cells). */
     rowHeight?: number;
     /** Fixed client-side rows per page (hides the rows-per-page picker). Ignored when
      *  `server` or `fillHeight` is set. */
@@ -67,6 +70,7 @@ export function DataTable<T>({
     actions,
     filters,
     loading,
+    emptyState,
     maxBodyHeight,
     fillHeight,
     rowHeight,
@@ -194,7 +198,7 @@ export function DataTable<T>({
                         {!loading && pageRows.length === 0 && (
                             <tr>
                                 <td colSpan={columns.length} className="text-muted-foreground px-4 py-10 text-center">
-                                    {lang === 'th' ? 'ไม่พบข้อมูล' : 'No data'}
+                                    {emptyState ?? (lang === 'th' ? 'ไม่พบข้อมูล' : 'No data')}
                                 </td>
                             </tr>
                         )}
@@ -221,7 +225,7 @@ export function DataTable<T>({
                             pageRows.length > 0 &&
                             pageRows.length < pageSize &&
                             Array.from({ length: pageSize - pageRows.length }).map((_, i) => (
-                                <tr key={`filler-${i}`} aria-hidden style={fillHeight && rowHeight ? { height: rowHeight } : undefined}>
+                                <tr key={`filler-${i}`} aria-hidden style={rowHeight ? { height: rowHeight } : undefined}>
                                     {columns.map((c) => (
                                         <td key={c.key} className="px-[var(--row-px)] py-[var(--row-py)]">
                                             <span className="invisible text-sm">–</span>
@@ -235,7 +239,7 @@ export function DataTable<T>({
 
             {!hidePagination && (
                 <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-sm">
-                    {/* Left: rows-per-page (when adjustable) + the range summary — kept separate from the pager. */}
+                    {/* Left: rows-per-page picker (when adjustable). */}
                     <div className="flex items-center gap-3">
                         {!(fillHeight || fixedPageSize) && (
                             <div className="flex items-center gap-2">
@@ -260,30 +264,32 @@ export function DataTable<T>({
                                 </Select>
                             </div>
                         )}
+                    </div>
+
+                    {/* Right: range summary sits next to the page navigation. */}
+                    <div className="flex items-center gap-3">
                         <span>
                             {total === 0 ? 0 : start + 1}–{Math.min(start + pageSize, total)} {lang === 'th' ? 'จาก' : 'of'} {total}
                         </span>
-                    </div>
-
-                    {/* Right: page navigation only. */}
-                    <div className="flex items-center gap-1">
-                        <button
-                            onClick={() => setPage(Math.max(1, safePage - 1))}
-                            disabled={safePage <= 1}
-                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </button>
-                        <span className="text-foreground px-1 font-medium">
-                            {safePage} / {pageCount}
-                        </span>
-                        <button
-                            onClick={() => setPage(Math.min(pageCount, safePage + 1))}
-                            disabled={safePage >= pageCount}
-                            className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setPage(Math.max(1, safePage - 1))}
+                                disabled={safePage <= 1}
+                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            <span className="text-foreground px-1 font-medium">
+                                {safePage} / {pageCount}
+                            </span>
+                            <button
+                                onClick={() => setPage(Math.min(pageCount, safePage + 1))}
+                                disabled={safePage >= pageCount}
+                                className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
