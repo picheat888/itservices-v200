@@ -4,6 +4,7 @@ namespace App\Http\Requests\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Contract\ContractType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -52,7 +53,11 @@ class StoreAssetRequest extends FormRequest
             'warranty_lifetime' => ['sometimes', 'boolean'],
             // A rented asset must be linked to the vendor contract it's billed under;
             // its lease term, fee and vendor are read from that contract (not stored here).
-            'contract_id' => ['nullable', 'required_if:source,rented', 'integer', 'exists:contracts,id'],
+            // Only hardware contracts may hold assets, so the linked contract must be one.
+            'contract_id' => [
+                'nullable', 'required_if:source,rented', 'integer',
+                Rule::exists('contracts', 'id')->where('type', ContractType::Hardware->value),
+            ],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

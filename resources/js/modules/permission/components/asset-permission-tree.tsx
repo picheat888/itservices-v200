@@ -4,21 +4,24 @@ import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 
-// Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
-const MASTER = 'stock.module';
-// `chip: false` hides the "View" tag — used for single-switch groups (Counting,
-// Event) that gate their whole feature rather than a view/management split.
+// Mirrors App\Support\Permissions::assetHierarchy() — keep in sync.
+const MASTER = 'assets.module';
+// The self-service "My Assets" pair is master-independent (like employees.edit_own):
+// `my` opens the page; `return` is its child and requires `my`.
+const STANDALONE = { view: 'assets.my', children: ['assets.return'] };
+// `chip: false` hides the "View" tag — used for single-switch groups (Dashboard) and
+// the management/special groups, which gate a whole area rather than a view/manage split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'stock.view_dashboard', children: [] },
-    { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
-    { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: [], chip: false },
-    { view: 'stock.view_events', children: [], chip: false },
+    { view: 'assets.view_dashboard', children: [], chip: false },
+    { view: 'assets.view', children: ['assets.register', 'assets.edit', 'assets.delete'] },
+    { view: 'assets.manage', children: ['assets.transfer', 'assets.receive', 'assets.retire'], chip: false },
+    { view: 'assets.special', children: ['assets.force_recall', 'assets.cancel_writeoff'], chip: false },
 ];
-const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+// Every key that lives under the master (excludes the standalone my/return pair).
+const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
 
-const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
-const info = (key: string, lang: Lang) => actionDescription('stock', key.replace('stock.', ''), lang);
+const label = (key: string, lang: Lang) => actionLabel('assets', key.replace('assets.', ''), lang);
+const info = (key: string, lang: Lang) => actionDescription('assets', key.replace('assets.', ''), lang);
 
 /** True when every ancestor (master, and the group view for a child) is on. */
 function hasAncestors(key: string, has: (k: string) => boolean): boolean {
@@ -52,11 +55,13 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 }
 
 /**
- * Renders the Stock permission card as a master → view → management tree with
- * cascade: turning a parent off clears + locks its children; turning a child on
- * implies its ancestors. Super is read-only (everything shown on + locked).
+ * Renders the Assets permission card as a master → group → management tree with
+ * cascade (mirrors ContractPermissionTree): turning a parent off clears + locks its
+ * children; turning a child on implies its ancestors. The "My Assets" pair
+ * (`my` + `return`) is a standalone self-service group the master never locks —
+ * `return` still requires `my`. Super is read-only (everything shown on + locked).
  */
-export function StockPermissionTree({
+export function AssetPermissionTree({
     draft,
     setDraft,
     isSuper,
@@ -79,11 +84,15 @@ export function StockPermissionTree({
             if (next.has(key)) {
                 next.delete(key);
                 if (key === MASTER) {
-                    ALL_KEYS.forEach((k) => next.delete(k));
+                    GATED_KEYS.forEach((k) => next.delete(k));
                 }
                 const group = GROUPS.find((g) => g.view === key);
                 if (group) {
                     group.children.forEach((c) => next.delete(c));
+                }
+                // Turning off "My Assets" clears its child.
+                if (key === STANDALONE.view) {
+                    STANDALONE.children.forEach((c) => next.delete(c));
                 }
             } else {
                 next.add(key);
@@ -95,28 +104,33 @@ export function StockPermissionTree({
                 if (GROUPS.some((g) => g.view === key)) {
                     next.add(MASTER);
                 }
+                // A standalone child implies its self-service view (not the master).
+                if (STANDALONE.children.includes(key)) {
+                    next.add(STANDALONE.view);
+                }
             }
             return next;
         });
     };
 
-    const activeCount = masterOn ? ALL_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const myOn = has(STANDALONE.view);
+    const standaloneActive = (myOn ? 1 : 0) + STANDALONE.children.filter((c) => has(c) && myOn).length;
+    const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = gatedActive + standaloneActive;
+    const totalCount = GATED_KEYS.length + 1 + STANDALONE.children.length; // + my + its children
 
     return (
         <div className="border-border rounded-lg border">
             <div className="border-border flex items-center justify-between border-b px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{moduleLabel('stock', lang)}</span>
+                <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{moduleLabel('assets', lang)}</span>
                 <span className={cn('font-mono text-[10.5px] font-bold', activeCount === 0 ? 'text-muted-foreground' : 'text-brand')}>
-                    {activeCount}/{ALL_KEYS.length}
+                    {activeCount}/{totalCount}
                 </span>
             </div>
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-sm font-semibold">
-                        {label(MASTER, lang)}
-                        {info(MASTER, lang) && <InfoHint text={info(MASTER, lang)} />}
-                    </div>
+                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
                     <div className="text-muted-foreground text-[10.5px]">
                         {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
                     </div>
@@ -167,6 +181,37 @@ export function StockPermissionTree({
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Standalone self-service group ("My Assets") — never locked by the master. */}
+            <div className="border-border border-t px-3.5 py-1.5">
+                <div className="flex min-h-[34px] items-center gap-2">
+                    <div className="min-w-0">
+                        <div className="text-sm font-medium">{label(STANDALONE.view, lang)}</div>
+                        <div className="text-muted-foreground text-[10.5px]">
+                            {lang === 'th' ? 'บริการตนเอง · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of the master'}
+                        </div>
+                    </div>
+                    <span className="ml-auto">
+                        <Switch on={myOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />
+                    </span>
+                </div>
+                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
+                    {STANDALONE.children.map((child) => {
+                        const childInfo = info(child, lang);
+                        return (
+                            <div key={child} className="flex min-h-[30px] items-center gap-2">
+                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
+                                    {label(child, lang)}
+                                    {childInfo && <InfoHint text={childInfo} />}
+                                </span>
+                                <span className="ml-auto">
+                                    <Switch on={has(child) && myOn} locked={isSuper || !myOn} onClick={() => toggle(child)} />
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

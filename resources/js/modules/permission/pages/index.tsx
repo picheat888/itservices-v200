@@ -1,6 +1,7 @@
 import { GroupRoleModal } from '../components/group-role-modal';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
 import { RoleModal } from '../components/role-modal';
+import { AssetPermissionTree } from '../components/asset-permission-tree';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { ContractPermissionTree } from '../components/contract-permission-tree';
@@ -97,7 +98,7 @@ export default function PermissionsPage() {
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
-    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees'] },
+    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
 ];
 
@@ -337,6 +338,17 @@ function RolesTab() {
                                             if (group.module === 'contracts') {
                                                 return (
                                                     <ContractPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'assets') {
+                                                return (
+                                                    <AssetPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}

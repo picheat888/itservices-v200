@@ -6,7 +6,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Check, Eye, RotateCcw, Share2, SquarePen, Tag } from 'lucide-react';
+import { Check, Eye, RotateCcw, Share2, SquarePen, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAsset, useAssetMutations } from '../hooks/use-assets';
 import { AssetHistoryTab } from './asset-history-tab';
@@ -52,6 +52,7 @@ export function AssetDetailDrawer({
     canReceive,
     canForceRecall = false,
     canCancelWriteoff = false,
+    canDelete = false,
 }: {
     asset: Asset | null;
     onClose: () => void;
@@ -63,6 +64,7 @@ export function AssetDetailDrawer({
     canReceive: boolean;
     canForceRecall?: boolean;
     canCancelWriteoff?: boolean;
+    canDelete?: boolean;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -98,7 +100,7 @@ export function AssetDetailDrawer({
     const { data: full } = useAsset(asset?.id);
     // The recipient (matched by employee code) is the only one who can accept a hand-over.
     const { user } = useAuth();
-    const { accept, cancelWriteoff } = useAssetMutations();
+    const { accept, cancelWriteoff, remove } = useAssetMutations();
 
     // Undo a write-off (wrong-retire fix) — restores the asset to the Ready pool.
     const askCancelWriteoff = async (target: Asset) => {
@@ -110,6 +112,22 @@ export function AssetDetailDrawer({
             confirmText: t('asset_cancel_writeoff'),
             action: async () => {
                 await cancelWriteoff.mutateAsync(target.id);
+                onClose();
+            },
+        });
+    };
+
+    // Permanently delete an asset — guarded to Ready + not contract-linked (mirrors the
+    // server rule in AssetController@destroy). Irreversible, so it uses the danger variant.
+    const askDelete = async (target: Asset) => {
+        await confirm({
+            variant: 'danger',
+            title: t('asset_delete_title'),
+            entity: { name: target.model, sub: target.asset_code },
+            description: t('asset_delete_confirm'),
+            confirmText: t('asset_delete'),
+            action: async () => {
+                await remove.mutateAsync(target.id);
                 onClose();
             },
         });
@@ -319,7 +337,13 @@ export function AssetDetailDrawer({
                     </div>
 
                     {/* Footer — context action (left) / Edit (right); the ✕ handles closing. */}
-                    {(onEdit || canTransfer || canReceive || isRecipient || canForceRecall || (canCancelWriteoff && a.status === 'writeoff')) && (
+                    {(onEdit ||
+                        canTransfer ||
+                        canReceive ||
+                        isRecipient ||
+                        canForceRecall ||
+                        (canCancelWriteoff && a.status === 'writeoff') ||
+                        (canDelete && a.status === 'ready' && !a.contract_id)) && (
                         <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
                             {isRecipient && (
                                 <Button onClick={() => accept.mutate(a.id, { onSuccess: onClose })} disabled={accept.isPending}>
@@ -370,6 +394,19 @@ export function AssetDetailDrawer({
                                 <Button variant="outline" onClick={() => askCancelWriteoff(a)} disabled={cancelWriteoff.isPending}>
                                     <RotateCcw className="h-4 w-4" />
                                     {t('asset_cancel_writeoff')}
+                                </Button>
+                            )}
+                            {/* Permanent delete — only for an in-pool (Ready) asset with no contract link.
+                                Anything deployed / pending / written-off, or tied to a contract, is blocked. */}
+                            {canDelete && a.status === 'ready' && !a.contract_id && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => askDelete(a)}
+                                    disabled={remove.isPending}
+                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('asset_delete')}
                                 </Button>
                             )}
                             {/* A written-off asset is frozen — no editing until the write-off is cancelled. */}
