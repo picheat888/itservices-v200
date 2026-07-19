@@ -83,6 +83,10 @@
 }
 
 :root {
+    /* Tell the browser this is a light UI so native scrollbars, form controls and
+       the like render in light tones. `.dark` flips this to `dark`. */
+    color-scheme: light;
+
     /* Blue brand accent (overridable from Settings → Branding via JS) */
     --brand: #2563eb;
     --brand-foreground: #ffffff;
@@ -140,6 +144,9 @@
 }
 
 .dark {
+    /* Dark UI → native scrollbars & form controls switch to their dark rendering. */
+    color-scheme: dark;
+
     --brand: #3b82f6;
     --brand-foreground: #ffffff;
 
@@ -266,15 +273,40 @@
     stroke-dasharray: 113;
     animation: toast-ring-deplete 6s linear forwards;
 }
+/* Transient toast (bottom-right): the new standard replaces the ring with a bottom
+   progress bar that depletes over the same 6s auto-dismiss window (paused on hover /
+   while leaving). NotificationToaster keeps the ring variant above. */
+@keyframes toast-bar-deplete {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}
+.toast-bar-fg {
+    transform-origin: left;
+    animation: toast-bar-deplete 6s linear forwards;
+}
+.toast-card:hover .toast-bar-fg,
+.toast-leave .toast-bar-fg {
+    animation-play-state: paused;
+}
 /* Card elevation: a soft ambient shadow, plus a faint edge ring + top highlight in dark
    mode so the near-black card separates from the page. Hover deepens the shadow (no lift —
    the enter/leave animations own `transform`). */
 .toast-card {
-    box-shadow: 0 0 0 1px var(--toast-ring), var(--shadow-toast), inset 0 1px 0 var(--toast-top);
+    box-shadow:
+        0 0 0 1px var(--toast-ring),
+        var(--shadow-toast),
+        inset 0 1px 0 var(--toast-top);
     transition: box-shadow 0.18s ease;
 }
 .toast-card:hover {
-    box-shadow: 0 0 0 1px var(--toast-ring), var(--shadow-toast-hover), inset 0 1px 0 var(--toast-top);
+    box-shadow:
+        0 0 0 1px var(--toast-ring),
+        var(--shadow-toast-hover),
+        inset 0 1px 0 var(--toast-top);
 }
 
 /* Pause the countdown (ring + the JS dismiss timer is paused in parallel) while hovered. */
@@ -287,7 +319,8 @@
     .toast-leave {
         animation-duration: 0.01ms;
     }
-    .toast-ring-fg {
+    .toast-ring-fg,
+    .toast-bar-fg {
         animation: none;
     }
 }

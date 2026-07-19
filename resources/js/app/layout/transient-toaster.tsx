@@ -1,18 +1,33 @@
 import { cn } from '@/shared/lib/utils';
-import { useToastStore, type Toast, type ToastTone } from '@/stores/toast';
-import { Info, X } from 'lucide-react';
+import { useToastStore, type Toast, type ToastIcon, type ToastTone } from '@/stores/toast';
+import { Check, Info, Trash2, TriangleAlert, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/** How long a toast stays before it auto-dismisses (matches the 6s ring animation in app.css). */
+/** How long a toast stays before it auto-dismisses (matches the 6s bar animation in app.css). */
 const TOAST_LIFE_MS = 6000;
 /** Most toasts shown stacked at once; the rest wait in the store and pop in as slots free up. */
 const MAX_VISIBLE = 3;
 
-/** Icon + accent color per tone. Error uses a bold X (matches the toast mockup). */
-const TONE_META: Record<ToastTone, { Icon: typeof X; color: string; strokeWidth?: number }> = {
-    error: { Icon: X, color: 'text-destructive', strokeWidth: 2.5 },
-    info: { Icon: Info, color: 'text-primary' },
+/**
+ * Per-tone icon + colour classes for the toast card, aligned with the app-wide status
+ * palette (emerald=success, amber=warning, red=error, blue=info):
+ *   - `Icon`   : the lucide glyph drawn white inside the solid badge
+ *   - `badge`  : solid circle background behind the white icon
+ *   - `border` : the card's tone-tinted border
+ *   - `bar`    : the bottom progress bar fill
+ */
+const TONE_META: Record<ToastTone, { Icon: typeof X; badge: string; border: string; bar: string }> = {
+    success: { Icon: Check, badge: 'bg-emerald-600', border: 'border-emerald-200 dark:border-emerald-900', bar: 'bg-emerald-600' },
+    error: { Icon: X, badge: 'bg-red-600', border: 'border-red-200 dark:border-red-900', bar: 'bg-red-600' },
+    warning: { Icon: TriangleAlert, badge: 'bg-amber-500', border: 'border-amber-200 dark:border-amber-900', bar: 'bg-amber-500' },
+    info: { Icon: Info, badge: 'bg-blue-600', border: 'border-blue-200 dark:border-blue-900', bar: 'bg-blue-600' },
+};
+
+/** Glyph overrides for the optional per-toast `icon` (keeps the tone's colours). */
+const ICON_OVERRIDES: Record<ToastIcon, typeof X> = {
+    trash: Trash2,
+    users: Users,
 };
 
 /**
@@ -37,12 +52,15 @@ export function TransientToaster() {
 
 /**
  * A single transient toast. Owns its auto-dismiss countdown (paused while
- * hovered so it stays in sync with the depleting progress ring), plays a
+ * hovered so it stays in sync with the depleting progress bar), plays a
  * slide-out on close, then removes itself from the store.
  */
 function ToastItem({ toast }: { toast: Toast }) {
     const dismiss = useToastStore((s) => s.dismiss);
-    const { Icon, color, strokeWidth } = TONE_META[toast.tone];
+    const { Icon: ToneIcon, badge, border, bar } = TONE_META[toast.tone];
+    // Per-toast icon override wins over the tone's default glyph (colours stay tone-based).
+    const Icon = toast.icon ? ICON_OVERRIDES[toast.icon] : ToneIcon;
+    const hasTitle = Boolean(toast.title);
 
     const [leaving, setLeaving] = useState(false);
 
@@ -70,7 +88,7 @@ function ToastItem({ toast }: { toast: Toast }) {
         return () => window.clearTimeout(timer.current);
     }, []);
 
-    /** Hover in: freeze the countdown (the ring pauses via CSS in parallel). */
+    /** Hover in: freeze the countdown (the bar pauses via CSS in parallel). */
     const pause = () => {
         window.clearTimeout(timer.current);
         remaining.current -= Date.now() - startedAt.current;
@@ -88,33 +106,37 @@ function ToastItem({ toast }: { toast: Toast }) {
             onMouseEnter={pause}
             onMouseLeave={resume}
             className={cn(
-                'toast-card border-border bg-popover pointer-events-auto flex w-80 max-w-full items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3',
+                'toast-card bg-popover pointer-events-auto w-80 max-w-full overflow-hidden rounded-xl border',
+                border,
                 leaving ? 'toast-leave' : 'toast-enter',
             )}
         >
-            <span className={cn('relative h-[42px] w-[42px] shrink-0', color)}>
-                <svg viewBox="0 0 42 42" className="absolute inset-0 -rotate-90">
-                    <circle cx="21" cy="21" r="18" fill="none" strokeWidth="3" className="stroke-current opacity-15" />
-                    <circle cx="21" cy="21" r="18" fill="none" strokeWidth="3" strokeLinecap="round" className="toast-ring-fg stroke-current" />
-                </svg>
-                <span className="absolute inset-0 grid place-items-center">
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={strokeWidth} />
+            <div className={cn('flex min-h-[2.5rem] gap-3 px-4 py-3.5', hasTitle ? 'items-start' : 'items-center')}>
+                <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full text-white', badge)}>
+                    <Icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
                 </span>
-            </span>
 
-            <div className="min-w-0 flex-1 text-sm leading-snug">
-                {toast.title && <div className="font-semibold">{toast.title}</div>}
-                <div className={cn(toast.title ? 'font-normal' : 'font-medium')}>{toast.message}</div>
+                <div className="min-w-0 flex-1 text-sm leading-snug">
+                    {hasTitle && <div className="text-foreground font-bold">{toast.title}</div>}
+                    <div className={cn(hasTitle ? 'text-muted-foreground mt-0.5 text-[13px] font-medium' : 'text-foreground font-bold')}>
+                        {toast.message}
+                    </div>
+                </div>
+
+                <button
+                    onClick={beginClose}
+                    aria-label="Dismiss"
+                    title="Dismiss"
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground -mr-1 flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md transition-colors"
+                >
+                    <X className="h-4 w-4" />
+                </button>
             </div>
 
-            <button
-                onClick={beginClose}
-                aria-label="Dismiss"
-                title="Dismiss"
-                className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-            >
-                <X className="h-4 w-4" />
-            </button>
+            {/* Bottom progress bar — depletes over the 6s life (paused on hover / while leaving). */}
+            <div className="bg-muted h-1">
+                <span className={cn('toast-bar-fg block h-full', bar)} />
+            </div>
         </div>
     );
 }
