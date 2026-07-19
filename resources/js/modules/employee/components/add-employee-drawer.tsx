@@ -1,6 +1,6 @@
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
@@ -175,7 +175,6 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     };
 
     const steps = [t('emp_personal_info'), t('emp_work_info'), t('emp_access')];
-    const photoInitials = `${form.firstName[0] ?? ''}${form.lastName[0] ?? ''}`.toUpperCase();
 
     return (
         <>
@@ -277,14 +276,13 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                         {step === 1 && (
                             <>
                                 <div className="flex items-center gap-4">
-                                    {/* key forces a remount when the photo changes/clears — otherwise Radix Avatar
-                                        keeps its stale "loaded" status and the fallback never reappears after Remove. */}
-                                    <Avatar key={photoUrl ?? 'no-photo'} className="h-16 w-16">
-                                        {photoUrl && <AvatarImage src={photoUrl} alt="" />}
-                                        <AvatarFallback className="bg-brand/10 text-brand">
-                                            {photoInitials || <User className="h-6 w-6" />}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <UserAvatar
+                                        name={`${form.firstName} ${form.lastName}`}
+                                        photoUrl={photoUrl}
+                                        className="h-16 w-16"
+                                        textClassName="text-lg"
+                                        fallbackIcon={<User className="h-6 w-6" />}
+                                    />
                                     <div>
                                         <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
                                             <Upload className="h-4 w-4" />

@@ -1,21 +1,12 @@
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { useSectionMembers } from '../hooks/use-org';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Employee, Section } from '@/shared/types';
 import { Users } from 'lucide-react';
-
-function initials(name: string) {
-    return name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
 
 /**
  * Focused dialog listing every employee in a section. Uses the shared DataTable
@@ -35,10 +26,7 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
             header: t('order_name'),
             render: (m) => (
                 <div className="flex items-center gap-2.5">
-                    <Avatar className="h-8 w-8">
-                        {m.photo_url && <AvatarImage src={m.photo_url} alt="" />}
-                        <AvatarFallback className="bg-brand/10 text-brand text-[11px] font-semibold">{initials(m.name)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar name={m.name} photoUrl={m.photo_url} />
                     <span className="truncate font-medium">{lang === 'th' ? (m.name_th ?? m.name) : m.name}</span>
                 </div>
             ),

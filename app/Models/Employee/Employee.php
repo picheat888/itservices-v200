@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 class Employee extends Model
 {
@@ -32,6 +33,12 @@ class Employee extends Model
         $th = trim(($this->first_name_th ?? '').' '.($this->last_name_th ?? ''));
 
         return $th !== '' ? $th : null;
+    }
+
+    /** Public URL of the employee photo (public disk), or null when none uploaded. */
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
     }
 
     protected function casts(): array
