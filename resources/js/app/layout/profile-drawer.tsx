@@ -1,6 +1,6 @@
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -11,15 +11,6 @@ import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-
-function initials(name: string) {
-    return name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
-}
 
 // Names are stored as a single space-joined string ("First Last"); the first
 // word is the given name and everything after it the surname. This mirrors the
@@ -152,10 +143,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 <div className="mt-6 flex-1 space-y-6 overflow-y-auto px-1 pb-4">
                     <div className="flex items-center gap-4">
                         <div className="relative">
-                            <Avatar className="h-16 w-16">
-                                {previewUrl && <AvatarImage src={previewUrl} alt={user.name} />}
-                                <AvatarFallback className="bg-brand/10 text-brand text-lg font-semibold">{initials(displayName)}</AvatarFallback>
-                            </Avatar>
+                            <UserAvatar name={displayName} photoUrl={previewUrl} className="h-16 w-16" textClassName="text-lg" />
                             {canEdit && (
                                 <button
                                     onClick={() => inputRef.current?.click()}

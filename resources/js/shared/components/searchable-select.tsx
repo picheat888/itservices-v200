@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -10,6 +10,8 @@ export interface SearchOption {
     label: string;
     /** Right-aligned monospace tag (e.g. a code or on-hand qty). */
     sub?: string;
+    /** Optional small pill shown before the sub (e.g. a department tag). */
+    tag?: string;
     /** Optional secondary line under the label (e.g. a job title). */
     hint?: string;
     /** Optional avatar URL; when the field is present an avatar slot renders (initials fallback). */
@@ -18,16 +20,6 @@ export interface SearchOption {
      *  has one, every row reserves the slot so labels stay aligned. */
     icon?: React.ReactNode;
     search: string;
-}
-
-/** First two initials of a label, for the avatar fallback. */
-function optionInitials(label: string): string {
-    return label
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase();
 }
 
 // Prefer dropping down; only flip up when there's less than this much room below.
@@ -192,18 +184,18 @@ export function SearchableSelect({
                         )}
                     >
                         {o.avatar !== undefined && (
-                            <Avatar className="h-7 w-7 shrink-0">
-                                {o.avatar && <AvatarImage src={o.avatar} alt="" />}
-                                <AvatarFallback className="bg-brand/10 text-brand text-[10px] font-semibold">
-                                    {optionInitials(o.label)}
-                                </AvatarFallback>
-                            </Avatar>
+                            <UserAvatar name={o.label} photoUrl={o.avatar} className="h-7 w-7 shrink-0" textClassName="text-[10px]" />
                         )}
                         {hasIcons && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{o.icon}</span>}
                         <span className="min-w-0 flex-1">
                             <span className="block truncate">{o.label}</span>
                             {o.hint && <span className="text-muted-foreground block truncate text-xs">{o.hint}</span>}
                         </span>
+                        {o.tag && (
+                            <span className="bg-accent text-muted-foreground max-w-[110px] shrink-0 truncate rounded px-1.5 py-0.5 text-[10px] font-medium">
+                                {o.tag}
+                            </span>
+                        )}
                         {o.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{o.sub}</span>}
                     </button>
                 ))}
@@ -224,12 +216,7 @@ export function SearchableSelect({
                 <span className="flex min-w-0 items-center gap-2">
                     {/* Avatar slot renders only for option sets that supply the field (e.g. people pickers). */}
                     {selected && selected.avatar !== undefined && (
-                        <Avatar className="h-6 w-6 shrink-0">
-                            {selected.avatar && <AvatarImage src={selected.avatar} alt="" />}
-                            <AvatarFallback className="bg-brand/10 text-brand text-[10px] font-semibold">
-                                {optionInitials(selected.label)}
-                            </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar name={selected.label} photoUrl={selected.avatar} className="h-6 w-6 shrink-0" textClassName="text-[10px]" />
                     )}
                     {/* Leading icon of the selected option (e.g. type icon / status dot). */}
                     {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}

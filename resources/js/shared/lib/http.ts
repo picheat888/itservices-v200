@@ -44,7 +44,7 @@ http.interceptors.response.use(
             const loggedIn = !!queryClient.getQueryData(ME_KEY);
             if (loggedIn) {
                 const detail = retryAfter ? ` Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : '';
-                useToastStore.getState().push(`Too many requests — please slow down for a moment.${detail}`);
+                useToastStore.getState().push(`Too many requests — please slow down for a moment.${detail}`, 'warning');
             } else {
                 showError('rate-limit', retryAfter);
             }

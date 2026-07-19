@@ -635,6 +635,7 @@ export interface EmailGroup {
     description?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
 }
@@ -646,9 +647,13 @@ export interface FileShare {
     path: string;
     department_id: number | null;
     department?: string | null;
-    size_label?: string | null;
+    // Numeric size + unit (split for reporting). size 0 = unlimited, null = unspecified.
+    size?: number | null;
+    size_unit?: string | null;
+    description?: string | null;
     owner_employee_id: number | null;
     owner?: string | null;
+    owner_photo_url?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
 }
@@ -671,12 +676,15 @@ export interface Software {
     code: string;
     name: string;
     publisher?: string | null;
-    version?: string | null;
+    brand_id?: number | null;
+    logo_url?: string | null;
     license_type: SoftwareLicenseType;
     seats?: number | null;
     seats_used?: number;
-    department_id: number | null;
-    department?: string | null;
+    /** Whether a product key is on file (visible to everyone). */
+    has_product_key?: boolean;
+    /** Decrypted product key — only present for users who can manage software. */
+    product_key?: string | null;
     notes?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
@@ -687,6 +695,7 @@ export interface AccessMemberPreview {
     id: number;
     employee_id: number;
     name: string | null;
+    photo_url?: string | null;
     access_level?: string | null;
     purpose?: string | null;
 }
@@ -695,9 +704,12 @@ export interface AccessMember {
     id: number;
     employee_id: number;
     employee?: string | null;
+    photo_url?: string | null;
     access_level: string | null;
     purpose: string | null;
     granted_at: string | null;
+    /** Display name of the admin who granted this membership (audit). */
+    granted_by?: string | null;
     revoked_at: string | null;
 }
 
@@ -711,6 +723,8 @@ export interface EmployeeAccessRow {
     access_level: string | null;
     purpose: string | null;
     granted_at: string | null;
+    // True when this employee owns the resource (email-group approver / file-share owner).
+    is_owner?: boolean;
 }
 
 export interface EmployeeAccess {
