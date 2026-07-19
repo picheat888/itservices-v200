@@ -16,9 +16,15 @@ class StoreFileShareRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'path' => ['required', 'string', 'max:255'],
-            'department_id' => ['nullable', 'exists:departments,id'],
-            'size_label' => ['nullable', 'string', 'max:50'],
-            'owner_employee_id' => ['nullable', 'exists:employees,id'],
+            'department_id' => ['required', 'exists:departments,id'],
+            // size 0 = unlimited (no unit needed); any other size requires a unit.
+            'size' => ['required', 'integer', 'min:0'],
+            'size_unit' => ['nullable', 'required_unless:size,0', 'in:KB,GB,TB,PB'],
+            'description' => ['nullable', 'string', 'max:500'],
+            // A file share must have an owner from creation (matches email groups).
+            // Required on create; on edit the owner is changed via the members dialog (setOwner),
+            // so the edit form doesn't send it.
+            'owner_employee_id' => [$this->isMethod('post') ? 'required' : 'nullable', 'exists:employees,id'],
         ];
     }
 }

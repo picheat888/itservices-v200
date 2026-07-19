@@ -1,0 +1,274 @@
+<title>Employee Access — Simple (current style + full data)</title>
+<style>
+  :root {
+    --bg: hsl(212 24% 94%);
+    --card: #ffffff;
+    --ink: hsl(222 32% 13%);
+    --ink-2: hsl(215 16% 40%);
+    --muted: hsl(215 14% 55%);
+    --line: hsl(214 22% 90%);
+    --surface: hsl(212 30% 97%);
+
+    --c-email: #7c3aed;
+    --c-file: #0d9488;
+    --c-social: #6366f1;
+    --c-soft: #d97706;
+
+    --lv-full: #059669;
+    --lv-write: #2563eb;
+    --lv-read: hsl(215 14% 46%);
+
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Noto Sans Thai', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: hsl(222 24% 7%); --card: hsl(222 22% 11%); --ink: hsl(210 22% 95%); --ink-2: hsl(215 16% 70%);
+      --muted: hsl(215 14% 52%); --line: hsl(215 16% 20%); --surface: hsl(215 20% 14%);
+      --c-email: #a78bfa; --c-file: #2dd4bf; --c-social: #818cf8; --c-soft: #fbbf24;
+      --lv-full: #34d399; --lv-write: #60a5fa; --lv-read: hsl(215 14% 60%);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: hsl(212 24% 94%); --card: #ffffff; --ink: hsl(222 32% 13%); --ink-2: hsl(215 16% 40%);
+    --muted: hsl(215 14% 55%); --line: hsl(214 22% 90%); --surface: hsl(212 30% 97%);
+    --c-email: #7c3aed; --c-file: #0d9488; --c-social: #6366f1; --c-soft: #d97706;
+    --lv-full: #059669; --lv-write: #2563eb; --lv-read: hsl(215 14% 46%);
+  }
+  :root[data-theme="dark"] {
+    --bg: hsl(222 24% 7%); --card: hsl(222 22% 11%); --ink: hsl(210 22% 95%); --ink-2: hsl(215 16% 70%);
+    --muted: hsl(215 14% 52%); --line: hsl(215 16% 20%); --surface: hsl(215 20% 14%);
+    --c-email: #a78bfa; --c-file: #2dd4bf; --c-social: #818cf8; --c-soft: #fbbf24;
+    --lv-full: #34d399; --lv-write: #60a5fa; --lv-read: hsl(215 14% 60%);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: var(--sans); color: var(--ink); background: var(--bg);
+    min-height: 100vh; padding: 40px 16px 80px; -webkit-font-smoothing: antialiased;
+  }
+  .toolbar { position: fixed; top: 14px; right: 14px; z-index: 20; }
+  .toggle {
+    font-family: var(--sans); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink);
+    border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 13px;
+  }
+  .toggle:focus-visible { outline: 2px solid var(--c-social); outline-offset: 2px; }
+
+  .stage { max-width: 640px; margin: 0 auto; }
+  .caption { text-align: center; color: var(--muted); font-size: 12.5px; margin: 0 0 18px; }
+  .caption b { color: var(--ink-2); font-weight: 600; }
+
+  /* the Access tab content area (as it sits inside the view drawer) */
+  .pane { display: flex; flex-direction: column; gap: 22px; }
+
+  /* group */
+  .group { display: flex; flex-direction: column; gap: 8px; }
+  .group-head { display: flex; align-items: center; gap: 8px; }
+  .group-ic { color: var(--gc); display: grid; place-items: center; }
+  .group-label {
+    font-size: 12.5px; font-weight: 700; color: var(--ink-2); letter-spacing: .01em;
+  }
+  .group-count {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+    min-width: 18px; height: 18px; padding: 0 6px; display: inline-grid; place-items: center;
+  }
+
+  /* row — same rounded card as today, enriched with owner + date */
+  .row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+    padding: 10px 14px; transition: border-color .15s, background .15s;
+  }
+  .row:hover { border-color: color-mix(in srgb, var(--gc) 40%, var(--line)); background: var(--surface); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--gc); }
+
+  .main { min-width: 0; flex: 1; }
+  .name { font-size: 13.5px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta {
+    display: flex; align-items: center; gap: 7px; margin-top: 2px; min-width: 0;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .meta .code { color: color-mix(in srgb, var(--gc) 78%, var(--ink-2)); font-weight: 600; flex: none; }
+  .meta .detail { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .sep { color: var(--line); flex: none; }
+  .meta .date { flex: none; }
+
+  /* right: owner (or type attribute) + access level */
+  .right { display: flex; align-items: center; gap: 14px; flex: none; }
+  .owner { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .owner-ava {
+    width: 24px; height: 24px; border-radius: 7px; flex: none; display: grid; place-items: center;
+    font-size: 9.5px; font-weight: 700; color: #fff; letter-spacing: .3px;
+  }
+  .owner-txt { line-height: 1.25; min-width: 0; }
+  .owner-eyebrow { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .owner-name { font-size: 12.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .owner-attr { font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
+
+  .lvl {
+    font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 7px; white-space: nowrap; flex: none;
+  }
+  .lvl.full  { color: #fff; background: var(--lv-full); }
+  .lvl.write { color: var(--lv-write); background: color-mix(in srgb, var(--lv-write) 14%, transparent); }
+  .lvl.read  { color: var(--lv-read); background: color-mix(in srgb, var(--lv-read) 15%, transparent); }
+  .lvl.member{ color: var(--c-email); background: color-mix(in srgb, var(--c-email) 13%, transparent); }
+  .lvl.sub   { color: var(--c-soft); background: color-mix(in srgb, var(--c-soft) 15%, transparent); }
+  .lvl.plain { color: var(--muted); background: var(--surface); }
+
+  @media (max-width: 540px) {
+    .row { flex-wrap: wrap; }
+    .right { width: 100%; justify-content: space-between; padding-left: 21px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="toolbar"><button class="toggle" id="themeBtn" type="button">◐ Theme</button></div>
+
+<div class="stage">
+  <p class="caption"><b>Simple.</b> Same grouped-row layout as today — plus Owner and grant date, and no revoke here.</p>
+
+  <div class="pane">
+
+    <!-- EMAIL GROUPS -->
+    <section class="group" style="--gc:var(--c-email)">
+      <div class="group-head">
+        <span class="group-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg></span>
+        <span class="group-label">Email Groups</span>
+        <span class="group-count">2</span>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">IT Support</div>
+          <div class="meta"><span class="code">MG-0001</span><span class="sep">·</span><span class="detail">it-support@inaba-foods.co.th</span><span class="sep">·</span><span class="date">2025-03-12</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <span class="owner-ava" style="background:#7c3aed">WP</span>
+            <div class="owner-txt"><div class="owner-eyebrow">Owner</div><div class="owner-name">Wanchai P.</div></div>
+          </div>
+          <span class="lvl member">Member</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">All Announcements</div>
+          <div class="meta"><span class="code">MG-0009</span><span class="sep">·</span><span class="detail">announce@inaba-foods.co.th</span><span class="sep">·</span><span class="date">2024-11-01</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <span class="owner-ava" style="background:#0ea5e9">PN</span>
+            <div class="owner-txt"><div class="owner-eyebrow">Owner</div><div class="owner-name">Pornpimol N.</div></div>
+          </div>
+          <span class="lvl member">Member</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FILE SHARES -->
+    <section class="group" style="--gc:var(--c-file)">
+      <div class="group-head">
+        <span class="group-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg></span>
+        <span class="group-label">File Shares</span>
+        <span class="group-count">2</span>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">IT Tools</div>
+          <div class="meta"><span class="code">FS-0004</span><span class="sep">·</span><span class="detail">\\inb-fs01\it-tools</span><span class="sep">·</span><span class="date">2025-03-12</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <span class="owner-ava" style="background:#7c3aed">WP</span>
+            <div class="owner-txt"><div class="owner-eyebrow">Owner</div><div class="owner-name">Wanchai P.</div></div>
+          </div>
+          <span class="lvl full">Full</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">Finance Reports</div>
+          <div class="meta"><span class="code">FS-0011</span><span class="sep">·</span><span class="detail">\\inb-fs01\finance</span><span class="sep">·</span><span class="date">2025-06-20</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <span class="owner-ava" style="background:#e11d48">NS</span>
+            <div class="owner-txt"><div class="owner-eyebrow">Owner</div><div class="owner-name">Nida S.</div></div>
+          </div>
+          <span class="lvl read">Read</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOCIAL -->
+    <section class="group" style="--gc:var(--c-social)">
+      <div class="group-head">
+        <span class="group-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg></span>
+        <span class="group-label">Social / Internet</span>
+        <span class="group-count">1</span>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">Facebook Page</div>
+          <div class="meta"><span class="code">SM-0002</span><span class="sep">·</span><span class="detail">facebook.com/inabafoods</span><span class="sep">·</span><span class="date">2025-01-15</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <div class="owner-txt"><div class="owner-eyebrow">Policy</div><div class="owner-attr">Restricted</div></div>
+          </div>
+          <span class="lvl plain">Posting</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOFTWARE -->
+    <section class="group" style="--gc:var(--c-soft)">
+      <div class="group-head">
+        <span class="group-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+        <span class="group-label">Software</span>
+        <span class="group-count">2</span>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">Adobe Acrobat Pro</div>
+          <div class="meta"><span class="code">SW-0001</span><span class="sep">·</span><span class="detail">Seat 3 / 10</span><span class="sep">·</span><span class="date">2025-02-01</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <div class="owner-txt"><div class="owner-eyebrow">Publisher</div><div class="owner-attr">Adobe</div></div>
+          </div>
+          <span class="lvl sub">Subscription</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="dot"></span>
+        <div class="main">
+          <div class="name">Microsoft 365</div>
+          <div class="meta"><span class="code">SW-0005</span><span class="sep">·</span><span class="detail">Seat 41 / 100</span><span class="sep">·</span><span class="date">2024-09-10</span></div>
+        </div>
+        <div class="right">
+          <div class="owner">
+            <div class="owner-txt"><div class="owner-eyebrow">Publisher</div><div class="owner-attr">Microsoft</div></div>
+          </div>
+          <span class="lvl sub">Subscription</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+

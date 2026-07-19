@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
+use App\Models\Access\Software;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Settings\Brand;
@@ -48,7 +49,9 @@ class BrandController extends Controller
     /** Delete a brand — blocked (409) while any asset or stock item still references it. */
     public function destroy(Brand $brand): JsonResponse
     {
-        $count = Asset::where('brand_id', $brand->id)->count() + StockItem::where('brand_id', $brand->id)->count();
+        $count = Asset::where('brand_id', $brand->id)->count()
+            + StockItem::where('brand_id', $brand->id)->count()
+            + Software::where('brand_id', $brand->id)->count();
         if ($count > 0) {
             return response()->json(['message' => 'in_use', 'count' => $count], 409);
         }

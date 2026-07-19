@@ -9,6 +9,7 @@ use App\Http\Resources\Access\AccessMembershipResource;
 use App\Http\Resources\Access\SocialPlatformResource;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\SocialPlatform;
+use App\Models\AuditLog;
 use App\Services\Access\AccessService;
 use Illuminate\Http\JsonResponse;
 
@@ -24,6 +25,7 @@ class SocialPlatformController extends Controller
     public function store(StoreSocialPlatformRequest $request): JsonResponse
     {
         $sp = SocialPlatform::create($request->validated());
+        AuditLog::record('Created social platform', $sp->name);
 
         return (new SocialPlatformResource($sp))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
@@ -31,7 +33,9 @@ class SocialPlatformController extends Controller
     /** Update an existing social platform. */
     public function update(StoreSocialPlatformRequest $request, SocialPlatform $socialPlatform): JsonResponse
     {
+        $before = $socialPlatform->getOriginal();
         $socialPlatform->update($request->validated());
+        AuditLog::record('Updated social platform', $socialPlatform->name, AuditLog::changes($before, $socialPlatform));
 
         return (new SocialPlatformResource($socialPlatform))->additional(['message' => 'success'])->response();
     }
@@ -42,6 +46,7 @@ class SocialPlatformController extends Controller
         if ($socialPlatform->memberships()->active()->exists()) {
             return response()->json(['message' => 'resource_has_members'], 422);
         }
+        AuditLog::record('Deleted social platform', $socialPlatform->name);
         $socialPlatform->delete();
 
         return response()->json(['message' => 'success']);
@@ -50,7 +55,7 @@ class SocialPlatformController extends Controller
     /** List the active members of a social platform. */
     public function members(SocialPlatform $socialPlatform): JsonResponse
     {
-        return AccessMembershipResource::collection($socialPlatform->memberships()->active()->with('employee')->get())->response();
+        return AccessMembershipResource::collection($socialPlatform->memberships()->active()->with(['employee', 'grantedBy'])->get())->response();
     }
 
     /** Grant an employee access to the social platform (null access level). */
@@ -58,13 +63,15 @@ class SocialPlatformController extends Controller
     {
         $data = $request->validated();
         $m = $svc->grant($socialPlatform, (int) $data['employee_id'], $data);
+        AuditLog::record('Added member to social platform', $socialPlatform->name, ['employee' => $m->employee?->name]);
 
-        return (new AccessMembershipResource($m->load('employee')))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        return (new AccessMembershipResource($m->load('employee', 'grantedBy')))->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     /** Soft-revoke a member's access to the social platform. */
     public function revokeMember(SocialPlatform $socialPlatform, AccessMembership $membership, AccessService $svc): JsonResponse
     {
+        AuditLog::record('Removed member from social platform', $socialPlatform->name, ['employee' => $membership->employee?->name]);
         $svc->revoke($membership);
 
         return response()->json(['message' => 'success']);

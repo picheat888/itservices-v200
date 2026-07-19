@@ -14,6 +14,8 @@ class AccessController extends Controller
     public function employee(Employee $employee, AccessService $svc): JsonResponse
     {
         $grouped = $svc->employeeAccess($employee);
+        // Let the resource flag rows this employee owns (approver / share owner).
+        $grouped['employee_id'] = $employee->id;
         $grouped['outstanding'] = $employee->status?->value === 'resigned'
             && ($grouped['email_group']->isNotEmpty() || $grouped['file_share']->isNotEmpty()
                 || $grouped['social_platform']->isNotEmpty() || $grouped['software']->isNotEmpty());

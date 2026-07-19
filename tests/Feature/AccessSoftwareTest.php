@@ -6,6 +6,7 @@ use App\Enums\Access\SoftwareLicenseType;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\Brand;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -38,11 +39,11 @@ class AccessSoftwareTest extends TestCase
     public function test_manager_can_create_software(): void
     {
         $this->actingAs($this->super());
+        $brand = Brand::create(['name' => 'Adobe']);
 
         $this->postJson('/api/software', [
             'name' => 'Adobe Acrobat Pro',
-            'publisher' => 'Adobe',
-            'version' => '2024',
+            'brand_id' => $brand->id,
             'license_type' => 'subscription',
             'seats' => 10,
         ])->assertCreated()

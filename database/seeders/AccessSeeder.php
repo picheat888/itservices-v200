@@ -22,7 +22,7 @@ class AccessSeeder extends Seeder
         $qa->memberships()->firstOrCreate(['employee_id' => $emp[0]], ['access_level' => 'Owner', 'granted_at' => '2024-01-15']);
         $qa->memberships()->firstOrCreate(['employee_id' => $emp[1]], ['access_level' => 'Member', 'granted_at' => '2024-02-01']);
 
-        $fs = FileShare::updateOrCreate(['path' => '\\\\FILES\\Recipes\\Plant1'], ['name' => 'Plant 1 Recipes', 'size_label' => '48 GB']);
+        $fs = FileShare::updateOrCreate(['path' => '\\\\FILES\\Recipes\\Plant1'], ['name' => 'Plant 1 Recipes', 'size' => 48, 'size_unit' => 'GB']);
         $fs->memberships()->firstOrCreate(['employee_id' => $emp[1]], ['access_level' => 'Read', 'granted_at' => '2024-03-04']);
 
         foreach ([['LINE', '#06C755', 'line.me'], ['Facebook', '#1877F2', 'facebook.com'], ['YouTube', '#FF0000', 'youtube.com']] as [$n, $c, $u]) {

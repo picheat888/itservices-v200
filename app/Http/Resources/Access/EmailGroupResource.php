@@ -21,10 +21,12 @@ class EmailGroupResource extends JsonResource
             'description' => $this->description,
             'owner_employee_id' => $this->owner_employee_id,
             'owner' => $this->whenLoaded('owner', fn () => $this->owner?->name),
+            'owner_photo_url' => $this->whenLoaded('owner', fn () => $this->owner?->photo_url),
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,
                 'name' => $m->employee?->name,
+                'photo_url' => $m->employee?->photo_url,
                 'access_level' => $m->access_level,
             ])->values()),
             'members_count' => $this->relationLoaded('memberships') ? $this->memberships->count() : $this->memberships()->active()->count(),

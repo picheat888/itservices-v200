@@ -7,6 +7,30 @@ export const useFileShares = () => useQuery({ queryKey: ['file-shares'], queryFn
 export const useSocialPlatforms = () => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms });
 export const useSoftware = () => useQuery({ queryKey: ['software'], queryFn: accessApi.software });
 
+/** Set/clear an email group's owner (workflow approver). Refreshes the group list + employee access. */
+export const useSetEmailGroupOwner = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (v: { id: number; ownerEmployeeId: number | null }) => accessApi.setEmailGroupOwner(v.id, v.ownerEmployeeId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['email-groups'] });
+            qc.invalidateQueries({ queryKey: ['employee-access'] });
+        },
+    });
+};
+
+/** Set/clear a file share's owner. Refreshes the share list + employee access. */
+export const useSetFileShareOwner = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (v: { id: number; ownerEmployeeId: number | null }) => accessApi.setFileShareOwner(v.id, v.ownerEmployeeId),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['file-shares'] });
+            qc.invalidateQueries({ queryKey: ['employee-access'] });
+        },
+    });
+};
+
 export const useResourceMembers = (kind: AccessKind, id: number | null) =>
     useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null });
 

@@ -10,7 +10,15 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class FileShare extends Model
 {
-    protected $fillable = ['code', 'name', 'path', 'department_id', 'size_label', 'owner_employee_id'];
+    protected $fillable = ['code', 'name', 'path', 'department_id', 'size', 'size_unit', 'description', 'owner_employee_id'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return [
+            'size' => 'integer',
+        ];
+    }
 
     protected static function booted(): void
     {
