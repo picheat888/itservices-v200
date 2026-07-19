@@ -49,8 +49,10 @@ class StoreContractRequest extends FormRequest
             'notify_30' => ['sometimes', 'boolean'],
             'notify_7' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            // Assets to link to this contract (sets each asset's contract_id). Omit to leave links untouched.
-            'asset_ids' => ['sometimes', 'array'],
+            // Assets to link to this contract (sets each asset's contract_id). Omit to leave links
+            // untouched. Only hardware contracts may hold assets — a non-empty list on any other
+            // type is rejected (a hardware contract selecting none still sends [] to detach).
+            'asset_ids' => ['sometimes', 'prohibited_unless:type,hardware', 'array'],
             'asset_ids.*' => ['integer', 'exists:assets,id'],
         ];
     }

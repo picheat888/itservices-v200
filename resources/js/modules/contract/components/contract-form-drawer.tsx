@@ -1,11 +1,9 @@
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { Button } from '@/shared/ui/button';
-import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { ContractDialogHeader } from './contract-dialog-header';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Switch } from '@/shared/ui/switch';
 import { useContractMutations } from '../hooks/use-contracts';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { useT } from '@/lang';
@@ -97,8 +95,7 @@ interface FormState {
     notify_30: boolean;
     notify_7: boolean;
     notes: string;
-    /** Whether this contract links to assets — chosen via a switch, independent of contract type. */
-    link_assets: boolean;
+    /** Asset links — only ever populated for hardware contracts (the only type that can hold assets). */
     asset_ids: number[];
 }
 
@@ -121,7 +118,6 @@ const EMPTY: FormState = {
     notify_30: false,
     notify_7: false,
     notes: '',
-    link_assets: false,
     asset_ids: [],
 };
 
@@ -145,7 +141,6 @@ export function ContractFormDrawer({
     const lang = useUiStore((s) => s.lang);
     const { symbol } = useCurrency();
     const { create, update, uploadAttachments, deleteAttachment } = useContractMutations();
-    const confirm = useConfirm();
     const { data: vendors = [] } = useVendors();
     const [form, setForm] = useState<FormState>(EMPTY);
     const [step, setStep] = useState(0);
@@ -217,7 +212,6 @@ export function ContractFormDrawer({
                 notify_30: editing.notify_30,
                 notify_7: editing.notify_7,
                 notes: editing.notes ?? '',
-                link_assets: (editing.linked_assets?.length ?? 0) > 0,
                 asset_ids: editing.linked_assets?.map((a) => a.id) ?? [],
             });
         } else {
@@ -227,31 +221,15 @@ export function ContractFormDrawer({
 
     const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-    // Toggling the link-assets switch: turning it ON asks for confirmation first
-    // (saving will reassign the picked assets to this contract); turning OFF is immediate.
-    const toggleLinkAssets = async (next: boolean) => {
-        if (!next) {
-            upd('link_assets', false);
-            return;
-        }
-        const ok = await confirm({
-            variant: 'warn',
-            title: lang === 'th' ? 'ผูกทรัพย์สินกับสัญญานี้?' : 'Link assets to this contract?',
-            description:
-                lang === 'th'
-                    ? 'เปิดเพื่อเลือกทรัพย์สินที่จะผูกกับสัญญานี้ — เมื่อบันทึก ระบบจะตั้งค่าสัญญาให้กับทรัพย์สินที่เลือก'
-                    : 'This lets you pick assets to link. On save, the selected assets will be assigned to this contract.',
-            confirmText: lang === 'th' ? 'ผูกทรัพย์สิน' : 'Link assets',
-        });
-        if (ok) upd('link_assets', true);
-    };
+    // Only hardware contracts can hold assets — the whole "link assets" step keys off this.
+    const isHardware = form.type === 'hardware';
 
-    // Linked-assets picker: enabled when the user turns the "link assets" switch on (any type).
+    // Linked-assets picker: loaded only for hardware contracts (the only type that can link assets).
     const [assetSearch, setAssetSearch] = useState('');
     const { data: linkableAssets = [], isLoading: assetsLoading } = useQuery({
         queryKey: ['assets-linkable', editing?.id ?? 'new'],
         queryFn: () => assetApi.linkable(editing?.id),
-        enabled: open && form.link_assets,
+        enabled: open && isHardware,
     });
     const filteredAssets = useMemo(() => {
         const q = assetSearch.trim().toLowerCase();
@@ -365,8 +343,8 @@ export function ContractFormDrawer({
             notify_30: form.notify_30,
             notify_7: form.notify_7,
             notes: form.notes.trim() || null,
-            // Send the current selection when linking is on; clear links when the switch is off.
-            asset_ids: form.link_assets ? form.asset_ids : [],
+            // Hardware links its selection; every other type clears links (sends []).
+            asset_ids: isHardware ? form.asset_ids : [],
         };
 
         try {
@@ -414,7 +392,7 @@ export function ContractFormDrawer({
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 {/* Header */}
-                <ContractDialogHeader
+                <FocusDialogHeader
                     icon={TypeIcon}
                     eyebrow={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : lang === 'th' ? 'สัญญาใหม่' : 'New contract'}
                     title={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : t('new_contract')}
@@ -486,7 +464,11 @@ export function ContractFormDrawer({
                                             <button
                                                 type="button"
                                                 key={tp.value}
-                                                onClick={() => upd('type', tp.value)}
+                                                onClick={() => {
+                                                    upd('type', tp.value);
+                                                    // Only hardware contracts can hold assets — drop any selection on other types.
+                                                    if (tp.value !== 'hardware') setForm((f) => ({ ...f, asset_ids: [] }));
+                                                }}
                                                 className={cn(
                                                     'flex flex-col items-center gap-2.5 rounded-xl border p-5 text-center transition-colors',
                                                     sel
@@ -778,33 +760,21 @@ export function ContractFormDrawer({
                         {/* ── Step 5 · Link assets ────────────────────── */}
                         {step === 4 && (
                             <div className="mx-auto w-full max-w-[560px] space-y-5">
-                                <div className="flex items-start justify-between gap-4">
-                                    <StepHead
-                                        lang={lang}
-                                        num={5}
-                                        thTitle="เชื่อมโยงทรัพย์สิน"
-                                        enTitle="Link assets"
-                                        thSub="เปิดสวิตช์เพื่อผูกสัญญานี้กับทรัพย์สินที่เกี่ยวข้อง"
-                                        enSub="Turn on the switch to link this contract to related assets."
-                                    />
-                                    <label className="flex shrink-0 cursor-pointer items-center gap-2.5 pt-1">
-                                        <span className="text-muted-foreground text-sm font-medium">
-                                            {lang === 'th' ? 'ผูกทรัพย์สิน' : 'Link assets'}
-                                        </span>
-                                        <Switch
-                                            checked={form.link_assets}
-                                            onChange={toggleLinkAssets}
-                                            aria-label={lang === 'th' ? 'ผูกทรัพย์สิน' : 'Link assets'}
-                                        />
-                                    </label>
-                                </div>
+                                <StepHead
+                                    lang={lang}
+                                    num={5}
+                                    thTitle="เชื่อมโยงทรัพย์สิน"
+                                    enTitle="Link assets"
+                                    thSub="เลือกทรัพย์สินที่ผูกกับสัญญานี้ (เฉพาะสัญญาประเภท Hardware)"
+                                    enSub="Choose the assets covered by this contract (Hardware contracts only)."
+                                />
 
-                                {!form.link_assets ? (
+                                {!isHardware ? (
                                     <div className="border-input bg-muted/40 text-muted-foreground flex items-center justify-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm">
                                         <Info className="h-4 w-4 shrink-0" />
                                         {lang === 'th'
-                                            ? 'ยังไม่ได้ผูกทรัพย์สิน — เปิดสวิตช์ด้านบนเพื่อเลือก'
-                                            : 'No assets linked — turn on the switch above to choose.'}
+                                            ? 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware — เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้'
+                                            : 'Only Hardware contracts can link assets — change the type in step 1 to enable this.'}
                                     </div>
                                 ) : (
                                     <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
@@ -910,7 +880,7 @@ export function ContractFormDrawer({
                                         k={t('contract_notify')}
                                         v={selectedNotify.length ? `${selectedNotify.join(' · ')} ${lang === 'th' ? 'วัน' : 'days'}` : '—'}
                                     />
-                                    {form.link_assets && (
+                                    {isHardware && (
                                         <ReviewRow
                                             k={t('contract_link_assets')}
                                             v={lang === 'th' ? `${form.asset_ids.length} รายการ` : `${form.asset_ids.length} linked`}

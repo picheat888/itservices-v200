@@ -3,6 +3,7 @@
 namespace App\Services\Contract;
 
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Settings\Vendor;
@@ -20,7 +21,7 @@ class ContractService
     {
         $assetIds = $this->pullAssetIds($data);
         $contract = Contract::create($this->withoutBlankCode($data));
-        $this->syncAssets($contract, $assetIds);
+        $this->syncAssets($contract, $this->assetIdsForType($contract, $assetIds));
 
         return $contract;
     }
@@ -34,9 +35,22 @@ class ContractService
     {
         $assetIds = $this->pullAssetIds($data);
         $contract->update($this->withoutBlankCode($data));
-        $this->syncAssets($contract, $assetIds);
+        $this->syncAssets($contract, $this->assetIdsForType($contract, $assetIds));
 
         return $contract->fresh();
+    }
+
+    /**
+     * Only hardware contracts may hold assets. For any other type this forces a
+     * full detach ([]) regardless of what was submitted; hardware keeps the
+     * caller's selection (null = leave existing links untouched).
+     *
+     * @param  list<int>|null  $assetIds
+     * @return list<int>|null
+     */
+    private function assetIdsForType(Contract $contract, ?array $assetIds): ?array
+    {
+        return $contract->type === ContractType::Hardware ? $assetIds : [];
     }
 
     /**
