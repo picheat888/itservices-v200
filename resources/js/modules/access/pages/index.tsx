@@ -407,12 +407,8 @@ export default function AccessControlPage() {
                             searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''}`}
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
-                            actions={
-                                <div className="flex gap-2">
-                                    {emailFilter}
-                                    {addButton('email-groups')}
-                                </div>
-                            }
+                            filters={emailFilter}
+                            actions={addButton('email-groups')}
                         />
                     )}
                     {tab === 'file-shares' && (
@@ -423,12 +419,8 @@ export default function AccessControlPage() {
                             searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''}`}
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
-                            actions={
-                                <div className="flex gap-2">
-                                    {fileFilter}
-                                    {addButton('file-shares')}
-                                </div>
-                            }
+                            filters={fileFilter}
+                            actions={addButton('file-shares')}
                         />
                     )}
                     {tab === 'social-platforms' && (
@@ -450,12 +442,8 @@ export default function AccessControlPage() {
                             searchable={(s) => `${s.name} ${s.publisher ?? ''}`}
                             onRowClick={openSoftware}
                             loading={software.isLoading}
-                            actions={
-                                <div className="flex gap-2">
-                                    {softwareFilter}
-                                    {addButton('software')}
-                                </div>
-                            }
+                            filters={softwareFilter}
+                            actions={addButton('software')}
                         />
                     )}
                 </div>
