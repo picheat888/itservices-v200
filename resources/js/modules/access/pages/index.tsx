@@ -2,13 +2,15 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { AvatarStack } from '@/shared/components/avatar-stack';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import { FilterPopover } from '@/shared/components/filter-popover';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Folder, Globe, Layers, Package, Plus, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Building2, Folder, Globe, KeyRound, Layers, Package, Plus, Tag, Users } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
 import { ResourceModal } from '../components/resource-modal';
 import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
@@ -16,6 +18,11 @@ import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '
 type Tab = AccessKind;
 /** Any of the four access resource shapes — used for the create/edit modal state. */
 type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
+
+/** SearchableSelect sentinel for the "no filter" option. */
+const ALL = '__all__';
+/** Software licence types, in display order (matches the resource form). */
+const LICENSES = ['subscription', 'perpetual', 'open_source', 'free'] as const;
 
 /** Compact KPI card (icon tile + big number + label). */
 function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
@@ -88,6 +95,11 @@ export default function AccessControlPage() {
     const [tab, setTab] = useState<Tab>('email-groups');
     const [editing, setEditing] = useState<{ kind: AccessKind; row: AnyResource | null } | null>(null);
     const [members, setMembers] = useState<MemberTarget | null>(null);
+    // Client-side filters per tab (department for email/file; licence + brand for software).
+    const [egDept, setEgDept] = useState('');
+    const [fsDept, setFsDept] = useState('');
+    const [swLicense, setSwLicense] = useState('');
+    const [swPublisher, setSwPublisher] = useState('');
 
     const emailGroups = useEmailGroups();
     const fileShares = useFileShares();
@@ -102,6 +114,99 @@ export default function AccessControlPage() {
     const totalGrants = useMemo(
         () => [...egRows, ...fsRows, ...spRows, ...swRows].reduce((sum, r) => sum + (r.members_count ?? 0), 0),
         [egRows, fsRows, spRows, swRows],
+    );
+
+    // Distinct filter option values, derived from the loaded rows.
+    const egDepts = useMemo(() => [...new Set(egRows.map((g) => g.department).filter(Boolean) as string[])].sort(), [egRows]);
+    const fsDepts = useMemo(() => [...new Set(fsRows.map((s) => s.department).filter(Boolean) as string[])].sort(), [fsRows]);
+    const swPublishers = useMemo(() => [...new Set(swRows.map((s) => s.publisher).filter(Boolean) as string[])].sort(), [swRows]);
+
+    // Rows after the client-side filters (the DataTable still applies its own text search on top).
+    const egFiltered = useMemo(() => (egDept ? egRows.filter((g) => g.department === egDept) : egRows), [egRows, egDept]);
+    const fsFiltered = useMemo(() => (fsDept ? fsRows.filter((s) => s.department === fsDept) : fsRows), [fsRows, fsDept]);
+    const swFiltered = useMemo(
+        () => swRows.filter((s) => (!swLicense || s.license_type === swLicense) && (!swPublisher || s.publisher === swPublisher)),
+        [swRows, swLicense, swPublisher],
+    );
+
+    // Small label above a filter select (icon + text), matching the Asset filter panel.
+    const fieldLabel = (icon: ReactNode, label: string) => (
+        <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+            {icon}
+            {label}
+        </div>
+    );
+
+    // "Filters" popover next to the search box (client-side), one per tab that needs it.
+    const emailFilter = (
+        <FilterPopover count={egDept ? 1 : 0} onClear={() => setEgDept('')} resultCount={egFiltered.length}>
+            {() => (
+                <div>
+                    {fieldLabel(<Building2 className="h-3.5 w-3.5" />, t('access_department'))}
+                    <SearchableSelect
+                        active={!!egDept}
+                        value={egDept || ALL}
+                        onChange={(v) => setEgDept(v === ALL ? '' : v)}
+                        options={[{ value: ALL, label: t('all'), search: t('all') }, ...egDepts.map((d) => ({ value: d, label: d, search: d }))]}
+                    />
+                </div>
+            )}
+        </FilterPopover>
+    );
+    const fileFilter = (
+        <FilterPopover count={fsDept ? 1 : 0} onClear={() => setFsDept('')} resultCount={fsFiltered.length}>
+            {() => (
+                <div>
+                    {fieldLabel(<Building2 className="h-3.5 w-3.5" />, t('access_department'))}
+                    <SearchableSelect
+                        active={!!fsDept}
+                        value={fsDept || ALL}
+                        onChange={(v) => setFsDept(v === ALL ? '' : v)}
+                        options={[{ value: ALL, label: t('all'), search: t('all') }, ...fsDepts.map((d) => ({ value: d, label: d, search: d }))]}
+                    />
+                </div>
+            )}
+        </FilterPopover>
+    );
+    const softwareFilter = (
+        <FilterPopover
+            count={(swLicense ? 1 : 0) + (swPublisher ? 1 : 0)}
+            width={420}
+            onClear={() => {
+                setSwLicense('');
+                setSwPublisher('');
+            }}
+            resultCount={swFiltered.length}
+        >
+            {() => (
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        {fieldLabel(<KeyRound className="h-3.5 w-3.5" />, t('access_license_type'))}
+                        <SearchableSelect
+                            active={!!swLicense}
+                            value={swLicense || ALL}
+                            onChange={(v) => setSwLicense(v === ALL ? '' : v)}
+                            options={[
+                                { value: ALL, label: t('all'), search: t('all') },
+                                ...LICENSES.map((l) => ({ value: l, label: t(`access_lic_${l}`), search: t(`access_lic_${l}`) })),
+                            ]}
+                        />
+                    </div>
+                    <div>
+                        {fieldLabel(<Tag className="h-3.5 w-3.5" />, t('access_publisher'))}
+                        <SearchableSelect
+                            active={!!swPublisher}
+                            value={swPublisher || ALL}
+                            onChange={(v) => setSwPublisher(v === ALL ? '' : v)}
+                            options={[
+                                { value: ALL, label: t('all'), search: t('all') },
+                                ...swPublishers.map((p) => ({ value: p, label: p, search: p })),
+                            ]}
+                        />
+                    </div>
+                </div>
+            )}
+        </FilterPopover>
     );
 
     const tabs: { id: Tab; label: string; count: number }[] = [
@@ -209,23 +314,24 @@ export default function AccessControlPage() {
         actionsCol<EmailGroup>(openEmailGroup),
     ];
 
-    // Fixed 30/20/20/20/10 split across name / size / owner / members / actions.
+    // Fixed 26/16/16/18/16/8 split across name / department / size / owner / members / actions.
     const fsColumns: Column<FileShare>[] = [
         {
             key: 'name',
             header: t('access_name'),
-            className: 'w-[30%]',
+            className: 'w-[26%]',
             render: (s) => <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />,
         },
+        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
         {
             key: 'size',
             header: t('access_size'),
-            className: 'w-[20%]',
+            className: 'w-[16%]',
             render: (s) => <span className="font-mono text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
         },
-        { key: 'owner', header: t('access_owner'), className: 'w-[20%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
-        { key: 'members', header: t('access_members'), className: 'w-[20%]', render: (s) => <AvatarStack members={s.members ?? []} /> },
-        { ...actionsCol<FileShare>(openFileShare), className: 'w-[10%]' },
+        { key: 'owner', header: t('access_owner'), className: 'w-[18%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
+        { key: 'members', header: t('access_members'), className: 'w-[16%]', render: (s) => <AvatarStack members={s.members ?? []} /> },
+        { ...actionsCol<FileShare>(openFileShare), className: 'w-[8%]' },
     ];
 
     const spColumns: Column<SocialPlatform>[] = [
@@ -296,23 +402,33 @@ export default function AccessControlPage() {
                     {tab === 'email-groups' && (
                         <DataTable
                             columns={egColumns}
-                            rows={egRows}
+                            rows={egFiltered}
                             rowKey={(g) => g.id}
                             searchable={(g) => `${g.name} ${g.email} ${g.department ?? ''}`}
                             onRowClick={openEmailGroup}
                             loading={emailGroups.isLoading}
-                            actions={addButton('email-groups')}
+                            actions={
+                                <div className="flex gap-2">
+                                    {emailFilter}
+                                    {addButton('email-groups')}
+                                </div>
+                            }
                         />
                     )}
                     {tab === 'file-shares' && (
                         <DataTable
                             columns={fsColumns}
-                            rows={fsRows}
+                            rows={fsFiltered}
                             rowKey={(s) => s.id}
                             searchable={(s) => `${s.name} ${s.path} ${s.department ?? ''}`}
                             onRowClick={openFileShare}
                             loading={fileShares.isLoading}
-                            actions={addButton('file-shares')}
+                            actions={
+                                <div className="flex gap-2">
+                                    {fileFilter}
+                                    {addButton('file-shares')}
+                                </div>
+                            }
                         />
                     )}
                     {tab === 'social-platforms' && (
@@ -329,12 +445,17 @@ export default function AccessControlPage() {
                     {tab === 'software' && (
                         <DataTable
                             columns={swColumns}
-                            rows={swRows}
+                            rows={swFiltered}
                             rowKey={(s) => s.id}
                             searchable={(s) => `${s.name} ${s.publisher ?? ''}`}
                             onRowClick={openSoftware}
                             loading={software.isLoading}
-                            actions={addButton('software')}
+                            actions={
+                                <div className="flex gap-2">
+                                    {softwareFilter}
+                                    {addButton('software')}
+                                </div>
+                            }
                         />
                     )}
                 </div>
