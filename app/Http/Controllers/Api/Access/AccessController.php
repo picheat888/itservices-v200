@@ -22,4 +22,10 @@ class AccessController extends Controller
 
         return (new EmployeeAccessResource($grouped))->response();
     }
+
+    /** Aggregate figures for the Access Directory overview tab. */
+    public function dashboard(AccessService $svc): JsonResponse
+    {
+        return response()->json(['data' => $svc->dashboard()]);
+    }
 }

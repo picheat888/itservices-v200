@@ -1,5 +1,5 @@
 import { Card } from '@/shared/ui/card';
-import { useStockMovements, useStockSummary } from '../../hooks/use-stock';
+import { useStockSummary } from '../../hooks/use-stock';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';
@@ -7,15 +7,13 @@ import { MV_META, MV_TONE_BG } from '../shared';
 
 export type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive };
 
-/** Scoped keyframes for the dashboard consoles (staggered reveal, LED pulse, live ping). */
+/** Scoped keyframes for the dashboard consoles (LED pulse, live ping). */
 const stockConsoleStyles = `
-@keyframes sc-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes sc-led { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 @keyframes sc-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
-.sc-row { animation: sc-fade .35s ease both; }
 .sc-led { box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 20%, transparent); animation: sc-led 1.1s ease-in-out infinite; }
 .sc-ping { animation: sc-ping 1.5s cubic-bezier(0,0,.2,1) infinite; }
-@media (prefers-reduced-motion: reduce) { .sc-row, .sc-led, .sc-ping { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sc-led, .sc-ping { animation: none; } }
 `;
 
 export function DashboardTab({
@@ -34,9 +32,9 @@ export function DashboardTab({
     /** When false the movements query is skipped and the recent-movements widget is hidden (caller lacks stock.view_events). */
     canEvents: boolean;
 }) {
-    // Only the most recent movements are shown here; one page is plenty.
-    const { data: movementsPage } = useStockMovements({ per_page: 10 }, canEvents);
-    const movements = movementsPage?.data ?? [];
+    // Recent movements are folded into the summary payload so they arrive with every other
+    // panel (no separate, lagging query). Empty for users without view_events (card hidden).
+    const movements = summary?.recent_movements ?? [];
     const maxUnits = Math.max(1, ...(summary?.by_category.map((c) => c.units) ?? []));
     // Items below their minimum, out-of-stock first, are the reorder queue.
     const reorderItems = summary ? [...summary.out_items, ...summary.low_items] : [];
@@ -64,9 +62,28 @@ export function DashboardTab({
             </div>
 
             {!summary ? (
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                        <div key={i} className="border-border bg-muted/40 h-64 animate-pulse rounded-xl border" />
+                // Skeleton mirrors the real card grid (header + rows) so it reads the same as
+                // the loaded state and the recent-movements card's own loading skeleton.
+                <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+                    {Array.from({ length: canEvents ? 4 : 3 }).map((_, i) => (
+                        <Card key={i} className="flex h-[22rem] flex-col overflow-hidden">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3">
+                                <div className="bg-muted h-4 w-4 animate-pulse rounded" />
+                                <div className="bg-muted h-4 w-36 animate-pulse rounded" />
+                            </div>
+                            <div className="min-h-0 flex-1 space-y-3 p-4">
+                                {Array.from({ length: 5 }).map((_, r) => (
+                                    <div key={r} className="flex items-center gap-3">
+                                        <div className="bg-muted h-8 w-8 shrink-0 animate-pulse rounded-lg" />
+                                        <div className="flex-1 space-y-1.5">
+                                            <div className="bg-muted h-3.5 w-2/3 animate-pulse rounded" />
+                                            <div className="bg-muted h-2.5 w-1/3 animate-pulse rounded" />
+                                        </div>
+                                        <div className="bg-muted h-4 w-8 shrink-0 animate-pulse rounded" />
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
                     ))}
                 </div>
             ) : (
@@ -94,14 +111,13 @@ export function DashboardTab({
                                     {t('stock_all_stocked')}
                                 </div>
                             ) : (
-                                <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto">
-                                    {reorderItems.slice(0, 6).map((it, i) => {
+                                <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
+                                    {reorderItems.slice(0, 6).map((it) => {
                                         const out = it.current_stock === 0;
                                         return (
                                             <div
                                                 key={it.id}
-                                                className="sc-row hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors"
-                                                style={{ animationDelay: `${i * 40}ms` }}
+                                                className="hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors"
                                             >
                                                 <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
                                                 <div className="min-w-0 flex-1 py-0.5">
@@ -145,16 +161,15 @@ export function DashboardTab({
                                 {movements.length === 0 ? (
                                     <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">{t('stock_no_moves')}</div>
                                 ) : (
-                                    <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-                                        {movements.slice(0, 6).map((m, i) => {
+                                    <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
+                                        {movements.slice(0, 6).map((m) => {
                                             const meta = MV_META[m.type];
                                             const MIcon = meta.icon;
                                             const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
                                             return (
                                                 <div
                                                     key={m.id}
-                                                    className="sc-row hover:bg-accent/40 flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors"
-                                                    style={{ animationDelay: `${i * 40}ms` }}
+                                                    className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors"
                                                 >
                                                     <span
                                                         className={cn(
@@ -193,18 +208,17 @@ export function DashboardTab({
                         {/* By warehouse */}
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3">
-                                <Warehouse className="text-brand h-4 w-4" />
+                                <Warehouse className="text-muted-foreground h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_warehouse')}</span>
                             </div>
-                            <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto">
-                                {summary.by_warehouse.map((w, i) => (
+                            <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
+                                {summary.by_warehouse.map((w) => (
                                     <button
                                         type="button"
                                         key={w.warehouse}
                                         onClick={() => onSelectWarehouse(w.warehouse)}
                                         title={t('stock_view_items')}
-                                        className="sc-row hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
-                                        style={{ animationDelay: `${i * 40}ms` }}
+                                        className="hover:bg-accent/30 group flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors"
                                     >
                                         <div className="flex min-w-0 items-center gap-2.5">
                                             <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
@@ -214,12 +228,12 @@ export function DashboardTab({
                                                 {w.warehouse}
                                             </span>
                                         </div>
-                                        <div className="flex shrink-0 gap-5 text-right font-mono text-sm">
-                                            <div>
+                                        <div className="flex shrink-0 gap-4 text-right font-mono text-sm">
+                                            <div className="w-12">
                                                 <div className="text-muted-foreground text-[10px] uppercase">SKU</div>
                                                 {w.skus}
                                             </div>
-                                            <div>
+                                            <div className="w-14">
                                                 <div className="text-muted-foreground text-[10px] uppercase">{t('stock_units')}</div>
                                                 {w.units}
                                             </div>
@@ -232,18 +246,17 @@ export function DashboardTab({
                         {/* By category */}
                         <Card className="flex h-[22rem] flex-col overflow-hidden p-0">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3">
-                                <Layers className="text-brand h-4 w-4" />
+                                <Layers className="text-muted-foreground h-4 w-4" />
                                 <span className="text-sm font-semibold">{t('stock_by_category')}</span>
                             </div>
                             <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
-                                {summary.by_category.map((c, i) => (
+                                {summary.by_category.map((c) => (
                                     <button
                                         type="button"
                                         key={c.category}
                                         onClick={() => onSelectCategory(c.category)}
                                         title={t('stock_view_items')}
-                                        className="sc-row group block w-full text-left"
-                                        style={{ animationDelay: `${i * 40}ms` }}
+                                        className="group block w-full text-left"
                                     >
                                         <div className="mb-1.5 flex items-center justify-between text-sm">
                                             <span className="group-hover:text-brand font-medium transition-colors">{c.category}</span>

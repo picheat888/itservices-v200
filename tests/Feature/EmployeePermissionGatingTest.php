@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -115,6 +116,33 @@ class EmployeePermissionGatingTest extends TestCase
         $allowed = $this->userWith(['employees.module', 'employees.view_dashboard']);
         $this->actingAs($blocked)->getJson('/api/employees/summary')->assertForbidden();
         $this->actingAs($allowed)->getJson('/api/employees/summary')->assertOk();
+    }
+
+    public function test_summary_reports_status_hires_and_resignations(): void
+    {
+        $allowed = $this->userWith(['employees.module', 'employees.view_dashboard']);
+
+        Employee::create(['first_name' => 'A', 'last_name' => 'One', 'status' => 'active', 'joined_at' => now()->subMonths(2)->toDateString()]);
+        Employee::create(['first_name' => 'B', 'last_name' => 'Two', 'status' => 'active', 'joined_at' => now()->subMonth()->toDateString()]);
+        Employee::create([
+            'first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'resigned',
+            'joined_at' => now()->subYears(2)->toDateString(), 'last_day' => now()->startOfYear()->addMonths(3)->toDateString(),
+        ]);
+
+        $res = $this->actingAs($allowed)->getJson('/api/employees/summary')->assertOk();
+
+        $res->assertJsonPath('total', 3)
+            ->assertJsonPath('active', 2)
+            ->assertJsonPath('resigned', 1)
+            ->assertJsonPath('resigned_this_year', 1)
+            ->assertJsonPath('recent_resignations.0.name', 'Gone Away')
+            ->assertJsonPath('recent_resignations.0.status', 'resigned');
+
+        // hires_by_month: a continuous, zero-filled series ending at the current month.
+        $months = $res->json('hires_by_month');
+        $this->assertNotEmpty($months);
+        $this->assertArrayHasKey('month', $months[0]);
+        $this->assertSame(now()->format('Y-m'), end($months)['month']);
     }
 
     public function test_org_chart_requires_view_org(): void

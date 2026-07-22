@@ -18,6 +18,7 @@ class SocialPlatformResource extends JsonResource
             'url' => $this->url,
             'color' => $this->color,
             'policy' => $this->policy,
+            'logo_url' => $this->logo_url,
             'members' => $this->whenLoaded('memberships', fn () => $this->memberships->map(fn ($m) => [
                 'id' => $m->id,
                 'employee_id' => $m->employee_id,

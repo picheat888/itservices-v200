@@ -120,7 +120,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
     const warehouseApplies = !editing || editing.status === 'ready';
 
     // Asset type, brand and model are all picked from the shared Master Data lists.
-    const typeOptions = useMemo(() => categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name })), [categories]);
+    const typeOptions = useMemo(
+        () => categories.map((c) => ({ value: String(c.id), label: lang === 'th' ? (c.name_th ?? c.name) : c.name, search: `${c.name} ${c.name_th ?? ''}` })),
+        [categories, lang],
+    );
     // Models are scoped to the chosen brand; with no brand picked, show them all.
     const selectedBrand = brands.find((b) => b.id === Number(form.brand_id));
     const modelOptions = useMemo(() => {

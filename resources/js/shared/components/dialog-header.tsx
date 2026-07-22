@@ -21,6 +21,9 @@ export function FocusDialogHeader({
     titleSuffix,
     headerRight,
     accent,
+    image,
+    round,
+    tileSize = 'md',
 }: {
     icon: LucideIcon;
     eyebrow: string;
@@ -35,16 +38,33 @@ export function FocusDialogHeader({
     headerRight?: React.ReactNode;
     /** Optional hex accent for the tile + code chip; defaults to the brand colour. */
     accent?: string;
+    /** Optional logo URL — when set, a round profile-style image replaces the icon tile. */
+    image?: string | null;
+    /** Render the icon tile as a circle (profile style) instead of a rounded square. */
+    round?: boolean;
+    /** Icon-tile size: `md` (default, 40px) or `lg` (56px). */
+    tileSize?: 'md' | 'lg';
 }) {
     const tintStyle = accent ? { background: `${accent}18`, color: accent } : undefined;
+    const boxCls = tileSize === 'lg' ? 'h-14 w-14' : 'h-10 w-10';
+    const iconCls = tileSize === 'lg' ? 'h-7 w-7' : 'h-5 w-5';
     return (
         <div className="flex items-center gap-3 px-6 pt-5 pb-4">
-            <div
-                className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', !accent && 'bg-brand/10 text-brand')}
-                style={tintStyle}
-            >
-                <Icon className="h-5 w-5" />
-            </div>
+            {image ? (
+                <img src={image} alt="" className={cn('shrink-0 rounded-full object-cover', boxCls)} />
+            ) : (
+                <div
+                    className={cn(
+                        'flex shrink-0 items-center justify-center',
+                        boxCls,
+                        round ? 'rounded-full' : 'rounded-xl',
+                        !accent && 'bg-brand/10 text-brand',
+                    )}
+                    style={tintStyle}
+                >
+                    <Icon className={iconCls} />
+                </div>
+            )}
             <div className="min-w-0">
                 <div className="text-muted-foreground text-[10.5px] font-bold tracking-[0.14em] uppercase">{eyebrow}</div>
                 <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">

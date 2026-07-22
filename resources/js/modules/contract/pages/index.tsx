@@ -16,6 +16,7 @@ import {
     AlertTriangle,
     ArrowRight,
     ArrowUpDown,
+    CalendarClock,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
@@ -28,31 +29,23 @@ import {
     TrendingUp,
     X,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { ImportContractDialog } from '../components/import-contract-dialog';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 
-// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
-// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['dashboard', 'all'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
-// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
-// (e.g. landing on /contracts from the sidebar menu rather than a reload/shared link).
-const CONTRACT_TAB_KEY = 'contracts.tab';
 const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
-/** Resolve the starting tab: URL (?tab=) wins, then the last tab in localStorage, then the dashboard. */
+/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialContractTab(): Tab {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    if (isContractTab(fromUrl)) {
-        return fromUrl;
-    }
-    const fromStore = localStorage.getItem(CONTRACT_TAB_KEY);
-    return isContractTab(fromStore) ? fromStore : 'dashboard';
+    return isContractTab(fromUrl) ? fromUrl : 'dashboard';
 }
 
 function StatCard({
@@ -132,7 +125,6 @@ export default function ContractsPage() {
     const [sort, setSort] = useState('end_asc');
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
-    const [selectedId, setSelectedId] = useState<number | null>(null);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Contract | null>(null);
     const [importOpen, setImportOpen] = useState(false);
@@ -156,19 +148,25 @@ export default function ContractsPage() {
         type: typeFilter || undefined,
         sort,
     });
-    const { data: selected } = useContract(selectedId);
-
-    // Deep-link from a notification: /contracts?view=<id> opens that contract's
-    // detail dialog, then clears the param so it doesn't reopen on refresh.
+    // The detail dialog is URL-driven (?view=<id>): the URL is the single source of truth, so a
+    // reload / shared link reopens it and closing just drops the param. setSelectedId(null) closes.
     const [searchParams, setSearchParams] = useSearchParams();
     const viewId = searchParams.get('view');
-    useEffect(() => {
-        if (!viewId) return;
-        setSelectedId(Number(viewId));
-        searchParams.delete('view');
-        setSearchParams(searchParams, { replace: true });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [viewId]);
+    const selectedId = viewId ? Number(viewId) : null;
+    const setSelectedId = (id: number | null) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                if (id == null) {
+                    p.delete('view');
+                } else {
+                    p.set('view', String(id));
+                }
+                return p;
+            },
+            { replace: true },
+        );
+    const { data: selected } = useContract(selectedId);
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
@@ -181,12 +179,10 @@ export default function ContractsPage() {
     const currentPage = meta?.current_page ?? page;
     const lastPage = meta?.last_page ?? 1;
 
-    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
-    // localStorage (so navigating away and back — which clears the URL — restores it).
+    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
         (next: Tab) => {
             setTab(next);
-            localStorage.setItem(CONTRACT_TAB_KEY, next);
             setSearchParams(
                 (prev) => {
                     const sp = new URLSearchParams(prev);
@@ -199,9 +195,28 @@ export default function ContractsPage() {
         [setSearchParams],
     );
 
-    const openCreate = () => {
+    // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
+    const adding = searchParams.get('add') != null;
+    const openCreate = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('add', '1');
+                return p;
+            },
+            { replace: true },
+        );
+    const closeForm = () => {
         setEditing(null);
-        setFormOpen(true);
+        setFormOpen(false);
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
     };
     // Open the Edit wizard over the current View. selectedId is kept so that
     // closing the form returns the user to the (now refreshed) detail dialog.
@@ -610,7 +625,7 @@ export default function ContractsPage() {
             </Card>
 
             <ContractDetailDrawer
-                contract={formOpen ? null : (selected ?? null)}
+                contract={selected ?? null}
                 onClose={() => setSelectedId(null)}
                 onEdit={openEdit}
                 canEdit={canEdit}
@@ -619,7 +634,7 @@ export default function ContractsPage() {
                 canReactivate={canReactivate}
                 canDelete={canDelete}
             />
-            <ContractFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} onCreated={handleCreated} />
+            <ContractFormDrawer open={adding || formOpen} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
             <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
     );
@@ -679,13 +694,6 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
     );
 }
 
-/** Scoped keyframes for the Contracts dashboard — staggered row reveal, matching the Stock dashboard feel. */
-const contractDashStyles = `
-@keyframes cf-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.cf-row { animation: cf-fade .35s ease both; }
-@media (prefers-reduced-motion: reduce) { .cf-row { animation: none; } }
-`;
-
 /** Attention-grabbing double-blink (+ slight zoom) for the alert-banner icons. */
 const bannerBlinkStyles = `
 @keyframes cf-blink {
@@ -730,9 +738,16 @@ function DashboardTab({
                 <div className="bg-muted/40 h-36 animate-pulse rounded-lg" />
                 <div className="grid gap-6 lg:grid-cols-2">
                     {Array.from({ length: 2 }).map((_, i) => (
-                        <Card key={i} className="p-5">
-                            <div className="bg-muted mb-4 h-3 w-32 animate-pulse rounded" />
-                            <div className="bg-muted/60 h-44 animate-pulse rounded" />
+                        <Card key={i} className="overflow-hidden">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                <div className="bg-muted h-4 w-4 animate-pulse rounded" />
+                                <div className="bg-muted h-4 w-36 animate-pulse rounded" />
+                            </div>
+                            <div className="space-y-3 p-5">
+                                {Array.from({ length: 5 }).map((_, r) => (
+                                    <div key={r} className="bg-muted h-9 w-full animate-pulse rounded" />
+                                ))}
+                            </div>
                         </Card>
                     ))}
                 </div>
@@ -788,7 +803,6 @@ function DashboardTab({
 
     return (
         <div className="space-y-6 p-5">
-            <style>{contractDashStyles}</style>
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
                 <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
@@ -810,7 +824,10 @@ function DashboardTab({
             {/* Expiry timeline — 12 months, starting 2 months back with NOW in the third column */}
             <div>
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('contract_timeline')}</span>
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                        <CalendarClock className="text-muted-foreground h-4 w-4" />
+                        {t('contract_timeline')}
+                    </span>
                     <div className="text-muted-foreground flex items-center gap-3 text-[11px]">
                         <span className="flex items-center gap-1.5">
                             <span className="bg-brand h-2 w-2 rounded-full" />
@@ -889,11 +906,14 @@ function DashboardTab({
 
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* Top vendors by spend */}
-                <Card className="p-5">
-                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_top_vendors')}</div>
-                    <div className="space-y-2.5">
-                        {summary.top_vendors.map((r, i) => (
-                            <div key={r.vendor} className="cf-row" style={{ animationDelay: `${i * 40}ms` }}>
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                        <TrendingUp className="text-muted-foreground h-4 w-4" />
+                        <span className="text-sm font-semibold">{t('contract_top_vendors')}</span>
+                    </div>
+                    <div className="space-y-2.5 p-5">
+                        {summary.top_vendors.map((r) => (
+                            <div key={r.vendor}>
                                 <div className="mb-1 flex justify-between text-sm">
                                     <span>{r.vendor}</span>
                                     <span className="text-muted-foreground font-mono text-xs">
@@ -910,20 +930,22 @@ function DashboardTab({
                 </Card>
 
                 {/* Action queue */}
-                <Card className="p-5">
-                    <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('contract_action_queue')}</div>
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                        <AlertTriangle className="text-muted-foreground h-4 w-4" />
+                        <span className="text-sm font-semibold">{t('contract_action_queue')}</span>
+                    </div>
                     {/* Up to 20 items (server-capped); scroll within the card so a long queue
                         doesn't stretch the layout past the Top-vendors card beside it. */}
-                    <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+                    <div className="divide-border/60 max-h-96 divide-y overflow-y-auto p-2">
                         {summary.action_queue.length === 0 && (
-                            <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-4 text-center text-sm">—</div>
+                            <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>
                         )}
-                        {summary.action_queue.map((c, i) => (
+                        {summary.action_queue.map((c) => (
                             <button
                                 key={c.id}
                                 onClick={() => onSelect(c.id)}
-                                style={{ animationDelay: `${i * 40}ms` }}
-                                className="cf-row border-border hover:bg-accent/40 flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors"
+                                className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                             >
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
                                     {c.days}d

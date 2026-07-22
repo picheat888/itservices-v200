@@ -43,14 +43,9 @@ import { DashboardTab } from './tabs/dashboard-tab';
 import { MovementsTab } from './tabs/movements-tab';
 import { RequestsTab } from './tabs/requests-tab';
 
-// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
-// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const STOCK_TABS = ['dashboard', 'items', 'movements', 'requests', 'audit'] as const;
 type StockTab = (typeof STOCK_TABS)[number];
-
-// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
-// (e.g. landing on /stock from the sidebar menu rather than a reload/shared link).
-const STOCK_TAB_KEY = 'stock.tab';
 
 // localStorage key for the Items-tab filters (search + category + warehouse + status).
 // Kept out of the URL so personal filters survive a reload without cluttering shareable links.
@@ -218,23 +213,16 @@ export default function StockPage() {
     const canManage = can('manage_items');
 
     const [searchParams, setSearchParams] = useSearchParams();
-    // Resolve the starting tab: the URL (?tab=) wins so reloads / shared links are exact;
-    // otherwise fall back to the last tab saved in localStorage; otherwise the dashboard.
+    // Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard.
     const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
     const urlTab = searchParams.get('tab');
-    const initialTab: StockTab = isStockTab(urlTab)
-        ? urlTab
-        : isStockTab(localStorage.getItem(STOCK_TAB_KEY))
-          ? (localStorage.getItem(STOCK_TAB_KEY) as StockTab)
-          : 'dashboard';
+    const initialTab: StockTab = isStockTab(urlTab) ? urlTab : 'dashboard';
     const [tab, setTab] = useState<StockTab>(initialTab);
 
-    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
-    // localStorage (so navigating away and back — which clears the URL — restores it).
+    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
         (next: StockTab) => {
             setTab(next);
-            localStorage.setItem(STOCK_TAB_KEY, next);
             setSearchParams(
                 (prev) => {
                     const sp = new URLSearchParams(prev);
@@ -268,8 +256,41 @@ export default function StockPage() {
         localStorage.setItem(STOCK_FILTER_KEY, JSON.stringify({ search, cat, wh, status: statusFilter, sort: itemSort }));
     }, [search, cat, wh, statusFilter, itemSort]);
     const [editItem, setEditItem] = useState<StockItem | null>(null);
-    const [viewId, setViewId] = useState<number | null>(null);
-    const [addOpen, setAddOpen] = useState(false);
+    // Item detail is URL-driven (?view=<id>) so a reload / shared link reopens it; closing drops it.
+    const viewId = searchParams.get('view') ? Number(searchParams.get('view')) : null;
+    const setViewId = (id: number | null) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                if (id == null) {
+                    p.delete('view');
+                } else {
+                    p.set('view', String(id));
+                }
+                return p;
+            },
+            { replace: true },
+        );
+    // The add-item drawer is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
+    const adding = searchParams.get('add') != null;
+    const openAdd = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('add', '1');
+                return p;
+            },
+            { replace: true },
+        );
+    const closeAdd = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
     const [moveKind, setMoveKind] = useState<StockMovementType | null>(null);
     const [reqOpen, setReqOpen] = useState(false);
 
@@ -304,6 +325,9 @@ export default function StockPage() {
     const pendingRequests = requestsPage?.meta.pending ?? 0;
     // Outstanding work = awaiting approval (pending) + awaiting fulfillment (approved).
     const outstandingRequests = requestsPage?.meta.outstanding ?? 0;
+    // Requests-tab pagination lives here (not in the tab) so it survives switching tabs.
+    const [reqPage, setReqPage] = useState(1);
+    const [reqPerPage, setReqPerPage] = useState(20);
 
     // Outstanding counting work = draft (not-yet-committed) count sessions.
     const { data: countsPage } = useStockCounts({}, can('view_count'));
@@ -670,7 +694,7 @@ export default function StockPage() {
                                         </Button>
                                     )}
                                     {canManage && (
-                                        <Button onClick={() => setAddOpen(true)}>
+                                        <Button onClick={openAdd}>
                                             <Plus className="h-4 w-4" />
                                             {t('stock_new_sku')}
                                         </Button>
@@ -716,31 +740,34 @@ export default function StockPage() {
                     )}
 
                     {tab === 'movements' && <MovementsTab />}
-                    {tab === 'requests' && <RequestsTab can={can} onNew={() => setReqOpen(true)} />}
+                    {tab === 'requests' && (
+                        <RequestsTab
+                            can={can}
+                            onNew={() => setReqOpen(true)}
+                            page={reqPage}
+                            setPage={setReqPage}
+                            perPage={reqPerPage}
+                            setPerPage={setReqPerPage}
+                        />
+                    )}
 
                     {tab === 'audit' && <AuditTab can={can} />}
                 </div>
             </Card>
 
             <StockItemModal
-                open={addOpen || !!editItem}
+                open={adding || !!editItem}
                 item={editItem}
                 onClose={() => {
-                    setAddOpen(false);
+                    closeAdd();
                     setEditItem(null);
                 }}
             />
             <StockItemDetailModal
+                // Stays open while editing; the edit modal stacks on top and closing returns here.
                 itemId={viewId}
                 onClose={() => setViewId(null)}
-                onEdit={
-                    canManage
-                        ? (i) => {
-                              setViewId(null);
-                              setEditItem(i);
-                          }
-                        : undefined
-                }
+                onEdit={canManage ? (i) => setEditItem(i) : undefined}
             />
             <MovementDrawer kind={moveKind} onClose={() => setMoveKind(null)} />
             <RequestDrawer open={reqOpen} onClose={() => setReqOpen(false)} />

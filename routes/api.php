@@ -207,6 +207,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
         Route::get('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'members']);
         Route::get('software', [SoftwareController::class, 'index']);
         Route::get('software/{software}/members', [SoftwareController::class, 'members']);
+        Route::get('access/dashboard', [AccessController::class, 'dashboard']);
         Route::get('employees/{employee}/access', [AccessController::class, 'employee']);
     });
     Route::middleware('permission:access.manage')->group(function () {

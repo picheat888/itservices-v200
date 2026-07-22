@@ -19,13 +19,28 @@ const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> =
     rejected: 'red',
 };
 
-export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew: () => void }) {
+export function RequestsTab({
+    can,
+    onNew,
+    page,
+    setPage,
+    perPage,
+    setPerPage,
+}: {
+    can: (p: string) => boolean;
+    onNew: () => void;
+    // Pagination lives in the parent so switching tabs (which unmounts this tab) keeps your place.
+    page: number;
+    setPage: (p: number) => void;
+    perPage: number;
+    setPerPage: (n: number) => void;
+}) {
     const t = useT();
     const confirm = useConfirm();
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
-    const [page, setPage] = useState(1);
-    const [perPage, setPerPage] = useState(20);
-    const { data: requestsPage, isLoading: requestsLoading, isFetching: requestsFetching } = useStockRequests({ page, per_page: perPage });
+    // `loading` tracks only the first load (isLoading), not background refetches (isFetching), so
+    // returning to this tab shows the cached page instantly instead of a shimmer every time.
+    const { data: requestsPage, isLoading: requestsLoading } = useStockRequests({ page, per_page: perPage });
     const requests = requestsPage?.data ?? [];
     const { approve, reject, fulfill } = useStockRequestActions();
     const [fulfillReq, setFulfillReq] = useState<StockRequest | null>(null);
@@ -185,7 +200,7 @@ export function RequestsTab({ can, onNew }: { can: (p: string) => boolean; onNew
                 columns={columns}
                 rows={requests}
                 rowKey={(r) => r.id}
-                loading={requestsLoading || requestsFetching}
+                loading={requestsLoading}
                 server={{
                     page,
                     pageSize: perPage,

@@ -5,6 +5,7 @@ namespace App\Services\Access;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
+use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
@@ -111,6 +112,93 @@ class AccessService
             'social_platform' => $all->where('resource_type', 'social_platform')->values(),
             'software' => $all->where('resource_type', 'software')->values(),
         ];
+    }
+
+    /**
+     * Aggregate figures for the Access Directory "overview" tab: per-channel
+     * counts (resources / active grants / grants added in the last 30 days), the
+     * active-grant distribution total, a handful of governance-hygiene checks,
+     * and the most-reached resources. Returned as a plain array (rendered as-is).
+     *
+     * @return array<string, mixed>
+     */
+    public function dashboard(): array
+    {
+        $since = now()->subDays(30)->startOfDay();
+
+        // Active grants by morph type, plus the last-30-day churn (grants issued vs
+        // revoked in the window) so the UI can show a signed net change per channel.
+        $activeByType = AccessMembership::query()->active()
+            ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
+        $createdByType = AccessMembership::query()->where('created_at', '>=', $since)
+            ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
+        $revokedByType = AccessMembership::query()->whereNotNull('revoked_at')->where('revoked_at', '>=', $since)
+            ->selectRaw('resource_type, COUNT(*) as c')->groupBy('resource_type')->pluck('c', 'resource_type');
+
+        $stat = fn (string $model, string $type): array => [
+            'resources' => (int) $model::count(),
+            'grants' => (int) ($activeByType[$type] ?? 0),
+            // Net change in the last 30 days: positive = grew, negative = shrank.
+            'net_30d' => (int) ($createdByType[$type] ?? 0) - (int) ($revokedByType[$type] ?? 0),
+        ];
+
+        $channels = [
+            'email_groups' => $stat(EmailGroup::class, 'email_group'),
+            'file_shares' => $stat(FileShare::class, 'file_share'),
+            'social' => $stat(SocialPlatform::class, 'social_platform'),
+            'software' => $stat(Software::class, 'software'),
+        ];
+
+        // Governance hygiene: file shares with no active member, resources missing
+        // an owner, and resigned employees who still hold an active grant.
+        $emptyShares = FileShare::query()->whereDoesntHave('memberships', fn ($q) => $q->active())->get(['id', 'name']);
+        $sharesNoOwner = FileShare::whereNull('owner_employee_id')->count();
+        $groupsNoOwner = EmailGroup::whereNull('owner_employee_id')->count();
+        $resignedHolders = AccessMembership::query()->active()
+            ->whereHas('employee', fn ($q) => $q->where('status', 'resigned'))
+            ->distinct('employee_id')->count('employee_id');
+
+        return [
+            'channels' => $channels,
+            'total_grants' => (int) array_sum(array_column($channels, 'grants')),
+            'governance' => [
+                'empty_shares' => $emptyShares->count(),
+                'empty_shares_sample' => $emptyShares->first()?->name,
+                'shares_without_owner' => $sharesNoOwner,
+                'groups_without_owner' => $groupsNoOwner,
+                'owners_complete' => $sharesNoOwner === 0 && $groupsNoOwner === 0,
+                'resigned_holders' => $resignedHolders,
+                'added_30d' => (int) AccessMembership::query()->active()->where('created_at', '>=', $since)->count(),
+            ],
+            'top_resources' => $this->topResources(6),
+        ];
+    }
+
+    /**
+     * The most-reached resources across all four types, ranked by active-grant
+     * count. Each row carries the front-end tab key (for linking) plus a type-
+     * appropriate detail line: email / path / url, or the publisher for software.
+     *
+     * @return array<int, array{id: int, name: string, detail: string|null, logo: string|null, kind: string, grants: int}>
+     */
+    private function topResources(int $limit): array
+    {
+        $activeCount = ['memberships as grants' => fn ($q) => $q->active()];
+        $rows = collect();
+
+        EmailGroup::query()->withCount($activeCount)->get(['id', 'name', 'email'])
+            ->each(fn ($r) => $rows->push(['id' => $r->id, 'name' => $r->name, 'detail' => $r->email, 'logo' => null, 'kind' => 'email-groups', 'grants' => (int) $r->grants]));
+
+        FileShare::query()->withCount($activeCount)->get(['id', 'name', 'path'])
+            ->each(fn ($r) => $rows->push(['id' => $r->id, 'name' => $r->name, 'detail' => $r->path, 'logo' => null, 'kind' => 'file-shares', 'grants' => (int) $r->grants]));
+
+        SocialPlatform::query()->withCount($activeCount)->get(['id', 'name', 'url', 'logo_path'])
+            ->each(fn ($r) => $rows->push(['id' => $r->id, 'name' => $r->name, 'detail' => $r->url, 'logo' => $r->logo_url, 'kind' => 'social-platforms', 'grants' => (int) $r->grants]));
+
+        Software::query()->with('brand')->withCount($activeCount)->get(['id', 'name', 'brand_id', 'logo_path'])
+            ->each(fn ($r) => $rows->push(['id' => $r->id, 'name' => $r->name, 'detail' => $r->brand?->name, 'logo' => $r->logo_url, 'kind' => 'software', 'grants' => (int) $r->grants]));
+
+        return $rows->sortByDesc('grants')->take($limit)->values()->all();
     }
 
     /**
