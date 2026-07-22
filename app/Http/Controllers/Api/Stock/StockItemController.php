@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Api\Stock;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stock\StoreStockItemRequest;
 use App\Http\Resources\Stock\StockItemResource;
+use App\Http\Resources\Stock\StockMovementResource;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockLot;
+use App\Models\Stock\StockMovement;
 use App\Support\DocumentName;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -146,6 +148,15 @@ class StockItemController extends Controller
             'units' => $group->sum('current_stock'),
         ])->sortByDesc('units')->values();
 
+        // Recent movements are folded into the summary so the dashboard's "Recent movements"
+        // card lands in the same request as every other panel (no lagging second query).
+        // Only for users who can view the event log; others get an empty list (card is hidden).
+        $recentMovements = $request->user()?->hasPermission('stock.view_events')
+            ? StockMovementResource::collection(
+                StockMovement::with('item')->orderByDesc('moved_at')->orderByDesc('id')->limit(10)->get()
+            )
+            : [];
+
         return response()->json([
             'skus' => $items->count(),
             'total_units' => $items->sum('current_stock'),
@@ -160,6 +171,7 @@ class StockItemController extends Controller
             'dead_items' => StockItemResource::collection($dead->values()),
             'by_warehouse' => $byWarehouse,
             'by_category' => $byCategory,
+            'recent_movements' => $recentMovements,
         ]);
     }
 

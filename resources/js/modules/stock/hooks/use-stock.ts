@@ -86,7 +86,14 @@ export function useRecordMovement() {
 
 /** Server-paginated stock requests visible to the current user. meta carries pending/outstanding totals. */
 export const useStockRequests = (params: { page?: number; per_page?: number } = {}, enabled = true) =>
-    useQuery({ queryKey: [...REQUESTS, params], queryFn: () => stockRequestApi.list(params), enabled, placeholderData: (prev) => prev });
+    useQuery({
+        queryKey: [...REQUESTS, params],
+        queryFn: () => stockRequestApi.list(params),
+        enabled,
+        placeholderData: (prev) => prev,
+        // Keep results fresh for 30s so re-opening the tab shows the cached page without a refetch flash.
+        staleTime: 30_000,
+    });
 
 /**
  * Combined "needs attention" count for the Stock sidebar badge: min/max alerts

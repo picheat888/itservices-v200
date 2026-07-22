@@ -1,10 +1,21 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, ApproverNode, Department, Employee, LocationItem, OrgChartNode, Position, Section } from '@/shared/types';
 
+/** One month on the hiring-trend chart. `month` is 'YYYY-MM'. */
+export interface EmployeeHiresMonth {
+    month: string;
+    count: number;
+}
+
 export interface EmployeeSummary {
     total: number;
     new_hires: number;
+    active: number;
+    resigned: number;
+    resigned_this_year: number;
+    hires_by_month: EmployeeHiresMonth[];
     recent: Employee[];
+    recent_resignations: Employee[];
 }
 
 /** A read-only asset row held by an employee — for the Employee detail's Assets tab. */

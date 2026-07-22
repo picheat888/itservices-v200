@@ -36,6 +36,8 @@ export type MemberTarget = {
     code?: string | null;
     /** Accent color (social platforms use the platform color). */
     color?: string | null;
+    /** Uploaded logo URL (social platforms / software) — shown round in the header. */
+    logo?: string | null;
 };
 
 // Access levels offered per kind; only file shares grade access. Email-group owner
@@ -288,6 +290,9 @@ export function MembersDrawer({
                         <FocusDialogHeader
                             icon={Icon}
                             accent={tileColor}
+                            image={tgt.logo ?? undefined}
+                            round
+                            tileSize="lg"
                             eyebrow={t(meta.eyebrow)}
                             title={tgt.name}
                             code={tgt.code ?? undefined}

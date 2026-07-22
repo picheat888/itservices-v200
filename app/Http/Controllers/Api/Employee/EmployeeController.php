@@ -16,6 +16,7 @@ use App\Services\Employee\ApprovalChainService;
 use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -116,16 +117,60 @@ class EmployeeController extends Controller
 
         $total = Employee::count();
         $newHires = Employee::where('joined_at', '>=', '2023-01-01')->count();
+        $active = Employee::where('status', EmployeeStatus::Active->value)->count();
+        $resigned = Employee::where('status', EmployeeStatus::Resigned->value)->count();
+        $resignedThisYear = Employee::where('status', EmployeeStatus::Resigned->value)
+            ->whereYear('last_day', now()->year)->count();
+
         $recent = Employee::with(['department', 'position', 'section'])
             ->orderByDesc('joined_at')
+            ->limit(5)
+            ->get();
+
+        // Most recent departures — mirrors "recent hires", ordered by their last working day.
+        $recentResignations = Employee::with(['department', 'position', 'section'])
+            ->where('status', EmployeeStatus::Resigned->value)
+            ->orderByDesc('last_day')
             ->limit(5)
             ->get();
 
         return response()->json([
             'total' => $total,
             'new_hires' => $newHires,
+            'active' => $active,
+            'resigned' => $resigned,
+            'resigned_this_year' => $resignedThisYear,
+            'hires_by_month' => $this->hiresByMonth(),
             'recent' => EmployeeResource::collection($recent),
+            'recent_resignations' => EmployeeResource::collection($recentResignations),
         ]);
+    }
+
+    /**
+     * Hire counts for the last 12 months (fixed rolling window, zero-filled) ending at
+     * the current month — drives the hiring-trend chart on the dashboard.
+     *
+     * @return array<int, array{month: string, count: int}>
+     */
+    private function hiresByMonth(): array
+    {
+        // Bucket by year-month in PHP (portable across MariaDB / SQLite test DB).
+        $counts = [];
+        foreach (Employee::whereNotNull('joined_at')->pluck('joined_at') as $d) {
+            $ym = Carbon::parse($d)->format('Y-m');
+            $counts[$ym] = ($counts[$ym] ?? 0) + 1;
+        }
+
+        $end = now()->startOfMonth();
+        $start = $end->copy()->subMonths(11);
+
+        $out = [];
+        for ($m = $start->copy(); $m->lte($end); $m->addMonth()) {
+            $ym = $m->format('Y-m');
+            $out[] = ['month' => $ym, 'count' => (int) ($counts[$ym] ?? 0)];
+        }
+
+        return $out;
     }
 
     /**

@@ -623,6 +623,8 @@ export interface StockSummary {
     dead_items: StockItem[];
     by_warehouse: { warehouse: string; skus: number; units: number }[];
     by_category: { category: string; skus: number; units: number }[];
+    /** Latest movements folded in (view_events only; empty otherwise) so the card lands with the summary. */
+    recent_movements: StockMovement[];
 }
 
 export interface EmailGroup {
@@ -665,6 +667,8 @@ export interface SocialPlatform {
     url?: string | null;
     color?: string | null;
     policy?: string | null;
+    logo_url?: string | null;
+    logo_path?: string | null;
     members?: AccessMemberPreview[];
     members_count?: number;
 }
@@ -736,3 +740,44 @@ export interface EmployeeAccess {
 }
 
 export type AccessKind = 'email-groups' | 'file-shares' | 'social-platforms' | 'software';
+
+/** Per-channel figures on the Access Directory overview tab. */
+export interface AccessChannelStat {
+    resources: number;
+    grants: number;
+    /** Net change in active grants over the last 30 days (positive = grew, negative = shrank). */
+    net_30d: number;
+}
+
+/** A most-reached resource row (ranked by active-grant count) on the overview tab. */
+export interface AccessTopResource {
+    id: number;
+    name: string;
+    /** Type-appropriate detail line: email / path / url, or publisher for software. */
+    detail: string | null;
+    /** Uploaded logo URL when the resource has one (social / software); null otherwise. */
+    logo: string | null;
+    kind: AccessKind;
+    grants: number;
+}
+
+/** Aggregate payload for the Access Directory overview tab (GET /access/dashboard). */
+export interface AccessSummary {
+    channels: {
+        email_groups: AccessChannelStat;
+        file_shares: AccessChannelStat;
+        social: AccessChannelStat;
+        software: AccessChannelStat;
+    };
+    total_grants: number;
+    governance: {
+        empty_shares: number;
+        empty_shares_sample: string | null;
+        shares_without_owner: number;
+        groups_without_owner: number;
+        owners_complete: boolean;
+        resigned_holders: number;
+        added_30d: number;
+    };
+    top_resources: AccessTopResource[];
+}

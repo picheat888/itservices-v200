@@ -1,4 +1,4 @@
-import type { AccessKind, AccessMember, ApiEnvelope, EmailGroup, EmployeeAccess, FileShare, SocialPlatform, Software } from '@/shared/types';
+import type { AccessKind, AccessMember, AccessSummary, ApiEnvelope, EmailGroup, EmployeeAccess, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -27,6 +27,7 @@ function toFormData(payload: Record<string, unknown>): FormData {
 }
 
 export const accessApi = {
+    summary: () => http.get<ApiEnvelope<AccessSummary>>('/access/dashboard').then((r) => r.data.data),
     emailGroups: () => http.get<ApiEnvelope<EmailGroup[]>>('/email-groups').then((r) => r.data.data),
     fileShares: () => http.get<ApiEnvelope<FileShare[]>>('/file-shares').then((r) => r.data.data),
     socialPlatforms: () => http.get<ApiEnvelope<SocialPlatform[]>>('/social-platforms').then((r) => r.data.data),

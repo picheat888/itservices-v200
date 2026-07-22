@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Access Directory — Dashboard preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* ===== tokens copied 1:1 from the app's app.css :root (light) ===== */
+  :root{
+    --brand:#2563eb;
+    --content:#f6f8fb;
+    --background:hsl(0,0%,100%);
+    --foreground:hsl(222,30%,12%);
+    --card:hsl(0,0%,100%);
+    --muted-foreground:hsl(215,16%,47%);
+    --secondary:hsl(210,20%,96%);
+    --border:hsl(214,20%,90%);
+    --destructive:hsl(0,72%,51%);
+    --radius:0.625rem;
+
+    --shadow-xs:0 1px 2px 0 rgba(15,23,42,.05);
+
+    /* the exact channel hexes the Access page NameCell already uses */
+    --email:#7c3aed;
+    --file:#0d9488;
+    --social:#6366f1;
+    --software:#f59e0b;
+
+    --font-sans:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--content);
+    color:var(--foreground);
+    font-family:var(--font-sans);
+    font-size:14px;line-height:1.5;letter-spacing:-.005em;
+    font-feature-settings:'ss01','cv11';
+    -webkit-font-smoothing:antialiased;
+    padding:32px 24px 72px;
+  }
+  .page{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+
+  .mono{font-family:var(--font-mono);font-feature-settings:'tnum'}
+  .muted{color:var(--muted-foreground)}
+
+  /* card = rounded-lg border bg-card shadow-xs */
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow-xs);
+  }
+
+  /* ===== page header (matches dashboard: text-2xl font-bold + muted sub) ===== */
+  .head h1{font-size:24px;font-weight:800;line-height:1.15;margin:0}
+  .head p{font-size:13.5px;margin:5px 0 0;color:var(--muted-foreground)}
+
+  /* ===== KPI row (identical pattern to DashboardPage) ===== */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .kpi{padding:20px}
+  .kpi-top{display:flex;align-items:flex-start;justify-content:space-between}
+  .kpi-label{font-size:14px;color:var(--muted-foreground)}
+  .kpi-ic{
+    height:36px;width:36px;border-radius:8px;display:grid;place-items:center;
+    background:color-mix(in srgb,var(--brand) 10%,transparent);color:var(--brand);
+  }
+  .kpi-ic svg{width:18px;height:18px}
+  .kpi-val{margin-top:8px;font-family:var(--font-mono);font-size:30px;font-weight:700;line-height:1.1}
+  .kpi-delta{margin-top:4px;font-size:12px;color:var(--muted-foreground)}
+  .kpi-delta.bad{color:var(--destructive)}
+
+  /* ===== 2-col grid rows (lg:grid-cols-2, gap-4) ===== */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+  /* card section header (border-b px-5 py-3.5, icon + font-semibold) */
+  .sec-head{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding:14px 20px}
+  .sec-head .l{display:flex;align-items:center;gap:8px}
+  .sec-head .l svg{width:16px;height:16px;color:var(--muted-foreground)}
+  .sec-head .t{font-weight:600}
+  .sec-head .more{font-size:12px;font-weight:500;color:var(--muted-foreground)}
+
+  /* channel breakdown list */
+  .chan-body{padding:16px 20px 18px;display:flex;flex-direction:column;gap:15px}
+  .chan-cap{margin:0 0 3px;font-size:12px;color:var(--muted-foreground);line-height:1.45}
+  .chan{display:flex;align-items:center;gap:12px}
+  .chan .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .chan .name{width:84px;font-size:13px}
+  .chan .bar{flex:1;height:8px;border-radius:999px;background:var(--secondary);overflow:hidden}
+  .chan .bar i{display:block;height:100%;border-radius:999px;transition:width .7s cubic-bezier(.2,.7,.2,1)}
+  .chan .n{width:66px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600;white-space:nowrap}
+  .chan .n .pct{font-size:11px;font-weight:500;color:var(--muted-foreground)}
+  .sec-head .more b{font-weight:700;color:var(--foreground)}
+
+  /* needs-review list */
+  .rev-body{padding:6px 8px}
+  .rev{display:flex;align-items:flex-start;gap:12px;padding:11px 12px;border-radius:8px}
+  .rev+.rev{border-top:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+  .rev .ic{width:16px;height:16px;flex:0 0 auto;margin-top:1px}
+  .rev .m{flex:1;min-width:0}
+  .rev .m .t{font-size:13px;font-weight:500}
+  .rev .m .s{font-size:12px;color:var(--muted-foreground)}
+  .rev .val{font-family:var(--font-mono);font-size:13px;font-weight:600}
+  .amber{color:var(--software)} .red{color:var(--destructive)} .green{color:#16a34a} .ink{color:var(--muted-foreground)}
+
+  /* ===== ledger table (copies the recent-tickets table styling) ===== */
+  .tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl th{padding:10px 20px;text-align:left;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted-foreground);border-bottom:1px solid var(--border)}
+  .tbl th.r{text-align:right}
+  .tbl td{padding:10px 20px;border-bottom:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+  .tbl tr:last-child td{border-bottom:0}
+  .res{display:flex;align-items:center;gap:10px}
+  .res .tile{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+  .res .tile svg{width:14px;height:14px}
+  .res .txt .n{font-weight:500}
+  .res .txt .c{font-family:var(--font-mono);font-size:11px;color:var(--muted-foreground)}
+  .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;text-transform:capitalize}
+  .reach{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+  .reach .bar{width:110px;height:7px;border-radius:999px;background:var(--secondary);overflow:hidden}
+  .reach .bar i{display:block;height:100%;border-radius:999px;transition:width .7s cubic-bezier(.2,.7,.2,1)}
+  .reach .n{width:18px;text-align:right;font-family:var(--font-mono);font-size:13px;font-weight:600}
+
+  .foot{text-align:center;color:var(--muted-foreground);font-size:12px;margin-top:4px}
+
+  /* motion — matches the app's staggered fade-in standard */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .anim{animation:fadeUp .45s cubic-bezier(.2,.7,.2,1) both}
+
+  @media (max-width:860px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .anim{animation:none}
+    .chan .bar i,.reach .bar i{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- header -->
+  <div class="head anim">
+    <h1>Access Directory</h1>
+    <p>ภาพรวมสิทธิ์การเข้าถึง — ใครเข้าถึงกลุ่มอีเมล ไฟล์แชร์ โซเชียล และซอฟต์แวร์ได้บ้าง</p>
+  </div>
+
+  <!-- KPI row — one card per real thing you can point at: how many, and how many people can reach it -->
+  <div class="kpis">
+    <div class="card kpi anim" style="animation-delay:.04s">
+      <div class="kpi-top">
+        <div class="kpi-label">กลุ่มอีเมล</div>
+        <span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+      </div>
+      <div class="kpi-val">4</div>
+      <div class="kpi-delta">↑ เพิ่ม 5 สิทธิ์ในรอบ 30 วัน</div>
+    </div>
+
+    <div class="card kpi anim" style="animation-delay:.08s">
+      <div class="kpi-top">
+        <div class="kpi-label">ไฟล์แชร์</div>
+        <span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/></svg></span>
+      </div>
+      <div class="kpi-val">4</div>
+      <div class="kpi-delta">↑ เพิ่ม 10 สิทธิ์ในรอบ 30 วัน</div>
+    </div>
+
+    <div class="card kpi anim" style="animation-delay:.12s">
+      <div class="kpi-top">
+        <div class="kpi-label">โซเชียล</div>
+        <span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg></span>
+      </div>
+      <div class="kpi-val">3</div>
+      <div class="kpi-delta">↑ เพิ่ม 5 สิทธิ์ในรอบ 30 วัน</div>
+    </div>
+
+    <div class="card kpi anim" style="animation-delay:.16s">
+      <div class="kpi-top">
+        <div class="kpi-label">ซอฟต์แวร์</div>
+        <span class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>
+      </div>
+      <div class="kpi-val">1</div>
+      <div class="kpi-delta">↑ เพิ่ม 1 สิทธิ์ในรอบ 30 วัน</div>
+    </div>
+  </div>
+
+  <!-- row 1: channel breakdown + needs review -->
+  <div class="grid2">
+    <div class="card anim" style="animation-delay:.2s">
+      <div class="sec-head">
+        <div class="l">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+          <span class="t">สัดส่วนการเข้าถึง</span>
+        </div>
+        <span class="more"><b class="mono">22</b> สิทธิ์รวม</span>
+      </div>
+      <div class="chan-body">
+        <p class="chan-cap">สิทธิ์การเข้าถึงที่ยังใช้งานอยู่ทั้งหมด แบ่งตามประเภทของทรัพยากร</p>
+        <div class="chan">
+          <span class="dot" style="background:var(--email)"></span>
+          <div class="name">กลุ่มอีเมล</div>
+          <div class="bar"><i style="width:45%;background:var(--email)"></i></div>
+          <div class="n">5 <span class="pct">23%</span></div>
+        </div>
+        <div class="chan">
+          <span class="dot" style="background:var(--file)"></span>
+          <div class="name">ไฟล์แชร์</div>
+          <div class="bar"><i style="width:100%;background:var(--file)"></i></div>
+          <div class="n">11 <span class="pct">50%</span></div>
+        </div>
+        <div class="chan">
+          <span class="dot" style="background:var(--social)"></span>
+          <div class="name">โซเชียล</div>
+          <div class="bar"><i style="width:45%;background:var(--social)"></i></div>
+          <div class="n">5 <span class="pct">23%</span></div>
+        </div>
+        <div class="chan">
+          <span class="dot" style="background:var(--software)"></span>
+          <div class="name">ซอฟต์แวร์</div>
+          <div class="bar"><i style="width:9%;background:var(--software)"></i></div>
+          <div class="n">1 <span class="pct">4%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card anim" style="animation-delay:.24s">
+      <div class="sec-head">
+        <div class="l">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          <span class="t">สถานะการกำกับดูแล</span>
+        </div>
+        <span class="more">ตรวจล่าสุด วันนี้</span>
+      </div>
+      <div class="rev-body">
+        <div class="rev">
+          <svg class="ic amber" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+          <div class="m"><div class="t">ไฟล์แชร์ที่ยังไม่มีสมาชิก</div><div class="s">“Public (Center)” ยังไม่มีผู้เข้าถึง</div></div>
+          <div class="val amber">1</div>
+        </div>
+        <div class="rev">
+          <svg class="ic ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/></svg>
+          <div class="m"><div class="t">สิทธิ์ที่เพิ่มในรอบ 30 วัน</div><div class="s">การมอบสิทธิ์ใหม่ในช่วงที่ผ่านมา</div></div>
+          <div class="val ink">21</div>
+        </div>
+        <div class="rev">
+          <svg class="ic green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <div class="m"><div class="t">ทรัพยากรมีผู้ดูแลครบทุกรายการ</div><div class="s">ทุกกลุ่มอีเมลและไฟล์แชร์มีเจ้าของ</div></div>
+          <div class="val green">✓</div>
+        </div>
+        <div class="rev">
+          <svg class="ic green" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>
+          <div class="m"><div class="t">ไม่มีพนักงานลาออกที่ยังถือสิทธิ์</div><div class="s">ตรวจสอบกับสถานะพนักงานแล้ว</div></div>
+          <div class="val green">✓</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- row 2: most-reached resources table -->
+  <div class="card anim" style="animation-delay:.28s;overflow:hidden">
+    <div class="sec-head">
+      <div class="l">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>
+        <span class="t">Resource ที่เข้าถึงมากที่สุด</span>
+      </div>
+      <span class="more">ดูทั้งหมด →</span>
+    </div>
+    <table class="tbl">
+      <thead>
+        <tr><th>Resource</th><th>ช่องทาง</th><th class="r">ผู้เข้าถึง</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="res">
+              <span class="tile" style="background:color-mix(in srgb,var(--file) 12%,#fff);color:var(--file)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2Z"/></svg></span>
+              <div class="txt"><div class="n">Plant 1 Recipes</div><div class="c">FS-0001</div></div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:color-mix(in srgb,var(--file) 12%,#fff);color:var(--file)">file share</span></td>
+          <td><div class="reach"><div class="bar"><i style="width:100%;background:var(--file)"></i></div><span class="n">9</span></div></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="res">
+              <span class="tile" style="background:color-mix(in srgb,var(--social) 12%,#fff);color:var(--social)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg></span>
+              <div class="txt"><div class="n">LINE</div><div class="c">SP-0002</div></div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:color-mix(in srgb,var(--social) 12%,#fff);color:var(--social)">social</span></td>
+          <td><div class="reach"><div class="bar"><i style="width:33%;background:var(--social)"></i></div><span class="n">3</span></div></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="res">
+              <span class="tile" style="background:color-mix(in srgb,var(--email) 12%,#fff);color:var(--email)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></span>
+              <div class="txt"><div class="n">QA Team</div><div class="c">EG-0003</div></div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:color-mix(in srgb,var(--email) 12%,#fff);color:var(--email)">email group</span></td>
+          <td><div class="reach"><div class="bar"><i style="width:22%;background:var(--email)"></i></div><span class="n">2</span></div></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="res">
+              <span class="tile" style="background:color-mix(in srgb,var(--social) 12%,#fff);color:var(--social)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20"/></svg></span>
+              <div class="txt"><div class="n">Facebook</div><div class="c">SP-0001</div></div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:color-mix(in srgb,var(--social) 12%,#fff);color:var(--social)">social</span></td>
+          <td><div class="reach"><div class="bar"><i style="width:11%;background:var(--social)"></i></div><span class="n">1</span></div></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="res">
+              <span class="tile" style="background:color-mix(in srgb,var(--software) 14%,#fff);color:var(--software)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg></span>
+              <div class="txt"><div class="n">Acrobat Pro 2025</div><div class="c">SW-0001</div></div>
+            </div>
+          </td>
+          <td><span class="badge" style="background:color-mix(in srgb,var(--software) 14%,#fff);color:var(--software)">software</span></td>
+          <td><div class="reach"><div class="bar"><i style="width:11%;background:var(--software)"></i></div><span class="n">1</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="foot">ตัวอย่างดีไซน์ (mockup) · ใช้ token/การ์ด/ตารางชุดเดียวกับหน้า Dashboard เดิม · ข้อมูลจริงจาก DB itservices</p>
+
+</div>
+</body>
+</html>

@@ -23,10 +23,19 @@ async function getCroppedFile(imageSrc: string, pixelCrop: Area): Promise<File> 
             canvas.height = SIZE;
             const ctx = canvas.getContext('2d')!;
             ctx.drawImage(img, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, SIZE, SIZE);
-            canvas.toBlob((blob) => {
-                if (!blob) { reject(new Error('toBlob failed')); return; }
-                resolve(new File([blob], 'photo.png', { type: 'image/png' }));
-            }, 'image/png');
+            // Encode as WebP (q≈0.9): far smaller than a canvas PNG while keeping transparency,
+            // so the stored file isn't heavier than the original the user picked.
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        reject(new Error('toBlob failed'));
+                        return;
+                    }
+                    resolve(new File([blob], 'photo.webp', { type: 'image/webp' }));
+                },
+                'image/webp',
+                0.9,
+            );
         };
         img.onerror = reject;
         img.src = imageSrc;

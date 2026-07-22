@@ -3,6 +3,7 @@ import { DepartmentMembersDialog } from '../components/department-members-dialog
 import { DepartmentModal } from '../components/department-modal';
 import { EditEmployeeDialog } from '../components/edit-employee-dialog';
 import { EmployeeViewDrawer } from '../components/employee-view-drawer';
+import { HiresTrendCard } from '../components/hires-trend-card';
 import { ImportEmployeeDialog } from '../components/import-employee-dialog';
 import { OrgChartTab } from '../components/org-chart/org-chart-tab';
 import { PositionMembersDialog } from '../components/position-members-dialog';
@@ -34,6 +35,7 @@ import {
     usePositionMutations,
     usePositions,
 } from '../hooks/use-org';
+import { useQueryClient } from '@tanstack/react-query';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -65,22 +67,12 @@ import { useSearchParams } from 'react-router-dom';
 const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
-// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
-// (e.g. landing on /employees from the sidebar menu rather than a reload/shared link).
-const EMP_TAB_KEY = 'employees.tab';
 const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
-/**
- * Resolve the starting tab: the URL (?tab=) wins so reloads / shared links are exact;
- * otherwise fall back to the last tab saved in localStorage; otherwise the dashboard.
- */
+/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialTab(): Tab {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    if (isTab(fromUrl)) {
-        return fromUrl;
-    }
-    const fromStore = localStorage.getItem(EMP_TAB_KEY);
-    return isTab(fromStore) ? fromStore : 'dashboard';
+    return isTab(fromUrl) ? fromUrl : 'dashboard';
 }
 
 export default function EmployeesPage() {
@@ -117,16 +109,12 @@ export default function EmployeesPage() {
     const canPosSpecial = perms.includes('employees.position_special') || role === 'super';
 
     const [tab, setTab] = useState<Tab>(initialTab);
-    const { data: summary } = useEmployeeSummary();
+    const { data: summary, isLoading: summaryLoading } = useEmployeeSummary();
     const { data: departments = [] } = useDepartments();
     const { data: positions = [] } = usePositions();
 
-    const [addOpen, setAddOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [editEmp, setEditEmp] = useState<Employee | null>(null);
-    const [viewEmp, setViewEmp] = useState<Employee | null>(null);
-    // "View profile" inside the org explorer: load the picked person, then swap the dialog to them.
-    const [profileId, setProfileId] = useState<number | null>(null);
     const [resignEmp, setResignEmp] = useState<Employee | null>(null);
     const [resetPwEmp, setResetPwEmp] = useState<Employee | null>(null);
     const [credEmp, setCredEmp] = useState<Employee | null>(null);
@@ -141,30 +129,74 @@ export default function EmployeesPage() {
     const departmentMut = useDepartmentMutations();
     const employeeMut = useEmployeeMutations();
 
-    // Deep-link from a notification: /employees?highlight=<id> opens that
-    // employee's record on the Directory tab, then clears the param.
+    // The view drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
+    // drops the param. Row clicks seed the cache for an instant open; "view profile" jumps by id.
+    const qc = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
-    const highlightId = searchParams.get('highlight');
-    const { data: highlighted } = useEmployee(highlightId ? Number(highlightId) : null);
-    // Fetch the person chosen via "View profile" and switch the open dialog to them.
-    const { data: profileEmp } = useEmployee(profileId);
-    useEffect(() => {
-        if (profileEmp) {
-            setViewEmp(profileEmp);
-            setProfileId(null);
-        }
-    }, [profileEmp]);
+    const viewId = searchParams.get('view');
+    const openId = viewId ? Number(viewId) : null;
+    const { data: viewEmp } = useEmployee(openId);
+    const setView = (id: number | null) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                if (id == null) {
+                    p.delete('view');
+                } else {
+                    p.set('view', String(id));
+                }
+                return p;
+            },
+            { replace: true },
+        );
+    const openEmp = (emp: Employee) => {
+        qc.setQueryData(['employee', emp.id], emp);
+        setView(emp.id);
+    };
+    const closeEmp = () => setView(null);
 
+    // The add-employee drawer is URL-driven (?add=1) so a reload / shared link reopens it.
+    const adding = searchParams.get('add') != null;
+    const openAdd = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('add', '1');
+                return p;
+            },
+            { replace: true },
+        );
+    const closeAdd = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
+
+    // Legacy deep-link ?highlight=<id> → convert once to ?view=<id> on the Directory tab.
+    const highlightId = searchParams.get('highlight');
     useEffect(() => {
-        if (highlightId) setTab('directory');
+        if (!highlightId) return;
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('tab', 'directory');
+                p.set('view', highlightId);
+                p.delete('highlight');
+                return p;
+            },
+            { replace: true },
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [highlightId]);
 
-    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
-    // localStorage (so navigating away and back — which clears the URL — restores it).
+    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
         (next: Tab) => {
             setTab(next);
-            localStorage.setItem(EMP_TAB_KEY, next);
             setSearchParams(
                 (prev) => {
                     const sp = new URLSearchParams(prev);
@@ -176,15 +208,6 @@ export default function EmployeesPage() {
         },
         [setSearchParams],
     );
-
-    useEffect(() => {
-        if (highlighted) {
-            setViewEmp(highlighted);
-            searchParams.delete('highlight');
-            setSearchParams(searchParams, { replace: true });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [highlighted]);
 
     const tabs: { id: Tab; label: string; count?: number }[] = [
         canViewDashboard && { id: 'dashboard' as Tab, label: t('sub_dashboard') },
@@ -418,7 +441,7 @@ export default function EmployeesPage() {
                             </Button>
                         )}
                         {canAdd && (
-                            <Button onClick={() => setAddOpen(true)}>
+                            <Button onClick={openAdd}>
                                 <Plus className="h-4 w-4" />
                                 {t('add_employee')}
                             </Button>
@@ -445,7 +468,8 @@ export default function EmployeesPage() {
                 </div>
 
                 <div className="p-5">
-                    {tab === 'dashboard' && (
+                    {tab === 'dashboard' && summaryLoading && <EmployeeDashboardSkeleton />}
+                    {tab === 'dashboard' && !summaryLoading && (
                         <Dashboard
                             summary={summary}
                             departments={departments}
@@ -463,7 +487,7 @@ export default function EmployeesPage() {
                             canResign={canResign}
                             canCancelResign={canCancelResign}
                             canSetCredentials={canSetCredentials}
-                            onView={setViewEmp}
+                            onView={openEmp}
                             onEdit={setEditEmp}
                             onResign={setResignEmp}
                             onCancelResign={async (e) => {
@@ -527,12 +551,12 @@ export default function EmployeesPage() {
                 </div>
             </Card>
 
-            <AddEmployeeDrawer open={addOpen} onClose={() => setAddOpen(false)} />
+            <AddEmployeeDrawer open={adding} onClose={closeAdd} />
             <EditEmployeeDialog open={!!editEmp} onClose={() => setEditEmp(null)} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
             <EmployeeViewDrawer
-                employee={viewEmp}
-                onClose={() => setViewEmp(null)}
+                employee={viewEmp ?? null}
+                onClose={() => closeEmp()}
                 canEdit={canEdit}
                 isSuperViewer={role === 'super'}
                 canResetPassword={canResetPassword}
@@ -546,25 +570,23 @@ export default function EmployeesPage() {
                         description: t('cancel_resign_confirm'),
                         action: async () => {
                             await employeeMut.cancelResign.mutateAsync(e.id);
-                            setViewEmp(null);
+                            closeEmp();
                         },
                     });
                 }}
                 onResetPassword={(e) => setResetPwEmp(e)}
                 // Keep the view dialog open so the credentials modal stacks on top of it.
                 onSetCredentials={(e) => setCredEmp(e)}
-                onEdit={(e) => {
-                    setViewEmp(null);
-                    setEditEmp(e);
-                }}
-                onViewProfile={(id) => setProfileId(id)}
+                // Keep the view dialog open so the edit dialog stacks on top (closing it returns here).
+                onEdit={setEditEmp}
+                onViewProfile={setView}
             />
             <ResignModal
                 employee={resignEmp}
                 onClose={() => setResignEmp(null)}
                 onDone={() => {
                     setResignEmp(null);
-                    setViewEmp(null);
+                    closeEmp();
                 }}
             />
             <ResetPasswordModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
@@ -853,6 +875,51 @@ import type { EmployeeSummary } from '../api/orgApi';
 
 const DASH_DEPT_LIMIT = 8;
 
+/** Pulse skeleton mirroring the dashboard (KPI row + trend + two 2-col grids) while the summary loads. */
+function EmployeeDashboardSkeleton() {
+    return (
+        <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="p-5">
+                        <div className="flex items-start justify-between">
+                            <div className="bg-muted h-4 w-20 animate-pulse rounded" />
+                            <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
+                        </div>
+                        <div className="bg-muted mt-3 h-8 w-14 animate-pulse rounded" />
+                    </Card>
+                ))}
+            </div>
+            <Card className="overflow-hidden">
+                <div className="border-border border-b px-5 py-3.5">
+                    <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                </div>
+                <div className="flex h-[172px] items-end gap-2.5 p-5">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className="bg-muted flex-1 animate-pulse rounded-t-md" style={{ height: `${25 + ((i * 37) % 70)}%` }} />
+                    ))}
+                </div>
+            </Card>
+            {Array.from({ length: 2 }).map((_, g) => (
+                <div key={g} className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <Card key={i} className="overflow-hidden">
+                            <div className="border-border border-b px-5 py-3.5">
+                                <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                            </div>
+                            <div className="space-y-2.5 p-5">
+                                {Array.from({ length: 5 }).map((_, r) => (
+                                    <div key={r} className="bg-muted h-8 w-full animate-pulse rounded" />
+                                ))}
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function Dashboard({
     summary,
     departments,
@@ -874,6 +941,14 @@ function Dashboard({
         { label: t('new_hires'), value: summary?.new_hires ?? '—', icon: UserPlus, tone: 'text-brand bg-brand/10' },
     ];
 
+    // Employee-status split (active vs resigned) for the status card's bar.
+    const total = summary?.total ?? 0;
+    const statusPct = {
+        active: total ? Math.round(((summary?.active ?? 0) / total) * 100) : 0,
+        resigned: total ? Math.round(((summary?.resigned ?? 0) / total) * 100) : 0,
+    };
+    const currentYear = new Date().getFullYear();
+
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -892,17 +967,87 @@ function Dashboard({
                     );
                 })}
             </div>
+            <HiresTrendCard data={summary?.hires_by_month ?? []} />
+
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card className="p-5">
-                    <div className="mb-4 flex items-center justify-between">
-                        <span className="text-sm font-semibold">{t('headcount_by_dept')}</span>
+                {/* Employee status — active vs resigned */}
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                        <span className="flex items-center gap-2 text-sm font-semibold">
+                            <UserCheck className="text-muted-foreground h-4 w-4" />
+                            {t('emp_status_title')}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                            <b className="text-foreground font-mono font-bold">{summary?.total ?? 0}</b> {t('emp_people')}
+                        </span>
+                    </div>
+                    <div className="p-5">
+                        <div className="flex items-baseline gap-2.5">
+                            <span className="font-mono text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
+                            <span className="text-muted-foreground text-sm">{t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}</span>
+                        </div>
+                        <div className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full">
+                            <span className="bg-brand block h-full" style={{ width: `${statusPct.active}%` }} />
+                            <span className="bg-destructive block h-full" style={{ width: `${statusPct.resigned}%` }} />
+                        </div>
+                        <div className="flex gap-5">
+                            <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
+                                <i className="bg-brand h-2.5 w-2.5 rounded-full" />
+                                {t('emp_status_active')} <b className="text-foreground font-mono font-semibold">{summary?.active ?? 0}</b>
+                            </span>
+                            <span className="text-muted-foreground flex items-center gap-2 text-[12.5px]">
+                                <i className="bg-destructive h-2.5 w-2.5 rounded-full" />
+                                {t('emp_status_resigned')} <b className="text-foreground font-mono font-semibold">{summary?.resigned ?? 0}</b>
+                            </span>
+                        </div>
+                        <div className="border-border mt-4 flex items-center gap-3 border-t border-dashed pt-3.5">
+                            <span className="text-destructive font-mono text-[32px] leading-none font-bold">{summary?.resigned_this_year ?? 0}</span>
+                            <span className="text-muted-foreground text-[12.5px]">{t('emp_resigned_year').replace('{y}', String(currentYear))}</span>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Recent resignations */}
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                        <UserMinus className="text-muted-foreground h-4 w-4" />
+                        <span className="text-sm font-semibold">{t('emp_recent_resignations')}</span>
+                    </div>
+                    <div className="max-h-[20rem] space-y-1 overflow-y-auto p-4">
+                        {(summary?.recent_resignations ?? []).length === 0 ? (
+                            <div className="text-muted-foreground py-10 text-center text-sm">{t('emp_no_resignations')}</div>
+                        ) : (
+                            (summary?.recent_resignations ?? []).map((e) => (
+                                <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
+                                    <UserAvatar name={e.name} photoUrl={e.photo_url} />
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate text-sm font-medium">{lang === 'th' ? (e.name_th ?? e.name) : e.name}</div>
+                                        <div className="text-muted-foreground truncate text-xs">
+                                            {e.position} · {lang === 'th' ? (e.department_th ?? e.department) : e.department}
+                                        </div>
+                                    </div>
+                                    <span className="text-muted-foreground font-mono text-xs">{e.last_day}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </Card>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                        <span className="flex items-center gap-2 text-sm font-semibold">
+                            <Building2 className="text-muted-foreground h-4 w-4" />
+                            {t('headcount_by_dept')}
+                        </span>
                         {departments.length > DASH_DEPT_LIMIT && (
                             <button onClick={onViewDepartments} className="text-brand text-xs font-medium hover:underline">
                                 {t('view_all')}
                             </button>
                         )}
                     </div>
-                    <div className="divide-border/60 divide-y">
+                    <div className="divide-border/60 divide-y px-5">
                         {[...departments]
                             .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
                             .slice(0, DASH_DEPT_LIMIT)
@@ -917,9 +1062,12 @@ function Dashboard({
                             ))}
                     </div>
                 </Card>
-                <Card className="p-5">
-                    <div className="mb-4 text-sm font-semibold">{t('recent_hires')}</div>
-                    <div className="max-h-[22rem] space-y-1 overflow-y-auto">
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                        <UserPlus className="text-muted-foreground h-4 w-4" />
+                        <span className="text-sm font-semibold">{t('recent_hires')}</span>
+                    </div>
+                    <div className="max-h-[22rem] space-y-1 overflow-y-auto p-4">
                         {(summary?.recent ?? []).map((e) => (
                             <div key={e.id} className="border-border/60 flex items-center gap-3 border-b py-2 last:border-0">
                                 <UserAvatar name={e.name} />

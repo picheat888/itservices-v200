@@ -97,24 +97,30 @@ export function EmployeeViewDrawer({
 
     const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
+    // Retain the last employee so the content stays rendered while the dialog animates closed —
+    // Radix skips the exit (fade-out) animation if the content unmounts the moment the prop goes null.
+    const [shown, setShown] = useState(employee);
+    useEffect(() => {
+        if (employee) setShown(employee);
+    }, [employee]);
     useEffect(() => {
         setTab('overview');
-    }, [employee?.id]);
+    }, [shown?.id]);
 
-    const { data: approvalChain = [] } = useApprovalChain(employee?.id ?? null);
+    const { data: approvalChain = [] } = useApprovalChain(shown?.id ?? null);
     const { data: orgNodes = [] } = useOrgChart();
-    const { data: access } = useEmployeeAccess(employee?.id ?? null);
-    const { data: heldAssets = [] } = useEmployeeAssets(employee?.id ?? null);
+    const { data: access } = useEmployeeAccess(shown?.id ?? null);
+    const { data: heldAssets = [] } = useEmployeeAssets(shown?.id ?? null);
     // Live copy of the employee — refetched when mutations invalidate ['employee'], so
     // setting credentials reflects immediately (No-account badge/strip clears without reload).
-    const { data: liveEmp } = useEmployee(employee?.id ?? null);
+    const { data: liveEmp } = useEmployee(shown?.id ?? null);
 
     const nodeById = useMemo(() => new Map(orgNodes.map((n) => [n.id, n])), [orgNodes]);
-    const directReports = useMemo(() => (employee ? orgNodes.filter((n) => n.manager_id === employee.id) : []), [orgNodes, employee]);
+    const directReports = useMemo(() => (shown ? orgNodes.filter((n) => n.manager_id === shown.id) : []), [orgNodes, shown]);
 
-    if (!employee) return null;
+    if (!shown) return null;
 
-    const emp = liveEmp ?? employee;
+    const emp = liveEmp ?? shown;
     const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';

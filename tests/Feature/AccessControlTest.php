@@ -358,6 +358,65 @@ class AccessControlTest extends TestCase
             ->assertJsonPath('data.0.product_key', null);
     }
 
+    public function test_access_dashboard_summarizes_channels_and_governance(): void
+    {
+        $this->seedDefaultPermissions();
+
+        // A plain user without access.view cannot read the overview.
+        $this->actingAs(User::factory()->create(['role' => 'user']));
+        $this->getJson('/api/access/dashboard')->assertForbidden();
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        $owner = Employee::create(['first_name' => 'Ow', 'last_name' => 'Ner']);
+        $active = Employee::create(['first_name' => 'Ac', 'last_name' => 'Tive']);
+        $resigned = Employee::create(['first_name' => 'Re', 'last_name' => 'Signed', 'status' => 'resigned']);
+
+        // Email group with one active member.
+        $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co', 'owner_employee_id' => $owner->id]);
+        $g->memberships()->create(['employee_id' => $active->id, 'granted_at' => now()]);
+
+        // Two file shares (both owned → owners_complete stays true): one empty, one with a resigned holder.
+        FileShare::create(['name' => 'Public (Center)', 'path' => '\\\\F\\P', 'owner_employee_id' => $owner->id]);
+        $recipes = FileShare::create(['name' => 'Recipes', 'path' => '\\\\F\\R', 'owner_employee_id' => $owner->id]);
+        $recipes->memberships()->create(['employee_id' => $resigned->id, 'granted_at' => now()]);
+
+        $res = $this->getJson('/api/access/dashboard')->assertOk();
+
+        $res->assertJsonPath('data.channels.email_groups.resources', 1)
+            ->assertJsonPath('data.channels.email_groups.grants', 1)
+            ->assertJsonPath('data.channels.file_shares.resources', 2)
+            ->assertJsonPath('data.channels.file_shares.grants', 1)
+            ->assertJsonPath('data.total_grants', 2)
+            ->assertJsonPath('data.governance.empty_shares', 1)
+            ->assertJsonPath('data.governance.empty_shares_sample', 'Public (Center)')
+            ->assertJsonPath('data.governance.owners_complete', true)
+            ->assertJsonPath('data.governance.resigned_holders', 1);
+
+        // Most-reached list ranks by active grants; the empty share sits at the bottom with 0.
+        $top = collect($res->json('data.top_resources'));
+        $this->assertSame(1, $top->firstWhere('name', 'Recipes')['grants']);
+        $this->assertSame('file-shares', $top->firstWhere('name', 'Recipes')['kind']);
+        $this->assertSame(0, $top->firstWhere('name', 'Public (Center)')['grants']);
+    }
+
+    public function test_social_platform_logo_upload_is_stored(): void
+    {
+        Storage::fake('public');
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        $this->post('/api/social-platforms', [
+            'name' => 'LINE', 'logo' => UploadedFile::fake()->image('line.png', 128, 128),
+        ], ['Accept' => 'application/json'])
+            ->assertStatus(201)
+            ->assertJsonPath('data.logo_url', fn ($u) => is_string($u) && $u !== '');
+
+        $path = SocialPlatform::firstWhere('name', 'LINE')->logo_path;
+        $this->assertNotNull($path);
+        Storage::disk('public')->assertExists($path);
+    }
+
     public function test_software_logo_upload_is_stored(): void
     {
         Storage::fake('public');

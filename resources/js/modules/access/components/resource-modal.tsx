@@ -69,6 +69,50 @@ function formatSizeValue(raw: string): string {
     return decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
 }
 
+/**
+ * Logo upload control (preview tile + upload/remove buttons), shared by software
+ * and social platforms. Picking a file goes through the parent's crop flow.
+ */
+function LogoField({
+    preview,
+    fallbackIcon: Icon,
+    onPick,
+    onRemove,
+    error,
+}: {
+    preview: string | null;
+    fallbackIcon: LucideIcon;
+    onPick: (file?: File) => void;
+    onRemove: () => void;
+    error: string | null;
+}) {
+    const t = useT();
+    return (
+        <div className="flex items-center gap-4">
+            <span className="bg-brand/10 text-brand grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full">
+                {preview ? <img src={preview} alt="" className="h-full w-full object-cover" /> : <Icon className="h-6 w-6" />}
+            </span>
+            <div>
+                <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
+                    <Upload className="h-4 w-4" />
+                    {preview ? t('access_logo_change') : t('access_logo')}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => onPick(e.target.files?.[0])} />
+                </label>
+                {preview && (
+                    <button type="button" onClick={onRemove} className="text-destructive ml-2 text-sm hover:underline">
+                        {t('access_logo_remove')}
+                    </button>
+                )}
+                {error ? (
+                    <p className="text-destructive mt-2 text-xs">{error}</p>
+                ) : (
+                    <p className="text-muted-foreground mt-2 text-xs">{t('access_logo_help')}</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
 /** Per-kind icon tile accent for the dialog header (matches the registry tables). */
 const HEAD: Record<AccessKind, { icon: LucideIcon; color: string }> = {
     'email-groups': { icon: Users, color: '#7c3aed' },
@@ -252,12 +296,14 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
         }
     }, [open, kind, row]);
 
+    // Kinds that carry an uploadable logo (software licences + social platforms).
+    const hasLogo = kind === 'software' || kind === 'social-platforms';
     // Live preview: a freshly cropped file wins; otherwise the saved logo (unless removed).
     const logoPreview = useMemo(() => {
         if (logo) return URL.createObjectURL(logo);
-        if (!removeLogo && row && kind === 'software') return (row as Software).logo_url ?? null;
+        if (!removeLogo && row && hasLogo) return (row as Software | SocialPlatform).logo_url ?? null;
         return null;
-    }, [logo, removeLogo, row, kind]);
+    }, [logo, removeLogo, row, hasLogo]);
     useEffect(() => {
         return () => {
             if (logo && logoPreview) URL.revokeObjectURL(logoPreview);
@@ -364,8 +410,11 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
             payload.owner_employee_id = form.owner_employee_id ? Number(form.owner_employee_id) : null;
         }
         if (kind === 'software') {
-            // Key off → send empty so the backend clears it. A logo File makes the request multipart.
+            // Key off → send empty so the backend clears it.
             payload.product_key = storeKey ? form.product_key.trim() : '';
+        }
+        // Logo (software + social platforms): a File makes the request multipart.
+        if (hasLogo) {
             if (logo) payload.logo = logo;
             if (removeLogo) payload.remove_logo = true;
         }
@@ -405,6 +454,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                 <FocusDialogHeader
                     icon={HEAD[curKind].icon}
                     accent={HEAD[curKind].color}
+                    round
                     eyebrow={titleByKind[curKind]}
                     title={curRow ? t('edit') : t('access_add')}
                     code={curRow?.code ?? undefined}
@@ -524,6 +574,17 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
 
                     {curKind === 'social-platforms' && (
                         <>
+                            {/* Platform logo — same upload/crop control as software. */}
+                            <LogoField
+                                preview={logoPreview}
+                                fallbackIcon={Globe}
+                                onPick={onLogo}
+                                onRemove={() => {
+                                    setLogo(null);
+                                    setRemoveLogo(true);
+                                }}
+                                error={logoError}
+                            />
                             <Field label={t('access_url')}>
                                 <Input value={form.url} onChange={(e) => set('url', e.target.value)} placeholder={t('access_ph_url')} />
                             </Field>
@@ -547,44 +608,16 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                     {curKind === 'software' && (
                         <>
                             {/* Logo — same control as the employee profile photo (preview + upload/remove + crop). */}
-                            <div className="flex items-center gap-4">
-                                <span className="bg-brand/10 text-brand grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl">
-                                    {logoPreview ? (
-                                        <img src={logoPreview} alt="" className="h-full w-full object-cover" />
-                                    ) : (
-                                        <Package className="h-6 w-6" />
-                                    )}
-                                </span>
-                                <div>
-                                    <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
-                                        <Upload className="h-4 w-4" />
-                                        {logoPreview ? t('access_logo_change') : t('access_logo')}
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/webp"
-                                            className="hidden"
-                                            onChange={(e) => onLogo(e.target.files?.[0])}
-                                        />
-                                    </label>
-                                    {logoPreview && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setLogo(null);
-                                                setRemoveLogo(true);
-                                            }}
-                                            className="text-destructive ml-2 text-sm hover:underline"
-                                        >
-                                            {t('access_logo_remove')}
-                                        </button>
-                                    )}
-                                    {logoError ? (
-                                        <p className="text-destructive mt-2 text-xs">{logoError}</p>
-                                    ) : (
-                                        <p className="text-muted-foreground mt-2 text-xs">{t('access_logo_help')}</p>
-                                    )}
-                                </div>
-                            </div>
+                            <LogoField
+                                preview={logoPreview}
+                                fallbackIcon={Package}
+                                onPick={onLogo}
+                                onRemove={() => {
+                                    setLogo(null);
+                                    setRemoveLogo(true);
+                                }}
+                                error={logoError}
+                            />
 
                             <div className="grid grid-cols-2 gap-3">
                                 <Field label={t('access_publisher')}>

@@ -12,7 +12,7 @@ import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     ArrowRight,
     Box,
@@ -25,6 +25,7 @@ import {
     Download,
     Filter,
     FlaskConicalOff,
+    Layers,
     Lock,
     PackageCheck,
     Plus,
@@ -33,6 +34,7 @@ import {
     Share2,
     SquarePen,
     Tag,
+    TrendingUp,
     Undo2,
     Warehouse,
     X,
@@ -48,24 +50,16 @@ import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
 
-// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put,
-// and also remembered in localStorage so navigating away and back (which resets the URL) restores it.
+// The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
 const TAB_IDS = ['dashboard', 'inventory', 'transfers'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
-// localStorage key for the last-active tab — the fallback when the URL has no ?tab=
-// (e.g. landing on /assets from the sidebar menu rather than a reload/shared link).
-const ASSET_TAB_KEY = 'assets.tab';
 const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
-/** Resolve the starting tab: URL (?tab=) wins, then the last tab in localStorage, then the dashboard. */
+/** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialAssetTab(): Tab {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    if (isAssetTab(fromUrl)) {
-        return fromUrl;
-    }
-    const fromStore = localStorage.getItem(ASSET_TAB_KEY);
-    return isAssetTab(fromStore) ? fromStore : 'dashboard';
+    return isAssetTab(fromUrl) ? fromUrl : 'dashboard';
 }
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
@@ -84,6 +78,49 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
 }
 
 const ALL = '__all__';
+
+/** Pulse skeleton mirroring the dashboard layout (KPI row + two cards) while the summary loads. */
+function AssetDashboardSkeleton() {
+    return (
+        <div className="space-y-6 p-5">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                    <Card key={i} className="p-5">
+                        <div className="flex items-start justify-between">
+                            <div className="bg-muted h-4 w-20 animate-pulse rounded" />
+                            <div className="bg-muted h-9 w-9 animate-pulse rounded-lg" />
+                        </div>
+                        <div className="bg-muted mt-3 h-8 w-14 animate-pulse rounded" />
+                    </Card>
+                ))}
+            </div>
+            <Card className="overflow-hidden">
+                <div className="border-border border-b px-5 py-3.5">
+                    <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                </div>
+                <div className="space-y-3.5 p-5">
+                    {Array.from({ length: 7 }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                            <div className="bg-muted h-4 w-36 shrink-0 animate-pulse rounded" />
+                            <div className="bg-muted h-2 flex-1 animate-pulse rounded-full" />
+                            <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
+                        </div>
+                    ))}
+                </div>
+            </Card>
+            <Card className="overflow-hidden">
+                <div className="border-border border-b px-5 py-3.5">
+                    <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                </div>
+                <div className="space-y-2 p-5">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="bg-muted h-8 w-full animate-pulse rounded" />
+                    ))}
+                </div>
+            </Card>
+        </div>
+    );
+}
 
 export default function AssetsPage() {
     const t = useT();
@@ -107,12 +144,10 @@ export default function AssetsPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [tab, setTab] = useState<Tab>(initialAssetTab);
 
-    // Switch tab and remember it in both the URL (?tab=, for reload / shared links) and
-    // localStorage (so navigating away and back — which clears the URL — restores it).
+    // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
         (next: Tab) => {
             setTab(next);
-            localStorage.setItem(ASSET_TAB_KEY, next);
             setSearchParams(
                 (prev) => {
                     const sp = new URLSearchParams(prev);
@@ -143,7 +178,6 @@ export default function AssetsPage() {
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
     const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive'>(null);
-    const [detail, setDetail] = useState<Asset | null>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
 
     // Transfers tab paginates client-side over the loaded list (backend returns the latest 100).
@@ -153,34 +187,38 @@ export default function AssetsPage() {
     const { data: warehouses = [] } = useWarehouses();
     const { data: categories = [] } = useCategories();
 
-    // Deep-link from a contract's linked-assets list: /assets?view=<id> opens that asset's
-    // detail drawer (fetched by id since it may not be on the current page), then clears the param.
+    // The detail drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
+    // drops the param. Opening seeds the query cache with the clicked row so the drawer shows
+    // instantly; a deep-link (id not on the current page) fetches by id. URL = single source of truth.
+    const qc = useQueryClient();
     const viewId = searchParams.get('view');
-    const { data: deepLinkedAsset } = useQuery({
-        queryKey: ['asset', 'view', viewId],
-        queryFn: () => assetApi.get(Number(viewId)),
-        enabled: !!viewId,
+    const openId = viewId ? Number(viewId) : null;
+    const { data: detail } = useQuery({
+        queryKey: ['asset', 'view', openId],
+        queryFn: () => assetApi.get(openId as number),
+        enabled: openId != null,
     });
-    useEffect(() => {
-        if (!deepLinkedAsset) return;
-        setDetail(deepLinkedAsset);
-        setSearchParams(
-            (prev) => {
-                const sp = new URLSearchParams(prev);
-                sp.delete('view');
-                return sp;
-            },
-            { replace: true },
-        );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [deepLinkedAsset]);
+    const openAsset = (a: Asset) => {
+        qc.setQueryData(['asset', 'view', a.id], a);
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.set('view', String(a.id));
+            return p;
+        }, { replace: true });
+    };
+    const closeAsset = () =>
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.delete('view');
+            return p;
+        }, { replace: true });
 
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Asset | null>(null);
     const [transferAsset, setTransferAsset] = useState<Asset | null>(null);
     const [recallAsset, setRecallAsset] = useState<Asset | null>(null);
 
-    const { data: summary } = useAssetSummary();
+    const { data: summary, isLoading: summaryLoading } = useAssetSummary();
     const { data: listData, isLoading } = useAssets({
         page,
         per_page: perPage,
@@ -212,14 +250,33 @@ export default function AssetsPage() {
     const transfersStart = (transfersSafePage - 1) * transfersPerPage;
     const transfersRows = transfers.slice(transfersStart, transfersStart + transfersPerPage);
 
-    const openCreate = () => {
-        setEditing(null);
-        setFormOpen(true);
-    };
+    // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
+    const adding = searchParams.get('add') != null;
+    const openCreate = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('add', '1');
+                return p;
+            },
+            { replace: true },
+        );
     const openEdit = (a: Asset) => {
-        setDetail(null);
+        // Keep ?view so closing the edit form returns to the detail drawer (bounce-back, like Access).
         setEditing(a);
         setFormOpen(true);
+    };
+    const closeForm = () => {
+        setEditing(null);
+        setFormOpen(false);
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
     };
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
@@ -311,6 +368,11 @@ export default function AssetsPage() {
 
     const typeBars = summary?.by_type ?? [];
     const maxTypeCount = Math.max(1, ...typeBars.map((b) => b.count));
+    // Localize the asset-type name from Master Data (categories carry both name + name_th).
+    const catLabel = (type: string) => {
+        const c = categories.find((x) => x.name === type);
+        return c ? (lang === 'th' ? (c.name_th ?? c.name) : c.name) : type;
+    };
 
     return (
         <div className="space-y-6">
@@ -401,12 +463,12 @@ export default function AssetsPage() {
                             )}
                         >
                             {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
-                            {tb === 'inventory' && <span className="text-muted-foreground ml-1.5 font-mono text-xs">{summary?.total ?? 0}</span>}
                         </button>
                     ))}
                 </div>
 
-                {tab === 'dashboard' && (
+                {tab === 'dashboard' && summaryLoading && <AssetDashboardSkeleton />}
+                {tab === 'dashboard' && !summaryLoading && (
                     <div className="space-y-6 p-5">
                         {/* Summary stats live on the Dashboard tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -421,27 +483,33 @@ export default function AssetsPage() {
                             <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
                         </div>
 
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('asset_by_type')}</div>
-                            <div className="space-y-2">
+                        <Card className="overflow-hidden">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                <Layers className="text-muted-foreground h-4 w-4" />
+                                <span className="text-sm font-semibold">{t('asset_by_type')}</span>
+                            </div>
+                            <div className="space-y-3.5 p-5">
                                 {typeBars.map((b) => (
                                     <div key={b.type} className="flex items-center gap-3">
-                                        <div className="flex w-28 items-center gap-2 text-sm">
-                                            <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4" />
-                                            {b.type}
+                                        <div className="flex w-36 shrink-0 items-center gap-2 overflow-hidden text-sm" title={catLabel(b.type)}>
+                                            <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
+                                            <span className="truncate">{catLabel(b.type)}</span>
                                         </div>
-                                        <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                                        <div className="bg-secondary h-2 flex-1 overflow-hidden rounded-full">
                                             <div className="bg-brand h-full rounded-full" style={{ width: `${(b.count / maxTypeCount) * 100}%` }} />
                                         </div>
-                                        <div className="w-8 text-right font-mono text-sm">{b.count}</div>
+                                        <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
                                     </div>
                                 ))}
                                 {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
                             </div>
-                        </div>
+                        </Card>
 
-                        <div>
-                            <div className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">{t('asset_top_value')}</div>
+                        <Card className="overflow-hidden">
+                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                <TrendingUp className="text-muted-foreground h-4 w-4" />
+                                <span className="text-sm font-semibold">{t('asset_top_value')}</span>
+                            </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
@@ -458,7 +526,7 @@ export default function AssetsPage() {
                                             <tr
                                                 key={a.id}
                                                 className="border-border/60 hover:bg-accent/40 cursor-pointer border-b last:border-0"
-                                                onClick={() => setDetail(a)}
+                                                onClick={() => openAsset(a)}
                                             >
                                                 <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{a.asset_code}</td>
                                                 <td className="px-3 py-2 font-medium">{a.model}</td>
@@ -472,7 +540,7 @@ export default function AssetsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </Card>
                     </div>
                 )}
 
@@ -510,8 +578,8 @@ export default function AssetsPage() {
                                                     { value: ALL, label: t('asset_all'), search: t('asset_all'), icon: <ToneDot tone="gray" /> },
                                                     ...categories.map((c) => ({
                                                         value: c.name,
-                                                        label: c.name,
-                                                        search: c.name,
+                                                        label: lang === 'th' ? (c.name_th ?? c.name) : c.name,
+                                                        search: `${c.name} ${c.name_th ?? ''}`,
                                                         icon: <AssetTypeIcon type={c.name} className="text-muted-foreground h-4 w-4" />,
                                                     })),
                                                 ]}
@@ -739,7 +807,7 @@ export default function AssetsPage() {
                                             rows.map((a) => (
                                                 <tr
                                                     key={a.id}
-                                                    onClick={() => setDetail(a)}
+                                                    onClick={() => openAsset(a)}
                                                     className={cn(
                                                         'border-border/60 cursor-pointer border-b transition-opacity last:border-0',
                                                         selectedIds.includes(a.id) ? 'bg-brand/5' : 'hover:bg-accent/40',
@@ -781,7 +849,7 @@ export default function AssetsPage() {
                                                     <td className="px-4 py-2.5">
                                                         <span className="flex items-center gap-2">
                                                             <AssetTypeIcon type={a.type} className="text-muted-foreground h-4 w-4" />
-                                                            {a.type}
+                                                            {catLabel(a.type)}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-2.5 font-medium">{a.model}</td>
@@ -1020,18 +1088,18 @@ export default function AssetsPage() {
             </Card>
 
             <AssetDetailDrawer
-                asset={detail}
-                onClose={() => setDetail(null)}
+                asset={detail ?? null}
+                onClose={() => closeAsset()}
                 onTransfer={(a) => {
-                    setDetail(null);
+                    closeAsset();
                     setTransferAsset(a);
                 }}
                 onReceive={(a) => {
-                    setDetail(null);
+                    closeAsset();
                     setReceiveAsset(a);
                 }}
                 onRecall={(a) => {
-                    setDetail(null);
+                    closeAsset();
                     setRecallAsset(a);
                 }}
                 onEdit={canEdit ? openEdit : undefined}
@@ -1041,7 +1109,7 @@ export default function AssetsPage() {
                 canCancelWriteoff={canCancelWriteoff}
                 canDelete={canDelete}
             />
-            <AssetFormDrawer open={formOpen} editing={editing} onClose={() => setFormOpen(false)} />
+            <AssetFormDrawer open={adding || formOpen} editing={adding ? null : editing} onClose={closeForm} />
             <AssetTransferDialog asset={transferAsset} onClose={() => setTransferAsset(null)} />
             <AssetReceiveModal asset={receiveAsset} onClose={() => setReceiveAsset(null)} />
             <AssetReceiveModal mode="recall" asset={recallAsset} onClose={() => setRecallAsset(null)} />

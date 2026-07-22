@@ -1110,3 +1110,71 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - **Sidebar badge fix** — ตัวเลข "ต้องจัดการ" ข้าง sidebar Contracts เปลี่ยนจากนับ `expired` → `overdue` (สัญญาที่ปิดถาวรแล้วไม่นับ) ให้ตรงกับ dashboard banner
 
 **Verification**: full suite **541 passed / 0 failed** · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
+
+## Access Directory — เพิ่มแท็บ "ภาพรวม" (Overview/Dashboard) (2026-07-21)
+
+**เหตุผล:** หน้าทะเบียนการเข้าถึงเดิมมีแค่การ์ด KPI 5 ใบด้านบน + 4 แท็บทะเบียน ยังไม่มีภาพรวมเชิงกำกับดูแล (ใครเข้าถึงกระจุกที่ไหน / มีอะไรต้องตรวจ) — เพิ่มแท็บภาพรวมเป็นแท็บแรก (ค่าเริ่มต้น) และย้ายสรุปทั้งหมดเข้าไป
+
+**Backend:**
+- `AccessService::dashboard()` — รวมสถิติต่อช่องทาง (resources / active grants / เพิ่มในรอบ 30 วัน), ยอดสิทธิ์รวม, สุขอนามัยการกำกับดูแล (file share ที่ไม่มีสมาชิก + ชื่อตัวอย่าง, resource ที่ไม่มีเจ้าของ, พนักงานลาออกที่ยังถือสิทธิ์, เพิ่มใน 30 วัน), และ `top_resources` (จัดอันดับตาม active grant ข้ามทั้ง 4 ตาราง พร้อม `kind` สำหรับลิงก์ไปแท็บ)
+- `AccessController::dashboard()` + route `GET /api/access/dashboard` (gate `access.view` เดิม)
+
+**Frontend (`modules/access`):**
+- `accessApi.summary()` + `useAccessSummary()` (barrel export) + type `AccessSummary`/`AccessChannelStat`/`AccessTopResource` ใน `shared/types`
+- `components/access-dashboard.tsx` — KPI 4 ใบ (นับต่อช่องทาง + delta **net change 30 วัน** = ให้ใหม่−ถอน: บวก↑เขียว / ลบ↓แดง / 0 เทา), การ์ด **"อัตราส่วนการเข้าถึง"** (แถบแยกช่องทาง + % ของยอดรวม), การ์ด **"สถานะการเข้าถึง"** (checklist ⚠/ⓘ/✓ + ป้าย "ล่าสุด"), ตาราง **"Resource ที่เข้าถึงมากที่สุด"** — ทั้งหมดใช้ `Card`/ตารางสไตล์เดียวกับหน้า Dashboard เดิม (หัวการ์ด `text-sm font-semibold` ตามแท็บ dashboard ของ Stock/Employee), คลิกการ์ด/แถวเพื่อกระโดดไปแท็บทะเบียน, มี pulse skeleton ตอนโหลด
+- `pages/index.tsx` — เพิ่มแท็บ `dashboard` เป็นแท็บแรก/ค่าเริ่มต้น, ย้าย overview เข้าไป, เอาแถว KPI StatCard เดิมด้านบนออก (ซ้ำกับแท็บใหม่); count บนแท็บเป็น optional
+- i18n `access_tab_overview` + `access_dash_*` (en+th) ไม่มี hardcode string; ชื่อประเภททรัพยากรใช้คีย์เดิมที่เป็นอังกฤษตาม product decision
+- สีช่องทางใช้ hex เดิมจาก NameCell (email #7c3aed · file #0d9488 · social #6366f1 · software #f59e0b)
+
+**Verification**: `php artisan test --compact tests/Feature/AccessControlTest.php` = **20 passed** (118 assertions, มีเทสต์ใหม่ครอบ gating + channels + governance + top) · `tsc --noEmit` (0) · `npm run build` (green) · `pint` passed
+
+## Access — Social platform รองรับอัปโหลดโลโก้ (2026-07-21)
+
+ให้ Social/Internet platform อัปโหลดโลโก้ได้เหมือน Software (โชว์ในตาราง + ฟอร์ม add/edit)
+- **Backend**: migration เพิ่ม `social_platforms.logo_path` (additive, `down()` rollback ได้); `SocialPlatform` model (`logo_path` fillable + `getLogoUrlAttribute`); `StoreSocialPlatformRequest` เพิ่ม rule `logo` (image, png/jpg/webp, ≤2MB) + `remove_logo`; `SocialPlatformResource` คืน `logo_url`; `SocialPlatformController::handleLogo()` เก็บที่ `social-logos` (ลบไฟล์เก่าเมื่อแทน/ลบ) ใช้ใน store/update — pattern เดียวกับ SoftwareController
+- **Frontend**: type `SocialPlatform.logo_url/logo_path`; แยก `LogoField` เป็นคอมโพเนนต์ย่อยใน `resource-modal.tsx` (ลดโค้ดซ้ำ) ใช้ทั้ง software + social (fallback icon: Package / Globe); ตาราง social โชว์โลโก้ผ่าน `NameCell logoUrl`; อัปโหลดผ่าน crop dialog เดิม, ส่ง multipart อัตโนมัติเมื่อมีไฟล์ (`accessApi.hasFile`)
+- ใช้คีย์ i18n `access_logo*` เดิมร่วมกัน ไม่มีคีย์ใหม่
+- **Verification**: `AccessControlTest` = **21 passed** (122 assertions, +เทสต์ `test_social_platform_logo_upload_is_stored`) · tsc 0 · build green · pint passed
+
+## Employee Dashboard — เพิ่ม 3 การ์ดสรุป (2026-07-22)
+
+เพิ่มการ์ดสรุปในแท็บ Dashboard ของ Employee: แนวโน้มการรับเข้า · สถานะพนักงาน · ลาออกล่าสุด (ดีไซน์ผ่าน mockup `docs/mockup/employee-dashboard-cards.html`)
+
+**Backend** (`EmployeeController::summary()`):
+- เพิ่ม `active` / `resigned` (นับตาม `status`) + `resigned_this_year` (`whereYear('last_day', ปีปัจจุบัน)`)
+- `hires_by_month` — นับพนักงานเริ่มงานต่อเดือน **12 เดือนล่าสุด** (fixed rolling window, zero-filled, จบที่เดือนปัจจุบัน) — **จัดกลุ่มใน PHP** (พอร์ตได้ทั้ง MariaDB + SQLite เทสต์ ไม่ใช้ `DATE_FORMAT`)
+- `recent_resignations` — พนักงานลาออก 5 คนล่าสุด (เรียงตาม `last_day`) ผ่าน `EmployeeResource`
+
+**Frontend** (`modules/employee`):
+- `components/hires-trend-card.tsx` — กราฟแท่ง **12 เดือนล่าสุด (คงที่ ไม่มี scroll)** เต็มความกว้าง; **ไฮไลต์เดือนปัจจุบัน** (แท่งทึบ brand + label สี brand ตัดกับอดีตที่ `bg-brand/35`), legend "ปัจจุบัน" (แท่งทุกคอลัมน์สูงเท่ากัน)
+- การ์ด **สถานะพนักงาน** — เลขใหญ่ active + แถบแยกสัดส่วน active/ลาออก (ไม่มี %) + legend + ท้ายการ์ดชู "ลาออกในปี YYYY" (สี destructive)
+- การ์ด **ลาออกล่าสุด** — รายการ avatar + ชื่อ + ตำแหน่ง·แผนก + วันสุดท้าย (คู่กับ "เข้าใหม่")
+- type `EmployeeSummary` + `EmployeeHiresMonth`; i18n `emp_*` (en+th)
+- ทุกการ์ดใช้ header เส้นคั่น + ไอคอนเทา `text-sm font-semibold` ตามชุด Access/Stock/Contract/Asset
+
+**Verification**: `EmployeePermissionGatingTest` = **10 passed** (31 assertions, +เทสต์ status/hires/resignations) · tsc 0 · pint passed · build green
+
+> อัปเดต (2026-07-22): เปลี่ยน `hires_by_month` จาก "เดือนแรกใน DB → ปัจจุบัน (เลื่อนได้)" เป็น **12 เดือนล่าสุดคงที่** เพราะข้อมูลจริงเก่า (2016–2020) ทำให้กราฟเปิดมาที่ช่วงว่างแล้วต้องเลื่อนไกล — 12 เดือนล่าสุดอ่านง่ายกว่าและเป็น trend มาตรฐาน
+
+## Deep-link + UX consistency ทั้งระบบ (2026-07-22)
+
+ยกมาตรฐานจาก Access Directory ไปใช้ทุกโมดูล (Contract · Asset · Ticket · Stock · Employee)
+
+**Deep-link (URL เป็น single source of truth):**
+- **`?view=<id>`** เปิด record/detail drawer แบบค้างถาวร — reload ยังเปิดอยู่ + แชร์ลิงก์ได้ + คลิกแถวเขียน URL + ปิดล้าง param (เดิมเป็น consume-once ที่ล้าง URL ทิ้ง). โมดูลที่ drawer รับ object (Asset/Ticket/Employee) → seed React Query cache ตอนคลิกเพื่อเปิดทันทีไม่รอ fetch; ที่รับ id (Contract/Stock) → derive ตรง. Employee: `?highlight=` เดิม redirect เป็น `?view=` อัตโนมัติ
+- **`?add=1`** เปิดฟอร์มสร้างแบบ URL — reload/แชร์ได้ (add-only: Ticket/Employee; ใช้ร่วม add+edit: Contract/Asset/Stock โดย add=URL / edit=local)
+- Access: rename `?open=` → `?view=` ให้ param มาตรฐานเดียวกันทั้งระบบ; ค่า `?tab=` ติดไปด้วยเสมอ (merge params) → `?tab=<x>&view=<id>`
+- **Edit ซ้อน detail + bounce-back**: กด Edit จาก detail → ฟอร์ม/dialog ซ้อนทับ (detail ค้างข้างหลัง เพราะ drawer ทุกตัวเป็น Dialog กลางจอ) → ปิดแล้วกลับมา detail เดิม (เอา closeAsset/closeEmp ที่ปิด view ออก)
+
+**Skeleton loading ครบทุก Dashboard** (Access/Asset/Employee/Stock/Contract) — mirror layout จริง (header เส้นคั่น + rows) แทนกล่องเทาเปล่า/empty วูบ
+
+**ความสม่ำเสมอของ UI:**
+- หัวการ์ด dashboard ทุกโมดูลใช้ header เส้นคั่น + ไอคอนเทา + `text-sm font-semibold`
+- แถวข้อมูลในการ์ด (Stock: คลัง/คิวงาน/ความเคลื่อนไหว · Contract: ต้องดำเนินการ) ใช้ `divide-y divide-border/60 p-2` + row `px-3 py-2.5` แบบการ์ด "สถานะการเข้าถึง" ของ Access (เลิกกล่อง border รายแถว)
+- avatar/โลโก้เป็นวงกลม (โปรไฟล์สไตล์), หัว dialog รองรับ `image`/`round`/`tileSize`
+- crop รูปโปรไฟล์/โลโก้ export เป็น WebP (เล็กลงมากกว่า PNG เดิม)
+- Stock: fold recent movements เข้า `/stock/summary` (การ์ดโหลดพร้อมกัน ไม่มีอันช้า) · แท็บ Requests ไม่ reload/ลืมหน้าเมื่อสลับแท็บ (loading=isLoading + lift page state + staleTime)
+- Asset: ชื่อประเภท (Master Data) สลับ TH/EN ทั้ง dashboard/ตาราง/ตัวกรอง/ฟอร์ม
+- เอา staggered fade-in (cf-row/sc-row) ออกจาก Contract/Stock; EmployeeViewDrawer retain content ให้มี fade-out ตอนปิด
+
+**Verification**: `php artisan test --compact` = **632 passed / 2400 assertions / 0 failed** · tsc 0 · eslint clean · build green · pint passed

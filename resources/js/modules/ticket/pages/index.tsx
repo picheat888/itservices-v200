@@ -16,9 +16,9 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Box, CheckCircle2, ChevronLeft, ChevronRight, Clock, Download, Plus, RefreshCcw, Search, Ticket as TicketIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 type Tab = 'dashboard' | 'all' | 'mine';
@@ -62,32 +62,41 @@ export default function TicketsPage() {
     const [priFilter, setPriFilter] = useState<TicketPriority | ''>('');
     const [page, setPage] = useState(1);
 
-    const [createOpen, setCreateOpen] = useState(false);
-    const [detail, setDetail] = useState<Ticket | null>(null);
     const [takeTicket, setTakeTicket] = useState<Ticket | null>(null);
 
-    // Deep-link from another module (e.g. an asset's repair-tickets tab): /tickets?view=<id>
-    // fetches that ticket by id and opens its detail drawer, then clears the param.
+    // The detail drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
+    // drops the param. Opening seeds the cache with the clicked ticket for an instant open; a
+    // deep-link (id not on the current page) fetches by id. URL = single source of truth.
+    const qc = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
     const viewId = searchParams.get('view');
-    const { data: deepLinkedTicket } = useQuery({
-        queryKey: ['ticket', 'view', viewId],
-        queryFn: () => ticketApi.get(Number(viewId)),
-        enabled: !!viewId,
+    const openId = viewId ? Number(viewId) : null;
+    const { data: detail } = useQuery({
+        queryKey: ['ticket', 'view', openId],
+        queryFn: () => ticketApi.get(openId as number),
+        enabled: openId != null,
     });
-    useEffect(() => {
-        if (!deepLinkedTicket) return;
-        setDetail(deepLinkedTicket);
-        setSearchParams(
-            (prev) => {
-                const sp = new URLSearchParams(prev);
-                sp.delete('view');
-                return sp;
-            },
-            { replace: true },
-        );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [deepLinkedTicket]);
+    const closeDetail = () =>
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.delete('view');
+            return p;
+        }, { replace: true });
+
+    // The create form is URL-driven (?add=1) so a reload / shared link reopens it.
+    const adding = searchParams.get('add') != null;
+    const openCreate = () =>
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.set('add', '1');
+            return p;
+        }, { replace: true });
+    const closeCreate = () =>
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.delete('add');
+            return p;
+        }, { replace: true });
 
     const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
@@ -109,9 +118,16 @@ export default function TicketsPage() {
     const cats = summary?.by_category ?? [];
     const maxCat = Math.max(1, ...cats.map((c) => c.count));
 
-    const openDetail = (tk: Ticket) => setDetail(tk);
+    const openDetail = (tk: Ticket) => {
+        qc.setQueryData(['ticket', 'view', tk.id], tk);
+        setSearchParams((sp) => {
+            const p = new URLSearchParams(sp);
+            p.set('view', String(tk.id));
+            return p;
+        }, { replace: true });
+    };
     const startResolve = (tk: Ticket, mode: ResolveMode) => {
-        setDetail(null);
+        closeDetail();
         setResolveState({ ticket: tk, mode });
     };
 
@@ -128,7 +144,7 @@ export default function TicketsPage() {
                         {t('export')}
                     </Button>
                     {canCreate && (
-                        <Button onClick={() => setCreateOpen(true)}>
+                        <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
                             {t('new_ticket')}
                         </Button>
@@ -305,19 +321,19 @@ export default function TicketsPage() {
                 )}
             </Card>
 
-            <CreateTicketDrawer open={createOpen} onClose={() => setCreateOpen(false)} />
+            <CreateTicketDrawer open={adding} onClose={closeCreate} />
             <TicketDetailDrawer
-                ticket={detail}
-                onClose={() => setDetail(null)}
+                ticket={detail ?? null}
+                onClose={() => closeDetail()}
                 isIT={isIT}
                 isSuper={isSuper}
                 meId={user?.id}
                 onTake={(tk) => {
-                    setDetail(null);
+                    closeDetail();
                     setTakeTicket(tk);
                 }}
                 onAssign={(tk) => {
-                    setDetail(null);
+                    closeDetail();
                     setAssignTicket(tk);
                 }}
                 onResolve={startResolve}

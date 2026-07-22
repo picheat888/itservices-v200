@@ -2,6 +2,9 @@ import { accessApi } from '../api/accessApi';
 import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+/** Aggregate figures for the Access Directory overview tab. */
+export const useAccessSummary = () => useQuery({ queryKey: ['access-summary'], queryFn: accessApi.summary });
+
 export const useEmailGroups = () => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups });
 export const useFileShares = () => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares });
 export const useSocialPlatforms = () => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms });

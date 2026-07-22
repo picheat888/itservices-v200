@@ -9,13 +9,20 @@ import { cn } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
-import { Building2, Folder, Globe, KeyRound, Layers, Package, Plus, Tag, Users } from 'lucide-react';
+import { Building2, Folder, Globe, KeyRound, Package, Plus, Tag, Users } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AccessDashboard } from '../components/access-dashboard';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
 import { ResourceModal } from '../components/resource-modal';
 import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
 
-type Tab = AccessKind;
+/** The overview tab plus the four resource registries. */
+type Tab = 'dashboard' | AccessKind;
+
+/** Valid tab ids (URL guard) — the active tab is mirrored in the URL `?tab=`. */
+const TAB_IDS = ['dashboard', 'email-groups', 'file-shares', 'social-platforms', 'software'] as const;
+const isTab = (v: string | null): v is Tab => v != null && (TAB_IDS as readonly string[]).includes(v);
 /** Any of the four access resource shapes — used for the create/edit modal state. */
 type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
 
@@ -23,21 +30,6 @@ type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
 const ALL = '__all__';
 /** Software licence types, in display order (matches the resource form). */
 const LICENSES = ['subscription', 'perpetual', 'open_source', 'free'] as const;
-
-/** Compact KPI card (icon tile + big number + label). */
-function StatCard({ label, value, icon: Icon }: { label: string; value: number; icon: typeof Users }) {
-    return (
-        <Card className="p-5">
-            <div className="flex items-start justify-between">
-                <div className="text-muted-foreground text-sm">{label}</div>
-                <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
-                    <Icon className="h-[18px] w-[18px]" />
-                </span>
-            </div>
-            <div className="mt-2 font-mono text-3xl font-bold">{value}</div>
-        </Card>
-    );
-}
 
 /** Owner cell: small avatar (photo or brand-chip initials) + name. */
 function OwnerCell({ owner, photoUrl }: { owner?: string | null; photoUrl?: string | null }) {
@@ -67,9 +59,9 @@ function NameCell({
     return (
         <div className="flex items-center gap-3">
             {logoUrl ? (
-                <img src={logoUrl} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
+                <img src={logoUrl} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
             ) : (
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md" style={{ background: `${color}18`, color }}>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: `${color}18`, color }}>
                     <Icon className="h-4 w-4" />
                 </span>
             )}
@@ -92,9 +84,87 @@ export default function AccessControlPage() {
     const t = useT();
     const { can } = useAuth();
     const canManage = can('access.manage');
-    const [tab, setTab] = useState<Tab>('email-groups');
+    // Active tab lives in the URL (?tab=) so a reload / shared link stays put — the URL
+    // is the single source of truth (no separate state, no localStorage). Default = dashboard.
+    const [searchParams, setSearchParams] = useSearchParams();
     const [editing, setEditing] = useState<{ kind: AccessKind; row: AnyResource | null } | null>(null);
-    const [members, setMembers] = useState<MemberTarget | null>(null);
+
+    const urlTab = searchParams.get('tab');
+    const tab: Tab = isTab(urlTab) ? urlTab : 'dashboard';
+    // The manage drawer (?view=<id>) and the create form (?add=1) are URL-driven too; both derive below.
+    const viewId = searchParams.get('view');
+    // ?add=1 is a presence flag — the create form's kind comes from the active (?tab) registry.
+    const adding = searchParams.get('add') != null && tab !== 'dashboard';
+
+    // Switch tab — mirror it in the URL (?tab=) and close any open drawer / create form.
+    const setTab = (next: Tab) => {
+        setEditing(null);
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('view');
+                p.delete('add');
+                if (next === 'dashboard') {
+                    p.delete('tab');
+                } else {
+                    p.set('tab', next);
+                }
+                return p;
+            },
+            { replace: true },
+        );
+    };
+
+    // Open a resource's manage drawer by (kind, id) — deep-linked as ?tab=<kind>&view=<id>.
+    // The URL is the single source of truth; the drawer content is derived in `members`.
+    const openResource = (kind: AccessKind, id: number) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('tab', kind);
+                p.set('view', String(id));
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
+
+    // Close the drawer — just drop ?open from the URL (members recomputes to null; no reopen race).
+    const closeDrawer = () =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('view');
+                return p;
+            },
+            { replace: true },
+        );
+
+    // Open the "add" form for a kind — deep-linked as ?tab=<kind>&add=1 (row stays null = create).
+    const openAdd = (kind: AccessKind) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('tab', kind);
+                p.set('add', '1');
+                p.delete('view');
+                return p;
+            },
+            { replace: true },
+        );
+
+    // Close the create/edit modal — clear the edit state and drop ?add.
+    const closeModal = () => {
+        setEditing(null);
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('add');
+                return p;
+            },
+            { replace: true },
+        );
+    };
     // Client-side filters per tab (department for email/file; licence + brand for software).
     const [egDept, setEgDept] = useState('');
     const [fsDept, setFsDept] = useState('');
@@ -110,11 +180,6 @@ export default function AccessControlPage() {
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
     const spRows = useMemo(() => social.data ?? [], [social.data]);
     const swRows = useMemo(() => software.data ?? [], [software.data]);
-
-    const totalGrants = useMemo(
-        () => [...egRows, ...fsRows, ...spRows, ...swRows].reduce((sum, r) => sum + (r.members_count ?? 0), 0),
-        [egRows, fsRows, spRows, swRows],
-    );
 
     // Distinct filter option values, derived from the loaded rows.
     const egDepts = useMemo(() => [...new Set(egRows.map((g) => g.department).filter(Boolean) as string[])].sort(), [egRows]);
@@ -209,14 +274,15 @@ export default function AccessControlPage() {
         </FilterPopover>
     );
 
-    const tabs: { id: Tab; label: string; count: number }[] = [
-        { id: 'email-groups', label: t('access_email_groups'), count: egRows.length },
-        { id: 'file-shares', label: t('access_file_shares'), count: fsRows.length },
-        { id: 'social-platforms', label: t('access_social'), count: spRows.length },
-        { id: 'software', label: t('access_software'), count: swRows.length },
+    const tabs: { id: Tab; label: string }[] = [
+        { id: 'dashboard', label: t('access_tab_overview') },
+        { id: 'email-groups', label: t('access_email_groups') },
+        { id: 'file-shares', label: t('access_file_shares') },
+        { id: 'social-platforms', label: t('access_social') },
+        { id: 'software', label: t('access_software') },
     ];
 
-    const newLabel: Record<Tab, string> = {
+    const newLabel: Record<AccessKind, string> = {
         'email-groups': t('access_new_group'),
         'file-shares': t('access_new_share'),
         'social-platforms': t('access_new_platform'),
@@ -224,25 +290,13 @@ export default function AccessControlPage() {
     };
 
     // "+ New …" button rendered inside each table's search row (right side), gated by manage.
-    const addButton = (kind: Tab) =>
+    const addButton = (kind: AccessKind) =>
         canManage ? (
-            <Button onClick={() => setEditing({ kind, row: null })}>
+            <Button onClick={() => openAdd(kind)}>
                 <Plus className="h-4 w-4" /> {newLabel[kind]}
             </Button>
         ) : undefined;
 
-    const openEmailGroup = (g: EmailGroup) =>
-        setMembers({
-            kind: 'email-groups',
-            id: g.id,
-            name: g.name,
-            detail: g.email,
-            owner: g.owner,
-            ownerEmployeeId: g.owner_employee_id,
-            code: g.code,
-            metaLabel: t('access_department'),
-            metaValue: g.department,
-        });
     // Compose the split size columns for display: null = unspecified (—), 0 = unlimited,
     // otherwise a thousands-separated value with its unit ("5,000 GB").
     const sizeText = (size?: number | null, unit?: string | null) => {
@@ -250,39 +304,47 @@ export default function AccessControlPage() {
         if (size === 0) return t('access_size_unlimited');
         return `${size.toLocaleString()}${unit ? ` ${unit}` : ''}`;
     };
-    const openFileShare = (s: FileShare) =>
-        setMembers({
-            kind: 'file-shares',
-            id: s.id,
-            name: s.name,
-            detail: s.path,
-            owner: s.owner,
-            ownerEmployeeId: s.owner_employee_id,
-            code: s.code,
-            metaLabel: t('access_size'),
-            metaValue: sizeText(s.size, s.size_unit),
-        });
-    const openSocial = (p: SocialPlatform) =>
-        setMembers({
-            kind: 'social-platforms',
-            id: p.id,
-            name: p.name,
-            detail: p.url,
-            color: p.color,
-            code: p.code,
-            metaLabel: t('access_policy'),
-            metaValue: p.policy,
-        });
-    const openSoftware = (s: Software) =>
-        setMembers({
-            kind: 'software',
-            id: s.id,
-            name: s.name,
-            detail: s.publisher,
-            code: s.code,
-            metaLabel: t('access_license_type'),
-            metaValue: t(`access_lic_${s.license_type}`),
-        });
+
+    // Build the drawer's header/meta payload from a registry row (fields differ per kind).
+    const buildTarget = (kind: AccessKind, row: AnyResource): MemberTarget => {
+        if (kind === 'email-groups') {
+            const g = row as EmailGroup;
+            return { kind, id: g.id, name: g.name, detail: g.email, owner: g.owner, ownerEmployeeId: g.owner_employee_id, code: g.code, metaLabel: t('access_department'), metaValue: g.department };
+        }
+        if (kind === 'file-shares') {
+            const s = row as FileShare;
+            return { kind, id: s.id, name: s.name, detail: s.path, owner: s.owner, ownerEmployeeId: s.owner_employee_id, code: s.code, metaLabel: t('access_size'), metaValue: sizeText(s.size, s.size_unit) };
+        }
+        if (kind === 'social-platforms') {
+            const p = row as SocialPlatform;
+            return { kind, id: p.id, name: p.name, detail: p.url, color: p.color, code: p.code, logo: p.logo_url, metaLabel: t('access_policy'), metaValue: p.policy };
+        }
+        const s = row as Software;
+        return { kind, id: s.id, name: s.name, detail: s.publisher, code: s.code, logo: s.logo_url, metaLabel: t('access_license_type'), metaValue: t(`access_lic_${s.license_type}`) };
+    };
+
+    // The open drawer is derived from the URL (?view=<id> on a registry tab): find the row in
+    // the loaded list and build its target. Single source of truth — no separate state, so
+    // closing (dropping ?open) can never race a reopen. null = drawer closed.
+    const members = useMemo<MemberTarget | null>(() => {
+        if (!viewId || tab === 'dashboard') {
+            return null;
+        }
+        const lists: Record<AccessKind, AnyResource[]> = {
+            'email-groups': egRows,
+            'file-shares': fsRows,
+            'social-platforms': spRows,
+            software: swRows,
+        };
+        const row = lists[tab].find((r) => r.id === Number(viewId));
+        return row ? buildTarget(tab, row) : null;
+    }, [viewId, tab, egRows, fsRows, spRows, swRows]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Row-click / "Manage" handlers just deep-link the resource — the URL drives the drawer.
+    const openEmailGroup = (g: EmailGroup) => openResource('email-groups', g.id);
+    const openFileShare = (s: FileShare) => openResource('file-shares', s.id);
+    const openSocial = (p: SocialPlatform) => openResource('social-platforms', p.id);
+    const openSoftware = (s: Software) => openResource('software', s.id);
 
     // Shared trailing action column: Manage members (Edit now lives in the drawer footer).
     // Stops propagation so the row-click (open members) doesn't also fire.
@@ -335,7 +397,7 @@ export default function AccessControlPage() {
     ];
 
     const spColumns: Column<SocialPlatform>[] = [
-        { key: 'name', header: t('access_name'), render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} /> },
+        { key: 'name', header: t('access_name'), render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} /> },
         { key: 'policy', header: t('access_policy'), render: (p) => p.policy ?? '—' },
         { key: 'members', header: t('access_members'), render: (p) => <AvatarStack members={p.members ?? []} /> },
         actionsCol<SocialPlatform>(openSocial),
@@ -368,18 +430,9 @@ export default function AccessControlPage() {
             {/* Page header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-semibold">{t('access_title')}</h1>
+                    <h1 className="text-2xl font-bold">{t('access_title')}</h1>
                     <p className="text-muted-foreground mt-0.5 text-sm">{t('access_sub')}</p>
                 </div>
-            </div>
-
-            {/* KPI row */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-                <StatCard label={t('access_email_groups')} value={egRows.length} icon={Users} />
-                <StatCard label={t('access_file_shares')} value={fsRows.length} icon={Folder} />
-                <StatCard label={t('access_social')} value={spRows.length} icon={Globe} />
-                <StatCard label={t('access_software')} value={swRows.length} icon={Package} />
-                <StatCard label={t('access_total_grants')} value={totalGrants} icon={Layers} />
             </div>
 
             {/* Tab card */}
@@ -392,13 +445,13 @@ export default function AccessControlPage() {
                             className={`relative px-3 py-3 text-sm font-medium ${tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             {tb.label}
-                            <span className="ml-1.5 font-mono text-xs opacity-60">{tb.count}</span>
                             {tab === tb.id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
                         </button>
                     ))}
                 </div>
 
                 <div className="p-4">
+                    {tab === 'dashboard' && <AccessDashboard onOpenTab={setTab} onOpenResource={openResource} />}
                     {tab === 'email-groups' && (
                         <DataTable
                             columns={egColumns}
@@ -449,12 +502,19 @@ export default function AccessControlPage() {
                 </div>
             </Card>
 
-            <ResourceModal open={!!editing} kind={editing?.kind ?? 'email-groups'} row={editing?.row ?? null} onClose={() => setEditing(null)} />
+            <ResourceModal
+                open={adding || !!editing}
+                kind={editing?.kind ?? (tab !== 'dashboard' ? tab : 'email-groups')}
+                row={editing?.row ?? null}
+                onClose={closeModal}
+            />
             <MembersDrawer
                 target={members}
                 canManage={canManage}
-                onClose={() => setMembers(null)}
+                onClose={closeDrawer}
                 onEdit={(tg) => {
+                    // Open the edit modal OVER the drawer without dropping ?open, so closing/saving
+                    // the modal reveals the manage drawer again (bounce back) instead of nothing.
                     const rows: Record<AccessKind, AnyResource[]> = {
                         'email-groups': egRows,
                         'file-shares': fsRows,
@@ -462,7 +522,6 @@ export default function AccessControlPage() {
                         software: swRows,
                     };
                     const row = rows[tg.kind]?.find((r) => r.id === tg.id) ?? null;
-                    setMembers(null);
                     if (row) setEditing({ kind: tg.kind, row });
                 }}
             />

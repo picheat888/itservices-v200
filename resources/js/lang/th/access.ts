@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const access: Dict = {
-    access_title: 'ทะเบียนการเข้าถึง',
+    access_title: 'การเข้าถึง',
     // Resource-type names stay in English in every locale (product decision).
     access_email_groups: 'Email Groups',
     access_file_shares: 'File Shares',
@@ -94,4 +94,33 @@ export const access: Dict = {
     access_ph_seats: '10',
     access_ph_product_key: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX',
     access_select_brand: 'เลือกยี่ห้อ',
+
+    // แท็บภาพรวม (dashboard)
+    access_tab_overview: 'ภาพรวม',
+    access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์ใน 30 วัน',
+    access_dash_down: '↓ ลดลง {n} สิทธิ์ใน 30 วัน',
+    access_dash_flat: 'ไม่เปลี่ยนแปลงใน 30 วัน',
+    access_dash_distribution_title: 'อัตราส่วนการเข้าถึง',
+    access_dash_distribution_cap: 'สิทธิ์การเข้าถึงที่ใช้งานอยู่ทั้งหมด แบ่งตามประเภทของทรัพยากร',
+    access_dash_grants_total: 'สิทธิ์รวม',
+    access_dash_governance_title: 'สถานะการเข้าถึง',
+    access_dash_latest: 'ล่าสุด',
+    access_dash_empty_shares: 'ไฟล์แชร์ที่ยังไม่มีสมาชิก',
+    access_dash_no_access_yet: 'ยังไม่มีผู้เข้าถึง',
+    access_dash_shares_ok: 'ไฟล์แชร์มีสมาชิกครบทุกรายการ',
+    access_dash_shares_ok_sub: 'ไม่มีไฟล์แชร์ที่ต้องตรวจสอบ',
+    access_dash_recent_title: 'สิทธิ์ที่เพิ่มในรอบ 30 วัน',
+    access_dash_recent_sub: 'การมอบสิทธิ์ใหม่ในช่วงที่ผ่านมา',
+    access_dash_owners_ok: 'ทรัพยากรมีผู้ดูแลครบทุกรายการ',
+    access_dash_owners_ok_sub: 'ทุกกลุ่มอีเมลและไฟล์แชร์มีเจ้าของ',
+    access_dash_owners_missing: 'ทรัพยากรที่ยังไม่มีผู้ดูแล',
+    access_dash_owners_missing_sub: 'กำหนดผู้ดูแลเพื่อให้ควบคุมได้',
+    access_dash_resigned_ok: 'ไม่มีพนักงานลาออกที่ยังถือสิทธิ์',
+    access_dash_resigned_ok_sub: 'ตรวจสอบกับสถานะพนักงานแล้ว',
+    access_dash_resigned_bad: 'พนักงานลาออกที่ยังถือสิทธิ์',
+    access_dash_resigned_bad_sub: 'ควรถอนสิทธิ์ของพนักงานที่ลาออก',
+    access_dash_top_title: 'Resource ที่เข้าถึงมากที่สุด',
+    access_dash_channel: 'ประเภท',
+    access_dash_reach: 'จำนวนสมาชิก',
+    access_dash_empty: 'ยังไม่มีข้อมูล',
 };
