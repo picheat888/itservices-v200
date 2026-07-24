@@ -434,7 +434,9 @@ export function TicketDetailDrawer({
                         </aside>
                     </div>
 
-                    {/* ---- footer: role-/status-aware actions ---- */}
+                    {/* ---- footer: role-/status-aware actions (hidden when there are none —
+                         closing is covered by the ✕ / Esc / backdrop) ---- */}
+                    {(canEdit || (isIT && isOpenUnassigned) || (view.status === 'in_progress' && isMine)) && (
                     <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
                         {canEdit && (
                             <Button variant="outline" onClick={() => onEdit(view)}>
@@ -443,9 +445,6 @@ export function TicketDetailDrawer({
                             </Button>
                         )}
                         <span className="flex-1" />
-                        <Button variant="outline" onClick={onClose}>
-                            {t('close')}
-                        </Button>
                         {isIT && isOpenUnassigned && (
                             <>
                                 {isSuper && (
@@ -473,6 +472,7 @@ export function TicketDetailDrawer({
                             </>
                         )}
                     </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
