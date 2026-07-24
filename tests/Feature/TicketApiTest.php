@@ -215,17 +215,13 @@ class TicketApiTest extends TestCase
         ], $overrides);
     }
 
-    public function test_it_staff_can_edit_ticket_fields(): void
+    public function test_admins_cannot_edit_someone_elses_ticket(): void
     {
-        $ticket = Ticket::factory()->create(['category' => 'network', 'status' => 'in_progress']);
+        // Editing is requester-only — even super has no override.
+        $ticket = Ticket::factory()->create(['category' => 'network', 'status' => 'open']);
         $this->actingAs($this->userWithEmployee('super'));
 
-        $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload())
-            ->assertOk()
-            ->assertJsonPath('data.subject', 'Updated — printer still jams on tray 2')
-            ->assertJsonPath('data.category', 'hardware')
-            // Workflow fields are untouched by an edit.
-            ->assertJsonPath('data.status', 'in_progress');
+        $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload())->assertForbidden();
     }
 
     public function test_requester_can_edit_their_own_open_ticket(): void
@@ -236,7 +232,10 @@ class TicketApiTest extends TestCase
 
         $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload())
             ->assertOk()
-            ->assertJsonPath('data.subject', 'Updated — printer still jams on tray 2');
+            ->assertJsonPath('data.subject', 'Updated — printer still jams on tray 2')
+            ->assertJsonPath('data.category', 'hardware')
+            // Workflow fields are untouched by an edit.
+            ->assertJsonPath('data.status', 'open');
     }
 
     public function test_requester_cannot_edit_once_the_ticket_is_in_progress(): void
@@ -258,8 +257,10 @@ class TicketApiTest extends TestCase
 
     public function test_update_validates_fields(): void
     {
-        $ticket = Ticket::factory()->create();
-        $this->actingAs($this->userWithEmployee('super'));
+        // Validation runs for the requester editing their own open ticket.
+        $me = $this->userWithEmployee('user');
+        $ticket = Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
+        $this->actingAs($me);
 
         $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload(['subject' => 'no', 'description' => 'short']))
             ->assertStatus(422)

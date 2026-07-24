@@ -241,9 +241,9 @@ export default function TicketsPage() {
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
 
-    // Who may edit the open ticket: IT staff / super anytime, or the requester while it's still Open.
-    const canEditDetail =
-        !!detail && (isIT || (detail.status === 'open' && detail.requester_id === user?.employee_id));
+    // Editing is requester-only and only while the case is still Open — no
+    // admin/super override (a case's content belongs to the person who opened it).
+    const canEditDetail = !!detail && detail.status === 'open' && detail.requester_id === user?.employee_id;
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
