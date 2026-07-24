@@ -55,6 +55,13 @@ const DialogContent = React.forwardRef<
 ));
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
+/**
+ * Sizing for the app's full-size centered "focus" detail dialogs
+ * (Asset / Contract / Stock / Ticket view, contract peek) — one source of truth.
+ * `!flex` overrides DialogContent's base `grid` display.
+ */
+const focusDialogContentClass = '!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0';
+
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
     <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
 );
@@ -78,4 +85,16 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => <DialogPrimitive.Description ref={ref} className={cn('text-sm text-muted-foreground', className)} {...props} />);
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
-export { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger };
+export {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogOverlay,
+    DialogPortal,
+    DialogTitle,
+    DialogTrigger,
+    focusDialogContentClass,
+};

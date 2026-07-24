@@ -1,9 +1,10 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { type ContractLinkedAsset, type ContractType } from '@/shared/types';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Clock, Cog, FileText, Laptop, Loader2, type LucideIcon, Package, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -154,7 +155,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 {/* Header */}
                 <div className="flex items-center gap-3 px-6 pt-5 pb-4">
                     <div className="bg-brand/10 text-brand flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
@@ -196,25 +197,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                 </div>
 
                 {/* Tab bar */}
-                <div className="border-border/60 flex gap-1 border-b px-6">
-                    {tabs.map((tb) => (
-                        <button
-                            key={tb.id}
-                            type="button"
-                            onClick={() => setTab(tb.id)}
-                            className={cn(
-                                'relative px-4 py-3 text-sm font-semibold transition-colors',
-                                tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            {tb.label}
-                            {tb.count != null && tb.count > 0 && (
-                                <span className="bg-accent ml-1.5 rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
-                            )}
-                            {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
-                        </button>
-                    ))}
-                </div>
+                <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
 
                 {/* Body */}
                 <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>

@@ -1,7 +1,8 @@
 import { StockMovementsTab } from './stock-movements-tab';
+import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useCurrency } from '@/modules/settings';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
 import { useT } from '@/lang';
@@ -149,7 +150,7 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+            <DialogContent className={focusDialogContentClass}>
                 {isLoading || !item ? (
                     <div className="space-y-4 px-6 py-6">
                         <DialogTitle className="text-base">{t('stock_detail')}</DialogTitle>
@@ -192,25 +193,7 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                         </div>
 
                         {/* Tab bar */}
-                        <div className="border-border/60 flex gap-1 border-b px-6">
-                            {tabs.map((tb) => (
-                                <button
-                                    key={tb.id}
-                                    type="button"
-                                    onClick={() => setTab(tb.id)}
-                                    className={cn(
-                                        'relative px-4 py-3 text-sm font-semibold transition-colors',
-                                        tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    {tb.label}
-                                    {tb.count != null && tb.count > 0 && (
-                                        <span className="bg-accent ml-1.5 rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
-                                    )}
-                                    {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
-                                </button>
-                            ))}
-                        </div>
+                        <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
 
                         {/* Body */}
                         <div className={cn('min-h-0 flex-1', tab === 'movements' ? 'overflow-hidden p-6' : 'overflow-y-auto px-6 py-5')}>
