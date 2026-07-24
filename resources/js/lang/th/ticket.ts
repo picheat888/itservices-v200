@@ -67,7 +67,7 @@ export const ticket: Dict = {
     "ticket_completed_event": "แก้ไขเสร็จสิ้น",
     "ticket_canceled_event": "ปิดเคส — ยกเลิก",
     "ticket_tab_details": "รายละเอียด",
-    "ticket_open_by": "ผู้เปิดเคส",
+    "ticket_open_by": "ผู้แจ้ง",
     "ticket_full_name": "ชื่อ-นามสกุล",
     "ticket_responsible_by": "ผู้รับผิดชอบ",
     "ticket_section_other": "ข้อมูลอื่น ๆ",
