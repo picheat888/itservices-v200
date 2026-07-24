@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,7 @@ import { useContractMutations } from '../hooks/use-contracts';
 import { ContractAssetsTab } from './contract-assets-tab';
 import { ContractAttachmentsTab } from './contract-attachments-tab';
 import { ContractCancelDialog } from './contract-cancel-dialog';
+import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SectionLabel } from '@/shared/components/section-label';
 
@@ -211,7 +212,7 @@ export function ContractDetailDrawer({
     return (
         <>
             <Dialog open={!!contract} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent className="!flex h-[min(860px,calc(100vh-72px))] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
+                <DialogContent className={focusDialogContentClass}>
                     <FocusDialogHeader
                         icon={TypeIcon}
                         eyebrow={lang === 'th' ? 'สัญญา' : 'Contract'}
@@ -235,25 +236,7 @@ export function ContractDetailDrawer({
                     />
 
                     {/* Tab bar */}
-                    <div className="border-border/60 flex gap-1 border-b px-6">
-                        {tabs.map((tb) => (
-                            <button
-                                key={tb.id}
-                                type="button"
-                                onClick={() => setTab(tb.id)}
-                                className={cn(
-                                    'relative px-4 py-3 text-sm font-semibold transition-colors',
-                                    tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {tb.label}
-                                {tb.count != null && tb.count > 0 && (
-                                    <span className="bg-accent ml-1.5 rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
-                                )}
-                                {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
-                            </button>
-                        ))}
-                    </div>
+                    <DialogTabs className="px-6" tabs={tabs} active={tab} onChange={setTab} />
 
                     {/* Body — the active panel. Assets/Attachments fill & manage their own layout. */}
                     <div

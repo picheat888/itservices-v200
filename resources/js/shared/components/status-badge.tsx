@@ -31,12 +31,15 @@ export function StatusBadge({
     tone = 'gray',
     color,
     dot = true,
+    className,
     children,
 }: {
     tone?: Tone;
     color?: string;
     /** Leading dot indicator; set false when the badge already has its own icon. */
     dot?: boolean;
+    /** Extra classes merged last — lets callers shrink/tweak the badge (e.g. compact dialog headers). */
+    className?: string;
     children: React.ReactNode;
 }) {
     // A custom hex (e.g. from Settings -> Assets) overrides the named tone:
@@ -44,7 +47,7 @@ export function StatusBadge({
     if (color) {
         return (
             <span
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
+                className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap', className)}
                 style={{ backgroundColor: `${color}22`, color }}
             >
                 {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />}
@@ -54,7 +57,7 @@ export function StatusBadge({
     }
 
     return (
-        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap', tones[tone])}>
+        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap', tones[tone], className)}>
             {dot && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />}
             {children}
         </span>

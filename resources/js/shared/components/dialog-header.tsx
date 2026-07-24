@@ -26,7 +26,8 @@ export function FocusDialogHeader({
     tileSize = 'md',
 }: {
     icon: LucideIcon;
-    eyebrow: string;
+    /** Small uppercase line above the title — a string, or a node for richer content (e.g. label + doc no.). */
+    eyebrow: React.ReactNode;
     title: string;
     code?: string;
     srDescription?: string;
