@@ -35,8 +35,8 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
     );
 }
 
-/** Visual tone of a spine step: done (brand check), ok (green), bad (red), current/working (pulsing), future (gray). */
-type SpineTone = 'done' | 'ok' | 'bad' | 'current' | 'working' | 'future';
+/** Visual tone of a spine step: done (brand check), ok (green), canceled (gray ✕, matches the status badge), current/working (pulsing), future (hollow gray). */
+type SpineTone = 'done' | 'ok' | 'canceled' | 'current' | 'working' | 'future';
 
 /** Maps the ticket status onto the three spine steps: created → taken → closed. */
 function spineTones(status: TicketStatus): [SpineTone, SpineTone, SpineTone] {
@@ -48,7 +48,7 @@ function spineTones(status: TicketStatus): [SpineTone, SpineTone, SpineTone] {
         case 'completed':
             return ['done', 'done', 'ok'];
         case 'canceled':
-            return ['done', 'done', 'bad'];
+            return ['done', 'done', 'canceled'];
     }
 }
 
@@ -68,7 +68,7 @@ function SpineStep({
     meta?: React.ReactNode;
     when?: string;
 }) {
-    const done = tone === 'done' || tone === 'ok' || tone === 'bad';
+    const done = tone === 'done' || tone === 'ok' || tone === 'canceled';
     return (
         <li className="flex gap-3">
             <div className="flex flex-col items-center">
@@ -77,7 +77,7 @@ function SpineStep({
                         'relative grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold',
                         tone === 'done' && 'bg-brand text-brand-foreground',
                         tone === 'ok' && 'bg-emerald-500 text-white',
-                        tone === 'bad' && 'bg-destructive text-destructive-foreground',
+                        tone === 'canceled' && 'bg-muted-foreground text-background',
                         tone === 'current' && 'border-brand text-brand bg-background border-2',
                         tone === 'working' && 'bg-background border-2 border-violet-500 text-violet-600 dark:text-violet-400',
                         tone === 'future' && 'border-border text-muted-foreground bg-background border-2',
@@ -91,7 +91,7 @@ function SpineStep({
                             )}
                         />
                     )}
-                    {done ? tone === 'bad' ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" /> : index}
+                    {done ? tone === 'canceled' ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" /> : index}
                 </span>
                 {!last && <div className={cn('my-1 w-0.5 flex-1 rounded-full', tone === 'done' ? 'bg-brand' : 'bg-border')} />}
             </div>
@@ -253,7 +253,8 @@ export function TicketDetailDrawer({
                                                 className={
                                                     view.status === 'completed'
                                                         ? 'rounded-md bg-emerald-500/10 px-3 py-2 text-sm leading-relaxed text-emerald-700 dark:text-emerald-400'
-                                                        : 'text-destructive bg-destructive/10 rounded-md px-3 py-2 text-sm leading-relaxed'
+                                                        : // Canceled is a neutral outcome, not an error — gray like its status badge.
+                                                          'bg-muted text-muted-foreground rounded-md px-3 py-2 text-sm leading-relaxed'
                                                 }
                                             >
                                                 {view.resolution}
