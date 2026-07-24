@@ -7,6 +7,7 @@ import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Department, Employee } from '@/shared/types';
 import { Building2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * Focused dialog listing every employee in a department. Uses the shared
@@ -16,10 +17,18 @@ import { Building2 } from 'lucide-react';
 export function DepartmentMembersDialog({ department, onClose }: { department: Department | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data: members = [], isLoading } = useDepartmentMembers(department?.id ?? null);
-    const { data: sections = [] } = useSections(department?.id ?? null);
 
-    const deptName = department ? (lang === 'th' ? (department.name_th ?? department.name) : department.name) : '';
+    // Retain the last department so content stays rendered while the dialog animates closed.
+    const [shown, setShown] = useState<Department | null>(null);
+    useEffect(() => {
+        if (department) setShown(department);
+    }, [department]);
+    const view = department ?? shown;
+
+    const { data: members = [], isLoading } = useDepartmentMembers(view?.id ?? null);
+    const { data: sections = [] } = useSections(view?.id ?? null);
+
+    const deptName = view ? (lang === 'th' ? (view.name_th ?? view.name) : view.name) : '';
 
     const columns: Column<Employee>[] = [
         {
@@ -56,7 +65,7 @@ export function DepartmentMembersDialog({ department, onClose }: { department: D
                     <DialogTitle className="flex items-center gap-2">
                         <Building2 className="text-muted-foreground h-4 w-4" />
                         {deptName}
-                        {department?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{department.tag}</span>}
+                        {view?.tag && <span className="text-muted-foreground font-mono text-xs font-normal">{view.tag}</span>}
                     </DialogTitle>
                     <DialogDescription>
                         {sections.length} {t('sub_sections')} · {members.length} {t('dept_members')}

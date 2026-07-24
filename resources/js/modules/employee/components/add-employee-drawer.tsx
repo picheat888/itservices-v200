@@ -105,7 +105,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         if (s === 1) {
             if (!form.firstName.trim()) e.firstName = t('emp_err_first');
             if (!form.lastName.trim()) e.lastName = t('emp_err_last');
-            if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = t('emp_err_email');
+            // ASCII-only practical pattern — rejects unicode (สมชาย@…), double @, and spaces up front.
+            if (form.email && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) e.email = t('emp_err_email');
         }
         if (s === 2) {
             if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
@@ -145,8 +146,16 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             await create.mutateAsync(payload);
             onClose();
         } catch (err) {
+            // Map Laravel's snake_case field errors onto the form's camelCase error slots
+            // so they render under the matching inputs; the toast stays as a catch-all
+            // (the failing field may sit on another step of this wizard).
             const fieldErrors = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data?.errors;
             if (fieldErrors) {
+                const mapped: Record<string, string> = {};
+                for (const [key, msgs] of Object.entries(fieldErrors)) {
+                    mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
+                }
+                setErrors((prev) => ({ ...prev, ...mapped }));
                 pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'));
             } else {
                 throw err;

@@ -5,9 +5,9 @@ namespace App\Services\Employee;
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
-use App\Models\Employee\Position;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
@@ -77,7 +77,30 @@ class EmployeeService
     {
         $employee->update($data);
 
+        $this->syncAccountEmail($employee);
+
         return $employee->load(['department', 'position']);
+    }
+
+    /**
+     * Mirrors the employee's (possibly edited) email onto their linked login
+     * account, so notifications and email-login keep working after HR updates
+     * the address. Skipped when another account already owns the new email
+     * (users.email is unique).
+     */
+    private function syncAccountEmail(Employee $employee): void
+    {
+        $user = User::where('employee_id', $employee->id)->first();
+        if ($user === null || ! $employee->email || $user->email === $employee->email) {
+            return;
+        }
+
+        $taken = User::where('email', $employee->email)->where('id', '!=', $user->id)->exists();
+        if ($taken) {
+            return;
+        }
+
+        $user->update(['email' => $employee->email]);
     }
 
     public function resign(Employee $employee, ?string $reason, ?string $lastDay, ?User $actor = null): Employee
@@ -129,6 +152,9 @@ class EmployeeService
         $existingCodes = Employee::pluck('code')->flip();
         $existingEmails = Employee::whereNotNull('email')->pluck('email')
             ->mapWithKeys(fn ($e) => [strtolower($e) => true]);
+        // Imported rows never own a login account yet, so ANY user email is a conflict.
+        $existingUserEmails = User::whereNotNull('email')->pluck('email')
+            ->mapWithKeys(fn ($e) => [strtolower($e) => true]);
 
         $errors = [];
         $prepared = [];
@@ -170,6 +196,9 @@ class EmployeeService
                 }
                 if (isset($existingEmails[$lower])) {
                     $rowErr[] = "email '{$email}' ซ้ำกับที่มีอยู่";
+                }
+                if (isset($existingUserEmails[$lower])) {
+                    $rowErr[] = "email '{$email}' ซ้ำกับบัญชีผู้ใช้ในระบบ";
                 }
                 if (isset($seenEmails[$lower])) {
                     $rowErr[] = "email '{$email}' ซ้ำในไฟล์";

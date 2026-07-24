@@ -1,6 +1,7 @@
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { useAuth, useLogout } from '@/modules/auth';
 import { useSettings } from '@/modules/settings';
+import { useAccessSidebarBadge } from '@/modules/access';
 import { useContractSidebarBadge } from '@/modules/contract';
 import { useAssetsSidebarBadge, useMyAssetsSidebarBadge } from '@/modules/asset';
 import { useStockSidebarBadge } from '@/modules/stock';
@@ -9,7 +10,7 @@ import { navGroups } from '@/app/nav';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/shared/types';
-import { LogOut } from 'lucide-react';
+import { Loader2, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export function Sidebar({ onProfile }: { onProfile: () => void }) {
@@ -31,7 +32,15 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const contractBadge = useContractSidebarBadge(perms.includes('contracts.view'));
     const myAssetsBadge = useMyAssetsSidebarBadge(perms.includes('assets.my'));
     const assetsBadge = useAssetsSidebarBadge(perms.includes('assets.receive'));
-    const badges: Record<string, number> = { stock: stockBadge, contracts: contractBadge, 'my-assets': myAssetsBadge, assets: assetsBadge };
+    // Access anomalies live on the Overview tab, so the badge follows its permission.
+    const accessBadge = useAccessSidebarBadge(perms.includes('access.overview'));
+    const badges: Record<string, number> = {
+        stock: stockBadge,
+        contracts: contractBadge,
+        'my-assets': myAssetsBadge,
+        assets: assetsBadge,
+        access: accessBadge,
+    };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
         if (i.permission) return perms.includes(i.permission);
@@ -93,9 +102,9 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                         {badge > 0 &&
                                             (iconsOnly ? (
                                                 // Collapsed rail: just a dot so it doesn't crowd the icon.
-                                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                                                <span className="bg-brand absolute right-1.5 top-1.5 h-2 w-2 rounded-full" />
                                             ) : (
-                                                <span className="ml-auto shrink-0 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
+                                                <span className="bg-brand/15 text-brand ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
                                                     {badge}
                                                 </span>
                                             ))}
@@ -126,11 +135,12 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     </button>
                     <button
                         onClick={() => logout.mutate()}
+                        disabled={logout.isPending}
                         title={t('profile_signout')}
-                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-60"
                         aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
                     >
-                        <LogOut className="h-[18px] w-[18px]" />
+                        {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
                     </button>
                 </div>
             ) : (
@@ -148,11 +158,12 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     </button>
                     <button
                         onClick={() => logout.mutate()}
+                        disabled={logout.isPending}
                         title={t('profile_signout')}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-60"
                         aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
                     >
-                        <LogOut className="h-[18px] w-[18px]" />
+                        {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
                     </button>
                 </div>
             )}

@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Krit Saengthong', 'email' => 'super@abcd.co.th', 'username' => 'super', 'role' => 'super'],
             ['name' => 'Thanapon Inthawong', 'email' => 'it@abcd.co.th', 'username' => 'it', 'role' => 'admin'],
             ['name' => 'Siriporn Chaiyo', 'email' => 'hr@abcd.co.th', 'username' => 'hr', 'role' => 'hr'],
-            ['name' => 'Nattaya Phimsen', 'email' => 'user@abcd.co.th', 'username' => 'user', 'role' => 'user'],
+            ['name' => 'Waraporn Sri', 'email' => 'user@abcd.co.th', 'username' => 'user', 'role' => 'user'],
         ];
 
         foreach ($demoUsers as $data) {

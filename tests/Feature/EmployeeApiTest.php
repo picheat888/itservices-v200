@@ -23,6 +23,65 @@ class EmployeeApiTest extends TestCase
         return User::factory()->create(['role' => 'super']);
     }
 
+    public function test_editing_employee_email_mirrors_onto_linked_account(): void
+    {
+        $this->actingAs($this->super());
+        $e = Employee::create(['first_name' => 'Mail', 'last_name' => 'Sync', 'email' => 'old@abcd.co.th']);
+        $account = User::factory()->create(['email' => 'old@abcd.co.th', 'employee_id' => $e->id]);
+
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Mail', 'last_name' => 'Sync', 'email' => 'new@abcd.co.th'])
+            ->assertOk();
+
+        $this->assertSame('new@abcd.co.th', $account->fresh()->email);
+    }
+
+    public function test_employee_email_cannot_collide_with_another_account(): void
+    {
+        $this->actingAs($this->super());
+        User::factory()->create(['email' => 'taken@abcd.co.th']);
+        $e = Employee::create(['first_name' => 'Mail', 'last_name' => 'Clash', 'email' => 'old@abcd.co.th']);
+        $account = User::factory()->create(['email' => 'old@abcd.co.th', 'employee_id' => $e->id]);
+
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Mail', 'last_name' => 'Clash', 'email' => 'taken@abcd.co.th'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+
+        // Nothing changed on either side.
+        $this->assertSame('old@abcd.co.th', $e->fresh()->email);
+        $this->assertSame('old@abcd.co.th', $account->fresh()->email);
+    }
+
+    public function test_employee_email_cannot_duplicate_another_employee(): void
+    {
+        $this->actingAs($this->super());
+        Employee::create(['first_name' => 'First', 'last_name' => 'Owner', 'email' => 'dup@abcd.co.th']);
+
+        $this->postJson('/api/employees', ['first_name' => 'Second', 'last_name' => 'Copy', 'email' => 'dup@abcd.co.th'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    public function test_employee_email_rejects_unicode_local_part(): void
+    {
+        $this->actingAs($this->super());
+
+        // The RFC default would accept a Thai local part — email:filter must not.
+        $this->postJson('/api/employees', ['first_name' => 'Uni', 'last_name' => 'Code', 'email' => 'สมชาย@abcd.co.th'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('email');
+    }
+
+    public function test_employee_can_keep_their_own_account_email(): void
+    {
+        $this->actingAs($this->super());
+        $e = Employee::create(['first_name' => 'Same', 'last_name' => 'Mail', 'email' => 'mine@abcd.co.th']);
+        User::factory()->create(['email' => 'mine@abcd.co.th', 'employee_id' => $e->id]);
+
+        // Re-saving with the unchanged email must not trip the collision rules.
+        $this->putJson("/api/employees/{$e->id}", ['first_name' => 'Same', 'last_name' => 'Mail', 'email' => 'mine@abcd.co.th'])
+            ->assertOk();
+    }
+
     public function test_employee_cannot_be_their_own_manager(): void
     {
         $this->actingAs($this->super());
