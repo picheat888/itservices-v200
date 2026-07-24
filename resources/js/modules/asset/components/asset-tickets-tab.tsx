@@ -1,7 +1,6 @@
 import { StatusBadge } from '@/shared/components/status-badge';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { useT } from '@/lang';
-import { useUiStore } from '@/stores/ui';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -29,7 +28,6 @@ const PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber' | 'blue' | '
  */
 export function AssetTicketsTab({ tickets }: { tickets: AssetTicket[] }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const navigate = useNavigate();
 
     if (tickets.length === 0) {
@@ -49,7 +47,7 @@ export function AssetTicketsTab({ tickets }: { tickets: AssetTicket[] }) {
             render: (tk) => (
                 <div>
                     <span className="text-muted-foreground block font-mono text-[11px]">{tk.ticket_no}</span>
-                    <span className="font-medium">{(lang === 'th' && tk.subject_th) || tk.subject}</span>
+                    <span className="font-medium">{tk.subject}</span>
                 </div>
             ),
         },
@@ -84,7 +82,7 @@ export function AssetTicketsTab({ tickets }: { tickets: AssetTicket[] }) {
                 columns={columns}
                 rows={tickets}
                 rowKey={(tk) => tk.id}
-                searchable={(tk) => `${tk.ticket_no} ${tk.subject} ${tk.subject_th ?? ''}`}
+                searchable={(tk) => `${tk.ticket_no} ${tk.subject}`}
                 onRowClick={(tk) => navigate(`/tickets?view=${tk.id}`)}
             />
         </div>

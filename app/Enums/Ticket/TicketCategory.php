@@ -9,4 +9,15 @@ enum TicketCategory: string
     case Software = 'software';
     case Network = 'network';
     case Other = 'other';
+
+    /** Short code used inside the ticket number (e.g. TKT-SW-YYMMDD-NNN). */
+    public function shortCode(): string
+    {
+        return match ($this) {
+            self::Software => 'SW',
+            self::Hardware => 'HW',
+            self::Network => 'NW',
+            self::Other => 'OTH',
+        };
+    }
 }

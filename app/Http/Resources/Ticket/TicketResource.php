@@ -18,7 +18,6 @@ class TicketResource extends JsonResource
             'id' => $this->id,
             'ticket_no' => $this->ticket_no,
             'subject' => $this->subject,
-            'subject_th' => $this->subject_th,
             'description' => $this->description,
             'category' => $this->category?->value,
             'priority' => $this->priority?->value,
@@ -35,10 +34,16 @@ class TicketResource extends JsonResource
 
             'related_asset_id' => $this->related_asset_id,
             'related_asset_tag' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->asset_code),
+            'related_asset_tag_name' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->tag),
+            'related_asset_type' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->category?->name),
+            'related_asset_type_th' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->category?->name_th),
+            'related_asset_brand' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->brand?->name),
             'related_asset_model' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->model?->name),
+            'related_asset_serial' => $this->whenLoaded('relatedAsset', fn () => $this->relatedAsset?->serial),
 
             'take_note' => $this->take_note,
             'resolution' => $this->resolution,
+            'responded_at' => $this->responded_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 
             'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments->map(fn ($a) => [

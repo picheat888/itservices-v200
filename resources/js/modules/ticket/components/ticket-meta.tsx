@@ -28,18 +28,31 @@ const CATEGORY_ICON: Record<TicketCategory, typeof Laptop> = {
     other: MoreHorizontal,
 };
 
-export function TicketStatusBadge({ status, t }: { status: TicketStatus; t: T }) {
+export function TicketStatusBadge({ status, t, className }: { status: TicketStatus; t: T; className?: string }) {
     const meta = TICKET_STATUS_META[status];
-    return <StatusBadge tone={meta.tone}>{t(meta.key)}</StatusBadge>;
+    return (
+        <StatusBadge tone={meta.tone} className={className}>
+            {t(meta.key)}
+        </StatusBadge>
+    );
 }
 
-export function TicketPriorityBadge({ priority, t }: { priority: TicketPriority | null; t: T }) {
+export function TicketPriorityBadge({ priority, t, className }: { priority: TicketPriority | null; t: T; className?: string }) {
     if (!priority) return <span className="text-muted-foreground text-sm">—</span>;
     const meta = TICKET_PRIORITY_META[priority];
-    return <StatusBadge tone={meta.tone}>{t(meta.key)}</StatusBadge>;
+    return (
+        <StatusBadge tone={meta.tone} className={className}>
+            {t(meta.key)}
+        </StatusBadge>
+    );
 }
 
 export function TicketCategoryIcon({ category, className }: { category: TicketCategory; className?: string }) {
     const Icon = CATEGORY_ICON[category];
     return <Icon className={className} />;
+}
+
+/** Raw lucide icon for a ticket category — for slots that need the component itself (e.g. FocusDialogHeader). */
+export function ticketCategoryIcon(category: TicketCategory): typeof Laptop {
+    return CATEGORY_ICON[category];
 }

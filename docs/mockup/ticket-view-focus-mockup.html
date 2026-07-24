@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ticket · View — Focus Dialog Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     Ticket · View — "Focus" centered dialog (replaces right Sheet)
+
+     Reusable anatomy (maps to a future <FocusViewDialog> shell):
+       .dialog
+         ├ .dlg-head   → slot: stub(doc no) + eyebrow/title + badges + close
+         ├ .dlg-cols
+         │   ├ .main   → slot: story (banners, sections, attachments)
+         │   └ .rail   → slot: state (status spine, people, meta KV)
+         └ .dlg-foot   → slot: role-aware actions
+     States are driven by body[data-state] + [data-when~="state"]
+     so the same shell renders open / in_progress / completed / canceled.
+
+     Design tokens are mirrored from resources/css/app.css (light+dark).
+     ============================================================ */
+  :root{
+    --brand:#2563eb; --brand-700:#1d4ed8; --brand-soft:rgba(37,99,235,.09); --brand-ring:rgba(37,99,235,.28);
+    --bg:#fff; --canvas:#f6f8fb; --surface:#fff; --surface-2:#fcfdff; --rail:#fafbfd;
+    --fg:hsl(222,30%,12%); --muted:hsl(215,16%,47%); --muted-2:hsl(215,18%,62%);
+    --border:hsl(214,20%,90%); --border-soft:hsl(214,22%,93%); --input:hsl(214,20%,86%);
+    --accent:hsl(210,24%,95%);
+    --destructive:hsl(0,72%,51%); --destructive-soft:rgba(220,38,38,.09);
+    --success:#059669; --success-soft:rgba(5,150,105,.1);
+    --violet:#7c3aed; --violet-soft:rgba(124,58,237,.1);
+    --amber:#b45309; --amber-soft:rgba(217,119,6,.12);
+    --radius:16px; --radius-sm:10px;
+    --shadow-dialog:0 32px 80px -20px rgba(16,24,40,.45), 0 0 0 1px rgba(16,24,40,.04);
+    --font:'Manrope','Noto Sans Thai',ui-sans-serif,system-ui,sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    color-scheme:light;
+  }
+  .dark{
+    --brand:#3b82f6; --brand-700:#60a5fa; --brand-soft:rgba(59,130,246,.14); --brand-ring:rgba(59,130,246,.35);
+    --bg:hsl(222,24%,10%); --canvas:hsl(222,28%,7%); --surface:hsl(222,24%,10%); --surface-2:hsl(222,23%,9%); --rail:hsl(222,25%,8.5%);
+    --fg:hsl(210,20%,96%); --muted:hsl(215,15%,65%); --muted-2:hsl(215,14%,50%);
+    --border:hsl(217,19%,20%); --border-soft:hsl(217,19%,16%); --input:hsl(217,19%,22%);
+    --accent:hsl(217,19%,18%);
+    --destructive:hsl(0,72%,60%); --destructive-soft:rgba(248,113,113,.12);
+    --success:#34d399; --success-soft:rgba(52,211,153,.12);
+    --violet:#a78bfa; --violet-soft:rgba(167,139,250,.14);
+    --amber:#fbbf24; --amber-soft:rgba(251,191,36,.13);
+    --shadow-dialog:0 32px 80px -18px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.06);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--font);color:var(--fg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;background:var(--canvas)}
+  [hidden]{display:none!important}
+  svg{flex:none}
+
+  /* ---------- Mockup chooser toolbar (NOT part of product) ---------- */
+  .chooser{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 20px;background:rgba(11,18,32,.94);backdrop-filter:blur(8px);color:#e7ecf5;border-bottom:1px solid rgba(255,255,255,.08)}
+  .chooser .brandmark{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:-.01em;padding-right:14px;border-right:1px solid rgba(255,255,255,.12)}
+  .chooser .brandmark .dot{width:9px;height:9px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 4px rgba(37,99,235,.25)}
+  .chooser .label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#8b96ab;margin-right:-6px}
+  .seg{display:inline-flex;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:3px}
+  .seg button{appearance:none;border:0;background:transparent;color:#aeb8ca;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;padding:6px 13px;border-radius:7px;transition:.18s;white-space:nowrap}
+  .seg button:hover{color:#fff}
+  .seg button.active{background:#2563eb;color:#fff;box-shadow:0 4px 12px -3px rgba(37,99,235,.6)}
+  .chooser .hint{margin-left:auto;font-size:12px;color:#7e8aa1}
+
+  /* ---------- Faux app backdrop (dimmed behind the dialog) ---------- */
+  .appbg{position:fixed;inset:52px 0 0;overflow:hidden;background:var(--canvas)}
+  .appbg .sidebar{position:absolute;left:0;top:0;bottom:0;width:240px;background:var(--surface);border-right:1px solid var(--border)}
+  .appbg .topbar{position:absolute;left:240px;right:0;top:0;height:60px;background:var(--surface);border-bottom:1px solid var(--border)}
+  .appbg .content{position:absolute;left:272px;right:32px;top:96px;bottom:32px}
+  .appbg .skeleton{height:14px;border-radius:6px;background:var(--accent);margin-bottom:14px}
+  .appbg .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px}
+  .appbg::after{content:"";position:absolute;inset:0;background:rgba(11,18,32,.46);backdrop-filter:blur(3px)}
+
+  /* ---------- Focus dialog shell ---------- */
+  .overlay{position:fixed;inset:52px 0 0;z-index:100;display:none;align-items:center;justify-content:center;padding:28px}
+  .overlay.show{display:flex}
+  .dialog{position:relative;background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-dialog);width:100%;display:flex;flex-direction:column;overflow:hidden;animation:pop .32s cubic-bezier(.16,1,.3,1)}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+
+  /* ---- header: ticket stub + title + badges + close ---- */
+  .dlg-head{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--border-soft)}
+  /* Ticket stub — the doc-number block reads like a physical ticket:
+     dashed perforation on the right edge + two punched notches */
+  .stub{position:relative;flex:none;background:var(--brand-soft);border-radius:12px;padding:9px 18px 9px 14px;border-right:2px dashed var(--brand-ring)}
+  .stub::before,.stub::after{content:"";position:absolute;right:-7px;width:12px;height:12px;border-radius:50%;background:var(--surface)}
+  .stub::before{top:-7px}
+  .stub::after{bottom:-7px}
+  .stub .eyebrow{font-size:9.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted-2)}
+  .stub .code{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--brand-700);margin-top:1px}
+  .dlg-head .titles{min-width:0;flex:1}
+  .dlg-head .cat{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
+  .dlg-head h2{margin:2px 0 0;font-size:16.5px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dlg-head .badges{display:flex;align-items:center;gap:8px;flex:none}
+  .dlg-head .x{border:0;background:transparent;color:var(--muted);cursor:pointer;width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none}
+  .dlg-head .x:hover{background:var(--accent);color:var(--fg)}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 11px;white-space:nowrap}
+  .badge .bdot{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .badge.b-open{background:var(--brand-soft);color:var(--brand-700)}
+  .badge.b-progress{background:var(--violet-soft);color:var(--violet)}
+  .badge.b-done{background:var(--success-soft);color:var(--success)}
+  .badge.b-cancel{background:var(--destructive-soft);color:var(--destructive)}
+  .badge.b-prio{background:var(--amber-soft);color:var(--amber)}
+  .badge.b-cat{background:var(--accent);color:var(--muted)}
+
+  /* ---- columns: story | state rail ---- */
+  .dlg-cols{flex:1;display:flex;min-height:0}
+  .main{flex:1;min-width:0;overflow-y:auto;padding:22px 24px}
+  .rail{width:292px;flex:none;overflow-y:auto;background:var(--rail);border-left:1px solid var(--border-soft);padding:20px}
+
+  .section-label{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);display:flex;align-items:center;gap:8px;margin:0 0 10px}
+  .section-label::after{content:"";flex:1;height:1px;background:var(--border-soft)}
+  .main section + section{margin-top:22px}
+  .rail section + section{margin-top:22px}
+
+  /* hint banners (status-aware) */
+  .banner{display:flex;align-items:center;gap:10px;border-radius:var(--radius-sm);padding:10px 13px;font-size:13.5px;margin-bottom:18px}
+  .banner.take{background:var(--brand-soft);color:var(--brand-700)}
+  .banner.take .btn{margin-left:auto}
+  .banner.working{background:var(--violet-soft);color:var(--violet)}
+
+  .desc{background:var(--accent);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;line-height:1.7;margin:0}
+  .note{background:var(--accent);border-radius:var(--radius-sm);padding:11px 14px;font-size:13.5px;line-height:1.65;margin:0}
+  .note.ok{background:var(--success-soft);color:var(--success)}
+  .note.bad{background:var(--destructive-soft);color:var(--destructive)}
+
+  /* attachments — whole row opens the in-app preview (image & PDF) */
+  .att{display:flex;align-items:center;gap:11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13.5px;background:var(--surface);cursor:pointer;transition:border-color .15s}
+  .att:hover{border-color:var(--brand)}
+  .att:hover .nm{color:var(--brand-700)}
+  .att + .att{margin-top:8px}
+  .att .thumb{width:38px;height:38px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#60a5fa,#2563eb)}
+  .att .thumb.doc{background:var(--accent);color:var(--muted)}
+  .att .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+  .att .sz{font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .att .x{border:0;background:transparent;color:var(--muted-2);cursor:pointer;display:flex;padding:4px;border-radius:6px}
+  .att .x:hover{color:var(--destructive);background:var(--accent)}
+
+  /* ---- rail: status spine ---- */
+  .spine{list-style:none;margin:0;padding:0}
+  .spine li{position:relative;padding:0 0 20px 34px}
+  .spine li:last-child{padding-bottom:0}
+  .spine li::before{content:"";position:absolute;left:10px;top:24px;bottom:2px;width:2px;border-radius:2px;background:var(--border)}
+  .spine li:last-child::before{display:none}
+  .spine li.done::before{background:var(--brand)}
+  .spine .sdot{position:absolute;left:0;top:0;width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:var(--muted-2)}
+  .spine .sdot svg{display:none}
+  .spine li.done .sdot{border-color:var(--brand);background:var(--brand);color:#fff}
+  .spine li.done .sdot .num{display:none}
+  .spine li.done .sdot .ic-check{display:block}
+  .spine li.done-ok .sdot{border-color:var(--success);background:var(--success);color:#fff}
+  .spine li.done-ok .sdot .num{display:none}
+  .spine li.done-ok .sdot .ic-check{display:block}
+  .spine li.done-cancel .sdot{border-color:var(--destructive);background:var(--destructive);color:#fff}
+  .spine li.done-cancel .sdot .num{display:none}
+  .spine li.done-cancel .sdot .ic-x{display:block}
+  .spine li.current .sdot{border-color:var(--brand);color:var(--brand-700);animation:ping 2.2s ease-out infinite}
+  .spine li.current.violet .sdot{border-color:var(--violet);color:var(--violet)}
+  @keyframes ping{0%{box-shadow:0 0 0 0 var(--brand-ring)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .spine .stitle{font-size:13.5px;font-weight:700;line-height:1.35}
+  .spine li.future .stitle{color:var(--muted-2);font-weight:600}
+  .spine .smeta{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+  .spine .smeta .when{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+
+  /* ---- rail: people ---- */
+  .person{display:flex;align-items:center;gap:11px}
+  .person + .person{margin-top:12px}
+  .person .av{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;background:var(--accent);color:var(--muted)}
+  .person .av.me{background:var(--brand-soft);color:var(--brand-700)}
+  .person .who{min-width:0}
+  .person .nm{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .person .nm .empty{color:var(--muted-2);font-style:italic;font-weight:500}
+  .person .sub{font-size:11.5px;color:var(--muted)}
+
+  /* ---- rail: meta KV ---- */
+  .kv{display:flex;flex-direction:column;gap:11px}
+  .kv .row .k{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+  .kv .row .v{font-size:13px;font-weight:600}
+  .kv .row .v.mono{font-family:var(--mono);font-weight:500;font-size:12.5px}
+  .kv .row .v a{color:var(--brand-700);text-decoration:none}
+  .kv .row .v a:hover{text-decoration:underline}
+
+  /* ---- footer actions ---- */
+  .dlg-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--border-soft);background:var(--surface-2)}
+  .dlg-foot .spacer{flex:1}
+  .btn{appearance:none;border:0;font-family:var(--font);font-weight:700;font-size:13.5px;cursor:pointer;border-radius:10px;padding:0 16px;height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.16s;white-space:nowrap}
+  .btn-primary{background:var(--brand);color:#fff;box-shadow:0 8px 18px -6px var(--brand-ring)}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-ghost{background:var(--surface);color:var(--fg);border:1.5px solid var(--border)}
+  .btn-ghost:hover{background:var(--accent)}
+  .btn-danger{background:var(--surface);color:var(--destructive);border:1.5px solid var(--border)}
+  .btn-danger:hover{border-color:var(--destructive);background:var(--destructive-soft)}
+  .btn-icon{width:40px;padding:0;color:var(--muted)}
+  .btn-icon:hover{color:var(--destructive)}
+  .btn.sm{height:32px;padding:0 12px;font-size:12.5px;border-radius:8px}
+
+  /* ---- Variant A: split rail ---- */
+  #dlgA .dialog{max-width:920px;height:min(700px,calc(100vh - 52px - 56px))}
+
+  /* ---- Variant B: compact single column ---- */
+  #dlgB .dialog{max-width:620px;max-height:calc(100vh - 52px - 56px)}
+  #dlgB .main{padding:20px 24px}
+  .kv-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px}
+  .kv-grid .k{font-size:11.5px;color:var(--muted);margin-bottom:2px}
+  .kv-grid .v{font-size:13.5px;font-weight:600}
+  .kv-grid .v.mono{font-family:var(--mono);font-weight:500;font-size:12.5px}
+  .kv-grid .v .empty{color:var(--muted-2);font-style:italic;font-weight:500}
+  /* timeline (variant B) — same vocabulary as current drawer */
+  .tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:13px}
+  .tl li{display:flex;gap:11px}
+  .tl .tdot{width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .tl .tdot.brand{background:var(--brand-soft);color:var(--brand-700)}
+  .tl .tdot.violet{background:var(--violet-soft);color:var(--violet)}
+  .tl .tdot.ok{background:var(--success-soft);color:var(--success)}
+  .tl .tdot.bad{background:var(--destructive-soft);color:var(--destructive)}
+  .tl .tdot.idle{background:var(--accent);color:var(--muted-2)}
+  .tl .ttitle{font-size:13.5px;font-weight:700}
+  .tl .tmeta{font-size:12px;color:var(--muted)}
+  .tl .tmeta .when{font-family:var(--mono);font-size:11px;color:var(--muted-2);margin-left:8px}
+
+  /* ---- Variant C: stacked head + tabs (per user's sketch) ---- */
+  #dlgC .dialog{max-width:880px;height:min(680px,calc(100vh - 52px - 56px))}
+  .hc{flex-wrap:wrap;row-gap:8px}
+  .hc .hspacer{flex:1}
+  .hc-subject{width:100%;margin:0;font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.4}
+  .hc-strip{padding:0 20px}
+  .hc-strip .banner{margin:14px 0 0}
+  .tabs{display:flex;gap:2px;border-bottom:1.5px solid var(--border-soft);margin-bottom:18px}
+  .tab{appearance:none;border:0;background:transparent;font-family:var(--font);font-size:13.5px;font-weight:700;color:var(--muted);padding:9px 14px;cursor:pointer;position:relative;border-radius:8px 8px 0 0;display:inline-flex;align-items:center}
+  .tab:hover{color:var(--fg);background:var(--accent)}
+  .tab.active{color:var(--brand-700)}
+  .tab.active::after{content:"";position:absolute;left:10px;right:10px;bottom:-1.5px;height:2.5px;border-radius:3px;background:var(--brand)}
+  .tab .cnt{font-size:11px;font-weight:700;background:var(--accent);color:var(--muted);border-radius:999px;padding:1px 7px;margin-left:7px}
+  .tab.active .cnt{background:var(--brand-soft);color:var(--brand-700)}
+  .rl-div{height:1px;background:var(--border-soft);margin:18px 0}
+  .asset-card{display:flex;align-items:center;gap:11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 13px;text-decoration:none;color:var(--fg);transition:border-color .15s}
+  .asset-card:hover{border-color:var(--brand)}
+  .asset-card .ac-ico{width:36px;height:36px;border-radius:9px;background:var(--accent);color:var(--muted);display:flex;align-items:center;justify-content:center;flex:none}
+  .asset-card .ac-tag{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+  .asset-card .ac-nm{font-size:13.5px;font-weight:700}
+  .asset-card .ac-go{margin-left:auto;color:var(--muted-2)}
+
+  /* ---- attachment preview overlay (image + PDF, in-app) ---- */
+  .pv{position:fixed;inset:52px 0 0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(11,18,32,.55);backdrop-filter:blur(4px);padding:26px}
+  .pv-box{background:var(--surface);border-radius:14px;box-shadow:var(--shadow-dialog);width:min(760px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;animation:pop .26s cubic-bezier(.16,1,.3,1)}
+  .pv-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border-soft)}
+  .pv-kind{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;background:var(--brand-soft);color:var(--brand-700);padding:3px 8px;border-radius:6px;flex:none}
+  .pv-name{font-size:13.5px;font-weight:700;min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pv-size{font-family:var(--mono);font-size:11.5px;color:var(--muted);flex:none}
+  .pv-act{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;text-decoration:none;padding:6px 9px;border-radius:8px;flex:none}
+  .pv-act:hover{background:var(--accent);color:var(--fg)}
+  .pv-head .x{border:0;background:transparent;color:var(--muted);cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none}
+  .pv-head .x:hover{background:var(--accent);color:var(--fg)}
+  .pv-body{background:var(--accent);display:flex;align-items:center;justify-content:center;padding:22px;overflow:auto;min-height:340px}
+  /* fake photo (mock only — real app renders <img src=url>) */
+  .pv-img{width:min(540px,100%);height:340px;border-radius:10px;background:linear-gradient(140deg,#334155,#0f172a);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#94a3b8}
+  .pv-img .cap{font-size:12px}
+  /* fake PDF page (mock only — real app embeds browser PDF viewer via <iframe src=url>) */
+  .pv-pdf{background:#fff;width:min(500px,100%);border-radius:8px;box-shadow:0 10px 30px -12px rgba(16,24,40,.35);padding:34px 38px;display:flex;flex-direction:column;gap:13px}
+  .pv-pdf .ln{height:10px;border-radius:5px;background:#e9eef5}
+  .pv-pdf .ln.h{height:16px;background:#d7e0ec;width:55%;margin-bottom:6px}
+  .pv-foot{padding:9px 14px;border-top:1px solid var(--border-soft);background:var(--surface-2);font-size:11.5px;color:var(--muted)}
+
+  /* ---- responsive ---- */
+  @media (max-width:820px){
+    .overlay{padding:12px}
+    #dlgA .dialog{height:auto;max-height:calc(100vh - 52px - 24px)}
+    .dlg-cols{flex-direction:column;overflow-y:auto}
+    .main{overflow:visible}
+    .rail{width:auto;overflow:visible;border-left:0;border-top:1px solid var(--border-soft)}
+    .dlg-head h2{white-space:normal}
+    .dlg-head .badges{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body data-state="open">
+
+<!-- ================= mockup chooser (not part of product) ================= -->
+<div class="chooser">
+  <span class="brandmark"><span class="dot"></span>Ticket · View Focus</span>
+  <span class="label">Layout</span>
+  <span class="seg" id="segVariant">
+    <button data-variant="c" class="active">C · แท็บ (ตาม sketch)</button>
+    <button data-variant="a">A · แยกคอลัมน์</button>
+    <button data-variant="b">B · คอลัมน์เดียว</button>
+  </span>
+  <span class="label">สถานะ</span>
+  <span class="seg" id="segState">
+    <button data-state="open" class="active">เปิด</button>
+    <button data-state="in_progress">กำลังดำเนินการ</button>
+    <button data-state="completed">เสร็จสิ้น</button>
+    <button data-state="canceled">ยกเลิก</button>
+  </span>
+  <span class="seg"><button id="themeBtn">🌙 Dark</button></span>
+  <span class="hint">คีย์ลัด: A/B/C สลับเลย์เอาต์ · 1–4 สลับสถานะ</span>
+</div>
+
+<!-- ================= faux app backdrop ================= -->
+<div class="appbg">
+  <div class="sidebar"></div>
+  <div class="topbar"></div>
+  <div class="content">
+    <div class="card"><div class="skeleton" style="width:38%"></div><div class="skeleton" style="width:65%"></div><div class="skeleton" style="width:52%"></div></div>
+    <div class="card"><div class="skeleton" style="width:45%"></div><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:30%"></div><div class="skeleton" style="width:58%"></div></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     VARIANT C — stacked head + tabbed body (per user's sketch)
+       row1: [ticket no][type] ......... [status][priority][x]
+       row2: subject
+       strip: full-width status banner
+       body:  tabs (รายละเอียด | ไฟล์แนบ N)  |  rail (สถานะเคส + dates)
+     ============================================================ -->
+<div class="overlay show" id="dlgC">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ttlC">
+    <div class="dlg-head hc">
+      <div class="stub">
+        <div class="eyebrow">Ticket No.</div>
+        <div class="code">TK-2026-0158</div>
+      </div>
+      <span class="badge b-cat">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        ฮาร์ดแวร์
+      </span>
+      <span class="hspacer"></span>
+      <span class="badge b-open" data-when="open"><span class="bdot"></span>เปิด</span>
+      <span class="badge b-progress" data-when="in_progress"><span class="bdot"></span>กำลังดำเนินการ</span>
+      <span class="badge b-done" data-when="completed"><span class="bdot"></span>เสร็จสิ้น</span>
+      <span class="badge b-cancel" data-when="canceled"><span class="bdot"></span>ยกเลิก</span>
+      <span class="badge b-prio">สูง</span>
+      <button class="x" aria-label="ปิด"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <h2 class="hc-subject" id="ttlC">เครื่องพิมพ์ฝ่ายบัญชีพิมพ์ไม่ออก ขึ้น Error 0x83C0000A</h2>
+    </div>
+
+    <!-- full-width status banner under the head -->
+    <div class="hc-strip">
+      <div class="banner take" data-when="open">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>เคสนี้ยังไม่มีผู้รับผิดชอบ กดรับเคสเพื่อเริ่มดำเนินการ</span>
+        <button class="btn btn-primary sm">รับเคส</button>
+      </div>
+      <div class="banner working" data-when="in_progress">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 9 8 9"/></svg>
+        <span>คุณกำลังดำเนินการเคสนี้อยู่ — ปิดงานได้จากปุ่มด้านล่าง</span>
+      </div>
+    </div>
+
+    <div class="dlg-cols">
+      <!-- ============ main: tabbed (รายละเอียด | ไฟล์แนบ) ============ -->
+      <div class="main">
+        <div class="tabs">
+          <button class="tab active" data-pane="paneIssue">รายละเอียด</button>
+          <button class="tab" data-pane="paneFiles">ไฟล์แนบ<span class="cnt">2</span></button>
+        </div>
+
+        <div class="tabpane" id="paneIssue">
+          <section>
+            <div class="kv-grid">
+              <div><div class="k">ผู้แจ้ง</div><div class="v">สมหญิง วงศ์สว่าง · ฝ่ายบัญชี</div></div>
+              <div><div class="k">เบอร์ติดต่อกลับ</div><div class="v mono">02-123-4567 ต่อ 218</div></div>
+              <div>
+                <div class="k">ผู้รับผิดชอบ</div>
+                <div class="v" data-when="open"><span class="empty">ยังไม่มีผู้รับผิดชอบ</span></div>
+                <div class="v" data-when="in_progress completed canceled">อานนท์ ศรีสุข · IT Support</div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div class="section-label">รายละเอียดปัญหา</div>
+            <p class="desc">เครื่องพิมพ์ HP LaserJet ของฝ่ายบัญชี (ชั้น 2) สั่งพิมพ์แล้วไฟกะพริบสีส้ม หน้าจอเครื่องขึ้นรหัส Error 0x83C0000A เอกสารค้างในคิวทั้งหมด ลองปิด-เปิดเครื่องแล้วอาการเดิม ช่วงนี้ปิดงบรายเดือนต้องพิมพ์เอกสารจำนวนมาก รบกวนช่วยดูให้ด่วนค่ะ</p>
+          </section>
+
+          <section data-when="in_progress completed canceled">
+            <div class="section-label">บันทึกจากเจ้าหน้าที่รับเคส</div>
+            <p class="note">ตรวจสอบเบื้องต้นจาก log — คาดว่าชุด fuser มีปัญหา จะเข้าไปตรวจหน้างานช่วงบ่ายวันนี้ ระหว่างนี้ให้ฝ่ายบัญชีพิมพ์ผ่านเครื่องส่วนกลางชั้น 1 ไปก่อน</p>
+          </section>
+
+          <section data-when="completed">
+            <div class="section-label">ผลการแก้ไข</div>
+            <p class="note ok">เปลี่ยนชุด fuser ตัวใหม่ (เบิกจากสต๊อก SP-0412) และอัปเดตเฟิร์มแวร์เป็นเวอร์ชันล่าสุด ทดสอบสั่งพิมพ์เอกสาร 20 หน้า ทำงานปกติ ผู้แจ้งยืนยันการใช้งานแล้ว</p>
+          </section>
+          <section data-when="canceled">
+            <div class="section-label">ผลการแก้ไข</div>
+            <p class="note bad">ผู้แจ้งขอยกเลิกเคส เนื่องจากฝ่ายบัญชีย้ายไปใช้เครื่องพิมพ์ส่วนกลางของชั้น 3 เป็นการถาวร</p>
+          </section>
+
+          <section>
+            <div class="section-label">อุปกรณ์ที่เกี่ยวข้อง</div>
+            <a class="asset-card" href="#">
+              <span class="ac-ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>
+              <span>
+                <span class="ac-tag">AST-0234</span>
+                <span class="ac-nm" style="display:block">HP LaserJet Pro M404dn</span>
+              </span>
+              <svg class="ac-go" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </section>
+        </div>
+
+        <div class="tabpane" id="paneFiles" hidden>
+          <div class="att" data-kind="img">
+            <span class="thumb"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+            <span class="nm">printer-error-panel.jpg</span>
+            <span class="sz">1.2 MB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="att" data-kind="pdf">
+            <span class="thumb doc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+            <span class="nm">print-queue-log.pdf</span>
+            <span class="sz">86 KB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ rail: สถานะเคส + วันที่ ============ -->
+      <div class="rail">
+        <section>
+          <div class="section-label">สถานะเคส</div>
+          <ol class="spine">
+            <li id="spC1">
+              <span class="sdot"><span class="num">1</span><svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <div class="stitle">ตั๋วถูกสร้าง</div>
+              <div class="smeta">สมหญิง วงศ์สว่าง<br /><span class="when">2026-07-21 09:42</span></div>
+            </li>
+            <li id="spC2">
+              <span class="sdot"><span class="num">2</span><svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <div class="stitle" data-when="open">รอเจ้าหน้าที่รับเคส</div>
+              <div class="stitle" data-when="in_progress completed canceled">รับเคสโดย อานนท์ ศรีสุข</div>
+              <div class="smeta" data-when="in_progress completed canceled"><span class="when">2026-07-21 10:15</span></div>
+            </li>
+            <li id="spC3">
+              <span class="sdot"><span class="num">3</span>
+                <svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg class="ic-x" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </span>
+              <div class="stitle" data-when="open in_progress">ปิดเคส</div>
+              <div class="stitle" data-when="completed">แก้ไขเสร็จสิ้น</div>
+              <div class="stitle" data-when="canceled">ปิดเคส — ยกเลิก</div>
+              <div class="smeta" data-when="completed canceled"><span class="when">2026-07-22 14:05</span></div>
+            </li>
+          </ol>
+        </section>
+
+        <div class="rl-div"></div>
+
+        <section style="margin-top:0">
+          <div class="kv">
+            <div class="row"><div class="k">สร้างเมื่อ</div><div class="v mono">2026-07-21 09:42</div></div>
+            <div class="row"><div class="k">อัปเดตล่าสุด</div><div class="v mono">2026-07-22 14:05</div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>แก้ไข</button>
+        <button class="btn btn-ghost btn-icon" aria-label="ลบ"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost">ปิด</button>
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>มอบหมายเจ้าหน้าที่</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>รับเคส</button>
+      </span>
+      <span data-when="in_progress" style="display:contents">
+        <button class="btn btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>ยกเลิกเคส</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>ปิดงานสำเร็จ</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     VARIANT A — split "story | state" focus dialog
+     ============================================================ -->
+<div class="overlay" id="dlgA">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ttlA">
+    <!-- header -->
+    <div class="dlg-head">
+      <div class="stub">
+        <div class="eyebrow">Ticket No.</div>
+        <div class="code">TK-2026-0158</div>
+      </div>
+      <div class="titles">
+        <div class="cat">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          ฮาร์ดแวร์ · ความสำคัญ สูง
+        </div>
+        <h2 id="ttlA">เครื่องพิมพ์ฝ่ายบัญชีพิมพ์ไม่ออก ขึ้น Error 0x83C0000A</h2>
+      </div>
+      <div class="badges">
+        <span class="badge b-open" data-when="open"><span class="bdot"></span>เปิด</span>
+        <span class="badge b-progress" data-when="in_progress"><span class="bdot"></span>กำลังดำเนินการ</span>
+        <span class="badge b-done" data-when="completed"><span class="bdot"></span>เสร็จสิ้น</span>
+        <span class="badge b-cancel" data-when="canceled"><span class="bdot"></span>ยกเลิก</span>
+        <span class="badge b-prio">สูง</span>
+      </div>
+      <button class="x" aria-label="ปิด"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <div class="dlg-cols">
+      <!-- ================= main: the story ================= -->
+      <div class="main">
+        <div class="banner take" data-when="open">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>เคสนี้ยังไม่มีผู้รับผิดชอบ กดรับเคสเพื่อเริ่มดำเนินการ</span>
+          <button class="btn btn-primary sm">รับเคส</button>
+        </div>
+        <div class="banner working" data-when="in_progress">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 9 8 9"/></svg>
+          <span>คุณกำลังดำเนินการเคสนี้อยู่ — ปิดงานได้จากปุ่มด้านล่าง</span>
+        </div>
+
+        <section>
+          <div class="section-label">รายละเอียดปัญหา</div>
+          <p class="desc">เครื่องพิมพ์ HP LaserJet ของฝ่ายบัญชี (ชั้น 2) สั่งพิมพ์แล้วไฟกะพริบสีส้ม หน้าจอเครื่องขึ้นรหัส Error 0x83C0000A เอกสารค้างในคิวทั้งหมด ลองปิด-เปิดเครื่องแล้วอาการเดิม ช่วงนี้ปิดงบรายเดือนต้องพิมพ์เอกสารจำนวนมาก รบกวนช่วยดูให้ด่วนค่ะ</p>
+        </section>
+
+        <section data-when="in_progress completed canceled">
+          <div class="section-label">บันทึกจากเจ้าหน้าที่รับเคส</div>
+          <p class="note">ตรวจสอบเบื้องต้นจาก log — คาดว่าชุด fuser มีปัญหา จะเข้าไปตรวจหน้างานช่วงบ่ายวันนี้ ระหว่างนี้ให้ฝ่ายบัญชีพิมพ์ผ่านเครื่องส่วนกลางชั้น 1 ไปก่อน</p>
+        </section>
+
+        <section data-when="completed">
+          <div class="section-label">ผลการแก้ไข</div>
+          <p class="note ok">เปลี่ยนชุด fuser ตัวใหม่ (เบิกจากสต๊อก SP-0412) และอัปเดตเฟิร์มแวร์เป็นเวอร์ชันล่าสุด ทดสอบสั่งพิมพ์เอกสาร 20 หน้า ทำงานปกติ ผู้แจ้งยืนยันการใช้งานแล้ว</p>
+        </section>
+        <section data-when="canceled">
+          <div class="section-label">ผลการแก้ไข</div>
+          <p class="note bad">ผู้แจ้งขอยกเลิกเคส เนื่องจากฝ่ายบัญชีย้ายไปใช้เครื่องพิมพ์ส่วนกลางของชั้น 3 เป็นการถาวร เครื่องเดิมรอตัดจำหน่ายตามรอบทรัพย์สิน</p>
+        </section>
+
+        <section>
+          <div class="section-label">ไฟล์แนบ · 2</div>
+          <div class="att" data-kind="img">
+            <span class="thumb"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+            <span class="nm">printer-error-panel.jpg</span>
+            <span class="sz">1.2 MB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="att" data-kind="pdf">
+            <span class="thumb doc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+            <span class="nm">print-queue-log.pdf</span>
+            <span class="sz">86 KB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+        </section>
+      </div>
+
+      <!-- ================= rail: the state ================= -->
+      <div class="rail">
+        <section>
+          <div class="section-label">สถานะเคส</div>
+          <ol class="spine" id="spineA">
+            <li id="spA1">
+              <span class="sdot"><span class="num">1</span><svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <div class="stitle">ตั๋วถูกสร้าง</div>
+              <div class="smeta">สมหญิง วงศ์สว่าง<br /><span class="when">2026-07-21 09:42</span></div>
+            </li>
+            <li id="spA2">
+              <span class="sdot"><span class="num">2</span><svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <div class="stitle" data-when="open">รอเจ้าหน้าที่รับเคส</div>
+              <div class="stitle" data-when="in_progress completed canceled">รับเคสโดย อานนท์ ศรีสุข</div>
+              <div class="smeta" data-when="in_progress completed canceled"><span class="when">2026-07-21 10:15</span></div>
+            </li>
+            <li id="spA3">
+              <span class="sdot"><span class="num">3</span>
+                <svg class="ic-check" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <svg class="ic-x" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </span>
+              <div class="stitle" data-when="open in_progress">ปิดเคส</div>
+              <div class="stitle" data-when="completed">แก้ไขเสร็จสิ้น</div>
+              <div class="stitle" data-when="canceled">ปิดเคส — ยกเลิก</div>
+              <div class="smeta" data-when="completed canceled"><span class="when">2026-07-22 14:05</span></div>
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <div class="section-label">ผู้เกี่ยวข้อง</div>
+          <div class="person">
+            <span class="av">สม</span>
+            <div class="who">
+              <div class="nm">สมหญิง วงศ์สว่าง</div>
+              <div class="sub">ผู้แจ้ง · ฝ่ายบัญชี</div>
+            </div>
+          </div>
+          <div class="person" data-when="open">
+            <span class="av">—</span>
+            <div class="who">
+              <div class="nm"><span class="empty">ยังไม่มีผู้รับผิดชอบ</span></div>
+              <div class="sub">ผู้รับผิดชอบ</div>
+            </div>
+          </div>
+          <div class="person" data-when="in_progress completed canceled">
+            <span class="av me">อน</span>
+            <div class="who">
+              <div class="nm">อานนท์ ศรีสุข</div>
+              <div class="sub">ผู้รับผิดชอบ · IT Support</div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-label">ข้อมูล</div>
+          <div class="kv">
+            <div class="row"><div class="k">สร้างเมื่อ</div><div class="v mono">2026-07-21 09:42</div></div>
+            <div class="row"><div class="k">อัปเดตล่าสุด</div><div class="v mono">2026-07-22 14:05</div></div>
+            <div class="row"><div class="k">เบอร์ติดต่อกลับ</div><div class="v mono">02-123-4567 ต่อ 218</div></div>
+            <div class="row"><div class="k">อุปกรณ์ที่เกี่ยวข้อง</div><div class="v"><a href="#">AST-0234 — HP LaserJet Pro M404dn</a></div></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- footer: role-aware actions -->
+    <div class="dlg-foot">
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>แก้ไข</button>
+        <button class="btn btn-ghost btn-icon" aria-label="ลบ"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost">ปิด</button>
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>มอบหมายเจ้าหน้าที่</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>รับเคส</button>
+      </span>
+      <span data-when="in_progress" style="display:contents">
+        <button class="btn btn-danger"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>ยกเลิกเคส</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>ปิดงานสำเร็จ</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     VARIANT B — compact single column (drawer content, centered)
+     ============================================================ -->
+<div class="overlay" id="dlgB">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="ttlB">
+    <div class="dlg-head">
+      <div class="stub">
+        <div class="eyebrow">Ticket No.</div>
+        <div class="code">TK-2026-0158</div>
+      </div>
+      <div class="titles">
+        <div class="cat">ฮาร์ดแวร์</div>
+        <h2 id="ttlB">เครื่องพิมพ์ฝ่ายบัญชีพิมพ์ไม่ออก ขึ้น Error 0x83C0000A</h2>
+      </div>
+      <div class="badges">
+        <span class="badge b-open" data-when="open"><span class="bdot"></span>เปิด</span>
+        <span class="badge b-progress" data-when="in_progress"><span class="bdot"></span>กำลังดำเนินการ</span>
+        <span class="badge b-done" data-when="completed"><span class="bdot"></span>เสร็จสิ้น</span>
+        <span class="badge b-cancel" data-when="canceled"><span class="bdot"></span>ยกเลิก</span>
+        <span class="badge b-prio">สูง</span>
+      </div>
+      <button class="x" aria-label="ปิด"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+
+    <div class="dlg-cols">
+      <div class="main">
+        <div class="banner take" data-when="open">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>เคสนี้ยังไม่มีผู้รับผิดชอบ กดรับเคสเพื่อเริ่มดำเนินการ</span>
+          <button class="btn btn-primary sm">รับเคส</button>
+        </div>
+        <div class="banner working" data-when="in_progress">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 9 8 9"/></svg>
+          <span>คุณกำลังดำเนินการเคสนี้อยู่</span>
+        </div>
+
+        <section>
+          <div class="section-label">รายละเอียดปัญหา</div>
+          <p class="desc">เครื่องพิมพ์ HP LaserJet ของฝ่ายบัญชี (ชั้น 2) สั่งพิมพ์แล้วไฟกะพริบสีส้ม หน้าจอเครื่องขึ้นรหัส Error 0x83C0000A เอกสารค้างในคิวทั้งหมด ลองปิด-เปิดเครื่องแล้วอาการเดิม รบกวนช่วยดูให้ด่วนค่ะ</p>
+        </section>
+
+        <section>
+          <div class="section-label">ข้อมูล</div>
+          <div class="kv-grid">
+            <div><div class="k">ผู้แจ้ง</div><div class="v">สมหญิง วงศ์สว่าง</div></div>
+            <div>
+              <div class="k">ผู้รับผิดชอบ</div>
+              <div class="v" data-when="open"><span class="empty">ยังไม่มีผู้รับผิดชอบ</span></div>
+              <div class="v" data-when="in_progress completed canceled">อานนท์ ศรีสุข</div>
+            </div>
+            <div><div class="k">สร้างเมื่อ</div><div class="v mono">2026-07-21 09:42</div></div>
+            <div><div class="k">อัปเดตล่าสุด</div><div class="v mono">2026-07-22 14:05</div></div>
+            <div><div class="k">เบอร์ติดต่อกลับ</div><div class="v mono">02-123-4567 ต่อ 218</div></div>
+            <div><div class="k">อุปกรณ์ที่เกี่ยวข้อง</div><div class="v mono">AST-0234 — HP LaserJet Pro M404dn</div></div>
+          </div>
+        </section>
+
+        <section data-when="in_progress completed canceled">
+          <div class="section-label">บันทึกจากเจ้าหน้าที่รับเคส</div>
+          <p class="note">ตรวจสอบเบื้องต้นจาก log — คาดว่าชุด fuser มีปัญหา จะเข้าไปตรวจหน้างานช่วงบ่ายวันนี้</p>
+        </section>
+
+        <section data-when="completed">
+          <div class="section-label">ผลการแก้ไข</div>
+          <p class="note ok">เปลี่ยนชุด fuser ตัวใหม่ และอัปเดตเฟิร์มแวร์เป็นเวอร์ชันล่าสุด ทดสอบสั่งพิมพ์เอกสาร 20 หน้า ทำงานปกติ</p>
+        </section>
+        <section data-when="canceled">
+          <div class="section-label">ผลการแก้ไข</div>
+          <p class="note bad">ผู้แจ้งขอยกเลิกเคส เนื่องจากย้ายไปใช้เครื่องพิมพ์ส่วนกลางของชั้น 3</p>
+        </section>
+
+        <section>
+          <div class="section-label">ไทม์ไลน์</div>
+          <ol class="tl">
+            <li>
+              <span class="tdot brand"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></span>
+              <div><div class="ttitle">ตั๋วถูกสร้าง</div><div class="tmeta">สมหญิง วงศ์สว่าง<span class="when">2026-07-21 09:42</span></div></div>
+            </li>
+            <li data-when="open">
+              <span class="tdot idle"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></svg></span>
+              <div><div class="tmeta" style="margin-top:4px">รอเจ้าหน้าที่รับเคส</div></div>
+            </li>
+            <li data-when="in_progress completed canceled">
+              <span class="tdot violet"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
+              <div><div class="ttitle">รับเคสโดย อานนท์ ศรีสุข</div><div class="tmeta"><span class="when" style="margin-left:0">2026-07-21 10:15</span></div></div>
+            </li>
+            <li data-when="completed">
+              <span class="tdot ok"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              <div><div class="ttitle">แก้ไขเสร็จสิ้น</div><div class="tmeta"><span class="when" style="margin-left:0">2026-07-22 14:05</span></div></div>
+            </li>
+            <li data-when="canceled">
+              <span class="tdot bad"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>
+              <div><div class="ttitle">ปิดเคส — ยกเลิก</div><div class="tmeta"><span class="when" style="margin-left:0">2026-07-22 14:05</span></div></div>
+            </li>
+          </ol>
+        </section>
+
+        <section>
+          <div class="section-label">ไฟล์แนบ · 2</div>
+          <div class="att" data-kind="img">
+            <span class="thumb"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+            <span class="nm">printer-error-panel.jpg</span>
+            <span class="sz">1.2 MB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="att" data-kind="pdf">
+            <span class="thumb doc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+            <span class="nm">print-queue-log.pdf</span>
+            <span class="sz">86 KB</span>
+            <button class="x" aria-label="ลบไฟล์แนบ"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>แก้ไข</button>
+        <button class="btn btn-ghost btn-icon" aria-label="ลบ"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </span>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost">ปิด</button>
+      <span data-when="open" style="display:contents">
+        <button class="btn btn-ghost">มอบหมายเจ้าหน้าที่</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>รับเคส</button>
+      </span>
+      <span data-when="in_progress" style="display:contents">
+        <button class="btn btn-danger">ยกเลิกเคส</button>
+        <button class="btn btn-primary"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>ปิดงานสำเร็จ</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     Attachment preview — one lightbox for BOTH images and PDF
+     (real impl: image → <img src>, pdf → <iframe src> browser viewer)
+     ============================================================ -->
+<div class="pv" id="pv" hidden>
+  <div class="pv-box" role="dialog" aria-modal="true" aria-label="ตัวอย่างไฟล์แนบ">
+    <div class="pv-head">
+      <span class="pv-kind" id="pvKind">รูปภาพ</span>
+      <span class="pv-name" id="pvName"></span>
+      <span class="pv-size" id="pvSize"></span>
+      <a class="pv-act" href="#" onclick="return false">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        เปิดแท็บใหม่
+      </a>
+      <a class="pv-act" href="#" onclick="return false">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        ดาวน์โหลด
+      </a>
+      <button class="x" aria-label="ปิดตัวอย่าง" onclick="closePreview()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="pv-body">
+      <div class="pv-img" id="pvImg">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span class="cap">(ภาพตัวอย่าง — ของจริงแสดงรูปที่อัปโหลด)</span>
+      </div>
+      <div class="pv-pdf" id="pvPdf" hidden>
+        <div class="ln h"></div>
+        <div class="ln" style="width:92%"></div>
+        <div class="ln" style="width:86%"></div>
+        <div class="ln" style="width:95%"></div>
+        <div class="ln" style="width:64%"></div>
+        <div class="ln" style="width:90%;margin-top:10px"></div>
+        <div class="ln" style="width:83%"></div>
+        <div class="ln" style="width:42%"></div>
+      </div>
+    </div>
+    <div class="pv-foot" id="pvFoot"></div>
+  </div>
+</div>
+
+<script>
+  /* ---------- mockup controls: variant / state / theme ---------- */
+  const STATES = ['open', 'in_progress', 'completed', 'canceled'];
+  // status spine classes per state: [step1, step2, step3]
+  const SPINE = {
+    open:        ['done', 'current', 'future'],
+    in_progress: ['done', 'current violet', 'future'],
+    completed:   ['done', 'done', 'done-ok'],
+    canceled:    ['done', 'done', 'done-cancel'],
+  };
+
+  function applyState(state) {
+    document.body.dataset.state = state;
+    // show/hide anything tagged with data-when="stateA stateB ..."
+    document.querySelectorAll('[data-when]').forEach((el) => {
+      el.hidden = !el.dataset.when.split(' ').includes(state);
+    });
+    // status spines (variants A + C)
+    [['spA1', 'spA2', 'spA3'], ['spC1', 'spC2', 'spC3']].forEach((ids) =>
+      ids.forEach((id, i) => {
+        document.getElementById(id).className = SPINE[state][i];
+      }));
+    document.querySelectorAll('#segState button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.state === state);
+    });
+  }
+
+  function applyVariant(v) {
+    ['a', 'b', 'c'].forEach((k) => {
+      document.getElementById('dlg' + k.toUpperCase()).classList.toggle('show', v === k);
+    });
+    document.querySelectorAll('#segVariant button').forEach((b) => {
+      b.classList.toggle('active', b.dataset.variant === v);
+    });
+  }
+
+  /* ---------- tabs (variant C: รายละเอียด | ไฟล์แนบ) ---------- */
+  document.querySelectorAll('.tabs').forEach((ts) => {
+    ts.querySelectorAll('.tab').forEach((tb) => {
+      tb.addEventListener('click', () => {
+        ts.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === tb));
+        ts.parentElement.querySelectorAll('.tabpane').forEach((p) => { p.hidden = p.id !== tb.dataset.pane; });
+      });
+    });
+  });
+
+  document.querySelectorAll('#segState button').forEach((b) =>
+    b.addEventListener('click', () => applyState(b.dataset.state)));
+  document.querySelectorAll('#segVariant button').forEach((b) =>
+    b.addEventListener('click', () => applyVariant(b.dataset.variant)));
+
+  const themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', () => {
+    const dark = document.documentElement.classList.toggle('dark');
+    themeBtn.textContent = dark ? '☀️ Light' : '🌙 Dark';
+  });
+
+  /* ---------- attachment preview (image + PDF in-app) ---------- */
+  const pv = document.getElementById('pv');
+  const FOOT = {
+    img: 'ของจริง: แสดงรูปเต็มในแอปด้วย <img> (พฤติกรรมเดียวกับ lightbox เดิม)',
+    pdf: 'ของจริง: ฝัง PDF viewer ของเบราว์เซอร์ด้วย <iframe src=url> — อ่านในแอปได้เลย ไม่ต้องเปิดแท็บใหม่',
+  };
+
+  function openPreview(kind, name, size) {
+    pv.hidden = false;
+    document.getElementById('pvKind').textContent = kind === 'pdf' ? 'PDF' : 'รูปภาพ';
+    document.getElementById('pvName').textContent = name;
+    document.getElementById('pvSize').textContent = size;
+    document.getElementById('pvImg').hidden = kind !== 'img';
+    document.getElementById('pvPdf').hidden = kind !== 'pdf';
+    document.getElementById('pvFoot').textContent = FOOT[kind];
+  }
+  function closePreview() { pv.hidden = true; }
+
+  // whole attachment row opens the preview (except the delete ✕)
+  document.querySelectorAll('.att').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      if (e.target.closest('.x')) return;
+      openPreview(a.dataset.kind, a.querySelector('.nm').textContent, a.querySelector('.sz').textContent);
+    });
+  });
+  pv.addEventListener('click', (e) => { if (e.target === pv) closePreview(); });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closePreview(); return; }
+    if (e.key === 'a' || e.key === 'A') applyVariant('a');
+    if (e.key === 'b' || e.key === 'B') applyVariant('b');
+    if (e.key === 'c' || e.key === 'C') applyVariant('c');
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 4) applyState(STATES[n - 1]);
+  });
+
+  applyState('open');
+</script>
+</body>
+</html>

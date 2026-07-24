@@ -91,7 +91,6 @@ class AssetResource extends JsonResource
                 'id' => $tk->id,
                 'ticket_no' => $tk->ticket_no,
                 'subject' => $tk->subject,
-                'subject_th' => $tk->subject_th,
                 'category' => $tk->category?->value,
                 'priority' => $tk->priority?->value,
                 'status' => $tk->status?->value,

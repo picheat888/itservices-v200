@@ -14,21 +14,42 @@ class TicketService
      * Create a new ticket from a requester. It starts Open and unassigned with no
      * priority — an IT staff sets those when they take or are assigned the case.
      *
-     * @param  array{subject:string, subject_th?:?string, description:string, category:string, callback_phone?:?string}  $data
+     * @param  array{subject:string, description:string, category:string, callback_phone?:?string, related_asset_id?:?int}  $data
      */
     public function create(array $data, Employee $requester): Ticket
     {
         return Ticket::create([
             'subject' => $data['subject'],
-            'subject_th' => $data['subject_th'] ?? null,
             'description' => $data['description'],
             'category' => $data['category'],
             'callback_phone' => $data['callback_phone'] ?? null,
+            // Requester may optionally point at the device the issue is about; IT can
+            // still (re)link one when taking the case.
+            'related_asset_id' => $data['related_asset_id'] ?? null,
             'priority' => null,
             'status' => TicketStatus::Open,
             'requester_id' => $requester->id,
             'assignee_id' => null,
         ]);
+    }
+
+    /**
+     * Correct a ticket's descriptive fields (subject / Thai subject / description /
+     * category / callback phone). Workflow fields — priority, status, assignee — are
+     * intentionally left untouched; those move only through take / assign / resolve.
+     *
+     * @param  array{subject:string, description:string, category:string, callback_phone:string}  $data
+     */
+    public function update(Ticket $ticket, array $data): Ticket
+    {
+        $ticket->update([
+            'subject' => $data['subject'],
+            'description' => $data['description'],
+            'category' => $data['category'],
+            'callback_phone' => $data['callback_phone'],
+        ]);
+
+        return $ticket->fresh();
     }
 
     /**

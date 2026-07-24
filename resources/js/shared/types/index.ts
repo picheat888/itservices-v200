@@ -292,7 +292,6 @@ export interface AssetTicket {
     id: number;
     ticket_no: string;
     subject: string;
-    subject_th: string | null;
     category: TicketCategory;
     priority: TicketPriority | null;
     status: TicketStatus;
@@ -342,7 +341,6 @@ export interface Ticket {
     id: number;
     ticket_no: string;
     subject: string;
-    subject_th: string | null;
     description: string;
     category: TicketCategory;
     priority: TicketPriority | null;
@@ -355,9 +353,15 @@ export interface Ticket {
     callback_phone: string | null;
     related_asset_id: number | null;
     related_asset_tag?: string | null;
+    related_asset_tag_name?: string | null;
+    related_asset_type?: string | null;
+    related_asset_type_th?: string | null;
+    related_asset_brand?: string | null;
     related_asset_model?: string | null;
+    related_asset_serial?: string | null;
     take_note: string | null;
     resolution: string | null;
+    responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];
     created_at: string | null;
@@ -365,14 +369,21 @@ export interface Ticket {
 }
 
 export interface TicketSummary {
-    total: number;
-    open: number;
-    in_progress: number;
-    completed: number;
-    canceled: number;
-    by_category: { category: TicketCategory; count: number }[];
-    avg_response_minutes: number | null;
+    range_days: number;
+    // Inbound / closed flow over the window, each with a trend vs the previous window.
+    created: number;
+    created_delta_pct: number | null;
+    resolved: number;
+    resolved_delta_pct: number | null;
+    // Point-in-time unresolved backlog (open + in progress).
+    backlog: number;
+    backlog_open: number;
+    backlog_in_progress: number;
+    // Window SLA % and its change in percentage points vs the previous window.
     sla_met_pct: number | null;
+    sla_delta_pts: number | null;
+    avg_response_minutes: number | null;
+    by_category: { category: TicketCategory; count: number }[];
 }
 
 export interface NavItem {
@@ -771,13 +782,25 @@ export interface AccessSummary {
     };
     total_grants: number;
     governance: {
-        empty_shares: number;
-        empty_shares_sample: string | null;
-        shares_without_owner: number;
-        groups_without_owner: number;
+        empty_resources: number;
+        empty_sample: string | null;
+        no_owner: number;
         owners_complete: boolean;
         resigned_holders: number;
         added_30d: number;
+        // Drill-down lists behind each status row (resigned rows also carry the holder).
+        issues: {
+            empty: AccessIssueItem[];
+            no_owner: AccessIssueItem[];
+            resigned: (AccessIssueItem & { employee: string | null })[];
+        };
     };
     top_resources: AccessTopResource[];
+}
+
+/** One problematic resource inside a governance drill-down list. */
+export interface AccessIssueItem {
+    kind: AccessKind;
+    id: number;
+    name: string | null;
 }

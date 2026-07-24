@@ -1,14 +1,17 @@
-import { StatusBadge } from '@/shared/components/status-badge';
-import { TicketCategoryIcon, TicketPriorityBadge, TicketStatusBadge } from './ticket-meta';
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useTicketMutations } from '../hooks/use-tickets';
-import { useT } from '@/lang';
+import { TicketPriorityBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
+import { AssetTypeIcon } from '@/modules/asset';
 import { useUiStore } from '@/stores/ui';
-import type { Ticket, TicketAttachment } from '@/shared/types';
-import { Check, ExternalLink, FileText, RefreshCcw, Users, X, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { SectionLabel } from '@/shared/components/section-label';
+import { useT } from '@/lang';
+import { cn } from '@/shared/lib/utils';
+import type { Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
+import { Check, Download, FileText, Pencil, RefreshCcw, RotateCcw, Users, X, Zap, ZoomIn, ZoomOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { ResolveMode } from './resolve-ticket-modal';
 
 /** Human-readable file size (KB/MB) for the attachment list. */
@@ -17,6 +20,12 @@ function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** "2026-07-21 14:05" from an ISO timestamp; empty for null. */
+function fmtWhen(iso: string | null | undefined): string {
+    return iso ? iso.slice(0, 16).replace('T', ' ') : '';
+}
+
+/** Small label/value pair used in the details grid and the rail. */
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
     return (
         <div className="space-y-0.5">
@@ -26,13 +35,88 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
     );
 }
 
-/** Read-only ticket detail with status-/role-aware footer actions. */
+/** Visual tone of a spine step: done (brand check), ok (green), bad (red), current/working (pulsing), future (gray). */
+type SpineTone = 'done' | 'ok' | 'bad' | 'current' | 'working' | 'future';
+
+/** Maps the ticket status onto the three spine steps: created → taken → closed. */
+function spineTones(status: TicketStatus): [SpineTone, SpineTone, SpineTone] {
+    switch (status) {
+        case 'open':
+            return ['done', 'current', 'future'];
+        case 'in_progress':
+            return ['done', 'working', 'future'];
+        case 'completed':
+            return ['done', 'done', 'ok'];
+        case 'canceled':
+            return ['done', 'done', 'bad'];
+    }
+}
+
+/** One node of the case-status spine in the rail: dot + connector line + title/meta. */
+function SpineStep({
+    tone,
+    index,
+    last = false,
+    title,
+    meta,
+    when,
+}: {
+    tone: SpineTone;
+    index: number;
+    last?: boolean;
+    title: React.ReactNode;
+    meta?: React.ReactNode;
+    when?: string;
+}) {
+    const done = tone === 'done' || tone === 'ok' || tone === 'bad';
+    return (
+        <li className="flex gap-3">
+            <div className="flex flex-col items-center">
+                <span
+                    className={cn(
+                        'relative grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full text-[10px] font-bold',
+                        tone === 'done' && 'bg-brand text-brand-foreground',
+                        tone === 'ok' && 'bg-emerald-500 text-white',
+                        tone === 'bad' && 'bg-destructive text-destructive-foreground',
+                        tone === 'current' && 'border-brand text-brand bg-background border-2',
+                        tone === 'working' && 'bg-background border-2 border-violet-500 text-violet-600 dark:text-violet-400',
+                        tone === 'future' && 'border-border text-muted-foreground bg-background border-2',
+                    )}
+                >
+                    {(tone === 'current' || tone === 'working') && (
+                        <span
+                            className={cn(
+                                'absolute inset-0 animate-ping rounded-full motion-reduce:hidden',
+                                tone === 'current' ? 'bg-brand/30' : 'bg-violet-500/30',
+                            )}
+                        />
+                    )}
+                    {done ? tone === 'bad' ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" /> : index}
+                </span>
+                {!last && <div className={cn('my-1 w-0.5 flex-1 rounded-full', tone === 'done' ? 'bg-brand' : 'bg-border')} />}
+            </div>
+            <div className={cn('min-w-0 flex-1', !last && 'pb-4')}>
+                <div className={cn('text-sm leading-tight font-medium', tone === 'future' && 'text-muted-foreground')}>{title}</div>
+                {(meta || when) && (
+                    <div className="text-muted-foreground text-xs leading-relaxed">
+                        {meta}
+                        {when && <div className="font-mono text-[11px]">{when}</div>}
+                    </div>
+                )}
+            </div>
+        </li>
+    );
+}
+
+/** Read-only ticket view — centered focus dialog with a tabbed body (details / files) and a case-status rail. */
 export function TicketDetailDrawer({
     ticket,
     onClose,
     isIT,
     isSuper,
     meId,
+    canEdit,
+    onEdit,
     onTake,
     onAssign,
     onResolve,
@@ -42,207 +126,444 @@ export function TicketDetailDrawer({
     isIT: boolean;
     isSuper: boolean;
     meId: number | undefined;
+    canEdit: boolean;
+    onEdit: (t: Ticket) => void;
     onTake: (t: Ticket) => void;
     onAssign: (t: Ticket) => void;
     onResolve: (t: Ticket, mode: ResolveMode) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { deleteAttachment } = useTicketMutations();
-    // In-app image preview (lightbox) instead of opening a new browser tab.
+
+    // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
+    const [shown, setShown] = useState<Ticket | null>(null);
+    useEffect(() => {
+        if (ticket) setShown(ticket);
+    }, [ticket]);
+    const view = ticket ?? shown;
+
+    const [tab, setTab] = useState<'details' | 'files'>('details');
+    // In-app preview (lightbox) for image and PDF attachments instead of opening a new tab.
     const [preview, setPreview] = useState<TicketAttachment | null>(null);
+    // Same retention trick for the lightbox — render from the last shown file so it
+    // doesn't blank while its own exit animation plays.
+    const [shownPreview, setShownPreview] = useState<TicketAttachment | null>(null);
+    useEffect(() => {
+        if (preview) setShownPreview(preview);
+    }, [preview]);
+    const pv = preview ?? shownPreview;
+    // Imperative zoom controls for the image lightbox (react-zoom-pan-pinch).
+    const zoomRef = useRef<ReactZoomPanPinchRef | null>(null);
     useEffect(() => {
         setPreview(null);
-    }, [ticket?.id]);
-    if (!ticket) return null;
+        setTab('details');
+    }, [view?.id]);
 
-    const subject = lang === 'th' && ticket.subject_th ? ticket.subject_th : ticket.subject;
-    const isMine = ticket.assignee_id != null && ticket.assignee_id === meId;
-    const isOpenUnassigned = ticket.status === 'open' && ticket.assignee_id == null;
+    if (!view) return null;
+
+    const isMine = view.assignee_id != null && view.assignee_id === meId;
+    const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
+    const files = view.attachments ?? [];
+    const [s1, s2, s3] = spineTones(view.status);
+    const isPdfPreview = pv?.mime === 'application/pdf';
+    // A ticket canceled before anyone took it never reached step 2.
+    const wasTaken = view.responded_at != null || view.assignee_name != null;
 
     return (
         <>
-        <Sheet open={!!ticket} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent side="right" className="flex w-[600px] flex-col sm:max-w-[600px]">
-                <SheetHeader>
-                    <SheetTitle className="font-mono">{ticket.ticket_no}</SheetTitle>
-                    <SheetDescription>{subject}</SheetDescription>
-                </SheetHeader>
+            <Dialog open={!!ticket} onOpenChange={(o) => !o && onClose()}>
+                <DialogContent className={focusDialogContentClass}>
+                    {/* ---- header: shared focus-dialog header (icon tile + eyebrow + title + code chip) ---- */}
+                    <FocusDialogHeader
+                        icon={ticketCategoryIcon(view.category)}
+                        eyebrow={
+                            <span className="flex flex-wrap items-center gap-2">
+                                Ticket no.
+                                <span className="text-foreground text-[13.5px] font-extrabold tracking-tight">{view.ticket_no}</span>
+                                <span className="bg-accent text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-normal normal-case">
+                                    {t(`ticket_cat_${view.category}`)}
+                                </span>
+                            </span>
+                        }
+                        title={view.subject}
+                        srDescription={view.ticket_no}
+                        headerRight={
+                            <div className="flex items-center gap-2">
+                                <TicketStatusBadge status={view.status} t={t} />
+                                {view.priority && <TicketPriorityBadge priority={view.priority} t={t} />}
+                            </div>
+                        }
+                    />
 
-                <div className="mt-6 flex-1 space-y-5 overflow-y-auto px-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <TicketStatusBadge status={ticket.status} t={t} />
-                        {ticket.priority ? (
-                            <TicketPriorityBadge priority={ticket.priority} t={t} />
-                        ) : (
-                            <StatusBadge tone="gray">{t('ticket_no_priority')}</StatusBadge>
-                        )}
-                        <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium">
-                            <TicketCategoryIcon category={ticket.category} className="h-3 w-3" />
-                            {t(`ticket_cat_${ticket.category}`)}
-                        </span>
-                    </div>
-
-                    <div className="text-lg font-bold tracking-tight">{subject}</div>
-
+                    {/* ---- full-width status banner under the header ---- */}
                     {isOpenUnassigned && isIT && (
-                        <div className="bg-brand/10 text-brand flex items-center gap-2.5 rounded-md px-3 py-2.5 text-sm">
-                            <Zap className="h-4 w-4 shrink-0" />
+                        <div className="bg-brand/10 text-brand border-border/60 flex items-center gap-2.5 border-b px-6 py-2 text-[12.5px]">
+                            <Zap className="h-3.5 w-3.5 shrink-0" />
                             <span className="flex-1">{t('ticket_unassigned_hint')}</span>
-                            <Button size="sm" onClick={() => onTake(ticket)}>
+                            <Button size="sm" className="h-7 px-2.5 text-xs" onClick={() => onTake(view)}>
                                 {t('ticket_take_case')}
                             </Button>
                         </div>
                     )}
-
-                    {ticket.status === 'in_progress' && isMine && (
-                        <div className="flex items-center gap-2.5 rounded-md bg-violet-500/10 px-3 py-2.5 text-sm text-violet-600 dark:text-violet-400">
-                            <RefreshCcw className="h-4 w-4 shrink-0" />
+                    {view.status === 'in_progress' && isMine && (
+                        <div className="border-border/60 flex items-center gap-2.5 border-b bg-violet-500/10 px-6 py-2 text-[12.5px] text-violet-600 dark:text-violet-400">
+                            <RefreshCcw className="h-3.5 w-3.5 shrink-0" />
                             <span>{t('ticket_working_hint')}</span>
                         </div>
                     )}
 
-                    {ticket.description && <p className="bg-muted/50 rounded-md px-3 py-2.5 text-sm leading-relaxed">{ticket.description}</p>}
+                    {/* ---- body: tabbed main column | case-status rail ---- */}
+                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto sm:flex-row sm:overflow-hidden">
+                        <div className="flex min-w-0 flex-1 flex-col sm:min-h-0">
+                            <DialogTabs
+                                className="shrink-0 px-6"
+                                active={tab}
+                                onChange={setTab}
+                                tabs={[
+                                    { id: 'details', label: t('ticket_tab_details') },
+                                    { id: 'files', label: t('ticket_attach'), count: files.length },
+                                ]}
+                            />
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <KV label={t('ticket_requester')} value={ticket.requester_name ?? ticket.requester_code} mono={!ticket.requester_name} />
-                        <KV
-                            label={t('ticket_assignee')}
-                            value={ticket.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
-                        />
-                        <KV label={t('ticket_created')} value={ticket.created_at?.slice(0, 16).replace('T', ' ')} mono />
-                        <KV label={t('ticket_updated')} value={ticket.updated_at?.slice(0, 16).replace('T', ' ')} mono />
-                        {ticket.callback_phone && <KV label={t('ticket_callback_phone')} value={ticket.callback_phone} mono />}
-                        {ticket.related_asset_tag && (
-                            <KV label={t('ticket_related_asset')} value={`${ticket.related_asset_tag} — ${ticket.related_asset_model}`} mono />
-                        )}
+                            {/* Only the pane content scrolls — the tab bar above stays put. */}
+                            <div className="min-h-0 flex-1 px-6 py-4 sm:overflow-y-auto">
+                            {tab === 'details' && (
+                                <div className="space-y-5">
+                                    <section>
+                                        <SectionLabel>{t('ticket_subject')}</SectionLabel>
+                                        <p className="text-[15px] leading-snug font-bold tracking-tight">{view.subject}</p>
+                                    </section>
+
+                                    <section>
+                                        <SectionLabel>{t('ticket_description')}</SectionLabel>
+                                        <p className="bg-muted/50 rounded-md px-3 py-2.5 text-sm leading-relaxed">{view.description}</p>
+                                    </section>
+
+                                    {view.take_note && (
+                                        <section>
+                                            <SectionLabel>{t('ticket_take_note')}</SectionLabel>
+                                            <p className="bg-muted/50 rounded-md px-3 py-2 text-sm leading-relaxed">{view.take_note}</p>
+                                        </section>
+                                    )}
+
+                                    {view.resolution && (
+                                        <section>
+                                            <SectionLabel>{t('ticket_resolution')}</SectionLabel>
+                                            <p
+                                                className={
+                                                    view.status === 'completed'
+                                                        ? 'rounded-md bg-emerald-500/10 px-3 py-2 text-sm leading-relaxed text-emerald-700 dark:text-emerald-400'
+                                                        : 'text-destructive bg-destructive/10 rounded-md px-3 py-2 text-sm leading-relaxed'
+                                                }
+                                            >
+                                                {view.resolution}
+                                            </p>
+                                        </section>
+                                    )}
+
+                                    {view.related_asset_tag && (
+                                        <section>
+                                            <SectionLabel>{t('ticket_related_asset')}</SectionLabel>
+                                            {/* Plain info block (not a card) — this view has no asset navigation. */}
+                                            <div className="space-y-3">
+                                                {/* Device kind: the ASSET's type icon + category name (not the ticket category). */}
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className="bg-muted text-muted-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md">
+                                                        <AssetTypeIcon type={view.related_asset_type ?? ''} className="h-4 w-4" />
+                                                    </span>
+                                                    <span className="text-sm font-semibold">
+                                                        {(lang === 'th' ? view.related_asset_type_th : null) ?? view.related_asset_type ?? '—'}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                                    <KV label={t('ticket_asset_no')} value={view.related_asset_tag} mono />
+                                                    <KV label={t('ticket_asset_tag')} value={view.related_asset_tag_name} mono />
+                                                    <KV
+                                                        label={t('ticket_asset_brand_model')}
+                                                        value={[view.related_asset_brand, view.related_asset_model].filter(Boolean).join(' ')}
+                                                    />
+                                                    <KV label={t('ticket_asset_serial')} value={view.related_asset_serial} mono />
+                                                </div>
+                                            </div>
+                                        </section>
+                                    )}
+                                </div>
+                            )}
+
+                            {tab === 'files' && (
+                                <div>
+                                    {files.length === 0 ? (
+                                        <p className="text-muted-foreground py-8 text-center text-sm">{t('ticket_no_attachments')}</p>
+                                    ) : (
+                                        <ul className="grid gap-3 sm:grid-cols-2">
+                                            {files.map((a) => {
+                                                const isImage = a.mime?.startsWith('image/');
+                                                return (
+                                                    <li
+                                                        key={a.id}
+                                                        className="border-border group hover:border-brand overflow-hidden rounded-xl border transition-colors"
+                                                    >
+                                                        {/* Big thumbnail → opens the in-app preview (image lightbox / PDF viewer). */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreview(a)}
+                                                            aria-label={a.name}
+                                                            className="bg-muted border-border/60 block h-36 w-full overflow-hidden border-b p-2"
+                                                        >
+                                                            {isImage ? (
+                                                                // object-contain: screenshots/documents show whole, letterboxed on the muted bg.
+                                                                <img
+                                                                    src={a.url}
+                                                                    alt=""
+                                                                    className="h-full w-full rounded-sm object-contain transition-transform duration-200 group-hover:scale-[1.02]"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-muted-foreground grid h-full w-full place-items-center">
+                                                                    <FileText className="h-10 w-10" />
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                        <div className="flex items-center gap-2 px-3 py-2.5">
+                                                            <div className="min-w-0 flex-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPreview(a)}
+                                                                    className="hover:text-brand block w-full truncate text-left text-sm font-semibold"
+                                                                >
+                                                                    {a.name}
+                                                                </button>
+                                                                <div className="text-muted-foreground truncate font-mono text-[11px]">
+                                                                    {formatSize(a.size)}
+                                                                    {a.created_at ? ` · ${fmtWhen(a.created_at)}` : ''}
+                                                                </div>
+                                                            </div>
+                                                            <a
+                                                                href={a.url}
+                                                                download={a.name}
+                                                                aria-label={t('ticket_download')}
+                                                                title={t('ticket_download')}
+                                                                className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md"
+                                                            >
+                                                                <Download className="h-4 w-4" />
+                                                            </a>
+                                                        </div>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
+                            )}
+                            </div>
+                        </div>
+
+                        {/* ---- rail: case-status spine + dates ---- */}
+                        <aside className="border-border bg-muted/30 shrink-0 border-t px-5 py-4 sm:w-[300px] sm:overflow-y-auto sm:border-t-0 sm:border-l">
+                            <SectionLabel>{t('ticket_case_status')}</SectionLabel>
+                            <ol className="mt-3">
+                                <SpineStep
+                                    tone={s1}
+                                    index={1}
+                                    title={t('ticket_created_event')}
+                                    meta={view.requester_name ?? view.requester_code}
+                                    when={fmtWhen(view.created_at)}
+                                />
+                                <SpineStep
+                                    tone={view.status !== 'open' && !wasTaken ? 'future' : s2}
+                                    index={2}
+                                    title={
+                                        view.status !== 'open' && wasTaken
+                                            ? `${t('ticket_taken_by')} ${view.assignee_name ?? ''}`
+                                            : t('ticket_waiting')
+                                    }
+                                    when={fmtWhen(view.responded_at)}
+                                />
+                                <SpineStep
+                                    tone={s3}
+                                    index={3}
+                                    last
+                                    title={
+                                        view.status === 'completed'
+                                            ? t('ticket_completed_event')
+                                            : view.status === 'canceled'
+                                              ? t('ticket_canceled_event')
+                                              : t('ticket_step_closed')
+                                    }
+                                    when={fmtWhen(view.resolved_at)}
+                                />
+                            </ol>
+
+                            <div className="bg-border/60 my-5 h-px" />
+                            <SectionLabel>{t('ticket_open_by')}</SectionLabel>
+                            <div className="space-y-3 pl-1">
+                                <KV
+                                    label={t('ticket_full_name')}
+                                    value={view.requester_name ?? view.requester_code}
+                                    mono={!view.requester_name}
+                                />
+                                <KV
+                                    label={t('ticket_callback_phone')}
+                                    value={
+                                        view.callback_phone ? (
+                                            // Click-to-call: strip the label text ("ต่อ 218" etc.) down to dialable characters.
+                                            <a
+                                                href={`tel:${view.callback_phone.replace(/[^\d+#*]/g, '')}`}
+                                                className="hover:text-brand hover:underline"
+                                            >
+                                                {view.callback_phone}
+                                            </a>
+                                        ) : null
+                                    }
+                                    mono
+                                />
+                            </div>
+
+                            <div className="bg-border/60 my-5 h-px" />
+                            <SectionLabel>{t('ticket_responsible_by')}</SectionLabel>
+                            <div className="pl-1 text-sm">
+                                {view.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
+                            </div>
+
+                            <div className="bg-border/60 my-5 h-px" />
+                            <SectionLabel>{t('ticket_section_other')}</SectionLabel>
+                            <div className="space-y-3 pl-1">
+                                <KV label={t('ticket_created')} value={fmtWhen(view.created_at)} mono />
+                                <KV label={t('ticket_updated')} value={fmtWhen(view.updated_at)} mono />
+                            </div>
+                        </aside>
                     </div>
 
-                    {ticket.take_note && (
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{t('ticket_take_note')}</div>
-                            <p className="bg-muted/50 rounded-md px-3 py-2 text-sm leading-relaxed">{ticket.take_note}</p>
-                        </div>
-                    )}
-
-                    {ticket.resolution && (
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{t('ticket_resolution')}</div>
-                            <p
-                                className={
-                                    ticket.status === 'completed'
-                                        ? 'rounded-md bg-emerald-500/10 px-3 py-2 text-sm leading-relaxed text-emerald-700 dark:text-emerald-400'
-                                        : 'text-destructive bg-destructive/10 rounded-md px-3 py-2 text-sm leading-relaxed'
-                                }
-                            >
-                                {ticket.resolution}
-                            </p>
-                        </div>
-                    )}
-
-                    {ticket.attachments && ticket.attachments.length > 0 && (
-                        <div>
-                            <div className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-wide uppercase">{t('ticket_attach')}</div>
-                            <ul className="space-y-1.5">
-                                {ticket.attachments.map((a) => {
-                                    const isImage = a.mime?.startsWith('image/');
-                                    return (
-                                        <li key={a.id} className="border-border flex items-center gap-2.5 rounded-md border px-3 py-2 text-sm">
-                                            {isImage ? (
-                                                // Thumbnail → opens the in-app lightbox.
-                                                <button type="button" onClick={() => setPreview(a)} className="shrink-0">
-                                                    <img src={a.url} alt="" className="border-border h-9 w-9 rounded-md border object-cover" />
-                                                </button>
-                                            ) : (
-                                                <span className="bg-muted text-muted-foreground grid h-9 w-9 shrink-0 place-items-center rounded-md">
-                                                    <FileText className="h-4 w-4" />
-                                                </span>
-                                            )}
-                                            {isImage ? (
-                                                <button type="button" onClick={() => setPreview(a)} className="hover:text-brand min-w-0 flex-1 truncate text-left hover:underline">
-                                                    {a.name}
-                                                </button>
-                                            ) : (
-                                                <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-brand min-w-0 flex-1 truncate hover:underline">
-                                                    {a.name}
-                                                </a>
-                                            )}
-                                            <span className="text-muted-foreground shrink-0 font-mono text-xs">{formatSize(a.size)}</span>
-                                            <button
-                                                type="button"
-                                                className="text-muted-foreground hover:text-destructive shrink-0"
-                                                onClick={() => deleteAttachment.mutate({ id: ticket.id, attachmentId: a.id })}
-                                                disabled={deleteAttachment.isPending}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    )}
-                </div>
-
-                <SheetFooter className="mt-4 flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose}>
-                        {t('close')}
-                    </Button>
-                    {isIT && isOpenUnassigned && (
-                        <>
-                            {isSuper && (
-                                <Button variant="outline" onClick={() => onAssign(ticket)}>
-                                    <Users className="h-4 w-4" />
-                                    {t('ticket_assign_to_staff')}
+                    {/* ---- footer: role-/status-aware actions ---- */}
+                    <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
+                        {canEdit && (
+                            <Button variant="outline" onClick={() => onEdit(view)}>
+                                <Pencil className="h-4 w-4" />
+                                {t('edit')}
+                            </Button>
+                        )}
+                        <span className="flex-1" />
+                        <Button variant="outline" onClick={onClose}>
+                            {t('close')}
+                        </Button>
+                        {isIT && isOpenUnassigned && (
+                            <>
+                                {isSuper && (
+                                    <Button variant="outline" onClick={() => onAssign(view)}>
+                                        <Users className="h-4 w-4" />
+                                        {t('ticket_assign_to_staff')}
+                                    </Button>
+                                )}
+                                <Button onClick={() => onTake(view)}>
+                                    <Zap className="h-4 w-4" />
+                                    {t('ticket_take_case')}
                                 </Button>
-                            )}
-                            <Button onClick={() => onTake(ticket)}>
-                                <Zap className="h-4 w-4" />
-                                {t('ticket_take_case')}
-                            </Button>
-                        </>
-                    )}
-                    {ticket.status === 'in_progress' && isMine && (
-                        <>
-                            <Button variant="destructive" onClick={() => onResolve(ticket, 'cancel')}>
-                                <X className="h-4 w-4" />
-                                {t('ticket_mark_canceled')}
-                            </Button>
-                            <Button onClick={() => onResolve(ticket, 'complete')}>
-                                <Check className="h-4 w-4" />
-                                {t('ticket_mark_complete')}
-                            </Button>
-                        </>
-                    )}
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                            </>
+                        )}
+                        {view.status === 'in_progress' && isMine && (
+                            <>
+                                <Button variant="destructive" onClick={() => onResolve(view, 'cancel')}>
+                                    <X className="h-4 w-4" />
+                                    {t('ticket_mark_canceled')}
+                                </Button>
+                                <Button onClick={() => onResolve(view, 'complete')}>
+                                    <Check className="h-4 w-4" />
+                                    {t('ticket_mark_complete')}
+                                </Button>
+                            </>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
 
-        {/* Image lightbox — preview in-app instead of opening a new tab */}
-        <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-            <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
-                <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
-                    <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{preview?.name}</DialogTitle>
-                    {preview && (
-                        <a
-                            href={preview.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-muted-foreground hover:text-foreground inline-flex shrink-0 items-center gap-1.5 text-xs font-medium"
+            {/* Attachment lightbox — images render inline, PDFs embed the browser's viewer via <iframe>. */}
+            <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+                <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
+                    <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
+                        <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
+                        {pv && !isPdfPreview && (
+                            <div className="flex shrink-0 items-center gap-0.5">
+                                <button
+                                    type="button"
+                                    onClick={() => zoomRef.current?.zoomOut(0.4, 250, 'easeOutCubic')}
+                                    aria-label={t('ticket_zoom_out')}
+                                    title={t('ticket_zoom_out')}
+                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
+                                >
+                                    <ZoomOut className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => zoomRef.current?.zoomIn(0.4, 250, 'easeOutCubic')}
+                                    aria-label={t('ticket_zoom_in')}
+                                    title={t('ticket_zoom_in')}
+                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
+                                >
+                                    <ZoomIn className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => zoomRef.current?.resetTransform(250, 'easeOutCubic')}
+                                    aria-label={t('ticket_zoom_reset')}
+                                    title={t('ticket_zoom_reset')}
+                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
+                                >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => setPreview(null)}
+                            aria-label={t('close')}
+                            className="text-muted-foreground hover:text-foreground shrink-0"
                         >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                            {lang === 'th' ? 'เปิดแท็บใหม่' : 'Open in new tab'}
-                        </a>
-                    )}
-                    <button type="button" onClick={() => setPreview(null)} className="text-muted-foreground hover:text-foreground shrink-0">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-                <div className="bg-muted/30 flex items-center justify-center p-4">
-                    {preview && <img src={preview.url} alt={preview.name} className="max-h-[72vh] w-auto rounded-lg object-contain" />}
-                </div>
-            </DialogContent>
-        </Dialog>
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                    <div
+                        className="bg-muted/30 flex items-center justify-center overflow-hidden"
+                        onWheelCapture={(e) => {
+                            const inst = zoomRef.current?.instance;
+                            if (!inst) return;
+                            // Smooth mode zooms by step × |deltaY| per event. A mouse notch sends ~100,
+                            // a touchpad tick ~1-10 — so derive step per event: touchpads keep the fast
+                            // fine-grained 0.1 feel, while the zoom per mouse notch is capped at ~0.35.
+                            inst.setup.wheel.step = Math.min(0.1, 0.35 / Math.max(1, Math.abs(e.deltaY)));
+                        }}
+                    >
+                        {pv &&
+                            (isPdfPreview ? (
+                                <iframe src={pv.url} title={pv.name} className="h-[72vh] w-full border-0" />
+                            ) : (
+                                // Zoom (wheel / double-click / +− buttons) and drag-to-pan via react-zoom-pan-pinch.
+                                // wheel.step is only the initial value — onWheelCapture above retunes it per event.
+                                <TransformWrapper
+                                    key={pv.id}
+                                    ref={zoomRef}
+                                    minScale={1}
+                                    maxScale={8}
+                                    smooth
+                                    wheel={{ step: 0.002 }}
+                                    doubleClick={{ mode: 'toggle', animationTime: 250, animationType: 'easeOutCubic' }}
+                                    zoomAnimation={{ animationTime: 250, animationType: 'easeOutCubic' }}
+                                    centerOnInit
+                                >
+                                    <TransformComponent
+                                        wrapperClass="!h-[72vh] !w-full"
+                                        contentClass="!flex !h-full !w-full items-center justify-center"
+                                    >
+                                        <img
+                                            src={pv.url}
+                                            alt={pv.name}
+                                            draggable={false}
+                                            className="max-h-[70vh] w-auto object-contain select-none"
+                                        />
+                                    </TransformComponent>
+                                </TransformWrapper>
+                            ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
