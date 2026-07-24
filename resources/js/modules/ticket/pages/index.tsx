@@ -303,14 +303,26 @@ export default function TicketsPage() {
         setPage(1);
     };
 
-    // Columns for the shared DataTable (All / Assigned-to-me tabs).
+    // Columns for the shared DataTable (All / Assigned-to-me tabs):
+    // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
     const columns: Column<Ticket>[] = [
-        { key: 'ticket_no', header: 'ID', className: 'text-muted-foreground font-mono text-xs', render: (tk) => tk.ticket_no },
+        {
+            key: 'created',
+            header: t('ticket_request_at'),
+            className: 'text-muted-foreground font-mono text-xs',
+            render: (tk) => tk.created_at?.slice(0, 16).replace('T', ' '),
+        },
+        { key: 'ticket_no', header: t('ticket_col_no'), className: 'text-muted-foreground font-mono text-xs', render: (tk) => tk.ticket_no },
         {
             key: 'subject',
             header: t('ticket_subject'),
             className: 'font-medium',
             render: (tk) => <span className="block max-w-[280px] truncate">{tk.subject}</span>,
+        },
+        {
+            key: 'requester',
+            header: t('ticket_open_by'),
+            render: (tk) => tk.requester_name ?? tk.requester_code,
         },
         {
             key: 'category',
@@ -325,21 +337,9 @@ export default function TicketsPage() {
         { key: 'priority', header: t('ticket_priority'), render: (tk) => <TicketPriorityBadge priority={tk.priority} t={t} /> },
         { key: 'status', header: t('status'), render: (tk) => <TicketStatusBadge status={tk.status} t={t} /> },
         {
-            key: 'requester',
-            header: t('ticket_requester'),
-            className: 'text-muted-foreground font-mono text-xs',
-            render: (tk) => tk.requester_code ?? tk.requester_name,
-        },
-        {
             key: 'assignee',
-            header: t('ticket_assignee'),
+            header: t('ticket_responsible_by'),
             render: (tk) => tk.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>,
-        },
-        {
-            key: 'updated',
-            header: t('ticket_updated'),
-            className: 'text-muted-foreground font-mono text-xs',
-            render: (tk) => tk.updated_at?.slice(0, 10),
         },
     ];
 
