@@ -161,22 +161,40 @@ class OrgSeeder extends Seeder
         $this->seedGroupRoles();
     }
 
-    /** Link the four demo logins to employee records (username + users.employee_id). */
+    /** Link the four demo logins to the employee records that MATCH their display names. */
     private function linkDemoAccounts(): void
     {
         $links = [
-            'EMP-0001' => 'super', // Vice President
-            'EMP-0016' => 'it',    // IT Manager
-            'EMP-0018' => 'hr',    // HR Manager
-            'EMP-0030' => 'user',  // HR staff
+            'EMP-0016' => 'super', // IT Manager — Krit Saengthong (same name as the super login)
+            'EMP-0026' => 'it',    // IT Support Supervisor — Thanapon Inthawong
+            'EMP-0018' => 'hr',    // HR Manager — Siriporn Chaiyo
+            'EMP-0030' => 'user',  // HR staff — Waraporn Sri
         ];
+
+        // Clear stale links first — updateOrCreate in pass 1 never touches `username`,
+        // so an old mapping (e.g. EMP-0001 → super) would survive a re-seed otherwise.
+        Employee::whereIn('username', array_values($links))
+            ->whereNotIn('code', array_keys($links))
+            ->update(['username' => null]);
+
+        // users.employee_id is unique — detach all four logins before re-assigning,
+        // otherwise swapped mappings collide with the previous owner mid-loop.
+        User::whereIn('username', array_values($links))->update(['employee_id' => null]);
+
         foreach ($links as $code => $username) {
             $employee = Employee::where('code', $code)->first();
             if (! $employee) {
                 continue;
             }
-            $employee->update(['username' => $username]);
-            User::where('username', $username)->update(['employee_id' => $employee->id]);
+            $user = User::where('username', $username)->first();
+            // Keep the pair consistent: the employee carries the login username and
+            // the account's email as their contact address (matches the real
+            // provisioning flow, where both sides share one email).
+            $employee->update([
+                'username' => $username,
+                'email' => $user?->email ?? $employee->email,
+            ]);
+            $user?->update(['employee_id' => $employee->id]);
         }
     }
 

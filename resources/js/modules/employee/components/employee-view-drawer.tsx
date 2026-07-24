@@ -93,7 +93,7 @@ export function EmployeeViewDrawer({
     const lang = useUiStore((s) => s.lang);
     const L = (th: string, en: string) => (lang === 'th' ? th : en);
     const { can } = useAuth();
-    const canViewAccess = can('access.view');
+    const canViewAccess = can('access.module');
 
     const [tab, setTab] = useState<'overview' | 'org' | 'assets' | 'tickets' | 'requests' | 'access'>('overview');
     const [copied, setCopied] = useState<string | null>(null);
@@ -940,7 +940,6 @@ function OrgPane({
 
     // Full-width card for a manager / direct report (clickable to walk the view).
     const NodeCard = ({ node }: { node: OrgChartNode }) => {
-        const dc = deptColor(node.department_code);
         const total = totalReports(node.id);
         return (
             <div
@@ -950,7 +949,6 @@ function OrgPane({
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), navTo(node.id))}
                 className="border-border bg-card focus-visible:ring-brand relative flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border py-1.5 pr-2.5 pl-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2"
             >
-                <span aria-hidden className="absolute inset-y-0 left-0 w-1 rounded-l-lg" style={{ background: dc }} />
                 <NodeAvatar node={node} size={32} />
                 <div className="min-w-0 flex-1">
                     <div className="truncate text-[13px] leading-tight font-bold">{nameOf(node)}</div>
@@ -1023,7 +1021,6 @@ function OrgPane({
                         className="bg-card relative overflow-hidden rounded-lg border px-3.5 py-2.5 shadow-md"
                         style={{ borderColor: dc, boxShadow: `0 0 0 2px color-mix(in oklch, ${dc} 16%, transparent)` }}
                     >
-                        <span aria-hidden className="absolute inset-y-0 left-0 w-[10px]" style={{ background: dc }} />
                         <div className="flex items-start gap-2.5">
                             <NodeAvatar node={focusNode} size={42} />
                             <div className="min-w-0 flex-1">

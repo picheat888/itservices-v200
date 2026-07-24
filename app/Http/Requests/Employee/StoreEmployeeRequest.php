@@ -5,6 +5,7 @@ namespace App\Http\Requests\Employee;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -51,7 +52,22 @@ class StoreEmployeeRequest extends FormRequest
             'section_id' => [$requireOrg ? 'required' : 'nullable', 'exists:sections,id'],
             'position_id' => ['nullable', 'exists:positions,id'],
             'manager_id' => [$requireOrg ? 'required' : 'nullable', 'exists:employees,id'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => [
+                // email:filter (FILTER_VALIDATE_EMAIL) — stricter than the RFC default,
+                // which accepts UTF-8 local parts like "สมชาย@…"; also matches the CSV import check.
+                'nullable', 'email:filter', 'max:255',
+                // No duplicate addresses anywhere in the system: not on another
+                // employee, and not on a login account other than this employee's own.
+                Rule::unique('employees', 'email')->ignore($employeeId),
+                function (string $attribute, mixed $value, \Closure $fail) use ($employeeId) {
+                    $taken = User::where('email', $value)
+                        ->where(fn ($q) => $q->whereNull('employee_id')->orWhere('employee_id', '!=', $employeeId ?? 0))
+                        ->exists();
+                    if ($taken) {
+                        $fail('This email is already used by another account.');
+                    }
+                },
+            ],
             'username' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:50'],
             'joined_at' => ['nullable', 'date'],

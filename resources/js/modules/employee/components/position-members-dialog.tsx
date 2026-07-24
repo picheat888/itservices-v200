@@ -7,6 +7,7 @@ import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Employee, Position } from '@/shared/types';
 import { Briefcase } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * Focused dialog listing every employee holding a position. Uses the shared
@@ -15,7 +16,15 @@ import { Briefcase } from 'lucide-react';
 export function PositionMembersDialog({ position, onClose }: { position: Position | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data: members = [], isLoading } = usePositionMembers(position?.id ?? null);
+
+    // Retain the last position so content stays rendered while the dialog animates closed.
+    const [shown, setShown] = useState<Position | null>(null);
+    useEffect(() => {
+        if (position) setShown(position);
+    }, [position]);
+    const view = position ?? shown;
+
+    const { data: members = [], isLoading } = usePositionMembers(view?.id ?? null);
 
     const columns: Column<Employee>[] = [
         {
@@ -57,8 +66,8 @@ export function PositionMembersDialog({ position, onClose }: { position: Positio
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Briefcase className="text-muted-foreground h-4 w-4" />
-                        {position?.title}
-                        {position?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{position.code}</span>}
+                        {view?.title}
+                        {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
                     <DialogDescription>
                         {members.length} {t('dept_members')}

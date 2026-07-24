@@ -7,6 +7,7 @@ import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import type { Employee, Section } from '@/shared/types';
 import { Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 /**
  * Focused dialog listing every employee in a section. Uses the shared DataTable
@@ -16,9 +17,17 @@ import { Users } from 'lucide-react';
 export function SectionMembersDialog({ section, onClose }: { section: Section | null; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { data: members = [], isLoading } = useSectionMembers(section?.id ?? null);
 
-    const sectionName = section ? (lang === 'th' ? (section.name_th ?? section.name) : section.name) : '';
+    // Retain the last section so content stays rendered while the dialog animates closed.
+    const [shown, setShown] = useState<Section | null>(null);
+    useEffect(() => {
+        if (section) setShown(section);
+    }, [section]);
+    const view = section ?? shown;
+
+    const { data: members = [], isLoading } = useSectionMembers(view?.id ?? null);
+
+    const sectionName = view ? (lang === 'th' ? (view.name_th ?? view.name) : view.name) : '';
 
     const columns: Column<Employee>[] = [
         {
@@ -50,10 +59,10 @@ export function SectionMembersDialog({ section, onClose }: { section: Section | 
                     <DialogTitle className="flex items-center gap-2">
                         <Users className="text-muted-foreground h-4 w-4" />
                         {sectionName}
-                        {section?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{section.code}</span>}
+                        {view?.code && <span className="text-muted-foreground font-mono text-xs font-normal">{view.code}</span>}
                     </DialogTitle>
                     <DialogDescription>
-                        {section?.department ? `${section.department} · ` : ''}
+                        {view?.department ? `${view.department} · ` : ''}
                         {members.length} {t('section_members')}
                     </DialogDescription>
                 </DialogHeader>
