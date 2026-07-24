@@ -5,6 +5,7 @@ import { AssetPermissionTree } from '../components/asset-permission-tree';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { ContractPermissionTree } from '../components/contract-permission-tree';
+import { AccessPermissionTree } from '../components/access-permission-tree';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { Button } from '@/shared/ui/button';
@@ -349,6 +350,17 @@ function RolesTab() {
                                             if (group.module === 'assets') {
                                                 return (
                                                     <AssetPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'access') {
+                                                return (
+                                                    <AccessPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}

@@ -149,26 +149,61 @@ class AccessService
             'software' => $stat(Software::class, 'software'),
         ];
 
-        // Governance hygiene: file shares with no active member, resources missing
-        // an owner, and resigned employees who still hold an active grant.
-        $emptyShares = FileShare::query()->whereDoesntHave('memberships', fn ($q) => $q->active())->get(['id', 'name']);
-        $sharesNoOwner = FileShare::whereNull('owner_employee_id')->count();
-        $groupsNoOwner = EmailGroup::whereNull('owner_employee_id')->count();
-        $resignedHolders = AccessMembership::query()->active()
+        // Governance hygiene, with per-item detail lists so each status row can
+        // open a drill-down: resources (of any kind) with no active member,
+        // resources missing an owner, and resigned employees still holding a grant.
+        $kinds = [
+            ['model' => EmailGroup::class, 'kind' => 'email-groups'],
+            ['model' => FileShare::class, 'kind' => 'file-shares'],
+            ['model' => SocialPlatform::class, 'kind' => 'social-platforms'],
+            ['model' => Software::class, 'kind' => 'software'],
+        ];
+
+        // No active member — checked across all four registries.
+        $emptyList = collect($kinds)->flatMap(fn (array $c) => $c['model']::query()
+            ->whereDoesntHave('memberships', fn ($q) => $q->active())
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($m) => ['kind' => $c['kind'], 'id' => $m->id, 'name' => $m->name]))->values();
+
+        // Missing owner — only email groups and file shares carry an owner.
+        $noOwnerList = FileShare::whereNull('owner_employee_id')->orderBy('name')->get(['id', 'name'])
+            ->map(fn ($s) => ['kind' => 'file-shares', 'id' => $s->id, 'name' => $s->name])
+            ->concat(EmailGroup::whereNull('owner_employee_id')->orderBy('name')->get(['id', 'name'])
+                ->map(fn ($g) => ['kind' => 'email-groups', 'id' => $g->id, 'name' => $g->name]))
+            ->values();
+
+        // Active grants still held by resigned employees — one row per grant so the
+        // drill-down shows who holds what.
+        $resignedGrants = AccessMembership::query()->active()
             ->whereHas('employee', fn ($q) => $q->where('status', 'resigned'))
-            ->distinct('employee_id')->count('employee_id');
+            ->with(['employee', 'resource'])->get();
+        $kindByType = [
+            'email_group' => 'email-groups', 'file_share' => 'file-shares',
+            'social_platform' => 'social-platforms', 'software' => 'software',
+        ];
+        $resignedList = $resignedGrants->map(fn (AccessMembership $m) => [
+            'kind' => $kindByType[$m->resource_type] ?? 'software',
+            'id' => $m->resource_id,
+            'name' => $m->resource?->name,
+            'employee' => $m->employee?->name,
+        ])->values();
 
         return [
             'channels' => $channels,
             'total_grants' => (int) array_sum(array_column($channels, 'grants')),
             'governance' => [
-                'empty_shares' => $emptyShares->count(),
-                'empty_shares_sample' => $emptyShares->first()?->name,
-                'shares_without_owner' => $sharesNoOwner,
-                'groups_without_owner' => $groupsNoOwner,
-                'owners_complete' => $sharesNoOwner === 0 && $groupsNoOwner === 0,
-                'resigned_holders' => $resignedHolders,
+                'empty_resources' => $emptyList->count(),
+                'empty_sample' => $emptyList->first()['name'] ?? null,
+                'no_owner' => $noOwnerList->count(),
+                'owners_complete' => $noOwnerList->isEmpty(),
+                'resigned_holders' => $resignedGrants->unique('employee_id')->count(),
                 'added_30d' => (int) AccessMembership::query()->active()->where('created_at', '>=', $since)->count(),
+                'issues' => [
+                    'empty' => $emptyList,
+                    'no_owner' => $noOwnerList,
+                    'resigned' => $resignedList,
+                ],
             ],
             'top_resources' => $this->topResources(6),
         ];

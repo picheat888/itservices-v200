@@ -5,6 +5,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect, type SearchOption } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
 import type { AccessKind, AccessMember } from '@/shared/types';
@@ -77,18 +78,30 @@ const KIND_META: Record<AccessKind, { icon: typeof Users; color: string; eyebrow
  */
 export function MembersDrawer({
     target,
-    canManage,
+    canEdit,
+    canDelete,
     onClose,
     onEdit,
 }: {
     target: MemberTarget | null;
-    canManage: boolean;
+    /** The registry's edit key — covers the edit form, owner changes, and member add/revoke. */
+    canEdit: boolean;
+    /** The registry's delete key — the footer "Delete" action only. */
+    canDelete: boolean;
     onClose: () => void;
     /** Open the resource's edit form (the footer "Edit" action). */
     onEdit?: (target: MemberTarget) => void;
 }) {
     const t = useT();
     const confirm = useConfirm();
+    // Retain the last granted flags while the dialog animates closed (the parent passes
+    // false once target goes null; without this the footer/actions blink out mid-exit).
+    const [heldPerms, setHeldPerms] = useState({ canEdit, canDelete });
+    useEffect(() => {
+        if (target) setHeldPerms({ canEdit, canDelete });
+    }, [target, canEdit, canDelete]);
+    const mayEdit = target ? canEdit : heldPerms.canEdit;
+    const mayDelete = target ? canDelete : heldPerms.canDelete;
     const toast = (msg: string, icon?: ToastIcon) => useToastStore.getState().push(msg, 'success', undefined, icon);
     // Retain the last target so the dialog keeps rendering its content while it
     // animates closed (target goes null on close; without this the body blanks mid-exit).
@@ -160,6 +173,9 @@ export function MembersDrawer({
 
     // employee_id -> employee, so a member row can show its code + department tag.
     const empById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
+    // Resigned members/owners get a red badge — their access is likely stale.
+    const isResigned = (employeeId: number | null | undefined) =>
+        employeeId != null && empById.get(employeeId)?.status === 'resigned';
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
     // Employees already on this resource — existing members plus the owner (email groups /
@@ -243,6 +259,7 @@ export function MembersDrawer({
                             textClassName="text-[10px]"
                         />
                         <span className="truncate text-sm font-medium">{m.employee ?? '—'}</span>
+                        {emp?.status === 'resigned' && <StatusBadge tone="red">{t('resigned')}</StatusBadge>}
                         {emp?.code && <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{emp.code}</span>}
                     </div>
                 );
@@ -252,7 +269,7 @@ export function MembersDrawer({
         ...(kind === 'file-shares'
             ? [{ key: 'level', header: t('access_access_level'), render: (m: AccessMember) => <AccessBadge level={m.access_level} /> }]
             : []),
-        ...(canManage
+        ...(mayEdit
             ? [
                   {
                       key: 'actions',
@@ -316,7 +333,7 @@ export function MembersDrawer({
                             <div className="border-border border-t px-6 py-4">
                                 <SectionLabel>{isEmail ? t('access_owner_approver') : t('access_owner')}</SectionLabel>
                                 <p className="text-muted-foreground -mt-1 mb-2.5 text-xs">{t('access_owner_hint')}</p>
-                                {canManage ? (
+                                {mayEdit ? (
                                     editingOwner ? (
                                         <div className="flex items-center gap-2">
                                             <div className="flex-1">
@@ -338,7 +355,9 @@ export function MembersDrawer({
                                     ) : (
                                         <div className="border-border bg-background flex h-10 items-center gap-2 rounded-md border px-3 text-sm">
                                             <User className="text-muted-foreground h-4 w-4 shrink-0" />
-                                            <span className={cn('flex-1 truncate', !ownerName && 'text-muted-foreground')}>{ownerName ?? '—'}</span>
+                                            <span className={cn('truncate', !ownerName && 'text-muted-foreground')}>{ownerName ?? '—'}</span>
+                                            {isResigned(tgt.ownerEmployeeId) && <StatusBadge tone="red">{t('resigned')}</StatusBadge>}
+                                            <span className="flex-1" />
                                             <button
                                                 type="button"
                                                 title={t('edit')}
@@ -353,6 +372,7 @@ export function MembersDrawer({
                                     <div className="flex items-center gap-2 text-sm font-semibold">
                                         <User className="text-muted-foreground h-3.5 w-3.5" />
                                         {ownerName ?? '—'}
+                                        {isResigned(tgt.ownerEmployeeId) && <StatusBadge tone="red">{t('resigned')}</StatusBadge>}
                                     </div>
                                 )}
                             </div>
@@ -380,7 +400,7 @@ export function MembersDrawer({
                                         </div>
                                     }
                                     actions={
-                                        canManage ? (
+                                        mayEdit ? (
                                             <div className="flex items-center gap-2">
                                                 <span className="text-muted-foreground shrink-0 text-sm font-medium">{t('access_add_member')}</span>
                                                 <div className="w-96">
@@ -425,20 +445,25 @@ export function MembersDrawer({
                             </div>
                         </div>
 
-                        {/* Footer — delete the whole resource (subtle, left) + edit its own details (right). */}
-                        {canManage && (
+                        {/* Footer — delete the whole resource (subtle, left; delete key) + edit its
+                            own details (right; edit key). Hidden entirely when neither is granted. */}
+                        {(mayEdit || mayDelete) && (
                             <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
-                                <Button
-                                    variant="ghost"
-                                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={askDeleteResource}
-                                    disabled={isLoading || members.length > 0}
-                                >
-                                    <Trash2 className="h-4 w-4" /> {t('delete')}
-                                </Button>
-                                {/* Backend blocks deleting a resource that still has members — explain why it's disabled. */}
-                                {members.length > 0 && <span className="text-muted-foreground text-xs">{t('access_delete_has_members')}</span>}
-                                {onEdit && (
+                                {mayDelete && (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                            onClick={askDeleteResource}
+                                            disabled={isLoading || members.length > 0}
+                                        >
+                                            <Trash2 className="h-4 w-4" /> {t('delete')}
+                                        </Button>
+                                        {/* Backend blocks deleting a resource that still has members — explain why it's disabled. */}
+                                        {members.length > 0 && <span className="text-muted-foreground text-xs">{t('access_delete_has_members')}</span>}
+                                    </>
+                                )}
+                                {mayEdit && onEdit && (
                                     <Button variant="outline" className="ml-auto" onClick={() => tgt && onEdit(tgt)}>
                                         <SquarePen className="h-4 w-4" /> {t('edit')}
                                     </Button>

@@ -7,14 +7,17 @@ use Illuminate\Validation\Rule;
 
 class StoreEmailGroupRequest extends FormRequest
 {
+    /** Create requires email_add; editing an existing group requires email_edit. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('access.manage');
+        $key = $this->route('emailGroup') !== null ? 'access.email_edit' : 'access.email_add';
+
+        return (bool) $this->user()?->hasPermission($key);
     }
 
     public function rules(): array
     {
-        $id = $this->route('email_group')?->id;
+        $id = $this->route('emailGroup')?->id;
 
         return [
             'name' => ['required', 'string', 'max:255'],

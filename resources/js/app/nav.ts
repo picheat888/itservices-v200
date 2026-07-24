@@ -15,7 +15,7 @@ export const navGroups: NavGroup[] = [
         label: 'nav_workspace',
         items: [
             { id: 'employees', label: 'employees', to: '/employees', icon: Users, permission: 'employees.module' },
-            { id: 'access', label: 'access_title', to: '/access', icon: KeyRound, permission: 'access.view' },
+            { id: 'access', label: 'access_title', to: '/access', icon: KeyRound, permission: 'access.module' },
             { id: 'tickets', label: 'tickets', to: '/tickets', icon: Ticket, permission: 'tickets.create' },
             { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, permission: 'requests.submit' },
             { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.module' },

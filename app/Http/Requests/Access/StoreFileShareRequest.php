@@ -6,9 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFileShareRequest extends FormRequest
 {
+    /** Create requires file_add; editing an existing share requires file_edit. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('access.manage');
+        $key = $this->route('fileShare') !== null ? 'access.file_edit' : 'access.file_add';
+
+        return (bool) $this->user()?->hasPermission($key);
     }
 
     public function rules(): array

@@ -14,7 +14,7 @@ class Permissions
     public static function catalog(): array
     {
         return [
-            'tickets' => ['view_all', 'create', 'assign', 'resolve', 'delete'],
+            'tickets' => ['view_all', 'create', 'assign', 'resolve'],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => [
                 'module',
@@ -45,7 +45,14 @@ class Permissions
                 'position_add', 'position_edit', 'position_delete', 'position_special',
                 'edit_own',
             ],
-            'access' => ['view', 'manage'],
+            'access' => [
+                'module',
+                'overview',
+                'email_view', 'email_add', 'email_edit', 'email_delete',
+                'file_view', 'file_add', 'file_edit', 'file_delete',
+                'social_view', 'social_add', 'social_edit', 'social_delete',
+                'software_view', 'software_add', 'software_edit', 'software_delete',
+            ],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'assets', 'security'],
         ];
@@ -93,7 +100,11 @@ class Permissions
                 'employees.view_section', 'employees.view_department', 'employees.view_position',
                 'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
-                'access.view', 'access.manage',
+                'access.module', 'access.overview',
+                'access.email_view', 'access.email_add', 'access.email_edit', 'access.email_delete',
+                'access.file_view', 'access.file_add', 'access.file_edit', 'access.file_delete',
+                'access.social_view', 'access.social_add', 'access.social_edit', 'access.social_delete',
+                'access.software_view', 'access.software_add', 'access.software_edit', 'access.software_delete',
                 'system.manage_permissions', 'system.manage_roles', 'system.manage_groups',
                 'system.view_audit',
             ],
@@ -102,7 +113,8 @@ class Permissions
                 'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
                 'employees.view_section', 'employees.view_department', 'employees.view_position',
                 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
-                'access.view',
+                'access.module', 'access.overview',
+                'access.email_view', 'access.file_view', 'access.social_view', 'access.software_view',
                 'assets.my', 'assets.return',
                 'tickets.create', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
@@ -209,6 +221,56 @@ class Permissions
                 $granted,
                 fn ($key) => ! str_starts_with($key, 'employees.') || isset($standalone[$key]),
             ));
+        }
+
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
+    }
+
+    /**
+     * Access Directory permission tree (mirrors the stock/contract shape): the master
+     * gates the module + sidebar; each registry's view key gates its tab and reads,
+     * and its add/edit/delete children. The edit keys also cover owner/member
+     * management for their registry. Overview is a single view key with no children.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function accessHierarchy(): array
+    {
+        return [
+            'master' => 'access.module',
+            'groups' => [
+                'access.overview' => [],
+                'access.email_view' => ['access.email_add', 'access.email_edit', 'access.email_delete'],
+                'access.file_view' => ['access.file_add', 'access.file_edit', 'access.file_delete'],
+                'access.social_view' => ['access.social_add', 'access.social_edit', 'access.social_delete'],
+                'access.software_view' => ['access.software_add', 'access.software_edit', 'access.software_delete'],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the access hierarchy on a granted set: a management child requires its
+     * registry's view key; every view key requires the master. Non-access keys pass
+     * through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeAccess(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::accessHierarchy();
+
+        if (! isset($set[$hierarchy['master']])) {
+            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'access.')));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {

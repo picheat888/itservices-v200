@@ -140,7 +140,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('tickets/{ticket}/resolve', [TicketController::class, 'resolve'])->name('api.tickets.resolve');
     Route::post('tickets/{ticket}/attachments', [TicketAttachmentController::class, 'store'])->name('api.tickets.attachments.store');
     Route::delete('tickets/{ticket}/attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('api.tickets.attachments.destroy');
-    Route::apiResource('tickets', TicketController::class)->except(['update']);
+    // Tickets can never be deleted — closed/canceled cases stay as history (no destroy route).
+    Route::apiResource('tickets', TicketController::class)->except(['destroy']);
 
     // Assets Management module
     Route::get('assets/summary', [AssetController::class, 'summary'])->name('api.assets.summary');
@@ -197,33 +198,66 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::put('notifications/{id}/read', [NotificationController::class, 'markRead'])->name('api.notifications.read');
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
 
-    // Access Control — reads gated by access.view, writes by access.manage
-    Route::middleware('permission:access.view')->group(function () {
-        Route::get('email-groups', [EmailGroupController::class, 'index']);
-        Route::get('file-shares', [FileShareController::class, 'index']);
-        Route::get('social-platforms', [SocialPlatformController::class, 'index']);
-        Route::get('email-groups/{emailGroup}/members', [EmailGroupController::class, 'members']);
-        Route::get('file-shares/{fileShare}/members', [FileShareController::class, 'members']);
-        Route::get('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'members']);
-        Route::get('software', [SoftwareController::class, 'index']);
-        Route::get('software/{software}/members', [SoftwareController::class, 'members']);
-        Route::get('access/dashboard', [AccessController::class, 'dashboard']);
+    // Access Directory — the module master (access.module) gates every read; the
+    // Overview tab has its own key; each registry's add/edit/delete is granular.
+    // A registry's *edit* key also covers owner + member management for it.
+    Route::middleware('permission:access.module')->group(function () {
+        // Reads — each registry's tab (list + members) is gated by its view key.
+        Route::middleware('permission:access.email_view')->group(function () {
+            Route::get('email-groups', [EmailGroupController::class, 'index']);
+            Route::get('email-groups/{emailGroup}/members', [EmailGroupController::class, 'members']);
+        });
+        Route::middleware('permission:access.file_view')->group(function () {
+            Route::get('file-shares', [FileShareController::class, 'index']);
+            Route::get('file-shares/{fileShare}/members', [FileShareController::class, 'members']);
+        });
+        Route::middleware('permission:access.social_view')->group(function () {
+            Route::get('social-platforms', [SocialPlatformController::class, 'index']);
+            Route::get('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'members']);
+        });
+        Route::middleware('permission:access.software_view')->group(function () {
+            Route::get('software', [SoftwareController::class, 'index']);
+            Route::get('software/{software}/members', [SoftwareController::class, 'members']);
+        });
+        Route::get('access/dashboard', [AccessController::class, 'dashboard'])->middleware('permission:access.overview');
         Route::get('employees/{employee}/access', [AccessController::class, 'employee']);
-    });
-    Route::middleware('permission:access.manage')->group(function () {
-        Route::apiResource('email-groups', EmailGroupController::class)->except(['index', 'show']);
-        Route::apiResource('file-shares', FileShareController::class)->except(['index', 'show']);
-        Route::apiResource('social-platforms', SocialPlatformController::class)->except(['index', 'show']);
-        Route::put('email-groups/{emailGroup}/owner', [EmailGroupController::class, 'setOwner']);
-        Route::put('file-shares/{fileShare}/owner', [FileShareController::class, 'setOwner']);
-        Route::post('email-groups/{emailGroup}/members', [EmailGroupController::class, 'addMember']);
-        Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember']);
-        Route::post('file-shares/{fileShare}/members', [FileShareController::class, 'addMember']);
-        Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember']);
-        Route::post('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'addMember']);
-        Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember']);
-        Route::apiResource('software', SoftwareController::class)->except(['index', 'show']);
-        Route::post('software/{software}/members', [SoftwareController::class, 'addMember']);
-        Route::post('software/{software}/members/{membership}/revoke', [SoftwareController::class, 'revokeMember']);
+
+        // Email Groups
+        Route::post('email-groups', [EmailGroupController::class, 'store'])->middleware('permission:access.email_add');
+        Route::middleware('permission:access.email_edit')->group(function () {
+            Route::match(['put', 'patch'], 'email-groups/{emailGroup}', [EmailGroupController::class, 'update']);
+            Route::put('email-groups/{emailGroup}/owner', [EmailGroupController::class, 'setOwner']);
+            Route::post('email-groups/{emailGroup}/members', [EmailGroupController::class, 'addMember']);
+            Route::post('email-groups/{emailGroup}/members/{membership}/revoke', [EmailGroupController::class, 'revokeMember']);
+        });
+        Route::delete('email-groups/{emailGroup}', [EmailGroupController::class, 'destroy'])->middleware('permission:access.email_delete');
+
+        // File Shares
+        Route::post('file-shares', [FileShareController::class, 'store'])->middleware('permission:access.file_add');
+        Route::middleware('permission:access.file_edit')->group(function () {
+            Route::match(['put', 'patch'], 'file-shares/{fileShare}', [FileShareController::class, 'update']);
+            Route::put('file-shares/{fileShare}/owner', [FileShareController::class, 'setOwner']);
+            Route::post('file-shares/{fileShare}/members', [FileShareController::class, 'addMember']);
+            Route::post('file-shares/{fileShare}/members/{membership}/revoke', [FileShareController::class, 'revokeMember']);
+        });
+        Route::delete('file-shares/{fileShare}', [FileShareController::class, 'destroy'])->middleware('permission:access.file_delete');
+
+        // Social / Internet
+        Route::post('social-platforms', [SocialPlatformController::class, 'store'])->middleware('permission:access.social_add');
+        Route::middleware('permission:access.social_edit')->group(function () {
+            Route::match(['put', 'patch'], 'social-platforms/{socialPlatform}', [SocialPlatformController::class, 'update']);
+            Route::post('social-platforms/{socialPlatform}/members', [SocialPlatformController::class, 'addMember']);
+            Route::post('social-platforms/{socialPlatform}/members/{membership}/revoke', [SocialPlatformController::class, 'revokeMember']);
+        });
+        Route::delete('social-platforms/{socialPlatform}', [SocialPlatformController::class, 'destroy'])->middleware('permission:access.social_delete');
+
+        // Software
+        Route::post('software', [SoftwareController::class, 'store'])->middleware('permission:access.software_add');
+        Route::middleware('permission:access.software_edit')->group(function () {
+            Route::match(['put', 'patch'], 'software/{software}', [SoftwareController::class, 'update']);
+            Route::post('software/{software}/members', [SoftwareController::class, 'addMember']);
+            Route::post('software/{software}/members/{membership}/revoke', [SoftwareController::class, 'revokeMember']);
+        });
+        Route::delete('software/{software}', [SoftwareController::class, 'destroy'])->middleware('permission:access.software_delete');
     });
 });

@@ -8,9 +8,12 @@ use Illuminate\Validation\Rules\Enum;
 
 class StoreSoftwareRequest extends FormRequest
 {
+    /** Create requires software_add; editing an existing title requires software_edit. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('access.manage');
+        $key = $this->route('software') !== null ? 'access.software_edit' : 'access.software_add';
+
+        return (bool) $this->user()?->hasPermission($key);
     }
 
     /** Normalise an empty product key to null so an "off" key toggle clears it. */

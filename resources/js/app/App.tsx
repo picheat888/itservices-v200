@@ -62,7 +62,7 @@ function App() {
                         <Route
                             path="access"
                             element={
-                                <RequirePermission anyOf={['access.view']}>
+                                <RequirePermission anyOf={['access.module']}>
                                     <AccessControlPage />
                                 </RequirePermission>
                             }
