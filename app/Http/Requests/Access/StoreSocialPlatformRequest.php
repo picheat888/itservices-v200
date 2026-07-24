@@ -6,9 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreSocialPlatformRequest extends FormRequest
 {
+    /** Create requires social_add; editing an existing platform requires social_edit. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('access.manage');
+        $key = $this->route('socialPlatform') !== null ? 'access.social_edit' : 'access.social_add';
+
+        return (bool) $this->user()?->hasPermission($key);
     }
 
     public function rules(): array

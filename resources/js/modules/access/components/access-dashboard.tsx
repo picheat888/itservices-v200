@@ -1,10 +1,12 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import type { AccessKind, AccessSummary } from '@/shared/types';
+import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import {
     AlertTriangle,
     CheckCircle2,
+    ChevronRight,
     Folder,
     Globe,
     LayoutGrid,
@@ -15,6 +17,7 @@ import {
     UserCheck,
     Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useAccessSummary } from '../hooks/use-access';
 
 /** Per-channel identity: brand-neutral colour (same hexes the registry NameCell uses) + icon + label key. */
@@ -41,7 +44,8 @@ function tint(color: string): React.CSSProperties {
 /**
  * A single governance-status row (icon + title/sub + trailing value). `tone`
  * drives the icon/value colour: amber = needs a look, red = act, green = clear,
- * ink = neutral information.
+ * ink = neutral information. With `onClick` the row becomes a button (hover +
+ * chevron) that opens the issue drill-down.
  */
 function StatusRow({
     icon: Icon,
@@ -49,12 +53,14 @@ function StatusRow({
     title,
     sub,
     value,
+    onClick,
 }: {
     icon: LucideIcon;
     tone: 'amber' | 'red' | 'green' | 'ink';
     title: string;
     sub: string;
     value: string | number;
+    onClick?: () => void;
 }) {
     const toneClass = {
         amber: 'text-amber-600 dark:text-amber-400',
@@ -62,15 +68,171 @@ function StatusRow({
         green: 'text-emerald-600 dark:text-emerald-400',
         ink: 'text-muted-foreground',
     }[tone];
-    return (
-        <div className="flex items-start gap-3 px-3 py-2.5">
+    const body = (
+        <>
             <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', toneClass)} />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 text-left">
                 <div className="text-sm font-medium">{title}</div>
                 <div className="text-muted-foreground text-xs">{sub}</div>
             </div>
             <span className={cn('font-mono text-sm font-semibold', toneClass)}>{value}</span>
+            {onClick && <ChevronRight className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />}
+        </>
+    );
+    if (onClick) {
+        return (
+            <button type="button" onClick={onClick} className="hover:bg-muted/40 flex w-full items-start gap-3 px-3 py-2.5 transition-colors">
+                {body}
+            </button>
+        );
+    }
+    return <div className="flex items-start gap-3 px-3 py-2.5">{body}</div>;
+}
+
+/** One severity-grouped section inside the issues drawer. Hidden when it has no rows. */
+function IssueSection({
+    tone,
+    icon: Icon,
+    title,
+    hint,
+    items,
+    onPick,
+    t,
+}: {
+    tone: 'red' | 'amber';
+    icon: LucideIcon;
+    title: string;
+    /** Problem line under each row when the item has no holder (resigned rows name the holder instead). */
+    hint: string;
+    items: (AccessIssueItem & { employee?: string | null })[];
+    onPick: (kind: AccessKind, id: number) => void;
+    t: (k: string) => string;
+}) {
+    if (items.length === 0) return null;
+    const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400';
+    const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
+    const tonePill = tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
+    return (
+        // The left rail carries the severity — red = act now, amber = needs a look.
+        <div className={cn('border-border rounded-lg border border-l-2', toneRail)}>
+            <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
+                <Icon className={cn('h-4 w-4 shrink-0', toneText)} />
+                <span className="text-sm font-semibold">{title}</span>
+                <span className={cn('ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold', tonePill)}>{items.length}</span>
+            </div>
+            <div className="divide-border/60 divide-y p-1.5">
+                {items.map((item, i) => {
+                    const meta = CHANNEL[item.kind];
+                    const ChannelIcon = meta.icon;
+                    return (
+                        <button
+                            key={`${item.kind}-${item.id}-${i}`}
+                            type="button"
+                            onClick={() => onPick(item.kind, item.id)}
+                            className="hover:bg-muted/40 flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-left transition-colors"
+                        >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={tint(meta.color)}>
+                                <ChannelIcon className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="truncate text-sm font-medium">{item.name ?? '—'}</span>
+                                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={tint(meta.color)}>
+                                        {t(meta.labelKey)}
+                                    </span>
+                                </div>
+                                <div className={cn('text-xs', item.employee ? toneText : 'text-muted-foreground')}>
+                                    {item.employee ? `${t('access_dash_issue_holder')} ${item.employee}` : hint}
+                                </div>
+                            </div>
+                            <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                        </button>
+                    );
+                })}
+            </div>
         </div>
+    );
+}
+
+/**
+ * Governance triage drawer: every anomaly across the four registries in one
+ * place, grouped by severity (resigned holders first). Clicking a row closes
+ * the drawer and opens that resource's manage drawer.
+ */
+function IssuesDrawer({
+    open,
+    governance,
+    onClose,
+    onOpenResource,
+    t,
+}: {
+    open: boolean;
+    governance: AccessSummary['governance'];
+    onClose: () => void;
+    onOpenResource: (kind: AccessKind, id: number) => void;
+    t: (k: string) => string;
+}) {
+    const { issues } = governance;
+    const total = issues.resigned.length + issues.no_owner.length + issues.empty.length;
+    const pick = (kind: AccessKind, id: number) => {
+        onClose();
+        onOpenResource(kind, id);
+    };
+    return (
+        <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+            <SheetContent side="right" className="flex w-[480px] flex-col sm:max-w-[480px]">
+                <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2">
+                        <ShieldCheck className="text-muted-foreground h-5 w-5" />
+                        {t('access_issues_title')}
+                        <span className="bg-brand/10 text-brand ml-1 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold">
+                            {total} {t('access_issues_total')}
+                        </span>
+                    </SheetTitle>
+                    <SheetDescription>{t('access_issues_sub')}</SheetDescription>
+                </SheetHeader>
+
+                <div className="mt-5 flex-1 space-y-3.5 overflow-y-auto px-1">
+                    {total === 0 ? (
+                        <div className="flex flex-col items-center gap-1.5 py-16 text-center">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                            <div className="text-sm font-semibold">{t('access_issues_clear')}</div>
+                            <div className="text-muted-foreground text-xs">{t('access_issues_clear_sub')}</div>
+                        </div>
+                    ) : (
+                        <>
+                            <IssueSection
+                                tone="red"
+                                icon={UserCheck}
+                                title={t('access_dash_resigned_bad')}
+                                hint=""
+                                items={issues.resigned}
+                                onPick={pick}
+                                t={t}
+                            />
+                            <IssueSection
+                                tone="amber"
+                                icon={ShieldCheck}
+                                title={t('access_dash_owners_missing')}
+                                hint={t('access_issue_no_owner_hint')}
+                                items={issues.no_owner}
+                                onPick={pick}
+                                t={t}
+                            />
+                            <IssueSection
+                                tone="amber"
+                                icon={AlertTriangle}
+                                title={t('access_dash_empty_shares')}
+                                hint={t('access_issue_empty_hint')}
+                                items={issues.empty}
+                                onPick={pick}
+                                t={t}
+                            />
+                        </>
+                    )}
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 }
 
@@ -90,6 +252,8 @@ export function AccessDashboard({
 }) {
     const t = useT();
     const { data, isLoading } = useAccessSummary();
+    // Whether the governance triage drawer is open (every issue group in one panel).
+    const [issuesOpen, setIssuesOpen] = useState(false);
 
     if (isLoading || !data) return <DashboardSkeleton />;
 
@@ -176,13 +340,14 @@ export function AccessDashboard({
                         <span className="text-muted-foreground text-xs">{t('access_dash_latest')}</span>
                     </div>
                     <div className="divide-border/60 divide-y p-2">
-                        {gov.empty_shares > 0 ? (
+                        {gov.empty_resources > 0 ? (
                             <StatusRow
                                 icon={AlertTriangle}
                                 tone="amber"
                                 title={t('access_dash_empty_shares')}
-                                sub={`“${gov.empty_shares_sample ?? ''}” ${t('access_dash_no_access_yet')}`}
-                                value={gov.empty_shares}
+                                sub={`“${gov.empty_sample ?? ''}” ${t('access_dash_no_access_yet')}`}
+                                value={gov.empty_resources}
+                                onClick={() => setIssuesOpen(true)}
                             />
                         ) : (
                             <StatusRow icon={CheckCircle2} tone="green" title={t('access_dash_shares_ok')} sub={t('access_dash_shares_ok_sub')} value="✓" />
@@ -198,7 +363,8 @@ export function AccessDashboard({
                                 tone="amber"
                                 title={t('access_dash_owners_missing')}
                                 sub={t('access_dash_owners_missing_sub')}
-                                value={gov.shares_without_owner + gov.groups_without_owner}
+                                value={gov.no_owner}
+                                onClick={() => setIssuesOpen(true)}
                             />
                         )}
 
@@ -209,6 +375,7 @@ export function AccessDashboard({
                                 title={t('access_dash_resigned_bad')}
                                 sub={t('access_dash_resigned_bad_sub')}
                                 value={gov.resigned_holders}
+                                onClick={() => setIssuesOpen(true)}
                             />
                         ) : (
                             <StatusRow icon={UserCheck} tone="green" title={t('access_dash_resigned_ok')} sub={t('access_dash_resigned_ok_sub')} value="✓" />
@@ -288,6 +455,9 @@ export function AccessDashboard({
                     </table>
                 )}
             </Card>
+
+            {/* Triage drawer behind the governance rows — item click jumps to the resource drawer. */}
+            <IssuesDrawer open={issuesOpen} governance={gov} onClose={() => setIssuesOpen(false)} onOpenResource={onOpenResource} t={t} />
         </div>
     );
 }

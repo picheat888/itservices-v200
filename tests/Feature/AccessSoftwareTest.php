@@ -68,10 +68,11 @@ class AccessSoftwareTest extends TestCase
         $this->getJson('/api/software')->assertForbidden();
     }
 
-    public function test_writes_require_access_manage(): void
+    public function test_writes_require_the_granular_action_key(): void
     {
         $viewer = User::factory()->create(['role' => 'user']);
-        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'access.view', 'allowed' => true]);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'access.module', 'allowed' => true]);
+        RolePermission::create(['role_id' => $viewer->role_id, 'permission' => 'access.software_view', 'allowed' => true]);
         $this->actingAs($viewer);
 
         // Can read...

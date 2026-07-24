@@ -83,14 +83,48 @@ function NameCell({
 export default function AccessControlPage() {
     const t = useT();
     const { can } = useAuth();
-    const canManage = can('access.manage');
+    // Granular gates (master access.module opens the page): Overview + each registry's
+    // tab has its own view key; add/edit/delete sit under it — edit also covers
+    // owner/member management.
+    const canOverview = can('access.overview');
+    const canView: Record<AccessKind, boolean> = {
+        'email-groups': can('access.email_view'),
+        'file-shares': can('access.file_view'),
+        'social-platforms': can('access.social_view'),
+        software: can('access.software_view'),
+    };
+    const canAdd: Record<AccessKind, boolean> = {
+        'email-groups': can('access.email_add'),
+        'file-shares': can('access.file_add'),
+        'social-platforms': can('access.social_add'),
+        software: can('access.software_add'),
+    };
+    const canEdit: Record<AccessKind, boolean> = {
+        'email-groups': can('access.email_edit'),
+        'file-shares': can('access.file_edit'),
+        'social-platforms': can('access.social_edit'),
+        software: can('access.software_edit'),
+    };
+    const canDelete: Record<AccessKind, boolean> = {
+        'email-groups': can('access.email_delete'),
+        'file-shares': can('access.file_delete'),
+        'social-platforms': can('access.social_delete'),
+        software: can('access.software_delete'),
+    };
     // Active tab lives in the URL (?tab=) so a reload / shared link stays put — the URL
-    // is the single source of truth (no separate state, no localStorage). Default = dashboard.
+    // is the single source of truth (no separate state, no localStorage). Default = the
+    // Overview when permitted, otherwise the first registry.
     const [searchParams, setSearchParams] = useSearchParams();
     const [editing, setEditing] = useState<{ kind: AccessKind; row: AnyResource | null } | null>(null);
 
+    // Coerce the URL tab onto one the user may actually see: Overview needs its key,
+    // a registry tab needs its view key; otherwise fall back to the first visible tab.
+    const visibleKinds = (['email-groups', 'file-shares', 'social-platforms', 'software'] as AccessKind[]).filter((k) => canView[k]);
+    const firstTab: Tab = canOverview ? 'dashboard' : (visibleKinds[0] ?? 'email-groups');
     const urlTab = searchParams.get('tab');
-    const tab: Tab = isTab(urlTab) ? urlTab : 'dashboard';
+    const resolvedTab: Tab = isTab(urlTab) ? urlTab : firstTab;
+    const tabAllowed = resolvedTab === 'dashboard' ? canOverview : canView[resolvedTab];
+    const tab: Tab = tabAllowed ? resolvedTab : firstTab;
     // The manage drawer (?view=<id>) and the create form (?add=1) are URL-driven too; both derive below.
     const viewId = searchParams.get('view');
     // ?add=1 is a presence flag — the create form's kind comes from the active (?tab) registry.
@@ -171,10 +205,10 @@ export default function AccessControlPage() {
     const [swLicense, setSwLicense] = useState('');
     const [swPublisher, setSwPublisher] = useState('');
 
-    const emailGroups = useEmailGroups();
-    const fileShares = useFileShares();
-    const social = useSocialPlatforms();
-    const software = useSoftware();
+    const emailGroups = useEmailGroups(canView['email-groups']);
+    const fileShares = useFileShares(canView['file-shares']);
+    const social = useSocialPlatforms(canView['social-platforms']);
+    const software = useSoftware(canView.software);
 
     const egRows = useMemo(() => emailGroups.data ?? [], [emailGroups.data]);
     const fsRows = useMemo(() => fileShares.data ?? [], [fileShares.data]);
@@ -274,12 +308,13 @@ export default function AccessControlPage() {
         </FilterPopover>
     );
 
+    // Every tab is permission-gated — hide the tab itself (not just its content).
     const tabs: { id: Tab; label: string }[] = [
-        { id: 'dashboard', label: t('access_tab_overview') },
-        { id: 'email-groups', label: t('access_email_groups') },
-        { id: 'file-shares', label: t('access_file_shares') },
-        { id: 'social-platforms', label: t('access_social') },
-        { id: 'software', label: t('access_software') },
+        ...(canOverview ? [{ id: 'dashboard' as Tab, label: t('access_tab_overview') }] : []),
+        ...(canView['email-groups'] ? [{ id: 'email-groups' as Tab, label: t('access_email_groups') }] : []),
+        ...(canView['file-shares'] ? [{ id: 'file-shares' as Tab, label: t('access_file_shares') }] : []),
+        ...(canView['social-platforms'] ? [{ id: 'social-platforms' as Tab, label: t('access_social') }] : []),
+        ...(canView.software ? [{ id: 'software' as Tab, label: t('access_software') }] : []),
     ];
 
     const newLabel: Record<AccessKind, string> = {
@@ -289,9 +324,9 @@ export default function AccessControlPage() {
         software: t('access_new_software'),
     };
 
-    // "+ New …" button rendered inside each table's search row (right side), gated by manage.
+    // "+ New …" button rendered inside each table's search row (right side), gated per registry.
     const addButton = (kind: AccessKind) =>
-        canManage ? (
+        canAdd[kind] ? (
             <Button onClick={() => openAdd(kind)}>
                 <Plus className="h-4 w-4" /> {newLabel[kind]}
             </Button>
@@ -384,7 +419,6 @@ export default function AccessControlPage() {
             className: 'w-[26%]',
             render: (s) => <NameCell icon={Folder} color="#0d9488" name={s.name} sub={s.path} />,
         },
-        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
         {
             key: 'size',
             header: t('access_size'),
@@ -392,6 +426,7 @@ export default function AccessControlPage() {
             render: (s) => <span className="font-mono text-[12.5px] whitespace-nowrap">{sizeText(s.size, s.size_unit) ?? '—'}</span>,
         },
         { key: 'owner', header: t('access_owner'), className: 'w-[18%]', render: (s) => <OwnerCell owner={s.owner} photoUrl={s.owner_photo_url} /> },
+        { key: 'department', header: t('access_department'), className: 'w-[16%]', render: (s) => s.department ?? '—' },
         { key: 'members', header: t('access_members'), className: 'w-[16%]', render: (s) => <AvatarStack members={s.members ?? []} /> },
         { ...actionsCol<FileShare>(openFileShare), className: 'w-[8%]' },
     ];
@@ -510,7 +545,8 @@ export default function AccessControlPage() {
             />
             <MembersDrawer
                 target={members}
-                canManage={canManage}
+                canEdit={members ? canEdit[members.kind] : false}
+                canDelete={members ? canDelete[members.kind] : false}
                 onClose={closeDrawer}
                 onEdit={(tg) => {
                     // Open the edit modal OVER the drawer without dropping ?open, so closing/saving

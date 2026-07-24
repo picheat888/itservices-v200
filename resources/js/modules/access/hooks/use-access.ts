@@ -3,12 +3,27 @@ import type { AccessKind } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 /** Aggregate figures for the Access Directory overview tab. */
-export const useAccessSummary = () => useQuery({ queryKey: ['access-summary'], queryFn: accessApi.summary });
+export const useAccessSummary = (enabled = true) => useQuery({ queryKey: ['access-summary'], queryFn: accessApi.summary, enabled });
 
-export const useEmailGroups = () => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups });
-export const useFileShares = () => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares });
-export const useSocialPlatforms = () => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms });
-export const useSoftware = () => useQuery({ queryKey: ['software'], queryFn: accessApi.software });
+/**
+ * "Needs attention" count for the sidebar badge — the same anomalies the Overview's
+ * governance card lists: shares with no active member, resources missing an owner,
+ * and resigned employees still holding an active grant. `enabled` should mirror
+ * access.overview (the endpoint's gate, and where the badge leads).
+ */
+export function useAccessSidebarBadge(enabled = true): number {
+    const { data } = useAccessSummary(enabled);
+    const gov = data?.governance;
+    if (!gov) return 0;
+
+    return gov.empty_resources + gov.no_owner + gov.resigned_holders;
+}
+
+// `enabled` mirrors the per-registry view permission — a tab the user can't see never fetches (no 403 noise).
+export const useEmailGroups = (enabled = true) => useQuery({ queryKey: ['email-groups'], queryFn: accessApi.emailGroups, enabled });
+export const useFileShares = (enabled = true) => useQuery({ queryKey: ['file-shares'], queryFn: accessApi.fileShares, enabled });
+export const useSocialPlatforms = (enabled = true) => useQuery({ queryKey: ['social-platforms'], queryFn: accessApi.socialPlatforms, enabled });
+export const useSoftware = (enabled = true) => useQuery({ queryKey: ['software'], queryFn: accessApi.software, enabled });
 
 /** Set/clear an email group's owner (workflow approver). Refreshes the group list + employee access. */
 export const useSetEmailGroupOwner = () => {
@@ -18,6 +33,7 @@ export const useSetEmailGroupOwner = () => {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['email-groups'] });
             qc.invalidateQueries({ queryKey: ['employee-access'] });
+            qc.invalidateQueries({ queryKey: ['access-summary'] }); // governance card + sidebar badge
         },
     });
 };
@@ -30,6 +46,7 @@ export const useSetFileShareOwner = () => {
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['file-shares'] });
             qc.invalidateQueries({ queryKey: ['employee-access'] });
+            qc.invalidateQueries({ queryKey: ['access-summary'] }); // governance card + sidebar badge
         },
     });
 };
@@ -45,6 +62,7 @@ export function useAccessMutations(kind: AccessKind) {
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: [kind] });
         qc.invalidateQueries({ queryKey: ['employee-access'] });
+        qc.invalidateQueries({ queryKey: ['access-summary'] }); // governance card + sidebar badge
     };
     return {
         create: useMutation({ mutationFn: (p: Record<string, unknown>) => accessApi.createResource(kind, p), onSuccess: invalidate }),

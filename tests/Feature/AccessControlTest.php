@@ -52,9 +52,32 @@ class AccessControlTest extends TestCase
 
     public function test_access_permission_keys_are_registered(): void
     {
-        $this->assertContains('access.view', Permissions::all());
-        $this->assertContains('access.manage', Permissions::all());
-        $this->assertContains('access.manage', Permissions::defaults()['admin']);
+        $this->assertContains('access.module', Permissions::all());
+        $this->assertContains('access.overview', Permissions::all());
+        foreach (['email', 'file', 'social', 'software'] as $registry) {
+            foreach (['view', 'add', 'edit', 'delete'] as $action) {
+                $this->assertContains("access.{$registry}_{$action}", Permissions::all());
+            }
+        }
+        // The legacy pair is gone; admin defaults carry the full granular set.
+        $this->assertNotContains('access.view', Permissions::all());
+        $this->assertNotContains('access.manage', Permissions::all());
+        $this->assertContains('access.module', Permissions::defaults()['admin']);
+        $this->assertContains('access.email_edit', Permissions::defaults()['admin']);
+        // HR keeps read-only visibility: module + overview + every registry view, no actions.
+        $this->assertContains('access.module', Permissions::defaults()['hr']);
+        $this->assertContains('access.email_view', Permissions::defaults()['hr']);
+        $this->assertNotContains('access.email_edit', Permissions::defaults()['hr']);
+    }
+
+    public function test_normalize_access_enforces_the_hierarchy(): void
+    {
+        // No master → every access key drops.
+        $this->assertSame([], Permissions::normalizeAccess(['access.email_view', 'access.email_edit']));
+        // A management child without its registry's view key drops; the rest survive.
+        $normalized = Permissions::normalizeAccess(['access.module', 'access.email_edit', 'access.file_view', 'access.file_add']);
+        $this->assertNotContains('access.email_edit', $normalized);
+        $this->assertContains('access.file_add', $normalized);
     }
 
     public function test_models_auto_code_and_relations(): void
@@ -388,10 +411,15 @@ class AccessControlTest extends TestCase
             ->assertJsonPath('data.channels.file_shares.resources', 2)
             ->assertJsonPath('data.channels.file_shares.grants', 1)
             ->assertJsonPath('data.total_grants', 2)
-            ->assertJsonPath('data.governance.empty_shares', 1)
-            ->assertJsonPath('data.governance.empty_shares_sample', 'Public (Center)')
+            ->assertJsonPath('data.governance.empty_resources', 1)
+            ->assertJsonPath('data.governance.empty_sample', 'Public (Center)')
             ->assertJsonPath('data.governance.owners_complete', true)
-            ->assertJsonPath('data.governance.resigned_holders', 1);
+            ->assertJsonPath('data.governance.resigned_holders', 1)
+            // Drill-down lists: the empty resource and the resigned grant, each with its kind + id.
+            ->assertJsonPath('data.governance.issues.empty.0.kind', 'file-shares')
+            ->assertJsonPath('data.governance.issues.empty.0.name', 'Public (Center)')
+            ->assertJsonPath('data.governance.issues.resigned.0.name', 'Recipes')
+            ->assertJsonPath('data.governance.issues.resigned.0.employee', 'Re Signed');
 
         // Most-reached list ranks by active grants; the empty share sits at the bottom with 0.
         $top = collect($res->json('data.top_resources'));

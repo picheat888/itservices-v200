@@ -60,7 +60,7 @@ class FileShareController extends Controller
      */
     public function setOwner(Request $request, FileShare $fileShare, AccessService $svc): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('access.manage'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('access.file_edit'), 403);
         $data = $request->validate([
             'owner_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
         ]);

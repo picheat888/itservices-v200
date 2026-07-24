@@ -60,7 +60,7 @@ class EmailGroupController extends Controller
      */
     public function setOwner(Request $request, EmailGroup $emailGroup, AccessService $svc): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('access.manage'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('access.email_edit'), 403);
         // Owner is mandatory for an email group — changing it always sets a real employee.
         $data = $request->validate([
             'owner_employee_id' => ['required', 'integer', 'exists:employees,id'],

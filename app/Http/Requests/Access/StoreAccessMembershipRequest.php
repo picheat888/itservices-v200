@@ -7,9 +7,17 @@ use Illuminate\Validation\Rule;
 
 class StoreAccessMembershipRequest extends FormRequest
 {
+    /** Member management is covered by the registry's edit key. */
     public function authorize(): bool
     {
-        return (bool) $this->user()?->hasPermission('access.manage');
+        $key = match (true) {
+            $this->route('emailGroup') !== null => 'access.email_edit',
+            $this->route('fileShare') !== null => 'access.file_edit',
+            $this->route('socialPlatform') !== null => 'access.social_edit',
+            default => 'access.software_edit',
+        };
+
+        return (bool) $this->user()?->hasPermission($key);
     }
 
     protected function prepareForValidation(): void
