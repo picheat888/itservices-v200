@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle, focusDialogContentClass } from '@/s
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SectionLabel } from '@/shared/components/section-label';
+import { useDateTime } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
@@ -18,11 +19,6 @@ import type { ResolveMode } from './resolve-ticket-modal';
 function formatSize(bytes: number): string {
     if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** "2026-07-21 14:05" from an ISO timestamp; empty for null. */
-function fmtWhen(iso: string | null | undefined): string {
-    return iso ? iso.slice(0, 16).replace('T', ' ') : '';
 }
 
 /** Small label/value pair used in the details grid and the rail. */
@@ -134,6 +130,9 @@ export function TicketDetailDrawer({
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
+    const { format: fmtTz } = useDateTime();
+    // System-timezone timestamp; '' (not '—') when missing — timeline steps hide their timestamp row entirely.
+    const fmtWhen = (iso: string | null | undefined): string => (iso ? fmtTz(iso) : '');
 
     // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
     const [shown, setShown] = useState<Ticket | null>(null);

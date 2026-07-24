@@ -20,6 +20,7 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { useAuth } from '@/modules/auth';
+import { useDateTime } from '@/modules/settings';
 import { ticketApi } from '../api/ticketApi';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 import { useT } from '@/lang';
@@ -184,6 +185,8 @@ function TicketDashboardBodySkeleton() {
 
 export default function TicketsPage() {
     const t = useT();
+    // System-timezone formatter (Settings -> Company) — the API emits UTC timestamps.
+    const { format: fmtDateTime } = useDateTime();
     const { user } = useAuth();
     const role = (user?.role ?? 'user') as Role;
     const perms = user?.permissions ?? [];
@@ -310,7 +313,7 @@ export default function TicketsPage() {
             key: 'created',
             header: t('ticket_request_at'),
             className: 'text-muted-foreground font-mono text-xs',
-            render: (tk) => tk.created_at?.slice(0, 16).replace('T', ' '),
+            render: (tk) => fmtDateTime(tk.created_at),
         },
         { key: 'ticket_no', header: t('ticket_col_no'), className: 'text-muted-foreground font-mono text-xs', render: (tk) => tk.ticket_no },
         {
@@ -627,6 +630,7 @@ function TicketTable({
     onRow: (tk: Ticket) => void;
     compact?: boolean;
 }) {
+    const { format: fmtDateTime } = useDateTime();
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -669,7 +673,7 @@ function TicketTable({
                             <td className="px-4 py-2.5">
                                 {tk.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
                             </td>
-                            {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.updated_at?.slice(0, 10)}</td>}
+                            {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{fmtDateTime(tk.updated_at, false)}</td>}
                         </tr>
                     ))}
                 </tbody>
