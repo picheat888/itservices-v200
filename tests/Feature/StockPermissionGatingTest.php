@@ -98,7 +98,7 @@ class StockPermissionGatingTest extends TestCase
         $movement = $this->makeMovement();
 
         // Not forbidden โ€” a receiver may print labels even without stock.events.
-        $response = $this->actingAs($receiver)->get("/api/stock-movements/{$movement->id}/labels/pdf");
+        $response = $this->actingAs($receiver)->get("/pdf/stock-movements/{$movement->id}/labels");
         $this->assertNotSame(403, $response->getStatusCode());
     }
 

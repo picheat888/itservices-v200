@@ -94,7 +94,7 @@ export default function ItemHistoryPage() {
                 </div>
                 <button
                     type="button"
-                    onClick={() => window.open(`/api/stock-items/${data.item.id}/history/pdf?v=${view ?? 'summary'}`, '_blank')}
+                    onClick={() => window.open(`/pdf/stock-items/${data.item.id}/history?v=${view ?? 'summary'}`, '_blank')}
                     className="border-border hover:bg-muted/50 inline-flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium print:hidden"
                 >
                     <Printer className="h-4 w-4" />

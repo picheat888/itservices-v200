@@ -253,7 +253,7 @@ export function MovementsTab() {
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        onClick={() => window.open(`/api/stock-movements/${viewMove.id}/labels/pdf`, '_blank')}
+                                                        onClick={() => window.open(`/pdf/stock-movements/${viewMove.id}/labels`, '_blank')}
                                                     >
                                                         <Printer className="h-3.5 w-3.5" />
                                                         {t('stock_print')}

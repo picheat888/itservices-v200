@@ -371,7 +371,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                     <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                         {t('stock_captured_serials')} <span className="font-mono">{done.serials.length}</span>
                                     </span>
-                                    <Button size="sm" onClick={() => window.open(`/api/stock-movements/${done.movementId}/labels/pdf`, '_blank')}>
+                                    <Button size="sm" onClick={() => window.open(`/pdf/stock-movements/${done.movementId}/labels`, '_blank')}>
                                         <Printer className="h-3.5 w-3.5" />
                                         {t('stock_print')}
                                     </Button>
