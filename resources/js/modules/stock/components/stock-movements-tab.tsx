@@ -1,5 +1,6 @@
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useDateTime } from '@/modules/settings';
 import { useStockItemHistory } from '../hooks/use-stock';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
@@ -32,13 +33,14 @@ const TYPE_META: Record<StockMovementType, { th: string; en: string; tone: 'gree
 export function StockMovementsTab({ itemId }: { itemId: number }) {
     const lang = useUiStore((s) => s.lang);
     const { data: history, isLoading } = useStockItemHistory(itemId);
+    const { format: fmtDateTime } = useDateTime();
     const moves = (history?.movements ?? []) as Move[];
 
     const columns: Column<Move>[] = [
         {
             key: 'moved_at',
             header: lang === 'th' ? 'วันที่' : 'Date',
-            render: (m) => <span className="text-muted-foreground font-mono text-xs">{m.moved_at?.slice(0, 10) ?? '—'}</span>,
+            render: (m) => <span className="text-muted-foreground font-mono text-xs">{fmtDateTime(m.moved_at, false)}</span>,
         },
         { key: 'doc_no', header: lang === 'th' ? 'เลขที่เอกสาร' : 'Doc No', render: (m) => <span className="font-mono text-xs">{m.doc_no ?? '—'}</span> },
         {

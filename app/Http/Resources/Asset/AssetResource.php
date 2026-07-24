@@ -5,6 +5,7 @@ namespace App\Http\Resources\Asset;
 use App\Enums\Asset\AssetSource;
 use App\Models\Asset\Asset;
 use App\Models\Settings\AppSetting;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -71,17 +72,17 @@ class AssetResource extends JsonResource
             'cover_end' => $this->coverEndsOn()?->toDateString(),
             // "Registered" = when the asset was created in this system (created_at);
             // the acquisition/purchase origin lives in purchase_date.
-            'registered_date' => $this->created_at?->toDateString(),
+            'registered_date' => SystemTime::date($this->created_at),
             'owned_since' => $this->owned_since?->toDateString(),
             'notes' => $this->notes,
             'last_reason' => $this->last_reason,
-            'created_at' => $this->created_at?->toDateString(),
-            'updated_at' => $this->updated_at?->toDateString(),
+            'created_at' => SystemTime::date($this->created_at),
+            'updated_at' => SystemTime::date($this->updated_at),
 
             // Included only on the single-asset endpoint (whenLoaded) so the list stays lean.
             'transfers' => $this->whenLoaded('transfers', fn () => $this->transfers->map(fn ($tr) => [
                 'id' => $tr->id,
-                'date' => $tr->created_at?->toDateString(),
+                'date' => SystemTime::date($tr->created_at),
                 'from_owner' => $tr->from_owner,
                 'to_owner' => $tr->to_owner,
                 'reason' => $tr->reason,
@@ -95,8 +96,8 @@ class AssetResource extends JsonResource
                 'priority' => $tk->priority?->value,
                 'status' => $tk->status?->value,
                 'assignee_name' => $tk->assignee?->name,
-                'created_at' => $tk->created_at?->toDateString(),
-                'resolved_at' => $tk->resolved_at?->toDateString(),
+                'created_at' => SystemTime::date($tk->created_at),
+                'resolved_at' => SystemTime::date($tk->resolved_at),
             ])),
         ];
     }

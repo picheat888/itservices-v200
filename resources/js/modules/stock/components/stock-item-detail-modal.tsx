@@ -3,7 +3,7 @@ import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
-import { useCurrency } from '@/modules/settings';
+import { useCurrency, useDateTime } from '@/modules/settings';
 import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -108,6 +108,8 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
+    // System-timezone date for UTC timestamps (received_at) — last_move_at is a pure date, shown as-is.
+    const { format: fmtDate } = useDateTime();
     const { data, isLoading } = useStockItem(itemId);
     // History is fetched here (and reused by the Movements tab via the same query key)
     // so the Movements tab count is known up front.
@@ -310,7 +312,7 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                             {l.doc_no ?? '—'}
                                                                         </span>
                                                                     </td>
-                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{l.received_at?.slice(0, 10) ?? '—'}</td>
+                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{fmtDate(l.received_at, false)}</td>
                                                                     <td className="px-3 py-1.5 text-right font-mono text-xs">{format(l.unit_cost)}</td>
                                                                     <td className="px-3 py-1.5 text-right font-mono">
                                                                         {l.qty_remaining}
@@ -326,7 +328,7 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                                 <Meta label={t('stock_warehouse')}>{l.warehouse || '—'}</Meta>
                                                                                 <Meta label={t('stock_supplier')}>{l.supplier || '—'}</Meta>
                                                                                 <Meta label={t('stock_by')}>{l.recorded_by || '—'}</Meta>
-                                                                                <Meta label={t('stock_serial_received')}>{l.received_at?.slice(0, 10) ?? '—'}</Meta>
+                                                                                <Meta label={t('stock_serial_received')}>{fmtDate(l.received_at, false)}</Meta>
                                                                                 <Meta label={t('stock_qty')}>
                                                                                     <span className="font-mono">
                                                                                         {l.qty_remaining}/{l.qty_received}
@@ -381,7 +383,7 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                 <StatusBadge tone={SN_TONE[s.status]}>{t(`stock_sn_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>
                                                             </td>
                                                             <td className="px-3 py-1.5">{s.warehouse ?? '—'}</td>
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{s.received_at?.slice(0, 10) ?? '—'}</td>
+                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{fmtDate(s.received_at, false)}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>

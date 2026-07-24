@@ -1,4 +1,5 @@
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import { useDateTime } from '@/modules/settings';
 import { useStockItemHistory } from '../hooks/use-stock';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -25,11 +26,6 @@ const VIEW_FILTER: Record<View, { types: string[]; event: SerialEvent['event'] }
     transfer: { types: ['transfer'], event: 'transferred' },
 };
 
-/** "YYYY-MM-DD HH:mm" from an ISO string. */
-function fmt(iso: string | null): string {
-    return iso ? `${iso.slice(0, 10)} ${iso.slice(11, 16)}` : '—';
-}
-
 export default function ItemHistoryPage() {
     const t = useT();
     useDocumentTitle('stock_history'); // tab title → "History - <brand>"
@@ -37,6 +33,9 @@ export default function ItemHistoryPage() {
     const [params, setParams] = useSearchParams();
     const view = (params.get('v') as View | null) ?? null;
     const { data, isLoading } = useStockItemHistory(id ? Number(id) : null);
+    // "YYYY-MM-DD HH:mm" in the system timezone (the API emits UTC timestamps).
+    const { format: fmtTz } = useDateTime();
+    const fmt = (iso: string | null): string => (iso ? fmtTz(iso) : '—');
 
     if (isLoading || !data) {
         return (

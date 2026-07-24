@@ -5,7 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useWarehouses } from '@/modules/settings';
+import { useDateTime, useWarehouses } from '@/modules/settings';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -18,6 +18,7 @@ import { useEffect, useState } from 'react';
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
     const confirm = useConfirm();
+    const { format: fmtDate } = useDateTime();
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const {
@@ -214,7 +215,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
             key: 'created_at',
             header: t('audit_time'),
             className: 'whitespace-nowrap',
-            render: (s) => <span className="text-muted-foreground font-mono text-xs">{s.created_at?.slice(0, 10)}</span>,
+            render: (s) => <span className="text-muted-foreground font-mono text-xs">{fmtDate(s.created_at, false)}</span>,
         },
         {
             key: 'warehouse',

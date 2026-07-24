@@ -1,6 +1,9 @@
 @php
     $item = $history['item'];
-    $fmt = fn ($iso) => $iso ? substr($iso, 0, 10) . ' ' . substr($iso, 11, 5) : '—';
+    // Timestamps come from the API as naive UTC — render them in the system timezone.
+    $fmt = fn ($iso) => $iso
+        ? \App\Support\SystemTime::dateTime(\Illuminate\Support\Carbon::parse($iso, 'UTC'))
+        : '—';
     $movesOf = fn (array $types) => array_values(array_filter($history['movements'], fn ($m) => in_array($m['type'], $types, true)));
     $serialsOf = function (array $m, string $event) use ($history) {
         $out = [];
