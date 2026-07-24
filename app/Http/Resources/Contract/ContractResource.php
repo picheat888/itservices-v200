@@ -7,6 +7,7 @@ use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractAttachment;
 use App\Models\Settings\AppSetting;
+use App\Support\SystemTime;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -56,7 +57,7 @@ class ContractResource extends JsonResource
                 'name' => $a->original_name,
                 'size' => $a->size,
                 'url' => $a->url(),
-                'created_at' => $a->created_at?->toDateString(),
+                'created_at' => SystemTime::date($a->created_at),
             ])->all(), []),
             // Assets linked to this contract (only attached when eager-loaded).
             'linked_assets' => $this->whenLoaded('assets', fn () => $this->assets->map(fn (Asset $a) => [
@@ -68,11 +69,11 @@ class ContractResource extends JsonResource
                 'status' => $a->status?->value,
                 'owner' => $a->owner,
             ])->all(), []),
-            'cancelled_at' => $this->cancelled_at?->toDateString(),
-            'expired_at' => $this->expired_at?->toDateString(),
+            'cancelled_at' => SystemTime::date($this->cancelled_at),
+            'expired_at' => SystemTime::date($this->expired_at),
             'cancel_reason' => $this->cancel_reason,
-            'created_at' => $this->created_at?->toDateString(),
-            'updated_at' => $this->updated_at?->toDateString(),
+            'created_at' => SystemTime::date($this->created_at),
+            'updated_at' => SystemTime::date($this->updated_at),
         ];
     }
 

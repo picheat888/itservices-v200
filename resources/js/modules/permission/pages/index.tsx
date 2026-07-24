@@ -752,8 +752,12 @@ function auditInitials(name: string | null): string {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || '?';
 }
 
-/** Compact "time ago" label; the full timestamp lives in the title attribute. */
-function auditAgo(iso: string, lang: string): string {
+/**
+ * Compact "time ago" label; the full timestamp lives in the title attribute.
+ * Beyond a week it falls back to an absolute date — passed in (system timezone)
+ * rather than derived from the browser's zone.
+ */
+function auditAgo(iso: string, lang: string, absoluteDate: string): string {
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
     if (m < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
     if (m < 60) return lang === 'th' ? `${m} น.` : `${m}m`;
@@ -761,7 +765,7 @@ function auditAgo(iso: string, lang: string): string {
     if (h < 24) return lang === 'th' ? `${h} ชม.` : `${h}h`;
     const d = Math.floor(h / 24);
     if (d < 7) return lang === 'th' ? `${d} วัน` : `${d}d`;
-    return new Date(iso).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB');
+    return absoluteDate;
 }
 
 /** One-line diff summary shown under the action in the table. */
@@ -947,7 +951,7 @@ function AuditTab() {
                                                 className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap"
                                                 title={fmtDateTime(l.created_at)}
                                             >
-                                                {auditAgo(l.created_at, lang)}
+                                                {auditAgo(l.created_at, lang, fmtDateTime(l.created_at, false))}
                                             </td>
                                             <td className="px-5 py-3">
                                                 {showDetails && (

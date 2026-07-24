@@ -28,4 +28,16 @@ class AppSetting extends Model
 
         return ['THB' => '฿', 'USD' => '$'][$code] ?? (string) $code;
     }
+
+    /**
+     * The system display timezone (Settings -> Company). The DB stores UTC;
+     * anything user-facing (resources, PDFs, emails) converts through this.
+     * Guards against an invalid saved identifier so date formatting never throws.
+     */
+    public static function timezone(): string
+    {
+        $tz = static::get('timezone', 'Asia/Bangkok') ?: 'Asia/Bangkok';
+
+        return in_array($tz, timezone_identifiers_list(), true) ? $tz : 'Asia/Bangkok';
+    }
 }

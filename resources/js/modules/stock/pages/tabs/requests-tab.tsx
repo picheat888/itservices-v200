@@ -5,6 +5,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
+import { useDateTime } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
@@ -37,6 +38,7 @@ export function RequestsTab({
 }) {
     const t = useT();
     const confirm = useConfirm();
+    const { format: fmtDate } = useDateTime();
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
     // `loading` tracks only the first load (isLoading), not background refetches (isFetching), so
     // returning to this tab shows the cached page instantly instead of a shimmer every time.
@@ -344,7 +346,7 @@ export function RequestsTab({
                                                         <span className="text-muted-foreground text-[11px]">{s.warehouse ?? '—'}</span>
                                                         {s.received_at && (
                                                             <span className="text-muted-foreground font-mono text-[11px]">
-                                                                {s.received_at.slice(0, 10)}
+                                                                {fmtDate(s.received_at, false)}
                                                             </span>
                                                         )}
                                                     </button>

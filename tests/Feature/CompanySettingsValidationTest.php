@@ -29,6 +29,19 @@ class CompanySettingsValidationTest extends TestCase
         ];
     }
 
+    public function test_timezone_helper_resolves_and_guards_invalid_values(): void
+    {
+        // Default when unset.
+        $this->assertSame('Asia/Bangkok', AppSetting::timezone());
+
+        AppSetting::put('timezone', 'Asia/Tokyo');
+        $this->assertSame('Asia/Tokyo', AppSetting::timezone());
+
+        // An invalid identifier must not break date formatting — fall back.
+        AppSetting::put('timezone', 'Not/AZone');
+        $this->assertSame('Asia/Bangkok', AppSetting::timezone());
+    }
+
     public function test_full_valid_company_payload_is_saved(): void
     {
         $this->actingAs($this->admin())

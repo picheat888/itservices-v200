@@ -251,7 +251,7 @@ class StockItemController extends Controller
             'address' => AppSetting::get('address'),
             'taxId' => AppSetting::get('tax_id'),
             'printedBy' => $request->user()?->name ?? '',
-            'printedAt' => now()->format('Y-m-d H:i'),
+            'printedAt' => now()->timezone(AppSetting::timezone())->format('Y-m-d H:i'),
         ])->setPaper('a4', $view === 'summary' ? 'portrait' : 'landscape');
 
         // dompdf v3's own stream() returns a buffered Illuminate Response; the tests read the
