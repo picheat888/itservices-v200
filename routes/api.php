@@ -166,11 +166,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('stock-items/summary', [StockItemController::class, 'summary'])->name('api.stock-items.summary');
     Route::get('stock-items/serials', [StockItemController::class, 'serials'])->name('api.stock-items.serials');
     Route::get('stock-items/{stockItem}/history', [StockItemController::class, 'history'])->name('api.stock-items.history');
-    Route::get('stock-items/{stockItem}/history/pdf', [StockItemController::class, 'historyPdf'])->name('api.stock-items.history-pdf');
+    // Note: the two stock PDF endpoints live in routes/web.php under /pdf — they
+    // return documents (not JSON) and open in a browser tab, so they belong on
+    // the web/session stack, not the JSON API.
     Route::apiResource('stock-items', StockItemController::class);
     Route::get('stock-movements', [StockMovementController::class, 'index'])->name('api.stock-movements.index');
     Route::get('stock-movements/{movement}/serials', [StockMovementController::class, 'serials'])->name('api.stock-movements.serials');
-    Route::get('stock-movements/{movement}/labels/pdf', [StockMovementController::class, 'labelsPdf'])->name('api.stock-movements.labels-pdf');
     Route::post('stock-movements', [StockMovementController::class, 'store'])->name('api.stock-movements.store');
     Route::get('stock-requests', [StockRequestController::class, 'index'])->name('api.stock-requests.index');
     Route::post('stock-requests', [StockRequestController::class, 'store'])->name('api.stock-requests.store');

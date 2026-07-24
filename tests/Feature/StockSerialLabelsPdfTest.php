@@ -37,7 +37,7 @@ class StockSerialLabelsPdfTest extends TestCase
         $this->receivedItem();
         $movementId = StockMovement::where('type', 'receive')->value('id');
 
-        $res = $this->get("/api/stock-movements/{$movementId}/labels/pdf");
+        $res = $this->get("/pdf/stock-movements/{$movementId}/labels");
         $res->assertOk();
         $this->assertSame('application/pdf', $res->headers->get('content-type'));
         $this->assertStringStartsWith('%PDF', $res->streamedContent());
@@ -55,7 +55,7 @@ class StockSerialLabelsPdfTest extends TestCase
             ->assertCreated();
         $movementId = StockMovement::where('stock_item_id', $item->id)->value('id');
 
-        $this->get("/api/stock-movements/{$movementId}/labels/pdf")->assertOk();
+        $this->get("/pdf/stock-movements/{$movementId}/labels")->assertOk();
     }
 
     public function test_requires_stock_view_permission(): void
@@ -64,6 +64,6 @@ class StockSerialLabelsPdfTest extends TestCase
         $movementId = StockMovement::where('type', 'receive')->value('id');
 
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
-        $this->actingAs($user)->get("/api/stock-movements/{$movementId}/labels/pdf")->assertForbidden();
+        $this->actingAs($user)->get("/pdf/stock-movements/{$movementId}/labels")->assertForbidden();
     }
 }

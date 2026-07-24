@@ -39,7 +39,7 @@ class StockItemHistoryPdfTest extends TestCase
         $this->actingAs($this->super());
         $item = $this->item();
 
-        $res = $this->get("/api/stock-items/{$item->id}/history/pdf?v=summary");
+        $res = $this->get("/pdf/stock-items/{$item->id}/history?v=summary");
         $res->assertOk();
         $this->assertSame('application/pdf', $res->headers->get('content-type'));
         $this->assertStringStartsWith('%PDF', $res->streamedContent());
@@ -51,7 +51,7 @@ class StockItemHistoryPdfTest extends TestCase
         $item = $this->item();
 
         foreach (['issue', 'receive', 'adjust', 'transfer'] as $v) {
-            $res = $this->get("/api/stock-items/{$item->id}/history/pdf?v={$v}");
+            $res = $this->get("/pdf/stock-items/{$item->id}/history?v={$v}");
             $res->assertOk();
             $this->assertSame('application/pdf', $res->headers->get('content-type'), "view {$v}");
         }
@@ -62,13 +62,13 @@ class StockItemHistoryPdfTest extends TestCase
         $this->actingAs($this->super());
         $item = $this->item();
 
-        $this->get("/api/stock-items/{$item->id}/history/pdf?v=bogus")->assertOk();
+        $this->get("/pdf/stock-items/{$item->id}/history?v=bogus")->assertOk();
     }
 
     public function test_requires_stock_view_permission(): void
     {
         $item = $this->item(); // created as super inside helper
         $user = User::factory()->create(['role' => 'admin']); // no seeded perms
-        $this->actingAs($user)->get("/api/stock-items/{$item->id}/history/pdf")->assertForbidden();
+        $this->actingAs($user)->get("/pdf/stock-items/{$item->id}/history")->assertForbidden();
     }
 }
