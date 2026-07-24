@@ -67,7 +67,7 @@ export const ticket: Dict = {
     "ticket_completed_event": "Resolved — completed",
     "ticket_canceled_event": "Closed — canceled",
     "ticket_tab_details": "Details",
-    "ticket_open_by": "Open by",
+    "ticket_open_by": "Request by",
     "ticket_full_name": "Full name",
     "ticket_responsible_by": "Responsible by",
     "ticket_section_other": "Other",
