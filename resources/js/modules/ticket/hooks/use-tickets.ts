@@ -1,4 +1,4 @@
-import { ticketApi, type CreateTicketPayload, type TicketListParams } from '../api/ticketApi';
+import { ticketApi, type CreateTicketPayload, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
 import type { TicketPriority } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -16,12 +16,20 @@ export const useTickets = (params: TicketListParams) =>
                 status: params.status || undefined,
                 category: params.category || undefined,
                 priority: params.priority || undefined,
+                sort: params.sort || undefined,
                 mine: params.mine || undefined,
             }),
         placeholderData: (prev) => prev,
     });
 
-export const useTicketSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: ticketApi.summary, enabled });
+export const useTicketSummary = (enabled = true, days?: number) =>
+    useQuery({
+        queryKey: [...SUMMARY, days ?? 30],
+        queryFn: () => ticketApi.summary(days),
+        enabled,
+        // Keep the prior window's numbers on screen while a new range loads (no skeleton flash).
+        placeholderData: (prev) => prev,
+    });
 
 export const useTicketStaff = (enabled = true) => useQuery({ queryKey: ['tickets-staff'], queryFn: ticketApi.staff, enabled });
 
@@ -30,9 +38,16 @@ export function useTicketMutations() {
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ['tickets-list'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
+        // Refresh the open detail drawer (?view=<id>) so a stacked action modal
+        // bounces back to up-to-date status/assignee without reopening.
+        qc.invalidateQueries({ queryKey: ['ticket', 'view'] });
     };
     return {
         create: useMutation({ mutationFn: (p: CreateTicketPayload) => ticketApi.create(p), onSuccess: invalidate }),
+        update: useMutation({
+            mutationFn: (v: { id: number; payload: UpdateTicketPayload }) => ticketApi.update(v.id, v.payload),
+            onSuccess: invalidate,
+        }),
         take: useMutation({
             mutationFn: (v: { id: number; priority: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
                 ticketApi.take(v.id, { priority: v.priority, note: v.note, related_asset_id: v.related_asset_id }),
@@ -48,13 +63,8 @@ export function useTicketMutations() {
                 ticketApi.resolve(v.id, { mode: v.mode, resolution: v.resolution }),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (id: number) => ticketApi.remove(id), onSuccess: invalidate }),
         uploadAttachments: useMutation({
             mutationFn: (v: { id: number; files: File[] }) => ticketApi.uploadAttachments(v.id, v.files),
-            onSuccess: invalidate,
-        }),
-        deleteAttachment: useMutation({
-            mutationFn: (v: { id: number; attachmentId: number }) => ticketApi.deleteAttachment(v.id, v.attachmentId),
             onSuccess: invalidate,
         }),
     };

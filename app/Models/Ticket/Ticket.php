@@ -29,7 +29,7 @@ class Ticket extends Model
     }
 
     protected $fillable = [
-        'ticket_no', 'subject', 'subject_th', 'description',
+        'ticket_no', 'subject', 'description',
         'category', 'priority', 'status',
         'requester_id', 'assignee_id', 'callback_phone', 'related_asset_id',
         'take_note', 'resolution', 'resolved_at', 'responded_at',
@@ -47,17 +47,35 @@ class Ticket extends Model
     }
 
     /**
-     * Auto-assign a sequential ticket number (TKT-####) on create when one
-     * wasn't supplied, mirroring the Employee code generator.
+     * Auto-assign the ticket number (TKT-<CAT>-YYMMDD-NNN) on create when one wasn't supplied.
      */
     protected static function booted(): void
     {
         static::creating(function (Ticket $ticket) {
             if (blank($ticket->ticket_no)) {
-                $next = (static::max('id') ?? 2860) + 1;
-                $ticket->ticket_no = 'TKT-'.$next;
+                $ticket->ticket_no = static::generateTicketNo($ticket->category);
             }
         });
+    }
+
+    /**
+     * Build the ticket number as TKT-<CAT>-YYMMDD-NNN: the TKT prefix, the category
+     * short code (SW / HW / NW / OTH), today's date (YYMMDD), and a 3-digit running
+     * number that restarts for each category+day. Only numbers already matching that
+     * exact prefix feed the sequence, so other formats never collide. Computed in PHP
+     * (not SQL) to stay portable across MySQL and SQLite.
+     */
+    public static function generateTicketNo(?TicketCategory $category = null): string
+    {
+        $cat = ($category ?? TicketCategory::Other)->shortCode();
+        $prefix = sprintf('TKT-%s-%s-', $cat, now()->format('ymd'));
+
+        $last = static::where('ticket_no', 'like', $prefix.'%')
+            ->pluck('ticket_no')
+            ->map(fn (string $no): int => (int) substr($no, strlen($prefix)))
+            ->max() ?? 0;
+
+        return sprintf('%s%03d', $prefix, $last + 1);
     }
 
     /** The employee who reported the issue. */

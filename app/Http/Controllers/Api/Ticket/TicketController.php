@@ -7,6 +7,7 @@ use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ticket\StoreTicketRequest;
+use App\Http\Requests\Ticket\UpdateTicketRequest;
 use App\Http\Resources\Ticket\TicketResource;
 use App\Models\AuditLog;
 use App\Models\Ticket\Ticket;
@@ -36,7 +37,18 @@ class TicketController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset', 'attachments'])->latest('id');
+        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset', 'attachments']);
+
+        // Whitelisted sort orders (?sort=): newest (default), oldest, recently
+        // updated, or priority high→low (CASE keeps it portable across MySQL/SQLite).
+        match ($request->query('sort')) {
+            'created_asc' => $query->oldest('id'),
+            'updated_desc' => $query->orderByDesc('updated_at')->latest('id'),
+            'priority_desc' => $query
+                ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END")
+                ->latest('id'),
+            default => $query->latest('id'),
+        };
 
         if (! $this->canViewAll($request)) {
             $query->where('requester_id', $request->user()?->employee_id);
@@ -75,28 +87,83 @@ class TicketController extends Controller
         ]);
     }
 
-    /** Dashboard aggregates: status counts and a per-category breakdown (IT only). */
+    /**
+     * Dashboard aggregates over a selectable window (7 / 30 / 90 days, default 30):
+     * inbound (created) and closed (resolved) flow each with a trend vs the previous
+     * equal-length window, the current unresolved backlog (open + in progress), and
+     * the window's SLA %, average response, and per-category mix.
+     */
     public function summary(Request $request): JsonResponse
     {
         abort_unless($this->canViewAll($request), 403);
 
+        $days = (int) $request->query('days', 30);
+        if (! in_array($days, [7, 30, 90], true)) {
+            $days = 30;
+        }
+
+        $now = now();
+        $curStart = $now->copy()->subDays($days);
+        $prevStart = $now->copy()->subDays($days * 2);
+
         $tickets = Ticket::all();
+
+        // Inbound flow — tickets created in the current vs the previous window.
+        $createdCur = $tickets->filter(fn (Ticket $t) => $t->created_at >= $curStart)->count();
+        $createdPrev = $tickets->filter(fn (Ticket $t) => $t->created_at >= $prevStart && $t->created_at < $curStart)->count();
+
+        // Closed flow — tickets resolved (completed or canceled) in each window.
+        $resolvedInWindow = fn ($start, $end) => $tickets->filter(
+            fn (Ticket $t) => $t->resolved_at !== null && $t->resolved_at >= $start && ($end === null || $t->resolved_at < $end)
+        );
+        $resolvedCur = $resolvedInWindow($curStart, null)->count();
+        $resolvedPrev = $resolvedInWindow($prevStart, $curStart)->count();
+
+        // Backlog is a point-in-time snapshot of everything still unresolved.
+        $open = $tickets->where('status', TicketStatus::Open)->count();
+        $inProgress = $tickets->where('status', TicketStatus::InProgress)->count();
+
+        // SLA % over the tickets resolved within each window, so the trend is comparable.
+        $slaCur = $this->slaMetPct($resolvedInWindow($curStart, null));
+        $slaPrev = $this->slaMetPct($resolvedInWindow($prevStart, $curStart));
 
         $byCategory = collect(TicketCategory::cases())->map(fn (TicketCategory $c) => [
             'category' => $c->value,
-            'count' => $tickets->where('category', $c)->count(),
+            'count' => $tickets->filter(fn (Ticket $t) => $t->category === $c && $t->created_at >= $curStart)->count(),
         ]);
 
         return response()->json([
-            'total' => $tickets->count(),
-            'open' => $tickets->where('status', TicketStatus::Open)->count(),
-            'in_progress' => $tickets->where('status', TicketStatus::InProgress)->count(),
-            'completed' => $tickets->where('status', TicketStatus::Completed)->count(),
-            'canceled' => $tickets->where('status', TicketStatus::Canceled)->count(),
+            'range_days' => $days,
+
+            'created' => $createdCur,
+            'created_delta_pct' => $this->deltaPct($createdCur, $createdPrev),
+
+            'resolved' => $resolvedCur,
+            'resolved_delta_pct' => $this->deltaPct($resolvedCur, $resolvedPrev),
+
+            'backlog' => $open + $inProgress,
+            'backlog_open' => $open,
+            'backlog_in_progress' => $inProgress,
+
+            'sla_met_pct' => $slaCur,
+            'sla_delta_pts' => ($slaCur === null || $slaPrev === null) ? null : $slaCur - $slaPrev,
+
+            'avg_response_minutes' => $this->avgResponseMinutes(
+                $tickets->filter(fn (Ticket $t) => $t->responded_at !== null && $t->responded_at >= $curStart)
+            ),
+
             'by_category' => $byCategory,
-            'avg_response_minutes' => $this->avgResponseMinutes($tickets),
-            'sla_met_pct' => $this->slaMetPct($tickets),
         ]);
+    }
+
+    /** Percent change of $current against $previous; null when there's no prior baseline. */
+    private function deltaPct(int $current, int $previous): ?int
+    {
+        if ($previous === 0) {
+            return null;
+        }
+
+        return (int) round((($current - $previous) / $previous) * 100);
     }
 
     /**
@@ -243,13 +310,16 @@ class TicketController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Delete a ticket (tickets.delete). */
-    public function destroy(Request $request, Ticket $ticket): JsonResponse
+    /**
+     * Correct a ticket's descriptive fields. Who may edit (IT staff, or the
+     * requester while still Open) is enforced by UpdateTicketRequest::authorize.
+     */
+    public function update(UpdateTicketRequest $request, Ticket $ticket): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('tickets.delete'), 403);
-        AuditLog::record('Deleted ticket', "{$ticket->ticket_no} — {$ticket->subject}");
-        $ticket->delete();
+        $ticket = $this->service->update($ticket, $request->validated());
+        AuditLog::record('Updated ticket', "{$ticket->ticket_no} — {$ticket->subject}");
 
-        return response()->json(['message' => 'success']);
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
+            ->additional(['message' => 'success'])->response();
     }
 }

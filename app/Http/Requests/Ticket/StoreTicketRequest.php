@@ -26,7 +26,6 @@ class StoreTicketRequest extends FormRequest
     {
         return [
             'subject' => ['required', 'string', 'min:5', 'max:200'],
-            'subject_th' => ['nullable', 'string', 'max:200'],
             'description' => ['required', 'string', 'min:10', 'max:5000'],
             'category' => ['required', new Enum(TicketCategory::class)],
             // At least 3 digits — internal extensions can be short (e.g. 123).

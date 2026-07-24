@@ -65,7 +65,6 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
         const ticket = await create.mutateAsync({
             subject: subject.trim(),
-            subject_th: lang === 'th' ? subject.trim() : null,
             description: description.trim(),
             category,
             callback_phone: phone.trim(),
