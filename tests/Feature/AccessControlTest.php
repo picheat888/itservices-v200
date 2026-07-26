@@ -315,17 +315,19 @@ class AccessControlTest extends TestCase
         $g->memberships()->create(['employee_id' => $member->id, 'granted_at' => '2026-01-01']);
         $g->memberships()->create(['employee_id' => $bare->id, 'granted_at' => '2026-01-01']);
 
+        // Photos are now served through the authenticated per-employee route, so the
+        // URL points at /files/employees/{id}/photo rather than the raw storage path.
         // Index: owner + inline member previews carry photo URLs (null when no photo uploaded).
         $this->getJson('/api/email-groups')
             ->assertOk()
-            ->assertJsonPath('data.0.owner_photo_url', fn ($u) => is_string($u) && str_contains($u, 'employee-photos/own.jpg'))
-            ->assertJsonPath('data.0.members.0.photo_url', fn ($u) => is_string($u) && str_contains($u, 'employee-photos/mem.jpg'))
+            ->assertJsonPath('data.0.owner_photo_url', fn ($u) => is_string($u) && str_contains($u, "/files/employees/{$owner->id}/photo"))
+            ->assertJsonPath('data.0.members.0.photo_url', fn ($u) => is_string($u) && str_contains($u, "/files/employees/{$member->id}/photo"))
             ->assertJsonPath('data.0.members.1.photo_url', null);
 
         // Members endpoint: each membership row carries the employee's photo URL too.
         $this->getJson("/api/email-groups/{$g->id}/members")
             ->assertOk()
-            ->assertJsonPath('data.0.photo_url', fn ($u) => is_string($u) && str_contains($u, 'employee-photos/mem.jpg'))
+            ->assertJsonPath('data.0.photo_url', fn ($u) => is_string($u) && str_contains($u, "/files/employees/{$member->id}/photo"))
             ->assertJsonPath('data.1.photo_url', null);
     }
 
@@ -430,7 +432,7 @@ class AccessControlTest extends TestCase
 
     public function test_social_platform_logo_upload_is_stored(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->seedDefaultPermissions();
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
@@ -442,12 +444,12 @@ class AccessControlTest extends TestCase
 
         $path = SocialPlatform::firstWhere('name', 'LINE')->logo_path;
         $this->assertNotNull($path);
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
     }
 
     public function test_software_logo_upload_is_stored(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->seedDefaultPermissions();
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
@@ -459,6 +461,6 @@ class AccessControlTest extends TestCase
 
         $path = Software::firstWhere('name', 'Acrobat')->logo_path;
         $this->assertNotNull($path);
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
     }
 }
