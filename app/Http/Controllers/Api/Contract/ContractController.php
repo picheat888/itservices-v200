@@ -264,7 +264,7 @@ class ContractController extends Controller
         // Remove the attachment files; the DB rows go via cascade on delete.
         $paths = $contract->attachments()->pluck('path')->all();
         if ($paths !== []) {
-            Storage::disk('public')->delete($paths);
+            Storage::disk('local')->delete($paths);
         }
         $contract->delete();
 

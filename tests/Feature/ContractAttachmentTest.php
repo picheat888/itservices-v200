@@ -30,7 +30,7 @@ class ContractAttachmentTest extends TestCase
 
     public function test_uploads_a_pdf_attachment(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
 
@@ -39,12 +39,12 @@ class ContractAttachmentTest extends TestCase
         ])->assertOk()->assertJsonPath('data.attachments.0.name', 'agreement.pdf');
 
         $this->assertSame(1, $contract->attachments()->count());
-        Storage::disk('public')->assertExists($contract->attachments()->first()->path);
+        Storage::disk('local')->assertExists($contract->attachments()->first()->path);
     }
 
     public function test_rejects_a_non_pdf_file(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
 
@@ -57,7 +57,7 @@ class ContractAttachmentTest extends TestCase
 
     public function test_rejects_an_oversized_pdf(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
 
@@ -71,7 +71,7 @@ class ContractAttachmentTest extends TestCase
 
     public function test_enforces_the_max_file_count(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
         for ($i = 0; $i < 5; $i++) {
@@ -90,7 +90,7 @@ class ContractAttachmentTest extends TestCase
 
     public function test_deletes_an_attachment(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
         $this->postJson("/api/contracts/{$contract->id}/attachments", [
@@ -101,12 +101,12 @@ class ContractAttachmentTest extends TestCase
         $this->deleteJson("/api/contracts/{$contract->id}/attachments/{$attachment->id}")->assertOk();
 
         $this->assertDatabaseMissing('contract_attachments', ['id' => $attachment->id]);
-        Storage::disk('public')->assertMissing($attachment->path);
+        Storage::disk('local')->assertMissing($attachment->path);
     }
 
     public function test_requires_permission_to_upload(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $contract = $this->contract();
         $user = User::factory()->create(['role' => 'user']); // no contract permissions
 
@@ -120,7 +120,7 @@ class ContractAttachmentTest extends TestCase
 
     public function test_deleting_a_contract_removes_its_attachment_files(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $contract = $this->contract();
         $this->postJson("/api/contracts/{$contract->id}/attachments", [
@@ -130,7 +130,7 @@ class ContractAttachmentTest extends TestCase
 
         $this->deleteJson("/api/contracts/{$contract->id}")->assertOk();
 
-        Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertMissing($path);
         $this->assertSame(0, ContractAttachment::count());
     }
 }

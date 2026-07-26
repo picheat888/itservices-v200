@@ -5,7 +5,6 @@ namespace App\Http\Resources\Employee;
 use App\Models\Employee\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 /** @mixin Employee */
 class OrgChartNodeResource extends JsonResource
@@ -26,7 +25,7 @@ class OrgChartNodeResource extends JsonResource
             'title' => $this->position?->title,
             'department' => $this->department?->name,
             'department_code' => $this->department?->tag,
-            'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
+            'photo_url' => $this->photo_url,
             'manager_id' => $this->manager_id,
             'reports_count' => (int) ($this->reports_count ?? 0),
         ];

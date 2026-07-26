@@ -37,9 +37,9 @@ class EmployeeController extends Controller
         unset($data['photo']);
         if ($request->hasFile('photo')) {
             if ($oldPath) {
-                Storage::disk('public')->delete($oldPath);
+                Storage::disk('local')->delete($oldPath);
             }
-            $data['photo_path'] = $request->file('photo')->store('employees', 'public');
+            $data['photo_path'] = $request->file('photo')->store('employees', 'local');
         }
 
         return $data;

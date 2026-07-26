@@ -39,11 +39,11 @@ class SoftwareController extends Controller
 
         if ($request->hasFile('logo')) {
             if ($oldPath) {
-                Storage::disk('public')->delete($oldPath);
+                Storage::disk('local')->delete($oldPath);
             }
-            $data['logo_path'] = $request->file('logo')->store('software-logos', 'public');
+            $data['logo_path'] = $request->file('logo')->store('software-logos', 'local');
         } elseif ($remove && $oldPath) {
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk('local')->delete($oldPath);
             $data['logo_path'] = null;
         }
 

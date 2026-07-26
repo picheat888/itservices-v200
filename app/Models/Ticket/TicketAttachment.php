@@ -4,11 +4,11 @@ namespace App\Models\Ticket;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * A single image/PDF attached to a ticket. The binary lives on the public disk
- * at {path}; this record holds the display metadata.
+ * A single image/PDF attached to a ticket. The binary lives on the PRIVATE disk
+ * at {path}; this record holds the display metadata. It is only reachable through
+ * the authenticated files.ticket-attachment route (never a public /storage URL).
  */
 class TicketAttachment extends Model
 {
@@ -27,9 +27,9 @@ class TicketAttachment extends Model
         return $this->belongsTo(Ticket::class);
     }
 
-    /** Public URL the browser can open/download the file from. */
+    /** Authenticated URL the browser can open/download the file from. */
     public function url(): string
     {
-        return Storage::disk('public')->url($this->path);
+        return route('files.ticket-attachment', $this);
     }
 }

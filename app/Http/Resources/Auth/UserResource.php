@@ -6,7 +6,6 @@ use App\Models\Employee\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 /** @mixin User */
 class UserResource extends JsonResource
@@ -33,7 +32,7 @@ class UserResource extends JsonResource
             'group_name' => $this->resolveGroupName($employee),
             'employee_id' => $employee?->id,
             'employee_code' => $employee?->code,
-            'photo_url' => $employee && $employee->photo_path ? Storage::disk('public')->url($employee->photo_path) : null,
+            'photo_url' => $employee?->photo_url,
             'phone' => $employee?->phone,
             'name_th' => $employee?->name_th,
             // Split name parts from the linked employee (for the profile edit form).

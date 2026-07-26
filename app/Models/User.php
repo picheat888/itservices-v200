@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -217,10 +216,6 @@ class User extends Authenticatable
     /** Resolves the profile photo URL from the linked Employee record. */
     public function employeePhotoUrl(): ?string
     {
-        $employee = $this->linkedEmployee();
-
-        return $employee && $employee->photo_path
-            ? Storage::disk('public')->url($employee->photo_path)
-            : null;
+        return $this->linkedEmployee()?->photo_url;
     }
 }
