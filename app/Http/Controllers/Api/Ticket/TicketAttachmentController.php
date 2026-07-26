@@ -47,7 +47,7 @@ class TicketAttachmentController extends Controller
         }
 
         foreach ($files as $file) {
-            $path = $file->store("tickets/{$ticket->id}", 'public');
+            $path = $file->store("tickets/{$ticket->id}", 'local');
             $ticket->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
                 'path' => $path,
@@ -68,7 +68,7 @@ class TicketAttachmentController extends Controller
         abort_unless($this->canManage($request, $ticket), 403);
         abort_unless($attachment->ticket_id === $ticket->id, 404);
 
-        Storage::disk('public')->delete($attachment->path);
+        Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
 
         AuditLog::record('Deleted ticket attachment', "{$attachment->original_name} — {$ticket->ticket_no}");

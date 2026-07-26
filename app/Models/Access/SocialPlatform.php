@@ -4,16 +4,15 @@ namespace App\Models\Access;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Support\Facades\Storage;
 
 class SocialPlatform extends Model
 {
     protected $fillable = ['code', 'name', 'url', 'color', 'policy', 'logo_path'];
 
-    /** Public URL of the platform logo (public disk), or null when none uploaded. */
+    /** Authenticated URL of the platform logo (private disk), or null when none uploaded. */
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
+        return $this->logo_path ? route('files.social-logo', $this) : null;
     }
 
     protected static function booted(): void

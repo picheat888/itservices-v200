@@ -4,11 +4,11 @@ namespace App\Models\Contract;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * A single PDF document attached to a contract. The binary lives on the public
- * disk at {path}; this record holds the display metadata.
+ * A single PDF document attached to a contract. The binary lives on the PRIVATE
+ * disk at {path}; this record holds the display metadata. It is only reachable
+ * through the authenticated files.contract-attachment route.
  */
 class ContractAttachment extends Model
 {
@@ -27,9 +27,9 @@ class ContractAttachment extends Model
         return $this->belongsTo(Contract::class);
     }
 
-    /** Public URL the browser can open/download the file from. */
+    /** Authenticated URL the browser can open/download the file from. */
     public function url(): string
     {
-        return Storage::disk('public')->url($this->path);
+        return route('files.contract-attachment', $this);
     }
 }

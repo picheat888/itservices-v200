@@ -6,7 +6,6 @@ use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 /** @mixin Employee */
 class EmployeeResource extends JsonResource
@@ -33,7 +32,7 @@ class EmployeeResource extends JsonResource
             // Composed full names (read-only accessors) for display convenience.
             'name' => $this->name,
             'name_th' => $this->name_th,
-            'photo_url' => $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null,
+            'photo_url' => $this->photo_url,
             'department_id' => $this->department_id,
             'position_id' => $this->position_id,
             'manager_id' => $this->manager_id,

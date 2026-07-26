@@ -48,7 +48,7 @@ class ContractAttachmentController extends Controller
         }
 
         foreach ($files as $file) {
-            $path = $file->store("contracts/{$contract->id}", 'public');
+            $path = $file->store("contracts/{$contract->id}", 'local');
             $contract->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
                 'path' => $path,
@@ -69,7 +69,7 @@ class ContractAttachmentController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.edit'), 403);
         abort_unless($attachment->contract_id === $contract->id, 404);
 
-        Storage::disk('public')->delete($attachment->path);
+        Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
 
         AuditLog::record('Deleted contract attachment', "{$attachment->original_name} — {$contract->name} ({$contract->code})");

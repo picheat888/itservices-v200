@@ -102,9 +102,9 @@ class AuthController extends Controller
             ];
             if ($request->hasFile('photo')) {
                 if ($employee->photo_path) {
-                    Storage::disk('public')->delete($employee->photo_path);
+                    Storage::disk('local')->delete($employee->photo_path);
                 }
-                $payload['photo_path'] = $request->file('photo')->store('employees', 'public');
+                $payload['photo_path'] = $request->file('photo')->store('employees', 'local');
             }
             $employee->update($payload);
         }

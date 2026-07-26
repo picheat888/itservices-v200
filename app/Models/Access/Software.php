@@ -7,7 +7,6 @@ use App\Models\Settings\Brand;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
-use Illuminate\Support\Facades\Storage;
 
 class Software extends Model
 {
@@ -31,10 +30,10 @@ class Software extends Model
         ];
     }
 
-    /** Public URL of the software logo (public disk), or null when none uploaded. */
+    /** Authenticated URL of the software logo (private disk), or null when none uploaded. */
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
+        return $this->logo_path ? route('files.software-logo', $this) : null;
     }
 
     protected static function booted(): void

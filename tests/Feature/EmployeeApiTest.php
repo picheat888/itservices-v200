@@ -130,7 +130,7 @@ class EmployeeApiTest extends TestCase
 
     public function test_update_with_photo_saves_the_file(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         // Special position so department/section/report-to aren't required — isolate the photo path.
         $position = Position::create(['title' => 'MD', 'allow_special_position' => true]);
@@ -148,12 +148,12 @@ class EmployeeApiTest extends TestCase
 
         $path = $emp->fresh()->photo_path;
         $this->assertNotNull($path, 'photo_path should be set after upload');
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
     }
 
     public function test_update_full_payload_with_photo_like_the_form(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $this->actingAs($this->super());
         $dept = Department::create(['name' => 'IT']);
         $section = Section::create(['department_id' => $dept->id, 'name' => 'Network']);
