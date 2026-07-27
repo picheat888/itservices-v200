@@ -49,6 +49,9 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     const [progress, setProgress] = useState<Record<number, number>>({});
     // Count of removed attachments already deleted during save (delete has no byte progress).
     const [deleted, setDeleted] = useState(0);
+    // Owns the whole save lifecycle (incl. a brief 100% hold) so the progress bar stays
+    // visible after the mutations' isPending flips back to false.
+    const [saving, setSaving] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Preload the form + attachments from the ticket each time it opens.
@@ -65,6 +68,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         setDragOver(false);
         setProgress({});
         setDeleted(0);
+        setSaving(false);
     }, [ticket]);
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
@@ -95,26 +99,37 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         if (Object.keys(e).length) return;
 
         setDeleted(0);
-        await update.mutateAsync({
-            id: ticket.id,
-            payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
-        });
-        if (pending.length > 0) {
-            await uploadAttachments.mutateAsync({
+        setSaving(true);
+        try {
+            await update.mutateAsync({
                 id: ticket.id,
-                files: pending,
-                onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [index]: percent })),
+                payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
             });
+            if (pending.length > 0) {
+                await uploadAttachments.mutateAsync({
+                    id: ticket.id,
+                    files: pending,
+                    onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [index]: percent })),
+                });
+            }
+            for (const attachmentId of removedIds) {
+                await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
+                setDeleted((d) => d + 1);
+            }
+            // Hold the finished bar at 100% for a beat so it doesn't vanish mid-fill.
+            if (totalOps > 0) {
+                await new Promise((resolve) => setTimeout(resolve, 450));
+            }
+        } catch {
+            // Mutation errors surface via the global handler; just re-enable the form.
+            setSaving(false);
+            return;
         }
-        for (const attachmentId of removedIds) {
-            await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
-            setDeleted((d) => d + 1);
-        }
+        setSaving(false);
         onClose();
     };
 
     const uploading = uploadAttachments.isPending;
-    const pendingState = update.isPending || uploading || deleteAttachment.isPending;
     // One overall bar for the whole save: each uploaded file contributes its byte fraction,
     // each deleted file counts as one done step (delete has no byte-level progress).
     const totalOps = pending.length + removedIds.length;
@@ -123,7 +138,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         : 0;
 
     return (
-        <Dialog open={!!ticket} onOpenChange={(o) => !o && !pendingState && onClose()}>
+        <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && onClose()}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader icon={Pencil} eyebrow="Edit Ticket" title={t('ticket_edit_title')} srDescription={t('ticket_edit_sub')} />
 
@@ -262,7 +277,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{a.name}</span>
                                                 <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(a.size)}</span>
-                                                {!pendingState && (
+                                                {!saving && (
                                                     <button
                                                         type="button"
                                                         className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
@@ -303,7 +318,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                 {/* Footer: actions */}
                 <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
                     {/* One save-progress bar covering upload (byte %) + delete (per-file step). */}
-                    {pendingState && totalOps > 0 && (
+                    {saving && totalOps > 0 && (
                         <div className="mr-auto flex items-center gap-2">
                             <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
                                 <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
@@ -311,11 +326,11 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                             <span className="text-muted-foreground font-mono text-xs">{overallPct}%</span>
                         </div>
                     )}
-                    <Button variant="outline" onClick={onClose} disabled={pendingState}>
+                    <Button variant="outline" onClick={onClose} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={pendingState}>
-                        {pendingState ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    <Button onClick={submit} disabled={saving}>
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         {t('save')}
                     </Button>
                 </div>
