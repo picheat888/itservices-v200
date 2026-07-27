@@ -30,8 +30,8 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
 /** Small uppercase section heading with a short brand accent underline (mirrors Contract detail). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="mb-3">
-            <div className="dark:text-foreground flex items-center gap-2 text-xs font-bold tracking-wide text-[#2f2f2f] uppercase">{children}</div>
+        <div className="mb-2">
+            <div className="dark:text-foreground flex items-center gap-2 text-sm font-bold tracking-wide text-[#2f2f2f] uppercase">{children}</div>
             <div className="bg-brand/70 mt-1.5 h-0.5 w-8 rounded-full" />
         </div>
     );
@@ -215,7 +215,7 @@ export function AssetDetailDrawer({
                     {/* Body */}
                     <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>
                         {tab === 'overview' && (
-                            <div className="space-y-7">
+                            <div className="space-y-5">
                                 {/* General information — the linked contract sits here as a sub-field */}
                                 <div>
                                     <SectionLabel>{t('asset_general')}</SectionLabel>

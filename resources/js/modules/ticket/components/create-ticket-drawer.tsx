@@ -38,6 +38,8 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     const [dragOver, setDragOver] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    // Per-file upload progress (index → 0..100), populated while uploading after submit.
+    const [progress, setProgress] = useState<Record<number, number>>({});
 
     // Keep only allowed extensions, cap at MAX_FILES, dedupe by name+size.
     const addFiles = (list: FileList | File[]) => {
@@ -61,6 +63,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setFiles([]);
             setDragOver(false);
             setErrors({});
+            setProgress({});
         }
     }, [open]);
 
@@ -82,20 +85,28 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             callback_phone: phone.trim(),
         });
         if (files.length > 0 && ticket?.id) {
-            await uploadAttachments.mutateAsync({ id: ticket.id, files });
+            await uploadAttachments.mutateAsync({
+                id: ticket.id,
+                files,
+                onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [index]: percent })),
+            });
         }
         onClose();
     };
 
-    const pending = create.isPending || uploadAttachments.isPending;
+    const uploading = uploadAttachments.isPending;
+    const pending = create.isPending || uploading;
     const hasFiles = files.length > 0;
+    // Overall upload progress = average of the per-file percents (missing = 0),
+    // shown as one bar so it stays visible no matter how many files scroll off.
+    const overallPct = files.length ? Math.round(Object.values(progress).reduce((a, b) => a + b, 0) / files.length) : 0;
 
     return (
-        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
-                    eyebrow={t('new_ticket')}
+                    eyebrow="New Ticket"
                     title={t('ticket_form_title')}
                     srDescription={t('ticket_form_title')}
                 />
@@ -113,7 +124,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         type="button"
                                         onClick={() => setCategory(c)}
                                         className={cn(
-                                            'flex cursor-pointer flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors',
+                                            'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden',
                                             category === c ? 'border-brand bg-brand/5' : 'border-border hover:border-brand/50',
                                         )}
                                     >
@@ -149,7 +160,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={5}
-                                        className="border-input bg-background ring-offset-background focus-visible:ring-ring w-full rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                                        className="border-input bg-background hover:border-brand/50 focus-visible:border-brand focus-visible:ring-brand/15 w-full rounded-md border px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-[3px]"
                                         placeholder={
                                             lang === 'th'
                                                 ? 'เกิดอะไรขึ้น ลองทำอะไรไปแล้วบ้าง เห็นข้อความ error อย่างไร'
@@ -203,7 +214,9 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                 className={cn(
                                     'flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 text-center text-sm transition-colors',
                                     hasFiles ? 'py-2.5' : 'py-9',
-                                    dragOver ? 'border-brand bg-brand/10 text-brand' : 'border-input text-muted-foreground hover:border-brand/50',
+                                    dragOver
+                                        ? 'border-brand bg-brand/10 text-brand'
+                                        : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand',
                                 )}
                             >
                                 <UploadCloud className={cn('shrink-0', hasFiles ? 'h-5 w-5' : 'h-6 w-6')} />
@@ -227,7 +240,14 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                     <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
                                         <Paperclip className="h-3.5 w-3.5" />
                                         {t('ticket_attach_count').replace('{n}', String(files.length)).replace('{max}', String(MAX_FILES))}
+                                        {uploading && <span className="ml-auto font-mono">{overallPct}%</span>}
                                     </div>
+                                    {/* One overall bar (outside the scroll area) so progress stays visible for all files. */}
+                                    {uploading && (
+                                        <div className="bg-muted mb-2.5 h-1.5 overflow-hidden rounded-full">
+                                            <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
+                                        </div>
+                                    )}
                                     {/* Caps at ~5 rows and scrolls internally so 10 files never stretch the dialog.
                                         scrollbar-gutter:stable reserves the scrollbar space at all times, so rows
                                         (and the ✕) don't shift when the scrollbar appears/disappears past 5 files. */}
@@ -239,14 +259,17 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{f.name}</span>
                                                 <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(f.size)}</span>
-                                                <button
-                                                    type="button"
-                                                    className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
-                                                    onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                                                    aria-label={t('delete')}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
+                                                {/* Remove is only available before the upload starts. */}
+                                                {!uploading && (
+                                                    <button
+                                                        type="button"
+                                                        className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
+                                                        onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                                                        aria-label={t('delete')}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -258,7 +281,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
                 {/* Footer: actions */}
                 <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose}>
+                    <Button variant="outline" onClick={onClose} disabled={pending}>
                         {t('cancel')}
                     </Button>
                     <Button onClick={submit} disabled={pending}>

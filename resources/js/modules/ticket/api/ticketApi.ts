@@ -56,11 +56,25 @@ export const ticketApi = {
         mutate<Ticket>('post', `/tickets/${id}/take`, body),
     assign: (id: number, body: { assignee_id: number; priority: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
-    uploadAttachments: async (id: number, files: File[]): Promise<Ticket> => {
+    /**
+     * Uploads attachments ONE AT A TIME so each file reports its own progress
+     * (axios onUploadProgress is per-request). onProgress(index, 0..100) fires as
+     * each file streams; returns the ticket from the final response.
+     */
+    uploadAttachments: async (id: number, files: File[], onProgress?: (index: number, percent: number) => void): Promise<Ticket> => {
         await ensureCsrf();
-        const fd = new FormData();
-        files.forEach((f) => fd.append('files[]', f));
-        const { data } = await http.post<ApiEnvelope<Ticket>>(`/tickets/${id}/attachments`, fd);
-        return data.data;
+        let latest: Ticket | undefined;
+        for (let i = 0; i < files.length; i++) {
+            const fd = new FormData();
+            fd.append('files[]', files[i]);
+            const { data } = await http.post<ApiEnvelope<Ticket>>(`/tickets/${id}/attachments`, fd, {
+                onUploadProgress: (e) => {
+                    if (onProgress && e.total) onProgress(i, Math.round((e.loaded / e.total) * 100));
+                },
+            });
+            latest = data.data;
+            onProgress?.(i, 100);
+        }
+        return latest as Ticket;
     },
 };

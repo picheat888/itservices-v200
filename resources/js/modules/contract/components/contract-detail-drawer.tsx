@@ -246,7 +246,7 @@ export function ContractDetailDrawer({
                         )}
                     >
                         {tab === 'overview' && (
-                            <div className="space-y-7">
+                            <div className="space-y-5">
                                 {/* ข้อมูลสัญญา */}
                                 <div>
                                     <SectionLabel>{t('contract_section_info')}</SectionLabel>

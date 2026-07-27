@@ -42,7 +42,7 @@ export const ticket: Dict = {
     "ticket_callback_help": "เบอร์ที่ทีมไอทีติดต่อกลับได้",
     "ticket_attach": "ไฟล์แนบ",
     "ticket_attach_help": "PNG, JPG, PDF, ZIP, Word, Excel, PowerPoint ไม่เกิน 20MB",
-    "ticket_form_title": "เปิดเคสแจ้งปัญหา IT",
+    "ticket_form_title": "แจ้งเราว่ามีปัญหาอะไร แล้วทีม IT จะติดต่อหาคุณ",
     "ticket_sec_type": "ประเภทปัญหา",
     "ticket_sec_detail": "รายละเอียดปัญหา",
     "ticket_sec_contact": "ช่องทางติดต่อกลับ",

@@ -7,7 +7,10 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
         <input
             type={type}
             className={cn(
-                'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+                // border-input at rest → brand-tinted border on hover, and on focus a full
+                // brand border with a soft brand glow (no heavy offset ring) — the same light,
+                // on-brand feel as the selected Issue Type card. Disabled keeps the resting border.
+                'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-brand/50 focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input md:text-sm',
                 className,
             )}
             ref={ref}
