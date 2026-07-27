@@ -408,7 +408,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                 </Field>
                                 <div className="grid grid-cols-2 gap-3">
                                     <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
-                                        <DateInput value={form.joinedAt} onChange={(e) => set('joinedAt', e.target.value)} />
+                                        <DateInput value={form.joinedAt} onChange={(v) => set('joinedAt', v)} />
                                     </Field>
                                     <Field label={t('emp_employee_id')} help={t('emp_id_help')}>
                                         <Input

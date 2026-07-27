@@ -107,4 +107,5 @@ export const common: Dict = {
     attachment_upload_failed: 'Could not upload attachment',
     new_ticket: 'Open ticket',
     submit_ticket: 'Submit',
+    pick_date: 'Pick a date',
 };

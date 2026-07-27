@@ -606,7 +606,7 @@ export function ContractFormDrawer({
                                             ))}
 
                                             {!atMax && (
-                                                <label className="border-input text-muted-foreground hover:bg-accent hover:text-brand flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed px-3 py-4 text-center text-sm">
+                                                <label className="border-input text-muted-foreground hover:text-brand flex cursor-pointer flex-col items-center gap-1 rounded-md border border-dashed px-3 py-4 text-center text-sm hover:bg-[#c4c4c40f]">
                                                     <Paperclip className="h-4 w-4" />
                                                     <span>{t('attachment_pick')}</span>
                                                     <input
@@ -647,10 +647,10 @@ export function ContractFormDrawer({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label={t('contract_start')} required error={err.start_date} name="start_date">
-                                        <DateInput value={form.start_date} onChange={(e) => upd('start_date', e.target.value)} />
+                                        <DateInput value={form.start_date} onChange={(v) => upd('start_date', v)} />
                                     </Field>
                                     <Field label={t('contract_end')} required error={err.end_date} name="end_date">
-                                        <DateInput value={form.end_date} onChange={(e) => upd('end_date', e.target.value)} />
+                                        <DateInput value={form.end_date} onChange={(v) => upd('end_date', v)} />
                                     </Field>
                                 </div>
 
