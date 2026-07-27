@@ -10,7 +10,7 @@ import { useDateTime } from '@/modules/settings';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
-import { Check, Download, FileText, Pencil, RefreshCcw, RotateCcw, Users, X, Zap, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, Download, File, FileArchive, FileSpreadsheet, FileText, Pencil, Presentation, RefreshCcw, RotateCcw, Users, X, Zap, ZoomIn, ZoomOut } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { ResolveMode } from './resolve-ticket-modal';
@@ -20,6 +20,32 @@ function formatSize(bytes: number): string {
     if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Broad file category derived from mime + extension — drives the icon and the preview mode. */
+type FileKind = 'image' | 'pdf' | 'word' | 'excel' | 'ppt' | 'archive' | 'other';
+
+/** Classify an attachment. Only image and pdf can be previewed inline; the rest show a file card. */
+function fileKind(a: TicketAttachment): FileKind {
+    const mime = a.mime ?? '';
+    const ext = a.name.split('.').pop()?.toLowerCase() ?? '';
+    if (mime.startsWith('image/')) return 'image';
+    if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (ext === 'doc' || ext === 'docx') return 'word';
+    if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'excel';
+    if (ext === 'ppt' || ext === 'pptx') return 'ppt';
+    if (ext === 'zip' || ext === 'rar' || ext === '7z') return 'archive';
+    return 'other';
+}
+
+/** Icon + accent color + i18n label per non-image file kind. */
+const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; color: string; labelKey: string }> = {
+    pdf: { Icon: FileText, color: 'text-red-500', labelKey: 'ticket_ft_pdf' },
+    word: { Icon: FileText, color: 'text-blue-500', labelKey: 'ticket_ft_word' },
+    excel: { Icon: FileSpreadsheet, color: 'text-green-600', labelKey: 'ticket_ft_excel' },
+    ppt: { Icon: Presentation, color: 'text-orange-500', labelKey: 'ticket_ft_ppt' },
+    archive: { Icon: FileArchive, color: 'text-purple-500', labelKey: 'ticket_ft_archive' },
+    other: { Icon: File, color: 'text-muted-foreground', labelKey: 'ticket_ft_file' },
+};
 
 /** Small label/value pair used in the details grid and the rail. */
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
@@ -164,7 +190,12 @@ export function TicketDetailDrawer({
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
     const files = view.attachments ?? [];
     const [s1, s2, s3] = spineTones(view.status);
-    const isPdfPreview = pv?.mime === 'application/pdf';
+    // Preview mode: images zoom/pan, PDFs embed via <iframe>, everything else shows a file card.
+    const pvKind = pv ? fileKind(pv) : null;
+    const isImagePreview = pvKind === 'image';
+    const isPdfPreview = pvKind === 'pdf';
+    // Icon/label metadata for the file card (non-image kinds; pdf is embedded, not carded).
+    const pvMeta = pvKind && pvKind !== 'image' ? KIND_META[pvKind] : null;
     // A ticket canceled before anyone took it never reached step 2.
     const wasTaken = view.responded_at != null || view.assignee_name != null;
 
@@ -297,7 +328,9 @@ export function TicketDetailDrawer({
                                     ) : (
                                         <ul className="grid gap-3 sm:grid-cols-2">
                                             {files.map((a) => {
-                                                const isImage = a.mime?.startsWith('image/');
+                                                const kind = fileKind(a);
+                                                const isImage = kind === 'image';
+                                                const meta = isImage ? null : KIND_META[kind];
                                                 return (
                                                     <li
                                                         key={a.id}
@@ -318,9 +351,11 @@ export function TicketDetailDrawer({
                                                                     className="h-full w-full rounded-sm object-contain transition-transform duration-200 group-hover:scale-[1.02]"
                                                                 />
                                                             ) : (
-                                                                <span className="text-muted-foreground grid h-full w-full place-items-center">
-                                                                    <FileText className="h-10 w-10" />
-                                                                </span>
+                                                                meta && (
+                                                                    <span className="grid h-full w-full place-items-center">
+                                                                        <meta.Icon className={cn('h-10 w-10', meta.color)} />
+                                                                    </span>
+                                                                )
                                                             )}
                                                         </button>
                                                         <div className="flex items-center gap-2 px-3 py-2.5">
@@ -480,7 +515,7 @@ export function TicketDetailDrawer({
                 <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
                     <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
                         <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
-                        {pv && !isPdfPreview && (
+                        {pv && isImagePreview && (
                             <div className="flex shrink-0 items-center gap-0.5">
                                 <button
                                     type="button"
@@ -532,9 +567,7 @@ export function TicketDetailDrawer({
                         }}
                     >
                         {pv &&
-                            (isPdfPreview ? (
-                                <iframe src={pv.url} title={pv.name} className="h-[72vh] w-full border-0" />
-                            ) : (
+                            (isImagePreview ? (
                                 // Zoom (wheel / double-click / +− buttons) and drag-to-pan via react-zoom-pan-pinch.
                                 // wheel.step is only the initial value — onWheelCapture above retunes it per event.
                                 <TransformWrapper
@@ -560,6 +593,29 @@ export function TicketDetailDrawer({
                                         />
                                     </TransformComponent>
                                 </TransformWrapper>
+                            ) : isPdfPreview ? (
+                                <iframe src={pv.url} title={pv.name} className="h-[72vh] w-full border-0" />
+                            ) : (
+                                // Office / archive / other: no inline render — show a file card with a download action.
+                                pvMeta && (
+                                    <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
+                                        <pvMeta.Icon className={cn('h-20 w-20', pvMeta.color)} />
+                                        <div className="space-y-1">
+                                            <div className="text-base font-semibold break-all">{pv.name}</div>
+                                            <div className="text-muted-foreground font-mono text-xs">
+                                                {t(pvMeta.labelKey)} · {formatSize(pv.size)}
+                                                {pv.created_at ? ` · ${fmtWhen(pv.created_at)}` : ''}
+                                            </div>
+                                            <div className="text-muted-foreground pt-1 text-xs">{t('ticket_no_inline_preview')}</div>
+                                        </div>
+                                        <Button asChild>
+                                            <a href={pv.url} download={pv.name}>
+                                                <Download className="h-4 w-4" />
+                                                {t('ticket_download')}
+                                            </a>
+                                        </Button>
+                                    </div>
+                                )
                             ))}
                     </div>
                 </DialogContent>
