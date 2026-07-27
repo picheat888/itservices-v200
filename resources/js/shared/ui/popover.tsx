@@ -8,15 +8,17 @@ const PopoverTrigger = PopoverPrimitive.Trigger;
 const PopoverAnchor = PopoverPrimitive.Anchor;
 
 /**
- * Floating panel anchored to its trigger. Portals to <body> so it escapes any
- * dialog/overflow clipping, and sits at z-50 (same layer as the dialog content,
- * but later in the DOM) so it renders above an open focus dialog.
+ * Floating panel anchored to its trigger. Pass `container` to control where it
+ * portals: inside a modal dialog you MUST portal into the dialog content node
+ * (which keeps `pointer-events: auto`) — a popover portaled to <body> sits under
+ * the dialog's modal guard and its clicks are dead. Omit `container` (defaults to
+ * <body>) when the trigger is not inside a modal dialog.
  */
 const PopoverContent = React.forwardRef<
     React.ElementRef<typeof PopoverPrimitive.Content>,
-    React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = 'start', sideOffset = 6, ...props }, ref) => (
-    <PopoverPrimitive.Portal>
+    React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & { container?: HTMLElement | null }
+>(({ className, align = 'start', sideOffset = 6, container, ...props }, ref) => (
+    <PopoverPrimitive.Portal container={container ?? undefined}>
         <PopoverPrimitive.Content
             ref={ref}
             align={align}

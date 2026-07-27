@@ -43,12 +43,25 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const [open, setOpen] = React.useState(false);
+    const triggerRef = React.useRef<HTMLButtonElement>(null);
+    // When inside a modal dialog the calendar must portal INTO the dialog content
+    // (pointer-events: auto) or its clicks are swallowed by the modal guard. Resolve
+    // the nearest dialog on open; null → PopoverContent falls back to <body>.
+    const [container, setContainer] = React.useState<HTMLElement | null>(null);
     const selected = toDate(value);
 
+    const handleOpenChange = (next: boolean) => {
+        if (next) {
+            setContainer((triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? null);
+        }
+        setOpen(next);
+    };
+
     return (
-        <Popover open={open} onOpenChange={setOpen}>
+        <Popover open={open} onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
                 <button
+                    ref={triggerRef}
                     type="button"
                     id={id}
                     disabled={disabled}
@@ -65,7 +78,7 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
                     <CalendarIcon className="h-4 w-4 shrink-0 opacity-60" />
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-auto">
+            <PopoverContent container={container} align="start" className="w-auto">
                 <Calendar
                     mode="single"
                     selected={selected}
