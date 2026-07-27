@@ -7,7 +7,7 @@ import { cn } from '@/shared/lib/utils';
 
 const MIN_YEAR = 1970;
 const MAX_YEAR = new Date().getFullYear() + 10;
-const YEARS_PER_PAGE = 12;
+const YEARS_PER_PAGE = 10;
 
 type View = 'days' | 'months' | 'years';
 
@@ -167,7 +167,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                         prevDisabled={yearPage <= MIN_YEAR}
                         nextDisabled={yearPage + YEARS_PER_PAGE > MAX_YEAR}
                     />
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-5 gap-1.5">
                         {Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPage + i).map((y) => (
                             <GridCell
                                 key={y}
