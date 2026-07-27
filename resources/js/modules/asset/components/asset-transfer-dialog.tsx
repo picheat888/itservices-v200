@@ -7,6 +7,7 @@ import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Loader2, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -157,11 +158,10 @@ export function AssetTransferDialog({
                     </Field>
 
                     <Field label={t('asset_transfer_reason')}>
-                        <textarea
+                        <Textarea
                             value={reason}
                             onChange={(ev) => setReason(ev.target.value)}
                             rows={3}
-                            className="border-input bg-background focus:border-brand w-full rounded-md border px-3 py-2 text-sm outline-none"
                             placeholder={t('asset_transfer_reason_ph')}
                         />
                     </Field>

@@ -4,6 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import { useContractMutations } from '../hooks/use-contracts';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { useT } from '@/lang';
@@ -542,12 +543,11 @@ export function ContractFormDrawer({
                                         </Field>
 
                                         <Field label={lang === 'th' ? 'หมายเหตุ' : 'Notes'}>
-                                            <textarea
+                                            <Textarea
                                                 value={form.notes}
                                                 onChange={(e) => upd('notes', e.target.value)}
                                                 rows={3}
                                                 placeholder={lang === 'th' ? 'รายละเอียดเพิ่มเติม (ถ้ามี)' : 'Additional notes (optional)'}
-                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-brand"
                                             />
                                         </Field>
                                     </div>

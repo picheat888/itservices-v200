@@ -2,6 +2,7 @@ import { Field } from '@/shared/components/field';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import { useEmployeeMutations } from '../hooks/use-org';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
@@ -71,12 +72,11 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                     </div>
 
                     <Field label={t('resign_reason')} required error={errors.reason}>
-                        <textarea
+                        <Textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             rows={3}
                             placeholder={lang === 'th' ? 'เช่น โอนย้ายตำแหน่ง ลาออกโดยสมัครใจ ฯลฯ' : 'e.g. Voluntary resignation, role change…'}
-                            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         />
                     </Field>
 

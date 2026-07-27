@@ -5,6 +5,7 @@ import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Textarea } from '@/shared/ui/textarea';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -156,11 +157,10 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                     />
                                 </Field>
                                 <Field label={t('ticket_description')} required error={errors.description}>
-                                    <textarea
+                                    <Textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={5}
-                                        className="border-input bg-background hover:border-brand/50 focus-visible:border-brand focus-visible:ring-brand/15 w-full rounded-md border px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-[3px]"
                                         placeholder={
                                             lang === 'th'
                                                 ? 'เกิดอะไรขึ้น ลองทำอะไรไปแล้วบ้าง เห็นข้อความ error อย่างไร'
