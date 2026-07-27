@@ -104,7 +104,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                 onClick={handleOpen}
                 className={cn(
                     'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
-                    'ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+                    'transition-colors hover:border-brand/50 focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden',
                     !selected && 'text-muted-foreground',
                     className,
                 )}
