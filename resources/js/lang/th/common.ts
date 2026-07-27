@@ -105,6 +105,6 @@ export const common: Dict = {
     attachment_too_big: 'แต่ละไฟล์ต้องไม่เกิน 25MB',
     attachment_max: 'แนบได้สูงสุด 5 ไฟล์ต่อสัญญา',
     attachment_upload_failed: 'อัปโหลดไฟล์ไม่สำเร็จ',
-    new_ticket: 'แจ้งปัญหาใหม่',
+    new_ticket: 'เปิด Ticket',
     submit_ticket: 'ส่งคำขอ',
 };

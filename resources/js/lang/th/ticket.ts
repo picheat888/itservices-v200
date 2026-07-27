@@ -51,7 +51,7 @@ export const ticket: Dict = {
     "ticket_attach_types": "PNG · JPG · PDF · ZIP · Office · ไม่เกิน 20MB/ไฟล์ · สูงสุด 10 ไฟล์",
     "ticket_attach_count": "แนบ {n} / {max} ไฟล์แล้ว",
     "ticket_take_case": "รับเคส",
-    "ticket_assign_to_staff": "มอบหมายเจ้าหน้าที่",
+    "ticket_assign_to_staff": "มอบหมาย",
     "ticket_assign": "มอบหมายตั๋ว",
     "ticket_select_staff": "เลือกเจ้าหน้าที่",
     "ticket_mark_complete": "ปิดงานสำเร็จ",
