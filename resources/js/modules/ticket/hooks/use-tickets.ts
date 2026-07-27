@@ -68,5 +68,9 @@ export function useTicketMutations() {
                 ticketApi.uploadAttachments(v.id, v.files, v.onProgress),
             onSuccess: invalidate,
         }),
+        deleteAttachment: useMutation({
+            mutationFn: (v: { id: number; attachmentId: number }) => ticketApi.deleteAttachment(v.id, v.attachmentId),
+            onSuccess: invalidate,
+        }),
     };
 }
