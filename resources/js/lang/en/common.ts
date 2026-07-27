@@ -105,6 +105,6 @@ export const common: Dict = {
     attachment_too_big: 'Each file must be ≤ 25MB',
     attachment_max: 'Up to 5 files per contract',
     attachment_upload_failed: 'Could not upload attachment',
-    new_ticket: 'New ticket',
-    submit_ticket: 'Submit ticket',
+    new_ticket: 'Open ticket',
+    submit_ticket: 'Submit',
 };
