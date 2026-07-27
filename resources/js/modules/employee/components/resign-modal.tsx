@@ -3,6 +3,7 @@ import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
+import { datePickerFocusClass } from '@/shared/lib/utils';
 import { useEmployeeMutations } from '../hooks/use-org';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
@@ -60,7 +61,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('resign_last_day')} required error={errors.lastDay}>
-                            <Input className="font-mono" type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
+                            <Input className={`font-mono ${datePickerFocusClass}`} type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
                         </Field>
                         <div>
                             <div className="mb-1.5 text-sm font-medium">{t('resign_assets_to_return')}</div>

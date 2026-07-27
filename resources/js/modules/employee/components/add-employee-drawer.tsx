@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { useSettings } from '@/modules/settings';
 import { useT } from '@/lang';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { cn, dateFieldClass, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
@@ -409,7 +409,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                     <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
                                         <div className="relative">
                                             <Input
-                                                className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+                                                className={dateFieldClass}
                                                 type="date"
                                                 value={form.joinedAt}
                                                 onChange={(e) => set('joinedAt', e.target.value)}
