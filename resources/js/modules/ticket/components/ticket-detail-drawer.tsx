@@ -353,7 +353,7 @@ export function TicketDetailDrawer({
                                                             ) : (
                                                                 meta && (
                                                                     <span className="flex h-full w-full flex-col items-center justify-center gap-2">
-                                                                        <meta.Icon className={cn('h-14 w-14', meta.color)} />
+                                                                        <meta.Icon strokeWidth={1.5} className={cn('h-14 w-14', meta.color)} />
                                                                         <span
                                                                             className={cn(
                                                                                 'rounded-full border border-current px-2 py-0.5 text-[10px] font-bold tracking-widest',
@@ -608,7 +608,7 @@ export function TicketDetailDrawer({
                                 pvMeta && (
                                     <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
                                         <div className="flex flex-col items-center gap-2">
-                                            <pvMeta.Icon className={cn('h-20 w-20', pvMeta.color)} />
+                                            <pvMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', pvMeta.color)} />
                                             <span
                                                 className={cn(
                                                     'rounded-full border border-current px-2.5 py-0.5 text-[11px] font-bold tracking-widest',
