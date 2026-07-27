@@ -47,8 +47,8 @@ const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; sho
     other: { Icon: File, short: 'FILE' },
 };
 
-/** One muted, dark-ish tone for every file icon/badge — minimal, monochrome; the kind reads from the keyword. */
-const FILE_TONE = 'text-foreground/70';
+/** One solid muted tone for every file icon/badge — minimal, monochrome (not translucent); the kind reads from the keyword. */
+const FILE_TONE = 'text-muted-foreground';
 
 /** Small label/value pair used in the details grid and the rail. */
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
