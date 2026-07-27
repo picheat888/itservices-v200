@@ -60,7 +60,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('resign_last_day')} required error={errors.lastDay}>
-                            <DateInput value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
+                            <DateInput value={lastDay} onChange={(v) => setLastDay(v)} />
                         </Field>
                         <div>
                             <div className="mb-1.5 text-sm font-medium">{t('resign_assets_to_return')}</div>

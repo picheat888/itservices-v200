@@ -382,7 +382,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                     <span className="text-destructive ml-0.5">*</span>
                                                 </Label>
                                             </div>
-                                            <DateInput value={form.purchase_date} onChange={(e) => upd('purchase_date', e.target.value)} />
+                                            <DateInput value={form.purchase_date} onChange={(v) => upd('purchase_date', v)} />
                                             {err.purchase_date && <p className="text-destructive text-xs">{err.purchase_date}</p>}
                                         </div>
                                         <div className="space-y-1.5" data-field="warranty_end">
@@ -416,7 +416,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                     {t('asset_warranty_lifetime')}
                                                 </div>
                                             ) : (
-                                                <DateInput value={form.warranty_end} onChange={(e) => upd('warranty_end', e.target.value)} />
+                                                <DateInput value={form.warranty_end} onChange={(v) => upd('warranty_end', v)} />
                                             )}
                                             {err.warranty_end && <p className="text-destructive text-xs">{err.warranty_end}</p>}
                                         </div>
