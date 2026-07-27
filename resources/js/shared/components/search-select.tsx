@@ -105,6 +105,8 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                 className={cn(
                     'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
                     'transition-colors hover:border-brand/50 focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden',
+                    // Keep the brand border + soft ring latched while the dropdown is open.
+                    open && 'border-brand ring-[3px] ring-brand/15',
                     !selected && 'text-muted-foreground',
                     className,
                 )}

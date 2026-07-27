@@ -211,6 +211,8 @@ export function SearchableSelect({
                 className={cn(
                     'flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 focus-visible:outline-hidden',
                     active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
+                    // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
+                    open && 'border-brand ring-[3px] ring-brand/15',
                 )}
             >
                 <span className="flex min-w-0 items-center gap-2">
