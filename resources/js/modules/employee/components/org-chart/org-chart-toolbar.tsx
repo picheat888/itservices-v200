@@ -78,7 +78,7 @@ export function OrgChartToolbar({
             <div className="ml-auto flex flex-wrap items-center gap-2">
                 {/* Search with suggestion dropdown */}
                 <div className="relative">
-                    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 focus-within:border-brand">
+                    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 transition-colors hover:border-brand/50 focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15">
                         <Search className="h-3.5 w-3.5 text-muted-foreground" />
                         <input
                             value={query}
