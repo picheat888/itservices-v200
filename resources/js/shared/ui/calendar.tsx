@@ -7,7 +7,8 @@ import { cn } from '@/shared/lib/utils';
 
 const MIN_YEAR = 1970;
 const MAX_YEAR = new Date().getFullYear() + 20;
-const YEARS_PER_PAGE = 12;
+const YEARS_PER_PAGE = 12; // cells shown (3×4, like the months grid)
+const YEAR_STEP = 10; // prev/next jumps a decade, and the page starts on a decade boundary
 
 type View = 'days' | 'months' | 'years';
 
@@ -77,7 +78,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
     const [month, setMonthState] = React.useState<Date>(() => defaultMonth ?? selected ?? today);
     const [view, setView] = React.useState<View>('days');
     // First year of the visible years-grid page.
-    const [yearPage, setYearPage] = React.useState<number>(() => month.getFullYear() - (month.getFullYear() % YEARS_PER_PAGE));
+    const [yearPage, setYearPage] = React.useState<number>(() => month.getFullYear() - (month.getFullYear() % YEAR_STEP));
 
     const viewYear = month.getFullYear();
 
@@ -133,7 +134,7 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                     <ViewHeader
                         title={String(viewYear)}
                         onTitleClick={() => {
-                            setYearPage(viewYear - (viewYear % YEARS_PER_PAGE));
+                            setYearPage(viewYear - (viewYear % YEAR_STEP));
                             setView('years');
                         }}
                         onPrev={() => setMonthState(setYear(month, viewYear - 1))}
@@ -162,10 +163,10 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                 <div>
                     <ViewHeader
                         title={`${yearPage} – ${yearPage + YEARS_PER_PAGE - 1}`}
-                        onPrev={() => setYearPage((p) => p - YEARS_PER_PAGE)}
-                        onNext={() => setYearPage((p) => p + YEARS_PER_PAGE)}
+                        onPrev={() => setYearPage((p) => p - YEAR_STEP)}
+                        onNext={() => setYearPage((p) => p + YEAR_STEP)}
                         prevDisabled={yearPage <= MIN_YEAR}
-                        nextDisabled={yearPage + YEARS_PER_PAGE > MAX_YEAR}
+                        nextDisabled={yearPage + YEAR_STEP > MAX_YEAR}
                     />
                     <div className="grid grid-cols-3 gap-1.5">
                         {Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPage + i).map((y) => (
