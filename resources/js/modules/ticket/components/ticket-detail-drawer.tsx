@@ -37,15 +37,18 @@ function fileKind(a: TicketAttachment): FileKind {
     return 'other';
 }
 
-/** Icon + accent color + short format keyword per non-image file kind (keyword is a format name, not translated). */
-const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; color: string; short: string }> = {
-    pdf: { Icon: FileText, color: 'text-red-500', short: 'PDF' },
-    word: { Icon: FileText, color: 'text-blue-500', short: 'WORD' },
-    excel: { Icon: FileSpreadsheet, color: 'text-green-600', short: 'EXCEL' },
-    ppt: { Icon: Presentation, color: 'text-orange-500', short: 'PPT' },
-    archive: { Icon: FileArchive, color: 'text-purple-500', short: 'ZIP' },
-    other: { Icon: File, color: 'text-muted-foreground', short: 'FILE' },
+/** Icon + short format keyword per non-image file kind (keyword is a format name, not translated). */
+const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; short: string }> = {
+    pdf: { Icon: FileText, short: 'PDF' },
+    word: { Icon: FileText, short: 'WORD' },
+    excel: { Icon: FileSpreadsheet, short: 'EXCEL' },
+    ppt: { Icon: Presentation, short: 'PPT' },
+    archive: { Icon: FileArchive, short: 'ZIP' },
+    other: { Icon: File, short: 'FILE' },
 };
+
+/** One muted, dark-ish tone for every file icon/badge — minimal, monochrome; the kind reads from the keyword. */
+const FILE_TONE = 'text-foreground/70';
 
 /** Small label/value pair used in the details grid and the rail. */
 function KV({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
@@ -353,11 +356,11 @@ export function TicketDetailDrawer({
                                                             ) : (
                                                                 meta && (
                                                                     <span className="flex h-full w-full flex-col items-center justify-center gap-2">
-                                                                        <meta.Icon strokeWidth={1.5} className={cn('h-14 w-14', meta.color)} />
+                                                                        <meta.Icon strokeWidth={1.5} className={cn('h-14 w-14', FILE_TONE)} />
                                                                         <span
                                                                             className={cn(
                                                                                 'rounded-full border border-current px-2 py-0.5 text-[10px] font-bold tracking-widest',
-                                                                                meta.color,
+                                                                                FILE_TONE,
                                                                             )}
                                                                         >
                                                                             {meta.short}
@@ -608,11 +611,11 @@ export function TicketDetailDrawer({
                                 pvMeta && (
                                     <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
                                         <div className="flex flex-col items-center gap-2">
-                                            <pvMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', pvMeta.color)} />
+                                            <pvMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', FILE_TONE)} />
                                             <span
                                                 className={cn(
                                                     'rounded-full border border-current px-2.5 py-0.5 text-[11px] font-bold tracking-widest',
-                                                    pvMeta.color,
+                                                    FILE_TONE,
                                                 )}
                                             >
                                                 {pvMeta.short}
