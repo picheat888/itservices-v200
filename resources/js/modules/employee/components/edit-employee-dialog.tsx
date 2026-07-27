@@ -3,10 +3,11 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { useT } from '@/lang';
-import { cn, dateFieldClass, focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/shared/types';
@@ -405,9 +406,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const joinedField = (
         <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
             <div className="relative">
-                <Input
-                    className={dateFieldClass}
-                    type="date"
+                <DateInput
                     value={form.joinedAt}
                     onChange={(e) => set('joinedAt', e.target.value)}
                 />
