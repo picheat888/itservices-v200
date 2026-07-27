@@ -1,14 +1,15 @@
-import { Field } from '@/shared/components/field';
-import { Button } from '@/shared/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { Textarea } from '@/shared/ui/textarea';
-import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { Field } from '@/shared/components/field';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import type { Ticket } from '@/shared/types';
-import { Check, Loader2, X } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Textarea } from '@/shared/ui/textarea';
+import { useUiStore } from '@/stores/ui';
+import { Check, CheckCircle2, Loader2, X, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTicketMutations } from '../hooks/use-tickets';
 
 export type ResolveMode = 'complete' | 'cancel';
 
@@ -40,15 +41,21 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
         onClose();
     };
 
-    return (
-        <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-            <SheetContent side="right" className="flex w-[480px] flex-col sm:max-w-[480px]">
-                <SheetHeader>
-                    <SheetTitle>{isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}</SheetTitle>
-                    <SheetDescription>{ticket?.ticket_no}</SheetDescription>
-                </SheetHeader>
+    const pending = resolve.isPending;
 
-                <div className="mt-6 flex-1 space-y-4 overflow-y-auto px-1">
+    return (
+        <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
+            <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
+                <FocusDialogHeader
+                    icon={isComplete ? CheckCircle2 : XCircle}
+                    eyebrow="Resolve"
+                    title={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
+                    code={ticket?.ticket_no}
+                    accent={isComplete ? undefined : '#ef4444'}
+                    srDescription={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
+                />
+
+                <div className="flex-1 space-y-4 overflow-y-auto border-t px-6 py-6">
                     <p className="text-muted-foreground text-sm">{t('ticket_resolution_required')}</p>
                     <Field label={t('ticket_resolution_details')} required error={err}>
                         <Textarea
@@ -72,22 +79,16 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                     </Field>
                 </div>
 
-                <SheetFooter className="mt-4 flex-row gap-2">
-                    <Button variant="outline" className="flex-1" onClick={onClose}>
+                <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
+                    <Button variant="outline" onClick={onClose} disabled={pending}>
                         {t('cancel')}
                     </Button>
-                    <Button className="flex-1" variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={resolve.isPending}>
-                        {resolve.isPending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : isComplete ? (
-                            <Check className="h-4 w-4" />
-                        ) : (
-                            <X className="h-4 w-4" />
-                        )}
+                    <Button variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={pending}>
+                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : isComplete ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
                         {isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                     </Button>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
