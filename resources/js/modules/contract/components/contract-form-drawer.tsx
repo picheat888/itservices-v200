@@ -7,13 +7,14 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { cn } from '@/shared/lib/utils';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
 
@@ -466,21 +467,15 @@ export function ContractFormDrawer({
                                         const Icon = tp.icon;
                                         const sel = form.type === tp.value;
                                         return (
-                                            <button
-                                                type="button"
+                                            <ChoiceCard
                                                 key={tp.value}
+                                                selected={sel}
                                                 onClick={() => {
                                                     upd('type', tp.value);
                                                     // Only hardware contracts can hold assets — drop any selection on other types.
                                                     if (tp.value !== 'hardware') setForm((f) => ({ ...f, asset_ids: [] }));
                                                 }}
-                                                className={cn(
-                                                    'focus-visible:border-brand focus-visible:ring-brand/15 flex flex-col items-center gap-2.5 rounded-xl border p-5 text-center transition-colors focus:outline-hidden focus-visible:ring-[3px]',
-                                                    // Same treatment as the Issue Type cards: soft brand glow latched on the selected card.
-                                                    sel
-                                                        ? 'border-brand bg-brand/5 text-brand ring-brand/15 ring-[3px]'
-                                                        : 'border-border hover:border-brand/50',
-                                                )}
+                                                className={cn('flex flex-col items-center gap-2.5 rounded-xl p-5 text-center', sel && 'text-brand')}
                                             >
                                                 <Icon className="h-6 w-6" />
                                                 <span className="text-[13px] leading-tight font-semibold">
@@ -489,7 +484,7 @@ export function ContractFormDrawer({
                                                         {lang === 'th' ? tp.subTh : tp.subEn}
                                                     </span>
                                                 </span>
-                                            </button>
+                                            </ChoiceCard>
                                         );
                                     })}
                                 </div>
@@ -652,22 +647,10 @@ export function ContractFormDrawer({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label={t('contract_start')} required error={err.start_date} name="start_date">
-                                        <div className="relative">
-                                            <DateInput
-                                                value={form.start_date}
-                                                onChange={(e) => upd('start_date', e.target.value)}
-                                            />
-                                            <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                                        </div>
+                                        <DateInput value={form.start_date} onChange={(e) => upd('start_date', e.target.value)} />
                                     </Field>
                                     <Field label={t('contract_end')} required error={err.end_date} name="end_date">
-                                        <div className="relative">
-                                            <DateInput
-                                                value={form.end_date}
-                                                onChange={(e) => upd('end_date', e.target.value)}
-                                            />
-                                            <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                                        </div>
+                                        <DateInput value={form.end_date} onChange={(e) => upd('end_date', e.target.value)} />
                                     </Field>
                                 </div>
 
