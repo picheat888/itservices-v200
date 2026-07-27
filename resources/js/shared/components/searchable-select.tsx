@@ -209,8 +209,8 @@ export function SearchableSelect({
                 type="button"
                 onClick={toggle}
                 className={cn(
-                    'ring-offset-background focus-visible:ring-ring flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden',
-                    active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background',
+                    'flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 focus-visible:outline-hidden',
+                    active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
                 )}
             >
                 <span className="flex min-w-0 items-center gap-2">
