@@ -47,6 +47,8 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     const [pending, setPending] = useState<File[]>([]);
     const [dragOver, setDragOver] = useState(false);
     const [progress, setProgress] = useState<Record<number, number>>({});
+    // Count of removed attachments already deleted during save (delete has no byte progress).
+    const [deleted, setDeleted] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Preload the form + attachments from the ticket each time it opens.
@@ -62,6 +64,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         setPending([]);
         setDragOver(false);
         setProgress({});
+        setDeleted(0);
     }, [ticket]);
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
@@ -91,6 +94,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         setErrors(e);
         if (Object.keys(e).length) return;
 
+        setDeleted(0);
         await update.mutateAsync({
             id: ticket.id,
             payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
@@ -104,13 +108,19 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         }
         for (const attachmentId of removedIds) {
             await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
+            setDeleted((d) => d + 1);
         }
         onClose();
     };
 
     const uploading = uploadAttachments.isPending;
     const pendingState = update.isPending || uploading || deleteAttachment.isPending;
-    const overallPct = pending.length ? Math.round(Object.values(progress).reduce((a, b) => a + b, 0) / pending.length) : 0;
+    // One overall bar for the whole save: each uploaded file contributes its byte fraction,
+    // each deleted file counts as one done step (delete has no byte-level progress).
+    const totalOps = pending.length + removedIds.length;
+    const overallPct = totalOps
+        ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100)
+        : 0;
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pendingState && onClose()}>
@@ -243,13 +253,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                     <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
                                         <Paperclip className="h-3.5 w-3.5" />
                                         {t('ticket_attach_count').replace('{n}', String(totalFiles)).replace('{max}', String(MAX_FILES))}
-                                        {uploading && <span className="ml-auto font-mono">{overallPct}%</span>}
                                     </div>
-                                    {uploading && (
-                                        <div className="bg-muted mb-2.5 h-1.5 overflow-hidden rounded-full">
-                                            <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
-                                        </div>
-                                    )}
                                     <div className="max-h-[196px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                                         {keptExisting.map((a) => (
                                             <div key={`e-${a.id}`} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
@@ -298,6 +302,15 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
 
                 {/* Footer: actions */}
                 <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
+                    {/* One save-progress bar covering upload (byte %) + delete (per-file step). */}
+                    {pendingState && totalOps > 0 && (
+                        <div className="mr-auto flex items-center gap-2">
+                            <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
+                                <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
+                            </div>
+                            <span className="text-muted-foreground font-mono text-xs">{overallPct}%</span>
+                        </div>
+                    )}
                     <Button variant="outline" onClick={onClose} disabled={pendingState}>
                         {t('cancel')}
                     </Button>
