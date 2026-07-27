@@ -34,7 +34,11 @@ class TicketAttachmentController extends Controller
 
         $request->validate([
             'files' => ['required', 'array', 'min:1'],
-            'files.*' => ['file', 'mimes:pdf,png,jpg,jpeg', 'mimetypes:application/pdf,image/png,image/jpeg', 'max:'.self::MAX_SIZE_KB],
+            // `mimes` is content-based (Laravel reads the bytes and maps to an extension),
+            // so it whitelists both by extension AND signature. We drop the explicit
+            // `mimetypes` rule on purpose: docx/xlsx/pptx are ZIP containers that finfo
+            // reports as application/zip, which would fight a rigid mimetypes list.
+            'files.*' => ['file', 'mimes:pdf,png,jpg,jpeg,zip,doc,docx,xls,xlsx,ppt,pptx', 'max:'.self::MAX_SIZE_KB],
         ]);
 
         $files = $request->file('files');

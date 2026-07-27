@@ -53,6 +53,23 @@ class TicketAttachmentTest extends TestCase
         $this->assertSame(1, $ticket->attachments()->count());
     }
 
+    public function test_zip_and_office_files_are_accepted(): void
+    {
+        Storage::fake('local');
+        $user = $this->userWithEmployee();
+        $ticket = Ticket::factory()->create(['requester_id' => $user->employee_id]);
+        $this->actingAs($user);
+
+        $this->postJson("/api/tickets/{$ticket->id}/attachments", [
+            'files' => [
+                UploadedFile::fake()->create('logs.zip', 300, 'application/zip'),
+                UploadedFile::fake()->create('report.xlsx', 300, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            ],
+        ])->assertOk();
+
+        $this->assertSame(2, $ticket->attachments()->count());
+    }
+
     public function test_disallowed_file_type_is_rejected(): void
     {
         Storage::fake('local');
