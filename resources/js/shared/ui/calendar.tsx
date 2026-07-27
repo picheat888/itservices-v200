@@ -9,18 +9,29 @@ import { cn } from '@/shared/lib/utils';
  * brand accent for the selected day. Pass `mode`, `selected`, `onSelect`, `locale`,
  * etc. straight through to DayPicker.
  */
-export function Calendar({ className, classNames, ...props }: DayPickerProps) {
+export function Calendar({ className, classNames, captionLayout = 'dropdown', startMonth, endMonth, ...props }: DayPickerProps) {
     const base = getDefaultClassNames();
+    // Wide navigable range so the month/year dropdowns cover past dates (purchase,
+    // join date) and future ones (contract expiry) without the caller specifying it.
+    const currentYear = new Date().getFullYear();
+    const start = startMonth ?? new Date(1970, 0);
+    const end = endMonth ?? new Date(currentYear + 10, 11);
 
     return (
         <DayPicker
             showOutsideDays
+            captionLayout={captionLayout}
+            startMonth={start}
+            endMonth={end}
             className={cn('select-none', className)}
             classNames={{
                 months: cn(base.months, 'relative'),
                 month: cn(base.month, 'space-y-3'),
                 month_caption: cn(base.month_caption, 'flex h-8 items-center justify-center'),
-                caption_label: cn(base.caption_label, 'text-sm font-semibold capitalize'),
+                caption_label: cn(base.caption_label, 'hover:text-brand flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold capitalize transition-colors'),
+                dropdowns: cn(base.dropdowns, 'flex items-center justify-center gap-1.5'),
+                dropdown_root: cn(base.dropdown_root, 'relative inline-flex items-center'),
+                dropdown: cn(base.dropdown, 'absolute inset-0 cursor-pointer opacity-0'),
                 nav: cn(base.nav, 'absolute inset-x-0 top-0 flex items-center justify-between'),
                 button_previous: cn(base.button_previous, 'text-muted-foreground hover:text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md transition-colors'),
                 button_next: cn(base.button_next, 'text-muted-foreground hover:text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md transition-colors'),
