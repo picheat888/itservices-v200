@@ -65,7 +65,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     }, [ticket]);
 
     const keptExisting = existing.filter((a) => !removedIds.includes(a.id));
-    const slotsLeft = MAX_FILES - keptExisting.length - pending.length;
+    const totalFiles = keptExisting.length + pending.length;
 
     // Keep only allowed extensions, respect the remaining slots, dedupe by name+size.
     const addFiles = (list: FileList | File[]) => {
@@ -194,81 +194,55 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                             <SectionLabel>{t('ticket_attach')}</SectionLabel>
                             <p className="text-muted-foreground mb-3.5 text-xs">{t('ticket_attach_optional')}</p>
 
-                            {/* Already-saved files — the ✕ marks them for removal (applied on Save). */}
-                            {keptExisting.length > 0 && (
-                                <div className="mb-3">
-                                    {keptExisting.map((a) => (
-                                        <div key={a.id} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
-                                            <span className="text-muted-foreground shrink-0">
-                                                {a.mime?.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                                            </span>
-                                            <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{a.name}</span>
-                                            <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(a.size)}</span>
-                                            {!pendingState && (
-                                                <button
-                                                    type="button"
-                                                    className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
-                                                    onClick={() => setRemovedIds((prev) => [...prev, a.id])}
-                                                    aria-label={t('delete')}
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
+                            {/* Drag & drop OR click — on top like Open Ticket, shrinks once any file is present. */}
+                            <div
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => inputRef.current?.click()}
+                                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setDragOver(true);
+                                }}
+                                onDragLeave={(e) => {
+                                    e.preventDefault();
+                                    setDragOver(false);
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    setDragOver(false);
+                                    addFiles(e.dataTransfer.files);
+                                }}
+                                className={cn(
+                                    'flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 text-center text-sm transition-colors',
+                                    totalFiles ? 'py-2.5' : 'py-9',
+                                    dragOver
+                                        ? 'border-brand bg-brand/10 text-brand'
+                                        : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand hover:bg-[#c4c4c40f]',
+                                )}
+                            >
+                                <UploadCloud className={cn('shrink-0', totalFiles ? 'h-5 w-5' : 'h-6 w-6')} />
+                                <span className="text-foreground font-medium">{t('ticket_attach_drop')}</span>
+                                <span className="text-muted-foreground text-[11px]">{t('ticket_attach_types')}</span>
+                                <input
+                                    ref={inputRef}
+                                    type="file"
+                                    multiple
+                                    accept={ACCEPT_ATTR}
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        addFiles(e.target.files ?? []);
+                                        e.target.value = '';
+                                    }}
+                                />
+                            </div>
 
-                            {/* Drag & drop OR click to add new files. Hidden once no slots remain. */}
-                            {slotsLeft > 0 && (
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => inputRef.current?.click()}
-                                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
-                                    onDragOver={(e) => {
-                                        e.preventDefault();
-                                        setDragOver(true);
-                                    }}
-                                    onDragLeave={(e) => {
-                                        e.preventDefault();
-                                        setDragOver(false);
-                                    }}
-                                    onDrop={(e) => {
-                                        e.preventDefault();
-                                        setDragOver(false);
-                                        addFiles(e.dataTransfer.files);
-                                    }}
-                                    className={cn(
-                                        'flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 text-center text-sm transition-colors',
-                                        pending.length ? 'py-2.5' : 'py-9',
-                                        dragOver
-                                            ? 'border-brand bg-brand/10 text-brand'
-                                            : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand hover:bg-[#c4c4c40f]',
-                                    )}
-                                >
-                                    <UploadCloud className={cn('shrink-0', pending.length ? 'h-5 w-5' : 'h-6 w-6')} />
-                                    <span className="text-foreground font-medium">{t('ticket_attach_drop')}</span>
-                                    <span className="text-muted-foreground text-[11px]">{t('ticket_attach_types')}</span>
-                                    <input
-                                        ref={inputRef}
-                                        type="file"
-                                        multiple
-                                        accept={ACCEPT_ATTR}
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            addFiles(e.target.files ?? []);
-                                            e.target.value = '';
-                                        }}
-                                    />
-                                </div>
-                            )}
-
-                            {pending.length > 0 && (
+                            {/* One scroll list under the dropzone: saved files first (✕ = mark for removal), then new files (✕ = drop). */}
+                            {totalFiles > 0 && (
                                 <div className="mt-3.5">
                                     <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
                                         <Paperclip className="h-3.5 w-3.5" />
-                                        {t('ticket_attach_count').replace('{n}', String(pending.length)).replace('{max}', String(MAX_FILES))}
+                                        {t('ticket_attach_count').replace('{n}', String(totalFiles)).replace('{max}', String(MAX_FILES))}
                                         {uploading && <span className="ml-auto font-mono">{overallPct}%</span>}
                                     </div>
                                     {uploading && (
@@ -277,8 +251,27 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                         </div>
                                     )}
                                     <div className="max-h-[196px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+                                        {keptExisting.map((a) => (
+                                            <div key={`e-${a.id}`} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
+                                                <span className="text-muted-foreground shrink-0">
+                                                    {a.mime?.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{a.name}</span>
+                                                <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(a.size)}</span>
+                                                {!pendingState && (
+                                                    <button
+                                                        type="button"
+                                                        className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
+                                                        onClick={() => setRemovedIds((prev) => [...prev, a.id])}
+                                                        aria-label={t('delete')}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
                                         {pending.map((f, i) => (
-                                            <div key={i} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
+                                            <div key={`p-${i}`} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
                                                 <span className="text-muted-foreground shrink-0">
                                                     {f.type.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                                                 </span>
