@@ -3,6 +3,7 @@ import { Field } from '@/shared/components/field';
 import type { Contract } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Textarea } from '@/shared/ui/textarea';
 import { Ban } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
@@ -52,13 +53,12 @@ export function ContractCancelDialog({ contract, onClose, onDone }: { contract: 
                 </DialogHeader>
 
                 <Field label={t('contract_cancel_reason')} required error={error}>
-                    <textarea
+                    <Textarea
                         value={reason}
                         onChange={(e) => setReason(e.target.value)}
                         rows={3}
                         autoFocus
                         placeholder={t('contract_cancel_reason_ph')}
-                        className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     />
                 </Field>
 

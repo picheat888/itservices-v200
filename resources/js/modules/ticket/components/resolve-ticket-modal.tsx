@@ -1,6 +1,7 @@
 import { Field } from '@/shared/components/field';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+import { Textarea } from '@/shared/ui/textarea';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -50,17 +51,14 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                 <div className="mt-6 flex-1 space-y-4 overflow-y-auto px-1">
                     <p className="text-muted-foreground text-sm">{t('ticket_resolution_required')}</p>
                     <Field label={t('ticket_resolution_details')} required error={err}>
-                        <textarea
+                        <Textarea
                             value={resolution}
                             onChange={(e) => {
                                 setResolution(e.target.value);
                                 setErr('');
                             }}
                             rows={5}
-                            className={cn(
-                                'bg-background focus:border-brand w-full rounded-md border px-3 py-2 text-sm outline-none',
-                                err ? 'border-destructive' : 'border-input',
-                            )}
+                            className={cn(err && 'border-destructive')}
                             placeholder={
                                 isComplete
                                     ? lang === 'th'

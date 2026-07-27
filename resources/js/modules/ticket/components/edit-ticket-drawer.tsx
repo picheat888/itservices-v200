@@ -3,6 +3,7 @@ import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+import { Textarea } from '@/shared/ui/textarea';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -102,11 +103,10 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                     </Field>
 
                     <Field label={t('ticket_description')} required error={errors.description}>
-                        <textarea
+                        <Textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             rows={4}
-                            className="border-input bg-background focus:border-brand w-full rounded-md border px-3 py-2 text-sm outline-none"
                         />
                     </Field>
 

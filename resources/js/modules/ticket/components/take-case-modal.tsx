@@ -2,6 +2,7 @@ import { Field } from '@/shared/components/field';
 import { TICKET_PRIORITY_META } from './ticket-meta';
 import { Button } from '@/shared/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+import { Textarea } from '@/shared/ui/textarea';
 import { useAssets } from '@/modules/asset';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { useT } from '@/lang';
@@ -82,11 +83,10 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     )}
 
                     <Field label={t('ticket_initial_notes')}>
-                        <textarea
+                        <Textarea
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
                             rows={3}
-                            className="border-input bg-background focus:border-brand w-full rounded-md border px-3 py-2 text-sm outline-none"
                         />
                     </Field>
                 </div>

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
+import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { Calendar, Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -444,11 +445,10 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     {/* Notes */}
                     <div>
                         <SectionLabel>{t('asset_notes')}</SectionLabel>
-                        <textarea
+                        <Textarea
                             value={form.notes}
                             onChange={(e) => upd('notes', e.target.value)}
                             rows={2}
-                            className="border-input focus:border-brand bg-background w-full rounded-md border px-3 py-2 text-sm outline-none"
                         />
                     </div>
                 </div>
