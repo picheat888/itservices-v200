@@ -43,8 +43,8 @@ function KV({ label, value, mono }: { label: string; value: React.ReactNode; mon
 /** Small uppercase section heading with a short brand accent underline (mirrors Contract/Asset detail). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="mb-3">
-            <div className="dark:text-foreground flex items-center gap-2 text-xs font-bold tracking-wide text-[#2f2f2f] uppercase">{children}</div>
+        <div className="mb-2">
+            <div className="dark:text-foreground flex items-center gap-2 text-sm font-bold tracking-wide text-[#2f2f2f] uppercase">{children}</div>
             <div className="bg-brand/70 mt-1.5 h-0.5 w-8 rounded-full" />
         </div>
     );
@@ -206,7 +206,7 @@ export function ContractPeekDialog({ assetId, onClose }: { assetId: number | nul
                             <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
                     ) : tab === 'overview' ? (
-                        <div className="space-y-7">
+                        <div className="space-y-5">
                             {/* ข้อมูลสัญญา */}
                             <div>
                                 <SectionLabel>{t('contract_section_info')}</SectionLabel>

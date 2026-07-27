@@ -64,7 +64,8 @@ export function useTicketMutations() {
             onSuccess: invalidate,
         }),
         uploadAttachments: useMutation({
-            mutationFn: (v: { id: number; files: File[] }) => ticketApi.uploadAttachments(v.id, v.files),
+            mutationFn: (v: { id: number; files: File[]; onProgress?: (index: number, percent: number) => void }) =>
+                ticketApi.uploadAttachments(v.id, v.files, v.onProgress),
             onSuccess: invalidate,
         }),
     };

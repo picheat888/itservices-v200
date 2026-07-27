@@ -58,7 +58,7 @@ function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
 function SectionLabel({ children, right }: { children: ReactNode; right?: ReactNode }) {
     return (
         <div className="mb-2 flex items-center justify-between">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{children}</span>
+            <span className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">{children}</span>
             {right != null && <span className="font-mono text-xs">{right}</span>}
         </div>
     );

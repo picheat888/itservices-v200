@@ -55,7 +55,7 @@ const DATE_CLS =
 
 /** Small uppercase section heading (mirrors the View Details dialog). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
-    return <div className="text-muted-foreground mb-2.5 text-[11px] font-bold tracking-wide uppercase">{children}</div>;
+    return <div className="text-muted-foreground mb-2 text-sm font-bold tracking-wide uppercase">{children}</div>;
 }
 
 /**
