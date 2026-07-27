@@ -37,14 +37,14 @@ function fileKind(a: TicketAttachment): FileKind {
     return 'other';
 }
 
-/** Icon + accent color + i18n label per non-image file kind. */
-const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; color: string; labelKey: string }> = {
-    pdf: { Icon: FileText, color: 'text-red-500', labelKey: 'ticket_ft_pdf' },
-    word: { Icon: FileText, color: 'text-blue-500', labelKey: 'ticket_ft_word' },
-    excel: { Icon: FileSpreadsheet, color: 'text-green-600', labelKey: 'ticket_ft_excel' },
-    ppt: { Icon: Presentation, color: 'text-orange-500', labelKey: 'ticket_ft_ppt' },
-    archive: { Icon: FileArchive, color: 'text-purple-500', labelKey: 'ticket_ft_archive' },
-    other: { Icon: File, color: 'text-muted-foreground', labelKey: 'ticket_ft_file' },
+/** Icon + accent color + short format keyword per non-image file kind (keyword is a format name, not translated). */
+const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; color: string; short: string }> = {
+    pdf: { Icon: FileText, color: 'text-red-500', short: 'PDF' },
+    word: { Icon: FileText, color: 'text-blue-500', short: 'WORD' },
+    excel: { Icon: FileSpreadsheet, color: 'text-green-600', short: 'EXCEL' },
+    ppt: { Icon: Presentation, color: 'text-orange-500', short: 'PPT' },
+    archive: { Icon: FileArchive, color: 'text-purple-500', short: 'ZIP' },
+    other: { Icon: File, color: 'text-muted-foreground', short: 'FILE' },
 };
 
 /** Small label/value pair used in the details grid and the rail. */
@@ -599,11 +599,21 @@ export function TicketDetailDrawer({
                                 // Office / archive / other: no inline render — show a file card with a download action.
                                 pvMeta && (
                                     <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
-                                        <pvMeta.Icon className={cn('h-20 w-20', pvMeta.color)} />
+                                        <div className="flex flex-col items-center gap-2">
+                                            <pvMeta.Icon className={cn('h-20 w-20', pvMeta.color)} />
+                                            <span
+                                                className={cn(
+                                                    'rounded-md border border-current px-2 py-0.5 text-[11px] font-bold tracking-widest',
+                                                    pvMeta.color,
+                                                )}
+                                            >
+                                                {pvMeta.short}
+                                            </span>
+                                        </div>
                                         <div className="space-y-1">
                                             <div className="text-base font-semibold break-all">{pv.name}</div>
                                             <div className="text-muted-foreground font-mono text-xs">
-                                                {t(pvMeta.labelKey)} · {formatSize(pv.size)}
+                                                {formatSize(pv.size)}
                                                 {pv.created_at ? ` · ${fmtWhen(pv.created_at)}` : ''}
                                             </div>
                                             <div className="text-muted-foreground pt-1 text-xs">{t('ticket_no_inline_preview')}</div>
