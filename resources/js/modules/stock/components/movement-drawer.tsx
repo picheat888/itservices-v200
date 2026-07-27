@@ -418,7 +418,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                     <DialogTitle>{k ? t(`stock_mv_${k}` as Parameters<typeof t>[0]) : ''}</DialogTitle>
                 </DialogHeader>
                 {/* -mx-2/px-2 keeps content aligned while pushing the scroll clip edge
-                    out so focused inputs' rings (ring-2 + ring-offset-2) aren't cut off. */}
+                    out so focused inputs' rings (ring-[3px]) aren't cut off. */}
                 <div className="-mx-2 max-h-[70vh] space-y-3 overflow-y-auto px-2 py-1.5">
                     <Field label={t('stock_item')} required>
                         <SearchableSelect
