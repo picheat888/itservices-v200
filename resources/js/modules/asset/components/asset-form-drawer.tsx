@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { cn } from '@/shared/lib/utils';
+import { cn, dateFieldClass } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -51,8 +51,6 @@ const EMPTY: FormState = {
 };
 
 /** Native date picker restyled to match the Contract form (Calendar icon on the right). */
-const DATE_CLS =
-    'pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
 
 /** Small uppercase section heading (mirrors the View Details dialog). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -385,7 +383,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                             <div className="relative">
                                                 <Input
                                                     type="date"
-                                                    className={DATE_CLS}
+                                                    className={dateFieldClass}
                                                     value={form.purchase_date}
                                                     onChange={(e) => upd('purchase_date', e.target.value)}
                                                 />
@@ -427,7 +425,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 <div className="relative">
                                                     <Input
                                                         type="date"
-                                                        className={DATE_CLS}
+                                                        className={dateFieldClass}
                                                         value={form.warranty_end}
                                                         onChange={(e) => upd('warranty_end', e.target.value)}
                                                     />

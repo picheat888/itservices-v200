@@ -8,7 +8,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useContractMutations } from '../hooks/use-contracts';
 import { useCurrency, useVendors } from '@/modules/settings';
 import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
+import { cn, dateFieldClass } from '@/shared/lib/utils';
 import { assetApi } from '@/modules/asset';
 import { useUiStore } from '@/stores/ui';
 import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
@@ -650,7 +650,7 @@ export function ContractFormDrawer({
                                         <div className="relative">
                                             <Input
                                                 type="date"
-                                                className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+                                                className={dateFieldClass}
                                                 value={form.start_date}
                                                 onChange={(e) => upd('start_date', e.target.value)}
                                             />
@@ -661,7 +661,7 @@ export function ContractFormDrawer({
                                         <div className="relative">
                                             <Input
                                                 type="date"
-                                                className="pr-9 font-mono [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+                                                className={dateFieldClass}
                                                 value={form.end_date}
                                                 onChange={(e) => upd('end_date', e.target.value)}
                                             />
