@@ -80,7 +80,6 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
             </PopoverTrigger>
             <PopoverContent container={container} align="start" className="w-auto">
                 <Calendar
-                    mode="single"
                     selected={selected}
                     defaultMonth={selected}
                     locale={lang === 'th' ? th : enUS}
