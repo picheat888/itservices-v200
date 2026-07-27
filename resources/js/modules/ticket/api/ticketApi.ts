@@ -77,4 +77,6 @@ export const ticketApi = {
         }
         return latest as Ticket;
     },
+    /** Remove one already-saved attachment from a ticket. */
+    deleteAttachment: (id: number, attachmentId: number) => mutate<Ticket>('delete', `/tickets/${id}/attachments/${attachmentId}`),
 };
