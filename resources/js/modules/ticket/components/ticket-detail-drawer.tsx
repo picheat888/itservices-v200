@@ -356,7 +356,7 @@ export function TicketDetailDrawer({
                                                                         <meta.Icon className={cn('h-14 w-14', meta.color)} />
                                                                         <span
                                                                             className={cn(
-                                                                                'rounded border border-current px-1.5 py-0.5 text-[10px] font-bold tracking-widest',
+                                                                                'rounded-full border border-current px-2 py-0.5 text-[10px] font-bold tracking-widest',
                                                                                 meta.color,
                                                                             )}
                                                                         >
@@ -611,7 +611,7 @@ export function TicketDetailDrawer({
                                             <pvMeta.Icon className={cn('h-20 w-20', pvMeta.color)} />
                                             <span
                                                 className={cn(
-                                                    'rounded-md border border-current px-2 py-0.5 text-[11px] font-bold tracking-widest',
+                                                    'rounded-full border border-current px-2.5 py-0.5 text-[11px] font-bold tracking-widest',
                                                     pvMeta.color,
                                                 )}
                                             >
