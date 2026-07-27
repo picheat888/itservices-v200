@@ -352,8 +352,16 @@ export function TicketDetailDrawer({
                                                                 />
                                                             ) : (
                                                                 meta && (
-                                                                    <span className="grid h-full w-full place-items-center">
-                                                                        <meta.Icon className={cn('h-10 w-10', meta.color)} />
+                                                                    <span className="flex h-full w-full flex-col items-center justify-center gap-2">
+                                                                        <meta.Icon className={cn('h-14 w-14', meta.color)} />
+                                                                        <span
+                                                                            className={cn(
+                                                                                'rounded border border-current px-1.5 py-0.5 text-[10px] font-bold tracking-widest',
+                                                                                meta.color,
+                                                                            )}
+                                                                        >
+                                                                            {meta.short}
+                                                                        </span>
                                                                     </span>
                                                                 )
                                                             )}
