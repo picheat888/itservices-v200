@@ -435,7 +435,7 @@ function useLivePreview(enabled: boolean, name: string, subject: string, body: s
 function SubjectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     const hlRef = useRef<HTMLDivElement>(null);
     return (
-        <div className="border-input bg-background ring-offset-background focus-within:ring-ring relative h-10 rounded-md border focus-within:ring-2 focus-within:ring-offset-2">
+        <div className="border-input bg-background relative h-10 rounded-md border transition-colors hover:border-brand/50 focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15">
             <div
                 ref={hlRef}
                 aria-hidden="true"
@@ -450,7 +450,7 @@ function SubjectField({ value, onChange }: { value: string; onChange: (v: string
                     if (h) h.scrollLeft = e.currentTarget.scrollLeft;
                 }}
                 spellCheck={false}
-                className="caret-foreground absolute inset-0 h-full w-full bg-transparent px-3 text-base text-transparent outline-none md:text-sm"
+                className="caret-foreground absolute inset-0 h-full w-full bg-transparent px-3 text-base text-transparent outline-hidden md:text-sm"
             />
         </div>
     );
