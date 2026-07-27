@@ -14,12 +14,15 @@ export function cn(...inputs: ClassValue[]) {
 export const datePickerFocusClass = 'focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden';
 
 /**
- * Full chrome for a `<input type="date">` paired with an overlaid <Calendar> icon:
- * a right-padded, mono-digit field whose native calendar-picker indicator is stretched
- * to cover the whole control and made invisible (so a click anywhere opens the picker),
- * plus the brand focus latch above.
+ * Chrome for a `<input type="date">` paired with an overlaid <Calendar> icon button:
+ * a right-padded, mono-digit field with the brand focus latch and the native
+ * calendar-picker indicator hidden. The indicator is intentionally NOT stretched to
+ * cover the field — a full-cover indicator opens the native picker on every click and
+ * the picker steals focus, so the ring never latched. With it hidden, clicking the
+ * field just focuses it (ring shows); the picker is opened via the icon button's
+ * `showPicker()` in <DateInput>.
  */
-export const dateFieldClass = `pr-9 font-mono ${datePickerFocusClass} [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0`;
+export const dateFieldClass = `pr-9 font-mono ${datePickerFocusClass} [&::-webkit-calendar-picker-indicator]:hidden`;
 
 /**
  * Scroll the first errored field into view and focus its control. Pass the validation

@@ -11,7 +11,7 @@ import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import type { Employee } from '@/shared/types';
-import { AlertTriangle, ArrowRight, Briefcase, Calendar, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
@@ -405,13 +405,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const joinedField = (
         <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
-            <div className="relative">
-                <DateInput
-                    value={form.joinedAt}
-                    onChange={(e) => set('joinedAt', e.target.value)}
-                />
-                <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-            </div>
+            <DateInput value={form.joinedAt} onChange={(e) => set('joinedAt', e.target.value)} />
         </Field>
     );
 

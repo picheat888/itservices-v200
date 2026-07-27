@@ -5,6 +5,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
@@ -12,7 +13,7 @@ import { Label } from '@/shared/ui/label';
 import { Switch } from '@/shared/ui/switch';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Calendar, Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
+import { Check, FileText, Infinity as InfinityIcon, Loader2, PackagePlus, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { AssetPayload } from '../api/assetApi';
 import { useAssetContractOptions, useAssetMutations } from '../hooks/use-assets';
@@ -50,8 +51,6 @@ const EMPTY: FormState = {
     contract_id: '',
     notes: '',
 };
-
-/** Native date picker restyled to match the Contract form (Calendar icon on the right). */
 
 /** Small uppercase section heading (mirrors the View Details dialog). */
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -243,15 +242,11 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                             {(['purchased', 'rented'] as AssetSource[]).map((s) => {
                                 const on = form.source === s;
                                 return (
-                                    <button
-                                        type="button"
+                                    <ChoiceCard
                                         key={s}
+                                        selected={on}
                                         onClick={() => upd('source', s)}
-                                        className={cn(
-                                            'focus-visible:border-brand focus-visible:ring-brand/15 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-hidden focus-visible:ring-[3px]',
-                                            // Same treatment as the Issue Type cards: soft brand glow latched on the selected card.
-                                            on ? 'border-brand bg-brand/5 ring-brand/15 ring-[3px]' : 'border-border hover:border-brand/50',
-                                        )}
+                                        className="flex items-start gap-3 rounded-xl p-3 text-left"
                                     >
                                         <span
                                             className={cn(
@@ -269,7 +264,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 {s === 'rented' ? t('asset_source_rented_sub') : t('asset_source_purchased_sub')}
                                             </span>
                                         </span>
-                                    </button>
+                                    </ChoiceCard>
                                 );
                             })}
                         </div>
@@ -387,13 +382,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                     <span className="text-destructive ml-0.5">*</span>
                                                 </Label>
                                             </div>
-                                            <div className="relative">
-                                                <DateInput
-                                                    value={form.purchase_date}
-                                                    onChange={(e) => upd('purchase_date', e.target.value)}
-                                                />
-                                                <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                                            </div>
+                                            <DateInput value={form.purchase_date} onChange={(e) => upd('purchase_date', e.target.value)} />
                                             {err.purchase_date && <p className="text-destructive text-xs">{err.purchase_date}</p>}
                                         </div>
                                         <div className="space-y-1.5" data-field="warranty_end">
@@ -427,13 +416,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                     {t('asset_warranty_lifetime')}
                                                 </div>
                                             ) : (
-                                                <div className="relative">
-                                                    <DateInput
-                                                        value={form.warranty_end}
-                                                        onChange={(e) => upd('warranty_end', e.target.value)}
-                                                    />
-                                                    <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                                                </div>
+                                                <DateInput value={form.warranty_end} onChange={(e) => upd('warranty_end', e.target.value)} />
                                             )}
                                             {err.warranty_end && <p className="text-destructive text-xs">{err.warranty_end}</p>}
                                         </div>

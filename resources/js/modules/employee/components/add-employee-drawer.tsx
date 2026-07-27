@@ -12,7 +12,7 @@ import { useT } from '@/lang';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Briefcase, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
@@ -408,13 +408,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                 </Field>
                                 <div className="grid grid-cols-2 gap-3">
                                     <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
-                                        <div className="relative">
-                                            <DateInput
-                                                value={form.joinedAt}
-                                                onChange={(e) => set('joinedAt', e.target.value)}
-                                            />
-                                            <Calendar className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2" />
-                                        </div>
+                                        <DateInput value={form.joinedAt} onChange={(e) => set('joinedAt', e.target.value)} />
                                     </Field>
                                     <Field label={t('emp_employee_id')} help={t('emp_id_help')}>
                                         <Input
