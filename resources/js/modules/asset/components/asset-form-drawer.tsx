@@ -2,9 +2,10 @@ import { useT } from '@/lang';
 import { useAssetModels, useBrands, useCategories, useCurrency, useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
-import { cn, dateFieldClass } from '@/shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import type { Asset, AssetSource } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -120,7 +121,12 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
 
     // Asset type, brand and model are all picked from the shared Master Data lists.
     const typeOptions = useMemo(
-        () => categories.map((c) => ({ value: String(c.id), label: lang === 'th' ? (c.name_th ?? c.name) : c.name, search: `${c.name} ${c.name_th ?? ''}` })),
+        () =>
+            categories.map((c) => ({
+                value: String(c.id),
+                label: lang === 'th' ? (c.name_th ?? c.name) : c.name,
+                search: `${c.name} ${c.name_th ?? ''}`,
+            })),
         [categories, lang],
     );
     // Models are scoped to the chosen brand; with no brand picked, show them all.
@@ -242,8 +248,9 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                         key={s}
                                         onClick={() => upd('source', s)}
                                         className={cn(
-                                            'flex items-start gap-3 rounded-xl border p-3 text-left transition-colors',
-                                            on ? 'border-brand bg-brand/5' : 'border-border hover:bg-accent',
+                                            'focus-visible:border-brand focus-visible:ring-brand/15 flex items-start gap-3 rounded-xl border p-3 text-left transition-colors focus:outline-hidden focus-visible:ring-[3px]',
+                                            // Same treatment as the Issue Type cards: soft brand glow latched on the selected card.
+                                            on ? 'border-brand bg-brand/5 ring-brand/15 ring-[3px]' : 'border-border hover:border-brand/50',
                                         )}
                                     >
                                         <span
@@ -381,9 +388,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 </Label>
                                             </div>
                                             <div className="relative">
-                                                <Input
-                                                    type="date"
-                                                    className={dateFieldClass}
+                                                <DateInput
                                                     value={form.purchase_date}
                                                     onChange={(e) => upd('purchase_date', e.target.value)}
                                                 />
@@ -423,9 +428,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                                 </div>
                                             ) : (
                                                 <div className="relative">
-                                                    <Input
-                                                        type="date"
-                                                        className={dateFieldClass}
+                                                    <DateInput
                                                         value={form.warranty_end}
                                                         onChange={(e) => upd('warranty_end', e.target.value)}
                                                     />
@@ -443,11 +446,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                     {/* Notes */}
                     <div>
                         <SectionLabel>{t('asset_notes')}</SectionLabel>
-                        <Textarea
-                            value={form.notes}
-                            onChange={(e) => upd('notes', e.target.value)}
-                            rows={2}
-                        />
+                        <Textarea value={form.notes} onChange={(e) => upd('notes', e.target.value)} rows={2} />
                     </div>
                 </div>
 

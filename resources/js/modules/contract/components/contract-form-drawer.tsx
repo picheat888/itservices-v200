@@ -1,20 +1,21 @@
+import { useT } from '@/lang';
+import { assetApi } from '@/modules/asset';
+import { useCurrency, useVendors } from '@/modules/settings';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { cn } from '@/shared/lib/utils';
+import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { useContractMutations } from '../hooks/use-contracts';
-import { useCurrency, useVendors } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn, dateFieldClass } from '@/shared/lib/utils';
-import { assetApi } from '@/modules/asset';
 import { useUiStore } from '@/stores/ui';
-import { type BillingCycle, type Contract, type ContractAttachment, type ContractType, type Vendor } from '@/shared/types';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Check, ChevronLeft, ChevronRight, Cog, FileText, Info, Laptop, Loader2, Package, Paperclip, Search, Wifi, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useContractMutations } from '../hooks/use-contracts';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 25 * 1024 * 1024; // 25MB
@@ -64,7 +65,12 @@ function sanitizeMoney(raw: string): string {
     let s = raw.replace(/[^\d.]/g, '');
     const dot = s.indexOf('.');
     if (dot !== -1) {
-        s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+        s =
+            s.slice(0, dot + 1) +
+            s
+                .slice(dot + 1)
+                .replace(/\./g, '')
+                .slice(0, 2);
     }
     return s;
 }
@@ -156,9 +162,7 @@ export function ContractFormDrawer({
         const end = new Date(form.end_date);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return null;
         const months =
-            (end.getFullYear() - start.getFullYear()) * 12 +
-            (end.getMonth() - start.getMonth()) +
-            (end.getDate() >= start.getDate() ? 0 : -1);
+            (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + (end.getDate() >= start.getDate() ? 0 : -1);
         const raw = form.billing_cycle === 'monthly' ? months : form.billing_cycle === 'quarterly' ? months / 3 : months / 12;
         return Math.round(v * Math.max(1, Math.round(raw)) * 100) / 100;
     })();
@@ -471,10 +475,11 @@ export function ContractFormDrawer({
                                                     if (tp.value !== 'hardware') setForm((f) => ({ ...f, asset_ids: [] }));
                                                 }}
                                                 className={cn(
-                                                    'flex flex-col items-center gap-2.5 rounded-xl border p-5 text-center transition-colors',
+                                                    'focus-visible:border-brand focus-visible:ring-brand/15 flex flex-col items-center gap-2.5 rounded-xl border p-5 text-center transition-colors focus:outline-hidden focus-visible:ring-[3px]',
+                                                    // Same treatment as the Issue Type cards: soft brand glow latched on the selected card.
                                                     sel
-                                                        ? 'border-brand bg-brand/5 text-brand shadow-[inset_0_0_0_1px_var(--brand)]'
-                                                        : 'border-border hover:bg-accent',
+                                                        ? 'border-brand bg-brand/5 text-brand ring-brand/15 ring-[3px]'
+                                                        : 'border-border hover:border-brand/50',
                                                 )}
                                             >
                                                 <Icon className="h-6 w-6" />
@@ -648,9 +653,7 @@ export function ContractFormDrawer({
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label={t('contract_start')} required error={err.start_date} name="start_date">
                                         <div className="relative">
-                                            <Input
-                                                type="date"
-                                                className={dateFieldClass}
+                                            <DateInput
                                                 value={form.start_date}
                                                 onChange={(e) => upd('start_date', e.target.value)}
                                             />
@@ -659,9 +662,7 @@ export function ContractFormDrawer({
                                     </Field>
                                     <Field label={t('contract_end')} required error={err.end_date} name="end_date">
                                         <div className="relative">
-                                            <Input
-                                                type="date"
-                                                className={dateFieldClass}
+                                            <DateInput
                                                 value={form.end_date}
                                                 onChange={(e) => upd('end_date', e.target.value)}
                                             />
@@ -687,13 +688,22 @@ export function ContractFormDrawer({
                                             onChange={(v) => upd('billing_cycle', v as BillingCycle)}
                                             options={[
                                                 { value: 'monthly', label: t('contract_billing_monthly'), search: t('contract_billing_monthly') },
-                                                { value: 'quarterly', label: t('contract_billing_quarterly'), search: t('contract_billing_quarterly') },
+                                                {
+                                                    value: 'quarterly',
+                                                    label: t('contract_billing_quarterly'),
+                                                    search: t('contract_billing_quarterly'),
+                                                },
                                                 { value: 'yearly', label: t('contract_billing_yearly'), search: t('contract_billing_yearly') },
                                             ]}
                                         />
                                     </Field>
                                 </div>
-                                <Field label={`${t('contract_total_value')} (${symbol})`} required={!editing} error={err.total_value} name="total_value">
+                                <Field
+                                    label={`${t('contract_total_value')} (${symbol})`}
+                                    required={!editing}
+                                    error={err.total_value}
+                                    name="total_value"
+                                >
                                     <Input
                                         type="text"
                                         inputMode="decimal"

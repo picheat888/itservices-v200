@@ -2,13 +2,14 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { Button } from '@/shared/ui/button';
+import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
 import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { useSettings } from '@/modules/settings';
 import { useT } from '@/lang';
-import { cn, dateFieldClass, focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeft, ArrowRight, Briefcase, Calendar, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
@@ -408,9 +409,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                 <div className="grid grid-cols-2 gap-3">
                                     <Field label={t('emp_start_date')} required name="joinedAt" error={errors.joinedAt}>
                                         <div className="relative">
-                                            <Input
-                                                className={dateFieldClass}
-                                                type="date"
+                                            <DateInput
                                                 value={form.joinedAt}
                                                 onChange={(e) => set('joinedAt', e.target.value)}
                                             />
