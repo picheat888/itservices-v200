@@ -68,6 +68,15 @@ function StatusRow({
         green: 'text-emerald-600 dark:text-emerald-400',
         ink: 'text-muted-foreground',
     }[tone];
+    // Alert rows (amber/red) get a soft tinted background + a count pill so they
+    // stand out from the all-clear rows; same paddings, so the card height is unchanged.
+    const isAlert = tone === 'amber' || tone === 'red';
+    const rowTint = {
+        amber: 'bg-amber-500/[0.07] hover:bg-amber-500/15',
+        red: 'bg-destructive/[0.06] hover:bg-destructive/10',
+        green: '',
+        ink: '',
+    }[tone];
     const body = (
         <>
             <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', toneClass)} />
@@ -75,18 +84,33 @@ function StatusRow({
                 <div className="text-sm font-medium">{title}</div>
                 <div className="text-muted-foreground text-xs">{sub}</div>
             </div>
-            <span className={cn('font-mono text-sm font-semibold', toneClass)}>{value}</span>
+            {isAlert ? (
+                <span
+                    className={cn(
+                        'rounded-full px-2 py-px font-mono text-xs font-bold',
+                        tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                    )}
+                >
+                    {value}
+                </span>
+            ) : (
+                <span className={cn('font-mono text-sm font-semibold', toneClass)}>{value}</span>
+            )}
             {onClick && <ChevronRight className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />}
         </>
     );
     if (onClick) {
         return (
-            <button type="button" onClick={onClick} className="hover:bg-muted/40 flex w-full items-start gap-3 px-3 py-2.5 transition-colors">
+            <button
+                type="button"
+                onClick={onClick}
+                className={cn('flex w-full items-start gap-3 rounded-lg px-3 py-2.5 transition-colors', rowTint || 'hover:bg-muted/40')}
+            >
                 {body}
             </button>
         );
     }
-    return <div className="flex items-start gap-3 px-3 py-2.5">{body}</div>;
+    return <div className={cn('flex items-start gap-3 rounded-lg px-3 py-2.5', rowTint)}>{body}</div>;
 }
 
 /** One severity-grouped section inside the issues drawer. Hidden when it has no rows. */
@@ -330,56 +354,136 @@ export function AccessDashboard({
                     </div>
                 </Card>
 
-                {/* Governance status */}
+                {/* Governance status — rows render by severity: act (red) → review (amber) → info → all-clear. */}
                 <Card className="overflow-hidden">
                     <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
                         <div className="flex items-center gap-2">
                             <ShieldCheck className="text-muted-foreground h-4 w-4" />
                             <span className="text-sm font-semibold">{t('access_dash_governance_title')}</span>
                         </div>
-                        <span className="text-muted-foreground text-xs">{t('access_dash_latest')}</span>
+                        <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                            {(gov.resigned_holders > 0 || gov.empty_resources > 0 || !gov.owners_complete) && (
+                                // Blinking dot = something below needs attention (red beats amber).
+                                <span className="relative flex h-2 w-2">
+                                    <span
+                                        className={cn(
+                                            'absolute inline-flex h-full w-full animate-ping rounded-full motion-reduce:hidden',
+                                            gov.resigned_holders > 0 ? 'bg-destructive/60' : 'bg-amber-500/60',
+                                        )}
+                                    />
+                                    <span
+                                        className={cn(
+                                            'relative inline-flex h-2 w-2 rounded-full',
+                                            gov.resigned_holders > 0 ? 'bg-destructive' : 'bg-amber-500',
+                                        )}
+                                    />
+                                </span>
+                            )}
+                            {t('access_dash_latest')}
+                        </span>
                     </div>
                     <div className="divide-border/60 divide-y p-2">
-                        {gov.empty_resources > 0 ? (
-                            <StatusRow
-                                icon={AlertTriangle}
-                                tone="amber"
-                                title={t('access_dash_empty_shares')}
-                                sub={`“${gov.empty_sample ?? ''}” ${t('access_dash_no_access_yet')}`}
-                                value={gov.empty_resources}
-                                onClick={() => setIssuesOpen(true)}
-                            />
-                        ) : (
-                            <StatusRow icon={CheckCircle2} tone="green" title={t('access_dash_shares_ok')} sub={t('access_dash_shares_ok_sub')} value="✓" />
-                        )}
-
-                        <StatusRow icon={TrendingUp} tone="ink" title={t('access_dash_recent_title')} sub={t('access_dash_recent_sub')} value={gov.added_30d} />
-
-                        {gov.owners_complete ? (
-                            <StatusRow icon={ShieldCheck} tone="green" title={t('access_dash_owners_ok')} sub={t('access_dash_owners_ok_sub')} value="✓" />
-                        ) : (
-                            <StatusRow
-                                icon={AlertTriangle}
-                                tone="amber"
-                                title={t('access_dash_owners_missing')}
-                                sub={t('access_dash_owners_missing_sub')}
-                                value={gov.no_owner}
-                                onClick={() => setIssuesOpen(true)}
-                            />
-                        )}
-
-                        {gov.resigned_holders > 0 ? (
-                            <StatusRow
-                                icon={UserCheck}
-                                tone="red"
-                                title={t('access_dash_resigned_bad')}
-                                sub={t('access_dash_resigned_bad_sub')}
-                                value={gov.resigned_holders}
-                                onClick={() => setIssuesOpen(true)}
-                            />
-                        ) : (
-                            <StatusRow icon={UserCheck} tone="green" title={t('access_dash_resigned_ok')} sub={t('access_dash_resigned_ok_sub')} value="✓" />
-                        )}
+                        {[
+                            gov.resigned_holders > 0
+                                ? {
+                                      rank: 0,
+                                      node: (
+                                          <StatusRow
+                                              key="resigned"
+                                              icon={UserCheck}
+                                              tone="red"
+                                              title={t('access_dash_resigned_bad')}
+                                              sub={t('access_dash_resigned_bad_sub')}
+                                              value={gov.resigned_holders}
+                                              onClick={() => setIssuesOpen(true)}
+                                          />
+                                      ),
+                                  }
+                                : {
+                                      rank: 3,
+                                      node: (
+                                          <StatusRow
+                                              key="resigned"
+                                              icon={UserCheck}
+                                              tone="green"
+                                              title={t('access_dash_resigned_ok')}
+                                              sub={t('access_dash_resigned_ok_sub')}
+                                              value="✓"
+                                          />
+                                      ),
+                                  },
+                            gov.empty_resources > 0
+                                ? {
+                                      rank: 1,
+                                      node: (
+                                          <StatusRow
+                                              key="empty"
+                                              icon={AlertTriangle}
+                                              tone="amber"
+                                              title={t('access_dash_empty_shares')}
+                                              sub={`“${gov.empty_sample ?? ''}” ${t('access_dash_no_access_yet')}`}
+                                              value={gov.empty_resources}
+                                              onClick={() => setIssuesOpen(true)}
+                                          />
+                                      ),
+                                  }
+                                : {
+                                      rank: 3,
+                                      node: (
+                                          <StatusRow
+                                              key="empty"
+                                              icon={CheckCircle2}
+                                              tone="green"
+                                              title={t('access_dash_shares_ok')}
+                                              sub={t('access_dash_shares_ok_sub')}
+                                              value="✓"
+                                          />
+                                      ),
+                                  },
+                            gov.owners_complete
+                                ? {
+                                      rank: 3,
+                                      node: (
+                                          <StatusRow
+                                              key="owners"
+                                              icon={ShieldCheck}
+                                              tone="green"
+                                              title={t('access_dash_owners_ok')}
+                                              sub={t('access_dash_owners_ok_sub')}
+                                              value="✓"
+                                          />
+                                      ),
+                                  }
+                                : {
+                                      rank: 1,
+                                      node: (
+                                          <StatusRow
+                                              key="owners"
+                                              icon={AlertTriangle}
+                                              tone="amber"
+                                              title={t('access_dash_owners_missing')}
+                                              sub={t('access_dash_owners_missing_sub')}
+                                              value={gov.no_owner}
+                                              onClick={() => setIssuesOpen(true)}
+                                          />
+                                      ),
+                                  },
+                            {
+                                rank: 2,
+                                node: (
+                                    <StatusRow
+                                        key="recent"
+                                        icon={TrendingUp}
+                                        tone="ink"
+                                        title={t('access_dash_recent_title')}
+                                        sub={t('access_dash_recent_sub')}
+                                        value={gov.added_30d}
+                                    />
+                                ),
+                            },
+                        ]
+                            .sort((a, b) => a.rank - b.rank)
+                            .map((r) => r.node)}
                     </div>
                 </Card>
             </div>
