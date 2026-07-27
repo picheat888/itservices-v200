@@ -1,18 +1,19 @@
-import { Field } from '@/shared/components/field';
+import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { Field } from '@/shared/components/field';
 import { SectionLabel } from '@/shared/components/section-label';
-import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
+import { cn } from '@/shared/lib/utils';
+import type { TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { useTicketMutations } from '../hooks/use-tickets';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { TicketCategory } from '@/shared/types';
-import { FileImage, FileText, Loader2, MessageSquarePlus, Paperclip, Send, UploadCloud, X } from 'lucide-react';
+import { AlertCircle, FileImage, FileText, Loader2, MessageSquarePlus, Paperclip, Send, UploadCloud, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTicketMutations } from '../hooks/use-tickets';
+import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 
 /** Hard cap enforced by the API (files.*|max:10) — mirrored here for the UI. */
 const MAX_FILES = 10;
@@ -31,7 +32,8 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     const lang = useUiStore((s) => s.lang);
     const { create, uploadAttachments } = useTicketMutations();
 
-    const [category, setCategory] = useState<TicketCategory>('hardware');
+    // No default — the employee must consciously pick an issue type (validated on submit).
+    const [category, setCategory] = useState<TicketCategory | null>(null);
     const [subject, setSubject] = useState('');
     const [description, setDescription] = useState('');
     const [phone, setPhone] = useState('');
@@ -57,7 +59,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
     useEffect(() => {
         if (open) {
-            setCategory('hardware');
+            setCategory(null);
             setSubject('');
             setDescription('');
             setPhone('');
@@ -70,6 +72,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
     const submit = async () => {
         const e: Record<string, string> = {};
+        if (!category) e.category = lang === 'th' ? 'กรุณาเลือกประเภทปัญหา' : 'Please select an issue type';
         if (subject.trim().length < 5)
             e.subject = lang === 'th' ? 'กรุณาระบุหัวข้อ (อย่างน้อย 5 ตัวอักษร)' : 'Please describe the issue (min 5 characters)';
         if (description.trim().length < 10)
@@ -77,7 +80,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
         // Internal extensions can be as short as 3 digits (e.g. 123).
         if (phone.replace(/\D/g, '').length < 3) e.phone = lang === 'th' ? 'เบอร์โทรไม่ถูกต้อง' : 'Please provide a callback phone number';
         setErrors(e);
-        if (Object.keys(e).length) return;
+        if (Object.keys(e).length || !category) return;
 
         const ticket = await create.mutateAsync({
             subject: subject.trim(),
@@ -107,7 +110,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0">
                 <FocusDialogHeader
                     icon={MessageSquarePlus}
-                    eyebrow="New Ticket"
+                    eyebrow="Open Ticket"
                     title={t('ticket_form_title')}
                     srDescription={t('ticket_form_title')}
                 />
@@ -117,17 +120,25 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                     {/* LEFT: what's wrong */}
                     <div className="space-y-6">
                         <section>
-                            <SectionLabel>{t('ticket_sec_type')}</SectionLabel>
+                            <SectionLabel>
+                                {t('ticket_sec_type')} <span className="text-destructive">*</span>
+                            </SectionLabel>
                             <div className="grid grid-cols-2 gap-2.5">
                                 {TICKET_CATEGORIES.map((c) => (
-                                    <button
+                                    <ChoiceCard
                                         key={c}
-                                        type="button"
-                                        onClick={() => setCategory(c)}
-                                        className={cn(
-                                            'flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden',
-                                            category === c ? 'border-brand bg-brand/5' : 'border-border hover:border-brand/50',
-                                        )}
+                                        selected={category === c}
+                                        invalid={!!errors.category}
+                                        onClick={() => {
+                                            setCategory(c);
+                                            // Picking a type fully resolves the error — clear it right away.
+                                            setErrors((prev) => {
+                                                const next = { ...prev };
+                                                delete next.category;
+                                                return next;
+                                            });
+                                        }}
+                                        className="flex flex-col items-start gap-1 rounded-lg p-3 text-left"
                                     >
                                         <span
                                             className={cn(
@@ -139,9 +150,15 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         </span>
                                         <span className="text-sm font-semibold">{t(`ticket_cat_${c}`)}</span>
                                         <span className="text-muted-foreground text-xs">{t(`ticket_cat_${c}_sub`)}</span>
-                                    </button>
+                                    </ChoiceCard>
                                 ))}
                             </div>
+                            {errors.category && (
+                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                    {errors.category}
+                                </p>
+                            )}
                         </section>
 
                         <section>
@@ -216,7 +233,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                     hasFiles ? 'py-2.5' : 'py-9',
                                     dragOver
                                         ? 'border-brand bg-brand/10 text-brand'
-                                        : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand',
+                                        : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand hover:bg-[#c4c4c40f]',
                                 )}
                             >
                                 <UploadCloud className={cn('shrink-0', hasFiles ? 'h-5 w-5' : 'h-6 w-6')} />
@@ -255,7 +272,11 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         {files.map((f, i) => (
                                             <div key={i} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
                                                 <span className="text-muted-foreground shrink-0">
-                                                    {f.type.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    {f.type.startsWith('image/') ? (
+                                                        <FileImage className="h-4 w-4" />
+                                                    ) : (
+                                                        <FileText className="h-4 w-4" />
+                                                    )}
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{f.name}</span>
                                                 <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(f.size)}</span>
