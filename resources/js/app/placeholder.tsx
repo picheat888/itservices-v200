@@ -9,10 +9,10 @@ export default function PlaceholderPage({ titleKey }: { titleKey: string }) {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">{t(titleKey)}</h1>
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-20 text-center">
-                <Construction className="h-10 w-10 text-muted-foreground" />
+            <div className="border-border flex flex-col items-center justify-center rounded-xl border border-dashed py-20 text-center">
+                <Construction className="text-muted-foreground h-10 w-10" />
                 <div className="mt-3 font-medium">{lang === 'th' ? 'โมดูลนี้จะพัฒนาในเฟสถัดไป' : 'This module ships in a later phase'}</div>
-                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                <p className="text-muted-foreground mt-1 max-w-sm text-sm">
                     {lang === 'th'
                         ? 'รากฐานของระบบ (โครง ธีม ภาษา สิทธิ์ตาม role) พร้อมแล้ว'
                         : 'The foundation (shell, theme, i18n, role-aware access) is ready.'}

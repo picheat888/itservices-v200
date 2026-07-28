@@ -1,5 +1,15 @@
-import type { ApiEnvelope, StockCount, StockCountAdjustMode, StockItem, StockItemHistory, StockMovement, StockMovementType, StockRequest, StockSummary } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type {
+    ApiEnvelope,
+    StockCount,
+    StockCountAdjustMode,
+    StockItem,
+    StockItemHistory,
+    StockMovement,
+    StockMovementType,
+    StockRequest,
+    StockSummary,
+} from '@/shared/types';
 
 export interface StockMovementPayload {
     type: StockMovementType;

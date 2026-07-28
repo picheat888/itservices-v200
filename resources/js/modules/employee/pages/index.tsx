@@ -1,21 +1,11 @@
-import { AddEmployeeDrawer } from '../components/add-employee-drawer';
-import { DepartmentMembersDialog } from '../components/department-members-dialog';
-import { DepartmentModal } from '../components/department-modal';
-import { EditEmployeeDialog } from '../components/edit-employee-dialog';
-import { EmployeeViewDrawer } from '../components/employee-view-drawer';
-import { HiresTrendCard } from '../components/hires-trend-card';
-import { ImportEmployeeDialog } from '../components/import-employee-dialog';
-import { OrgChartTab } from '../components/org-chart/org-chart-tab';
-import { PositionMembersDialog } from '../components/position-members-dialog';
-import { PositionModal } from '../components/position-modal';
-import { ResetPasswordModal } from '../components/reset-password-modal';
-import { ResignModal } from '../components/resign-modal';
-import { SectionsTab } from '../components/sections-tab';
-import { SetCredentialsModal } from '../components/set-credentials-modal';
+import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { cn } from '@/shared/lib/utils';
+import type { Department, Employee, Position, Role } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -24,22 +14,8 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/shared/ui/tooltip';
-import { useAuth } from '@/modules/auth';
-import {
-    useDepartmentMutations,
-    useDepartments,
-    useEmployee,
-    useEmployeeDirectory,
-    useEmployeeMutations,
-    useEmployeeSummary,
-    usePositionMutations,
-    usePositions,
-} from '../hooks/use-org';
-import { useQueryClient } from '@tanstack/react-query';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Department, Employee, Position, Role } from '@/shared/types';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     Briefcase,
     Building2,
@@ -63,6 +39,30 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { AddEmployeeDrawer } from '../components/add-employee-drawer';
+import { DepartmentMembersDialog } from '../components/department-members-dialog';
+import { DepartmentModal } from '../components/department-modal';
+import { EditEmployeeDialog } from '../components/edit-employee-dialog';
+import { EmployeeViewDrawer } from '../components/employee-view-drawer';
+import { HiresTrendCard } from '../components/hires-trend-card';
+import { ImportEmployeeDialog } from '../components/import-employee-dialog';
+import { OrgChartTab } from '../components/org-chart/org-chart-tab';
+import { PositionMembersDialog } from '../components/position-members-dialog';
+import { PositionModal } from '../components/position-modal';
+import { ResetPasswordModal } from '../components/reset-password-modal';
+import { ResignModal } from '../components/resign-modal';
+import { SectionsTab } from '../components/sections-tab';
+import { SetCredentialsModal } from '../components/set-credentials-modal';
+import {
+    useDepartmentMutations,
+    useDepartments,
+    useEmployee,
+    useEmployeeDirectory,
+    useEmployeeMutations,
+    useEmployeeSummary,
+    usePositionMutations,
+    usePositions,
+} from '../hooks/use-org';
 
 const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
@@ -984,7 +984,9 @@ function Dashboard({
                     <div className="p-5">
                         <div className="flex items-baseline gap-2.5">
                             <span className="font-mono text-[54px] leading-none font-bold">{summary?.active ?? 0}</span>
-                            <span className="text-muted-foreground text-sm">{t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}</span>
+                            <span className="text-muted-foreground text-sm">
+                                {t('emp_status_caption').replace('{n}', String(summary?.total ?? 0))}
+                            </span>
                         </div>
                         <div className="bg-secondary my-4 flex h-3 w-full overflow-hidden rounded-full">
                             <span className="bg-brand block h-full" style={{ width: `${statusPct.active}%` }} />

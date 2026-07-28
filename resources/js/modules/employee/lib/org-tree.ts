@@ -29,8 +29,16 @@ export type OrgFlowNode = Node<OrgNodeData, 'orgNode'>;
 // department code, mirroring the approved design. Unknown codes fall back to a
 // stable hash so any department still gets a consistent colour.
 const DEPT_HUE: Record<string, number> = {
-    OPS: 255, PRD: 150, QA: 305, FIN: 185, LOG: 70,
-    HR: 25, IT: 230, SAL: 340, ENG: 115, RND: 200,
+    OPS: 255,
+    PRD: 150,
+    QA: 305,
+    FIN: 185,
+    LOG: 70,
+    HR: 25,
+    IT: 230,
+    SAL: 340,
+    ENG: 115,
+    RND: 200,
 };
 
 /** Stable hue (0–360) derived from a string, for departments not in DEPT_HUE. */

@@ -1,15 +1,15 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { AlertTriangle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useStockItems, useStockRequestActions } from '../hooks/use-stock';
 
 const CLOSE_DELAY_MS = 1100;
 

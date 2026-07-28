@@ -1,6 +1,6 @@
-import { StatusBadge } from '@/shared/components/status-badge';
-import { type Column, DataTable } from '@/shared/components/data-table';
 import { useT } from '@/lang';
+import { type Column, DataTable } from '@/shared/components/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
 import { Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';

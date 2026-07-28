@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
+use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -118,6 +119,66 @@ class TicketApiTest extends TestCase
             ->assertJsonPath('data.assignee_id', $staff->id);
     }
 
+    public function test_staff_cannot_take_a_case_they_filed_themselves(): void
+    {
+        // Anti case-pumping: filing your own case and taking it would game the SLA stats.
+        $staff = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['requester_id' => $staff->employee_id]);
+        $this->actingAs($staff);
+
+        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertStatus(422);
+    }
+
+    public function test_a_case_cannot_be_assigned_to_its_requester(): void
+    {
+        $staff = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['requester_id' => $staff->employee_id]);
+        $this->actingAs($this->userWithEmployee('super'));
+
+        $this->postJson("/api/tickets/{$ticket->id}/assign", ['assignee_id' => $staff->id, 'priority' => 'low'])
+            ->assertStatus(422);
+    }
+
+    public function test_assignee_can_forward_their_case_to_another_staff(): void
+    {
+        $owner = $this->userWithEmployee('super');
+        $next = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['assignee_id' => $owner->id, 'status' => 'in_progress', 'priority' => 'high']);
+        $this->actingAs($owner);
+
+        $this->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $next->id])
+            ->assertOk()
+            ->assertJsonPath('data.assignee_id', $next->id)
+            // Forwarding never restarts a clock or resets the priority.
+            ->assertJsonPath('data.priority', 'high')
+            ->assertJsonPath('data.status', 'in_progress');
+
+        // The receiving staff gets a bell pointing at the case.
+        $this->assertSame('ticket_forwarded', $next->notifications()->first()->data['type']);
+    }
+
+    public function test_forwarding_is_blocked_for_bystanders_requesters_and_open_cases(): void
+    {
+        $owner = $this->userWithEmployee('super');
+        $next = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['assignee_id' => $owner->id, 'status' => 'in_progress']);
+
+        // A user with no assign permission who isn't the assignee is refused.
+        $this->actingAs($this->userWithEmployee('user'));
+        $this->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $next->id])->assertForbidden();
+
+        // The requester can never receive their own case.
+        $requesterStaff = $this->userWithEmployee('super');
+        $ticket->update(['requester_id' => $requesterStaff->employee_id]);
+        $this->actingAs($owner);
+        $this->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $requesterStaff->id])->assertStatus(422);
+
+        // Open cases use take/assign, not forward.
+        $open = Ticket::factory()->create(['status' => 'open']);
+        $this->actingAs($this->userWithEmployee('super'));
+        $this->postJson("/api/tickets/{$open->id}/forward", ['assignee_id' => $next->id])->assertStatus(422);
+    }
+
     public function test_cannot_take_an_already_assigned_ticket(): void
     {
         $staff = $this->userWithEmployee('super');
@@ -125,6 +186,17 @@ class TicketApiTest extends TestCase
         $this->actingAs($this->userWithEmployee('super'));
 
         $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertStatus(422);
+    }
+
+    public function test_a_dispatcher_cannot_assign_a_case_to_themselves(): void
+    {
+        // Taking a case yourself goes through Take Case, not Assign.
+        $me = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create();
+        $this->actingAs($me);
+
+        $this->postJson("/api/tickets/{$ticket->id}/assign", ['assignee_id' => $me->id, 'priority' => 'low'])
+            ->assertStatus(422);
     }
 
     public function test_super_can_assign_a_ticket_to_a_staff_member(): void
@@ -194,6 +266,64 @@ class TicketApiTest extends TestCase
         $this->getJson('/api/tickets')->assertOk()->assertJsonCount(3, 'data');
     }
 
+    public function test_meta_reports_the_open_count_ignoring_filters(): void
+    {
+        $this->actingAs($this->userWithEmployee('super'));
+        Ticket::factory()->count(2)->create(['status' => 'open']);
+        Ticket::factory()->create(['status' => 'completed']);
+
+        // The badge count stays put even when the list itself is filtered away from Open.
+        $this->getJson('/api/tickets?status=completed')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.open_count', 2);
+    }
+
+    public function test_meta_reports_my_unfinished_jobs(): void
+    {
+        $me = $this->userWithEmployee('super');
+        $this->actingAs($me);
+        Ticket::factory()->count(2)->create(['assignee_id' => $me->id, 'status' => 'in_progress']);
+        Ticket::factory()->create(['assignee_id' => $me->id, 'status' => 'completed']); // finished — not counted
+        Ticket::factory()->create(['status' => 'in_progress']);                         // someone else's — not counted
+
+        $this->getJson('/api/tickets')->assertOk()->assertJsonPath('meta.my_jobs_count', 2);
+    }
+
+    public function test_meta_reports_my_unresolved_requests(): void
+    {
+        $me = $this->userWithEmployee('super');
+        $this->actingAs($me);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'in_progress']);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'completed']); // closed — not counted
+        Ticket::factory()->create(['status' => 'open']);                                          // someone else's — not counted
+
+        $this->getJson('/api/tickets')->assertOk()->assertJsonPath('meta.my_tickets_count', 2);
+    }
+
+    public function test_sidebar_badge_counts_attention_tickets_once_each(): void
+    {
+        $me = $this->userWithEmployee('super');
+        $this->actingAs($me);
+        Ticket::factory()->create(['status' => 'open']);                                       // waiting for a take
+        Ticket::factory()->create(['assignee_id' => $me->id, 'status' => 'in_progress']);      // my unfinished job
+        // Overlap: I filed it AND it's open-unassigned — must count once, not twice.
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
+        Ticket::factory()->create(['status' => 'completed']);                                  // closed — not counted
+
+        $this->getJson('/api/tickets/badge')->assertOk()->assertJsonPath('count', 3);
+    }
+
+    public function test_sidebar_badge_for_a_regular_user_covers_only_their_requests(): void
+    {
+        $me = $this->userWithEmployee('user');
+        $this->actingAs($me);
+        Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']); // mine — counted
+        Ticket::factory()->create(['status' => 'open']); // waiting for IT — not my action
+
+        $this->getJson('/api/tickets/badge')->assertOk()->assertJsonPath('count', 1);
+    }
+
     public function test_tickets_cannot_be_deleted(): void
     {
         $ticket = Ticket::factory()->create();
@@ -227,6 +357,7 @@ class TicketApiTest extends TestCase
     public function test_requester_can_edit_their_own_open_ticket(): void
     {
         $me = $this->userWithEmployee('user');
+        RolePermission::create(['role_id' => $me->role_id, 'permission' => 'tickets.edit_own', 'allowed' => true]);
         $ticket = Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
         $this->actingAs($me);
 
@@ -255,10 +386,21 @@ class TicketApiTest extends TestCase
         $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload())->assertForbidden();
     }
 
+    public function test_editing_requires_the_edit_own_permission(): void
+    {
+        // Same requester + open case, but the role was never granted tickets.edit_own.
+        $me = $this->userWithEmployee('user');
+        $ticket = Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
+        $this->actingAs($me);
+
+        $this->putJson("/api/tickets/{$ticket->id}", $this->updatePayload())->assertForbidden();
+    }
+
     public function test_update_validates_fields(): void
     {
         // Validation runs for the requester editing their own open ticket.
         $me = $this->userWithEmployee('user');
+        RolePermission::create(['role_id' => $me->role_id, 'permission' => 'tickets.edit_own', 'allowed' => true]);
         $ticket = Ticket::factory()->create(['requester_id' => $me->employee_id, 'status' => 'open']);
         $this->actingAs($me);
 
@@ -297,6 +439,45 @@ class TicketApiTest extends TestCase
 
         // Unknown value falls back to the default order rather than erroring.
         $this->getJson('/api/tickets?sort=bogus')->assertOk()->assertJsonPath('data.0.id', $newest->id);
+    }
+
+    public function test_my_jobs_lists_active_work_before_finished_work(): void
+    {
+        $staff = $this->userWithEmployee('super');
+        $this->actingAs($staff);
+
+        // Finished jobs are newer than the active one — the group order must still win.
+        $active = Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => 'in_progress']);
+        $completed = Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => 'completed']);
+        $canceled = Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => 'canceled']);
+        Ticket::factory()->create(['status' => 'in_progress']); // someone else's — excluded by mine
+
+        $this->getJson('/api/tickets?mine=1')->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('data.0.id', $active->id)
+            // Within the finished group the default newest-first order still applies.
+            ->assertJsonPath('data.1.id', $canceled->id)
+            ->assertJsonPath('data.2.id', $completed->id);
+    }
+
+    public function test_my_tickets_scope_returns_only_tickets_the_user_filed(): void
+    {
+        $me = $this->userWithEmployee('super'); // super bypasses the tickets.my gate
+        Ticket::factory()->create(['requester_id' => $me->employee_id]);
+        $other = Ticket::factory()->create(); // someone else's request
+        $this->actingAs($me);
+
+        $this->getJson('/api/tickets?requested=1')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonMissing(['id' => $other->id]);
+    }
+
+    public function test_my_tickets_scope_requires_the_tickets_my_permission(): void
+    {
+        // A plain 'user' has no seeded role_permissions in this test DB → denied.
+        $this->actingAs($this->userWithEmployee('user'));
+
+        $this->getJson('/api/tickets?requested=1')->assertForbidden();
     }
 
     public function test_summary_reports_backlog_and_respects_the_days_window(): void

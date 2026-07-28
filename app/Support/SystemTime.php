@@ -2,33 +2,25 @@
 
 namespace App\Support;
 
-use App\Models\Settings\AppSetting;
 use Carbon\CarbonInterface;
 
 /**
- * Formats stored-UTC timestamps in the system display timezone
- * (Settings -> Company). Pure DATE columns must NOT go through this —
- * they carry no time component, so shifting them can change the day.
+ * Formats stored timestamps for display. The whole system runs on local wall
+ * time (APP_TIMEZONE, single-site deployment) — the database stores local time
+ * and no timezone conversion happens anywhere; these helpers only format.
+ * Pure DATE columns must NOT go through dateTime() — they carry no time component.
  */
 class SystemTime
 {
-    /** Per-request memo — resources format many rows per response. */
-    private static ?string $tz = null;
-
-    private static function tz(): string
-    {
-        return self::$tz ??= AppSetting::timezone();
-    }
-
-    /** "YYYY-MM-DD" of a UTC timestamp in the system timezone; null passes through. */
+    /** "YYYY-MM-DD" of a stored timestamp; null passes through. */
     public static function date(?CarbonInterface $at): ?string
     {
-        return $at?->copy()->timezone(self::tz())->toDateString();
+        return $at?->toDateString();
     }
 
-    /** "YYYY-MM-DD HH:mm" of a UTC timestamp in the system timezone; null passes through. */
+    /** "YYYY-MM-DD HH:mm" of a stored timestamp; null passes through. */
     public static function dateTime(?CarbonInterface $at): ?string
     {
-        return $at?->copy()->timezone(self::tz())->format('Y-m-d H:i');
+        return $at?->format('Y-m-d H:i');
     }
 }

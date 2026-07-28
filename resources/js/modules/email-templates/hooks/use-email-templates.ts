@@ -1,9 +1,5 @@
-import {
-    emailTemplateApi,
-    type CreateEmailTemplatePayload,
-    type EmailTemplatePayload,
-} from '../api/emailTemplateApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { emailTemplateApi, type CreateEmailTemplatePayload, type EmailTemplatePayload } from '../api/emailTemplateApi';
 
 const KEY = ['email-templates'] as const;
 

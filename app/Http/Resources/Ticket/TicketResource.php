@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Ticket;
 
 use App\Models\Ticket\Ticket;
+use App\Support\TicketSla;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -43,6 +44,8 @@ class TicketResource extends JsonResource
 
             'take_note' => $this->take_note,
             'resolution' => $this->resolution,
+            // Both SLA clocks + the state of whichever clock currently matters (null for canceled).
+            'sla' => TicketSla::forTicket($this->resource),
             'responded_at' => $this->responded_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 

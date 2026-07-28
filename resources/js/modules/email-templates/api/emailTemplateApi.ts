@@ -42,8 +42,7 @@ export interface CreateEmailTemplatePayload {
 }
 
 export const emailTemplateApi = {
-    list: (): Promise<EmailTemplateListResponse> =>
-        http.get<EmailTemplateListResponse>('/email-templates').then((r) => r.data),
+    list: (): Promise<EmailTemplateListResponse> => http.get<EmailTemplateListResponse>('/email-templates').then((r) => r.data),
 
     update: async (id: number, payload: EmailTemplatePayload) => {
         await ensureCsrf();

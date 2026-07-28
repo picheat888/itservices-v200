@@ -1,7 +1,7 @@
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { AlertTriangle, Check, Loader2, PencilLine, Trash2, type LucideIcon } from 'lucide-react';
 import * as React from 'react';
 
@@ -96,7 +96,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     const Icon = opts?.icon ?? v.icon;
 
     const defaults = {
-        danger: { title: t('cd_delete_title'), description: t('cd_delete_desc'), confirm: t('delete'), busy: t('cd_deleting'), done: t('cd_deleted') },
+        danger: {
+            title: t('cd_delete_title'),
+            description: t('cd_delete_desc'),
+            confirm: t('delete'),
+            busy: t('cd_deleting'),
+            done: t('cd_deleted'),
+        },
         edit: { title: t('cd_edit_title'), description: t('cd_edit_desc'), confirm: t('save'), busy: t('saving'), done: t('saved') },
         warn: { title: t('cd_confirm_title'), description: t('cd_confirm_desc'), confirm: t('cd_confirm'), busy: t('saving'), done: t('cd_done') },
     }[variant];
@@ -155,14 +161,14 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                     </div>
 
                     {opts?.entity && (
-                        <div className="rounded-lg border bg-muted/50 px-3.5 py-2.5">
-                            <p className="truncate text-sm font-medium text-foreground">{opts.entity.name}</p>
-                            {opts.entity.sub && <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">{opts.entity.sub}</p>}
+                        <div className="bg-muted/50 rounded-lg border px-3.5 py-2.5">
+                            <p className="text-foreground truncate text-sm font-medium">{opts.entity.name}</p>
+                            {opts.entity.sub && <p className="text-muted-foreground mt-0.5 truncate font-mono text-xs">{opts.entity.sub}</p>}
                         </div>
                     )}
 
                     {error && (
-                        <p className="flex items-center gap-1.5 text-sm text-destructive">
+                        <p className="text-destructive flex items-center gap-1.5 text-sm">
                             <AlertTriangle className="h-4 w-4 shrink-0" />
                             {error}
                         </p>

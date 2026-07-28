@@ -1,10 +1,10 @@
+import { useT } from '@/lang';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
-import { useT } from '@/lang';
 import { ZoomIn, ZoomOut } from 'lucide-react';
-import Cropper from 'react-easy-crop';
-import type { Area, Point } from 'react-easy-crop';
 import { useCallback, useEffect, useState } from 'react';
+import type { Area, Point } from 'react-easy-crop';
+import Cropper from 'react-easy-crop';
 
 interface Props {
     /** Object URL to crop, or null when closed. Kept mounted so the close animation can play. */
@@ -86,13 +86,13 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
         <Dialog open={!!imageSrc} onOpenChange={(o) => !o && onCancel()}>
             <DialogContent className="max-w-sm gap-0 overflow-hidden p-0 [&>button]:hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div className="border-border flex items-center justify-between border-b px-4 py-3">
                     <DialogTitle className="text-sm font-semibold">{t('photo_crop_title')}</DialogTitle>
-                    <span className="text-xs text-muted-foreground">{t('photo_crop_hint')}</span>
+                    <span className="text-muted-foreground text-xs">{t('photo_crop_hint')}</span>
                 </div>
 
                 {/* Cropper — fixed square */}
-                <div className="relative h-72 w-full bg-muted/30">
+                <div className="bg-muted/30 relative h-72 w-full">
                     <Cropper
                         image={src ?? ''}
                         crop={crop}
@@ -114,8 +114,8 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                 </div>
 
                 {/* Zoom row */}
-                <div className="flex items-center gap-2 border-t border-border px-4 py-3">
-                    <ZoomOut className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="border-border flex items-center gap-2 border-t px-4 py-3">
+                    <ZoomOut className="text-muted-foreground h-4 w-4 shrink-0" />
                     <input
                         type="range"
                         min={1}
@@ -123,13 +123,13 @@ export function PhotoCropDialog({ imageSrc, onConfirm, onCancel }: Props) {
                         step={0.01}
                         value={zoom}
                         onChange={(e) => setZoom(Number(e.target.value))}
-                        className="flex-1 accent-brand"
+                        className="accent-brand flex-1"
                     />
-                    <ZoomIn className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <ZoomIn className="text-muted-foreground h-4 w-4 shrink-0" />
                 </div>
 
                 {/* Actions */}
-                <div className="flex justify-end gap-2 border-t border-border px-4 py-3">
+                <div className="border-border flex justify-end gap-2 border-t px-4 py-3">
                     <Button variant="outline" size="sm" onClick={onCancel} disabled={applying}>
                         {t('cancel')}
                     </Button>

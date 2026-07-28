@@ -1,11 +1,17 @@
-import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/shared/types';
 
 export interface TicketPageMeta {
     total: number;
     per_page: number;
     current_page: number;
     last_page: number;
+    /** Open tickets in the viewer's scope (ignores tab filters) — drives the red tab badge. */
+    open_count: number;
+    /** The viewer's own in-progress assignments — drives the My Jobs tab badge. */
+    my_jobs_count: number;
+    /** The viewer's own still-unresolved requests — drives the My Tickets tab badge. */
+    my_tickets_count: number;
 }
 
 export interface TicketPageResponse {
@@ -36,7 +42,11 @@ export interface TicketListParams {
     category?: string;
     priority?: string;
     sort?: string;
+    /** 'breached' = only active tickets whose current SLA deadline has passed. */
+    sla?: string;
     mine?: boolean;
+    /** My Tickets scope — only tickets the user filed themselves (gated by tickets.my). */
+    requested?: boolean;
 }
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
@@ -45,16 +55,25 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
     return (data as ApiEnvelope<T>)?.data;
 }
 
+/** Dashboard window: a preset day count (7/30/90) or a custom inclusive date pair. */
+export type SummaryRange = number | { from: string; to: string };
+
 export const ticketApi = {
     list: (params: TicketListParams) => http.get<TicketPageResponse>('/tickets', { params }).then((r) => r.data),
-    summary: (days?: number) => http.get<TicketSummary>('/tickets/summary', { params: { days } }).then((r) => r.data),
-    staff: () => http.get<{ data: { id: number; name: string }[] }>('/tickets/staff').then((r) => r.data.data),
+    summary: (range?: SummaryRange) =>
+        http.get<TicketSummary>('/tickets/summary', { params: typeof range === 'object' ? range : { days: range } }).then((r) => r.data),
+    staff: (category?: string) =>
+        http.get<{ data: { id: number; name: string }[] }>('/tickets/staff', { params: { category } }).then((r) => r.data.data),
+    badge: () => http.get<{ count: number }>('/tickets/badge').then((r) => r.data.count),
+    requesterAssets: (id: number) =>
+        http.get<{ data: { id: number; asset_code: string; model: string | null }[] }>(`/tickets/${id}/requester-assets`).then((r) => r.data.data),
     get: (id: number) => http.get<ApiEnvelope<Ticket>>(`/tickets/${id}`).then((r) => r.data.data),
     create: (payload: CreateTicketPayload) => mutate<Ticket>('post', '/tickets', payload),
     update: (id: number, payload: UpdateTicketPayload) => mutate<Ticket>('put', `/tickets/${id}`, payload),
     take: (id: number, body: { priority: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
         mutate<Ticket>('post', `/tickets/${id}/take`, body),
     assign: (id: number, body: { assignee_id: number; priority: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
+    forward: (id: number, body: { assignee_id: number }) => mutate<Ticket>('post', `/tickets/${id}/forward`, body),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
     /**
      * Uploads attachments ONE AT A TIME so each file reports its own progress

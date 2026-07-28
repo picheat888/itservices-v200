@@ -1,15 +1,15 @@
+import { useT } from '@/lang';
+import { emailTemplateApi, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
+import { useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
+import { settingsApi, useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { TableSkeleton } from '@/shared/components/skeletons';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
-import { settingsApi, useSettings } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
-import { emailTemplateApi, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import {
@@ -232,7 +232,11 @@ export default function EmailTemplatesPage() {
             const res = await settingsApi.testMail();
             useToastStore
                 .getState()
-                .push(res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'), res.sent ? 'success' : 'error', res.sent ? undefined : t('email_test_failed_title'));
+                .push(
+                    res.sent ? `${t('email_test_sent')} ${res.to ?? ''}` : t('email_test_failed'),
+                    res.sent ? 'success' : 'error',
+                    res.sent ? undefined : t('email_test_failed_title'),
+                );
         } catch (e: unknown) {
             const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
             useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
@@ -435,7 +439,7 @@ function useLivePreview(enabled: boolean, name: string, subject: string, body: s
 function SubjectField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     const hlRef = useRef<HTMLDivElement>(null);
     return (
-        <div className="border-input bg-background relative h-10 rounded-md border transition-colors hover:border-brand/50 focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15">
+        <div className="border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 relative h-10 rounded-md border transition-colors focus-within:ring-[3px]">
             <div
                 ref={hlRef}
                 aria-hidden="true"

@@ -1,13 +1,13 @@
+import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { usePositionMembers } from '../hooks/use-org';
-import { useT } from '@/lang';
-import { useUiStore } from '@/stores/ui';
 import type { Employee, Position } from '@/shared/types';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { useUiStore } from '@/stores/ui';
 import { Briefcase } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { usePositionMembers } from '../hooks/use-org';
 
 /**
  * Focused dialog listing every employee holding a position. Uses the shared

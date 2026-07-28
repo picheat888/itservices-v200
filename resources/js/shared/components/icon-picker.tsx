@@ -30,7 +30,7 @@ export function IconPicker({
             <button
                 type="button"
                 onClick={() => setOpen((o) => !o)}
-                className="border-input focus:border-brand flex h-10 w-full items-center gap-2 rounded-md border bg-background px-3 text-sm outline-none"
+                className="border-input focus:border-brand bg-background flex h-10 w-full items-center gap-2 rounded-md border px-3 text-sm outline-none"
             >
                 {Current ? (
                     <>
@@ -69,7 +69,7 @@ export function IconPicker({
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
                             placeholder="ค้นหาไอคอน…"
-                            className="border-input focus:border-brand mb-2 h-8 w-full rounded-md border bg-background px-2 text-sm outline-none"
+                            className="border-input focus:border-brand bg-background mb-2 h-8 w-full rounded-md border px-2 text-sm outline-none"
                         />
                         <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">
                             {filtered.map(({ name, Icon }) => (

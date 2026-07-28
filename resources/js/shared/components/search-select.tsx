@@ -1,5 +1,5 @@
-import { cn } from '@/shared/lib/utils';
 import type { SelectOption } from '@/shared/lib/locale-data';
+import { cn } from '@/shared/lib/utils';
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -33,11 +33,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
     const filtered =
         query === ''
             ? options
-            : options.filter(
-                  (o) =>
-                      o.label.toLowerCase().includes(query.toLowerCase()) ||
-                      o.value.toLowerCase().includes(query.toLowerCase()),
-              );
+            : options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()) || o.value.toLowerCase().includes(query.toLowerCase()));
 
     const handleOpen = () => {
         if (triggerRef.current) {
@@ -103,10 +99,10 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                 type="button"
                 onClick={handleOpen}
                 className={cn(
-                    'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm',
-                    'transition-colors hover:border-brand/50 focus:border-brand focus:ring-[3px] focus:ring-brand/15 focus:outline-hidden',
+                    'border-input bg-background flex h-10 w-full items-center justify-between rounded-md border px-3 py-2 text-sm',
+                    'hover:border-brand/50 focus:border-brand focus:ring-brand/15 transition-colors focus:ring-[3px] focus:outline-hidden',
                     // Keep the brand border + soft ring latched while the dropdown is open.
-                    open && 'border-brand ring-[3px] ring-brand/15',
+                    open && 'border-brand ring-brand/15 ring-[3px]',
                     !selected && 'text-muted-foreground',
                     className,
                 )}
@@ -128,17 +124,17 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                             maxHeight: rect.maxHeight,
                             zIndex: 9999,
                         }}
-                        className="flex flex-col overflow-hidden rounded-md border bg-popover shadow-md"
+                        className="bg-popover flex flex-col overflow-hidden rounded-md border shadow-md"
                     >
                         {/* Search row */}
                         <div className="flex shrink-0 items-center border-b px-3">
-                            <Search className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />
+                            <Search className="text-muted-foreground mr-2 h-4 w-4 shrink-0" />
                             <input
                                 ref={searchRef}
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Escape' && handleClose()}
-                                className="flex h-10 w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+                                className="placeholder:text-muted-foreground flex h-10 w-full bg-transparent py-2 text-sm outline-none"
                                 placeholder="Search…"
                             />
                         </div>
@@ -146,7 +142,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                         {/* Options list */}
                         <div className="min-h-0 flex-1 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">No results</div>
+                                <div className="text-muted-foreground px-3 py-2 text-sm">No results</div>
                             ) : (
                                 filtered.map((opt) => (
                                     <button
@@ -160,9 +156,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                                         )}
                                     >
                                         <span className="truncate">{opt.label}</span>
-                                        {opt.value === value && (
-                                            <Check className="ml-2 h-4 w-4 shrink-0 text-brand" />
-                                        )}
+                                        {opt.value === value && <Check className="text-brand ml-2 h-4 w-4 shrink-0" />}
                                     </button>
                                 ))
                             )}

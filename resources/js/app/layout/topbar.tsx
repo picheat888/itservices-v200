@@ -1,10 +1,10 @@
-import { FlagEN, FlagTH } from '@/shared/components/flags';
+import { navGroups } from '@/app/nav';
+import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useNotifications } from '@/modules/notification';
-import { useT } from '@/lang';
-import { navGroups } from '@/app/nav';
-import { useUiStore } from '@/stores/ui';
+import { FlagEN, FlagTH } from '@/shared/components/flags';
 import type { Role } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
@@ -34,10 +34,10 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
     const roleLabel = user?.role_label ?? role;
 
     return (
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
+        <header className="border-border bg-background flex h-16 shrink-0 items-center gap-3 border-b px-4">
             <button
                 onClick={toggleSidebar}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md"
                 title="Toggle sidebar"
             >
                 <Menu className="h-[18px] w-[18px]" />
@@ -53,7 +53,7 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
 
             <button
                 onClick={toggleLang}
-                className="flex h-9 items-center gap-2 rounded-md px-2.5 text-muted-foreground hover:bg-accent"
+                className="text-muted-foreground hover:bg-accent flex h-9 items-center gap-2 rounded-md px-2.5"
                 title={lang === 'en' ? 'เปลี่ยนเป็นภาษาไทย' : 'Switch to English'}
             >
                 {lang === 'en' ? <FlagEN /> : <FlagTH />}
@@ -62,7 +62,7 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
 
             <button
                 onClick={toggleDark}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                className="text-muted-foreground hover:bg-accent flex h-9 w-9 items-center justify-center rounded-md"
                 title={dark ? t('light_mode') : t('dark_mode')}
             >
                 {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
@@ -71,12 +71,12 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
             <button
                 data-notif-btn
                 onClick={onToggleNotif}
-                className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+                className="text-muted-foreground hover:bg-accent relative flex h-9 w-9 items-center justify-center rounded-md"
                 title={t('notif_title')}
             >
                 <Bell className="h-[18px] w-[18px]" />
                 {unreadCount > 0 && (
-                    <span className="absolute right-px top-px flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white">
+                    <span className="bg-destructive absolute top-px right-px flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white">
                         {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}

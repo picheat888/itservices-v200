@@ -133,9 +133,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     // One overall bar for the whole save: each uploaded file contributes its byte fraction,
     // each deleted file counts as one done step (delete has no byte-level progress).
     const totalOps = pending.length + removedIds.length;
-    const overallPct = totalOps
-        ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100)
-        : 0;
+    const overallPct = totalOps ? Math.round(((Object.values(progress).reduce((a, b) => a + b, 0) / 100 + deleted) / totalOps) * 100) : 0;
 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !saving && onClose()}>
@@ -271,9 +269,16 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                     </div>
                                     <div className="max-h-[196px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
                                         {keptExisting.map((a) => (
-                                            <div key={`e-${a.id}`} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
+                                            <div
+                                                key={`e-${a.id}`}
+                                                className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0"
+                                            >
                                                 <span className="text-muted-foreground shrink-0">
-                                                    {a.mime?.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    {a.mime?.startsWith('image/') ? (
+                                                        <FileImage className="h-4 w-4" />
+                                                    ) : (
+                                                        <FileText className="h-4 w-4" />
+                                                    )}
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{a.name}</span>
                                                 <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(a.size)}</span>
@@ -290,9 +295,16 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                             </div>
                                         ))}
                                         {pending.map((f, i) => (
-                                            <div key={`p-${i}`} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
+                                            <div
+                                                key={`p-${i}`}
+                                                className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0"
+                                            >
                                                 <span className="text-muted-foreground shrink-0">
-                                                    {f.type.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                                    {f.type.startsWith('image/') ? (
+                                                        <FileImage className="h-4 w-4" />
+                                                    ) : (
+                                                        <FileText className="h-4 w-4" />
+                                                    )}
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{f.name}</span>
                                                 <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(f.size)}</span>

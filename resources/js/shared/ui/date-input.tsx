@@ -4,8 +4,8 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import * as React from 'react';
 
 import { useT } from '@/lang';
-import { Calendar } from '@/shared/ui/calendar';
 import { cn } from '@/shared/lib/utils';
+import { Calendar } from '@/shared/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { useUiStore } from '@/stores/ui';
 
@@ -69,7 +69,7 @@ export function DateInput({ value, onChange, id, disabled, className, placeholde
                         'border-input bg-background flex h-10 w-full items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors',
                         'hover:border-brand/50 focus:border-brand focus:ring-brand/15 focus:ring-[3px] focus:outline-hidden',
                         'data-[state=open]:border-brand data-[state=open]:ring-brand/15 data-[state=open]:ring-[3px]',
-                        'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input',
+                        'disabled:hover:border-input disabled:cursor-not-allowed disabled:opacity-50',
                         !value && 'text-muted-foreground',
                         className,
                     )}

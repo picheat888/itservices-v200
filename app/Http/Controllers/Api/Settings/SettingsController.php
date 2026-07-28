@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
+use App\Models\Ticket\Ticket;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
@@ -27,7 +28,6 @@ class SettingsController extends Controller
         'address' => '99/9 หมู่ 5 นิคมอุตสาหกรรมอมตะซิตี้ ต.ดอนหัวฬอ อ.เมืองชลบุรี จ.ชลบุรี 20000',
         'country' => 'Thailand',
         'currency' => 'THB',
-        'timezone' => 'Asia/Bangkok',
         // Display theme — system-wide (shared by all users), not per-user.
         'theme_accent' => '#2563eb',
         'theme_density' => 'normal',
@@ -65,7 +65,6 @@ class SettingsController extends Controller
             'address' => ['sometimes', 'required', 'string', 'max:255'],
             'country' => ['sometimes', 'nullable', 'string', 'max:100'],
             'currency' => ['sometimes', 'nullable', 'string', 'max:20'],
-            'timezone' => ['sometimes', 'nullable', 'string', 'max:60'],
         ]);
 
         foreach ($data as $key => $value) {
@@ -110,16 +109,33 @@ class SettingsController extends Controller
     public function updateSla(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
+            // Resolution is per priority; first response is ONE system-wide target
+            // (priority doesn't exist yet while a case waits to be taken).
             'ticket_sla' => ['required', 'array'],
-            'ticket_sla.*.response' => ['required', 'integer', 'min:1', 'max:10080'],
             'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            'ticket_sla_response' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
+            // Working window the SLA clocks count against (days: ISO weekday 1–7).
+            'ticket_sla_hours' => ['sometimes', 'required', 'array'],
+            'ticket_sla_hours.days' => ['required_with:ticket_sla_hours', 'array', 'min:1'],
+            'ticket_sla_hours.days.*' => ['integer', 'between:1,7', 'distinct'],
+            'ticket_sla_hours.start' => ['required_with:ticket_sla_hours', 'date_format:H:i'],
+            'ticket_sla_hours.end' => ['required_with:ticket_sla_hours', 'date_format:H:i', 'after:ticket_sla_hours.start'],
+            // Optional break the clocks skip (e.g. lunch) — null on both = no break.
+            'ticket_sla_hours.break_start' => [
+                'nullable', 'required_with:ticket_sla_hours.break_end', 'date_format:H:i',
+                'after_or_equal:ticket_sla_hours.start', 'before:ticket_sla_hours.end',
+            ],
+            'ticket_sla_hours.break_end' => [
+                'nullable', 'required_with:ticket_sla_hours.break_start', 'date_format:H:i',
+                'after:ticket_sla_hours.break_start', 'before_or_equal:ticket_sla_hours.end',
+            ],
         ]);
 
-        // Resolution (hours) must be at least the first-response target (minutes).
+        // Every resolution target (hours) must be at least the first-response target (minutes).
         $validator->after(function ($v) use ($request) {
+            $response = (int) $request->input('ticket_sla_response', TicketSla::responseMinutes());
             foreach ((array) $request->input('ticket_sla', []) as $priority => $row) {
-                $response = (int) ($row['response'] ?? 0);
-                $resolve = (int) ($row['resolve'] ?? 0);
+                $resolve = (int) (is_array($row) ? ($row['resolve'] ?? 0) : 0);
                 if ($response > 0 && $resolve > 0 && $resolve * 60 < $response) {
                     $v->errors()->add("ticket_sla.{$priority}.resolve", 'Resolution must be at least the first-response target.');
                 }
@@ -129,6 +145,32 @@ class SettingsController extends Controller
         $data = $validator->validate();
 
         AppSetting::put('ticket_sla', json_encode($data['ticket_sla']));
+        if (isset($data['ticket_sla_response'])) {
+            AppSetting::put(TicketSla::RESPONSE_KEY, (string) $data['ticket_sla_response']);
+        }
+        if (isset($data['ticket_sla_hours'])) {
+            AppSetting::put(TicketSla::HOURS_KEY, json_encode($data['ticket_sla_hours']));
+        }
+        TicketSla::flush(); // drop the per-request memo so this response reflects the new values
+
+        // Deadlines are persisted per ticket for SQL ordering — refresh every ticket
+        // still in motion under the new targets/window (closed history stays frozen).
+        Ticket::query()->whereIn('status', ['open', 'in_progress'])->chunkById(200, function ($tickets) {
+            foreach ($tickets as $ticket) {
+                // Compute BEFORE disabling timestamps — usesTimestamps()=false also
+                // drops the created_at Carbon cast the business-time math needs.
+                $dues = [
+                    'sla_response_due_at' => TicketSla::responseDueAt($ticket),
+                    'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
+                    // The deadlines moved — stale escalation state must re-evaluate.
+                    'sla_response_alert_level' => null,
+                    'sla_resolve_alert_level' => null,
+                ];
+                $ticket->timestamps = false; // a recompute is not an edit — keep updated_at
+                $ticket->forceFill($dues)->saveQuietly();
+            }
+        });
+
         AuditLog::record('Updated SLA settings', 'ticket_sla');
 
         return $this->show();
@@ -308,8 +350,11 @@ class SettingsController extends Controller
         $stored = json_decode((string) AppSetting::get('asset_status_colors', '{}'), true);
         $values['asset_status_colors'] = array_merge($this->assetStatusColorDefaults, is_array($stored) ? $stored : []);
 
-        // Ticket SLA targets: saved values merged over defaults (see TicketSla).
+        // Ticket SLA: per-priority resolution targets, the single first-response
+        // target, and the working window — saved values merged over defaults.
         $values['ticket_sla'] = TicketSla::targets();
+        $values['ticket_sla_response'] = TicketSla::responseMinutes();
+        $values['ticket_sla_hours'] = TicketSla::hours();
 
         return $values;
     }

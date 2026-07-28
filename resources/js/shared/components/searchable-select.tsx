@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -209,10 +209,10 @@ export function SearchableSelect({
                 type="button"
                 onClick={toggle}
                 className={cn(
-                    'flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:border-brand focus-visible:ring-[3px] focus-visible:ring-brand/15 focus-visible:outline-hidden',
+                    'focus-visible:border-brand focus-visible:ring-brand/15 flex h-10 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-sm transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden',
                     active ? 'border-brand/50 bg-brand/5 text-brand font-medium' : 'border-input bg-background hover:border-brand/50',
                     // Keep the brand border + soft ring latched while the panel is open (focus moves into the filter box).
-                    open && 'border-brand ring-[3px] ring-brand/15',
+                    open && 'border-brand ring-brand/15 ring-[3px]',
                 )}
             >
                 <span className="flex min-w-0 items-center gap-2">

@@ -1,8 +1,8 @@
-import { Card } from '@/shared/ui/card';
-import { useStockSummary } from '../../hooks/use-stock';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { Card } from '@/shared/ui/card';
 import { AlertTriangle, Archive, Check, Layers, Warehouse } from 'lucide-react';
+import { useStockSummary } from '../../hooks/use-stock';
 import { MV_META, MV_TONE_BG } from '../shared';
 
 export type Kpi = { label: string; value: string | number; sub: string; icon: typeof Archive };
@@ -115,10 +115,7 @@ export function DashboardTab({
                                     {reorderItems.slice(0, 6).map((it) => {
                                         const out = it.current_stock === 0;
                                         return (
-                                            <div
-                                                key={it.id}
-                                                className="hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors"
-                                            >
+                                            <div key={it.id} className="hover:bg-accent/30 flex items-stretch gap-3 px-3 py-2.5 transition-colors">
                                                 <span className={cn('w-1 shrink-0 rounded-full', out ? 'bg-destructive sc-led' : 'bg-amber-500')} />
                                                 <div className="min-w-0 flex-1 py-0.5">
                                                     <div className="truncate text-sm font-medium">{it.name}</div>
@@ -159,7 +156,9 @@ export function DashboardTab({
                                     <span className="text-muted-foreground font-mono text-[10px] tracking-[0.2em] uppercase">live</span>
                                 </div>
                                 {movements.length === 0 ? (
-                                    <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">{t('stock_no_moves')}</div>
+                                    <div className="text-muted-foreground flex min-h-0 flex-1 items-center justify-center py-12 text-center text-sm">
+                                        {t('stock_no_moves')}
+                                    </div>
                                 ) : (
                                     <div className="divide-border/60 min-h-0 flex-1 divide-y overflow-y-auto p-2">
                                         {movements.slice(0, 6).map((m) => {
@@ -167,10 +166,7 @@ export function DashboardTab({
                                             const MIcon = meta.icon;
                                             const inbound = m.type === 'receive' || m.type === 'return' || m.type === 'adjust_up';
                                             return (
-                                                <div
-                                                    key={m.id}
-                                                    className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors"
-                                                >
+                                                <div key={m.id} className="hover:bg-accent/40 flex items-center gap-3 px-3 py-2.5 transition-colors">
                                                     <span
                                                         className={cn(
                                                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',

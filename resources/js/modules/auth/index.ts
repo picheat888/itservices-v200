@@ -9,9 +9,9 @@ export * from './hooks/use-user-preferences';
 export { default as LoginPage } from './pages/login';
 
 // Components
-export { ProtectedRoute } from './components/protected-route';
-export { RequirePermission, NoAccess } from './components/require-permission';
 export { ChangePasswordDialog } from './components/change-password-dialog';
+export { ProtectedRoute } from './components/protected-route';
+export { NoAccess, RequirePermission } from './components/require-permission';
 export { SessionTimeoutModal } from './components/session-timeout-modal';
 
 // API

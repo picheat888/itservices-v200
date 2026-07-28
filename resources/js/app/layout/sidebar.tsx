@@ -1,15 +1,16 @@
-import { UserAvatar } from '@/shared/components/user-avatar';
-import { useAuth, useLogout } from '@/modules/auth';
-import { useSettings } from '@/modules/settings';
-import { useAccessSidebarBadge } from '@/modules/access';
-import { useContractSidebarBadge } from '@/modules/contract';
-import { useAssetsSidebarBadge, useMyAssetsSidebarBadge } from '@/modules/asset';
-import { useStockSidebarBadge } from '@/modules/stock';
-import { useT } from '@/lang';
 import { navGroups } from '@/app/nav';
+import { useT } from '@/lang';
+import { useAccessSidebarBadge } from '@/modules/access';
+import { useAssetsSidebarBadge, useMyAssetsSidebarBadge } from '@/modules/asset';
+import { useAuth, useLogout } from '@/modules/auth';
+import { useContractSidebarBadge } from '@/modules/contract';
+import { useSettings } from '@/modules/settings';
+import { useStockSidebarBadge } from '@/modules/stock';
+import { useTicketSidebarBadge } from '@/modules/ticket';
+import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import type { Role } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { Loader2, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -34,12 +35,15 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const assetsBadge = useAssetsSidebarBadge(perms.includes('assets.receive'));
     // Access anomalies live on the Overview tab, so the badge follows its permission.
     const accessBadge = useAccessSidebarBadge(perms.includes('access.overview'));
+    // Tickets needing my attention — follows the nav item's own gate (tickets.create).
+    const ticketsBadge = useTicketSidebarBadge(perms.includes('tickets.create'));
     const badges: Record<string, number> = {
         stock: stockBadge,
         contracts: contractBadge,
         'my-assets': myAssetsBadge,
         assets: assetsBadge,
         access: accessBadge,
+        tickets: ticketsBadge,
     };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
@@ -47,24 +51,19 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
         if (i.roles) return i.roles.includes(role);
         return true;
     };
-    const groups = navGroups
-        .map((g) => ({ ...g, items: g.items.filter(canSee) }))
-        .filter((g) => g.items.length > 0);
+    const groups = navGroups.map((g) => ({ ...g, items: g.items.filter(canSee) })).filter((g) => g.items.length > 0);
 
     return (
         <aside
-            className={cn(
-                'flex h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-all',
-                iconsOnly ? 'w-16' : 'w-64',
-            )}
+            className={cn('border-sidebar-border bg-sidebar flex h-screen shrink-0 flex-col border-r transition-all', iconsOnly ? 'w-16' : 'w-64')}
         >
             <div className="flex h-16 items-center gap-3 px-4">
                 {/* Custom uploaded logo, else the bundled default (public/logo.svg). */}
                 <img src={logoUrl || '/logo.svg'} alt={brandName} className="h-9 w-9 shrink-0 rounded-lg object-contain" />
                 {!iconsOnly && (
                     <div className="min-w-0">
-                        <div className="truncate text-sm font-bold text-sidebar-foreground">{brandName}</div>
-                        <div className="truncate text-xs text-muted-foreground">{brandSub}</div>
+                        <div className="text-sidebar-foreground truncate text-sm font-bold">{brandName}</div>
+                        <div className="text-muted-foreground truncate text-xs">{brandSub}</div>
                     </div>
                 )}
             </div>
@@ -72,13 +71,11 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             <nav className="flex-1 space-y-5 overflow-y-auto px-2 py-3">
                 {groups.map((group, idx) => (
                     <div key={group.label}>
-                        {iconsOnly
-                            ? idx > 0 && <div className="mx-auto mb-3 h-px w-6 rounded-full bg-sidebar-border" />
-                            : (
-                                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                    {t(group.label)}
-                                </div>
-                            )}
+                        {iconsOnly ? (
+                            idx > 0 && <div className="bg-sidebar-border mx-auto mb-3 h-px w-6 rounded-full" />
+                        ) : (
+                            <div className="text-muted-foreground px-3 pb-1 text-[11px] font-semibold tracking-wide uppercase">{t(group.label)}</div>
+                        )}
                         <div className="space-y-0.5">
                             {group.items.map((item) => {
                                 const Icon = item.icon;
@@ -91,9 +88,9 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                         title={t(item.label)}
                                         className={({ isActive }) =>
                                             cn(
-                                                'relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent',
+                                                'text-sidebar-foreground hover:bg-sidebar-accent relative flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                                                 iconsOnly && 'justify-center px-0',
-                                                isActive && 'bg-brand/15 font-semibold text-brand hover:bg-brand/15',
+                                                isActive && 'bg-brand/15 text-brand hover:bg-brand/15 font-semibold',
                                             )
                                         }
                                     >
@@ -102,7 +99,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                                         {badge > 0 &&
                                             (iconsOnly ? (
                                                 // Collapsed rail: just a dot so it doesn't crowd the icon.
-                                                <span className="bg-brand absolute right-1.5 top-1.5 h-2 w-2 rounded-full" />
+                                                <span className="bg-brand absolute top-1.5 right-1.5 h-2 w-2 rounded-full" />
                                             ) : (
                                                 <span className="bg-brand/15 text-brand ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-mono text-[11px] font-semibold">
                                                     {badge}
@@ -117,19 +114,19 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
             </nav>
 
             {!iconsOnly && settings?.company_name && (
-                <div className="px-4 pb-2 pt-1 text-center">
-                    <p className="truncate text-[10px] text-muted-foreground/60">
+                <div className="px-4 pt-1 pb-2 text-center">
+                    <p className="text-muted-foreground/60 truncate text-[10px]">
                         &copy; {new Date().getFullYear()} {settings.company_name}
                     </p>
                 </div>
             )}
 
             {iconsOnly ? (
-                <div className="flex flex-col items-center gap-1 border-t border-sidebar-border px-2 py-3">
+                <div className="border-sidebar-border flex flex-col items-center gap-1 border-t px-2 py-3">
                     <button
                         onClick={onProfile}
                         title={t('profile')}
-                        className="flex h-10 w-10 items-center justify-center rounded-md transition-colors hover:bg-sidebar-accent"
+                        className="hover:bg-sidebar-accent flex h-10 w-10 items-center justify-center rounded-md transition-colors"
                     >
                         <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-8 w-8 shrink-0" textClassName="text-xs" />
                     </button>
@@ -137,30 +134,30 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                         onClick={() => logout.mutate()}
                         disabled={logout.isPending}
                         title={t('profile_signout')}
-                        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-60"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex h-10 w-10 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-60"
                         aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
                     >
                         {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}
                     </button>
                 </div>
             ) : (
-                <div className="flex items-center gap-2 border-t border-sidebar-border p-3">
+                <div className="border-sidebar-border flex items-center gap-2 border-t p-3">
                     <button
                         onClick={onProfile}
                         title={t('profile')}
-                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-sidebar-accent"
+                        className="hover:bg-sidebar-accent flex min-w-0 flex-1 items-center gap-2 rounded-md p-1 text-left transition-colors"
                     >
                         <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-9 w-9 shrink-0" textClassName="text-xs" />
                         <div className="min-w-0 flex-1">
                             <div className="truncate text-sm font-medium">{user?.name}</div>
-                            <div className="truncate text-xs text-muted-foreground">{user?.group_name ?? user?.role_label}</div>
+                            <div className="text-muted-foreground truncate text-xs">{user?.group_name ?? user?.role_label}</div>
                         </div>
                     </button>
                     <button
                         onClick={() => logout.mutate()}
                         disabled={logout.isPending}
                         title={t('profile_signout')}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-60"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-60"
                         aria-label={lang === 'th' ? 'ออกจากระบบ' : 'Sign out'}
                     >
                         {logout.isPending ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <LogOut className="h-[18px] w-[18px]" />}

@@ -1,11 +1,11 @@
+import { useT } from '@/lang';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { useContractMutations } from '../hooks/use-contracts';
-import { useT } from '@/lang';
-import { contractApi } from '../api/contractApi';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { contractApi } from '../api/contractApi';
+import { useContractMutations } from '../hooks/use-contracts';
 
 interface RowError {
     row: number;
@@ -62,19 +62,14 @@ export function ImportContractDialog({ open, onClose }: { open: boolean; onClose
         }
     };
 
-    const successMsg =
-        success != null
-            ? lang === 'th'
-                ? `นำเข้าสำเร็จ ${success} รายการ`
-                : `Imported ${success} contract(s)`
-            : '';
+    const successMsg = success != null ? (lang === 'th' ? `นำเข้าสำเร็จ ${success} รายการ` : `Imported ${success} contract(s)`) : '';
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Upload className="h-5 w-5 text-brand" />
+                        <Upload className="text-brand h-5 w-5" />
                         {t('import_contract')}
                     </DialogTitle>
                     <DialogDescription>{t('import_contract_desc')}</DialogDescription>
@@ -84,16 +79,16 @@ export function ImportContractDialog({ open, onClose }: { open: boolean; onClose
                     <button
                         type="button"
                         onClick={handleDownload}
-                        className="flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+                        className="border-border hover:bg-accent flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
                     >
-                        <Download className="h-4 w-4 text-brand" />
+                        <Download className="text-brand h-4 w-4" />
                         {t('import_download_template')}
                     </button>
 
-                    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 py-6 text-center hover:bg-accent/50">
-                        <FileSpreadsheet className="h-7 w-7 text-muted-foreground" />
+                    <label className="border-border hover:bg-accent/50 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-6 text-center">
+                        <FileSpreadsheet className="text-muted-foreground h-7 w-7" />
                         <span className="text-sm font-medium">{file ? file.name : t('import_choose_file')}</span>
-                        <span className="text-xs text-muted-foreground">{t('import_contract_hint')}</span>
+                        <span className="text-muted-foreground text-xs">{t('import_contract_hint')}</span>
                         <input
                             ref={inputRef}
                             type="file"
@@ -115,18 +110,18 @@ export function ImportContractDialog({ open, onClose }: { open: boolean; onClose
                         </div>
                     )}
 
-                    {generalError && <div className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{generalError}</div>}
+                    {generalError && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{generalError}</div>}
 
                     {errors.length > 0 && (
-                        <div className="rounded-lg border border-destructive/30 bg-destructive/5">
-                            <div className="flex items-center gap-2 border-b border-destructive/20 px-3 py-2 text-sm font-semibold text-destructive">
+                        <div className="border-destructive/30 bg-destructive/5 rounded-lg border">
+                            <div className="border-destructive/20 text-destructive flex items-center gap-2 border-b px-3 py-2 text-sm font-semibold">
                                 <AlertCircle className="h-4 w-4" />
                                 {t('import_errors_found')} ({errors.length})
                             </div>
                             <div className="max-h-48 overflow-y-auto px-3 py-2">
                                 {errors.map((er) => (
                                     <div key={er.row} className="py-0.5 text-xs">
-                                        <span className="font-mono font-semibold text-destructive">
+                                        <span className="text-destructive font-mono font-semibold">
                                             {t('import_row')} {er.row}:
                                         </span>{' '}
                                         <span className="text-muted-foreground">{er.message}</span>

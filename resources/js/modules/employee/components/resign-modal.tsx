@@ -1,14 +1,14 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { useEmployeeMutations } from '../hooks/use-org';
-import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
-import type { Employee } from '@/shared/types';
 import { AlertTriangle, Box, UserMinus } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useEmployeeMutations } from '../hooks/use-org';
 
 export function ResignModal({ employee, onClose, onDone }: { employee: Employee | null; onClose: () => void; onDone: () => void }) {
     const t = useT();
@@ -46,9 +46,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                         <AlertTriangle className="h-5 w-5 text-amber-500" />
                         {t('resign_title')}
                     </DialogTitle>
-                    {employee && (
-                        <DialogDescription>{lang === 'th' ? employee.name_th ?? employee.name : employee.name}</DialogDescription>
-                    )}
+                    {employee && <DialogDescription>{lang === 'th' ? (employee.name_th ?? employee.name) : employee.name}</DialogDescription>}
                 </DialogHeader>
 
                 <div className="space-y-4">
@@ -60,11 +58,17 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
                     <div className="grid grid-cols-2 gap-4">
                         <Field label={t('resign_last_day')} required error={errors.lastDay}>
-                            <DateInput value={lastDay} onChange={(v) => setLastDay(v)} />
+                            <DateInput
+                                value={lastDay}
+                                onChange={(v) => {
+                                    setLastDay(v);
+                                    setErrors((p) => ({ ...p, lastDay: undefined }));
+                                }}
+                            />
                         </Field>
                         <div>
                             <div className="mb-1.5 text-sm font-medium">{t('resign_assets_to_return')}</div>
-                            <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1.5 text-xs font-medium text-muted-foreground">
+                            <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium">
                                 <Box className="h-3.5 w-3.5" />
                                 {t('coming_soon')}
                             </span>
@@ -74,7 +78,10 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                     <Field label={t('resign_reason')} required error={errors.reason}>
                         <Textarea
                             value={reason}
-                            onChange={(e) => setReason(e.target.value)}
+                            onChange={(e) => {
+                                setReason(e.target.value);
+                                setErrors((p) => ({ ...p, reason: undefined }));
+                            }}
                             rows={3}
                             placeholder={lang === 'th' ? 'เช่น โอนย้ายตำแหน่ง ลาออกโดยสมัครใจ ฯลฯ' : 'e.g. Voluntary resignation, role change…'}
                         />
@@ -82,8 +89,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
 
                     {/* Assets list — pending the Assets module */}
                     <div>
-                        <div className="mb-2 text-xs text-muted-foreground">{t('resign_assets_flagged')}</div>
-                        <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-border py-6 text-sm text-muted-foreground">
+                        <div className="text-muted-foreground mb-2 text-xs">{t('resign_assets_flagged')}</div>
+                        <div className="border-border text-muted-foreground flex items-center justify-center gap-2 rounded-lg border border-dashed py-6 text-sm">
                             <Box className="h-4 w-4" />
                             {t('coming_soon')} (Assets)
                         </div>

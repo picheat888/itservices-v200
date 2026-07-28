@@ -44,6 +44,15 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     // Per-file upload progress (index → 0..100), populated while uploading after submit.
     const [progress, setProgress] = useState<Record<number, number>>({});
 
+    /** Drop one field's validation error — typing/picking counts as fixing it. */
+    const clearError = (key: string) =>
+        setErrors((prev) => {
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
+
     // Keep only allowed extensions, cap at MAX_FILES, dedupe by name+size.
     const addFiles = (list: FileList | File[]) => {
         const incoming = Array.from(list).filter((f) => ACCEPT_EXT.includes(f.name.split('.').pop()?.toLowerCase() ?? ''));
@@ -131,12 +140,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         invalid={!!errors.category}
                                         onClick={() => {
                                             setCategory(c);
-                                            // Picking a type fully resolves the error — clear it right away.
-                                            setErrors((prev) => {
-                                                const next = { ...prev };
-                                                delete next.category;
-                                                return next;
-                                            });
+                                            clearError('category');
                                         }}
                                         className="flex flex-col items-start gap-1 rounded-lg p-3 text-left"
                                     >
@@ -169,14 +173,20 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                 <Field label={t('ticket_subject')} required error={errors.subject}>
                                     <Input
                                         value={subject}
-                                        onChange={(e) => setSubject(e.target.value)}
+                                        onChange={(e) => {
+                                            setSubject(e.target.value);
+                                            clearError('subject');
+                                        }}
                                         placeholder={lang === 'th' ? 'เช่น เชื่อมต่อ VPN ไม่ได้' : "e.g. Can't connect to VPN"}
                                     />
                                 </Field>
                                 <Field label={t('ticket_description')} required error={errors.description}>
                                     <Textarea
                                         value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
+                                        onChange={(e) => {
+                                            setDescription(e.target.value);
+                                            clearError('description');
+                                        }}
                                         rows={5}
                                         placeholder={
                                             lang === 'th'
@@ -198,7 +208,10 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                             <Field label={t('ticket_callback_phone')} required error={errors.phone} help={t('ticket_callback_help')}>
                                 <Input
                                     value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
+                                    onChange={(e) => {
+                                        setPhone(e.target.value);
+                                        clearError('phone');
+                                    }}
                                     className="font-mono"
                                     placeholder="+66 81 234 5678 / ext. 1305"
                                 />

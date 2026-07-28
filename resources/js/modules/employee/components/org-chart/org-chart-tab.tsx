@@ -1,10 +1,21 @@
-import { useOrgChart } from '../../hooks/use-org';
 import { useT } from '@/lang';
-import { deptColor, layoutPositions, NODE_H, NODE_W, nodesWithReports, rootIds, visibleGraph, type OrgDir, type OrgFlowNode, type OrgNodeData } from '../../lib/org-tree';
 import type { OrgChartNode } from '@/shared/types';
 import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useOrgChart } from '../../hooks/use-org';
+import {
+    deptColor,
+    layoutPositions,
+    NODE_H,
+    NODE_W,
+    nodesWithReports,
+    rootIds,
+    visibleGraph,
+    type OrgDir,
+    type OrgFlowNode,
+    type OrgNodeData,
+} from '../../lib/org-tree';
 import { OrgChartToolbar } from './org-chart-toolbar';
 import { OrgNode } from './org-node';
 

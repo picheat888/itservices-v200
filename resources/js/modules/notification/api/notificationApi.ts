@@ -23,6 +23,13 @@ export interface NotificationData {
     reference?: string;
     // Stock count notifications (stock_count)
     stock_count_id?: number;
+    // Ticket SLA alerts (ticket_sla) — subtype: response_at_risk | response_breached | resolve_at_risk | resolve_breached
+    ticket_id?: number;
+    ticket_no?: string;
+    subject?: string;
+    // Ticket owner notifications (ticket_owner) — event: taken | forwarded | resolved | cancelled
+    event?: string;
+    by?: string | null;
     // Asset assigned notifications (asset_assigned)
     asset_id?: number;
     asset_tag?: string;
@@ -44,15 +51,11 @@ export interface NotificationsResponse {
 }
 
 export const notificationApi = {
-    list: (): Promise<NotificationsResponse> =>
-        http.get<NotificationsResponse>('/notifications').then((r) => r.data),
+    list: (): Promise<NotificationsResponse> => http.get<NotificationsResponse>('/notifications').then((r) => r.data),
 
-    markRead: (id: string): Promise<void> =>
-        http.put(`/notifications/${id}/read`).then(() => undefined),
+    markRead: (id: string): Promise<void> => http.put(`/notifications/${id}/read`).then(() => undefined),
 
-    markAllRead: (): Promise<void> =>
-        http.put('/notifications/read-all').then(() => undefined),
+    markAllRead: (): Promise<void> => http.put('/notifications/read-all').then(() => undefined),
 
-    dismiss: (id: string): Promise<void> =>
-        http.delete(`/notifications/${id}`).then(() => undefined),
+    dismiss: (id: string): Promise<void> => http.delete(`/notifications/${id}`).then(() => undefined),
 };

@@ -674,11 +674,7 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
             </td>
             <td className="px-4 py-2.5 font-mono text-xs">{c.value_display}</td>
             <td className="px-4 py-2.5">
-                <StatusBadge
-                    tone={
-                        c.status === 'cancelled' || c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : 'green'
-                    }
-                >
+                <StatusBadge tone={c.status === 'cancelled' || c.status === 'expired' ? 'gray' : c.status === 'overdue' ? 'red' : 'green'}>
                     {c.status === 'cancelled'
                         ? t('contract_cancelled')
                         : c.status === 'expired'
@@ -938,9 +934,7 @@ function DashboardTab({
                     {/* Up to 20 items (server-capped); scroll within the card so a long queue
                         doesn't stretch the layout past the Top-vendors card beside it. */}
                     <div className="divide-border/60 max-h-96 divide-y overflow-y-auto p-2">
-                        {summary.action_queue.length === 0 && (
-                            <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>
-                        )}
+                        {summary.action_queue.length === 0 && <div className="text-muted-foreground px-3 py-4 text-center text-sm">—</div>}
                         {summary.action_queue.map((c) => (
                             <button
                                 key={c.id}

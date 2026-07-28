@@ -1,13 +1,13 @@
-export { default as AccessControlPage } from './pages';
-export {
-    useAccessSummary,
-    useAccessSidebarBadge,
-    useEmailGroups,
-    useFileShares,
-    useSocialPlatforms,
-    useResourceMembers,
-    useEmployeeAccess,
-    useAccessMutations,
-} from './hooks/use-access';
-export { accessApi } from './api/accessApi';
 export type { AccessKind } from '@/shared/types';
+export { accessApi } from './api/accessApi';
+export {
+    useAccessMutations,
+    useAccessSidebarBadge,
+    useAccessSummary,
+    useEmailGroups,
+    useEmployeeAccess,
+    useFileShares,
+    useResourceMembers,
+    useSocialPlatforms,
+} from './hooks/use-access';
+export { default as AccessControlPage } from './pages';

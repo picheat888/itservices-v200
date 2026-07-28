@@ -1,24 +1,24 @@
+import { useT } from '@/lang';
+import { useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { cn } from '@/shared/lib/utils';
+import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useDateTime, useWarehouses } from '@/modules/settings';
-import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockCountAdjustMode, StockItem } from '@/shared/types';
 import { AlertTriangle, Check, ClipboardList, FileText, Loader2, Search, Trash2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
 
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
     const t = useT();
     const confirm = useConfirm();
-    const { format: fmtDate } = useDateTime();
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const {

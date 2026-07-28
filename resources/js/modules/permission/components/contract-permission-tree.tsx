@@ -1,8 +1,8 @@
-import { actionDescription, actionLabel, moduleLabel } from '../lib/permission-labels';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
+import { actionDescription, actionLabel, moduleLabel } from '../lib/permission-labels';
 
 // Mirrors App\Support\Permissions::contractHierarchy() — keep in sync.
 const MASTER = 'contracts.module';
@@ -44,7 +44,12 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
             onClick={onClick}
             className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', on ? 'bg-brand' : 'bg-muted')}
         >
-            <span className={cn('absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all', on ? 'left-[1.125rem]' : 'left-0.5')}>
+            <span
+                className={cn(
+                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
+                    on ? 'left-[1.125rem]' : 'left-0.5',
+                )}
+            >
                 {on && <Check className="text-brand h-2.5 w-2.5" />}
                 {locked && !on && <Lock className="text-muted-foreground h-2.5 w-2.5" />}
             </span>

@@ -1,11 +1,11 @@
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { useDateTime } from '@/modules/settings';
-import { useStockItemHistory } from '../hooks/use-stock';
+import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import { type StockMovementType } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { History } from 'lucide-react';
+import { useStockItemHistory } from '../hooks/use-stock';
 
 /** One movement row as returned by the item-history endpoint. */
 type Move = {
@@ -20,7 +20,10 @@ type Move = {
 };
 
 /** Localized label, badge tone, and qty sign for each movement type. */
-const TYPE_META: Record<StockMovementType, { th: string; en: string; tone: 'green' | 'amber' | 'red' | 'blue' | 'violet' | 'gray'; sign: '+' | '-' | '' }> = {
+const TYPE_META: Record<
+    StockMovementType,
+    { th: string; en: string; tone: 'green' | 'amber' | 'red' | 'blue' | 'violet' | 'gray'; sign: '+' | '-' | '' }
+> = {
     receive: { th: 'รับเข้า', en: 'Receive', tone: 'green', sign: '+' },
     issue: { th: 'เบิกออก', en: 'Issue', tone: 'violet', sign: '-' },
     return: { th: 'คืน', en: 'Return', tone: 'blue', sign: '+' },
@@ -33,7 +36,6 @@ const TYPE_META: Record<StockMovementType, { th: string; en: string; tone: 'gree
 export function StockMovementsTab({ itemId }: { itemId: number }) {
     const lang = useUiStore((s) => s.lang);
     const { data: history, isLoading } = useStockItemHistory(itemId);
-    const { format: fmtDateTime } = useDateTime();
     const moves = (history?.movements ?? []) as Move[];
 
     const columns: Column<Move>[] = [
@@ -42,7 +44,11 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
             header: lang === 'th' ? 'วันที่' : 'Date',
             render: (m) => <span className="text-muted-foreground font-mono text-xs">{fmtDateTime(m.moved_at, false)}</span>,
         },
-        { key: 'doc_no', header: lang === 'th' ? 'เลขที่เอกสาร' : 'Doc No', render: (m) => <span className="font-mono text-xs">{m.doc_no ?? '—'}</span> },
+        {
+            key: 'doc_no',
+            header: lang === 'th' ? 'เลขที่เอกสาร' : 'Doc No',
+            render: (m) => <span className="font-mono text-xs">{m.doc_no ?? '—'}</span>,
+        },
         {
             key: 'type',
             header: lang === 'th' ? 'ประเภท' : 'Type',
@@ -55,7 +61,12 @@ export function StockMovementsTab({ itemId }: { itemId: number }) {
             render: (m) => {
                 const meta = TYPE_META[m.type];
                 return (
-                    <span className={cn('font-mono font-semibold', meta.sign === '+' ? 'text-emerald-600 dark:text-emerald-400' : meta.sign === '-' ? 'text-red-600 dark:text-red-400' : '')}>
+                    <span
+                        className={cn(
+                            'font-mono font-semibold',
+                            meta.sign === '+' ? 'text-emerald-600 dark:text-emerald-400' : meta.sign === '-' ? 'text-red-600 dark:text-red-400' : '',
+                        )}
+                    >
                         {meta.sign}
                         {m.qty}
                     </span>

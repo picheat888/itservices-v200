@@ -1,5 +1,15 @@
-import type { AccessKind, AccessMember, AccessSummary, ApiEnvelope, EmailGroup, EmployeeAccess, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type {
+    AccessKind,
+    AccessMember,
+    AccessSummary,
+    ApiEnvelope,
+    EmailGroup,
+    EmployeeAccess,
+    FileShare,
+    SocialPlatform,
+    Software,
+} from '@/shared/types';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
@@ -33,8 +43,7 @@ export const accessApi = {
     socialPlatforms: () => http.get<ApiEnvelope<SocialPlatform[]>>('/social-platforms').then((r) => r.data.data),
     software: () => http.get<ApiEnvelope<Software[]>>('/software').then((r) => r.data.data),
 
-    members: (kind: AccessKind, id: number) =>
-        http.get<ApiEnvelope<AccessMember[]>>(`/${kind}/${id}/members`).then((r) => r.data.data),
+    members: (kind: AccessKind, id: number) => http.get<ApiEnvelope<AccessMember[]>>(`/${kind}/${id}/members`).then((r) => r.data.data),
 
     createResource: async (kind: AccessKind, payload: Record<string, unknown>) => {
         if (!hasFile(payload)) return mutate<EmailGroup | FileShare | SocialPlatform | Software>('post', `/${kind}`, payload);
@@ -55,8 +64,7 @@ export const accessApi = {
 
     addMember: (kind: AccessKind, id: number, payload: { employee_id: number; access_level?: string | null; purpose?: string | null }) =>
         mutate<AccessMember>('post', `/${kind}/${id}/members`, payload),
-    revokeMember: (kind: AccessKind, id: number, membershipId: number) =>
-        mutate<void>('post', `/${kind}/${id}/members/${membershipId}/revoke`),
+    revokeMember: (kind: AccessKind, id: number, membershipId: number) => mutate<void>('post', `/${kind}/${id}/members/${membershipId}/revoke`),
 
     // Set/clear an email group's owner (the workflow approver) — separate from members.
     setEmailGroupOwner: (id: number, ownerEmployeeId: number | null) =>
@@ -66,6 +74,5 @@ export const accessApi = {
     setFileShareOwner: (id: number, ownerEmployeeId: number | null) =>
         mutate<FileShare>('put', `/file-shares/${id}/owner`, { owner_employee_id: ownerEmployeeId }),
 
-    employeeAccess: (employeeId: number) =>
-        http.get<ApiEnvelope<EmployeeAccess>>(`/employees/${employeeId}/access`).then((r) => r.data.data),
+    employeeAccess: (employeeId: number) => http.get<ApiEnvelope<EmployeeAccess>>(`/employees/${employeeId}/access`).then((r) => r.data.data),
 };

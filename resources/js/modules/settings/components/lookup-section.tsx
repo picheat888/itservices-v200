@@ -1,13 +1,13 @@
+import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
+import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
-import { hasFieldError, toastDeleteError } from '@/shared/lib/api-errors';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -168,7 +168,13 @@ function LookupModal({
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
-            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error', hasFieldError(err, 'name') ? undefined : t('cd_error_title'));
+            useToastStore
+                .getState()
+                .push(
+                    hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'),
+                    'error',
+                    hasFieldError(err, 'name') ? undefined : t('cd_error_title'),
+                );
         }
     };
 

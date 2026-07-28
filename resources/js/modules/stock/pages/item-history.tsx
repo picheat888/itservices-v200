@@ -1,12 +1,12 @@
-import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { useDateTime } from '@/modules/settings';
-import { useStockItemHistory } from '../hooks/use-stock';
 import { useT } from '@/lang';
+import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { SerialEvent, StockItemHistory } from '@/shared/types';
 import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ChevronLeft, Printer, SlidersHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useStockItemHistory } from '../hooks/use-stock';
 
 type View = 'issue' | 'receive' | 'adjust' | 'transfer';
 type Movement = StockItemHistory['movements'][number];
@@ -34,7 +34,6 @@ export default function ItemHistoryPage() {
     const view = (params.get('v') as View | null) ?? null;
     const { data, isLoading } = useStockItemHistory(id ? Number(id) : null);
     // "YYYY-MM-DD HH:mm" in the system timezone (the API emits UTC timestamps).
-    const { format: fmtTz } = useDateTime();
     const fmt = (iso: string | null): string => (iso ? fmtTz(iso) : '—');
 
     if (isLoading || !data) {
@@ -146,7 +145,12 @@ export default function ItemHistoryPage() {
                         headers={['#', t('stock_hist_serial'), t('stock_hist_receive_date'), t('stock_hist_receive_no')]}
                         rows={data.serials.map((s, i) => {
                             const recv = s.events.find((e) => e.event === 'received');
-                            return [String(i + 1), <span className="font-mono">{s.serial}</span>, fmt(recv?.occurred_at ?? null), recv?.doc_no ?? '—'];
+                            return [
+                                String(i + 1),
+                                <span className="font-mono">{s.serial}</span>,
+                                fmt(recv?.occurred_at ?? null),
+                                recv?.doc_no ?? '—',
+                            ];
                         })}
                     />
                 )}
@@ -176,17 +180,103 @@ export default function ItemHistoryPage() {
         let rows: ReactNode[][];
 
         if (view === 'issue') {
-            headers = ['#', t('stock_doc_no'), t('audit_time'), t('stock_hist_action'), t('stock_warehouse'), t('stock_hist_issue_by'), t('stock_hist_request_by'), t('stock_hist_request_no'), t('stock_hist_serials')];
-            rows = movements.map((m, i) => [String(i + 1), <span className="font-mono">{m.doc_no ?? '—'}</span>, fmt(m.moved_at), action(m), m.from_label ?? '—', m.recorded_by ?? '—', m.to_label ?? '—', m.reference ?? '—', serialCell(m)]);
+            headers = [
+                '#',
+                t('stock_doc_no'),
+                t('audit_time'),
+                t('stock_hist_action'),
+                t('stock_warehouse'),
+                t('stock_hist_issue_by'),
+                t('stock_hist_request_by'),
+                t('stock_hist_request_no'),
+                t('stock_hist_serials'),
+            ];
+            rows = movements.map((m, i) => [
+                String(i + 1),
+                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                fmt(m.moved_at),
+                action(m),
+                m.from_label ?? '—',
+                m.recorded_by ?? '—',
+                m.to_label ?? '—',
+                m.reference ?? '—',
+                serialCell(m),
+            ]);
         } else if (view === 'receive') {
-            headers = ['#', t('stock_doc_no'), t('audit_time'), t('stock_hist_action'), t('stock_supplier'), t('stock_hist_ref_doc'), t('stock_warehouse'), t('stock_cost'), t('stock_hist_serials'), t('stock_qty'), t('stock_hist_note')];
-            rows = movements.map((m, i) => [String(i + 1), <span className="font-mono">{m.doc_no ?? '—'}</span>, fmt(m.moved_at), action(m), m.from_label ?? '—', m.reference ?? '—', m.to_label ?? '—', m.unit_cost != null ? <span className="font-mono">{m.unit_cost}</span> : '—', serialCell(m), <span className="font-mono">{m.qty}</span>, m.notes ?? '—']);
+            headers = [
+                '#',
+                t('stock_doc_no'),
+                t('audit_time'),
+                t('stock_hist_action'),
+                t('stock_supplier'),
+                t('stock_hist_ref_doc'),
+                t('stock_warehouse'),
+                t('stock_cost'),
+                t('stock_hist_serials'),
+                t('stock_qty'),
+                t('stock_hist_note'),
+            ];
+            rows = movements.map((m, i) => [
+                String(i + 1),
+                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                fmt(m.moved_at),
+                action(m),
+                m.from_label ?? '—',
+                m.reference ?? '—',
+                m.to_label ?? '—',
+                m.unit_cost != null ? <span className="font-mono">{m.unit_cost}</span> : '—',
+                serialCell(m),
+                <span className="font-mono">{m.qty}</span>,
+                m.notes ?? '—',
+            ]);
         } else if (view === 'adjust') {
-            headers = ['#', t('stock_doc_no'), t('audit_time'), t('stock_hist_ref_doc'), t('stock_hist_action'), t('stock_hist_adjust_by'), t('stock_hist_serials'), t('stock_qty'), t('stock_hist_note')];
-            rows = movements.map((m, i) => [String(i + 1), <span className="font-mono">{m.doc_no ?? '—'}</span>, fmt(m.moved_at), m.reference ?? '—', action(m), m.recorded_by ?? '—', serialCell(m), <span className="font-mono">{m.qty}</span>, m.notes ?? '—']);
+            headers = [
+                '#',
+                t('stock_doc_no'),
+                t('audit_time'),
+                t('stock_hist_ref_doc'),
+                t('stock_hist_action'),
+                t('stock_hist_adjust_by'),
+                t('stock_hist_serials'),
+                t('stock_qty'),
+                t('stock_hist_note'),
+            ];
+            rows = movements.map((m, i) => [
+                String(i + 1),
+                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                fmt(m.moved_at),
+                m.reference ?? '—',
+                action(m),
+                m.recorded_by ?? '—',
+                serialCell(m),
+                <span className="font-mono">{m.qty}</span>,
+                m.notes ?? '—',
+            ]);
         } else {
-            headers = ['#', t('stock_doc_no'), t('audit_time'), t('stock_hist_action'), t('stock_from'), t('stock_to'), t('stock_hist_transfer_by'), t('stock_hist_serials'), t('stock_qty'), t('stock_hist_note')];
-            rows = movements.map((m, i) => [String(i + 1), <span className="font-mono">{m.doc_no ?? '—'}</span>, fmt(m.moved_at), action(m), m.from_label ?? '—', m.to_label ?? '—', m.recorded_by ?? '—', serialCell(m), <span className="font-mono">{m.qty}</span>, m.notes ?? '—']);
+            headers = [
+                '#',
+                t('stock_doc_no'),
+                t('audit_time'),
+                t('stock_hist_action'),
+                t('stock_from'),
+                t('stock_to'),
+                t('stock_hist_transfer_by'),
+                t('stock_hist_serials'),
+                t('stock_qty'),
+                t('stock_hist_note'),
+            ];
+            rows = movements.map((m, i) => [
+                String(i + 1),
+                <span className="font-mono">{m.doc_no ?? '—'}</span>,
+                fmt(m.moved_at),
+                action(m),
+                m.from_label ?? '—',
+                m.to_label ?? '—',
+                m.recorded_by ?? '—',
+                serialCell(m),
+                <span className="font-mono">{m.qty}</span>,
+                m.notes ?? '—',
+            ]);
         }
 
         const Icon = meta.icon;

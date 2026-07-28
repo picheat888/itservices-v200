@@ -12,10 +12,10 @@ use Illuminate\Validation\Rules\Enum;
 class UpdateTicketRequest extends FormRequest
 {
     /**
-     * Only the ticket's requester (open-by) may edit it, and only while it is
-     * still Open — before an IT staff picks it up. There is NO admin/super
-     * override: a case's content belongs to its opener, and once taken any
-     * correction happens through the workflow (take note / resolution).
+     * Only the ticket's requester (open-by) may edit it — gated by tickets.edit_own —
+     * and only while it is still Open, before an IT staff picks it up. There is NO
+     * admin/super requester-override: a case's content belongs to its opener, and
+     * once taken any correction happens through the workflow (take note / resolution).
      */
     public function authorize(): bool
     {
@@ -23,6 +23,7 @@ class UpdateTicketRequest extends FormRequest
         $ticket = $this->route('ticket');
 
         return $user !== null
+            && $user->hasPermission('tickets.edit_own')
             && $ticket instanceof Ticket
             && $ticket->requester_id === $user->employee_id
             && $ticket->status === TicketStatus::Open;

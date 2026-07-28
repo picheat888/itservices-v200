@@ -1,18 +1,18 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { DateInput } from '@/shared/ui/date-input';
-import { Input } from '@/shared/ui/input';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
-import { useT } from '@/lang';
 import { cn, focusFirstError } from '@/shared/lib/utils';
+import type { Employee } from '@/shared/types';
+import { Button } from '@/shared/ui/button';
+import { DateInput } from '@/shared/ui/date-input';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import type { Employee } from '@/shared/types';
 import { AlertTriangle, ArrowRight, Briefcase, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -97,10 +97,27 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         [photo, photoUrl],
     );
 
-    const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => setForm((f) => ({ ...f, [k]: v }));
+    /** Update one field and drop its validation error — editing counts as fixing it. */
+    const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => {
+        setForm((f) => ({ ...f, [k]: v }));
+        setErrors((prev) => {
+            if (!(k in prev)) return prev;
+            const next = { ...prev };
+            delete next[k];
+            return next;
+        });
+    };
 
     /** When department changes, clear the section so stale options don't persist. */
-    const setDepartment = (v: string) => setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
+    const setDepartment = (v: string) => {
+        setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
+        setErrors((prev) => {
+            if (!('departmentId' in prev)) return prev;
+            const next = { ...prev };
+            delete next.departmentId;
+            return next;
+        });
+    };
 
     // Manager candidates: everyone except the employee being edited.
     const managerOptions = useMemo(

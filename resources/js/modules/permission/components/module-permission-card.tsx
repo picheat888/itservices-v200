@@ -1,9 +1,9 @@
 import { useT } from '@/lang';
-import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
+import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 
 /**
  * Master-row behaviour for a card:
@@ -52,7 +52,19 @@ function CardHeader({ title, on, total }: { title: string; on: number; total: nu
 }
 
 /** Brand-tinted identity band: title + subtitle on the left, master switch on the right. */
-function MasterBand({ title, subtitle, on, locked, onToggle }: { title: string; subtitle: string; on: boolean; locked: boolean; onToggle: () => void }) {
+function MasterBand({
+    title,
+    subtitle,
+    on,
+    locked,
+    onToggle,
+}: {
+    title: string;
+    subtitle: string;
+    on: boolean;
+    locked: boolean;
+    onToggle: () => void;
+}) {
     return (
         <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
             <div className="min-w-0">

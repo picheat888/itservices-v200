@@ -84,16 +84,16 @@ export function AssetTransferDialog({
         setErr(e);
         if (Object.keys(e).length) return;
 
-        const owner =
-            mode === 'employee'
-                ? { owner_employee_id: Number(employeeId) }
-                : { owner_label: sharedLabel.trim() };
+        const owner = mode === 'employee' ? { owner_employee_id: Number(employeeId) } : { owner_label: sharedLabel.trim() };
 
         try {
             if (isBulk) {
                 await bulkTransfer.mutateAsync({ ids, mode, ...owner, location_id: Number(location), reason: reason.trim() || undefined });
             } else if (asset) {
-                await transfer.mutateAsync({ id: asset.id, payload: { mode, ...owner, location_id: Number(location), reason: reason.trim() || undefined } });
+                await transfer.mutateAsync({
+                    id: asset.id,
+                    payload: { mode, ...owner, location_id: Number(location), reason: reason.trim() || undefined },
+                });
             }
             (onDone ?? onClose)();
         } catch {
@@ -154,16 +154,17 @@ export function AssetTransferDialog({
                     )}
 
                     <Field label={t('asset_location')} required error={err.location}>
-                        <SearchableSelect value={location} onChange={setLocation} options={locationOptions} preferDown placeholder={t('transfer_location_ph')} />
+                        <SearchableSelect
+                            value={location}
+                            onChange={setLocation}
+                            options={locationOptions}
+                            preferDown
+                            placeholder={t('transfer_location_ph')}
+                        />
                     </Field>
 
                     <Field label={t('asset_transfer_reason')}>
-                        <Textarea
-                            value={reason}
-                            onChange={(ev) => setReason(ev.target.value)}
-                            rows={3}
-                            placeholder={t('asset_transfer_reason_ph')}
-                        />
+                        <Textarea value={reason} onChange={(ev) => setReason(ev.target.value)} rows={3} placeholder={t('asset_transfer_reason_ph')} />
                     </Field>
                 </div>
 

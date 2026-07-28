@@ -1,17 +1,17 @@
+import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { cn } from '@/shared/lib/utils';
+import type { StockRequest, StockRequestStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
-import { useDateTime } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockRequest, StockRequestStatus } from '@/shared/types';
 import { AlertTriangle, ArrowUpFromLine, Check, FilePlus2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
@@ -38,7 +38,6 @@ export function RequestsTab({
 }) {
     const t = useT();
     const confirm = useConfirm();
-    const { format: fmtDate } = useDateTime();
     // The API returns actionable requests first (await approval → await fulfillment), server-paginated.
     // `loading` tracks only the first load (isLoading), not background refetches (isFetching), so
     // returning to this tab shows the cached page instantly instead of a shimmer every time.

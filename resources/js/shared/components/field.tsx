@@ -25,11 +25,14 @@ export function Field({
                 {required && <span className="text-destructive ml-0.5">*</span>}
             </Label>
             {/* On error, tint the control(s) inside red — input/textarea/select and
-                button-style triggers (SearchableSelect) all pick up the border. */}
+                button-style triggers (SearchableSelect) all pick up the border.
+                The focus: overrides must stay: the controls' own focus-visible:border-brand
+                outranks the plain descendant override, so without them the border flips to
+                the theme colour while focused. */}
             <div
                 className={cn(
                     error &&
-                        '[&_input]:border-destructive [&_textarea]:border-destructive [&_select]:border-destructive [&_button]:border-destructive [&_input]:focus-visible:ring-destructive/25 [&_textarea]:focus-visible:ring-destructive/25',
+                        '[&_input]:border-destructive [&_textarea]:border-destructive [&_select]:border-destructive [&_button]:border-destructive [&_input]:focus:border-destructive [&_textarea]:focus:border-destructive [&_select]:focus:border-destructive [&_button]:focus:border-destructive [&_input]:focus-visible:ring-destructive/25 [&_textarea]:focus-visible:ring-destructive/25 [&_select]:focus:ring-destructive/25 [&_button]:focus:ring-destructive/25 [&_button]:ring-destructive/25 [&_button]:data-[state=open]:border-destructive [&_button]:data-[state=open]:ring-destructive/25',
                 )}
             >
                 {children}

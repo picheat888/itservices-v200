@@ -45,8 +45,8 @@ import { assetApi } from '../api/assetApi';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
-import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
+import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
 
@@ -200,18 +200,24 @@ export default function AssetsPage() {
     });
     const openAsset = (a: Asset) => {
         qc.setQueryData(['asset', 'view', a.id], a);
-        setSearchParams((sp) => {
-            const p = new URLSearchParams(sp);
-            p.set('view', String(a.id));
-            return p;
-        }, { replace: true });
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('view', String(a.id));
+                return p;
+            },
+            { replace: true },
+        );
     };
     const closeAsset = () =>
-        setSearchParams((sp) => {
-            const p = new URLSearchParams(sp);
-            p.delete('view');
-            return p;
-        }, { replace: true });
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('view');
+                return p;
+            },
+            { replace: true },
+        );
 
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Asset | null>(null);
@@ -454,17 +460,17 @@ export default function AssetsPage() {
                     {(['dashboard', 'inventory', 'transfers'] as Tab[])
                         .filter((tb) => tb !== 'dashboard' || canViewDashboard)
                         .map((tb) => (
-                        <button
-                            key={tb}
-                            onClick={() => changeTab(tb)}
-                            className={cn(
-                                'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                                tab === tb ? 'border-brand text-brand' : 'text-muted-foreground hover:text-foreground border-transparent',
-                            )}
-                        >
-                            {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
-                        </button>
-                    ))}
+                            <button
+                                key={tb}
+                                onClick={() => changeTab(tb)}
+                                className={cn(
+                                    'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+                                    tab === tb ? 'border-brand text-brand' : 'text-muted-foreground hover:text-foreground border-transparent',
+                                )}
+                            >
+                                {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
+                            </button>
+                        ))}
                 </div>
 
                 {tab === 'dashboard' && summaryLoading && <AssetDashboardSkeleton />}

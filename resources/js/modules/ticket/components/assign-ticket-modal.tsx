@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -17,11 +18,24 @@ const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
 export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { assign } = useTicketMutations();
-    const { data: staff = [] } = useTicketStaff(!!ticket);
+    // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
+    const [shown, setShown] = useState<Ticket | null>(null);
+    useEffect(() => {
+        if (ticket) setShown(ticket);
+    }, [ticket]);
+    const view = ticket ?? shown;
+    // Only staff whose Ticket Level covers this case's category can receive it.
+    const { data: staff = [] } = useTicketStaff(!!view, view?.category);
+    const { user: me } = useAuth();
     const [assigneeId, setAssigneeId] = useState('');
     const [priority, setPriority] = useState<TicketPriority>('medium');
 
-    const staffOptions = useMemo(() => staff.map((s) => ({ value: String(s.id), label: s.name, search: s.name })), [staff]);
+    // Assign hands a case to someone ELSE — the dispatcher takes via Take Case instead
+    // (the API rejects self-assign too).
+    const staffOptions = useMemo(
+        () => staff.filter((s) => s.id !== me?.id).map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
+        [staff, me],
+    );
 
     useEffect(() => {
         if (ticket) {
@@ -41,7 +55,13 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
     return (
         <Dialog open={!!ticket} onOpenChange={(o) => !o && !pending && onClose()}>
             <DialogContent className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[560px] flex-col gap-0 overflow-hidden p-0">
-                <FocusDialogHeader icon={UserPlus} eyebrow="Assign" title={t('ticket_assign')} code={ticket?.ticket_no} srDescription={t('ticket_assign')} />
+                <FocusDialogHeader
+                    icon={UserPlus}
+                    eyebrow="Assign"
+                    title={t('ticket_assign')}
+                    code={view?.ticket_no}
+                    srDescription={t('ticket_assign')}
+                />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     <Field label={t('ticket_select_staff')} required>

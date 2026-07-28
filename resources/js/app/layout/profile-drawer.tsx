@@ -1,3 +1,6 @@
+import { useT } from '@/lang';
+import { useAuth, useUpdateProfile } from '@/modules/auth';
+import { PhotoCropDialog, useEmployee } from '@/modules/employee';
 import { SaveButton } from '@/shared/components/save-button';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
@@ -5,9 +8,6 @@ import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useAuth, useUpdateProfile } from '@/modules/auth';
-import { PhotoCropDialog, useEmployee } from '@/modules/employee';
-import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { Camera } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
