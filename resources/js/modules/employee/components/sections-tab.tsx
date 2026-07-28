@@ -1,16 +1,16 @@
-import { SectionMembersDialog } from './section-members-dialog';
-import { SectionModal } from './section-modal';
+import { useT } from '@/lang';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import type { Section } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useDepartments, useSectionMutations, useSections } from '../hooks/use-org';
-import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
-import type { Section } from '@/shared/types';
 import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useDepartments, useSectionMutations, useSections } from '../hooks/use-org';
+import { SectionMembersDialog } from './section-members-dialog';
+import { SectionModal } from './section-modal';
 
 type SortKey = 'dept' | 'name' | 'members' | 'code';
 

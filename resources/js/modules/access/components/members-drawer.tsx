@@ -174,8 +174,7 @@ export function MembersDrawer({
     // employee_id -> employee, so a member row can show its code + department tag.
     const empById = useMemo(() => new Map(employees.map((e) => [e.id, e])), [employees]);
     // Resigned members/owners get a red badge — their access is likely stale.
-    const isResigned = (employeeId: number | null | undefined) =>
-        employeeId != null && empById.get(employeeId)?.status === 'resigned';
+    const isResigned = (employeeId: number | null | undefined) => employeeId != null && empById.get(employeeId)?.status === 'resigned';
     const deptTag = useMemo(() => new Map(departments.map((d) => [d.id, d.tag])), [departments]);
 
     // Employees already on this resource — existing members plus the owner (email groups /
@@ -460,7 +459,9 @@ export function MembersDrawer({
                                             <Trash2 className="h-4 w-4" /> {t('delete')}
                                         </Button>
                                         {/* Backend blocks deleting a resource that still has members — explain why it's disabled. */}
-                                        {members.length > 0 && <span className="text-muted-foreground text-xs">{t('access_delete_has_members')}</span>}
+                                        {members.length > 0 && (
+                                            <span className="text-muted-foreground text-xs">{t('access_delete_has_members')}</span>
+                                        )}
                                     </>
                                 )}
                                 {mayEdit && onEdit && (

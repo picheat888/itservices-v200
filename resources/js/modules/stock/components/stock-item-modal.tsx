@@ -1,20 +1,20 @@
+import { useT } from '@/lang';
+import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SerialToggle } from '@/shared/components/serial-toggle';
+import { cn } from '@/shared/lib/utils';
+import type { StockItem } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { useAssetModels, useBrands, useCategories, useUnits, useWarrantyTypes } from '@/modules/settings';
-import { useStockItemMutations } from '../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
-import type { StockItemPayload } from '../api/stockApi';
 import { useToastStore } from '@/stores/toast';
-import type { StockItem } from '@/shared/types';
 import { useEffect, useState } from 'react';
+import type { StockItemPayload } from '../api/stockApi';
+import { useStockItemMutations } from '../hooks/use-stock';
 
 const CLOSE_DELAY_MS = 1100;
 

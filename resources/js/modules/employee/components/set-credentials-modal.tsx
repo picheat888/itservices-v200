@@ -1,14 +1,14 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { cn } from '@/shared/lib/utils';
+import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useEmployeeMutations } from '../hooks/use-org';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { Employee } from '@/shared/types';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useEmployeeMutations } from '../hooks/use-org';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
@@ -72,9 +72,18 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const handleSubmit = async () => {
         if (!employee) return;
         setError('');
-        if (!username.trim()) { setError(t('cred_err_username_required')); return; }
-        if (password.length < 6) { setError(t('cred_err_password_short')); return; }
-        if (password !== confirm) { setError(t('cred_err_no_match')); return; }
+        if (!username.trim()) {
+            setError(t('cred_err_username_required'));
+            return;
+        }
+        if (password.length < 6) {
+            setError(t('cred_err_password_short'));
+            return;
+        }
+        if (password !== confirm) {
+            setError(t('cred_err_no_match'));
+            return;
+        }
         try {
             await setCredentials.mutateAsync({ id: employee.id, username: username.trim(), password, password_confirmation: confirm });
             // Flash "✓ Saved" briefly, then close.
@@ -87,7 +96,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         }
     };
 
-    const empName = employee ? (lang === 'th' ? employee.name_th ?? employee.name : employee.name) : '';
+    const empName = employee ? (lang === 'th' ? (employee.name_th ?? employee.name) : employee.name) : '';
 
     return (
         <>
@@ -115,7 +124,13 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         </div>
 
                         <Field label={t('cred_username')}>
-                            <Input value={username} onChange={(e) => setUsername(e.target.value)} className="font-mono" placeholder="e.g. john_do" autoComplete="off" />
+                            <Input
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="font-mono"
+                                placeholder="e.g. john_do"
+                                autoComplete="off"
+                            />
                         </Field>
                         <Field label={t('cred_password')}>
                             <div className="relative">
@@ -130,7 +145,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 <button
                                     type="button"
                                     onClick={() => setShowPw((s) => !s)}
-                                    className="text-muted-foreground hover:text-foreground absolute right-2.5 top-1/2 -translate-y-1/2"
+                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
                                     tabIndex={-1}
                                 >
                                     {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -181,7 +196,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         ].map((row) => (
                             <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
                                 <div className="min-w-0 flex-1">
-                                    <div className="text-muted-foreground text-[10.5px] font-semibold uppercase tracking-wide">{row.label}</div>
+                                    <div className="text-muted-foreground text-[10.5px] font-semibold tracking-wide uppercase">{row.label}</div>
                                     <div className="truncate font-mono text-sm font-semibold">{row.value}</div>
                                 </div>
                                 <button

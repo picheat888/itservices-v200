@@ -534,13 +534,18 @@ export function AccessDashboard({
                                                 <div className="min-w-0">
                                                     <div className="font-medium">{r.name}</div>
                                                     {r.detail && (
-                                                        <div className="text-muted-foreground max-w-[260px] truncate font-mono text-[11px]">{r.detail}</div>
+                                                        <div className="text-muted-foreground max-w-[260px] truncate font-mono text-[11px]">
+                                                            {r.detail}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-5 py-2.5">
-                                            <span className="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold" style={tint(meta.color)}>
+                                            <span
+                                                className="inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                                                style={tint(meta.color)}
+                                            >
                                                 {t(meta.labelKey)}
                                             </span>
                                         </td>

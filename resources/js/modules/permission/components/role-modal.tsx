@@ -1,15 +1,15 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useRoleMutations } from '../hooks/use-permissions';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
-import type { RoleRow } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import type { RoleRow } from '../api/permissionApi';
+import { useRoleMutations } from '../hooks/use-permissions';
 
 const COLORS = ['#2563eb', '#0284c7', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0f172a'];
 

@@ -109,7 +109,35 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         setInitial(next);
     }, [open, editing]);
 
-    const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
+    /** Form field → validation-error key (they don't always share a name). */
+    const ERR_KEY: Partial<Record<keyof FormState, string>> = {
+        category_id: 'type',
+        brand_id: 'brand',
+        model_id: 'model',
+        serial: 'serial',
+        warehouse_id: 'warehouse',
+        contract_id: 'contract_id',
+        value: 'value',
+        vendor_id: 'supplier',
+        purchase_date: 'purchase_date',
+        warranty_end: 'warranty_end',
+        // Turning "lifetime" on satisfies the warranty-end requirement.
+        warranty_lifetime: 'warranty_end',
+    };
+
+    /** Update one field and drop its validation error — editing counts as fixing it. */
+    const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => {
+        setForm((f) => ({ ...f, [k]: v }));
+        const errKey = ERR_KEY[k];
+        if (errKey) {
+            setErr((prev) => {
+                if (!(errKey in prev)) return prev;
+                const next = { ...prev };
+                delete next[errKey];
+                return next;
+            });
+        }
+    };
     const rented = form.source === 'rented';
     // In edit mode, disable Save until the form differs from the loaded asset.
     const isDirty = JSON.stringify(form) !== JSON.stringify(initial);
@@ -286,7 +314,16 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
                                 <Field label={t('asset_brand')} required error={err.brand} name="brand">
                                     <SearchableSelect
                                         value={form.brand_id}
-                                        onChange={(v) => setForm((f) => ({ ...f, brand_id: v, model_id: '' }))}
+                                        onChange={(v) => {
+                                            // Picking a brand resets the model (models are brand-scoped).
+                                            setForm((f) => ({ ...f, brand_id: v, model_id: '' }));
+                                            setErr((prev) => {
+                                                if (!('brand' in prev)) return prev;
+                                                const next = { ...prev };
+                                                delete next.brand;
+                                                return next;
+                                            });
+                                        }}
                                         options={brandOptions}
                                         placeholder={lang === 'th' ? 'เลือกยี่ห้อ' : 'Select brand'}
                                     />

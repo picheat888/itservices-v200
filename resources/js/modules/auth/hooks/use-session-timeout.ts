@@ -30,7 +30,7 @@ export function useSessionTimeout(timeoutMinutes: number) {
     const [showWarning, setShowWarning] = useState(false);
     const [secondsLeft, setSecondsLeft] = useState(WARN_BEFORE_SEC);
 
-    const timeoutMsRef = useRef(0);           // 0 = disabled
+    const timeoutMsRef = useRef(0); // 0 = disabled
     const lastActivityRef = useRef(Date.now());
     const warningActiveRef = useRef(false);
     const mainIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

@@ -344,18 +344,57 @@ export default function AccessControlPage() {
     const buildTarget = (kind: AccessKind, row: AnyResource): MemberTarget => {
         if (kind === 'email-groups') {
             const g = row as EmailGroup;
-            return { kind, id: g.id, name: g.name, detail: g.email, owner: g.owner, ownerEmployeeId: g.owner_employee_id, code: g.code, metaLabel: t('access_department'), metaValue: g.department };
+            return {
+                kind,
+                id: g.id,
+                name: g.name,
+                detail: g.email,
+                owner: g.owner,
+                ownerEmployeeId: g.owner_employee_id,
+                code: g.code,
+                metaLabel: t('access_department'),
+                metaValue: g.department,
+            };
         }
         if (kind === 'file-shares') {
             const s = row as FileShare;
-            return { kind, id: s.id, name: s.name, detail: s.path, owner: s.owner, ownerEmployeeId: s.owner_employee_id, code: s.code, metaLabel: t('access_size'), metaValue: sizeText(s.size, s.size_unit) };
+            return {
+                kind,
+                id: s.id,
+                name: s.name,
+                detail: s.path,
+                owner: s.owner,
+                ownerEmployeeId: s.owner_employee_id,
+                code: s.code,
+                metaLabel: t('access_size'),
+                metaValue: sizeText(s.size, s.size_unit),
+            };
         }
         if (kind === 'social-platforms') {
             const p = row as SocialPlatform;
-            return { kind, id: p.id, name: p.name, detail: p.url, color: p.color, code: p.code, logo: p.logo_url, metaLabel: t('access_policy'), metaValue: p.policy };
+            return {
+                kind,
+                id: p.id,
+                name: p.name,
+                detail: p.url,
+                color: p.color,
+                code: p.code,
+                logo: p.logo_url,
+                metaLabel: t('access_policy'),
+                metaValue: p.policy,
+            };
         }
         const s = row as Software;
-        return { kind, id: s.id, name: s.name, detail: s.publisher, code: s.code, logo: s.logo_url, metaLabel: t('access_license_type'), metaValue: t(`access_lic_${s.license_type}`) };
+        return {
+            kind,
+            id: s.id,
+            name: s.name,
+            detail: s.publisher,
+            code: s.code,
+            logo: s.logo_url,
+            metaLabel: t('access_license_type'),
+            metaValue: t(`access_lic_${s.license_type}`),
+        };
     };
 
     // The open drawer is derived from the URL (?view=<id> on a registry tab): find the row in
@@ -432,7 +471,11 @@ export default function AccessControlPage() {
     ];
 
     const spColumns: Column<SocialPlatform>[] = [
-        { key: 'name', header: t('access_name'), render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} /> },
+        {
+            key: 'name',
+            header: t('access_name'),
+            render: (p) => <NameCell icon={Globe} color={p.color ?? '#6366f1'} name={p.name} sub={p.url} logoUrl={p.logo_url} />,
+        },
         { key: 'policy', header: t('access_policy'), render: (p) => p.policy ?? '—' },
         { key: 'members', header: t('access_members'), render: (p) => <AvatarStack members={p.members ?? []} /> },
         actionsCol<SocialPlatform>(openSocial),

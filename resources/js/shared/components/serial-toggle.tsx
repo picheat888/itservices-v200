@@ -1,6 +1,6 @@
-import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Box, ShieldCheck } from 'lucide-react';
 
 /**

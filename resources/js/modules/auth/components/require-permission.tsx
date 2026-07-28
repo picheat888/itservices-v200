@@ -1,7 +1,7 @@
-import { useAuth } from '@/modules/auth/hooks/use-auth';
 import { useT } from '@/lang';
-import { useUiStore } from '@/stores/ui';
+import { useAuth } from '@/modules/auth/hooks/use-auth';
 import type { Role } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -54,7 +54,7 @@ export function NoAccess() {
     return (
         <div className="grid min-h-[72vh] place-items-center px-4">
             <div className="flex flex-col items-center gap-5 text-center">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+                <span className="bg-destructive/10 text-destructive flex h-16 w-16 items-center justify-center rounded-2xl">
                     <Lock className="h-8 w-8" />
                 </span>
 
@@ -73,10 +73,7 @@ export function NoAccess() {
                     </div>
                 </div>
 
-                <Link
-                    to="/"
-                    className="text-brand mt-2 text-sm font-semibold no-underline transition-opacity hover:opacity-70"
-                >
+                <Link to="/" className="text-brand mt-2 text-sm font-semibold no-underline transition-opacity hover:opacity-70">
                     {t('noaccess_back')}
                 </Link>
             </div>

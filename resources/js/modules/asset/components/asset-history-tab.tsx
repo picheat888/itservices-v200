@@ -1,5 +1,5 @@
-import { type Column, DataTable } from '@/shared/components/data-table';
 import { useT } from '@/lang';
+import { type Column, DataTable } from '@/shared/components/data-table';
 import { cn } from '@/shared/lib/utils';
 import type { AssetTransferEntry } from '@/shared/types';
 import { History } from 'lucide-react';

@@ -1,6 +1,5 @@
-import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '../api/masterDataApi';
-import type { AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '../api/masterDataApi';
 
 const BRANDS = ['brands'] as const;
 const MODELS = ['asset-models'] as const;
@@ -120,7 +119,8 @@ export function useWarrantyTypeMutations() {
     return {
         create: useMutation({ mutationFn: (p: { name: string; description?: string }) => warrantyTypeApi.create(p), onSuccess: inv }),
         update: useMutation({
-            mutationFn: (v: { id: number; name: string; description?: string }) => warrantyTypeApi.update(v.id, { name: v.name, description: v.description }),
+            mutationFn: (v: { id: number; name: string; description?: string }) =>
+                warrantyTypeApi.update(v.id, { name: v.name, description: v.description }),
             onSuccess: inv,
         }),
         remove: useMutation({ mutationFn: (id: number) => warrantyTypeApi.remove(id), onSuccess: inv }),

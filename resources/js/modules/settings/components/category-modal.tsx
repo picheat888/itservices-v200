@@ -1,15 +1,15 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { IconPicker } from '@/shared/components/icon-picker';
 import { SaveButton } from '@/shared/components/save-button';
+import { hasFieldError } from '@/shared/lib/api-errors';
+import type { Category } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useCategoryMutations } from '../hooks/use-master-data';
-import { useT } from '@/lang';
 import { useToastStore } from '@/stores/toast';
-import { hasFieldError } from '@/shared/lib/api-errors';
-import type { Category } from '@/shared/types';
 import { useEffect, useState } from 'react';
+import { useCategoryMutations } from '../hooks/use-master-data';
 
 /** How long the success checkmark stays visible before the dialog closes. */
 const CLOSE_DELAY_MS = 1100;
@@ -57,7 +57,13 @@ export function CategoryModal({ open, category, onClose }: { open: boolean; cate
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
         } catch (err) {
-            useToastStore.getState().push(hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'), 'error', hasFieldError(err, 'name') ? undefined : t('cd_error_title'));
+            useToastStore
+                .getState()
+                .push(
+                    hasFieldError(err, 'name') ? t('md_name_taken') : t('cd_error'),
+                    'error',
+                    hasFieldError(err, 'name') ? undefined : t('cd_error_title'),
+                );
         }
     };
 

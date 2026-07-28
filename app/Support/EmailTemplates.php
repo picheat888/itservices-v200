@@ -44,11 +44,31 @@ class EmailTemplates
                 'cadence' => 'realtime',
             ],
             [
+                'key' => 'ticket.forwarded',
+                'name' => 'Ticket forwarded',
+                'subject' => 'Ticket {{ticket.id}} was forwarded to you',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Ticket <strong>{{ticket.id}}</strong> — {{ticket.subject}} — was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in the IT portal.</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 'key' => 'ticket.resolved',
                 'name' => 'Ticket resolved',
                 'subject' => 'Ticket {{ticket.id}} has been resolved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'ticket.sla_breach',
+                'name' => 'Ticket SLA breached',
+                'subject' => 'Ticket {{ticket.id}} has breached its SLA',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Ticket <strong>{{ticket.id}}</strong> — {{ticket.subject}} — has passed its SLA target and needs attention.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',

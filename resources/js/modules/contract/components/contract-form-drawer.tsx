@@ -225,7 +225,18 @@ export function ContractFormDrawer({
         }
     }, [open, editing]);
 
-    const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
+    /** Update one field and drop its validation error — editing counts as fixing it.
+     *  Error keys match field names, except the notify_* checkboxes which share 'notify'. */
+    const upd = <K extends keyof FormState>(k: K, v: FormState[K]) => {
+        setForm((f) => ({ ...f, [k]: v }));
+        const errKey = k.startsWith('notify_') ? 'notify' : k;
+        setErr((prev) => {
+            if (!(errKey in prev)) return prev;
+            const next = { ...prev };
+            delete next[errKey];
+            return next;
+        });
+    };
 
     // Only hardware contracts can hold assets — the whole "link assets" step keys off this.
     const isHardware = form.type === 'hardware';

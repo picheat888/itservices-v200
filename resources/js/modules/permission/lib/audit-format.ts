@@ -3,8 +3,8 @@
 // turn those into friendly labels and resolved entity names at display time, so
 // historical logs become readable without rewriting stored data.
 
-import type { Lang } from '@/shared/types';
 import { translate } from '@/lang';
+import type { Lang } from '@/shared/types';
 
 /**
  * Maps a raw DB column name to a friendly label. The labels live in

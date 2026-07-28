@@ -25,7 +25,19 @@ interface CalendarProps {
 }
 
 /** A month/year cell button shared by the months and years grids. */
-function GridCell({ label, active, current, disabled, onClick }: { label: string; active?: boolean; current?: boolean; disabled?: boolean; onClick: () => void }) {
+function GridCell({
+    label,
+    active,
+    current,
+    disabled,
+    onClick,
+}: {
+    label: string;
+    active?: boolean;
+    current?: boolean;
+    disabled?: boolean;
+    onClick: () => void;
+}) {
     return (
         <button
             type="button"
@@ -43,8 +55,23 @@ function GridCell({ label, active, current, disabled, onClick }: { label: string
 }
 
 /** Header bar (a clickable title + prev/next paging) for the months and years views. */
-function ViewHeader({ title, onTitleClick, onPrev, onNext, prevDisabled, nextDisabled }: { title: string; onTitleClick?: () => void; onPrev: () => void; onNext: () => void; prevDisabled?: boolean; nextDisabled?: boolean }) {
-    const arrow = 'text-muted-foreground hover:text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-30';
+function ViewHeader({
+    title,
+    onTitleClick,
+    onPrev,
+    onNext,
+    prevDisabled,
+    nextDisabled,
+}: {
+    title: string;
+    onTitleClick?: () => void;
+    onPrev: () => void;
+    onNext: () => void;
+    prevDisabled?: boolean;
+    nextDisabled?: boolean;
+}) {
+    const arrow =
+        'text-muted-foreground hover:text-foreground hover:bg-accent grid h-7 w-7 place-items-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-30';
     return (
         <div className="mb-2 flex h-8 items-center justify-between">
             <button type="button" onClick={onPrev} disabled={prevDisabled} className={arrow} aria-label="Previous">
@@ -100,12 +127,21 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                         month_caption: cn(base.month_caption, 'flex h-8 items-center justify-center'),
                         caption_label: cn(base.caption_label, 'text-sm font-semibold capitalize'),
                         nav: cn(base.nav, 'pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between'),
-                        button_previous: cn(base.button_previous, 'text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto grid h-7 w-7 place-items-center rounded-md transition-colors'),
-                        button_next: cn(base.button_next, 'text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto grid h-7 w-7 place-items-center rounded-md transition-colors'),
+                        button_previous: cn(
+                            base.button_previous,
+                            'text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto grid h-7 w-7 place-items-center rounded-md transition-colors',
+                        ),
+                        button_next: cn(
+                            base.button_next,
+                            'text-muted-foreground hover:text-foreground hover:bg-accent pointer-events-auto grid h-7 w-7 place-items-center rounded-md transition-colors',
+                        ),
                         month_grid: cn(base.month_grid, 'w-full border-collapse'),
                         weekday: cn(base.weekday, 'text-muted-foreground h-8 w-9 pb-1 text-[11px] font-normal'),
                         day: cn(base.day, 'p-0 text-center'),
-                        day_button: cn(base.day_button, 'hover:bg-accent grid h-9 w-9 place-items-center rounded-md text-sm font-normal transition-colors'),
+                        day_button: cn(
+                            base.day_button,
+                            'hover:bg-accent grid h-9 w-9 place-items-center rounded-md text-sm font-normal transition-colors',
+                        ),
                         selected: cn(base.selected, '[&>button]:bg-brand [&>button]:hover:bg-brand [&>button]:font-medium [&>button]:text-white'),
                         today: cn(base.today, '[&>button]:border-brand/60 [&>button]:border'),
                         outside: cn(base.outside, 'text-muted-foreground/50'),
@@ -124,7 +160,11 @@ export function Calendar({ selected, onSelect, locale, defaultMonth, className }
                             </button>
                         ),
                         Chevron: ({ orientation, className: chevronClass }) =>
-                            orientation === 'left' ? <ChevronLeft className={cn('h-4 w-4', chevronClass)} /> : <ChevronRight className={cn('h-4 w-4', chevronClass)} />,
+                            orientation === 'left' ? (
+                                <ChevronLeft className={cn('h-4 w-4', chevronClass)} />
+                            ) : (
+                                <ChevronRight className={cn('h-4 w-4', chevronClass)} />
+                            ),
                     }}
                 />
             )}

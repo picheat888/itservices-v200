@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { useUiStore } from '@/stores/ui';
 import { type ContractAttachment } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { useState } from 'react';
 

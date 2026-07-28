@@ -1,13 +1,13 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import type { Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
-import { usePositionMutations } from '../hooks/use-org';
-import { useT } from '@/lang';
-import type { Position } from '@/shared/types';
 import { useEffect, useState } from 'react';
+import { usePositionMutations } from '../hooks/use-org';
 
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
     const t = useT();

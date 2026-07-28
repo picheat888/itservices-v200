@@ -1,37 +1,17 @@
-import { GroupRoleModal } from '../components/group-role-modal';
-import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
-import { RoleModal } from '../components/role-modal';
-import { AssetPermissionTree } from '../components/asset-permission-tree';
-import { StockPermissionTree } from '../components/stock-permission-tree';
-import { EmployeePermissionTree } from '../components/employee-permission-tree';
-import { ContractPermissionTree } from '../components/contract-permission-tree';
-import { AccessPermissionTree } from '../components/access-permission-tree';
+import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
+import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
+import { InfoHint } from '@/shared/components/info-hint';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
+import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
-import { useAuth } from '@/modules/auth';
-import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
-import {
-    useAuditLogs,
-    useGroupRoleMutations,
-    useGroupRoles,
-    usePermissionMatrix,
-    useRoleMutations,
-    useSetDefaultGroup,
-    useUpdateRolePermissions,
-} from '../hooks/use-permissions';
-import { useDateTime } from '@/modules/settings';
-import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
-import { useT } from '@/lang';
-import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
-import { InfoHint } from '@/shared/components/info-hint';
-import { cn } from '@/shared/lib/utils';
-import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowLeftRight,
@@ -51,6 +31,27 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
+import { AccessPermissionTree } from '../components/access-permission-tree';
+import { AssetPermissionTree } from '../components/asset-permission-tree';
+import { ContractPermissionTree } from '../components/contract-permission-tree';
+import { EmployeePermissionTree } from '../components/employee-permission-tree';
+import { GroupRoleModal } from '../components/group-role-modal';
+import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
+import { RoleModal } from '../components/role-modal';
+import { StockPermissionTree } from '../components/stock-permission-tree';
+import { TicketPermissionTree } from '../components/ticket-permission-tree';
+import {
+    useAuditLogs,
+    useGroupRoleMutations,
+    useGroupRoles,
+    usePermissionMatrix,
+    useRoleMutations,
+    useSetDefaultGroup,
+    useUpdateRolePermissions,
+} from '../hooks/use-permissions';
+import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
+import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 
 type Tab = 'roles' | 'groups' | 'audit';
 
@@ -358,6 +359,17 @@ function RolesTab() {
                                                     />
                                                 );
                                             }
+                                            if (group.module === 'tickets') {
+                                                return (
+                                                    <TicketPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
                                             if (group.module === 'access') {
                                                 return (
                                                     <AccessPermissionTree
@@ -412,7 +424,12 @@ function RolesTab() {
                                                             const locked = role.is_super || !live;
                                                             return (
                                                                 <div key={key} className="flex items-center justify-between gap-2">
-                                                                    <span className={cn('flex items-center gap-1 text-sm', on ? 'text-foreground' : 'text-muted-foreground')}>
+                                                                    <span
+                                                                        className={cn(
+                                                                            'flex items-center gap-1 text-sm',
+                                                                            on ? 'text-foreground' : 'text-muted-foreground',
+                                                                        )}
+                                                                    >
                                                                         {actionLabel(mod, action, lang)}
                                                                         {info && <InfoHint text={info} />}
                                                                         {!live && (
@@ -788,7 +805,6 @@ function auditDiffSummary(d: AuditDetails | null): string | null {
 function AuditTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { format: fmtDateTime } = useDateTime();
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<10 | 20 | 50 | 100>(20);
     const [expandedId, setExpandedId] = useState<number | null>(null);

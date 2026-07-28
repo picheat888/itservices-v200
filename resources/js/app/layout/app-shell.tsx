@@ -1,6 +1,6 @@
 import { ChangePasswordDialog, SessionTimeoutModal, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
-import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { settingsApi } from '@/modules/settings';
+import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';

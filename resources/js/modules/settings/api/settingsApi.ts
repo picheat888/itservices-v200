@@ -1,5 +1,5 @@
-import type { ApiEnvelope } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type { ApiEnvelope } from '@/shared/types';
 
 export interface SettingsData {
     brand_name: string;
@@ -12,12 +12,13 @@ export interface SettingsData {
     address: string;
     country: string;
     currency: string;
-    timezone: string;
     theme_accent: string;
     theme_density: 'compact' | 'normal' | 'cozy';
     theme_radius: number;
     asset_status_colors: AssetStatusColors;
     ticket_sla: TicketSlaTargets;
+    ticket_sla_response: number;
+    ticket_sla_hours: TicketSlaHours;
     default_employee_role: string;
     default_employee_role_label: string;
 }
@@ -25,18 +26,30 @@ export interface SettingsData {
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
 export type AssetStatusColors = Record<string, string>;
 
-// Per-priority SLA targets: response in minutes, resolve (close) in hours.
-export type TicketSlaTargets = Record<string, { response: number; resolve: number }>;
+// Per-priority resolution (close) targets in hours. First response is a single
+// system-wide target in minutes (ticket_sla_response) — priority is only assigned
+// when a case is taken, so it can't drive the response clock.
+export type TicketSlaTargets = Record<string, { resolve: number }>;
+
+// Working window the SLA clocks count against (days: ISO weekday 1–7 = Mon–Sun).
+// break_* is an optional pause (e.g. lunch) the clocks skip — null on both = no break.
+export interface TicketSlaHours {
+    days: number[];
+    start: string;
+    end: string;
+    break_start: string | null;
+    break_end: string | null;
+}
 
 export interface TicketSlaPayload {
     ticket_sla: TicketSlaTargets;
+    ticket_sla_response?: number;
+    ticket_sla_hours?: TicketSlaHours;
 }
 
-// Company info — saved via PUT /settings/company.
-export type CompanyPayload = Pick<
-    SettingsData,
-    'company_name' | 'legal_name' | 'tax_id' | 'industry' | 'address' | 'country' | 'currency' | 'timezone'
->;
+// Company info — saved via PUT /settings/company. (The app timezone is fixed by
+// .env APP_TIMEZONE and is not a setting at all — see shared/lib/datetime.ts.)
+export type CompanyPayload = Pick<SettingsData, 'company_name' | 'legal_name' | 'tax_id' | 'industry' | 'address' | 'country' | 'currency'>;
 
 // Branding — saved via PUT /settings/branding.
 export type BrandingPayload = Pick<SettingsData, 'brand_name' | 'brand_sub'>;

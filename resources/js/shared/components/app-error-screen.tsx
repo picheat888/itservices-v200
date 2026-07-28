@@ -36,14 +36,14 @@ export function AppErrorScreen() {
     const detail = kind === 'rate-limit' && retryAfter ? `Try again in about ${retryAfter} second${retryAfter > 1 ? 's' : ''}.` : null;
 
     return (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 bg-background px-6 text-center">
-            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+        <div className="bg-background fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 px-6 text-center">
+            <span className="bg-destructive/10 text-destructive flex h-16 w-16 items-center justify-center rounded-2xl">
                 <Icon className="h-8 w-8" />
             </span>
             <div className="space-y-1.5">
                 <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-                <p className="max-w-md text-sm text-muted-foreground">{message}</p>
-                {detail && <p className="text-sm font-medium text-foreground">{detail}</p>}
+                <p className="text-muted-foreground max-w-md text-sm">{message}</p>
+                {detail && <p className="text-foreground text-sm font-medium">{detail}</p>}
             </div>
             <Button onClick={() => window.location.reload()}>
                 <RotateCw className="h-4 w-4" />

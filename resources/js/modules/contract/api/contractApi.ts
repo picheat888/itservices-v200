@@ -1,5 +1,5 @@
-import type { ApiEnvelope, Contract, ContractSummary } from '@/shared/types';
 import { ensureCsrf, http } from '@/shared/lib/http';
+import type { ApiEnvelope, Contract, ContractSummary } from '@/shared/types';
 
 export interface ContractPageMeta {
     total: number;
@@ -44,8 +44,7 @@ async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: 
 export const contractApi = {
     list: (params: { page: number; per_page: number; search?: string; tab?: string; type?: string; sort?: string }) =>
         http.get<ContractPageResponse>('/contracts', { params }).then((r) => r.data),
-    downloadImportTemplate: () =>
-        http.get('/contracts/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    downloadImportTemplate: () => http.get('/contracts/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
     import: async (file: File): Promise<{ imported: number }> => {
         await ensureCsrf();
         const fd = new FormData();
@@ -68,6 +67,5 @@ export const contractApi = {
         const { data } = await http.post<ApiEnvelope<Contract>>(`/contracts/${id}/attachments`, fd);
         return data.data;
     },
-    deleteAttachment: (id: number, attachmentId: number) =>
-        mutate<Contract>('delete', `/contracts/${id}/attachments/${attachmentId}`),
+    deleteAttachment: (id: number, attachmentId: number) => mutate<Contract>('delete', `/contracts/${id}/attachments/${attachmentId}`),
 };

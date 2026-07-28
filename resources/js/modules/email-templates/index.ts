@@ -1,10 +1,10 @@
-export { default as EmailTemplatesPage } from './pages';
-export { useEmailTemplates, useEmailTemplateMutations } from './hooks/use-email-templates';
 export { emailTemplateApi } from './api/emailTemplateApi';
 export type {
+    CreateEmailTemplatePayload,
     EmailTemplate,
-    EmailTemplateStats,
     EmailTemplateListResponse,
     EmailTemplatePayload,
-    CreateEmailTemplatePayload,
+    EmailTemplateStats,
 } from './api/emailTemplateApi';
+export { useEmailTemplateMutations, useEmailTemplates } from './hooks/use-email-templates';
+export { default as EmailTemplatesPage } from './pages';

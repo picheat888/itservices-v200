@@ -1,7 +1,7 @@
-import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications } from '@/modules/notification';
 import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import type { AppNotification } from '@/modules/notification';
+import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications } from '@/modules/notification';
+import { cn } from '@/shared/lib/utils';
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';

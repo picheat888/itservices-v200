@@ -1,4 +1,7 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { type Contract, type ContractType } from '@/shared/types';
@@ -12,9 +15,6 @@ import { useContractMutations } from '../hooks/use-contracts';
 import { ContractAssetsTab } from './contract-assets-tab';
 import { ContractAttachmentsTab } from './contract-attachments-tab';
 import { ContractCancelDialog } from './contract-cancel-dialog';
-import { DialogTabs } from '@/shared/components/dialog-tabs';
-import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { SectionLabel } from '@/shared/components/section-label';
 
 /** Icon per contract type — mirrors the icons used by the Edit wizard's type cards. */
 const TYPE_ICON: Record<ContractType, LucideIcon> = {
@@ -240,10 +240,7 @@ export function ContractDetailDrawer({
 
                     {/* Body — the active panel. Assets/Attachments fill & manage their own layout. */}
                     <div
-                        className={cn(
-                            'min-h-0 flex-1',
-                            tab === 'overview' || tab === 'notify' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6',
-                        )}
+                        className={cn('min-h-0 flex-1', tab === 'overview' || tab === 'notify' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}
                     >
                         {tab === 'overview' && (
                             <div className="space-y-5">
@@ -297,9 +294,7 @@ export function ContractDetailDrawer({
                                     <div>
                                         <SectionLabel>{t('contract_section_closure')}</SectionLabel>
                                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                            {cancelled && c.cancelled_at && (
-                                                <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />
-                                            )}
+                                            {cancelled && c.cancelled_at && <KV label={t('contract_cancelled_on')} value={c.cancelled_at} mono />}
                                             {c.status === 'expired' && c.expired_at && (
                                                 <KV label={t('contract_expired_on')} value={c.expired_at} mono />
                                             )}
@@ -345,11 +340,7 @@ export function ContractDetailDrawer({
                                 </div>
                                 <KV
                                     label={t('contract_reminder_threshold')}
-                                    value={
-                                        c.reminder_days
-                                            ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}`
-                                            : '—'
-                                    }
+                                    value={c.reminder_days ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}` : '—'}
                                 />
                             </div>
                         )}
@@ -363,10 +354,7 @@ export function ContractDetailDrawer({
                         contract can only be marked Expired. */}
                     {c.status !== 'cancelled' &&
                         c.status !== 'expired' &&
-                        ((canCancel && c.status === 'active') ||
-                            (canExpire && c.status === 'overdue') ||
-                            (canDelete && deletable) ||
-                            canEdit) && (
+                        ((canCancel && c.status === 'active') || (canExpire && c.status === 'overdue') || (canDelete && deletable) || canEdit) && (
                             <div className="border-border/60 bg-muted/30 flex items-center gap-2 border-t px-6 py-3">
                                 {canCancel && c.status === 'active' && (
                                     <Button variant="destructive" onClick={handleCancel}>
@@ -391,14 +379,14 @@ export function ContractDetailDrawer({
                                         {t('contract_delete')}
                                     </Button>
                                 )}
-                            {canEdit && (
-                                <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
-                                    <SquarePen className="h-4 w-4" />
-                                    {t('edit')}
-                                </Button>
-                            )}
-                        </div>
-                    )}
+                                {canEdit && (
+                                    <Button variant="outline" className="ml-auto" onClick={() => onEdit(c)}>
+                                        <SquarePen className="h-4 w-4" />
+                                        {t('edit')}
+                                    </Button>
+                                )}
+                            </div>
+                        )}
 
                     {/* Terminal contracts (cancelled or expired) are read-only — a user with the
                         Reactivate permission can reopen them (clears cancelled_at / expired_at). */}

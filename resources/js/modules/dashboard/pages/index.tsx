@@ -1,9 +1,9 @@
-import { StatusBadge } from '@/shared/components/status-badge';
-import { Card } from '@/shared/ui/card';
+import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useContractSummary } from '@/modules/contract';
-import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
+import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Box, Construction, FileText, Inbox, type LucideIcon, Ticket } from 'lucide-react';
 
@@ -45,19 +45,46 @@ export default function DashboardPage() {
     const { data: contracts } = useContractSummary();
 
     const kpis: Kpi[] = [
-        { key: 'open', label: t('kpi_open_tickets'), value: '14', delta: lang === 'th' ? '↑ 12% จากสัปดาห์ก่อน' : '↑ 12% vs last week', icon: Ticket, tone: 'text-brand bg-brand/10' },
-        { key: 'req', label: t('kpi_pending_requests'), value: '5', delta: lang === 'th' ? 'รอคุณดำเนินการ 4' : '4 awaiting you', icon: Inbox, tone: 'text-brand bg-brand/10' },
-        { key: 'assets', label: t('kpi_total_assets'), value: '128', delta: lang === 'th' ? '↑ เพิ่ม 2 สัปดาห์นี้' : '↑ 2 this week', icon: Box, tone: 'text-brand bg-brand/10' },
-        { key: 'contracts', label: t('kpi_expiring_contracts'), value: contracts?.expiring ?? '—', delta: lang === 'th' ? 'อยู่ในช่วงแจ้งเตือน' : 'in reminder window', deltaClass: (contracts?.expiring ?? 0) > 0 ? 'text-destructive' : undefined, icon: FileText, tone: 'text-brand bg-brand/10' },
+        {
+            key: 'open',
+            label: t('kpi_open_tickets'),
+            value: '14',
+            delta: lang === 'th' ? '↑ 12% จากสัปดาห์ก่อน' : '↑ 12% vs last week',
+            icon: Ticket,
+            tone: 'text-brand bg-brand/10',
+        },
+        {
+            key: 'req',
+            label: t('kpi_pending_requests'),
+            value: '5',
+            delta: lang === 'th' ? 'รอคุณดำเนินการ 4' : '4 awaiting you',
+            icon: Inbox,
+            tone: 'text-brand bg-brand/10',
+        },
+        {
+            key: 'assets',
+            label: t('kpi_total_assets'),
+            value: '128',
+            delta: lang === 'th' ? '↑ เพิ่ม 2 สัปดาห์นี้' : '↑ 2 this week',
+            icon: Box,
+            tone: 'text-brand bg-brand/10',
+        },
+        {
+            key: 'contracts',
+            label: t('kpi_expiring_contracts'),
+            value: contracts?.expiring ?? '—',
+            delta: lang === 'th' ? 'อยู่ในช่วงแจ้งเตือน' : 'in reminder window',
+            deltaClass: (contracts?.expiring ?? 0) > 0 ? 'text-destructive' : undefined,
+            icon: FileText,
+            tone: 'text-brand bg-brand/10',
+        },
     ];
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold">
-                    {lang === 'th' ? `สวัสดี, ${user?.name ?? ''}` : `Welcome back, ${user?.name ?? ''}`}
-                </h1>
-                <p className="text-sm text-muted-foreground">{t('dash_welcome_sub')}</p>
+                <h1 className="text-2xl font-bold">{lang === 'th' ? `สวัสดี, ${user?.name ?? ''}` : `Welcome back, ${user?.name ?? ''}`}</h1>
+                <p className="text-muted-foreground text-sm">{t('dash_welcome_sub')}</p>
             </div>
 
             {/* KPI cards with icons */}
@@ -67,7 +94,7 @@ export default function DashboardPage() {
                     return (
                         <Card key={k.key} className="p-5">
                             <div className="flex items-start justify-between">
-                                <div className="text-sm text-muted-foreground">{k.label}</div>
+                                <div className="text-muted-foreground text-sm">{k.label}</div>
                                 <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg', k.tone)}>
                                     <Icon className="h-[18px] w-[18px]" />
                                 </span>
@@ -88,29 +115,31 @@ export default function DashboardPage() {
             {/* Row 2: recent tickets (white card) + recent activity (coming soon) */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <Card className="overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
+                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
                         <div className="flex items-center gap-2">
-                            <Ticket className="h-4 w-4 text-muted-foreground" />
+                            <Ticket className="text-muted-foreground h-4 w-4" />
                             <span className="font-semibold">{t('dash_recent_tickets')}</span>
                         </div>
-                        <span className="text-xs font-medium text-muted-foreground">{t('view_all')} →</span>
+                        <span className="text-muted-foreground text-xs font-medium">{t('view_all')} →</span>
                     </div>
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-border">
-                                <th className="px-5 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">ID</th>
-                                <th className="px-5 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <tr className="border-border border-b">
+                                <th className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                    ID
+                                </th>
+                                <th className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                     {lang === 'th' ? 'หัวข้อ' : 'Subject'}
                                 </th>
-                                <th className="px-5 py-2.5 text-left text-[11.5px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                <th className="text-muted-foreground px-5 py-2.5 text-left text-[11.5px] font-semibold tracking-wide uppercase">
                                     {lang === 'th' ? 'สถานะ' : 'Status'}
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
                             {demoTickets.map((tk) => (
-                                <tr key={tk.id} className="border-b border-border/60 last:border-0">
-                                    <td className="px-5 py-2.5 font-mono text-xs text-muted-foreground">{tk.id}</td>
+                                <tr key={tk.id} className="border-border/60 border-b last:border-0">
+                                    <td className="text-muted-foreground px-5 py-2.5 font-mono text-xs">{tk.id}</td>
                                     <td className="px-5 py-2.5">
                                         <div className="flex items-center gap-2.5">
                                             <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', iconTone[tk.tone])}>
@@ -138,13 +167,13 @@ function ComingSoonCard({ title, icon: Icon }: { title: string; icon: LucideIcon
     const t = useT();
     return (
         <Card className="overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-                <Icon className="h-4 w-4 text-muted-foreground" />
+            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                <Icon className="text-muted-foreground h-4 w-4" />
                 <div className="font-semibold">{title}</div>
             </div>
             <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
-                <Construction className="h-9 w-9 text-muted-foreground" />
-                <div className="text-sm font-medium text-muted-foreground">{t('coming_soon')}</div>
+                <Construction className="text-muted-foreground h-9 w-9" />
+                <div className="text-muted-foreground text-sm font-medium">{t('coming_soon')}</div>
             </div>
         </Card>
     );

@@ -1,5 +1,5 @@
-import type { Lang } from '@/shared/types';
 import { translate } from '@/lang';
+import type { Lang } from '@/shared/types';
 
 // Module + action display labels now live in lang/<locale>/permissions.ts
 // (keys perm_mod_<module> / perm_act_<module>.<action>). These helpers resolve

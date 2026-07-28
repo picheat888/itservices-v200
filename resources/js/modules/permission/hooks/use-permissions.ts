@@ -1,5 +1,5 @@
-import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '../api/permissionApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { groupRoleApi, permissionApi, roleApi, type AuditFilters, type GroupRoleListResponse, type GroupRolePayload } from '../api/permissionApi';
 
 const KEY = ['permissions-matrix'] as const;
 const GROUPS = ['group-roles'] as const;
@@ -37,7 +37,10 @@ export function useGroupRoleMutations() {
     const invalidate = () => qc.invalidateQueries({ queryKey: GROUPS });
     return {
         create: useMutation({ mutationFn: (p: GroupRolePayload) => groupRoleApi.create(p), onSuccess: invalidate }),
-        update: useMutation({ mutationFn: (v: { id: number; payload: GroupRolePayload }) => groupRoleApi.update(v.id, v.payload), onSuccess: invalidate }),
+        update: useMutation({
+            mutationFn: (v: { id: number; payload: GroupRolePayload }) => groupRoleApi.update(v.id, v.payload),
+            onSuccess: invalidate,
+        }),
         remove: useMutation({ mutationFn: (id: number) => groupRoleApi.remove(id), onSuccess: invalidate }),
     };
 }

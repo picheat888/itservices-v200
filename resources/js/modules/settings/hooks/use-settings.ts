@@ -1,4 +1,7 @@
 import { currencySymbol } from '@/shared/lib/currency';
+import { useUiStore } from '@/stores/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import {
     settingsApi,
     type AssetColorsPayload,
@@ -8,9 +11,6 @@ import {
     type SettingsData,
     type TicketSlaPayload,
 } from '../api/settingsApi';
-import { useUiStore } from '@/stores/ui';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
 
 const KEY = ['settings'] as const;
 
@@ -74,41 +74,14 @@ export function useCurrency() {
     const symbol = currencySymbol(code);
 
     // Money formatter: symbol + thousands grouping + always 2 decimals (e.g. "฿1,234.50").
-    const format = (value: number) =>
-        `${symbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const format = (value: number) => `${symbol}${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     // Compact money formatter for tight spaces (KPI cards): symbol + uppercase K/M/B
     // (e.g. "฿1.2M"). Forced to en-US so the suffix is always uppercase Latin, not a
     // locale-specific/lowercase form.
-    const formatCompact = (value: number) =>
-        `${symbol}${value.toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 })}`;
+    const formatCompact = (value: number) => `${symbol}${value.toLocaleString('en-US', { notation: 'compact', maximumFractionDigits: 1 })}`;
 
     return { code, symbol, format, formatCompact };
-}
-
-/**
- * Formats backend timestamps in the system-configured timezone (Settings -> Company).
- * The API emits naive UTC strings ("YYYY-MM-DD HH:mm:ss"), so they're treated as UTC
- * and converted to the configured zone. Returns "YYYY-MM-DD HH:mm" (or date only).
- */
-export function useDateTime() {
-    const { data } = useSettings();
-    const tz = data?.timezone || 'Asia/Bangkok';
-
-    const format = (value: string | null | undefined, withTime = true): string => {
-        if (!value) return '—';
-        const hasZone = /[zZ]|[+-]\d\d:?\d\d$/.test(value);
-        const normalized = value.includes('T') ? value : value.replace(' ', 'T');
-        const date = new Date(hasZone ? normalized : `${normalized}Z`);
-        if (Number.isNaN(date.getTime())) return value;
-
-        const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
-        if (!withTime) return ymd;
-        const hm = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
-        return `${ymd} ${hm}`;
-    };
-
-    return { tz, format };
 }
 
 function useSyncStore() {

@@ -521,7 +521,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                             >
                                 <div
                                     className={cn(
-                                        'border-input bg-background flex h-10 w-full overflow-hidden rounded-md border transition-colors hover:border-brand/50 focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15',
+                                        'border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 flex h-10 w-full overflow-hidden rounded-md border transition-colors focus-within:ring-[3px]',
                                         errors.size_value && 'border-destructive',
                                     )}
                                 >
@@ -671,7 +671,7 @@ export function ResourceModal({ open, kind, row, onClose }: { open: boolean; kin
                                 <label htmlFor="sw-seats" className="mb-1.5 block text-sm font-medium">
                                     {t('access_seats')}
                                 </label>
-                                <div className="border-input bg-background flex h-10 max-w-[220px] items-center gap-2.5 rounded-md border px-3 transition-colors hover:border-brand/50 focus-within:border-brand focus-within:ring-[3px] focus-within:ring-brand/15">
+                                <div className="border-input bg-background hover:border-brand/50 focus-within:border-brand focus-within:ring-brand/15 flex h-10 max-w-[220px] items-center gap-2.5 rounded-md border px-3 transition-colors focus-within:ring-[3px]">
                                     <Users className="text-muted-foreground h-4 w-4 shrink-0" />
                                     <input
                                         id="sw-seats"

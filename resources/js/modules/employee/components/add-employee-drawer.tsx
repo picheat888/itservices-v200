@@ -1,19 +1,19 @@
+import { useT } from '@/lang';
+import { useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
-import { useSettings } from '@/modules/settings';
-import { useT } from '@/lang';
-import { cn, focusFirstError } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeft, ArrowRight, Briefcase, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -78,10 +78,27 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         [photo, photoUrl],
     );
 
-    const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => setForm((f) => ({ ...f, [k]: v }));
+    /** Update one field and drop its validation error — editing counts as fixing it. */
+    const set = <K extends keyof typeof empty>(k: K, v: (typeof empty)[K]) => {
+        setForm((f) => ({ ...f, [k]: v }));
+        setErrors((prev) => {
+            if (!(k in prev)) return prev;
+            const next = { ...prev };
+            delete next[k];
+            return next;
+        });
+    };
 
     /** When department changes, clear the section so stale options don't persist. */
-    const setDepartment = (v: string) => setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
+    const setDepartment = (v: string) => {
+        setForm((f) => ({ ...f, departmentId: v, sectionId: '' }));
+        setErrors((prev) => {
+            if (!('departmentId' in prev)) return prev;
+            const next = { ...prev };
+            delete next.departmentId;
+            return next;
+        });
+    };
 
     // All employees are manager candidates when adding a new employee.
     const managerOptions = useMemo(
@@ -398,7 +415,13 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         </SelectContent>
                                     </Select>
                                 </Field>
-                                <Field label={t('emp_manager')} help={t('emp_manager_help')} required={!posIsSpecial} name="managerId" error={errors.managerId}>
+                                <Field
+                                    label={t('emp_manager')}
+                                    help={t('emp_manager_help')}
+                                    required={!posIsSpecial}
+                                    name="managerId"
+                                    error={errors.managerId}
+                                >
                                     <SearchableSelect
                                         value={form.managerId}
                                         onChange={(v) => set('managerId', v)}

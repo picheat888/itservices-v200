@@ -1,8 +1,8 @@
 import { AssetDetailDrawer, assetApi } from '@/modules/asset';
-import { StatusBadge } from '@/shared/components/status-badge';
 import { type Column, DataTable } from '@/shared/components/data-table';
-import { useUiStore } from '@/stores/ui';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { type Asset, type ContractLinkedAsset } from '@/shared/types';
+import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useState } from 'react';
@@ -46,8 +46,7 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
         {
             key: 'status',
             header: lang === 'th' ? 'สถานะ' : 'Status',
-            render: (a) =>
-                a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—',
+            render: (a) => (a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—'),
         },
     ];
 

@@ -1,12 +1,12 @@
+import { useT } from '@/lang';
+import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
+import { useDocumentTitle } from '@/shared/hooks/use-document-title';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
-import { useDocumentTitle } from '@/shared/hooks/use-document-title';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, ArrowRight, Eye, EyeOff, Languages, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Languages, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -176,7 +176,12 @@ export default function LoginPage() {
                                     autoComplete="username"
                                     placeholder={t('login_field')}
                                     aria-invalid={!!fieldErrors.login}
-                                    className={cn('pl-9', fieldErrors.login && 'border-destructive focus-visible:ring-destructive')}
+                                    className={cn(
+                                        'pl-9',
+                                        // Match the shared Field error look: red border stays on focus,
+                                        // with a soft red glow instead of a solid red ring.
+                                        fieldErrors.login && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                                    )}
                                 />
                             </div>
                             {fieldErrors.login && (
@@ -202,7 +207,11 @@ export default function LoginPage() {
                                     autoComplete="current-password"
                                     placeholder={t('login_password')}
                                     aria-invalid={!!fieldErrors.password}
-                                    className={cn('pr-10 pl-9', fieldErrors.password && 'border-destructive focus-visible:ring-destructive')}
+                                    className={cn(
+                                        'pr-10 pl-9',
+                                        fieldErrors.password &&
+                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                                    )}
                                 />
                                 <button
                                     type="button"
@@ -240,10 +249,7 @@ export default function LoginPage() {
                                     {t('login_signing_in')}
                                 </>
                             ) : (
-                                <>
-                                    {t('login_submit')}
-                                    <ArrowRight className="h-4 w-4" />
-                                </>
+                                t('login_submit')
                             )}
                         </Button>
                     </form>

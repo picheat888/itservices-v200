@@ -1,17 +1,17 @@
+import { useT } from '@/lang';
+import { useVendors, useWarehouses } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { cn } from '@/shared/lib/utils';
+import type { StockItem, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useVendors, useWarehouses } from '@/modules/settings';
-import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useToastStore } from '@/stores/toast';
-import type { StockItem, StockMovementType } from '@/shared/types';
 import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -888,7 +888,13 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                                     value={s}
                                                     onChange={(e) => updSerial(i, e.target.value)}
                                                     placeholder={`${t('stock_serial_n')}${i + 1}`}
-                                                    className={cn('h-8 font-mono', bad && 'border-destructive focus-visible:ring-destructive')}
+                                                    className={cn(
+                                                        'h-8 font-mono',
+                                                        // Match the shared Field error look: red border stays on focus,
+                                                        // with a soft red glow instead of a solid red ring.
+                                                        bad &&
+                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                                                    )}
                                                 />
                                                 <span className="w-20 shrink-0 text-xs">
                                                     {st === 'ok' && <Check className="h-4 w-4 text-emerald-600" />}

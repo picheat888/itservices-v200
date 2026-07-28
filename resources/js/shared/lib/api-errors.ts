@@ -30,12 +30,7 @@ export function fieldError(error: unknown, field: string): string | undefined {
  * is still referenced — the body shows the {count} of records still using it;
  * anything else falls back to a generic error toast.
  */
-export function toastDeleteError(
-    error: unknown,
-    t: (key: string) => string,
-    bodyKey = 'md_in_use',
-    titleKey = 'md_in_use_title',
-): void {
+export function toastDeleteError(error: unknown, t: (key: string) => string, bodyKey = 'md_in_use', titleKey = 'md_in_use_title'): void {
     const res = (error as { response?: { status?: number; data?: { count?: number } } })?.response;
     if (res?.status === 409) {
         useToastStore.getState().push(t(bodyKey).replace('{count}', String(res.data?.count ?? 0)), 'error', t(titleKey));

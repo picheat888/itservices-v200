@@ -1,12 +1,12 @@
+import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import type { Department } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { useDepartmentMutations } from '../hooks/use-org';
-import { useT } from '@/lang';
-import type { Department } from '@/shared/types';
 import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useDepartmentMutations } from '../hooks/use-org';
 
 const empty = { name: '', name_th: '', tag: '' };
 
@@ -22,9 +22,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
         if (open) {
             setError(null);
             setSaved(false);
-            const values = department
-                ? { name: department.name, name_th: department.name_th ?? '', tag: department.tag ?? '' }
-                : empty;
+            const values = department ? { name: department.name, name_th: department.name_th ?? '', tag: department.tag ?? '' } : empty;
             setForm(values);
             initial.current = values;
         }
@@ -87,7 +85,7 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                                 {t('dept_code_en_only')}
                             </p>
                         ) : (
-                            !error && <p className="mt-1 text-xs text-muted-foreground">{t('dept_code_hint')}</p>
+                            !error && <p className="text-muted-foreground mt-1 text-xs">{t('dept_code_hint')}</p>
                         )}
                     </Field>
                 </div>
@@ -97,9 +95,15 @@ export function DepartmentModal({ open, onClose, department }: { open: boolean; 
                     </Button>
                     <Button onClick={submit} disabled={!form.name.trim() || !isDirty || tagInvalid || create.isPending || update.isPending || saved}>
                         {create.isPending || update.isPending ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" />{t('saving')}</>
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {t('saving')}
+                            </>
                         ) : saved ? (
-                            <><Check className="h-4 w-4" />{t('saved')}</>
+                            <>
+                                <Check className="h-4 w-4" />
+                                {t('saved')}
+                            </>
                         ) : (
                             t('save')
                         )}

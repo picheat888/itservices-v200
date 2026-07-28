@@ -22,7 +22,14 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
     const [err, setErr] = useState('');
 
     const open = !!ticket && !!mode;
-    const isComplete = mode === 'complete';
+    // Retain "shown" copies (ticket + mode) so the content — including the
+    // complete/cancel styling — doesn't flip or blank during the Radix exit animation.
+    const [shown, setShown] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
+    useEffect(() => {
+        if (ticket && mode) setShown({ ticket, mode });
+    }, [ticket, mode]);
+    const view = ticket ?? shown?.ticket ?? null;
+    const isComplete = (mode ?? shown?.mode) === 'complete';
 
     useEffect(() => {
         if (open) {
@@ -50,7 +57,7 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                     icon={isComplete ? CheckCircle2 : XCircle}
                     eyebrow="Resolve"
                     title={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
-                    code={ticket?.ticket_no}
+                    code={view?.ticket_no}
                     accent={isComplete ? undefined : '#ef4444'}
                     srDescription={isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                 />
@@ -84,7 +91,13 @@ export function ResolveTicketModal({ ticket, mode, onClose }: { ticket: Ticket |
                         {t('cancel')}
                     </Button>
                     <Button variant={isComplete ? 'default' : 'destructive'} onClick={submit} disabled={pending}>
-                        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : isComplete ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                        {pending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isComplete ? (
+                            <Check className="h-4 w-4" />
+                        ) : (
+                            <X className="h-4 w-4" />
+                        )}
                         {isComplete ? t('ticket_mark_complete') : t('ticket_mark_canceled')}
                     </Button>
                 </div>

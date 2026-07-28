@@ -1,5 +1,19 @@
 import type { NavGroup } from '@/shared/types';
-import { Box, FileText, Inbox, KeyRound, LayoutDashboard, LineChart, Mail, PackageCheck, Settings, Shield, Ticket, Users, Warehouse } from 'lucide-react';
+import {
+    Box,
+    FileText,
+    Inbox,
+    LayoutDashboard,
+    LineChart,
+    Mail,
+    MonitorCog,
+    PackageCheck,
+    Settings,
+    Shield,
+    Users,
+    Warehouse,
+    Wrench,
+} from 'lucide-react';
 
 // Nav definition. `label` holds an i18n key resolved at render time.
 export const navGroups: NavGroup[] = [
@@ -15,8 +29,9 @@ export const navGroups: NavGroup[] = [
         label: 'nav_workspace',
         items: [
             { id: 'employees', label: 'employees', to: '/employees', icon: Users, permission: 'employees.module' },
-            { id: 'access', label: 'access_title', to: '/access', icon: KeyRound, permission: 'access.module' },
-            { id: 'tickets', label: 'tickets', to: '/tickets', icon: Ticket, permission: 'tickets.create' },
+            { id: 'access', label: 'access_title', to: '/access', icon: MonitorCog, permission: 'access.module' },
+            // Staff enter via the module master; ordinary employees via the self-service keys.
+            { id: 'tickets', label: 'tickets', to: '/tickets', icon: Wrench, anyOf: ['tickets.module', 'tickets.create', 'tickets.my'] },
             { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, permission: 'requests.submit' },
             { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.module' },
             { id: 'contracts', label: 'contracts', to: '/contracts', icon: FileText, permission: 'contracts.module' },

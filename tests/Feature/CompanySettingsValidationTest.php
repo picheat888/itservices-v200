@@ -29,17 +29,17 @@ class CompanySettingsValidationTest extends TestCase
         ];
     }
 
-    public function test_timezone_helper_resolves_and_guards_invalid_values(): void
+    public function test_timezone_is_not_a_setting_anymore(): void
     {
-        // Default when unset.
-        $this->assertSame('Asia/Bangkok', AppSetting::timezone());
+        // The app runs on local wall time fixed by .env (APP_TIMEZONE). Sent along
+        // with a valid payload the field is simply ignored — never persisted, and
+        // no longer part of the settings payload at all.
+        $this->actingAs($this->admin())
+            ->putJson('/api/settings/company', array_merge($this->validPayload(), ['timezone' => 'Asia/Tokyo']))
+            ->assertOk();
 
-        AppSetting::put('timezone', 'Asia/Tokyo');
-        $this->assertSame('Asia/Tokyo', AppSetting::timezone());
-
-        // An invalid identifier must not break date formatting — fall back.
-        AppSetting::put('timezone', 'Not/AZone');
-        $this->assertSame('Asia/Bangkok', AppSetting::timezone());
+        $this->assertNull(AppSetting::get('timezone'));
+        $this->assertArrayNotHasKey('timezone', $this->getJson('/api/settings')->json('data'));
     }
 
     public function test_full_valid_company_payload_is_saved(): void

@@ -337,6 +337,17 @@ export interface TicketAttachment {
     created_at: string | null;
 }
 
+/** State of the SLA clock that currently matters (backend-computed; see App\Support\TicketSla). */
+export type TicketSlaState = 'on_track' | 'at_risk' | 'breached' | 'met' | 'missed';
+
+export interface TicketSlaSnapshot {
+    /** ISO instants in local wall time (APP_TIMEZONE) — display via formatDateTime. */
+    response_due_at: string;
+    resolve_due_at: string;
+    state: TicketSlaState;
+    pct_elapsed: number;
+}
+
 export interface Ticket {
     id: number;
     ticket_no: string;
@@ -361,6 +372,7 @@ export interface Ticket {
     related_asset_serial?: string | null;
     take_note: string | null;
     resolution: string | null;
+    sla?: TicketSlaSnapshot | null;
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];
@@ -370,19 +382,29 @@ export interface Ticket {
 
 export interface TicketSummary {
     range_days: number;
-    // Inbound / closed flow over the window, each with a trend vs the previous window.
+    // Inbound / closed flow over the window, each with a trend vs the previous window
+    // (created trends by absolute ticket count, resolved by percent change).
     created: number;
-    created_delta_pct: number | null;
+    created_delta_count: number;
     resolved: number;
-    resolved_delta_pct: number | null;
+    resolved_delta_count: number;
     // Point-in-time unresolved backlog (open + in progress).
     backlog: number;
     backlog_open: number;
     backlog_in_progress: number;
+    // Active cases currently past their SLA deadline (right now, not window-scoped).
+    sla_breached_now: number;
     // Window SLA % and its change in percentage points vs the previous window.
     sla_met_pct: number | null;
     sla_delta_pts: number | null;
+    // Same pair for the first-response clock (tickets responded within the window).
+    response_sla_met_pct: number | null;
+    response_sla_delta_pts: number | null;
+    // The configured response target in working minutes (Settings → Ticket & SLA).
+    response_target_minutes: number;
     avg_response_minutes: number | null;
+    // Change vs the previous window in minutes: negative = faster, positive = slower.
+    avg_response_delta_minutes: number | null;
     by_category: { category: TicketCategory; count: number }[];
 }
 

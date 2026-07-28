@@ -1,5 +1,5 @@
-import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { cn } from '@/shared/lib/utils';
+import { DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import { type LucideIcon } from 'lucide-react';
 
 /**

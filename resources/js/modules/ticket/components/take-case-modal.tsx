@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { Loader2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useTicketMutations } from '../hooks/use-tickets';
+import { useTicketMutations, useTicketRequesterAssets } from '../hooks/use-tickets';
 import { TICKET_PRIORITY_META } from './ticket-meta';
 
 const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
@@ -23,12 +23,35 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const [note, setNote] = useState('');
     const [assetId, setAssetId] = useState('');
 
-    const isHardware = ticket?.category === 'hardware';
+    // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
+    const [shown, setShown] = useState<Ticket | null>(null);
+    useEffect(() => {
+        if (ticket) setShown(ticket);
+    }, [ticket]);
+    const view = ticket ?? shown;
+
+    const isHardware = view?.category === 'hardware';
     const { data: assetData } = useAssets({ page: 1, per_page: 50, search: '' });
-    const assetOptions = useMemo(
-        () => (assetData?.data ?? []).map((a) => ({ value: String(a.id), label: `${a.asset_code} · ${a.model}`, search: `${a.asset_code} ${a.model}` })),
-        [assetData],
-    );
+    // The requester's own devices — offered as one-click chips, and merged to the
+    // top of the search select so a chip-picked asset always renders its label.
+    const { data: ownAssets } = useTicketRequesterAssets(isHardware ? view?.id : null);
+    const assetOptions = useMemo(() => {
+        const own = (ownAssets ?? []).map((a) => ({
+            value: String(a.id),
+            label: `${a.asset_code} · ${a.model ?? '—'}`,
+            search: `${a.asset_code} ${a.model ?? ''}`,
+        }));
+        const ownIds = new Set(own.map((o) => o.value));
+        const rest = (assetData?.data ?? [])
+            .map((a) => ({
+                value: String(a.id),
+                label: `${a.asset_code} · ${a.model}`,
+                search: `${a.asset_code} ${a.model}`,
+            }))
+            .filter((o) => !ownIds.has(o.value));
+
+        return [...own, ...rest];
+    }, [assetData, ownAssets]);
 
     useEffect(() => {
         if (ticket) {
@@ -53,8 +76,8 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                     icon={Zap}
                     eyebrow="Take Case"
                     title={t('ticket_take_case')}
-                    code={ticket?.ticket_no}
-                    subtitle={ticket ? <span className="text-muted-foreground truncate text-sm">{ticket.subject}</span> : undefined}
+                    code={view?.ticket_no}
+                    subtitle={view ? <span className="text-muted-foreground truncate text-sm">{view.subject}</span> : undefined}
                     srDescription={t('ticket_take_case')}
                 />
 
@@ -79,13 +102,42 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
 
                     {isHardware && (
                         <Field label={t('ticket_related_asset')} help={t('ticket_related_asset_help')}>
-                            <SearchableSelect
-                                value={assetId}
-                                onChange={setAssetId}
-                                options={assetOptions}
-                                placeholder={t('ticket_no_related_asset')}
-                                clearable
-                            />
+                            <div className="space-y-2">
+                                {(ownAssets?.length ?? 0) > 0 && (
+                                    <div>
+                                        <div className="text-muted-foreground mb-1.5 text-xs">
+                                            {t('ticket_requester_assets').replace('{name}', view?.requester_name ?? '')}
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {(ownAssets ?? []).map((a) => {
+                                                const selected = assetId === String(a.id);
+                                                return (
+                                                    <button
+                                                        key={a.id}
+                                                        type="button"
+                                                        onClick={() => setAssetId(selected ? '' : String(a.id))}
+                                                        className={cn(
+                                                            'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                                                            selected
+                                                                ? 'border-brand bg-brand/10 text-brand'
+                                                                : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                                                        )}
+                                                    >
+                                                        {a.asset_code} · {a.model ?? '—'}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                <SearchableSelect
+                                    value={assetId}
+                                    onChange={setAssetId}
+                                    options={assetOptions}
+                                    placeholder={t('ticket_no_related_asset')}
+                                    clearable
+                                />
+                            </div>
                         </Field>
                     )}
 

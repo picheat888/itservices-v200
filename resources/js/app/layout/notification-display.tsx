@@ -1,5 +1,21 @@
 import type { AppNotification } from '@/modules/notification';
-import { Boxes, CalendarClock, ClipboardList, Inbox, PackageCheck, PackageMinus, PackagePlus, Undo2, UserMinus, UserPlus } from 'lucide-react';
+import {
+    ArrowRightLeft,
+    Boxes,
+    CalendarClock,
+    CheckCircle2,
+    ClipboardList,
+    Gauge,
+    Inbox,
+    PackageCheck,
+    PackageMinus,
+    PackagePlus,
+    Undo2,
+    UserCheck,
+    UserMinus,
+    UserPlus,
+    XCircle,
+} from 'lucide-react';
 
 /**
  * Shared presentation helpers for notifications, used by both the bell dropdown
@@ -33,6 +49,28 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         }
         return { Icon: CalendarClock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
+    if (n.data.type === 'ticket_sla') {
+        // Breached = red, at-risk = amber — mirrors the SLA badge tones on the list.
+        if (n.data.subtype?.endsWith('breached')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        return { Icon: Gauge, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
+    if (n.data.type === 'ticket_forwarded') {
+        return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+    }
+    if (n.data.type === 'ticket_new') {
+        return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+    }
+    if (n.data.type === 'ticket_assigned') {
+        return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+    }
+    if (n.data.type === 'ticket_owner') {
+        // Owner-facing case updates: closed = green check, cancelled = red cross,
+        // responsibility changes (taken / forwarded) = who has it now.
+        if (n.data.event === 'resolved') return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+        if (n.data.event === 'cancelled') return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+        return { Icon: UserCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+    }
     if (n.data.type === 'stock_alert') {
         if (n.data.subtype === 'out') return { Icon: PackageMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.subtype === 'over') return { Icon: PackagePlus, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
@@ -62,6 +100,7 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
 /** Headline line for a notification (vendor/contract code, stock item SKU, or employee name/code). */
 export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
+    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} — ${n.data.subject}`;
     if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
@@ -76,6 +115,12 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
             ? t('notif_contract_expired').replace('{days}', String(Math.abs(n.data.days_remaining ?? 0)))
             : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining));
     }
+    if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
+    if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replace('{from}', n.data.from ?? '—');
+    if (n.data.type === 'ticket_new') return t('notif_ticket_new');
+    if (n.data.type === 'ticket_assigned') return t('notif_ticket_assigned');
+    if (n.data.type === 'ticket_owner')
+        return t(`notif_ticket_owner_${n.data.event}` as Parameters<Translate>[0]).replace('{name}', n.data.by ?? '—');
     if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
@@ -86,6 +131,8 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
 
 /** SPA route a notification should open when clicked. */
 export function notificationTarget(n: AppNotification): string {
+    // Every ticket notification opens the case's detail drawer directly.
+    if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
     // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
     if (n.data.type === 'asset_assigned') return '/my-assets';
     if (n.data.type === 'asset_return_requested') return '/assets';

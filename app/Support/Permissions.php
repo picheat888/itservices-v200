@@ -14,7 +14,14 @@ class Permissions
     public static function catalog(): array
     {
         return [
-            'tickets' => ['view_all', 'create', 'assign', 'resolve'],
+            'tickets' => [
+                'module',
+                'view_dashboard', 'view_all',
+                'resolve', 'forward', 'assign',
+                'level_hardware', 'level_software', 'level_network', 'level_other',
+                'create', 'edit_own',
+                'my', 'jobs',
+            ],
             'requests' => ['submit', 'approve_manager', 'approve_it', 'view_all', 'reject'],
             'assets' => [
                 'module',
@@ -85,7 +92,10 @@ class Permissions
         return [
             // IT Technician — broad operational access, configurable
             'admin' => [
-                'tickets.view_all', 'tickets.create', 'tickets.assign', 'tickets.resolve',
+                'tickets.module', 'tickets.view_dashboard', 'tickets.view_all',
+                'tickets.resolve', 'tickets.forward', 'tickets.assign',
+                'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
                 'requests.submit', 'requests.approve_it', 'requests.view_all', 'requests.reject',
                 'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
                 'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
@@ -116,13 +126,13 @@ class Permissions
                 'access.module', 'access.overview',
                 'access.email_view', 'access.file_view', 'access.social_view', 'access.software_view',
                 'assets.my', 'assets.return',
-                'tickets.create', 'requests.submit',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
-                'tickets.create', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
@@ -389,6 +399,84 @@ class Permissions
             return array_values(array_filter(
                 array_keys($set),
                 fn ($key) => ! str_starts_with($key, 'assets.') || isset($keep[$key]),
+            ));
+        }
+
+        // Master on: a management child requires its group view.
+        foreach ($hierarchy['groups'] as $viewKey => $children) {
+            if (! isset($set[$viewKey])) {
+                foreach ($children as $child) {
+                    unset($set[$child]);
+                }
+            }
+        }
+
+        return array_keys($set);
+    }
+
+    /**
+     * Ticket permission tree used for client cascade and server normalization.
+     * Master gates the module tabs for staff; the self-service pair
+     * (`create` + its child `edit_own`) and the My Tickets tab (`my`) are
+     * standalone — an ordinary employee files and tracks their own cases with
+     * no staff-side access at all. The four `level_*` keys scope which ticket
+     * categories a staff member may see / take / be alerted about (strict: no
+     * level = no cases).
+     *
+     * @return array{master: string, standalone: array{view: string, children: list<string>}, standalone_solo: list<string>, groups: array<string, list<string>>}
+     */
+    public static function ticketHierarchy(): array
+    {
+        return [
+            'master' => 'tickets.module',
+            'standalone' => [
+                'view' => 'tickets.create',
+                'children' => ['tickets.edit_own'],
+            ],
+            // Master-independent single switches (no children).
+            'standalone_solo' => ['tickets.my'],
+            'groups' => [
+                'tickets.view_dashboard' => [],
+                'tickets.view_all' => ['tickets.resolve', 'tickets.forward', 'tickets.assign'],
+                'tickets.level_hardware' => [],
+                'tickets.level_software' => [],
+                'tickets.level_network' => [],
+                'tickets.level_other' => [],
+                'tickets.jobs' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the ticket hierarchy on a granted set: a management child requires
+     * its group's view key; every group key requires the master. The self-service
+     * keys (`create` + `edit_own`, and `my`) survive without the master, but
+     * `edit_own` still requires `create`. Non-ticket keys pass through untouched.
+     * Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeTickets(array $granted): array
+    {
+        $set = array_flip($granted);
+        $hierarchy = self::ticketHierarchy();
+        $standalone = $hierarchy['standalone'];
+
+        // Self-service is master-independent, but `edit_own` still requires `create`.
+        if (! isset($set[$standalone['view']])) {
+            foreach ($standalone['children'] as $child) {
+                unset($set[$child]);
+            }
+        }
+
+        // Without the master, drop every ticket key except the self-service ones.
+        if (! isset($set[$hierarchy['master']])) {
+            $keep = array_flip([$standalone['view'], ...$standalone['children'], ...$hierarchy['standalone_solo']]);
+
+            return array_values(array_filter(
+                array_keys($set),
+                fn ($key) => ! str_starts_with($key, 'tickets.') || isset($keep[$key]),
             ));
         }
 

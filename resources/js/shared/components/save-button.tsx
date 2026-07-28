@@ -1,5 +1,5 @@
-import { Button, type ButtonProps } from '@/shared/ui/button';
 import { useT } from '@/lang';
+import { Button, type ButtonProps } from '@/shared/ui/button';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 

@@ -1,10 +1,10 @@
-import { Field } from '@/shared/components/field';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { useLogout } from '@/modules/auth/hooks/use-auth';
 import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
+import { useLogout } from '@/modules/auth/hooks/use-auth';
+import { Field } from '@/shared/components/field';
 import type { User } from '@/shared/types';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ShieldAlert } from 'lucide-react';
 import { useState } from 'react';

@@ -1,16 +1,17 @@
-import { StockMovementsTab } from './stock-movements-tab';
+import { useT } from '@/lang';
+import { useCurrency } from '@/modules/settings';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
+import { cn } from '@/shared/lib/utils';
+import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
-import { useCurrency, useDateTime } from '@/modules/settings';
-import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
-import { useT } from '@/lang';
-import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
-import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
 import { Box, ChevronDown, ChevronLeft, ChevronRight, History, Package, ShieldCheck, SquarePen, Warehouse } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useStockItem, useStockItemHistory } from '../hooks/use-stock';
+import { StockMovementsTab } from './stock-movements-tab';
 
 const ITEM_TONE: Record<StockItemStatus, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = {
     ok: 'green',
@@ -65,7 +66,19 @@ function SectionLabel({ children, right }: { children: ReactNode; right?: ReactN
 }
 
 /** Reusable table footer pager (prev / page-of / next), shared by lots and serials. */
-function Pager({ page, pageCount, total, perPage, onPage }: { page: number; pageCount: number; total: number; perPage: number; onPage: (p: number) => void }) {
+function Pager({
+    page,
+    pageCount,
+    total,
+    perPage,
+    onPage,
+}: {
+    page: number;
+    pageCount: number;
+    total: number;
+    perPage: number;
+    onPage: (p: number) => void;
+}) {
     return (
         <div className="border-border bg-muted/20 flex items-center justify-between border-t px-3 py-2">
             <span className="text-muted-foreground font-mono text-[11px]">
@@ -104,12 +117,19 @@ function Pager({ page, pageCount, total, perPage, onPage }: { page: number; page
  * `open` so it animates closed; the last item is retained so content doesn't flash
  * to skeleton during the fade-out.
  */
-export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: number | null; onClose: () => void; onEdit?: (item: StockItem) => void }) {
+export function StockItemDetailModal({
+    itemId,
+    onClose,
+    onEdit,
+}: {
+    itemId: number | null;
+    onClose: () => void;
+    onEdit?: (item: StockItem) => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     // System-timezone date for UTC timestamps (received_at) — last_move_at is a pure date, shown as-is.
-    const { format: fmtDate } = useDateTime();
     const { data, isLoading } = useStockItem(itemId);
     // History is fetched here (and reused by the Movements tab via the same query key)
     // so the Movements tab count is known up front.
@@ -174,7 +194,9 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                 </div>
                                 <DialogTitle className="mt-0.5 flex flex-wrap items-center gap-2 text-base font-extrabold tracking-tight">
                                     <span className="truncate">{item.name}</span>
-                                    <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">{item.sku}</span>
+                                    <span className="bg-brand/10 text-brand shrink-0 rounded-md px-2 py-0.5 font-mono text-xs font-semibold">
+                                        {item.sku}
+                                    </span>
                                     <span
                                         className={cn(
                                             'inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[11.5px] font-semibold',
@@ -209,7 +231,9 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                             sub={
                                                 item.reserved != null && item.reserved > 0 ? (
                                                     <span>
-                                                        {lang === 'th' ? `สำรอง ${item.reserved} · ว่าง ${item.current_stock - item.reserved}` : `${item.reserved} reserved · ${item.current_stock - item.reserved} free`}
+                                                        {lang === 'th'
+                                                            ? `สำรอง ${item.reserved} · ว่าง ${item.current_stock - item.reserved}`
+                                                            : `${item.reserved} reserved · ${item.current_stock - item.reserved} free`}
                                                     </span>
                                                 ) : (
                                                     <span className="lowercase">{item.unit}</span>
@@ -221,7 +245,10 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                             value={
                                                 <>
                                                     <span className="text-muted-foreground text-sm">{symbol}</span>
-                                                    {item.total_value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    {item.total_value.toLocaleString(undefined, {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    })}
                                                 </>
                                             }
                                         />
@@ -238,7 +265,9 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
 
                                     <div className="grid grid-cols-4 gap-x-6 gap-y-3">
                                         <Meta label={t('stock_category')}>{item.category ?? '—'}</Meta>
-                                        <Meta label={lang === 'th' ? 'ยี่ห้อ / รุ่น' : 'Brand / Model'}>{[item.brand, item.model].filter(Boolean).join(' ') || '—'}</Meta>
+                                        <Meta label={lang === 'th' ? 'ยี่ห้อ / รุ่น' : 'Brand / Model'}>
+                                            {[item.brand, item.model].filter(Boolean).join(' ') || '—'}
+                                        </Meta>
                                         <Meta label={lang === 'th' ? 'หน่วย' : 'Unit'}>{item.unit}</Meta>
                                         <Meta label="Min / Max">
                                             <span className="font-mono">
@@ -308,17 +337,28 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                 >
                                                                     <td className="px-3 py-1.5 font-mono text-xs">
                                                                         <span className="inline-flex items-center gap-1.5">
-                                                                            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
+                                                                            <ChevronDown
+                                                                                className={cn(
+                                                                                    'h-3.5 w-3.5 transition-transform',
+                                                                                    expanded && 'rotate-180',
+                                                                                )}
+                                                                            />
                                                                             {l.doc_no ?? '—'}
                                                                         </span>
                                                                     </td>
-                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{fmtDate(l.received_at, false)}</td>
-                                                                    <td className="px-3 py-1.5 text-right font-mono text-xs">{format(l.unit_cost)}</td>
+                                                                    <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                                        {fmtDate(l.received_at, false)}
+                                                                    </td>
+                                                                    <td className="px-3 py-1.5 text-right font-mono text-xs">
+                                                                        {format(l.unit_cost)}
+                                                                    </td>
                                                                     <td className="px-3 py-1.5 text-right font-mono">
                                                                         {l.qty_remaining}
                                                                         <span className="text-muted-foreground">/{l.qty_received}</span>
                                                                     </td>
-                                                                    <td className="px-3 py-1.5 text-right font-mono font-semibold">{format(l.value)}</td>
+                                                                    <td className="px-3 py-1.5 text-right font-mono font-semibold">
+                                                                        {format(l.value)}
+                                                                    </td>
                                                                 </tr>
                                                                 {expanded && (
                                                                     <tr className="border-border/60 border-b last:border-0">
@@ -328,7 +368,9 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                                 <Meta label={t('stock_warehouse')}>{l.warehouse || '—'}</Meta>
                                                                                 <Meta label={t('stock_supplier')}>{l.supplier || '—'}</Meta>
                                                                                 <Meta label={t('stock_by')}>{l.recorded_by || '—'}</Meta>
-                                                                                <Meta label={t('stock_serial_received')}>{fmtDate(l.received_at, false)}</Meta>
+                                                                                <Meta label={t('stock_serial_received')}>
+                                                                                    {fmtDate(l.received_at, false)}
+                                                                                </Meta>
                                                                                 <Meta label={t('stock_qty')}>
                                                                                     <span className="font-mono">
                                                                                         {l.qty_remaining}/{l.qty_received}
@@ -337,7 +379,10 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                                             </div>
                                                                             {l.notes && (
                                                                                 <div className="text-muted-foreground mt-2.5 text-xs">
-                                                                                    <span className="tracking-wide uppercase">{t('stock_notes')}:</span> {l.notes}
+                                                                                    <span className="tracking-wide uppercase">
+                                                                                        {t('stock_notes')}:
+                                                                                    </span>{' '}
+                                                                                    {l.notes}
                                                                                 </div>
                                                                             )}
                                                                         </td>
@@ -349,11 +394,19 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                 </tbody>
                                             </table>
                                             {lots.length > LOTS_PER_PAGE && (
-                                                <Pager page={lotPage} pageCount={lotPageCount} total={lots.length} perPage={LOTS_PER_PAGE} onPage={setLotPage} />
+                                                <Pager
+                                                    page={lotPage}
+                                                    pageCount={lotPageCount}
+                                                    total={lots.length}
+                                                    perPage={LOTS_PER_PAGE}
+                                                    onPage={setLotPage}
+                                                />
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="text-muted-foreground rounded-lg border border-dashed py-5 text-center text-xs">{t('stock_no_lots')}</div>
+                                        <div className="text-muted-foreground rounded-lg border border-dashed py-5 text-center text-xs">
+                                            {t('stock_no_lots')}
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -361,7 +414,9 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                             {/* Serials (tab only present when track_serial) */}
                             {tab === 'serials' && (
                                 <div>
-                                    <SectionLabel right={<span className="text-muted-foreground">{serials.length}</span>}>{t('stock_serial_list')}</SectionLabel>
+                                    <SectionLabel right={<span className="text-muted-foreground">{serials.length}</span>}>
+                                        {t('stock_serial_list')}
+                                    </SectionLabel>
                                     {serials.length > 0 ? (
                                         <div className="border-border overflow-hidden rounded-lg border">
                                             <table className="w-full text-sm">
@@ -377,23 +432,37 @@ export function StockItemDetailModal({ itemId, onClose, onEdit }: { itemId: numb
                                                 <tbody>
                                                     {pagedSerials.map((s, i) => (
                                                         <tr key={s.id} className="border-border/60 border-b last:border-0">
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{serialPage * SERIALS_PER_PAGE + i + 1}</td>
+                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                                {serialPage * SERIALS_PER_PAGE + i + 1}
+                                                            </td>
                                                             <td className="px-3 py-1.5 font-mono">{s.serial}</td>
                                                             <td className="px-3 py-1.5">
-                                                                <StatusBadge tone={SN_TONE[s.status]}>{t(`stock_sn_${s.status}` as Parameters<typeof t>[0])}</StatusBadge>
+                                                                <StatusBadge tone={SN_TONE[s.status]}>
+                                                                    {t(`stock_sn_${s.status}` as Parameters<typeof t>[0])}
+                                                                </StatusBadge>
                                                             </td>
                                                             <td className="px-3 py-1.5">{s.warehouse ?? '—'}</td>
-                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">{fmtDate(s.received_at, false)}</td>
+                                                            <td className="text-muted-foreground px-3 py-1.5 font-mono text-xs">
+                                                                {fmtDate(s.received_at, false)}
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
                                             {serials.length > SERIALS_PER_PAGE && (
-                                                <Pager page={serialPage} pageCount={serialPageCount} total={serials.length} perPage={SERIALS_PER_PAGE} onPage={setSerialPage} />
+                                                <Pager
+                                                    page={serialPage}
+                                                    pageCount={serialPageCount}
+                                                    total={serials.length}
+                                                    perPage={SERIALS_PER_PAGE}
+                                                    onPage={setSerialPage}
+                                                />
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-xs">{t('stock_no_serials')}</div>
+                                        <div className="text-muted-foreground rounded-lg border border-dashed py-6 text-center text-xs">
+                                            {t('stock_no_serials')}
+                                        </div>
                                     )}
                                 </div>
                             )}
