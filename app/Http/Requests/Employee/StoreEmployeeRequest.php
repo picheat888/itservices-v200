@@ -69,8 +69,9 @@ class StoreEmployeeRequest extends FormRequest
                 },
             ],
             'username' => ['nullable', 'string', 'max:255'],
-            // Digits plus the separators international and local formats use — no letters.
-            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[\d+()\-\s]+$/'],
+            // Same shape as a ticket's callback phone: free-form (so "ext. 1305" works) but it
+            // has to carry at least three digits, which rules out text that isn't a number.
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/(\D*\d){3,}/'],
             'joined_at' => ['nullable', 'date'],
             'status' => ['nullable', Rule::in(['active', 'resigned'])],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],

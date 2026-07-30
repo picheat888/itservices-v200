@@ -156,6 +156,7 @@ export const employee: Dict = {
     emp_err_first: 'กรุณากรอกชื่อ',
     emp_err_last: 'กรุณากรอกนามสกุล',
     emp_err_email: 'อีเมลไม่ถูกต้อง',
+    emp_err_phone: 'กรอกเบอร์โทรที่มีตัวเลขอย่างน้อย 3 ตัว',
     emp_err_username: 'อย่างน้อย 3 ตัวอักษร',
     emp_err_dept: 'กรุณาเลือกแผนก',
     emp_err_pos: 'กรุณาเลือกตำแหน่ง',

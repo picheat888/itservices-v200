@@ -155,6 +155,7 @@ export const employee: Dict = {
     emp_err_first: 'Required',
     emp_err_last: 'Required',
     emp_err_email: 'Invalid email',
+    emp_err_phone: 'Enter a phone number with at least 3 digits',
     emp_err_username: 'At least 3 characters',
     emp_err_dept: 'Required',
     emp_err_pos: 'Required',

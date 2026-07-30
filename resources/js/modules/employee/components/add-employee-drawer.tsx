@@ -3,7 +3,7 @@ import { useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn, focusFirstError, sanitizePhone } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
@@ -128,6 +128,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             if (!form.lastName.trim()) e.lastName = t('emp_err_last');
             // ASCII-only practical pattern — rejects unicode (สมชาย@…), double @, and spaces up front.
             if (form.email && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) e.email = t('emp_err_email');
+            // Optional, but once filled it has to be a number — free-form so "ext. 1305" is
+            // allowed, matching a ticket's callback phone.
+            if (form.phone.trim() && form.phone.replace(/\D/g, '').length < 3) e.phone = t('emp_err_phone');
         }
         if (s === 2) {
             if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
@@ -361,12 +364,12 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         placeholder="john.doe@example.com"
                                     />
                                 </Field>
-                                <Field label={t('emp_phone')}>
+                                <Field label={t('emp_phone')} name="phone" error={errors.phone}>
                                     <Input
                                         className="font-mono"
                                         value={form.phone}
-                                        onChange={(e) => set('phone', sanitizePhone(e.target.value))}
-                                        placeholder="+66 81 234 5678"
+                                        onChange={(e) => set('phone', e.target.value)}
+                                        placeholder="+66 81 234 5678 / ext. 1305"
                                         inputMode="tel"
                                     />
                                 </Field>
