@@ -186,7 +186,7 @@ export const employee: Dict = {
     cred_auto: 'Auto-generate',
     cred_auto_title: 'Generated credentials',
     cred_auto_hint: 'From name + employee code',
-    cred_share_hint: 'Share these with the employee — the password is shown only here.',
+    cred_share_hint: 'You can share these with your employees.',
     cred_copied: 'Copied',
     cred_saving: 'Saving…',
     cred_has_account: 'Has account',
@@ -259,5 +259,5 @@ export const employee: Dict = {
     emp_cred_force_change: 'Require a password change at next sign-in',
     emp_cred_reset_btn: 'Reset Password',
     cred_saved_title: 'Account created',
-    cred_copy_all: 'Copy both',
+    cred_copy: 'Copy',
 };

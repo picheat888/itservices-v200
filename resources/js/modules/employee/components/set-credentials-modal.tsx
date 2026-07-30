@@ -252,14 +252,10 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </div>
 
                     <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}
-                        >
-                            {copied === 'all' ? <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-4 w-4" />}
-                            {t('cred_copy_all')}
+                        <Button onClick={() => copy(`Username: ${shownCreds?.username ?? ''}\nPassword: ${shownCreds?.password ?? ''}`, 'all')}>
+                            {copied === 'all' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            {t('cred_copy')}
                         </Button>
-                        <Button onClick={closeReveal}>{t('cd_confirm')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
