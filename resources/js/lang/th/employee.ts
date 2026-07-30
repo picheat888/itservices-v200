@@ -215,6 +215,7 @@ export const employee: Dict = {
     emp_v_last_day: 'วันสุดท้าย',
     emp_v_contact: 'ข้อมูลติดต่อ',
     emp_v_phone: 'โทรศัพท์',
+    emp_v_credentials: 'Credentials',
     emp_v_employment: 'ข้อมูลการจ้างงาน',
     emp_v_tab_org: 'องค์กร',
     emp_v_tab_assets: 'อุปกรณ์',

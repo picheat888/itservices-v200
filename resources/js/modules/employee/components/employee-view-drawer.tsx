@@ -361,15 +361,14 @@ export function EmployeeViewDrawer({
                             </div>
                             <RailRow icon={<Mail className="h-3.5 w-3.5" />} label={t('emp_email')} value={emp.email} copyKey="email" />
                             <RailRow icon={<Phone className="h-3.5 w-3.5" />} label={t('emp_v_phone')} value={emp.phone} copyKey="phone" mono />
-                            {emp.username && (
-                                <RailRow
-                                    icon={<Shield className="h-3.5 w-3.5" />}
-                                    label={t('emp_username')}
-                                    value={emp.username}
-                                    copyKey="user"
-                                    mono
-                                />
-                            )}
+                        </section>
+
+                        {/* Login credentials — the username only; passwords are never surfaced here. */}
+                        <section className="flex flex-col gap-3">
+                            <div className="text-muted-foreground border-border border-b pb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
+                                {t('emp_v_credentials')}
+                            </div>
+                            <RailRow icon={<Shield className="h-3.5 w-3.5" />} label={t('emp_username')} value={emp.username} copyKey="user" mono />
                         </section>
 
                         <section className="flex flex-col gap-3">
