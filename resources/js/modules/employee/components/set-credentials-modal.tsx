@@ -5,10 +5,11 @@ import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useEmployeeMutations } from '../hooks/use-org';
+import { useEmployeeMutations } from '../hooks/use-employees';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
@@ -23,6 +24,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [showPw, setShowPw] = useState(false);
+    // Force the employee to set their own password at the first sign-in (default on).
+    const [forceChange, setForceChange] = useState(true);
     const [copied, setCopied] = useState<string | null>(null);
     // Brief success state — shows "✓ Saved" before the dialog closes.
     const [saved, setSaved] = useState(false);
@@ -38,6 +41,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setConfirm('');
         setError('');
         setShowPw(false);
+        setForceChange(true);
         setAutoCreds(null);
         setSaved(false);
         // Re-run only when a different employee opens (id), not on every employee object change.
@@ -85,7 +89,13 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
             return;
         }
         try {
-            await setCredentials.mutateAsync({ id: employee.id, username: username.trim(), password, password_confirmation: confirm });
+            await setCredentials.mutateAsync({
+                id: employee.id,
+                username: username.trim(),
+                password,
+                password_confirmation: confirm,
+                force_change: forceChange,
+            });
             // Flash "✓ Saved" briefly, then close.
             setSaved(true);
             window.setTimeout(onClose, 1200);
@@ -162,6 +172,11 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 autoComplete="new-password"
                             />
                         </Field>
+
+                        <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
+                            <span className="text-sm">{t('emp_cred_force_change')}</span>
+                            <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
+                        </div>
 
                         {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
                     </div>
