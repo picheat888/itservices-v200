@@ -27,6 +27,16 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
+    /**
+     * Login-name rules shared by account creation and username changes. English letters only —
+     * the name must start with a letter, end with a letter or digit, and may use . _ - in
+     * between (the separator set accepted by AD / POSIX logins). The frontend mirrors this
+     * pattern for instant feedback; this copy is the authority.
+     *
+     * @var list<string>
+     */
+    private const USERNAME_RULES = ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$/'];
+
     public function __construct(private readonly EmployeeService $service) {}
 
     /**
@@ -431,7 +441,7 @@ class EmployeeController extends Controller
         }
 
         $data = $request->validate([
-            'username' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($user->id)],
             'reset_password' => ['sometimes', 'boolean'],
             'password' => ['nullable', 'string', 'min:6'],
             'force_change' => ['sometimes', 'boolean'],
@@ -480,7 +490,7 @@ class EmployeeController extends Controller
         }
 
         $data = $request->validate([
-            'username' => ['required', 'string', 'max:255', 'unique:users,username'],
+            'username' => [...self::USERNAME_RULES, 'unique:users,username'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
             'force_change' => ['sometimes', 'boolean'],
         ]);

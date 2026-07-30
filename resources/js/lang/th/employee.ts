@@ -194,6 +194,7 @@ export const employee: Dict = {
     cred_err_password_short: 'Password ต้องมีอย่างน้อย 6 ตัวอักษร',
     cred_err_no_match: 'Password ไม่ตรงกัน',
     cred_err_username_taken: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว',
+    cred_err_username_format: 'ใช้ตัวอักษรอังกฤษ ตัวเลข และ . _ - เท่านั้น โดยขึ้นต้นด้วยตัวอักษร (ไม่เกิน 30 ตัว)',
     cred_err_generic: 'เกิดข้อผิดพลาด',
     emp_set_credentials: 'สร้าง User & Password',
     emp_account_pending_title: 'บัญชีเข้าใช้งาน',

@@ -10,6 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
+import { isValidUsername } from '../lib/username';
 
 // 0/O and 1/l/I are left out so a generated password survives being read aloud,
 // written on a note, or retyped by the employee without confusion.
@@ -87,7 +88,12 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const handleAuto = () => {
         if (!employee) return;
         const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const u = `${clean(employee.first_name ?? '')}_${clean(employee.last_name ?? '').slice(0, 2)}`;
+        const first = clean(employee.first_name ?? '');
+        const last = clean(employee.last_name ?? '').slice(0, 2);
+        // Thai-only names clean away to nothing, and a trailing "_" would break the username
+        // rule — fall back to the employee code so the result is always usable.
+        const fromName = first && last ? `${first}_${last}` : first;
+        const u = isValidUsername(fromName) ? fromName : clean(employee.code ?? '');
         const p = randomPassword();
         setUsername(u);
         setPassword(p);
@@ -115,6 +121,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const validate = () => {
         const e: Record<string, string> = {};
         if (!username.trim()) e.username = t('cred_err_username_required');
+        else if (!isValidUsername(username.trim())) e.username = t('cred_err_username_format');
         if (password.length < 6) e.password = t('cred_err_password_short');
         if (!confirm || password !== confirm) e.confirm = t('cred_err_no_match');
         setErrors(e);
