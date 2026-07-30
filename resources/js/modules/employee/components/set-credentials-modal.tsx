@@ -29,8 +29,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [copied, setCopied] = useState<string | null>(null);
     // Brief success state — shows "✓ Saved" before the dialog closes.
     const [saved, setSaved] = useState(false);
-    // Holds the auto-generated pair so the stacked confirm dialog can show them in plain text.
-    const [autoCreds, setAutoCreds] = useState<{ username: string; password: string } | null>(null);
+    // The pair that was just SAVED — revealed once in the stacked dialog so the admin can
+    // copy/share it; after this the password can no longer be retrieved.
+    const [savedCreds, setSavedCreds] = useState<{ username: string; password: string } | null>(null);
 
     // Retain the last employee so the content stays rendered while the dialog animates
     // closed — the prop goes null the moment it closes, which would blank the fade-out.
@@ -39,12 +40,12 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         if (employee) setShown(employee);
     }, [employee]);
 
-    // Same retention for the stacked "Generated credentials" dialog — closing sets
-    // autoCreds to null, which would blank the username/password rows mid fade-out.
-    const [shownCreds, setShownCreds] = useState(autoCreds);
+    // Same retention for the stacked reveal dialog — closing sets savedCreds to null,
+    // which would blank the username/password rows mid fade-out.
+    const [shownCreds, setShownCreds] = useState(savedCreds);
     useEffect(() => {
-        if (autoCreds) setShownCreds(autoCreds);
-    }, [autoCreds]);
+        if (savedCreds) setShownCreds(savedCreds);
+    }, [savedCreds]);
 
     // Reset the form whenever a different employee is opened. Skip on close (employee → null)
     // so the "✓ Saved" state isn't reverted to "Save" mid-way through the exit animation.
@@ -56,14 +57,15 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setError('');
         setShowPw(false);
         setForceChange(true);
-        setAutoCreds(null);
+        setSavedCreds(null);
         setSaved(false);
         // Re-run only when a different employee opens (id), not on every employee object change.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
 
     // Auto-fill: username = first name + "_" + first 2 letters of last name (lowercased);
-    // password = the employee code. Then reveal the pair in a confirm dialog.
+    // password = the employee code — revealed in the form itself (showPw). The share/copy
+    // reveal happens once after a successful save instead.
     const handleAuto = () => {
         if (!employee) return;
         const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -74,7 +76,6 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setConfirm(p);
         setShowPw(true);
         setError('');
-        setAutoCreds({ username: u, password: p });
     };
 
     const copy = (text: string, key: string) => {
@@ -110,14 +111,20 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                 password_confirmation: confirm,
                 force_change: forceChange,
             });
-            // Flash "✓ Saved" briefly, then close.
+            // Reveal the saved pair once (copy/share) — closing the reveal closes the whole flow.
             setSaved(true);
-            window.setTimeout(onClose, 1200);
+            setSavedCreds({ username: username.trim(), password });
         } catch (e: unknown) {
             const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
             // Surface the unique-username rejection clearly (localized), else the server message.
             setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
         }
+    };
+
+    /** Close the post-save reveal — the account is created, so the whole flow ends here. */
+    const closeReveal = () => {
+        setSavedCreds(null);
+        onClose();
     };
 
     const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
@@ -207,13 +214,14 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                 </DialogContent>
             </Dialog>
 
-            {/* Stacked confirm — reveals the generated pair in plain text, copyable. */}
-            <Dialog open={!!autoCreds} onOpenChange={(o) => !o && setAutoCreds(null)}>
+            {/* Stacked reveal after a successful save — the one place the saved pair can be
+                copied; closing it ends the whole flow. */}
+            <Dialog open={!!savedCreds} onOpenChange={(o) => !o && closeReveal()}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Wand2 className="text-brand h-5 w-5" />
-                            {t('cred_auto_title')}
+                            <ShieldCheck className="text-brand h-5 w-5" />
+                            {t('cred_saved_title')}
                         </DialogTitle>
                         <DialogDescription>{t('cred_share_hint')}</DialogDescription>
                     </DialogHeader>
@@ -244,7 +252,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </div>
 
                     <DialogFooter>
-                        <Button onClick={() => setAutoCreds(null)}>{t('cd_confirm')}</Button>
+                        <Button onClick={closeReveal}>{t('cd_confirm')}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
