@@ -73,6 +73,8 @@ export function useTicketMutations() {
         // Refresh the open detail drawer (?view=<id>) so a stacked action modal
         // bounces back to up-to-date status/assignee without reopening.
         qc.invalidateQueries({ queryKey: ['ticket', 'view'] });
+        // Employee detail's read-only Tickets tab (employee module) mirrors this data.
+        qc.invalidateQueries({ queryKey: ['employee-tickets'] });
     };
     return {
         create: useMutation({ mutationFn: (p: CreateTicketPayload) => ticketApi.create(p), onSuccess: invalidate }),

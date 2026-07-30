@@ -21,6 +21,8 @@ class EmployeeAccessResource extends JsonResource
             'resource_code' => $m->resource?->code,
             'resource_detail' => $m->resource?->email ?? $m->resource?->path ?? $m->resource?->url ?? $m->resource?->brand?->name,
             'resource_color' => $m->resource?->color,
+            // Social platforms + software expose an uploaded logo; other resource types return null.
+            'resource_logo' => $m->resource?->logo_url,
             'access_level' => $m->access_level,
             'purpose' => $m->purpose,
             'granted_at' => $m->granted_at?->toDateString(),

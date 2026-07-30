@@ -69,7 +69,8 @@ class StoreEmployeeRequest extends FormRequest
                 },
             ],
             'username' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            // Digits plus the separators international and local formats use — no letters.
+            'phone' => ['nullable', 'string', 'max:50', 'regex:/^[\d+()\-\s]+$/'],
             'joined_at' => ['nullable', 'date'],
             'status' => ['nullable', Rule::in(['active', 'resigned'])],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],

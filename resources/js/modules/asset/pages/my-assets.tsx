@@ -58,6 +58,22 @@ export default function MyAssetsPage() {
     const { accept, requestReturn } = useAssetMutations();
     const confirm = useConfirm();
 
+    // Ids with an accept request in flight. Tracked as a Set here (not via `accept.variables`)
+    // because the mutation object only remembers its LATEST call — accepting a second asset
+    // while the first is still saving would stop the first row's spinner.
+    const [acceptingIds, setAcceptingIds] = useState<Set<number>>(new Set());
+    const onAccept = (id: number) => {
+        setAcceptingIds((prev) => new Set(prev).add(id));
+        accept.mutate(id, {
+            onSettled: () =>
+                setAcceptingIds((prev) => {
+                    const next = new Set(prev);
+                    next.delete(id);
+                    return next;
+                }),
+        });
+    };
+
     /** Ask before sending a held asset back to IT (goes to "pending return"). */
     const onReturn = (id: number, name: string, assetId: string) =>
         confirm({
@@ -173,10 +189,10 @@ export default function MyAssetsPage() {
                                     <Button
                                         size="sm"
                                         className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                        onClick={() => accept.mutate(a.id)}
-                                        disabled={accept.isPending && accept.variables === a.id}
+                                        onClick={() => onAccept(a.id)}
+                                        disabled={acceptingIds.has(a.id)}
                                     >
-                                        {accept.isPending && accept.variables === a.id ? (
+                                        {acceptingIds.has(a.id) ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />
                                         ) : (
                                             <Check className="h-4 w-4" />

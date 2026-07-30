@@ -143,4 +143,19 @@ class AccessSoftwareTest extends TestCase
             ->assertJsonPath('data.software.0.resource_name', 'Jira')
             ->assertJsonPath('data.software.0.resource_code', fn ($c) => is_string($c) && str_starts_with($c, 'SW-'));
     }
+
+    public function test_employee_access_rows_expose_the_software_logo(): void
+    {
+        $this->actingAs($this->super());
+        $sw = Software::create(['name' => 'Figma', 'license_type' => 'subscription', 'logo_path' => 'software-logos/figma.png']);
+        $bare = Software::create(['name' => 'Slack', 'license_type' => 'subscription']);
+        $e = Employee::create(['code' => 'EMP-SW10', 'first_name' => 'E', 'last_name' => 'Five']);
+        $this->postJson("/api/software/{$sw->id}/members", ['employee_id' => $e->id])->assertCreated();
+        $this->postJson("/api/software/{$bare->id}/members", ['employee_id' => $e->id])->assertCreated();
+
+        $rows = $this->getJson("/api/employees/{$e->id}/access")->assertOk()->json('data.software');
+        $byName = collect($rows)->keyBy('resource_name');
+        $this->assertIsString($byName['Figma']['resource_logo']);
+        $this->assertNull($byName['Slack']['resource_logo']);
+    }
 }

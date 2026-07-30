@@ -4,8 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { employeeApi } from '../api/orgApi';
-import { useEmployeeMutations } from '../hooks/use-org';
+import { employeeApi } from '../api/employeeApi';
+import { useEmployeeMutations } from '../hooks/use-employees';
 
 interface RowError {
     row: number;

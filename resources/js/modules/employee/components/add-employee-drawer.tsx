@@ -3,7 +3,7 @@ import { useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError, sanitizePhone } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Input } from '@/shared/ui/input';
@@ -13,7 +13,10 @@ import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { ArrowLeft, ArrowRight, Briefcase, Check, Info, KeyRound, Laptop, Mail, Smartphone, Upload, User } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
+import { useDepartments } from '../hooks/use-departments';
+import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
+import { usePositions } from '../hooks/use-positions';
+import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -362,8 +365,9 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                     <Input
                                         className="font-mono"
                                         value={form.phone}
-                                        onChange={(e) => set('phone', e.target.value)}
-                                        placeholder="+1 202 555 0100"
+                                        onChange={(e) => set('phone', sanitizePhone(e.target.value))}
+                                        placeholder="+66 81 234 5678"
+                                        inputMode="tel"
                                     />
                                 </Field>
                             </>

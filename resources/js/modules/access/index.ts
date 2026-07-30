@@ -5,7 +5,6 @@ export {
     useAccessSidebarBadge,
     useAccessSummary,
     useEmailGroups,
-    useEmployeeAccess,
     useFileShares,
     useResourceMembers,
     useSocialPlatforms,

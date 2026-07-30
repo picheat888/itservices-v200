@@ -54,13 +54,6 @@ export const useSetFileShareOwner = () => {
 export const useResourceMembers = (kind: AccessKind, id: number | null) =>
     useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null });
 
-export const useEmployeeAccess = (employeeId: number | null) =>
-    useQuery({
-        queryKey: ['employee-access', employeeId],
-        queryFn: () => accessApi.employeeAccess(employeeId as number),
-        enabled: employeeId != null,
-    });
-
 export function useAccessMutations(kind: AccessKind) {
     const qc = useQueryClient();
     const invalidate = () => {

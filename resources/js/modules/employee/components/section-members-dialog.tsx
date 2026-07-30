@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUiStore } from '@/stores/ui';
 import { Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useSectionMembers } from '../hooks/use-org';
+import { useSectionMembers } from '../hooks/use-sections';
 
 /**
  * Focused dialog listing every employee in a section. Uses the shared DataTable

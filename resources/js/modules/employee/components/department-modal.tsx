@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { AlertTriangle, Check, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { useDepartmentMutations } from '../hooks/use-org';
+import { useDepartmentMutations } from '../hooks/use-departments';
 
 const empty = { name: '', name_th: '', tag: '' };
 

@@ -67,7 +67,7 @@ class RoleReferenceTest extends TestCase
 
         $this->actingAs(User::factory()->create(['role' => 'super']));
         $this->postJson("/api/employees/{$employee->id}/credentials", [
-            'username' => 'grouped', 'password' => 'secret123', 'password_confirmation' => 'secret123',
+            'username' => 'grouped', 'password' => 'Secret123!', 'password_confirmation' => 'Secret123!',
         ])->assertCreated();
 
         $this->assertSame($hr->id, User::where('username', 'grouped')->first()->role_id);

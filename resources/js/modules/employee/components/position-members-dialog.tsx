@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUiStore } from '@/stores/ui';
 import { Briefcase } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { usePositionMembers } from '../hooks/use-org';
+import { usePositionMembers } from '../hooks/use-positions';
 
 /**
  * Focused dialog listing every employee holding a position. Uses the shared

@@ -8,7 +8,8 @@ import { Input } from '@/shared/ui/input';
 import { useUiStore } from '@/stores/ui';
 import { Check, Loader2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useDepartments, useSectionMutations } from '../hooks/use-org';
+import { useDepartments } from '../hooks/use-departments';
+import { useSectionMutations } from '../hooks/use-sections';
 
 const empty = { department_id: '', name: '', name_th: '' };
 
