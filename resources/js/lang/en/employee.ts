@@ -259,4 +259,5 @@ export const employee: Dict = {
     emp_cred_force_change: 'Require a password change at next sign-in',
     emp_cred_reset_btn: 'Reset Password',
     cred_saved_title: 'Account created',
+    cred_copy_all: 'Copy both',
 };
