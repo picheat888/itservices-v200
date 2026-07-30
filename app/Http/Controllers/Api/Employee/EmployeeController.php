@@ -22,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -45,6 +46,18 @@ class EmployeeController extends Controller
     private static function passwordRule(): Password
     {
         return Password::min(8)->mixedCase()->numbers()->symbols();
+    }
+
+    /**
+     * Fold an incoming username to lower case before it is validated or stored. Logins are
+     * case-insensitive, so this keeps "John_Do" from slipping past an existing "john_do" —
+     * a guarantee that would otherwise rest on the database collation alone.
+     */
+    private function normalizeUsername(Request $request): void
+    {
+        if ($request->has('username')) {
+            $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
+        }
     }
 
     public function __construct(private readonly EmployeeService $service) {}
@@ -450,6 +463,8 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'no_account'], 422);
         }
 
+        $this->normalizeUsername($request);
+
         $data = $request->validate([
             'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($user->id)],
             'reset_password' => ['sometimes', 'boolean'],
@@ -498,6 +513,8 @@ class EmployeeController extends Controller
         if ($employee->user()->exists()) {
             return response()->json(['message' => 'Employee already has a login account.'], 422);
         }
+
+        $this->normalizeUsername($request);
 
         $data = $request->validate([
             'username' => [...self::USERNAME_RULES, 'unique:users,username'],

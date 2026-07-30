@@ -205,8 +205,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         >
                             <Input
                                 value={username}
+                                // Lower-cased as it's typed, matching what the API stores.
                                 onChange={(e) => {
-                                    setUsername(e.target.value);
+                                    setUsername(e.target.value.toLowerCase());
                                     clearError('username');
                                 }}
                                 className="font-mono"
