@@ -11,6 +11,17 @@ import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-re
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 
+// 0/O and 1/l/I are left out so a generated password survives being read aloud,
+// written on a note, or retyped by the employee without confusion.
+const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+/** Random temporary password drawn from an unambiguous alphabet (crypto-grade source). */
+function randomPassword(length = 12): string {
+    const picks = new Uint32Array(length);
+    crypto.getRandomValues(picks);
+    return Array.from(picks, (n) => PASSWORD_ALPHABET[n % PASSWORD_ALPHABET.length]).join('');
+}
+
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
  * login account — username + password — for an employee who has none yet.
@@ -64,13 +75,13 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     }, [employee?.id]);
 
     // Auto-fill: username = first name + "_" + first 2 letters of last name (lowercased);
-    // password = the employee code — revealed in the form itself (showPw). The share/copy
+    // password = a fresh random string — revealed in the form itself (showPw). The share/copy
     // reveal happens once after a successful save instead.
     const handleAuto = () => {
         if (!employee) return;
         const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
         const u = `${clean(employee.first_name ?? '')}_${clean(employee.last_name ?? '').slice(0, 2)}`;
-        const p = employee.code ?? '';
+        const p = randomPassword();
         setUsername(u);
         setPassword(p);
         setConfirm(p);
@@ -183,14 +194,25 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             </div>
                         </Field>
                         <Field label={t('cred_confirm_password')}>
-                            <Input
-                                type={showPw ? 'text' : 'password'}
-                                value={confirm}
-                                onChange={(e) => setConfirm(e.target.value)}
-                                className="font-mono"
-                                placeholder="••••••"
-                                autoComplete="new-password"
-                            />
+                            <div className="relative">
+                                <Input
+                                    type={showPw ? 'text' : 'password'}
+                                    value={confirm}
+                                    onChange={(e) => setConfirm(e.target.value)}
+                                    className="pr-9 font-mono"
+                                    placeholder="••••••"
+                                    autoComplete="new-password"
+                                />
+                                {/* Shares showPw with the field above — either eye reveals both. */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPw((s) => !s)}
+                                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+                                    tabIndex={-1}
+                                >
+                                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </Field>
 
                         <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
