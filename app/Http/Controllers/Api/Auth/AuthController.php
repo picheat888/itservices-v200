@@ -132,6 +132,7 @@ class AuthController extends Controller
         $user->forceFill([
             'password' => Hash::make($data['password']),
             'password_changed_at' => now(),
+            'must_change_password' => false,
         ])->save();
 
         AuditLog::record('Changed own password');

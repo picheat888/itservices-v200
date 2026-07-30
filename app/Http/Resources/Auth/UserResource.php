@@ -44,7 +44,7 @@ class UserResource extends JsonResource
             'preferences' => $this->resolvedPreferences(),
             'email_verified_at' => $this->email_verified_at,
             // Drives the forced change-password modal when the expiry policy is on.
-            'password_expired' => $this->isPasswordExpired(),
+            'password_expired' => (bool) $this->must_change_password || $this->isPasswordExpired(),
         ];
     }
 

@@ -34,6 +34,7 @@ class User extends Authenticatable
         'username',
         'password',
         'password_changed_at',
+        'must_change_password',
         'role',
         'role_id',
         'preferences',
@@ -78,6 +79,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password_changed_at' => 'datetime',
+            'must_change_password' => 'boolean',
             'password' => 'hashed',
             'preferences' => 'array',
         ];
