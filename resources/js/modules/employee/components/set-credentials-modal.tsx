@@ -32,6 +32,13 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     // Holds the auto-generated pair so the stacked confirm dialog can show them in plain text.
     const [autoCreds, setAutoCreds] = useState<{ username: string; password: string } | null>(null);
 
+    // Retain the last employee so the content stays rendered while the dialog animates
+    // closed — the prop goes null the moment it closes, which would blank the fade-out.
+    const [shown, setShown] = useState(employee);
+    useEffect(() => {
+        if (employee) setShown(employee);
+    }, [employee]);
+
     // Reset the form whenever a different employee is opened. Skip on close (employee → null)
     // so the "✓ Saved" state isn't reverted to "Save" mid-way through the exit animation.
     useEffect(() => {
@@ -106,7 +113,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         }
     };
 
-    const empName = employee ? (lang === 'th' ? (employee.name_th ?? employee.name) : employee.name) : '';
+    const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
 
     return (
         <>
@@ -119,7 +126,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         </DialogTitle>
                         <DialogDescription>
                             {empName}
-                            {employee?.code ? ` (${employee.code})` : ''}
+                            {shown?.code ? ` (${shown.code})` : ''}
                         </DialogDescription>
                     </DialogHeader>
 
