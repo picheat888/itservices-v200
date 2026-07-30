@@ -195,7 +195,6 @@ export const employee: Dict = {
     cred_err_no_match: 'Passwords do not match',
     cred_err_username_taken: 'This username is already taken',
     cred_err_username_format: 'Use English letters, digits, and . _ - only — starting with a letter (max 30)',
-    cred_password_hint: 'At least 8 characters, with mixed case, a number and a symbol',
     cred_err_password_policy: 'Password does not meet the requirements below',
     cred_rule_length: 'At least 8 characters',
     cred_rule_upper: 'Uppercase letter (A–Z)',
