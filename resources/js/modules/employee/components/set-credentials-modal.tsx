@@ -145,9 +145,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </DialogHeader>
 
                     <div className="space-y-3">
-                        {/* Auto-generate */}
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="text-muted-foreground text-xs">{t('cred_auto_hint')}</span>
+                        {/* Auto-generate — fills the fields below, which show the result themselves. */}
+                        <div className="flex justify-end">
                             <Button type="button" variant="outline" size="sm" onClick={handleAuto}>
                                 <Wand2 className="h-4 w-4" />
                                 {t('cred_auto')}
