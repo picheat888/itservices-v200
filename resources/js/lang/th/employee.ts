@@ -195,7 +195,6 @@ export const employee: Dict = {
     cred_err_no_match: 'Password ไม่ตรงกัน',
     cred_err_username_taken: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว',
     cred_err_username_format: 'ใช้ตัวอักษรอังกฤษ ตัวเลข และ . _ - เท่านั้น โดยขึ้นต้นด้วยตัวอักษร (ไม่เกิน 30 ตัว)',
-    cred_password_hint: 'อย่างน้อย 8 ตัวอักษร มีตัวพิมพ์ใหญ่-เล็ก ตัวเลข และอักขระพิเศษ',
     cred_err_password_policy: 'Password ยังไม่ตรงตามเงื่อนไขด้านล่าง',
     cred_rule_length: 'อย่างน้อย 8 ตัวอักษร',
     cred_rule_upper: 'ตัวพิมพ์ใหญ่ (A–Z)',

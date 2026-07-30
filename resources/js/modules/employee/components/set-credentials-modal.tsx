@@ -10,8 +10,9 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, PASSWORD_RULES, randomPassword } from '../lib/password';
+import { isValidPassword, randomPassword } from '../lib/password';
 import { isValidUsername } from '../lib/username';
+import { PasswordChecklist } from './password-checklist';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
@@ -213,14 +214,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 autoComplete="off"
                             />
                         </Field>
-                        <Field
-                            label={t('cred_password')}
-                            required
-                            name="password"
-                            error={errors.password}
-                            // The checklist below takes over once typing starts.
-                            help={password ? undefined : t('cred_password_hint')}
-                        >
+                        {/* No `help` text here — the checklist below states the rules in full. */}
+                        <Field label={t('cred_password')} required name="password" error={errors.password}>
                             <div className="relative">
                                 <Input
                                     type={showPw ? 'text' : 'password'}
@@ -243,30 +238,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 </button>
                             </div>
 
-                            {/* Live policy checklist — each line ticks green the moment it passes. */}
-                            {password.length > 0 && (
-                                <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                                    {PASSWORD_RULES.map((rule) => {
-                                        const met = rule.test(password);
-                                        return (
-                                            <li
-                                                key={rule.key}
-                                                className={cn(
-                                                    'flex items-center gap-1.5 text-[11px] transition-colors',
-                                                    met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
-                                                )}
-                                            >
-                                                {met ? (
-                                                    <Check className="h-3 w-3 shrink-0" />
-                                                ) : (
-                                                    <span className="bg-muted-foreground/50 h-1 w-1 shrink-0 rounded-full" />
-                                                )}
-                                                {t(rule.labelKey)}
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
+                            <PasswordChecklist value={password} className="mt-2" />
                         </Field>
                         <Field label={t('cred_confirm_password')} required name="confirm" error={errors.confirm}>
                             <div className="relative">

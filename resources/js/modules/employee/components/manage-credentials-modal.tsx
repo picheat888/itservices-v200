@@ -1,7 +1,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Field } from '@/shared/components/field';
-import { cn } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -11,8 +10,9 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, PASSWORD_RULES } from '../lib/password';
+import { isValidPassword } from '../lib/password';
 import { isValidUsername } from '../lib/username';
+import { PasswordChecklist } from './password-checklist';
 
 /**
  * "จัดการบัญชี" dialog for an employee who already has a login account.
@@ -164,32 +164,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             autoComplete="new-password"
                                         />
                                     </Field>
-                                    {password.length > 0 ? (
-                                        // Live policy checklist — only relevant once a custom password is typed.
-                                        <ul className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                            {PASSWORD_RULES.map((rule) => {
-                                                const met = rule.test(password);
-                                                return (
-                                                    <li
-                                                        key={rule.key}
-                                                        className={cn(
-                                                            'flex items-center gap-1.5 text-[11px] transition-colors',
-                                                            met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
-                                                        )}
-                                                    >
-                                                        {met ? (
-                                                            <Check className="h-3 w-3 shrink-0" />
-                                                        ) : (
-                                                            <span className="bg-muted-foreground/50 h-1 w-1 shrink-0 rounded-full" />
-                                                        )}
-                                                        {t(rule.labelKey)}
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    ) : (
-                                        <p className="text-muted-foreground text-xs">{t('emp_cred_reset_hint')}</p>
-                                    )}
+                                    {/* The hint covers the blank case; the checklist covers a typed one. */}
+                                    <p className="text-muted-foreground text-xs">{t('emp_cred_reset_hint')}</p>
+                                    <PasswordChecklist value={password} />
                                     <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
