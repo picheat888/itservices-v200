@@ -191,7 +191,7 @@ export const employee: Dict = {
     cred_no_account: 'ยังไม่มีบัญชี',
     cred_no_account_desc: 'พนักงานคนนี้ยังไม่มีบัญชีเข้าใช้งาน กรุณาตั้ง Username และ Password เพื่อให้ล็อกอินได้',
     cred_err_username_required: 'กรุณากรอก Username',
-    cred_err_password_short: 'Password ต้องมีอย่างน้อย 6 ตัวอักษร',
+    cred_err_password_short: 'Password ต้องมีอย่างน้อย 8 ตัวอักษร',
     cred_err_no_match: 'Password ไม่ตรงกัน',
     cred_err_username_taken: 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว',
     cred_err_username_format: 'ใช้ตัวอักษรอังกฤษ ตัวเลข และ . _ - เท่านั้น โดยขึ้นต้นด้วยตัวอักษร (ไม่เกิน 30 ตัว)',

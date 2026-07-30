@@ -191,7 +191,7 @@ export const employee: Dict = {
     cred_no_account: 'No account',
     cred_no_account_desc: 'This employee has no login account yet. Set a username & password to enable sign-in.',
     cred_err_username_required: 'Username is required',
-    cred_err_password_short: 'Password must be at least 6 characters',
+    cred_err_password_short: 'Password must be at least 8 characters',
     cred_err_no_match: 'Passwords do not match',
     cred_err_username_taken: 'This username is already taken',
     cred_err_username_format: 'Use English letters, digits, and . _ - only — starting with a letter (max 30)',

@@ -117,6 +117,23 @@ class EmployeeCredentialsManageTest extends TestCase
         }
     }
 
+    /** Admin-set passwords honour the same 8-character floor as a user's own password change. */
+    public function test_password_shorter_than_eight_characters_is_rejected(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7010', 'short_pw');
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'sec123'])
+            ->assertStatus(422)->assertJsonValidationErrors('password');
+
+        $fresh = Employee::create(['code' => 'EMP-7011', 'first_name' => 'Short', 'last_name' => 'Pass']);
+        $this->postJson("/api/employees/{$fresh->id}/credentials", [
+            'username' => 'short_pw2',
+            'password' => 'sec123',
+            'password_confirmation' => 'sec123',
+        ])->assertStatus(422)->assertJsonValidationErrors('password');
+    }
+
     public function test_create_credentials_rejects_a_non_english_username(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
