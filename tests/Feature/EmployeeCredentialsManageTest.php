@@ -55,9 +55,9 @@ class EmployeeCredentialsManageTest extends TestCase
             ->assertOk()->assertJsonPath('new_password', 'EMP-7002');
         $this->assertTrue(Hash::check('EMP-7002', $employee->fresh()->user->password));
 
-        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'custom-secret'])
-            ->assertOk()->assertJsonPath('new_password', 'custom-secret');
-        $this->assertTrue(Hash::check('custom-secret', $employee->fresh()->user->password));
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'Custom-Secret9'])
+            ->assertOk()->assertJsonPath('new_password', 'Custom-Secret9');
+        $this->assertTrue(Hash::check('Custom-Secret9', $employee->fresh()->user->password));
     }
 
     public function test_force_change_flag_is_set_and_cleared_per_reset(): void
@@ -117,20 +117,36 @@ class EmployeeCredentialsManageTest extends TestCase
         }
     }
 
-    /** Admin-set passwords honour the same 8-character floor as a user's own password change. */
-    public function test_password_shorter_than_eight_characters_is_rejected(): void
+    /**
+     * Admin-set passwords follow the AD-style complexity policy: 8+ characters with mixed
+     * case, a digit and a symbol — the same set the forms tick off in their live checklist.
+     */
+    public function test_password_policy_is_enforced(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
-        $employee = $this->makeEmployeeWithAccount('EMP-7010', 'short_pw');
+        $employee = $this->makeEmployeeWithAccount('EMP-7010', 'policy_pw');
 
-        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'sec123'])
-            ->assertStatus(422)->assertJsonValidationErrors('password');
+        $rejected = [
+            'Sec12!',          // too short
+            'secret123!',      // no uppercase
+            'SECRET123!',      // no lowercase
+            'SecretPass!',     // no digit
+            'SecretPass1',     // no symbol
+        ];
+        foreach ($rejected as $bad) {
+            $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => $bad])
+                ->assertStatus(422)->assertJsonValidationErrors('password');
+        }
 
-        $fresh = Employee::create(['code' => 'EMP-7011', 'first_name' => 'Short', 'last_name' => 'Pass']);
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'SecretPass1!'])
+            ->assertOk();
+
+        // The same policy applies when the account is first created.
+        $fresh = Employee::create(['code' => 'EMP-7011', 'first_name' => 'Weak', 'last_name' => 'Pass']);
         $this->postJson("/api/employees/{$fresh->id}/credentials", [
-            'username' => 'short_pw2',
-            'password' => 'sec123',
-            'password_confirmation' => 'sec123',
+            'username' => 'weak_pw',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
         ])->assertStatus(422)->assertJsonValidationErrors('password');
     }
 
@@ -141,8 +157,8 @@ class EmployeeCredentialsManageTest extends TestCase
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
             'username' => 'สมชาย',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'password' => 'Secret123!',
+            'password_confirmation' => 'Secret123!',
         ])->assertStatus(422)->assertJsonValidationErrors('username');
 
         $this->assertFalse($employee->fresh()->user()->exists());
@@ -155,8 +171,8 @@ class EmployeeCredentialsManageTest extends TestCase
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
             'username' => 'fresh_user',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'password' => 'Secret123!',
+            'password_confirmation' => 'Secret123!',
             'force_change' => true,
         ])->assertCreated();
 

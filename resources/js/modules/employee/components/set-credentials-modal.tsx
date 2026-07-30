@@ -10,18 +10,8 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
+import { isValidPassword, PASSWORD_RULES, randomPassword } from '../lib/password';
 import { isValidUsername } from '../lib/username';
-
-// 0/O and 1/l/I are left out so a generated password survives being read aloud,
-// written on a note, or retyped by the employee without confusion.
-const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-
-/** Random temporary password drawn from an unambiguous alphabet (crypto-grade source). */
-function randomPassword(length = 12): string {
-    const picks = new Uint32Array(length);
-    crypto.getRandomValues(picks);
-    return Array.from(picks, (n) => PASSWORD_ALPHABET[n % PASSWORD_ALPHABET.length]).join('');
-}
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
@@ -122,7 +112,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         const e: Record<string, string> = {};
         if (!username.trim()) e.username = t('cred_err_username_required');
         else if (!isValidUsername(username.trim())) e.username = t('cred_err_username_format');
-        if (password.length < 8) e.password = t('cred_err_password_short');
+        if (!isValidPassword(password)) e.password = t('cred_err_password_policy');
         if (!confirm || password !== confirm) e.confirm = t('cred_err_no_match');
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);
@@ -223,7 +213,14 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 autoComplete="off"
                             />
                         </Field>
-                        <Field label={t('cred_password')} required name="password" error={errors.password} help={t('cred_password_hint')}>
+                        <Field
+                            label={t('cred_password')}
+                            required
+                            name="password"
+                            error={errors.password}
+                            // The checklist below takes over once typing starts.
+                            help={password ? undefined : t('cred_password_hint')}
+                        >
                             <div className="relative">
                                 <Input
                                     type={showPw ? 'text' : 'password'}
@@ -245,6 +242,31 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                     {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
+
+                            {/* Live policy checklist — each line ticks green the moment it passes. */}
+                            {password.length > 0 && (
+                                <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                                    {PASSWORD_RULES.map((rule) => {
+                                        const met = rule.test(password);
+                                        return (
+                                            <li
+                                                key={rule.key}
+                                                className={cn(
+                                                    'flex items-center gap-1.5 text-[11px] transition-colors',
+                                                    met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                                                )}
+                                            >
+                                                {met ? (
+                                                    <Check className="h-3 w-3 shrink-0" />
+                                                ) : (
+                                                    <span className="bg-muted-foreground/50 h-1 w-1 shrink-0 rounded-full" />
+                                                )}
+                                                {t(rule.labelKey)}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
                         </Field>
                         <Field label={t('cred_confirm_password')} required name="confirm" error={errors.confirm}>
                             <div className="relative">
