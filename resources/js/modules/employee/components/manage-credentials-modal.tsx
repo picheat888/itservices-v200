@@ -131,7 +131,13 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                 {t('emp_cred_username_section')}
                             </div>
                             <div className="flex items-center gap-2">
-                                <Input value={username} onChange={(e) => setUsername(e.target.value)} className="font-mono" autoComplete="off" />
+                                {/* Lower-cased as it's typed, matching what the API stores. */}
+                                <Input
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                                    className="font-mono"
+                                    autoComplete="off"
+                                />
                                 <Button onClick={saveUsername} disabled={updateCredentials.isPending || !username.trim()}>
                                     {updateCredentials.isPending ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />

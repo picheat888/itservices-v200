@@ -46,6 +46,24 @@ class EmployeeCredentialsManageTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('username');
     }
 
+    /** Logins are case-insensitive, so "John_Do" must not slip past an existing "john_do". */
+    public function test_username_uniqueness_ignores_letter_case(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7012', 'case_owner');
+        User::factory()->create(['username' => 'john_do']);
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'John_Do'])
+            ->assertStatus(422)->assertJsonValidationErrors('username');
+
+        $fresh = Employee::create(['code' => 'EMP-7013', 'first_name' => 'Case', 'last_name' => 'Clash']);
+        $this->postJson("/api/employees/{$fresh->id}/credentials", [
+            'username' => 'JOHN_DO',
+            'password' => 'Secret123!',
+            'password_confirmation' => 'Secret123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('username');
+    }
+
     public function test_reset_defaults_to_employee_code_and_custom_password_wins(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
