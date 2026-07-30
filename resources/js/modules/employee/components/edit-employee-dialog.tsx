@@ -462,7 +462,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 }}
             >
                 <DialogContent
-                    className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[900px] flex-col gap-0 overflow-hidden p-0"
+                    className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[1100px] flex-col gap-0 overflow-hidden p-0"
                     onKeyDown={(e) => {
                         // Skip Enter-to-submit when focus is on an interactive element that
                         // has its own click/change handler (button, select, option).
