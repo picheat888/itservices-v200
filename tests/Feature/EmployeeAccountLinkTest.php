@@ -27,8 +27,8 @@ class EmployeeAccountLinkTest extends TestCase
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
             'username' => 'newhire',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'password' => 'Secret123!',
+            'password_confirmation' => 'Secret123!',
         ])->assertCreated();
 
         $user = User::where('username', 'newhire')->first();
@@ -46,8 +46,8 @@ class EmployeeAccountLinkTest extends TestCase
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
             'username' => 'taken_user',
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
+            'password' => 'Secret123!',
+            'password_confirmation' => 'Secret123!',
         ])->assertStatus(422)->assertJsonValidationErrors('username');
 
         $this->assertFalse($employee->fresh()->user()->exists());
@@ -86,7 +86,7 @@ class EmployeeAccountLinkTest extends TestCase
         User::factory()->create(['employee_id' => $employee->id]);
 
         $this->postJson("/api/employees/{$employee->id}/credentials", [
-            'username' => 'dupuser', 'password' => 'secret123', 'password_confirmation' => 'secret123',
+            'username' => 'dupuser', 'password' => 'Secret123!', 'password_confirmation' => 'Secret123!',
         ])->assertStatus(422);
     }
 

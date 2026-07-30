@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
@@ -36,6 +37,15 @@ class EmployeeController extends Controller
      * @var list<string>
      */
     private const USERNAME_RULES = ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$/'];
+
+    /**
+     * Password policy for admin-set credentials — the complexity set Active Directory and most
+     * corporate policies use. The forms mirror it as a live checklist; this copy is the authority.
+     */
+    private static function passwordRule(): Password
+    {
+        return Password::min(8)->mixedCase()->numbers()->symbols();
+    }
 
     public function __construct(private readonly EmployeeService $service) {}
 
@@ -443,7 +453,7 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($user->id)],
             'reset_password' => ['sometimes', 'boolean'],
-            'password' => ['nullable', 'string', 'min:8'],
+            'password' => ['nullable', 'string', self::passwordRule()],
             'force_change' => ['sometimes', 'boolean'],
         ]);
 
@@ -491,7 +501,7 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'username' => [...self::USERNAME_RULES, 'unique:users,username'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', self::passwordRule()],
             'force_change' => ['sometimes', 'boolean'],
         ]);
 
