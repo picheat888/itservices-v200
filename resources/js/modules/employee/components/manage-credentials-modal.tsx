@@ -39,6 +39,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const [newPassword, setNewPassword] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [copied, setCopied] = useState(false);
+    // Which action is in flight. Both buttons drive the same mutation, so its `isPending`
+    // alone would spin them together — this keeps the spinner on the one that was clicked.
+    const [busy, setBusy] = useState<'username' | 'password' | null>(null);
 
     // Retain the last employee so the content stays rendered while the dialog animates
     // closed — the prop goes null the moment it closes, which would blank the fade-out.
@@ -57,12 +60,13 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         setNewPassword(null);
         setError('');
         setCopied(false);
+        setBusy(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
 
     /**
-     * Renaming changes how this person signs in, so it goes through a confirm step showing
-     * the old → new pair. The dialog owns the spinner while the request runs.
+     * Renaming changes how this person signs in, so it goes through a confirm step first.
+     * The confirm dialog owns the spinner while the request runs.
      */
     const saveUsername = async () => {
         if (!employee || !username.trim()) return;
@@ -80,8 +84,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
             icon: KeyRound,
             title: t('emp_cred_username_confirm_title'),
             description: t('emp_cred_username_confirm_desc'),
-            entity: { name: next, sub: employee.username ?? undefined },
             action: async () => {
+                setBusy('username');
                 try {
                     await updateCredentials.mutateAsync({ id: employee.id, payload: { username: next } });
                     setUsernameSaved(true);
@@ -89,6 +93,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
                     setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
                     throw e;
+                } finally {
+                    setBusy(null);
                 }
             },
         });
@@ -102,6 +108,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
             setError(t('cred_err_password_policy'));
             return;
         }
+        setBusy('password');
         try {
             const res = await updateCredentials.mutateAsync({
                 id: employee.id,
@@ -111,6 +118,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         } catch (e: unknown) {
             const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
             setError(data?.errors?.password?.[0] ?? data?.message ?? t('cred_err_generic'));
+        } finally {
+            setBusy(null);
         }
     };
 
@@ -156,8 +165,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                     className="font-mono"
                                     autoComplete="off"
                                 />
-                                <Button onClick={saveUsername} disabled={updateCredentials.isPending || !username.trim()}>
-                                    {updateCredentials.isPending ? (
+                                <Button onClick={saveUsername} disabled={busy !== null || !username.trim()}>
+                                    {busy === 'username' ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : usernameSaved ? (
                                         <Check className="h-4 w-4" />
@@ -195,12 +204,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                                     </div>
-                                    <Button className="w-full" variant="outline" onClick={resetPassword} disabled={updateCredentials.isPending}>
-                                        {updateCredentials.isPending ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <KeyRound className="h-4 w-4" />
-                                        )}
+                                    <Button className="w-full" variant="outline" onClick={resetPassword} disabled={busy !== null}>
+                                        {busy === 'password' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                         {t('emp_cred_reset_btn')}
                                     </Button>
                                 </>
