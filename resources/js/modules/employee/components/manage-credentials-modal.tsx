@@ -10,6 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
+import { isValidUsername } from '../lib/username';
 
 /**
  * "จัดการบัญชี" dialog for an employee who already has a login account.
@@ -60,6 +61,10 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         if (!employee || !username.trim()) return;
         setError('');
         setUsernameSaved(false);
+        if (!isValidUsername(username.trim())) {
+            setError(t('cred_err_username_format'));
+            return;
+        }
         try {
             await updateCredentials.mutateAsync({ id: employee.id, payload: { username: username.trim() } });
             setUsernameSaved(true);

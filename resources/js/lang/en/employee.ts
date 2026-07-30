@@ -194,6 +194,7 @@ export const employee: Dict = {
     cred_err_password_short: 'Password must be at least 6 characters',
     cred_err_no_match: 'Passwords do not match',
     cred_err_username_taken: 'This username is already taken',
+    cred_err_username_format: 'Use English letters, digits, and . _ - only — starting with a letter (max 30)',
     cred_err_generic: 'An error occurred',
     emp_set_credentials: 'Set User & Password',
     emp_account_pending_title: 'Login account',

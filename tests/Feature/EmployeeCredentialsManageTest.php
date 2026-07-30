@@ -98,6 +98,39 @@ class EmployeeCredentialsManageTest extends TestCase
         $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])->assertOk();
     }
 
+    /**
+     * Login names are English-only: they must start with a letter, end with a letter or digit,
+     * and may use . _ - in between. Short shared names like "hr" stay valid.
+     */
+    public function test_username_format_is_enforced(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7008', 'format_user');
+
+        foreach (['สมชาย', 'john doe', 'john@doe', '1john', '_john', 'john_', 'j', str_repeat('a', 31)] as $bad) {
+            $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => $bad])
+                ->assertStatus(422)->assertJsonValidationErrors('username');
+        }
+
+        foreach (['hr', 'john.doe', 'john_do2', 'John-Doe'] as $good) {
+            $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => $good])->assertOk();
+        }
+    }
+
+    public function test_create_credentials_rejects_a_non_english_username(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = Employee::create(['code' => 'EMP-7009', 'first_name' => 'Thai', 'last_name' => 'Name']);
+
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'สมชาย',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertStatus(422)->assertJsonValidationErrors('username');
+
+        $this->assertFalse($employee->fresh()->user()->exists());
+    }
+
     public function test_create_credentials_accepts_force_change(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
