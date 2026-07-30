@@ -186,7 +186,7 @@ export const employee: Dict = {
     cred_auto: 'สร้างอัตโนมัติ',
     cred_auto_title: 'ข้อมูลเข้าระบบที่สร้างให้',
     cred_auto_hint: 'จากชื่อ + รหัสพนักงาน',
-    cred_share_hint: 'แจ้งข้อมูลนี้ให้พนักงาน — รหัสผ่านแสดงเฉพาะที่นี่',
+    cred_share_hint: 'คุณสามารถคัดลอก เพื่อแชร์ให้กับพนักงานได้',
     cred_copied: 'คัดลอกแล้ว',
     cred_saving: 'กำลังบันทึก…',
     cred_has_account: 'มีบัญชีแล้ว',
@@ -259,5 +259,5 @@ export const employee: Dict = {
     emp_cred_force_change: 'บังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งถัดไป',
     emp_cred_reset_btn: 'Reset Password',
     cred_saved_title: 'สร้างบัญชีเรียบร้อย',
-    cred_copy_all: 'คัดลอกทั้งคู่',
+    cred_copy: 'คัดลอก',
 };
