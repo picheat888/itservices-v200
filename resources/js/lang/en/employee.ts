@@ -260,6 +260,8 @@ export const employee: Dict = {
     emp_cred_manage_title: 'Manage Account',
     emp_cred_username_section: 'Username',
     emp_cred_username_saved: 'Username updated',
+    emp_cred_username_confirm_title: 'Change this username?',
+    emp_cred_username_confirm_desc: 'They will need the new username to sign in from now on. The current session stays open.',
     emp_cred_reset_section: 'Reset Password',
     emp_cred_reset_hint: 'Leave blank to use the employee code',
     emp_cred_force_change: 'Require a password change at next sign-in',

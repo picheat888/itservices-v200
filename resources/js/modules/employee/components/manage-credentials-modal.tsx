@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { Field } from '@/shared/components/field';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
@@ -25,6 +26,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
+    const confirm = useConfirm();
     const { updateCredentials } = useEmployeeMutations();
 
     const canUsername = can('employees.set_credentials');
@@ -58,21 +60,38 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [employee?.id]);
 
+    /**
+     * Renaming changes how this person signs in, so it goes through a confirm step showing
+     * the old → new pair. The dialog owns the spinner while the request runs.
+     */
     const saveUsername = async () => {
         if (!employee || !username.trim()) return;
+        const next = username.trim();
         setError('');
         setUsernameSaved(false);
-        if (!isValidUsername(username.trim())) {
+        if (!isValidUsername(next)) {
             setError(t('cred_err_username_format'));
             return;
         }
-        try {
-            await updateCredentials.mutateAsync({ id: employee.id, payload: { username: username.trim() } });
-            setUsernameSaved(true);
-        } catch (e: unknown) {
-            const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-            setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
-        }
+        if (next === (employee.username ?? '')) return;
+
+        await confirm({
+            variant: 'warn',
+            icon: KeyRound,
+            title: t('emp_cred_username_confirm_title'),
+            description: t('emp_cred_username_confirm_desc'),
+            entity: { name: next, sub: employee.username ?? undefined },
+            action: async () => {
+                try {
+                    await updateCredentials.mutateAsync({ id: employee.id, payload: { username: next } });
+                    setUsernameSaved(true);
+                } catch (e: unknown) {
+                    const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+                    setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
+                    throw e;
+                }
+            },
+        });
     };
 
     const resetPassword = async () => {
