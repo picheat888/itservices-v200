@@ -258,4 +258,5 @@ export const employee: Dict = {
     emp_cred_reset_hint: 'เว้นว่างเพื่อใช้รหัสพนักงาน',
     emp_cred_force_change: 'บังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งถัดไป',
     emp_cred_reset_btn: 'Reset Password',
+    cred_saved_title: 'สร้างบัญชีเรียบร้อย',
 };
