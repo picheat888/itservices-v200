@@ -8,6 +8,7 @@ export function Field({
     required,
     help,
     name,
+    action,
     children,
 }: {
     label: string;
@@ -16,14 +17,27 @@ export function Field({
     help?: string;
     /** Field key — exposed as data-field so a form can scroll/focus it on validation error. */
     name?: string;
+    /** Optional control shown at the right end of the label row (e.g. a "generate for me" shortcut). */
+    action?: React.ReactNode;
     children: React.ReactNode;
 }) {
+    const labelNode = (
+        <Label>
+            {label}
+            {required && <span className="text-destructive ml-0.5">*</span>}
+        </Label>
+    );
+
     return (
         <div data-field={name} className="space-y-1.5">
-            <Label>
-                {label}
-                {required && <span className="text-destructive ml-0.5">*</span>}
-            </Label>
+            {action ? (
+                <div className="flex min-h-6 items-center justify-between gap-2">
+                    {labelNode}
+                    {action}
+                </div>
+            ) : (
+                labelNode
+            )}
             {/* On error, tint the control(s) inside red — input/textarea/select and
                 button-style triggers (SearchableSelect) all pick up the border.
                 The focus: overrides must stay: the controls' own focus-visible:border-brand
