@@ -207,22 +207,21 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     // A "special position" skips both the Department and Report-to requirements.
     const posIsSpecial = positions.find((p) => String(p.id) === form.positionId)?.allow_special_position ?? false;
 
-    /** Validates personal info (step 1) or employment info (step 2). */
-    const validateStep = (s: number) => {
+    /**
+     * Validates every field in one pass. Both columns are on screen together, so all the
+     * problems are flagged at once instead of surfacing one section at a time.
+     */
+    const validate = () => {
         const e: Record<string, string> = {};
-        if (s === 1) {
-            if (!form.firstName.trim()) e.firstName = t('emp_err_first');
-            if (!form.lastName.trim()) e.lastName = t('emp_err_last');
-            // ASCII-only practical pattern — rejects unicode (สมชาย@…), double @, and spaces up front.
-            if (form.email && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) e.email = t('emp_err_email');
-        }
-        if (s === 2) {
-            if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
-            if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
-            if (!form.positionId) e.positionId = t('emp_err_pos');
-            if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
-            if (!form.joinedAt) e.joinedAt = t('emp_err_start');
-        }
+        if (!form.firstName.trim()) e.firstName = t('emp_err_first');
+        if (!form.lastName.trim()) e.lastName = t('emp_err_last');
+        // ASCII-only practical pattern — rejects unicode (สมชาย@…), double @, and spaces up front.
+        if (form.email && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) e.email = t('emp_err_email');
+        if (!form.departmentId && !posIsSpecial) e.departmentId = t('emp_err_dept');
+        if (!form.sectionId && !posIsSpecial) e.sectionId = t('emp_err_section');
+        if (!form.positionId) e.positionId = t('emp_err_pos');
+        if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
+        if (!form.joinedAt) e.joinedAt = t('emp_err_start');
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);
         return Object.keys(e).length === 0;
@@ -233,7 +232,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
      * otherwise commit the update immediately.
      */
     const submit = async () => {
-        if (!validateStep(1) || !validateStep(2)) return;
+        if (!validate()) return;
         if (orgChanges.length > 0) {
             setOrgConfirm(true);
             return;
@@ -301,9 +300,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         setCropSrc(URL.createObjectURL(file));
     };
 
-    // Accent uses the system brand colour — it no longer changes per department tag.
-    const accent = 'var(--brand)';
-
     const status = employee?.status;
 
     // ── Shared field blocks ──────────────────────────────────────────────────
@@ -320,12 +316,14 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             <div className="min-w-0">
                 <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
                     <Upload className="h-4 w-4" />
-                    {photo ? t('emp_photo_change') : t('emp_photo')}
+                    {/* Keyed off the rendered photo, not the pending pick — an employee who already
+                        has one is changing it, not adding it. */}
+                    {photoUrl ? t('emp_photo_change') : t('emp_photo')}
                     <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => onPhoto(e.target.files?.[0])} />
                 </label>
                 {photo && (
-                    <button onClick={() => setPhoto(null)} className="text-destructive ml-2 text-sm hover:underline">
-                        {t('emp_photo_remove')}
+                    <button type="button" onClick={() => setPhoto(null)} className="text-destructive ml-2 text-sm hover:underline">
+                        {t('cancel')}
                     </button>
                 )}
                 {photoError ? (
@@ -530,11 +528,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                 <Button variant="outline" onClick={() => setOrgConfirm(false)} disabled={update.isPending}>
                                     {t('cancel')}
                                 </Button>
-                                <Button
-                                    onClick={persist}
-                                    disabled={update.isPending}
-                                    style={update.isPending ? undefined : { background: accent, borderColor: accent }}
-                                >
+                                <Button onClick={persist} disabled={update.isPending}>
                                     {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                     {update.isPending ? t('saving') : t('emp_org_confirm')}
                                 </Button>
@@ -596,11 +590,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                 <Button variant="outline" onClick={onClose}>
                                     {t('cancel')}
                                 </Button>
-                                <Button
-                                    onClick={submit}
-                                    disabled={update.isPending || saved || !isDirty}
-                                    style={update.isPending || saved || !isDirty ? undefined : { background: accent, borderColor: accent }}
-                                >
+                                <Button onClick={submit} disabled={update.isPending || saved || !isDirty}>
                                     {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : null}
                                     {update.isPending ? t('saving') : saved ? t('saved') : t('save')}
                                 </Button>
