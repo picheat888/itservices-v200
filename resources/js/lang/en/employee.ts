@@ -222,7 +222,6 @@ export const employee: Dict = {
     emp_v_resigned_note: 'This employee has resigned',
     emp_v_last_day: 'Last day',
     emp_v_contact: 'Contact',
-    emp_v_phone: 'Phone',
     emp_v_credentials: 'Credentials',
     emp_v_employment: 'Employment',
     emp_v_tab_org: 'Organization',
