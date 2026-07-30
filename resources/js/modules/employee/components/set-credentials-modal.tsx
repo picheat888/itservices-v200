@@ -122,7 +122,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         const e: Record<string, string> = {};
         if (!username.trim()) e.username = t('cred_err_username_required');
         else if (!isValidUsername(username.trim())) e.username = t('cred_err_username_format');
-        if (password.length < 6) e.password = t('cred_err_password_short');
+        if (password.length < 8) e.password = t('cred_err_password_short');
         if (!confirm || password !== confirm) e.confirm = t('cred_err_no_match');
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);

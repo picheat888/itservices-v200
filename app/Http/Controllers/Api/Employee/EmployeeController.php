@@ -443,7 +443,7 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'username' => ['sometimes', ...self::USERNAME_RULES, Rule::unique('users', 'username')->ignore($user->id)],
             'reset_password' => ['sometimes', 'boolean'],
-            'password' => ['nullable', 'string', 'min:6'],
+            'password' => ['nullable', 'string', 'min:8'],
             'force_change' => ['sometimes', 'boolean'],
         ]);
 
@@ -491,7 +491,7 @@ class EmployeeController extends Controller
 
         $data = $request->validate([
             'username' => [...self::USERNAME_RULES, 'unique:users,username'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'force_change' => ['sometimes', 'boolean'],
         ]);
 
