@@ -1,15 +1,5 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type {
-    AccessKind,
-    AccessMember,
-    AccessSummary,
-    ApiEnvelope,
-    EmailGroup,
-    EmployeeAccess,
-    FileShare,
-    SocialPlatform,
-    Software,
-} from '@/shared/types';
+import type { AccessKind, AccessMember, AccessSummary, ApiEnvelope, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
@@ -73,6 +63,4 @@ export const accessApi = {
     // Set/clear a file share's owner — same drawer tier as email groups, but optional.
     setFileShareOwner: (id: number, ownerEmployeeId: number | null) =>
         mutate<FileShare>('put', `/file-shares/${id}/owner`, { owner_employee_id: ownerEmployeeId }),
-
-    employeeAccess: (employeeId: number) => http.get<ApiEnvelope<EmployeeAccess>>(`/employees/${employeeId}/access`).then((r) => r.data.data),
 };

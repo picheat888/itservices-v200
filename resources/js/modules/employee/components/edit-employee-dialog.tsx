@@ -4,7 +4,7 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError, sanitizePhone } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, Upload, User, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, SquarePen, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
@@ -362,7 +362,13 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
             </Field>
             <Field label={t('emp_phone')}>
-                <Input className="font-mono" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+1 202 555 0100" />
+                <Input
+                    className="font-mono"
+                    value={form.phone}
+                    onChange={(e) => set('phone', sanitizePhone(e.target.value))}
+                    placeholder="+66 81 234 5678"
+                    inputMode="tel"
+                />
             </Field>
         </div>
     );
@@ -475,9 +481,9 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                     {cropDialog}
 
                     <FocusDialogHeader
-                        icon={User}
-                        image={photoUrl}
-                        round
+                        // The tile states what this dialog does; the photo itself lives in the
+                        // form below, where it can actually be changed.
+                        icon={SquarePen}
                         eyebrow={t('emp_v_edit_title')}
                         title={`${form.firstName} ${form.lastName}`.trim() || (employee?.name ?? '')}
                         code={employee?.code}
@@ -564,10 +570,9 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                     <SectionLabel>{t('emp_personal_info')}</SectionLabel>
                                     <div className="flex flex-col gap-3.5">
                                         {photoBlock}
-                                        {nameFields}
-                                        {/* The code identifies the person, so it closes the name block
-                                            rather than trailing the employment column. */}
+                                        {/* The code is the person's identifier, so it opens the block. */}
                                         {codeField}
+                                        {nameFields}
                                         {contactFields}
                                     </div>
                                 </section>

@@ -3,7 +3,7 @@ import type { OrgChartNode } from '@/shared/types';
 import { Background, Controls, getNodesBounds, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useOrgChart } from '../../hooks/use-org';
+import { useOrgChart } from '../../hooks/use-employees';
 import {
     deptColor,
     layoutPositions,

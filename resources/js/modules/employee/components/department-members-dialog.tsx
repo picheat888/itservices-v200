@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useUiStore } from '@/stores/ui';
 import { Building2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useDepartmentMembers, useSections } from '../hooks/use-org';
+import { useDepartmentMembers } from '../hooks/use-departments';
+import { useSections } from '../hooks/use-sections';
 
 /**
  * Focused dialog listing every employee in a department. Uses the shared

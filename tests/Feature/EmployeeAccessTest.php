@@ -53,4 +53,25 @@ class EmployeeAccessTest extends TestCase
 
         $this->getJson("/api/employees/{$e->id}/access")->assertOk()->assertJsonPath('data.outstanding', true);
     }
+
+    /** The endpoint is an Employee-module "peek" — employees.view alone is enough, no access.module needed. */
+    public function test_employee_access_endpoint_requires_only_employees_view(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'hr_viewer'], ['name' => 'HR Viewer']);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'employees.view'], ['allowed' => true]);
+        $this->actingAs(User::factory()->create(['role' => 'hr_viewer']));
+        $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
+
+        $this->getJson("/api/employees/{$e->id}/access")->assertOk();
+    }
+
+    /** Without employees.view the endpoint is forbidden. */
+    public function test_employee_access_endpoint_forbidden_without_employees_view(): void
+    {
+        Role::firstOrCreate(['key' => 'no_perms'], ['name' => 'No Perms']);
+        $this->actingAs(User::factory()->create(['role' => 'no_perms']));
+        $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
+
+        $this->getJson("/api/employees/{$e->id}/access")->assertForbidden();
+    }
 }

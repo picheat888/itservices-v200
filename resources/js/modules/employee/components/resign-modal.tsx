@@ -8,7 +8,7 @@ import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, Box, UserMinus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useEmployeeMutations } from '../hooks/use-org';
+import { useEmployeeMutations } from '../hooks/use-employees';
 
 export function ResignModal({ employee, onClose, onDone }: { employee: Employee | null; onClose: () => void; onDone: () => void }) {
     const t = useT();

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useEffect, useState } from 'react';
-import { usePositionMutations } from '../hooks/use-org';
+import { usePositionMutations } from '../hooks/use-positions';
 
 export function PositionModal({ open, onClose, position }: { open: boolean; onClose: () => void; position: Position | null }) {
     const t = useT();

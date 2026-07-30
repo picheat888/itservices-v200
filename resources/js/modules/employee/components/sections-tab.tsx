@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUiStore } from '@/stores/ui';
 import { ArrowUpDown, Plus, SquarePen, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useDepartments, useSectionMutations, useSections } from '../hooks/use-org';
+import { useDepartments } from '../hooks/use-departments';
+import { useSectionMutations, useSections } from '../hooks/use-sections';
 import { SectionMembersDialog } from './section-members-dialog';
 import { SectionModal } from './section-modal';
 

@@ -757,6 +757,8 @@ export interface EmployeeAccessRow {
     resource_code: string | null;
     resource_detail: string | null;
     resource_color: string | null;
+    /** Uploaded logo URL (social platforms + software); null for other resource types. */
+    resource_logo: string | null;
     access_level: string | null;
     purpose: string | null;
     granted_at: string | null;
