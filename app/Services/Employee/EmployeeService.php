@@ -52,14 +52,16 @@ class EmployeeService
      * Login is by username; the employee's email is mirrored onto the account
      * only as a contact field (it is not a login identifier).
      */
-    public function createUserWithCredentials(Employee $employee, string $username, string $password): User
+    public function createUserWithCredentials(Employee $employee, string $username, string $password, bool $mustChangePassword = false): User
     {
         $user = User::create([
             'name' => $employee->name,
             'email' => $employee->email ?: null,
             'username' => $username,
             'password' => Hash::make($password),
-            'password_changed_at' => now(),
+            // null marks the password as "never set by the user" so the forced-change flow fires.
+            'password_changed_at' => $mustChangePassword ? null : now(),
+            'must_change_password' => $mustChangePassword,
             'role_id' => $this->resolveGroupRole($employee),
             'employee_id' => $employee->id,
         ]);

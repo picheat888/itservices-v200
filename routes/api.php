@@ -88,10 +88,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('api.employees.import');
     Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('api.employees.resign');
     Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');
-    Route::post('employees/{employee}/reset-password', [EmployeeController::class, 'resetPassword'])->name('api.employees.reset-password');
+    Route::put('employees/{employee}/credentials', [EmployeeController::class, 'updateCredentials'])->name('api.employees.credentials.update');
     Route::post('employees/{employee}/credentials', [EmployeeController::class, 'credentials'])->name('api.employees.credentials');
     Route::get('employees/{employee}/approval-chain', [EmployeeController::class, 'approvalChain'])->name('api.employees.approval-chain');
     Route::get('employees/{employee}/assets', [EmployeeController::class, 'assets'])->name('api.employees.assets');
+    Route::get('employees/{employee}/access', [EmployeeController::class, 'access'])->name('api.employees.access');
+    Route::get('employees/{employee}/tickets', [EmployeeController::class, 'tickets'])->name('api.employees.tickets');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
     Route::apiResource('employees', EmployeeController::class);
     Route::get('positions/{position}/members', [PositionController::class, 'members'])->name('api.positions.members');
@@ -224,7 +226,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
             Route::get('software/{software}/members', [SoftwareController::class, 'members']);
         });
         Route::get('access/dashboard', [AccessController::class, 'dashboard'])->middleware('permission:access.overview');
-        Route::get('employees/{employee}/access', [AccessController::class, 'employee']);
 
         // Email Groups
         Route::post('email-groups', [EmailGroupController::class, 'store'])->middleware('permission:access.email_add');

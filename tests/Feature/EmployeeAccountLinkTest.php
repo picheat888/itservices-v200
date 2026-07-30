@@ -53,7 +53,7 @@ class EmployeeAccountLinkTest extends TestCase
         $this->assertFalse($employee->fresh()->user()->exists());
     }
 
-    public function test_reset_password_uses_fk_link(): void
+    public function test_credentials_update_uses_fk_link(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
 
@@ -61,10 +61,10 @@ class EmployeeAccountLinkTest extends TestCase
         User::factory()->create(['employee_id' => $linked->id]);
         $unlinked = Employee::create(['code' => 'EMP-9004', 'first_name' => 'Unlinked', 'last_name' => 'Test', 'email' => 'u@x.test']);
 
-        $this->postJson("/api/employees/{$linked->id}/reset-password")
+        $this->putJson("/api/employees/{$linked->id}/credentials", ['reset_password' => true])
             ->assertOk()->assertJsonPath('new_password', 'EMP-9003');
 
-        $this->postJson("/api/employees/{$unlinked->id}/reset-password")
+        $this->putJson("/api/employees/{$unlinked->id}/credentials", ['reset_password' => true])
             ->assertStatus(422)->assertJsonPath('message', 'no_account');
     }
 
