@@ -34,7 +34,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
+    // Each field reveals on its own — one eye never unmasks the other field.
     const [showPw, setShowPw] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
     // Force the employee to set their own password at the first sign-in (default on).
     const [forceChange, setForceChange] = useState(true);
     const [copied, setCopied] = useState<string | null>(null);
@@ -67,6 +69,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setConfirm('');
         setError('');
         setShowPw(false);
+        setShowConfirm(false);
         setForceChange(true);
         setSavedCreds(null);
         setSaved(false);
@@ -85,7 +88,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setUsername(u);
         setPassword(p);
         setConfirm(p);
+        // Both are revealed here so the generated pair can be checked before saving.
         setShowPw(true);
+        setShowConfirm(true);
         setError('');
     };
 
@@ -196,21 +201,20 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         <Field label={t('cred_confirm_password')}>
                             <div className="relative">
                                 <Input
-                                    type={showPw ? 'text' : 'password'}
+                                    type={showConfirm ? 'text' : 'password'}
                                     value={confirm}
                                     onChange={(e) => setConfirm(e.target.value)}
                                     className="pr-9 font-mono"
                                     placeholder="••••••"
                                     autoComplete="new-password"
                                 />
-                                {/* Shares showPw with the field above — either eye reveals both. */}
                                 <button
                                     type="button"
-                                    onClick={() => setShowPw((s) => !s)}
+                                    onClick={() => setShowConfirm((s) => !s)}
                                     className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
                                     tabIndex={-1}
                                 >
-                                    {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                         </Field>
