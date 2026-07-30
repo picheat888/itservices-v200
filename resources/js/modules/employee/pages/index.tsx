@@ -46,23 +46,16 @@ import { EditEmployeeDialog } from '../components/edit-employee-dialog';
 import { EmployeeViewDrawer } from '../components/employee-view-drawer';
 import { HiresTrendCard } from '../components/hires-trend-card';
 import { ImportEmployeeDialog } from '../components/import-employee-dialog';
+import { ManageCredentialsModal } from '../components/manage-credentials-modal';
 import { OrgChartTab } from '../components/org-chart/org-chart-tab';
 import { PositionMembersDialog } from '../components/position-members-dialog';
 import { PositionModal } from '../components/position-modal';
-import { ResetPasswordModal } from '../components/reset-password-modal';
 import { ResignModal } from '../components/resign-modal';
 import { SectionsTab } from '../components/sections-tab';
 import { SetCredentialsModal } from '../components/set-credentials-modal';
-import {
-    useDepartmentMutations,
-    useDepartments,
-    useEmployee,
-    useEmployeeDirectory,
-    useEmployeeMutations,
-    useEmployeeSummary,
-    usePositionMutations,
-    usePositions,
-} from '../hooks/use-org';
+import { useDepartmentMutations, useDepartments } from '../hooks/use-departments';
+import { useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
+import { usePositionMutations, usePositions } from '../hooks/use-positions';
 
 const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
@@ -589,7 +582,7 @@ export default function EmployeesPage() {
                     closeEmp();
                 }}
             />
-            <ResetPasswordModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
+            <ManageCredentialsModal employee={resetPwEmp} onClose={() => setResetPwEmp(null)} />
             <SetCredentialsModal employee={credEmp} onClose={() => setCredEmp(null)} />
             <PositionModal open={posModalOpen} onClose={() => setPosModalOpen(false)} position={editPos} />
             <DepartmentModal open={deptModalOpen} onClose={() => setDeptModalOpen(false)} department={editDept} />
@@ -735,10 +728,10 @@ function DirectoryTab({
                                     {t('emp_set_credentials')}
                                 </DropdownMenuItem>
                             )}
-                            {canResetPassword && e.has_account && (
+                            {(canResetPassword || canSetCredentials) && e.has_account && (
                                 <DropdownMenuItem onClick={() => onResetPassword(e)}>
                                     <KeyRound className="h-4 w-4" />
-                                    {t('reset_password')}
+                                    {t('emp_cred_manage_title')}
                                 </DropdownMenuItem>
                             )}
                             {canResign && e.status !== 'resigned' && (
@@ -871,7 +864,7 @@ function DirectoryTab({
     );
 }
 
-import type { EmployeeSummary } from '../api/orgApi';
+import type { EmployeeSummary } from '../api/employeeApi';
 
 const DASH_DEPT_LIMIT = 8;
 
