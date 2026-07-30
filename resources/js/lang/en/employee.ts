@@ -184,8 +184,6 @@ export const employee: Dict = {
     cred_confirm_password: 'Confirm Password',
     cred_save: 'Save Credentials',
     cred_auto: 'Auto-generate',
-    cred_auto_title: 'Generated credentials',
-    cred_auto_hint: 'From name + employee code',
     cred_share_hint: 'You can share these with your employees.',
     cred_copied: 'Copied',
     cred_saving: 'Saving…',
