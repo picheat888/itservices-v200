@@ -23,9 +23,16 @@ export function Switch({
             aria-label={ariaLabel}
             disabled={disabled}
             onClick={() => onChange(!checked)}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50', checked ? 'bg-brand' : 'bg-muted')}
+            className={cn(
+                'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50',
+                // Off-state uses muted-foreground (not bg-muted) so the track stays visible on
+                // muted surfaces (e.g. the bg-muted/40 rows in dialogs) in both themes.
+                checked ? 'bg-brand' : 'bg-muted-foreground/35',
+            )}
         >
-            <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all', checked ? 'left-[1.125rem]' : 'left-0.5')} />
+            <span
+                className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all', checked ? 'left-[1.125rem]' : 'left-0.5')}
+            />
         </button>
     );
 }
