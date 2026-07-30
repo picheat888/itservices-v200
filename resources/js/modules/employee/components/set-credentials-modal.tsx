@@ -39,6 +39,13 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         if (employee) setShown(employee);
     }, [employee]);
 
+    // Same retention for the stacked "Generated credentials" dialog — closing sets
+    // autoCreds to null, which would blank the username/password rows mid fade-out.
+    const [shownCreds, setShownCreds] = useState(autoCreds);
+    useEffect(() => {
+        if (autoCreds) setShownCreds(autoCreds);
+    }, [autoCreds]);
+
     // Reset the form whenever a different employee is opened. Skip on close (employee → null)
     // so the "✓ Saved" state isn't reverted to "Save" mid-way through the exit animation.
     useEffect(() => {
@@ -213,8 +220,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
 
                     <div className="space-y-2">
                         {[
-                            { key: 'u', label: t('cred_username'), value: autoCreds?.username ?? '' },
-                            { key: 'p', label: t('cred_password'), value: autoCreds?.password ?? '' },
+                            { key: 'u', label: t('cred_username'), value: shownCreds?.username ?? '' },
+                            { key: 'p', label: t('cred_password'), value: shownCreds?.password ?? '' },
                         ].map((row) => (
                             <div key={row.key} className="border-border bg-muted/40 flex items-center gap-3 rounded-lg border px-3 py-2">
                                 <div className="min-w-0 flex-1">
