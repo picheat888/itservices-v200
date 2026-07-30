@@ -36,6 +36,13 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const [error, setError] = useState('');
     const [copied, setCopied] = useState(false);
 
+    // Retain the last employee so the content stays rendered while the dialog animates
+    // closed — the prop goes null the moment it closes, which would blank the fade-out.
+    const [shown, setShown] = useState(employee);
+    useEffect(() => {
+        if (employee) setShown(employee);
+    }, [employee]);
+
     // Reset per employee opened (skip on close so content survives the exit animation).
     useEffect(() => {
         if (!employee) return;
@@ -88,7 +95,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         setTimeout(() => setCopied(false), 1500);
     };
 
-    const empName = employee ? (lang === 'th' ? (employee.name_th ?? employee.name) : employee.name) : '';
+    const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
@@ -100,7 +107,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     </DialogTitle>
                     <DialogDescription>
                         {empName}
-                        {employee?.code ? ` (${employee.code})` : ''}
+                        {shown?.code ? ` (${shown.code})` : ''}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -141,7 +148,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             className="font-mono"
-                                            placeholder={employee?.code ?? ''}
+                                            placeholder={shown?.code ?? ''}
                                             autoComplete="new-password"
                                         />
                                     </Field>
