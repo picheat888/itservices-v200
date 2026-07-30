@@ -10,8 +10,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, randomPassword } from '../lib/password';
-import { isValidUsername } from '../lib/username';
+import { isValidPassword, isValidUsername, randomPassword } from '../lib/credentials';
 import { PasswordChecklist } from './password-checklist';
 
 /**

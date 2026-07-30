@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Check } from 'lucide-react';
-import { PASSWORD_RULES } from '../lib/password';
+import { PASSWORD_RULES } from '../lib/credentials';
 
 /**
  * Live policy checklist for a password field — every requirement is listed from the start
