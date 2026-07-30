@@ -161,15 +161,23 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </DialogHeader>
 
                     <div className="space-y-3">
-                        {/* Auto-generate — fills the fields below, which show the result themselves. */}
-                        <div className="flex justify-end">
-                            <Button type="button" variant="outline" size="sm" onClick={handleAuto}>
-                                <Wand2 className="h-4 w-4" />
-                                {t('cred_auto')}
-                            </Button>
-                        </div>
-
-                        <Field label={t('cred_username')}>
+                        {/* The shortcut rides the first field's label row: it fills this field and
+                            the two below it, and the filled values speak for themselves. */}
+                        <Field
+                            label={t('cred_username')}
+                            action={
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleAuto}
+                                    className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
+                                >
+                                    <Wand2 />
+                                    {t('cred_auto')}
+                                </Button>
+                            }
+                        >
                             <Input
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
