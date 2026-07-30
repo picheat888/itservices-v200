@@ -1,0 +1,117 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Employee\Employee;
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class EmployeeCredentialsManageTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function makeEmployeeWithAccount(string $code = 'EMP-7001', string $username = 'old_name'): Employee
+    {
+        $employee = Employee::create(['code' => $code, 'first_name' => 'Cred', 'last_name' => 'Test', 'username' => $username]);
+        User::factory()->create(['employee_id' => $employee->id, 'username' => $username]);
+
+        return $employee;
+    }
+
+    public function test_username_change_updates_user_and_employee(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount();
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'new_name'])->assertOk();
+
+        $this->assertSame('new_name', $employee->fresh()->user->username);
+        $this->assertSame('new_name', $employee->fresh()->username);
+    }
+
+    public function test_username_unique_ignores_own_account_but_rejects_others(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount();
+        User::factory()->create(['username' => 'taken_name']);
+
+        // Re-submitting the current username is fine.
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'old_name'])->assertOk();
+        // Someone else's username is rejected.
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'taken_name'])
+            ->assertStatus(422)->assertJsonValidationErrors('username');
+    }
+
+    public function test_reset_defaults_to_employee_code_and_custom_password_wins(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7002', 'reset_me');
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])
+            ->assertOk()->assertJsonPath('new_password', 'EMP-7002');
+        $this->assertTrue(Hash::check('EMP-7002', $employee->fresh()->user->password));
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'custom-secret'])
+            ->assertOk()->assertJsonPath('new_password', 'custom-secret');
+        $this->assertTrue(Hash::check('custom-secret', $employee->fresh()->user->password));
+    }
+
+    public function test_force_change_flag_is_set_and_cleared_per_reset(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7003', 'force_me');
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'force_change' => true])->assertOk();
+        $user = $employee->fresh()->user;
+        $this->assertTrue((bool) $user->must_change_password);
+        $this->assertNull($user->password_changed_at);
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'force_change' => false])->assertOk();
+        $this->assertFalse((bool) $employee->fresh()->user->must_change_password);
+    }
+
+    public function test_endpoint_rejects_employee_without_account_and_empty_payload(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $bare = Employee::create(['code' => 'EMP-7004', 'first_name' => 'No', 'last_name' => 'Account']);
+
+        $this->putJson("/api/employees/{$bare->id}/credentials", ['username' => 'whatever'])
+            ->assertStatus(422)->assertJsonPath('message', 'no_account');
+
+        $withAccount = $this->makeEmployeeWithAccount('EMP-7005', 'noop_user');
+        $this->putJson("/api/employees/{$withAccount->id}/credentials", [])->assertStatus(422);
+    }
+
+    public function test_field_level_permission_gates(): void
+    {
+        // Role with reset_password but NOT set_credentials.
+        $role = Role::firstOrCreate(['key' => 'pw_only'], ['name' => 'PW Only']);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'employees.reset_password'], ['allowed' => true]);
+        $this->actingAs(User::factory()->create(['role' => 'pw_only']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7006', 'gate_user');
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['username' => 'sneaky'])->assertForbidden();
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])->assertOk();
+    }
+
+    public function test_create_credentials_accepts_force_change(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = Employee::create(['code' => 'EMP-7007', 'first_name' => 'New', 'last_name' => 'Account']);
+
+        $this->postJson("/api/employees/{$employee->id}/credentials", [
+            'username' => 'fresh_user',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+            'force_change' => true,
+        ])->assertCreated();
+
+        $user = $employee->fresh()->user;
+        $this->assertTrue((bool) $user->must_change_password);
+        $this->assertNull($user->password_changed_at);
+    }
+}

@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Api\Employee;
 use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreEmployeeRequest;
+use App\Http\Resources\Access\EmployeeAccessResource;
 use App\Http\Resources\Employee\ApproverNodeResource;
 use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\OrgChartNodeResource;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Access\AccessService;
 use App\Services\Employee\ApprovalChainService;
 use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +22,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
@@ -311,6 +315,52 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Read-only view of the access memberships this employee holds, for the Employee detail's
+     * Access tab. Gated by employees.view (an Employee-module read) — NOT access.module — since
+     * it only surfaces what this one person can reach. Mirrors the own-module "peek" pattern
+     * used by the Assets tab above.
+     */
+    public function access(Request $request, Employee $employee, AccessService $accessService): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        $grouped = $accessService->employeeAccess($employee);
+        // Let the resource flag rows this employee owns (approver / share owner).
+        $grouped['employee_id'] = $employee->id;
+        $grouped['outstanding'] = $employee->status?->value === 'resigned'
+            && ($grouped['email_group']->isNotEmpty() || $grouped['file_share']->isNotEmpty()
+                || $grouped['social_platform']->isNotEmpty() || $grouped['software']->isNotEmpty());
+
+        return (new EmployeeAccessResource($grouped))->response();
+    }
+
+    /**
+     * Read-only list of the tickets this employee has requested, for the Employee detail's
+     * Tickets tab. Gated by employees.view (an Employee-module read) — NOT tickets permissions —
+     * same own-module "peek" pattern as the Assets and Access tabs above.
+     */
+    public function tickets(Request $request, Employee $employee): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        $tickets = Ticket::query()
+            ->where('requester_id', $employee->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (Ticket $tk) => [
+                'id' => $tk->id,
+                'ticket_no' => $tk->ticket_no,
+                'subject' => $tk->subject,
+                'category' => $tk->category->value,
+                'priority' => $tk->priority?->value,
+                'status' => $tk->status->value,
+                'created_at' => $tk->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['data' => $tickets]);
+    }
+
+    /**
      * Returns active employees as a flat list of org-chart nodes (resigned
      * excluded). The frontend assembles the reporting forest from manager_id;
      * reports_count is the number of active direct reports.
@@ -368,23 +418,52 @@ class EmployeeController extends Controller
     }
 
     /** Resets the linked system account password to the employee's code. Returns the new password. */
-    public function resetPassword(Request $request, Employee $employee): JsonResponse
+    /**
+     * Manage an existing login account: change the username and/or reset the password.
+     * Field-level permissions — username requires employees.set_credentials, password
+     * reset requires employees.reset_password. Replaces the old reset-password endpoint.
+     */
+    public function updateCredentials(Request $request, Employee $employee): JsonResponse
     {
-        abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
-
-        // Find the user account via the FK relation
         $user = $employee->user;
-
         if (! $user) {
             return response()->json(['message' => 'no_account'], 422);
         }
 
-        $newPassword = $employee->code; // Reset to employee code
-        $user->update(['password' => Hash::make($newPassword), 'password_changed_at' => now()]);
+        $data = $request->validate([
+            'username' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'reset_password' => ['sometimes', 'boolean'],
+            'password' => ['nullable', 'string', 'min:6'],
+            'force_change' => ['sometimes', 'boolean'],
+        ]);
 
-        AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
+        $changingUsername = array_key_exists('username', $data);
+        $resetting = $request->boolean('reset_password');
+        abort_unless($changingUsername || $resetting, 422, 'Nothing to update.');
 
-        return response()->json(['message' => 'success', 'new_password' => $newPassword]);
+        if ($changingUsername) {
+            abort_unless((bool) $request->user()?->hasPermission('employees.set_credentials'), 403);
+            $user->update(['username' => $data['username']]);
+            // Mirror onto the employee for display/search (same as account creation).
+            $employee->update(['username' => $data['username']]);
+            AuditLog::record('Changed username', "{$employee->name} ({$employee->code})");
+        }
+
+        $newPassword = null;
+        if ($resetting) {
+            abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
+            $force = $request->boolean('force_change');
+            $newPassword = filled($data['password'] ?? null) ? $data['password'] : $employee->code;
+            $user->forceFill([
+                'password' => Hash::make($newPassword),
+                // null marks the password as "never set by the user" while forcing a change.
+                'password_changed_at' => $force ? null : now(),
+                'must_change_password' => $force,
+            ])->save();
+            AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
+        }
+
+        return response()->json(array_filter(['message' => 'success', 'new_password' => $newPassword]));
     }
 
     /**
@@ -403,9 +482,10 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'force_change' => ['sometimes', 'boolean'],
         ]);
 
-        $this->service->createUserWithCredentials($employee, $data['username'], $data['password']);
+        $this->service->createUserWithCredentials($employee, $data['username'], $data['password'], $request->boolean('force_change'));
 
         AuditLog::record('Created user account', "{$employee->name} ({$employee->code})");
 
