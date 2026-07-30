@@ -571,6 +571,9 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                     <div className="flex flex-col gap-3.5">
                                         {photoBlock}
                                         {nameFields}
+                                        {/* The code identifies the person, so it closes the name block
+                                            rather than trailing the employment column. */}
+                                        {codeField}
                                         {contactFields}
                                     </div>
                                 </section>
@@ -583,10 +586,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                         {sectionField}
                                         {positionField}
                                         {managerField}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {joinedField}
-                                            {codeField}
-                                        </div>
+                                        {joinedField}
                                     </div>
                                 </section>
 
