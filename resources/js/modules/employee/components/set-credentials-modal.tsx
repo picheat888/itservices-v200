@@ -198,6 +198,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             required
                             name="username"
                             error={errors.username}
+                            help={t('cred_username_hint')}
                             action={
                                 <Button
                                     type="button"
@@ -222,7 +223,7 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 autoComplete="off"
                             />
                         </Field>
-                        <Field label={t('cred_password')} required name="password" error={errors.password}>
+                        <Field label={t('cred_password')} required name="password" error={errors.password} help={t('cred_password_hint')}>
                             <div className="relative">
                                 <Input
                                     type={showPw ? 'text' : 'password'}
