@@ -18,6 +18,11 @@ class CheckPasswordExpiry
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Admin-forced change (reset/creation with force_change) applies regardless of the policy.
+        if ($request->user()?->must_change_password) {
+            return response()->json(['message' => 'password_expired'], 403);
+        }
+
         $days = (int) AppSetting::get('password_expiry_days', '0');
 
         if ($days <= 0 || ! $request->user()) {
