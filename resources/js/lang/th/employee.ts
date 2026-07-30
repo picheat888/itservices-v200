@@ -255,7 +255,6 @@ export const employee: Dict = {
     emp_v_reporting_to: 'ผู้ใต้บังคับบัญชาของ',
     emp_v_no_reports: 'ไม่มีผู้ใต้บังคับบัญชา',
     emp_v_edit_title: 'แก้ไขข้อมูลพนักงาน',
-    emp_v_edit_notice: 'การเปลี่ยนแปลงจะมีผลทันทีในระบบ ข้อมูลบัญชี (username/password) ต้องตั้งค่าผ่าน "ตั้งค่าบัญชี" แยกต่างหาก',
     // ── Credentials management (emp_cred_*) ──
     emp_cred_manage_title: 'จัดการบัญชี',
     emp_cred_username_section: 'Username',

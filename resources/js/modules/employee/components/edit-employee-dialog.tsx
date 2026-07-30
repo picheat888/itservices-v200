@@ -12,7 +12,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, ArrowRight, Briefcase, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Briefcase, Check, Loader2, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDepartments } from '../hooks/use-departments';
 import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
@@ -589,12 +589,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                         {joinedField}
                                     </div>
                                 </section>
-
-                                {/* Credentials notice — a statement about the whole form, so it spans both columns. */}
-                                <div className="flex items-start gap-2.5 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-blue-700 sm:col-span-2 dark:text-blue-300">
-                                    <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                    <div>{t('emp_v_edit_notice')}</div>
-                                </div>
                             </div>
 
                             {/* ── Footer ── */}

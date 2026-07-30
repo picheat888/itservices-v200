@@ -255,7 +255,6 @@ export const employee: Dict = {
     emp_v_reporting_to: 'People reporting to',
     emp_v_no_reports: 'No direct reports',
     emp_v_edit_title: 'Edit employee',
-    emp_v_edit_notice: 'Changes take effect immediately. Account credentials (username/password) must be set via "Set account" separately.',
     // ── Credentials management (emp_cred_*) ──
     emp_cred_manage_title: 'Manage Account',
     emp_cred_username_section: 'Username',
