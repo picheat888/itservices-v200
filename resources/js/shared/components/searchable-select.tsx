@@ -163,6 +163,9 @@ export function SearchableSelect({
                     autoFocus
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
+                    // Keep Enter inside the menu — dialogs that submit on Enter would otherwise
+                    // save the whole form while the user is only filtering this list.
+                    onKeyDown={(e) => e.key === 'Enter' && e.stopPropagation()}
                     placeholder={t('search_placeholder_short')}
                     className="w-full bg-transparent px-1 text-sm outline-none"
                 />
