@@ -19,7 +19,7 @@ export function PasswordChecklist({ value, className }: { value: string; classNa
                     <li
                         key={rule.key}
                         className={cn(
-                            'flex items-center gap-1.5 text-[11px] transition-colors',
+                            'flex items-center gap-1.5 text-xs transition-colors',
                             met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
                         )}
                     >
