@@ -1,18 +1,23 @@
 import { useT } from '@/lang';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { SectionLabel } from '@/shared/components/section-label';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertTriangle, ArrowRight, Briefcase, Check, Info, Loader2, Upload, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useDepartments, useEmployeeMutations, useEmployees, usePositions, useSections } from '../hooks/use-org';
+import { useDepartments } from '../hooks/use-departments';
+import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
+import { usePositions } from '../hooks/use-positions';
+import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
 
 const empty = {
@@ -296,9 +301,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         setCropSrc(URL.createObjectURL(file));
     };
 
-    /** Inline bilingual literal helper. */
-    const L = (th: string, en: string) => (lang === 'th' ? th : en);
-
     // Accent uses the system brand colour — it no longer changes per department tag.
     const accent = 'var(--brand)';
 
@@ -315,7 +317,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 textClassName="text-lg"
                 fallbackIcon={<User className="h-6 w-6" />}
             />
-            <div>
+            <div className="min-w-0">
                 <label className="border-input bg-background hover:bg-accent inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium">
                     <Upload className="h-4 w-4" />
                     {photo ? t('emp_photo_change') : t('emp_photo')}
@@ -460,7 +462,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                 }}
             >
                 <DialogContent
-                    className="max-w-[620px] gap-0 overflow-hidden p-0 [&>button]:hidden"
+                    className="!flex max-h-[calc(100vh-4.5rem)] w-[calc(100vw-2rem)] max-w-[900px] flex-col gap-0 overflow-hidden p-0"
                     onKeyDown={(e) => {
                         // Skip Enter-to-submit when focus is on an interactive element that
                         // has its own click/change handler (button, select, option).
@@ -470,50 +472,36 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                         void submit();
                     }}
                 >
-                    <DialogTitle className="sr-only">{t('edit_employee')}</DialogTitle>
-                    <DialogDescription className="sr-only">{t('edit_employee')}</DialogDescription>
-
                     {/* PhotoCropDialog is its own (nested) Radix dialog, so it portals itself out
                         and becomes the active layer — placement here is fine, not inerted. */}
                     {cropDialog}
 
-                    {/* ── Header (neutral — no colour tint, no avatar) ── */}
-                    <div className="border-border bg-card flex items-center gap-3.5 border-b px-5 py-4">
-                        <div className="min-w-0 flex-1">
-                            <div className="truncate text-[17px] leading-tight font-extrabold tracking-tight">
-                                {`${form.firstName} ${form.lastName}`.trim() || employee?.name}
-                            </div>
-                            <div className="text-muted-foreground mt-0.5 truncate text-xs">
-                                {employee?.code} · {L('แก้ไขข้อมูลพนักงาน', 'Edit employee')}
-                            </div>
-                        </div>
-                        <span
-                            className={cn(
-                                'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
-                                status === 'resigned'
-                                    ? 'bg-destructive/15 text-destructive'
-                                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-                            )}
-                        >
-                            {status === 'resigned' ? L('ลาออกแล้ว', 'Resigned') : L('ใช้งาน', 'Active')}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setOrgConfirm(false);
-                                onClose();
-                            }}
-                            aria-label={t('cancel')}
-                            className="bg-muted text-muted-foreground hover:bg-border hover:text-foreground grid h-8 w-8 shrink-0 place-items-center rounded-full transition-colors"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
+                    <FocusDialogHeader
+                        icon={User}
+                        image={photoUrl}
+                        round
+                        eyebrow={t('emp_v_edit_title')}
+                        title={`${form.firstName} ${form.lastName}`.trim() || (employee?.name ?? '')}
+                        code={employee?.code}
+                        srDescription={t('edit_employee')}
+                        headerRight={
+                            <span
+                                className={cn(
+                                    'shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold',
+                                    status === 'resigned'
+                                        ? 'bg-destructive/15 text-destructive'
+                                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+                                )}
+                            >
+                                {status === 'resigned' ? t('resigned') : t('active')}
+                            </span>
+                        }
+                    />
 
                     {/* ── Org-change confirm panel (inline — avoids Radix focus-trap fighting a stacked Dialog) ── */}
                     {orgConfirm && (
                         <>
-                            <div className="flex flex-col gap-4 px-6 py-5">
+                            <div className="flex flex-1 flex-col gap-4 overflow-y-auto border-t px-6 py-5">
                                 <div className="flex items-start gap-3.5">
                                     <span className="bg-brand/15 text-brand grid h-10 w-10 shrink-0 place-items-center rounded-lg">
                                         <Briefcase className="h-5 w-5" />
@@ -538,7 +526,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                     ))}
                                 </div>
                             </div>
-                            <div className="bg-muted/40 flex items-center justify-end gap-2 border-t px-5 py-3.5">
+                            <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
                                 <Button variant="outline" onClick={() => setOrgConfirm(false)} disabled={update.isPending}>
                                     {t('cancel')}
                                 </Button>
@@ -556,11 +544,11 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
                     {!orgConfirm && (
                         <>
-                            {/* ── Body ── */}
-                            <div className="flex max-h-[min(68vh,620px)] flex-col gap-6 overflow-y-auto px-6 py-5">
+                            {/* Two columns: left = who the person is, right = where they sit in the org. */}
+                            <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
                                 {/* Manager-loop alert — inline (NOT a stacked modal: Radix focus-trap fights it) */}
                                 {managerLoop && (
-                                    <div className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3.5 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                    <div className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3.5 py-3 text-amber-800 sm:col-span-2 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                                         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                                         <div className="flex-1">
                                             <div className="text-sm font-semibold">{t('emp_manager_loop_title')}</div>
@@ -577,30 +565,22 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                     </div>
                                 )}
 
-                                {/* Personal info */}
+                                {/* LEFT: personal info */}
                                 <section>
-                                    <div className="text-muted-foreground mb-3.5 flex items-center gap-2 text-[10.5px] font-bold tracking-wider uppercase">
-                                        {L('ข้อมูลส่วนตัว', 'Personal info')}
-                                        <span className="bg-border h-px flex-1" />
-                                    </div>
+                                    <SectionLabel>{t('emp_personal_info')}</SectionLabel>
                                     <div className="flex flex-col gap-3.5">
                                         {photoBlock}
                                         {nameFields}
-                                        <div className="grid grid-cols-2 gap-3">{contactFields}</div>
+                                        {contactFields}
                                     </div>
                                 </section>
 
-                                {/* Employment */}
+                                {/* RIGHT: employment */}
                                 <section>
-                                    <div className="text-muted-foreground mb-3.5 flex items-center gap-2 text-[10.5px] font-bold tracking-wider uppercase">
-                                        {L('ข้อมูลการจ้างงาน', 'Employment')}
-                                        <span className="bg-border h-px flex-1" />
-                                    </div>
+                                    <SectionLabel>{t('emp_v_employment')}</SectionLabel>
                                     <div className="flex flex-col gap-3.5">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {departmentField}
-                                            {sectionField}
-                                        </div>
+                                        {departmentField}
+                                        {sectionField}
                                         {positionField}
                                         {managerField}
                                         <div className="grid grid-cols-2 gap-3">
@@ -610,20 +590,15 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                                     </div>
                                 </section>
 
-                                {/* Credentials notice */}
-                                <div className="flex items-start gap-2.5 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+                                {/* Credentials notice — a statement about the whole form, so it spans both columns. */}
+                                <div className="flex items-start gap-2.5 rounded-md bg-blue-500/10 px-3.5 py-2.5 text-xs leading-relaxed text-blue-700 sm:col-span-2 dark:text-blue-300">
                                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                    <div>
-                                        {L(
-                                            'การเปลี่ยนแปลงจะมีผลทันทีในระบบ ข้อมูลบัญชี (username/password) ต้องตั้งค่าผ่าน "ตั้งค่าบัญชี" แยกต่างหาก',
-                                            'Changes take effect immediately. Account credentials (username/password) must be set via "Set account" separately.',
-                                        )}
-                                    </div>
+                                    <div>{t('emp_v_edit_notice')}</div>
                                 </div>
                             </div>
 
                             {/* ── Footer ── */}
-                            <div className="bg-muted/40 flex items-center justify-end gap-2 border-t px-5 py-3.5">
+                            <div className="border-border bg-muted/20 flex flex-wrap items-center justify-end gap-2 border-t px-6 py-3.5">
                                 <Button variant="outline" onClick={onClose}>
                                     {t('cancel')}
                                 </Button>
