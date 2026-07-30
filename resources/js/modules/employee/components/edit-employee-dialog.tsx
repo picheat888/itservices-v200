@@ -359,14 +359,14 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     );
 
     const contactFields = (
-        <>
+        <div className="grid grid-cols-2 gap-3">
             <Field label={t('emp_email')} name="email" error={errors.email}>
                 <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
             </Field>
             <Field label={t('emp_phone')}>
                 <Input className="font-mono" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+1 202 555 0100" />
             </Field>
-        </>
+        </div>
     );
 
     const departmentField = (
