@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
-import { cn } from '@/shared/lib/utils';
+import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
@@ -33,7 +33,10 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
-    const [error, setError] = useState('');
+    // Per-field messages (red border + helper text); `formError` is the catch-all banner
+    // for failures that belong to no single field.
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [formError, setFormError] = useState('');
     // Each field reveals on its own — one eye never unmasks the other field.
     const [showPw, setShowPw] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
@@ -67,7 +70,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         setUsername('');
         setPassword('');
         setConfirm('');
-        setError('');
+        setErrors({});
+        setFormError('');
         setShowPw(false);
         setShowConfirm(false);
         setForceChange(true);
@@ -91,7 +95,31 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
         // Both are revealed here so the generated pair can be checked before saving.
         setShowPw(true);
         setShowConfirm(true);
-        setError('');
+        setErrors({});
+        setFormError('');
+    };
+
+    /** Drop a field's error as soon as it's edited — typing counts as fixing it. */
+    const clearError = (key: string) =>
+        setErrors((prev) => {
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
+
+    /**
+     * UX-side checks mirroring the server rules (Laravel stays the authority):
+     * username required, password at least 6 characters, confirmation matching.
+     */
+    const validate = () => {
+        const e: Record<string, string> = {};
+        if (!username.trim()) e.username = t('cred_err_username_required');
+        if (password.length < 6) e.password = t('cred_err_password_short');
+        if (!confirm || password !== confirm) e.confirm = t('cred_err_no_match');
+        setErrors(e);
+        if (Object.keys(e).length) focusFirstError(e);
+        return Object.keys(e).length === 0;
     };
 
     const copy = (text: string, key: string) => {
@@ -106,19 +134,8 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
 
     const handleSubmit = async () => {
         if (!employee) return;
-        setError('');
-        if (!username.trim()) {
-            setError(t('cred_err_username_required'));
-            return;
-        }
-        if (password.length < 6) {
-            setError(t('cred_err_password_short'));
-            return;
-        }
-        if (password !== confirm) {
-            setError(t('cred_err_no_match'));
-            return;
-        }
+        setFormError('');
+        if (!validate()) return;
         try {
             await setCredentials.mutateAsync({
                 id: employee.id,
@@ -132,8 +149,14 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
             setSavedCreds({ username: username.trim(), password });
         } catch (e: unknown) {
             const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-            // Surface the unique-username rejection clearly (localized), else the server message.
-            setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
+            // A rejected username belongs under that field; anything else is a form-level failure.
+            if (data?.errors?.username) {
+                const taken = { username: t('cred_err_username_taken') };
+                setErrors(taken);
+                focusFirstError(taken);
+            } else {
+                setFormError(data?.message ?? t('cred_err_generic'));
+            }
         }
     };
 
@@ -165,6 +188,9 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             the two below it, and the filled values speak for themselves. */}
                         <Field
                             label={t('cred_username')}
+                            required
+                            name="username"
+                            error={errors.username}
                             action={
                                 <Button
                                     type="button"
@@ -180,18 +206,24 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                         >
                             <Input
                                 value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                onChange={(e) => {
+                                    setUsername(e.target.value);
+                                    clearError('username');
+                                }}
                                 className="font-mono"
                                 placeholder="e.g. john_do"
                                 autoComplete="off"
                             />
                         </Field>
-                        <Field label={t('cred_password')}>
+                        <Field label={t('cred_password')} required name="password" error={errors.password}>
                             <div className="relative">
                                 <Input
                                     type={showPw ? 'text' : 'password'}
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        clearError('password');
+                                    }}
                                     className="pr-9 font-mono"
                                     placeholder="••••••"
                                     autoComplete="new-password"
@@ -206,12 +238,15 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                                 </button>
                             </div>
                         </Field>
-                        <Field label={t('cred_confirm_password')}>
+                        <Field label={t('cred_confirm_password')} required name="confirm" error={errors.confirm}>
                             <div className="relative">
                                 <Input
                                     type={showConfirm ? 'text' : 'password'}
                                     value={confirm}
-                                    onChange={(e) => setConfirm(e.target.value)}
+                                    onChange={(e) => {
+                                        setConfirm(e.target.value);
+                                        clearError('confirm');
+                                    }}
                                     className="pr-9 font-mono"
                                     placeholder="••••••"
                                     autoComplete="new-password"
@@ -232,7 +267,11 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                             <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                         </div>
 
-                        {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
+                        {formError && (
+                            <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3 py-2 text-sm">
+                                {formError}
+                            </div>
+                        )}
                     </div>
 
                     <DialogFooter>
