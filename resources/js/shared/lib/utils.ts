@@ -6,15 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Strip anything a phone number can't contain, keeping digits and the separators used by
- * international and local formats — "+66 81 234 5678", "(02) 123-4567". Applied as the field
- * is typed, so letters never make it in (whether typed or pasted).
- */
-export function sanitizePhone(value: string): string {
-    return value.replace(/[^\d+()\-\s]/g, '');
-}
-
-/**
  * Brand focus ring for native date/time `<input>`s. Uses `:focus` (not `focus-visible`)
  * on purpose: the browser's focus-visible heuristic covers typed text fields but not
  * date/time controls, so without this the brand ring never shows when the field is
