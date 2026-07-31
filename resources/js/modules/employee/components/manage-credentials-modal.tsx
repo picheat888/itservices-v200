@@ -5,6 +5,7 @@ import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { SectionLabel } from '@/shared/components/section-label';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
+import { cn } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -12,7 +13,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { Check, CheckCircle2, Copy, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { Check, CheckCircle2, Copy, Info, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
@@ -195,23 +196,41 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                         </div>
 
                         {/* The password is the hero — sized and spaced to be read aloud over a
-                            phone, which is how it usually reaches the employee. */}
-                        <div className="border-border bg-muted/40 rounded-lg border px-4 py-3.5 text-center">
-                            <div className="text-muted-foreground mb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
+                            phone, which is how it usually reaches the employee. Copy sits with
+                            it rather than as a separate button, so the value and the way to take
+                            it are one thing. */}
+                        <div className="border-border bg-muted/40 rounded-lg border px-4 py-3">
+                            <div className="text-muted-foreground mb-1 text-[10.5px] font-bold tracking-wider uppercase">
                                 {t('reset_password_new')}
                             </div>
-                            <div className="font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">{newPassword}</div>
+                            <div className="flex items-center gap-2">
+                                <span className="min-w-0 flex-1 font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">
+                                    {newPassword}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={copyPw}
+                                    title={copied ? t('cred_copied') : t('cred_copy')}
+                                    aria-label={copied ? t('cred_copied') : t('cred_copy')}
+                                    className={cn(
+                                        'border-border hover:bg-accent grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-transparent transition-colors',
+                                        copied ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground hover:text-foreground',
+                                    )}
+                                >
+                                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                </button>
+                            </div>
                         </div>
 
-                        <Button className="w-full" onClick={copyPw}>
-                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            {copied ? t('cred_copied') : t('cred_copy')}
-                        </Button>
-
-                        <p className="text-muted-foreground text-xs leading-relaxed">
-                            {t('emp_cred_handover_note')}
-                            {forceChange && ` ${t('emp_cred_handover_force')}`}
-                        </p>
+                        {/* Amber, not muted grey: the value above is gone for good once this
+                            dialog closes, which the admin has to register before moving on. */}
+                        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <div>
+                                <p>{t('emp_cred_handover_note')}</p>
+                                {forceChange && <p>{t('emp_cred_handover_force')}</p>}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-5 border-t px-6 py-5">
