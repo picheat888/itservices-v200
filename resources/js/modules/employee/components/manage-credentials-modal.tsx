@@ -209,6 +209,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             className="font-mono"
+                                            // Eight dots — the same mask the creation dialog uses, and the
+                                            // policy's minimum length at a glance.
+                                            placeholder="••••••••"
                                             autoComplete="new-password"
                                         />
                                     </Field>
