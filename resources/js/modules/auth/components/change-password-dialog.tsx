@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
-import { useLogout } from '@/modules/auth/hooks/use-auth';
+import { useAuth, useLogout } from '@/modules/auth/hooks/use-auth';
 import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { isValidPassword } from '@/shared/lib/password-policy';
@@ -22,6 +22,7 @@ export function ChangePasswordDialog() {
     const t = useT();
     const qc = useQueryClient();
     const logout = useLogout();
+    const { user } = useAuth();
 
     const [current, setCurrent] = useState('');
     const [next, setNext] = useState('');
@@ -76,6 +77,20 @@ export function ChangePasswordDialog() {
                             submit();
                         }}
                     >
+                        {/* Password managers key a credential to a username. Without one in the
+                            form they have nothing to match, so the saved password is never
+                            offered — hence this hidden, read-only mirror of the signed-in name. */}
+                        <input
+                            type="text"
+                            name="username"
+                            autoComplete="username"
+                            value={user?.username ?? ''}
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden
+                            className="sr-only"
+                        />
+
                         <div className="space-y-3">
                             <Field label={t('pwd_current')}>
                                 <Input
