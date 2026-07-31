@@ -20,7 +20,9 @@ use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -77,6 +79,28 @@ class EmployeeController extends Controller
         if ($request->has('username')) {
             $request->merge(['username' => Str::lower(trim((string) $request->input('username')))]);
         }
+    }
+
+    /**
+     * Sign the account out everywhere after its password is reset.
+     *
+     * Laravel keeps only the user id in the session, so changing the password leaves every
+     * existing session working. That matters because the usual reason to reset a password is
+     * a suspected takeover — without this, whoever holds the live session simply keeps it,
+     * and would meet the forced-change screen able to pick a password of their own.
+     */
+    private function signOutEverywhere(User $user): void
+    {
+        // Keyed off the table rather than the configured driver so the behaviour is the same
+        // everywhere it is stored — and testable. (Sessions held outside the database, e.g.
+        // in Redis, would need their own eviction; this app stores them here.)
+        $table = config('session.table', 'sessions');
+        if (Schema::hasTable($table)) {
+            DB::table($table)->where('user_id', $user->id)->delete();
+        }
+
+        // API tokens, for any client that authenticates with one instead of a cookie.
+        $user->tokens()->delete();
     }
 
     public function __construct(private readonly EmployeeService $service) {}
@@ -516,6 +540,7 @@ class EmployeeController extends Controller
                 'password_changed_at' => $force ? null : now(),
                 'must_change_password' => $force,
             ])->save();
+            $this->signOutEverywhere($user);
             AuditLog::record('Reset password', "{$employee->name} ({$employee->code})");
         }
 
