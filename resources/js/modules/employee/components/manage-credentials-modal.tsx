@@ -100,27 +100,41 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         });
     };
 
+    /**
+     * A reset can't be undone — the old password stops working the moment it runs — so it
+     * asks first, the same way renaming does.
+     */
     const resetPassword = async () => {
         if (!employee) return;
         setError('');
-        // A blank field means "use the employee code"; anything typed must satisfy the policy.
+        // A blank field means "let the server generate one"; anything typed must satisfy the policy.
         if (password.trim() && !isValidPassword(password.trim())) {
             setError(t('cred_err_password_policy'));
             return;
         }
-        setBusy('password');
-        try {
-            const res = await updateCredentials.mutateAsync({
-                id: employee.id,
-                payload: { reset_password: true, password: password.trim() || undefined, force_change: forceChange },
-            });
-            setNewPassword(res.new_password ?? null);
-        } catch (e: unknown) {
-            const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-            setError(data?.errors?.password?.[0] ?? data?.message ?? t('cred_err_generic'));
-        } finally {
-            setBusy(null);
-        }
+
+        await confirm({
+            variant: 'warn',
+            icon: KeyRound,
+            title: t('emp_cred_reset_confirm_title'),
+            description: t('emp_cred_reset_confirm_desc'),
+            action: async () => {
+                setBusy('password');
+                try {
+                    const res = await updateCredentials.mutateAsync({
+                        id: employee.id,
+                        payload: { reset_password: true, password: password.trim() || undefined, force_change: forceChange },
+                    });
+                    setNewPassword(res.new_password ?? null);
+                } catch (e: unknown) {
+                    const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
+                    setError(data?.errors?.password?.[0] ?? data?.message ?? t('cred_err_generic'));
+                    throw e;
+                } finally {
+                    setBusy(null);
+                }
+            },
+        });
     };
 
     const copyPw = () => {

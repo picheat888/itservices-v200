@@ -266,6 +266,8 @@ export const employee: Dict = {
     emp_cred_reset_hint: 'เว้นว่างไว้ ระบบจะสุ่มรหัสผ่านให้',
     emp_cred_force_change: 'บังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งถัดไป',
     emp_cred_reset_btn: 'Reset Password',
+    emp_cred_reset_confirm_title: 'ยืนยันรีเซ็ตรหัสผ่าน?',
+    emp_cred_reset_confirm_desc: 'รหัสผ่านเดิมจะใช้ไม่ได้ทันที และรหัสใหม่จะแสดงเพียงครั้งเดียว กรุณาคัดลอกก่อนปิดหน้าต่าง',
     cred_saved_title: 'สร้างบัญชีเรียบร้อย',
     cred_copy: 'คัดลอก',
 };
