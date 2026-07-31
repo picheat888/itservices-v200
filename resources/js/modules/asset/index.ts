@@ -7,9 +7,7 @@ export {
     useAssetSummary,
     useAssetTransfers,
     useAssets,
-    useAssetsSidebarBadge,
     useMyAssets,
-    useMyAssetsSidebarBadge,
     usePendingReturns,
 } from './hooks/use-assets';
 export { default as AssetsPage } from './pages';

@@ -1,13 +1,9 @@
 import { navGroups } from '@/app/nav';
 import { useT } from '@/lang';
-import { useAccessSidebarBadge } from '@/modules/access';
-import { useAssetsSidebarBadge, useMyAssetsSidebarBadge } from '@/modules/asset';
 import { useAuth, useLogout } from '@/modules/auth';
-import { useContractSidebarBadge } from '@/modules/contract';
 import { useSettings } from '@/modules/settings';
-import { useStockSidebarBadge } from '@/modules/stock';
-import { useTicketSidebarBadge } from '@/modules/ticket';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { useSidebarBadges } from '@/shared/hooks/use-sidebar-badges';
 import { cn } from '@/shared/lib/utils';
 import type { Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
@@ -28,22 +24,17 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const iconsOnly = sidebar === 'icons';
 
     const perms = user?.permissions ?? [];
-    // "Needs attention" counts shown as a sidebar badge, keyed by nav item id.
-    const stockBadge = useStockSidebarBadge(perms.includes('stock.view'));
-    const contractBadge = useContractSidebarBadge(perms.includes('contracts.view'));
-    const myAssetsBadge = useMyAssetsSidebarBadge(perms.includes('assets.my'));
-    const assetsBadge = useAssetsSidebarBadge(perms.includes('assets.receive'));
-    // Access anomalies live on the Overview tab, so the badge follows its permission.
-    const accessBadge = useAccessSidebarBadge(perms.includes('access.overview'));
-    // Tickets needing my attention — follows the nav item's own gate (tickets.create).
-    const ticketsBadge = useTicketSidebarBadge(perms.includes('tickets.create'));
+    // All "needs attention" counts arrive together from one endpoint, which decides per
+    // count what this user is allowed to see (anything else comes back as 0).
+    const counts = useSidebarBadges(user != null);
     const badges: Record<string, number> = {
-        stock: stockBadge,
-        contracts: contractBadge,
-        'my-assets': myAssetsBadge,
-        assets: assetsBadge,
-        access: accessBadge,
-        tickets: ticketsBadge,
+        stock: counts.stock,
+        contracts: counts.contracts,
+        'my-assets': counts.my_assets,
+        assets: counts.assets,
+        access: counts.access,
+        tickets: counts.tickets,
+        employees: counts.employees,
     };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));

@@ -1,3 +1,4 @@
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import type { TicketPriority } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketApi, type CreateTicketPayload, type SummaryRange, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
@@ -46,29 +47,14 @@ export const useTicketRequesterAssets = (ticketId?: number | null) =>
         enabled: !!ticketId,
     });
 
-/**
- * "Needs my attention" count for the Tickets sidebar badge: open cases waiting
- * for a take (staff only) + own unfinished assignments + own unresolved requests,
- * deduped server-side. Polls every minute — the sidebar must stay fresh without
- * the Tickets page ever being opened.
- */
-export function useTicketSidebarBadge(enabled = true): number {
-    const { data } = useQuery({
-        queryKey: ['tickets-badge'],
-        queryFn: ticketApi.badge,
-        enabled,
-        refetchInterval: 60_000,
-        staleTime: 30_000,
-    });
-
-    return data ?? 0;
-}
+// The Tickets badge ("needs my attention") now comes from the combined
+// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 export function useTicketMutations() {
     const qc = useQueryClient();
     const invalidate = () => {
         qc.invalidateQueries({ queryKey: ['tickets-list'] });
-        qc.invalidateQueries({ queryKey: ['tickets-badge'] });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
         qc.invalidateQueries({ queryKey: SUMMARY });
         // Refresh the open detail drawer (?view=<id>) so a stacked action modal
         // bounces back to up-to-date status/assignee without reopening.

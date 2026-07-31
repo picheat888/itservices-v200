@@ -1,3 +1,4 @@
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { contractApi, type ContractPayload } from '../api/contractApi';
 
@@ -22,19 +23,8 @@ export const useContracts = (params: { page: number; per_page: number; search: s
 
 export const useContractSummary = (enabled = true) => useQuery({ queryKey: SUMMARY, queryFn: contractApi.summary, enabled });
 
-/**
- * "Needs attention" count for the Contracts sidebar badge: contracts inside their
- * reminder window (expiring soon) plus contracts already overdue (past the end date
- * but still live and needing renewal). Mirrors the two alert banners on the Contracts
- * page. Note this uses `overdue`, not `expired` — `expired` is the terminal, admin
- * closed-out state with nothing left to action. Pass enabled=false to skip the query
- * for users without contracts access.
- */
-export function useContractSidebarBadge(enabled = true): number {
-    const { data: summary } = useContractSummary(enabled);
-
-    return summary ? summary.expiring + summary.overdue : 0;
-}
+// The Contracts sidebar badge (expiring + overdue) now comes from the combined
+// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 /** Fetches one full contract by id — used when opening the detail drawer. */
 export const useContract = (id: number | null) =>
@@ -51,6 +41,7 @@ export function useContractMutations() {
         qc.invalidateQueries({ queryKey: ['contracts-list'] });
         qc.invalidateQueries({ queryKey: ['contract'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
         create: useMutation({ mutationFn: (p: ContractPayload) => contractApi.create(p), onSuccess: invalidate }),

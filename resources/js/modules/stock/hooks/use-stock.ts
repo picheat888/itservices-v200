@@ -1,3 +1,4 @@
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import type { StockCountAdjustMode } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -51,6 +52,7 @@ export function useStockItemMutations() {
     const inv = () => {
         qc.invalidateQueries({ queryKey: ITEMS });
         qc.invalidateQueries({ queryKey: SUMMARY });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
 
     return {
@@ -95,22 +97,8 @@ export const useStockRequests = (params: { page?: number; per_page?: number } = 
         staleTime: 30_000,
     });
 
-/**
- * Combined "needs attention" count for the Stock sidebar badge: min/max alerts
- * (out + low + over + dead) + outstanding requests (pending/approved) + draft
- * count sessions. Pass enabled=false to skip the queries for users without stock access.
- */
-export function useStockSidebarBadge(enabled = true): number {
-    const { data: summary } = useStockSummary(enabled);
-    const { data: requests } = useStockRequests({}, enabled);
-    const { data: counts } = useStockCounts({}, enabled);
-
-    const alerts = summary ? summary.out_count + summary.low_count + summary.over_count + summary.dead_count : 0;
-    const openRequests = requests?.meta.outstanding ?? 0;
-    const draftCounts = counts?.meta.draft ?? 0;
-
-    return alerts + openRequests + draftCounts;
-}
+// The Stock sidebar badge (min/max alerts + outstanding requests + draft counts) now comes
+// from the combined /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 /** Request workflow mutations (submit / approve / reject / fulfill). */
 export function useStockRequestActions() {
@@ -120,6 +108,7 @@ export function useStockRequestActions() {
         qc.invalidateQueries({ queryKey: ITEMS });
         qc.invalidateQueries({ queryKey: SUMMARY });
         qc.invalidateQueries({ queryKey: MOVEMENTS });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
         submit: useMutation({ mutationFn: (p: StockRequestPayload) => stockRequestApi.create(p), onSuccess: inv }),
@@ -149,6 +138,7 @@ export function useStockCountMutations() {
         qc.invalidateQueries({ queryKey: ITEMS });
         qc.invalidateQueries({ queryKey: MOVEMENTS });
         qc.invalidateQueries({ queryKey: SUMMARY });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
         open: useMutation({

@@ -2,7 +2,6 @@ export type { AccessKind } from '@/shared/types';
 export { accessApi } from './api/accessApi';
 export {
     useAccessMutations,
-    useAccessSidebarBadge,
     useAccessSummary,
     useEmailGroups,
     useFileShares,

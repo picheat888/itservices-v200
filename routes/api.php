@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Settings\UnitController;
 use App\Http\Controllers\Api\Settings\VendorController;
 use App\Http\Controllers\Api\Settings\WarrantyTypeController;
+use App\Http\Controllers\Api\Sidebar\SidebarBadgeController;
 use App\Http\Controllers\Api\Stock\StockCountController;
 use App\Http\Controllers\Api\Stock\StockItemController;
 use App\Http\Controllers\Api\Stock\StockMovementController;
@@ -46,6 +47,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     // Lightweight heartbeat used by the session-timeout modal to refresh _sec_last_activity on the server.
     Route::get('session/ping', fn () => response()->json(['ok' => true]))->name('api.session.ping');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
+    // Every sidebar badge count in one request (per-count permission handled in the service).
+    Route::get('sidebar-badges', [SidebarBadgeController::class, 'index'])->name('api.sidebar-badges');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])->name('api.password.change');
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
