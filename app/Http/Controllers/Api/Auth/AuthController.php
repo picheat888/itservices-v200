@@ -124,8 +124,14 @@ class AuthController extends Controller
      */
     public function changePassword(Request $request): JsonResponse
     {
+        // Re-entering the current password guards against someone using an unattended,
+        // already-signed-in session. That guard is moot right after an admin handed the
+        // password over — the account is flagged, the person just authenticated with it,
+        // and the temporary password is the one thing they would have to type twice.
+        $forced = (bool) $request->user()?->must_change_password;
+
         $data = $request->validate([
-            'current_password' => ['required', 'current_password'],
+            'current_password' => $forced ? ['nullable'] : ['required', 'current_password'],
             // Same complexity an admin must satisfy when setting a password for someone —
             // otherwise a forced change could weaken the account it was meant to protect.
             'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],

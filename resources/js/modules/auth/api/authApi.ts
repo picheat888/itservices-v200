@@ -8,7 +8,8 @@ export interface LoginPayload {
 }
 
 export interface ChangePasswordPayload {
-    current_password: string;
+    /** Omitted on a forced change — the API waives it while must_change_password is set. */
+    current_password?: string;
     password: string;
     password_confirmation: string;
 }
