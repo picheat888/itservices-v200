@@ -1,10 +1,12 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { SectionLabel } from '@/shared/components/section-label';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
@@ -18,9 +20,8 @@ import { PasswordChecklist } from './password-checklist';
  * "จัดการบัญชี" dialog for an employee who already has a login account.
  * Two independent sections, gated per permission:
  *  - Username (employees.set_credentials): edit + save the login name.
- *  - Reset password (employees.reset_password): optional custom password
- *    (blank = employee code) + a force-change-at-next-sign-in switch;
- *    reveals the new password with copy after a reset.
+ *  - Reset password (employees.reset_password): a typed or generated password plus a
+ *    force-change-at-next-sign-in switch; reveals the new password with copy afterwards.
  */
 export function ManageCredentialsModal({ employee, onClose }: { employee: Employee | null; onClose: () => void }) {
     const t = useT();
@@ -37,7 +38,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const [password, setPassword] = useState('');
     const [forceChange, setForceChange] = useState(true);
     const [newPassword, setNewPassword] = useState<string | null>(null);
-    const [error, setError] = useState('');
+    // Per-field messages sit under their own input; `formError` is the catch-all banner.
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [formError, setFormError] = useState('');
     const [copied, setCopied] = useState(false);
     // Which action is in flight. Both buttons drive the same mutation, so its `isPending`
     // alone would spin them together — this keeps the spinner on the one that was clicked.
@@ -58,7 +61,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
         setPassword('');
         setForceChange(true);
         setNewPassword(null);
-        setError('');
+        setErrors({});
+        setFormError('');
         setCopied(false);
         setBusy(null);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -71,10 +75,11 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const saveUsername = async () => {
         if (!employee || !username.trim()) return;
         const next = username.trim();
-        setError('');
+        setErrors({});
+        setFormError('');
         setUsernameSaved(false);
         if (!isValidUsername(next)) {
-            setError(t('cred_err_username_format'));
+            setErrors({ username: t('cred_err_username_format') });
             return;
         }
         if (next === (employee.username ?? '')) return;
@@ -91,7 +96,12 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     setUsernameSaved(true);
                 } catch (e: unknown) {
                     const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-                    setError(data?.errors?.username ? t('cred_err_username_taken') : (data?.message ?? t('cred_err_generic')));
+                    // A rejected name belongs under its field; anything else is form-level.
+                    if (data?.errors?.username) {
+                        setErrors({ username: t('cred_err_username_taken') });
+                    } else {
+                        setFormError(data?.message ?? t('cred_err_generic'));
+                    }
                     throw e;
                 } finally {
                     setBusy(null);
@@ -106,9 +116,10 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
      */
     const resetPassword = async () => {
         if (!employee) return;
-        setError('');
+        setErrors({});
+        setFormError('');
         if (!isValidPassword(password.trim())) {
-            setError(t('cred_err_password_policy'));
+            setErrors({ password: t('cred_err_password_policy') });
             return;
         }
 
@@ -127,7 +138,11 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     setNewPassword(res.new_password ?? null);
                 } catch (e: unknown) {
                     const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
-                    setError(data?.errors?.password?.[0] ?? data?.message ?? t('cred_err_generic'));
+                    if (data?.errors?.password) {
+                        setErrors({ password: data.errors.password[0] ?? t('cred_err_password_policy') });
+                    } else {
+                        setFormError(data?.message ?? t('cred_err_generic'));
+                    }
                     throw e;
                 } finally {
                     setBusy(null);
@@ -153,58 +168,56 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <ShieldCheck className="text-brand h-5 w-5" />
-                        {t('emp_cred_manage_title')}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {empName}
-                        {shown?.code ? ` (${shown.code})` : ''}
-                    </DialogDescription>
-                </DialogHeader>
+            <DialogContent className="max-w-md gap-0 overflow-hidden p-0">
+                <FocusDialogHeader
+                    icon={ShieldCheck}
+                    eyebrow={t('emp_cred_manage_title')}
+                    title={empName}
+                    code={shown?.code}
+                    srDescription={t('emp_cred_manage_title')}
+                />
 
-                <div className="space-y-4">
+                <div className="space-y-5 border-t px-6 py-5">
                     {/* ── Username ── */}
                     {canUsername && (
-                        <section className="space-y-2">
-                            <div className="text-muted-foreground text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('emp_cred_username_section')}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {/* Lower-cased as it's typed, matching what the API stores. */}
-                                <Input
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                                    className="font-mono"
-                                    autoComplete="off"
-                                />
-                                <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
-                                    {busy === 'username' ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : usernameSaved ? (
-                                        <Check className="h-4 w-4" />
-                                    ) : null}
-                                    {usernameSaved ? t('saved') : t('save')}
-                                </Button>
-                            </div>
-                            {usernameSaved && <p className="text-xs text-emerald-600 dark:text-emerald-400">{t('emp_cred_username_saved')}</p>}
+                        <section>
+                            <SectionLabel>{t('emp_cred_username_section')}</SectionLabel>
+                            <Field label={t('cred_username')} name="username" error={errors.username}>
+                                <div className="flex items-center gap-2">
+                                    {/* Lower-cased as it's typed, matching what the API stores. */}
+                                    <Input
+                                        value={username}
+                                        onChange={(e) => {
+                                            setUsername(e.target.value.toLowerCase());
+                                            setErrors({});
+                                        }}
+                                        className="font-mono"
+                                        autoComplete="off"
+                                    />
+                                    <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
+                                        {busy === 'username' ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : usernameSaved ? (
+                                            <Check className="h-4 w-4" />
+                                        ) : null}
+                                        {usernameSaved ? t('saved') : t('save')}
+                                    </Button>
+                                </div>
+                            </Field>
+                            {usernameSaved && <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400">{t('emp_cred_username_saved')}</p>}
                         </section>
                     )}
 
-                    {canUsername && canReset && <div className="bg-border h-px" />}
-
                     {/* ── Reset password ── */}
                     {canReset && (
-                        <section className="space-y-3">
-                            <div className="text-muted-foreground text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('emp_cred_reset_section')}
-                            </div>
+                        <section>
+                            <SectionLabel>{t('emp_cred_reset_section')}</SectionLabel>
                             {!newPassword ? (
                                 <>
                                     <Field
                                         label={t('reset_password_new')}
+                                        name="password"
+                                        error={errors.password}
                                         action={
                                             <Button
                                                 type="button"
@@ -220,7 +233,10 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                     >
                                         <Input
                                             value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
+                                            onChange={(e) => {
+                                                setPassword(e.target.value);
+                                                setErrors({});
+                                            }}
                                             className="font-mono"
                                             // Eight dots — the same mask the creation dialog uses, and the
                                             // policy's minimum length at a glance.
@@ -228,9 +244,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             autoComplete="new-password"
                                         />
                                     </Field>
-                                    {/* The hint covers the blank case; the checklist covers a typed one. */}
-                                    <p className="text-muted-foreground text-xs">{t('emp_cred_reset_hint')}</p>
-                                    <PasswordChecklist value={password} />
+                                    <PasswordChecklist value={password} className="mt-2" />
                                     <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
@@ -268,10 +282,14 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                         </section>
                     )}
 
-                    {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
+                    {formError && (
+                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3 py-2 text-sm">
+                            {formError}
+                        </div>
+                    )}
                 </div>
 
-                <div className="flex justify-end">
+                <div className="border-border bg-muted/20 flex justify-end border-t px-6 py-3.5">
                     <Button variant="outline" onClick={onClose}>
                         {t('close')}
                     </Button>
