@@ -261,7 +261,7 @@ export const employee: Dict = {
     emp_cred_username_section: 'Username',
     emp_cred_username_saved: 'บันทึกชื่อผู้ใช้แล้ว',
     emp_cred_username_confirm_title: 'ยืนยันเปลี่ยนชื่อผู้ใช้?',
-    emp_cred_username_confirm_desc: 'พนักงานสามารถใช้ "ชื่อผู้ใช้งานใหม่" ในการเข้าสู่ระบบตั้งแต่ครั้งถัดไป',
+    emp_cred_username_confirm_desc: '"ชื่อผู้ใช้งานใหม่" สามารถใช้การเข้าสู่ระบบในครั้งถัดไป',
     emp_cred_reset_section: 'Reset Password',
     emp_cred_reset_hint: 'เว้นว่างเพื่อใช้รหัสพนักงาน',
     emp_cred_force_change: 'บังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งถัดไป',
