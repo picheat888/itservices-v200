@@ -1178,3 +1178,52 @@ spec: `docs/superpowers/specs/2026-07-08-contract-cancel-reason-design.md` · pl
 - เอา staggered fade-in (cf-row/sc-row) ออกจาก Contract/Stock; EmployeeViewDrawer retain content ให้มี fade-out ตอนปิด
 
 **Verification**: `php artisan test --compact` = **632 passed / 2400 assertions / 0 failed** · tsc 0 · eslint clean · build green · pint passed
+
+## 🔑 Credentials Management + Employee module cleanup (2026-07-31)
+
+Spec: `docs/superpowers/specs/2026-07-30-credentials-management-design.md` · Plan: `docs/superpowers/plans/2026-07-30-credentials-management.md`
+
+**ปัญหาเดิม**: สร้างบัญชีแล้วแก้ `username` ไม่ได้เลย · "Reset Password" ตั้งรหัสเป็น**รหัสพนักงาน**แล้วจบ (ไม่บังคับเปลี่ยนครั้งถัดไป ทั้งที่รหัสพนักงานเป็นข้อมูลสาธารณะ เดาได้)
+
+### 1. Credentials Management
+
+**Backend**
+- migration `users.must_change_password` (boolean, default false) — **แยกอิสระจาก policy `password_expiry_days`**
+- `UserResource.password_expired` = `must_change_password || isPasswordExpired()` → หน้าบังคับเปลี่ยนรหัสเดิม (`ChangePasswordDialog` ที่ `app-shell`) ทำงานทันที **โดยไม่ต้องแก้ frontend ฝั่ง auth เลย**; `AuthController@changePassword` เคลียร์ flag เมื่อสำเร็จ; `CheckPasswordExpiry` เช็ค flag ด้วย
+- **`PUT /employees/{employee}/credentials`** (`updateCredentials`) — แก้ username และ/หรือ reset password ใน request เดียว **gate แยกรายฟิลด์**: username → `employees.set_credentials`, password → `employees.reset_password`; 422 `no_account` เมื่อไม่มีบัญชี; **ลบ `POST reset-password` + `ResetPasswordModal` เดิมทิ้ง**
+- **นโยบายรหัสผ่าน** `Password::min(8)->mixedCase()->numbers()->symbols()` (ชุด complexity แบบ AD) ใช้ทั้งตอนสร้างและตอน reset — ตรงกับ `min:8` ที่ `changePassword` บังคับอยู่แล้ว
+- **กฎ username** `^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$` max 30 — อังกฤษเท่านั้น ขึ้นต้นด้วยตัวอักษร ลงท้ายด้วยตัวอักษร/ตัวเลข ใช้ `. _ -` ตรงกลาง (ชุดที่ AD/POSIX รับ); ขั้นต่ำ 2 ตัวเพื่อไม่ตัดบัญชีร่วมที่ใช้จริง (`hr`, `it`)
+- **normalize username เป็นตัวพิมพ์เล็กก่อน validate** — ความ unique แบบไม่สนตัวพิมพ์เดิมพึ่ง collation `utf8mb4_unicode_ci` ของ MariaDB ทำให้ SQLite (เทสต์) ปล่อย `John_Do` ผ่าน `john_do` ได้ ตอนนี้การันตีจากโค้ด
+- reset ที่ไม่ส่งรหัสมา → `generatePassword()` สุ่มรหัสที่ผ่าน policy เสมอ (หยิบตัวแทนครบทุกคลาสก่อนแล้วสับ) — **เลิกใช้รหัสพนักงานเป็นค่าเริ่มต้น**
+
+**Frontend** (`modules/employee`)
+- **`manage-credentials-modal.tsx`** — dialog "จัดการบัญชี" แทนปุ่ม Reset Password เดิม (footer drawer + เมนู ⋮ ในตาราง): แก้ username + reset password แสดงตามสิทธิ์รายส่วน, **สวิตช์บังคับเปลี่ยนรหัสครั้งถัดไป** (default เปิด), เผยรหัสใหม่พร้อมปุ่มคัดลอกหลัง reset
+- **ยืนยันก่อนลงมือทั้งสองการกระทำ** ผ่าน `useConfirm()` — rename เปลี่ยนวิธีล็อกอินของคนอื่น · reset ย้อนกลับไม่ได้
+- `set-credentials-modal.tsx` — สวิตช์เดียวกัน + **Auto Gen สุ่มรหัส 14 ตัว** (เดิมใช้รหัสพนักงาน) + เผยคู่ user/pass **หลังบันทึกสำเร็จ** แทน popup ซ้ำตอนกด Gen
+- `lib/credentials.ts` — กฎ username + policy + ตัวสุ่ม mirror จาก controller ที่เดียว; `password-checklist.tsx` — checklist 5 ข้อติ๊กเขียวสด **แสดงตลอดเวลาเพื่อไม่ให้ฟอร์มขยับตอนพิมพ์**
+- ปุ่ม Reset ต้องมีรหัสที่ผ่านเกณฑ์ก่อนจึงกดได้ · ปุ่ม Save ปิดจนกว่า username จะเปลี่ยนจริง
+
+### 2. Employee detail drawer — แท็บใช้งานได้จริง
+
+- **Tickets tab** (ใหม่): `GET /employees/{employee}/tickets` gate ด้วย `employees.view` — ตาราง Request at · Subject/เลขที่ · Category · Status ใช้ badge จากโมดูล ticket ผ่าน barrel; `useTicketMutations` invalidate `['employee-tickets']` ให้รีเฟรชสด
+- **Access tab**: ย้าย `GET /employees/{employee}/access` จาก `AccessController` (gate `access.module`) มาไว้ที่ `EmployeeController` gate ด้วย `employees.view` — คนที่ดูแลพนักงานแต่ไม่มีสิทธิ์ Access Directory จึงเปิดดูได้ (own-module peek pattern เดียวกับ Assets tab) + แสดงโลโก้ Social/Software (`resource_logo`)
+- แถบซ้ายเพิ่มกลุ่ม **Credentials** (Username อย่างเดียว) แยกจากข้อมูลติดต่อ
+- **i18n**: ย้ายสตริง hardcode 49 จุดใน `employee-view-drawer` + `edit-employee-dialog` เข้า `lang/{en,th}/employee.ts` (`emp_v_*`) — ลบ helper `L(th, en)` ที่เลี่ยงระบบ i18n ทิ้ง
+
+### 3. Module restructure + Edit dialog
+
+- `hooks/use-org.ts` (196 บรรทัด) → `use-employees` · `use-departments` · `use-positions` · `use-sections` · `use-locations` + `query-keys.ts`; `api/orgApi.ts` (174 บรรทัด) → `employeeApi` · `departmentApi` · `positionApi` · `sectionApi` · `locationApi` + `http-helpers.ts` — ชื่อไฟล์ตรงกับเนื้อใน (เดิมชื่อ "org" แต่เป็น hook/api กลางของทั้งโมดูล ใช้ข้าม 6 โมดูล) · barrel รับภาระ re-export ให้ผู้เรียกภายนอกไม่ต้องแก้
+- **`edit-employee-dialog` เป็น focus drawer 2 คอลัมน์** แบบ Open Ticket: `FocusDialogHeader` + `SectionLabel` กลาง · ซ้าย = ตัวตน (รูป/รหัส/ชื่อ/ติดต่อ) ขวา = การจ้างงาน · กว้าง 1100px · validate ทุกช่องรวดเดียว (เดิม `!validateStep(1) || !validateStep(2)` ตัดวงจร ทำให้เห็น error ทีละคอลัมน์)
+- phone: validate แบบเดียวกับ `callback_phone` ของ Ticket (`regex:/(\D*\d){3,}/`) — พิมพ์ "ext. 1305" ได้ แต่ต้องมีตัวเลข ≥3 ตัว
+
+### 4. Bug fixes
+
+- **My Assets**: กดรับหลายรายการต่อเนื่อง spinner ของรายการแรกดับ — `accept.variables` จำได้แค่คำสั่งล่าสุด เปลี่ยนเป็น `Set<number>` ต่อแถว (บั๊กชนิดเดียวกันเกิดซ้ำที่ปุ่ม Save/Reset ใน dialog จัดการบัญชี → แยก state `busy`)
+- **Enter ในช่องค้นหา `SearchableSelect` สั่งบันทึกทั้งฟอร์ม** — dialog ดัก Enter โดยข้ามเฉพาะ `TEXTAREA/BUTTON/SELECT/OPTION` ไม่มี `INPUT`; แก้ที่ต้นเหตุด้วย `stopPropagation` ในช่องค้นหา (มีผลทุกฟอร์มที่ใช้ component นี้)
+- **Dialog เนื้อหาหายก่อน fade-out** — retain `shown` copy ใน credential dialogs ทั้ง 3 ตัว (ตามมาตรฐานเดิมของ view drawer)
+- **`Switch` สถานะปิดจมพื้นหลัง** ทั้ง light/dark — `bg-muted` เป็น token เดียวกับพื้นกล่อง เปลี่ยนเป็น `bg-muted-foreground/35` (มีผลทุก switch ในระบบ)
+- `Field` รองรับ `action` slot (ปุ่มบนบรรทัด label) — ใช้กับปุ่ม Auto Gen ที่เดิมลอยไม่มีที่ยึด
+
+**Verification**: `php artisan test --compact` = **732 passed / 2791 assertions / 0 failed** · tsc 0 · build green · pint passed (`--dirty`)
+
+> บทเรียน: `git add` แบบระบุชื่อไฟล์ทีละตัวทำให้ไฟล์ใหม่ 11 ไฟล์ (hooks/api ที่แยกออกมา + เทสต์) ตกหล่นไม่เข้า git ทั้งที่ commit อื่นอ้างถึงอยู่ — `tsc`/Vite อ่านจากดิสก์จึงไม่ฟ้อง ตรวจเจอตอนจะ push ด้วยการ clone repo จาก git ล้วนแล้วไล่ตรวจว่าทุก import ชี้ไปยังไฟล์ที่มีจริง
