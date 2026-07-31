@@ -32,6 +32,16 @@ http.interceptors.response.use(
             return Promise.reject(error);
         }
 
+        // Any other 401 on a screen that was working means the session is simply gone —
+        // an admin reset the password (which signs the account out everywhere), or it was
+        // revoked elsewhere. Without this the page just fails silently until the user
+        // happens to reload. `/me` is exempt: it answers 401 whenever nobody is signed in,
+        // and the route guard already sends those visitors to the login page.
+        if (status === 401 && !error.config?.url?.endsWith('/me') && !window.location.pathname.startsWith('/login')) {
+            window.location.href = '/login?reason=signed_out';
+            return Promise.reject(error);
+        }
+
         // 419 = stale CSRF token — e.g. cookies clobbered by late responses racing a
         // logout (single-worker dev server), or a login page left open past the session
         // lifetime. Refresh the cookie and replay the request once — the standard
