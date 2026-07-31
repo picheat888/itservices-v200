@@ -275,4 +275,7 @@ export const employee: Dict = {
         'They are signed out immediately and their old password stops working.\nTell them to sign in again with the new password.',
     cred_saved_title: 'Account created',
     cred_copy: 'Copy',
+    emp_cred_handover_note: 'This is the only time it is shown — copy it and pass it on.',
+    emp_cred_handover_force: 'They will be asked to set their own when they sign in.',
+    emp_cred_done: 'Done',
 };
