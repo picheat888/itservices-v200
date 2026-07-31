@@ -62,6 +62,14 @@ type Tab = (typeof TAB_IDS)[number];
 
 const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
+/** One entry on the sub-tab bar; `count` renders as a small badge with `countTitle` as its tooltip. */
+interface TabItem {
+    id: Tab;
+    label: string;
+    count?: number;
+    countTitle?: string;
+}
+
 /** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialTab(): Tab {
     const fromUrl = new URLSearchParams(window.location.search).get('tab');
@@ -202,14 +210,21 @@ export default function EmployeesPage() {
         [setSearchParams],
     );
 
-    const tabs: { id: Tab; label: string; count?: number }[] = [
+    // The Directory badge counts active staff still waiting for a login account — work left to do,
+    // not a headcount — so it is tinted amber and hidden once everyone has one.
+    const tabs: TabItem[] = [
         canViewDashboard && { id: 'dashboard' as Tab, label: t('sub_dashboard') },
-        canViewDirectory && { id: 'directory' as Tab, label: t('sub_directory'), count: summary?.total },
+        canViewDirectory && {
+            id: 'directory' as Tab,
+            label: t('sub_directory'),
+            count: summary?.no_account || undefined,
+            countTitle: t('cred_no_account'),
+        },
         canViewSections && { id: 'sections' as Tab, label: t('sub_sections') },
         canViewDepartments && { id: 'departments' as Tab, label: t('sub_departments') },
         canViewPositions && { id: 'positions' as Tab, label: t('sub_positions') },
         canViewOrg && { id: 'orgchart' as Tab, label: t('sub_org_chart') },
-    ].filter(Boolean) as { id: Tab; label: string; count?: number }[];
+    ].filter(Boolean) as TabItem[];
 
     // If the persisted/landing tab isn't visible (permission removed), fall back to first visible tab.
     useEffect(() => {
@@ -455,7 +470,14 @@ export default function EmployeesPage() {
                             )}
                         >
                             {tb.label}
-                            {tb.count != null && <span className="ml-1.5 font-mono text-xs opacity-60">{tb.count}</span>}
+                            {tb.count != null && (
+                                <span
+                                    title={tb.countTitle}
+                                    className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 font-mono text-xs text-amber-600 dark:text-amber-400"
+                                >
+                                    {tb.count}
+                                </span>
+                            )}
                         </button>
                     ))}
                 </div>

@@ -106,4 +106,17 @@ class EmployeeAccountLinkTest extends TestCase
         $this->assertTrue($noCodes->contains('EMP-9008'));
         $this->assertFalse($noCodes->contains('EMP-9007'));
     }
+
+    public function test_index_orders_by_newest_employee_code_within_the_same_group(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        // Same status + same no-account state, so only the code decides the order.
+        Employee::create(['code' => '521310', 'first_name' => 'Older', 'last_name' => 'Code', 'email' => 'oc@x.test']);
+        Employee::create(['code' => '681310', 'first_name' => 'Newer', 'last_name' => 'Code', 'email' => 'nc@x.test']);
+
+        $codes = collect($this->getJson('/api/employees?page=1&status=no_account')->json('data'))->pluck('code');
+
+        $this->assertLessThan($codes->search('521310'), $codes->search('681310'));
+    }
 }
