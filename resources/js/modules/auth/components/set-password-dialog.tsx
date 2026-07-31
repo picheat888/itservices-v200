@@ -77,10 +77,17 @@ export function SetPasswordDialog() {
                                 onChange={(e) => setCurrent(e.target.value)}
                                 autoComplete="current-password"
                                 autoFocus
+                                placeholder="••••••••"
                             />
                         </Field>
                         <Field label={t('pwd_new')}>
-                            <Input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" />
+                            <Input
+                                type="password"
+                                value={next}
+                                onChange={(e) => setNext(e.target.value)}
+                                autoComplete="new-password"
+                                placeholder="••••••••"
+                            />
                             <PasswordChecklist value={next} className="mt-2" />
                         </Field>
                         <Field label={t('pwd_confirm')} error={error ?? undefined}>
@@ -89,6 +96,7 @@ export function SetPasswordDialog() {
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
                                 autoComplete="new-password"
+                                placeholder="••••••••"
                                 onKeyDown={(e) => e.key === 'Enter' && submit()}
                             />
                         </Field>
