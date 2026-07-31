@@ -173,7 +173,7 @@ export const employee: Dict = {
     pwd_set_title: 'Set your password',
     pwd_set_desc: 'IT set a temporary password for this account. Choose one only you know to continue.',
     pwd_set_submit: 'Set password',
-    pwd_ph_current: 'Current password',
+    pwd_ph_current: 'Enter your current password',
     pwd_ph_new: 'Choose a new password',
     pwd_ph_confirm: 'Repeat the new password',
     pwd_expired_title: 'Password expired',
