@@ -171,7 +171,7 @@ export const employee: Dict = {
     emp_onboarding_note: 'Note (optional)',
     emp_onboarding_deferred: 'Requests will be created automatically once the Requests module is available.',
     pwd_set_title: 'Set your password',
-    pwd_set_desc: 'IT set a temporary password for this account. Choose one only you know to continue.',
+    pwd_set_desc: 'Choose one only you know to continue.',
     pwd_set_submit: 'Set password',
     pwd_ph_current: 'Enter your current password',
     pwd_ph_new: 'Choose your new password',
