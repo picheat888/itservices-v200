@@ -230,10 +230,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                 admin another reset and another call to the employee. */}
                             <div className="flex items-start gap-2 border-t border-amber-300/70 bg-amber-50 px-4 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-300">
                                 <EyeOff className="mt-[3px] h-3.5 w-3.5 shrink-0" />
-                                <div>
-                                    <p>{t('emp_cred_handover_note')}</p>
-                                    {forceChange && <p className="opacity-80">{t('emp_cred_handover_force')}</p>}
-                                </div>
+                                <span>{t('emp_cred_handover_note')}</span>
                             </div>
                         </div>
                     </div>

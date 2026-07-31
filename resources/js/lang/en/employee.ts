@@ -276,6 +276,5 @@ export const employee: Dict = {
     cred_saved_title: 'Account created',
     cred_copy: 'Copy',
     emp_cred_handover_note: 'This is the only time it is shown — copy it and pass it to them.',
-    emp_cred_handover_force: 'They will set their own password when they next sign in.',
     emp_cred_done: 'Done',
 };
