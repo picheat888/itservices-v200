@@ -264,7 +264,6 @@ export const employee: Dict = {
     // ── Credentials management (emp_cred_*) ──
     emp_cred_manage_title: 'จัดการบัญชี',
     emp_cred_username_section: 'Username',
-    emp_cred_username_saved: 'บันทึกชื่อผู้ใช้แล้ว',
     emp_cred_username_confirm_title: 'ยืนยันเปลี่ยนชื่อผู้ใช้?',
     emp_cred_username_confirm_desc: '"ชื่อผู้ใช้งานใหม่" สามารถใช้การเข้าสู่ระบบในครั้งถัดไป',
     emp_cred_reset_section: 'Reset Password',

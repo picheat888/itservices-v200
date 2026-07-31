@@ -264,9 +264,6 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                         </Button>
                                     </div>
                                 </Field>
-                                {usernameSaved && (
-                                    <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400">{t('emp_cred_username_saved')}</p>
-                                )}
                             </section>
                         )}
 
