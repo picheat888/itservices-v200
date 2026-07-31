@@ -62,7 +62,7 @@ class EmployeeAccountLinkTest extends TestCase
         $unlinked = Employee::create(['code' => 'EMP-9004', 'first_name' => 'Unlinked', 'last_name' => 'Test', 'email' => 'u@x.test']);
 
         $this->putJson("/api/employees/{$linked->id}/credentials", ['reset_password' => true])
-            ->assertOk()->assertJsonPath('new_password', 'EMP-9003');
+            ->assertOk()->assertJsonPath('new_password', fn ($p) => is_string($p) && $p !== '');
 
         $this->putJson("/api/employees/{$unlinked->id}/credentials", ['reset_password' => true])
             ->assertStatus(422)->assertJsonPath('message', 'no_account');

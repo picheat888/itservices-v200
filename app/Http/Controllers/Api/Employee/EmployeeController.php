@@ -49,6 +49,25 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Temporary password used when a reset arrives without one. Takes a character from each
+     * required class first so the result always satisfies passwordRule(), then fills and
+     * shuffles. Ambiguous glyphs (0/O, 1/l/I) are left out so it survives being read aloud.
+     */
+    private function generatePassword(int $length = 14): string
+    {
+        $pools = ['abcdefghijkmnopqrstuvwxyz', 'ABCDEFGHJKLMNPQRSTUVWXYZ', '23456789', '!@#$%&*?'];
+        $combined = implode('', $pools);
+
+        $chars = array_map(fn (string $pool) => $pool[random_int(0, strlen($pool) - 1)], $pools);
+        while (count($chars) < $length) {
+            $chars[] = $combined[random_int(0, strlen($combined) - 1)];
+        }
+        shuffle($chars);
+
+        return implode('', $chars);
+    }
+
+    /**
      * Fold an incoming username to lower case before it is validated or stored. Logins are
      * case-insensitive, so this keeps "John_Do" from slipping past an existing "john_do" —
      * a guarantee that would otherwise rest on the database collation alone.
@@ -488,7 +507,9 @@ class EmployeeController extends Controller
         if ($resetting) {
             abort_unless((bool) $request->user()?->hasPermission('employees.reset_password'), 403);
             $force = $request->boolean('force_change');
-            $newPassword = filled($data['password'] ?? null) ? $data['password'] : $employee->code;
+            // No password supplied → generate one. The employee code was the old fallback, but
+            // it is public knowledge and fails the very policy this endpoint enforces.
+            $newPassword = filled($data['password'] ?? null) ? $data['password'] : $this->generatePassword();
             $user->forceFill([
                 'password' => Hash::make($newPassword),
                 // null marks the password as "never set by the user" while forcing a change.
