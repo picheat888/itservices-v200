@@ -2,6 +2,8 @@ import { useT } from '@/lang';
 import { authApi, type ChangePasswordPayload } from '@/modules/auth/api/authApi';
 import { useLogout } from '@/modules/auth/hooks/use-auth';
 import { Field } from '@/shared/components/field';
+import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { isValidPassword } from '@/shared/lib/password-policy';
 import type { User } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -41,8 +43,9 @@ export function ChangePasswordDialog() {
 
     const submit = () => {
         setError(null);
-        if (next.length < 8) {
-            setError(t('pwd_too_short'));
+        // Mirrors the API rule; the checklist below spells out which part failed.
+        if (!isValidPassword(next)) {
+            setError(t('cred_err_password_policy'));
             return;
         }
         if (next !== confirm) {
@@ -73,7 +76,7 @@ export function ChangePasswordDialog() {
                                 onChange={(e) => setCurrent(e.target.value)}
                                 autoComplete="current-password"
                                 autoFocus
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_current')}
                             />
                         </Field>
                         <Field label={t('pwd_new')}>
@@ -82,8 +85,9 @@ export function ChangePasswordDialog() {
                                 value={next}
                                 onChange={(e) => setNext(e.target.value)}
                                 autoComplete="new-password"
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_new')}
                             />
+                            <PasswordChecklist value={next} className="mt-2" />
                         </Field>
                         <Field label={t('pwd_confirm')} error={error ?? undefined}>
                             <Input
@@ -91,7 +95,7 @@ export function ChangePasswordDialog() {
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
                                 autoComplete="new-password"
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_confirm')}
                                 onKeyDown={(e) => e.key === 'Enter' && submit()}
                             />
                         </Field>
