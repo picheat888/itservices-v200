@@ -271,7 +271,8 @@ export const employee: Dict = {
     emp_cred_force_change: 'Require a password change at next sign-in',
     emp_cred_reset_btn: 'Reset Password',
     emp_cred_reset_confirm_title: 'Reset this password?',
-    emp_cred_reset_confirm_desc: 'The current password stops working right away. The new one is shown once — copy it before closing.',
+    emp_cred_reset_confirm_desc:
+        'They are signed out immediately and their old password stops working.\nTell them to sign in again with the new password.',
     cred_saved_title: 'Account created',
     cred_copy: 'Copy',
 };
