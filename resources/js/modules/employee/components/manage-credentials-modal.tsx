@@ -2,7 +2,9 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { SectionLabel } from '@/shared/components/section-label';
+import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -13,8 +15,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, isValidUsername, randomPassword } from '../lib/credentials';
-import { PasswordChecklist } from './password-checklist';
+import { isValidUsername } from '../lib/credentials';
 
 /**
  * "จัดการบัญชี" dialog for an employee who already has a login account.

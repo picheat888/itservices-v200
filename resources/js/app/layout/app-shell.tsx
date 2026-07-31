@@ -1,4 +1,4 @@
-import { ChangePasswordDialog, SessionTimeoutModal, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
+import { ChangePasswordDialog, SessionTimeoutModal, SetPasswordDialog, useAuth, useSessionTimeout, useUserPreferences } from '@/modules/auth';
 import { settingsApi } from '@/modules/settings';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { useUiStore } from '@/stores/ui';
@@ -48,7 +48,9 @@ export function AppShell() {
             <NotificationToaster />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
-            {user?.password_expired && <ChangePasswordDialog />}
+            {/* Both block the app until a new password is set, but they explain different
+                reasons: an admin set this one, versus the policy aged it out. */}
+            {user?.must_change_password ? <SetPasswordDialog /> : user?.password_expired ? <ChangePasswordDialog /> : null}
         </div>
     );
 }

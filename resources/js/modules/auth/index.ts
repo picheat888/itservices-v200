@@ -13,6 +13,7 @@ export { ChangePasswordDialog } from './components/change-password-dialog';
 export { ProtectedRoute } from './components/protected-route';
 export { NoAccess, RequirePermission } from './components/require-permission';
 export { SessionTimeoutModal } from './components/session-timeout-modal';
+export { SetPasswordDialog } from './components/set-password-dialog';
 
 // API
 export * from './api/authApi';

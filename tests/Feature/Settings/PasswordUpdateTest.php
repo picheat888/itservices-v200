@@ -19,12 +19,12 @@ class PasswordUpdateTest extends TestCase
         $this->actingAs($user)
             ->putJson('/api/password', [
                 'current_password' => 'password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => 'New-Password1!',
+                'password_confirmation' => 'New-Password1!',
             ])
             ->assertOk();
 
-        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+        $this->assertTrue(Hash::check('New-Password1!', $user->refresh()->password));
     }
 
     /** A wrong current password is rejected and the password is left unchanged. */
@@ -35,8 +35,8 @@ class PasswordUpdateTest extends TestCase
         $this->actingAs($user)
             ->putJson('/api/password', [
                 'current_password' => 'wrong-password',
-                'password' => 'new-password',
-                'password_confirmation' => 'new-password',
+                'password' => 'New-Password1!',
+                'password_confirmation' => 'New-Password1!',
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('current_password');

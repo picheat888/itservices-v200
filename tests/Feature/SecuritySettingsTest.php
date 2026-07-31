@@ -80,8 +80,8 @@ class SecuritySettingsTest extends TestCase
 
         $this->putJson('/api/password', [
             'current_password' => 'wrong-password',
-            'password' => 'new-secret-123',
-            'password_confirmation' => 'new-secret-123',
+            'password' => 'New-Secret123!',
+            'password_confirmation' => 'New-Secret123!',
         ])->assertStatus(422);
     }
 
@@ -92,12 +92,12 @@ class SecuritySettingsTest extends TestCase
 
         $this->putJson('/api/password', [
             'current_password' => 'password',
-            'password' => 'new-secret-123',
-            'password_confirmation' => 'new-secret-123',
+            'password' => 'New-Secret123!',
+            'password_confirmation' => 'New-Secret123!',
         ])->assertOk();
 
         $user->refresh();
-        $this->assertTrue(Hash::check('new-secret-123', $user->password));
+        $this->assertTrue(Hash::check('New-Secret123!', $user->password));
         $this->assertNotNull($user->password_changed_at);
     }
 
