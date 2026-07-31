@@ -70,14 +70,14 @@ export function SetPasswordDialog() {
 
                     <div className="space-y-3">
                         {/* Named for what they were handed, not "current password". */}
-                        <Field label={t('pwd_set_temp')}>
+                        <Field label={t('pwd_current')}>
                             <Input
                                 type="password"
                                 value={current}
                                 onChange={(e) => setCurrent(e.target.value)}
                                 autoComplete="current-password"
                                 autoFocus
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_current')}
                             />
                         </Field>
                         <Field label={t('pwd_new')}>
@@ -86,7 +86,7 @@ export function SetPasswordDialog() {
                                 value={next}
                                 onChange={(e) => setNext(e.target.value)}
                                 autoComplete="new-password"
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_new')}
                             />
                             <PasswordChecklist value={next} className="mt-2" />
                         </Field>
@@ -96,7 +96,7 @@ export function SetPasswordDialog() {
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
                                 autoComplete="new-password"
-                                placeholder="••••••••"
+                                placeholder={t('pwd_ph_confirm')}
                                 onKeyDown={(e) => e.key === 'Enter' && submit()}
                             />
                         </Field>
