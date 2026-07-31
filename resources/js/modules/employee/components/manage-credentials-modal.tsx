@@ -35,6 +35,10 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const canReset = can('employees.reset_password');
 
     const [username, setUsername] = useState('');
+    // The name as it currently stands on the account. The `employee` prop is a snapshot taken
+    // when the dialog opened and never refreshes, so saving has to advance this itself —
+    // otherwise typing the original name back looks unchanged and the button locks up.
+    const [savedUsername, setSavedUsername] = useState('');
     const [usernameSaved, setUsernameSaved] = useState(false);
     const [password, setPassword] = useState('');
     const [forceChange, setForceChange] = useState(true);
@@ -58,6 +62,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     useEffect(() => {
         if (!employee) return;
         setUsername(employee.username ?? '');
+        setSavedUsername(employee.username ?? '');
         setUsernameSaved(false);
         setPassword('');
         setForceChange(true);
@@ -83,7 +88,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
             setErrors({ username: t('cred_err_username_format') });
             return;
         }
-        if (next === (employee.username ?? '')) return;
+        if (next === savedUsername) return;
 
         await confirm({
             variant: 'warn',
@@ -94,6 +99,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                 setBusy('username');
                 try {
                     await updateCredentials.mutateAsync({ id: employee.id, payload: { username: next } });
+                    setSavedUsername(next);
                     setUsernameSaved(true);
                 } catch (e: unknown) {
                     const data = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
@@ -165,7 +171,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
 
     const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
     // Nothing to save until the field actually differs from the name on the account.
-    const usernameDirty = username.trim() !== (shown?.username ?? '');
+    const usernameDirty = username.trim() !== savedUsername;
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
@@ -221,6 +227,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             onChange={(e) => {
                                                 setUsername(e.target.value.toLowerCase());
                                                 setErrors({});
+                                                // Editing again makes the button an action, not a receipt.
+                                                setUsernameSaved(false);
                                             }}
                                             className="font-mono"
                                             autoComplete="off"
