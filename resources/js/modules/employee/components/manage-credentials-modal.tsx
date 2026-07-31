@@ -135,6 +135,8 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     };
 
     const empName = shown ? (lang === 'th' ? (shown.name_th ?? shown.name) : shown.name) : '';
+    // Nothing to save until the field actually differs from the name on the account.
+    const usernameDirty = username.trim() !== (shown?.username ?? '');
 
     return (
         <Dialog open={!!employee} onOpenChange={(o) => !o && onClose()}>
@@ -165,7 +167,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                     className="font-mono"
                                     autoComplete="off"
                                 />
-                                <Button onClick={saveUsername} disabled={busy !== null || !username.trim()}>
+                                <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
                                     {busy === 'username' ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : usernameSaved ? (
