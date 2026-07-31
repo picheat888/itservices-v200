@@ -1,3 +1,4 @@
+import { ME_KEY } from '@/shared/lib/query-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from '../api/employeeApi';
 import { DEPT, EMP } from './query-keys';
@@ -77,6 +78,9 @@ export function useEmployeeMutations() {
         qc.invalidateQueries({ queryKey: ['employee'] });
         qc.invalidateQueries({ queryKey: ['org-chart'] });
         qc.invalidateQueries({ queryKey: ['employee-access'] });
+        // The signed-in user's own record when they edit themselves — otherwise the topbar
+        // and profile drawer keep showing the old name until a reload.
+        qc.invalidateQueries({ queryKey: ME_KEY });
     };
     return {
         create: useMutation({ mutationFn: (p: EmployeePayload) => employeeApi.create(p), onSuccess: invalidate }),
