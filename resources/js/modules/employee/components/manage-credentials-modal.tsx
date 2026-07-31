@@ -213,7 +213,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                         <section>
                             <SectionLabel>{t('emp_cred_reset_section')}</SectionLabel>
                             {!newPassword ? (
-                                <>
+                                <div className="space-y-4">
                                     <Field
                                         label={t('reset_password_new')}
                                         name="password"
@@ -243,8 +243,9 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                             placeholder="••••••••"
                                             autoComplete="new-password"
                                         />
+                                        {/* Sits with the field it describes, not as a separate block. */}
+                                        <PasswordChecklist value={password} className="mt-2" />
                                     </Field>
-                                    <PasswordChecklist value={password} className="mt-2" />
                                     <div className="border-border bg-muted/40 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5">
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
@@ -259,7 +260,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                         {busy === 'password' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                         {t('emp_cred_reset_btn')}
                                     </Button>
-                                </>
+                                </div>
                             ) : (
                                 <div className="space-y-2">
                                     <p className="text-muted-foreground text-sm">{t('reset_password_success')}</p>
