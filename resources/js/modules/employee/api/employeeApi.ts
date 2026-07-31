@@ -14,6 +14,8 @@ export interface EmployeeSummary {
     active: number;
     resigned: number;
     resigned_this_year: number;
+    /** Active employees still without a login account — drives the Directory tab badge. */
+    no_account: number;
     hires_by_month: EmployeeHiresMonth[];
     recent: Employee[];
     recent_resignations: Employee[];

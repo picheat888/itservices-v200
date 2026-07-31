@@ -131,10 +131,12 @@ class EmployeeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Resigned sink to the bottom; within active, no-account first; then by name.
+        // Resigned sink to the bottom; within active, no-account first;
+        // then newest employee code first (68xxxx before 52xxxx); then by name.
         $query = Employee::with(['department', 'position', 'section', 'user'])
             ->orderByRaw("status = 'resigned'")
             ->orderByRaw('EXISTS(SELECT 1 FROM users WHERE users.employee_id = employees.id)')
+            ->orderByDesc('code')
             ->orderBy('first_name')
             ->orderBy('last_name');
 
@@ -202,6 +204,10 @@ class EmployeeController extends Controller
         $resignedThisYear = Employee::where('status', EmployeeStatus::Resigned->value)
             ->whereYear('last_day', now()->year)->count();
 
+        // Active staff still waiting for a login account — mirrors the ?status=no_account filter.
+        $noAccount = Employee::where('status', EmployeeStatus::Active->value)
+            ->whereDoesntHave('user')->count();
+
         $recent = Employee::with(['department', 'position', 'section'])
             ->orderByDesc('joined_at')
             ->limit(5)
@@ -220,6 +226,7 @@ class EmployeeController extends Controller
             'active' => $active,
             'resigned' => $resigned,
             'resigned_this_year' => $resignedThisYear,
+            'no_account' => $noAccount,
             'hires_by_month' => $this->hiresByMonth(),
             'recent' => EmployeeResource::collection($recent),
             'recent_resignations' => EmployeeResource::collection($recentResignations),

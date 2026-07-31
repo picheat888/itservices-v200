@@ -145,6 +145,21 @@ class EmployeePermissionGatingTest extends TestCase
         $this->assertSame(now()->format('Y-m'), end($months)['month']);
     }
 
+    public function test_summary_counts_active_employees_without_a_login_account(): void
+    {
+        $allowed = $this->userWith(['employees.module', 'employees.view_dashboard']);
+
+        $linked = Employee::create(['first_name' => 'Has', 'last_name' => 'Account', 'status' => 'active']);
+        User::factory()->create(['employee_id' => $linked->id]);
+        Employee::create(['first_name' => 'Needs', 'last_name' => 'Account', 'status' => 'active']);
+        // Resigned staff are excluded — they are not waiting for an account.
+        Employee::create(['first_name' => 'Gone', 'last_name' => 'Away', 'status' => 'resigned']);
+
+        $this->actingAs($allowed)->getJson('/api/employees/summary')
+            ->assertOk()
+            ->assertJsonPath('no_account', 1);
+    }
+
     public function test_org_chart_requires_view_org(): void
     {
         $blocked = $this->userWith(['employees.module', 'employees.view']);
