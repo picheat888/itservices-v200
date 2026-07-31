@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class MustChangePasswordTest extends TestCase
@@ -49,6 +50,30 @@ class MustChangePasswordTest extends TestCase
         $normal = User::factory()->create();
         $this->actingAs($normal);
         $this->getJson('/api/me')->assertOk()->assertJsonPath('data.must_change_password', false);
+    }
+
+    /**
+     * On a forced change the current password is waived — the person authenticated with the
+     * temporary one moments ago. Everyone else must still prove they know it, so an
+     * unattended session can't be used to take an account over.
+     */
+    public function test_current_password_is_waived_only_while_the_flag_is_set(): void
+    {
+        $flagged = User::factory()->create(['must_change_password' => true]);
+        $this->actingAs($flagged);
+        $this->putJson('/api/password', [
+            'password' => 'New-Secret123!',
+            'password_confirmation' => 'New-Secret123!',
+        ])->assertOk();
+        $this->assertTrue(Hash::check('New-Secret123!', $flagged->fresh()->password));
+
+        // Same request without the flag is rejected for the missing current password.
+        $normal = User::factory()->create();
+        $this->actingAs($normal);
+        $this->putJson('/api/password', [
+            'password' => 'New-Secret123!',
+            'password_confirmation' => 'New-Secret123!',
+        ])->assertStatus(422)->assertJsonValidationErrors('current_password');
     }
 
     /** A forced change must not be allowed to weaken the account it was meant to protect. */

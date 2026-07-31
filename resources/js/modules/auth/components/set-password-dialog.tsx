@@ -23,7 +23,6 @@ export function SetPasswordDialog() {
     const qc = useQueryClient();
     const logout = useLogout();
 
-    const [current, setCurrent] = useState('');
     const [next, setNext] = useState('');
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -51,7 +50,9 @@ export function SetPasswordDialog() {
             setError(t('pwd_mismatch'));
             return;
         }
-        change.mutate({ current_password: current, password: next, password_confirmation: confirm });
+        // No current password: the API waives it while must_change_password is set, and the
+        // person authenticated with the temporary one seconds ago.
+        change.mutate({ password: next, password_confirmation: confirm });
     };
 
     return (
@@ -68,8 +69,7 @@ export function SetPasswordDialog() {
                     <h2 className="mb-1 text-center text-base font-semibold">{t('pwd_set_title')}</h2>
                     <p className="text-muted-foreground mb-5 text-center text-sm">{t('pwd_set_desc')}</p>
 
-                    {/* A real <form> so password managers recognise the pair and offer to fill
-                        the current password saved at sign-in; it also gives Enter-to-submit. */}
+                    {/* A real <form> so Enter submits from any field. */}
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();
@@ -77,22 +77,13 @@ export function SetPasswordDialog() {
                         }}
                     >
                         <div className="space-y-3">
-                            <Field label={t('pwd_current')}>
-                                <Input
-                                    type="password"
-                                    value={current}
-                                    onChange={(e) => setCurrent(e.target.value)}
-                                    autoComplete="current-password"
-                                    autoFocus
-                                    placeholder={t('pwd_ph_current')}
-                                />
-                            </Field>
                             <Field label={t('pwd_new')}>
                                 <Input
                                     type="password"
                                     value={next}
                                     onChange={(e) => setNext(e.target.value)}
                                     autoComplete="new-password"
+                                    autoFocus
                                     placeholder={t('pwd_ph_new')}
                                 />
                                 <PasswordChecklist value={next} className="mt-2" />
@@ -109,7 +100,7 @@ export function SetPasswordDialog() {
                         </div>
 
                         <div className="mt-5 flex flex-col gap-2">
-                            <Button type="submit" className="w-full" disabled={change.isPending || !current || !next || !confirm}>
+                            <Button type="submit" className="w-full" disabled={change.isPending || !next || !confirm}>
                                 {t('pwd_set_submit')}
                             </Button>
                             <Button type="button" variant="ghost" className="text-muted-foreground w-full" onClick={() => logout.mutate()}>
