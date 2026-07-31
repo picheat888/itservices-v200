@@ -7,6 +7,7 @@ use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -85,6 +86,34 @@ class EmployeeCredentialsManageTest extends TestCase
         $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'Custom-Secret9'])
             ->assertOk()->assertJsonPath('new_password', 'Custom-Secret9');
         $this->assertTrue(Hash::check('Custom-Secret9', $employee->fresh()->user->password));
+    }
+
+    /**
+     * A reset is the usual response to a suspected takeover, so it must evict whoever is
+     * already signed in — otherwise the live session survives the reset and, on the forced
+     * change screen, could set a password without ever knowing the one the admin issued.
+     */
+    public function test_reset_signs_the_account_out_everywhere(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $employee = $this->makeEmployeeWithAccount('EMP-7014', 'evict_me');
+        $user = $employee->user;
+
+        // A live session row and an API token for that account.
+        DB::table('sessions')->insert([
+            'id' => 'session-under-test',
+            'user_id' => $user->id,
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'phpunit',
+            'payload' => '',
+            'last_activity' => time(),
+        ]);
+        $user->createToken('device')->plainTextToken;
+
+        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])->assertOk();
+
+        $this->assertDatabaseMissing('sessions', ['user_id' => $user->id]);
+        $this->assertSame(0, $user->tokens()->count());
     }
 
     public function test_force_change_flag_is_set_and_cleared_per_reset(): void
