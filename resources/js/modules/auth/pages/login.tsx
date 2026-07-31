@@ -1,14 +1,21 @@
 import { useT } from '@/lang';
+import type { Lang } from '@/lang/types';
 import { useAuth, useLogin } from '@/modules/auth/hooks/use-auth';
 import { useDocumentTitle } from '@/shared/hooks/use-document-title';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, Eye, EyeOff, Languages, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, Moon, Sun, User } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+
+const LANGUAGES: { code: Lang; label: string }[] = [
+    { code: 'en', label: 'EN' },
+    { code: 'th', label: 'ไทย' },
+];
 
 export default function LoginPage() {
     const t = useT();
@@ -18,14 +25,14 @@ export default function LoginPage() {
     const logoUrl = useUiStore((s) => s.logoUrl);
     const lang = useUiStore((s) => s.lang);
     const dark = useUiStore((s) => s.dark);
-    const toggleLang = useUiStore((s) => s.toggleLang);
+    const setLang = useUiStore((s) => s.setLang);
     const toggleDark = useUiStore((s) => s.toggleDark);
     const markLoginPref = useUiStore((s) => s.markLoginPref);
 
     // A language / theme switch on the login screen is a deliberate choice:
     // flag that field so it wins over (and is saved to) the account after sign-in.
-    const chooseLang = () => {
-        toggleLang();
+    const chooseLang = (next: Lang) => {
+        setLang(next);
         markLoginPref('lang');
     };
     const chooseDark = () => {
@@ -37,6 +44,10 @@ export default function LoginPage() {
     const [loginId, setLoginId] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [remember, setRemember] = useState(false);
+    // Focus targets for failed submits (see submit()).
+    const loginRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
     // Per-field required-validation messages (red border + red text, like the mockup).
     const [fieldErrors, setFieldErrors] = useState<{ login?: string; password?: string }>({});
     // Briefly shake the error banner on a rejected sign-in attempt.
@@ -49,6 +60,42 @@ export default function LoginPage() {
     const target = from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/';
 
     if (!isLoading && isAuthenticated) return <Navigate to={target} replace />;
+
+    /**
+     * What actually went wrong, in the user's language. The API answers 429 with
+     * `retry_after` once the 5-attempt lockout trips, 422 for wrong credentials, and
+     * nothing at all when it is unreachable — three different fixes, three messages.
+     */
+    const errorMessage = (): string => {
+        const res = (
+            login.error as {
+                response?: { status?: number; data?: { retry_after?: number }; headers?: Record<string, string> };
+            } | null
+        )?.response;
+        if (!res) {
+            return t('login_err_server');
+        }
+        if (res.status === 429) {
+            // The sign-in lockout sends `retry_after`; the app-wide 60/min limiter only
+            // sends the Retry-After header. Either way, tell the user how long to wait.
+            const header = Number(res.headers?.['retry-after']);
+            const seconds = res.data?.retry_after ?? (Number.isFinite(header) ? header : 0);
+            if (seconds <= 0) {
+                return t('login_err_throttled_wait');
+            }
+            const wait =
+                seconds >= 60
+                    ? t('login_time_minutes').replace('{n}', String(Math.ceil(seconds / 60)))
+                    : t('login_time_seconds').replace('{n}', String(seconds));
+
+            return t('login_err_throttled').replace('{time}', wait);
+        }
+        if (res.status === 422) {
+            return t('login_error');
+        }
+
+        return t('login_err_server');
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,16 +114,25 @@ export default function LoginPage() {
         setFieldErrors(errs);
         login.reset(); // clear any previous "invalid credentials" banner
         if (Object.keys(errs).length > 0) {
+            // Land the caret on the first field that needs fixing — a keyboard or
+            // screen-reader user should not have to hunt for it.
+            (errs.login ? loginRef : passwordRef).current?.focus();
             return;
         }
 
         login.mutate(
-            { login: loginId, password },
+            { login: loginId, password, remember },
             {
                 // Wrong credentials → shake the banner once (matches the mockup UX).
-                onError: () => {
+                onError: (error) => {
                     setShake(true);
                     setTimeout(() => setShake(false), 450);
+                    // Rejected credentials are retyped from the password field; a lockout or
+                    // an outage is not, so leave focus alone in those cases.
+                    const status = (error as { response?: { status?: number } })?.response?.status;
+                    if (status === 422) {
+                        passwordRef.current?.select();
+                    }
                 },
             },
         );
@@ -126,20 +182,29 @@ export default function LoginPage() {
             <main className="relative flex min-h-screen flex-col items-center justify-center px-5 py-12">
                 {/* Language + theme toggles */}
                 <div className="absolute top-4 right-4 flex items-center gap-1.5">
-                    <button
-                        type="button"
-                        onClick={chooseLang}
-                        aria-label={t('login_language')}
-                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors"
-                    >
-                        <Languages className="h-4 w-4" />
-                        {lang === 'en' ? 'EN' : 'ไทย'}
-                    </button>
+                    {/* Both languages stay on screen with the active one filled in: the control
+                        shows what you can switch to, not just what you are already reading. */}
+                    <div role="group" aria-label={t('login_language')} className="border-border flex h-9 items-center rounded-lg border p-0.5">
+                        {LANGUAGES.map(({ code, label }) => (
+                            <button
+                                key={code}
+                                type="button"
+                                onClick={() => chooseLang(code)}
+                                aria-pressed={lang === code}
+                                className={cn(
+                                    'focus-visible:ring-ring ring-offset-background inline-flex h-8 items-center rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-hidden',
+                                    lang === code ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground cursor-pointer',
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                     <button
                         type="button"
                         onClick={chooseDark}
                         aria-label={t('login_theme')}
-                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors"
+                        className="border-border text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring ring-offset-background inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     >
                         {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     </button>
@@ -167,6 +232,7 @@ export default function LoginPage() {
                                 <User className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     id="login"
+                                    ref={loginRef}
                                     value={loginId}
                                     onChange={(e) => {
                                         setLoginId(e.target.value);
@@ -176,6 +242,7 @@ export default function LoginPage() {
                                     autoComplete="username"
                                     placeholder={t('login_field')}
                                     aria-invalid={!!fieldErrors.login}
+                                    aria-describedby={fieldErrors.login ? 'login-error' : undefined}
                                     className={cn(
                                         'pl-9',
                                         // Match the shared Field error look: red border stays on focus,
@@ -185,7 +252,10 @@ export default function LoginPage() {
                                 />
                             </div>
                             {fieldErrors.login && (
-                                <p className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs">
+                                <p
+                                    id="login-error"
+                                    className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs"
+                                >
                                     <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                                     {fieldErrors.login}
                                 </p>
@@ -198,6 +268,7 @@ export default function LoginPage() {
                                 <Lock className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
                                     id="password"
+                                    ref={passwordRef}
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => {
@@ -207,6 +278,7 @@ export default function LoginPage() {
                                     autoComplete="current-password"
                                     placeholder={t('login_password')}
                                     aria-invalid={!!fieldErrors.password}
+                                    aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                                     className={cn(
                                         'pr-10 pl-9',
                                         fieldErrors.password &&
@@ -217,28 +289,39 @@ export default function LoginPage() {
                                     type="button"
                                     onClick={() => setShowPassword((v) => !v)}
                                     aria-label={showPassword ? t('login_hide_password') : t('login_show_password')}
-                                    className="text-muted-foreground hover:bg-accent hover:text-foreground absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors"
+                                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                 </button>
                             </div>
                             {fieldErrors.password && (
-                                <p className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs">
+                                <p
+                                    id="password-error"
+                                    className="text-destructive animate-in fade-in slide-in-from-top-1 flex items-center gap-1.5 text-xs"
+                                >
                                     <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                                     {fieldErrors.password}
                                 </p>
                             )}
                         </div>
 
+                        <div className="flex items-center gap-2.5">
+                            <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
+                            <Label htmlFor="remember" className="cursor-pointer font-normal">
+                                {t('login_remember')}
+                            </Label>
+                        </div>
+
                         {login.isError && (
                             <p
+                                role="alert"
                                 className={cn(
-                                    'bg-destructive/10 text-destructive border-destructive/25 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm',
+                                    'bg-destructive/10 text-destructive border-destructive/25 flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
                                     shake && 'animate-shake',
                                 )}
                             >
-                                <AlertCircle className="h-4 w-4 shrink-0" />
-                                {t('login_error')}
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                {errorMessage()}
                             </p>
                         )}
 

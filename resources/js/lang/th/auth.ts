@@ -14,6 +14,12 @@ export const auth: Dict = {
     login_error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่',
     login_err_username: 'กรุณากรอกชื่อผู้ใช้',
     login_err_password: 'กรุณากรอกรหัสผ่าน',
+    // Shown instead of "wrong password" once the 5-attempt lockout kicks in.
+    login_err_throttled: 'ลองผิดหลายครั้งเกินไป กรุณาลองใหม่ในอีก {time}',
+    login_err_throttled_wait: 'ลองผิดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่',
+    login_err_server: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่',
+    login_time_seconds: '{n} วินาที',
+    login_time_minutes: '{n} นาที',
     login_tagline: 'แจ้งปัญหา และติดตามงาน\nครบจบในที่เดียว',
     login_show_password: 'แสดงรหัสผ่าน',
     login_hide_password: 'ซ่อนรหัสผ่าน',
