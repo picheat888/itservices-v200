@@ -107,8 +107,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
     const resetPassword = async () => {
         if (!employee) return;
         setError('');
-        // A blank field means "let the server generate one"; anything typed must satisfy the policy.
-        if (password.trim() && !isValidPassword(password.trim())) {
+        if (!isValidPassword(password.trim())) {
             setError(t('cred_err_password_policy'));
             return;
         }
@@ -123,7 +122,7 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                 try {
                     const res = await updateCredentials.mutateAsync({
                         id: employee.id,
-                        payload: { reset_password: true, password: password.trim() || undefined, force_change: forceChange },
+                        payload: { reset_password: true, password: password.trim(), force_change: forceChange },
                     });
                     setNewPassword(res.new_password ?? null);
                 } catch (e: unknown) {
@@ -236,7 +235,13 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                         <span className="text-sm">{t('emp_cred_force_change')}</span>
                                         <Switch checked={forceChange} onChange={setForceChange} aria-label={t('emp_cred_force_change')} />
                                     </div>
-                                    <Button className="w-full" variant="outline" onClick={resetPassword} disabled={busy !== null}>
+                                    {/* Nothing to reset to until a password is typed or generated. */}
+                                    <Button
+                                        className="w-full"
+                                        variant="outline"
+                                        onClick={resetPassword}
+                                        disabled={busy !== null || !isValidPassword(password.trim())}
+                                    >
                                         {busy === 'password' ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                         {t('emp_cred_reset_btn')}
                                     </Button>
