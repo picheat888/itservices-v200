@@ -45,6 +45,9 @@ class UserResource extends JsonResource
             'email_verified_at' => $this->email_verified_at,
             // Drives the forced change-password modal when the expiry policy is on.
             'password_expired' => (bool) $this->must_change_password || $this->isPasswordExpired(),
+            // Distinguishes the two reasons behind `password_expired` so the UI can explain
+            // the right one: an admin set this password, versus the policy aged it out.
+            'must_change_password' => (bool) $this->must_change_password,
         ];
     }
 

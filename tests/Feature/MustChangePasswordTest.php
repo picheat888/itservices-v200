@@ -29,10 +29,42 @@ class MustChangePasswordTest extends TestCase
 
         $this->putJson('/api/password', [
             'current_password' => 'password',
-            'password' => 'new-secret-123',
-            'password_confirmation' => 'new-secret-123',
+            'password' => 'New-Secret123!',
+            'password_confirmation' => 'New-Secret123!',
         ])->assertOk()->assertJsonPath('data.password_expired', false);
 
         $this->assertFalse((bool) $user->fresh()->must_change_password);
+    }
+
+    /** The UI needs the reason, not just the fact, so it can explain the right one. */
+    public function test_the_reason_is_exposed_separately_from_password_expired(): void
+    {
+        $flagged = User::factory()->create(['must_change_password' => true]);
+        $this->actingAs($flagged);
+        $this->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('data.password_expired', true)
+            ->assertJsonPath('data.must_change_password', true);
+
+        $normal = User::factory()->create();
+        $this->actingAs($normal);
+        $this->getJson('/api/me')->assertOk()->assertJsonPath('data.must_change_password', false);
+    }
+
+    /** A forced change must not be allowed to weaken the account it was meant to protect. */
+    public function test_own_password_change_honours_the_complexity_policy(): void
+    {
+        $user = User::factory()->create(['must_change_password' => true]);
+        $this->actingAs($user);
+
+        foreach (['Sec12!', 'newsecret1!', 'NEWSECRET1!', 'NewSecretPass!', 'NewSecret123'] as $weak) {
+            $this->putJson('/api/password', [
+                'current_password' => 'password',
+                'password' => $weak,
+                'password_confirmation' => $weak,
+            ])->assertStatus(422)->assertJsonValidationErrors('password');
+        }
+
+        $this->assertTrue((bool) $user->fresh()->must_change_password, 'the flag survives a rejected attempt');
     }
 }

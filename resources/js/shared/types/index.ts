@@ -36,6 +36,8 @@ export interface User {
     preferences: UserPreferences;
     email_verified_at: string | null;
     password_expired: boolean;
+    /** True when an admin set the current password — the user must replace it before continuing. */
+    must_change_password: boolean;
 }
 
 export interface ApiEnvelope<T> {

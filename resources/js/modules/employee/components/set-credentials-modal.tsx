@@ -1,5 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { PasswordChecklist } from '@/shared/components/password-checklist';
+import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -10,8 +12,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, isValidUsername, randomPassword } from '../lib/credentials';
-import { PasswordChecklist } from './password-checklist';
+import { isValidUsername } from '../lib/credentials';
 
 /**
  * Dialog for a permitted user (employees.set_credentials) to provision a
