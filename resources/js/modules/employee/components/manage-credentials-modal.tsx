@@ -13,7 +13,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { Check, CheckCircle2, Copy, Info, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { Check, CheckCircle2, Copy, EyeOff, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
@@ -195,40 +195,45 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                             <p className="text-sm font-semibold">{t('reset_password_success')}</p>
                         </div>
 
-                        {/* The password is the hero — sized and spaced to be read aloud over a
-                            phone, which is how it usually reaches the employee. Copy sits with
-                            it rather than as a separate button, so the value and the way to take
-                            it are one thing. */}
-                        <div className="border-border bg-muted/40 rounded-lg border px-4 py-3">
-                            <div className="text-muted-foreground mb-1 text-[10.5px] font-bold tracking-wider uppercase">
-                                {t('reset_password_new')}
+                        {/* One card, two zones. The warning belongs to the string above it, so it
+                            is a footer inside the same panel rather than a second floating alert —
+                            two stacked boxes of similar shape only competed with each other. */}
+                        <div className="border-border overflow-hidden rounded-lg border">
+                            {/* The password is the hero — sized and spaced to be read aloud over a
+                                phone, which is how it usually reaches the employee. Copy sits with
+                                it, so the value and the way to take it are one thing. */}
+                            <div className="bg-muted/40 px-4 py-3">
+                                <div className="text-muted-foreground mb-1 text-[10.5px] font-bold tracking-wider uppercase">
+                                    {t('reset_password_new')}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="min-w-0 flex-1 font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">
+                                        {newPassword}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={copyPw}
+                                        title={copied ? t('cred_copied') : t('cred_copy')}
+                                        aria-label={copied ? t('cred_copied') : t('cred_copy')}
+                                        className={cn(
+                                            'border-border hover:bg-accent grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-transparent transition-colors',
+                                            copied ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground hover:text-foreground',
+                                        )}
+                                    >
+                                        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="min-w-0 flex-1 font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">
-                                    {newPassword}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={copyPw}
-                                    title={copied ? t('cred_copied') : t('cred_copy')}
-                                    aria-label={copied ? t('cred_copied') : t('cred_copy')}
-                                    className={cn(
-                                        'border-border hover:bg-accent grid h-9 w-9 shrink-0 place-items-center rounded-md border bg-transparent transition-colors',
-                                        copied ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        </div>
 
-                        {/* Amber, not muted grey: the value above is gone for good once this
-                            dialog closes, which the admin has to register before moving on. */}
-                        <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            <div>
-                                <p>{t('emp_cred_handover_note')}</p>
-                                {forceChange && <p>{t('emp_cred_handover_force')}</p>}
+                            {/* EyeOff rather than a generic ⓘ: the point is literally that this
+                                will not be shown again. Amber, not grey — missing it costs the
+                                admin another reset and another call to the employee. */}
+                            <div className="flex items-start gap-2 border-t border-amber-300/70 bg-amber-50 px-4 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-800/70 dark:bg-amber-950/30 dark:text-amber-300">
+                                <EyeOff className="mt-[3px] h-3.5 w-3.5 shrink-0" />
+                                <div>
+                                    <p>{t('emp_cred_handover_note')}</p>
+                                    {forceChange && <p className="opacity-80">{t('emp_cred_handover_force')}</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
