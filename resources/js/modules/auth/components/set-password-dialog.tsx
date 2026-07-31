@@ -68,48 +68,55 @@ export function SetPasswordDialog() {
                     <h2 className="mb-1 text-center text-base font-semibold">{t('pwd_set_title')}</h2>
                     <p className="text-muted-foreground mb-5 text-center text-sm">{t('pwd_set_desc')}</p>
 
-                    <div className="space-y-3">
-                        {/* Named for what they were handed, not "current password". */}
-                        <Field label={t('pwd_current')}>
-                            <Input
-                                type="password"
-                                value={current}
-                                onChange={(e) => setCurrent(e.target.value)}
-                                autoComplete="current-password"
-                                autoFocus
-                                placeholder={t('pwd_ph_current')}
-                            />
-                        </Field>
-                        <Field label={t('pwd_new')}>
-                            <Input
-                                type="password"
-                                value={next}
-                                onChange={(e) => setNext(e.target.value)}
-                                autoComplete="new-password"
-                                placeholder={t('pwd_ph_new')}
-                            />
-                            <PasswordChecklist value={next} className="mt-2" />
-                        </Field>
-                        <Field label={t('pwd_confirm')} error={error ?? undefined}>
-                            <Input
-                                type="password"
-                                value={confirm}
-                                onChange={(e) => setConfirm(e.target.value)}
-                                autoComplete="new-password"
-                                placeholder={t('pwd_ph_confirm')}
-                                onKeyDown={(e) => e.key === 'Enter' && submit()}
-                            />
-                        </Field>
-                    </div>
+                    {/* A real <form> so password managers recognise the pair and offer to fill
+                        the current password saved at sign-in; it also gives Enter-to-submit. */}
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            submit();
+                        }}
+                    >
+                        <div className="space-y-3">
+                            <Field label={t('pwd_current')}>
+                                <Input
+                                    type="password"
+                                    value={current}
+                                    onChange={(e) => setCurrent(e.target.value)}
+                                    autoComplete="current-password"
+                                    autoFocus
+                                    placeholder={t('pwd_ph_current')}
+                                />
+                            </Field>
+                            <Field label={t('pwd_new')}>
+                                <Input
+                                    type="password"
+                                    value={next}
+                                    onChange={(e) => setNext(e.target.value)}
+                                    autoComplete="new-password"
+                                    placeholder={t('pwd_ph_new')}
+                                />
+                                <PasswordChecklist value={next} className="mt-2" />
+                            </Field>
+                            <Field label={t('pwd_confirm')} error={error ?? undefined}>
+                                <Input
+                                    type="password"
+                                    value={confirm}
+                                    onChange={(e) => setConfirm(e.target.value)}
+                                    autoComplete="new-password"
+                                    placeholder={t('pwd_ph_confirm')}
+                                />
+                            </Field>
+                        </div>
 
-                    <div className="mt-5 flex flex-col gap-2">
-                        <Button className="w-full" onClick={submit} disabled={change.isPending || !current || !next || !confirm}>
-                            {t('pwd_set_submit')}
-                        </Button>
-                        <Button variant="ghost" className="text-muted-foreground w-full" onClick={() => logout.mutate()}>
-                            {t('profile_signout')}
-                        </Button>
-                    </div>
+                        <div className="mt-5 flex flex-col gap-2">
+                            <Button type="submit" className="w-full" disabled={change.isPending || !current || !next || !confirm}>
+                                {t('pwd_set_submit')}
+                            </Button>
+                            <Button type="button" variant="ghost" className="text-muted-foreground w-full" onClick={() => logout.mutate()}>
+                                {t('profile_signout')}
+                            </Button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
