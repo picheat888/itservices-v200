@@ -12,7 +12,7 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { Check, Copy, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { Check, CheckCircle2, Copy, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
@@ -178,42 +178,73 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                     srDescription={t('emp_cred_manage_title')}
                 />
 
-                <div className="space-y-5 border-t px-6 py-5">
-                    {/* ── Username ── */}
-                    {canUsername && (
-                        <section>
-                            <SectionLabel>{t('emp_cred_username_section')}</SectionLabel>
-                            <Field label={t('cred_username')} name="username" error={errors.username}>
-                                <div className="flex items-center gap-2">
-                                    {/* Lower-cased as it's typed, matching what the API stores. */}
-                                    <Input
-                                        value={username}
-                                        onChange={(e) => {
-                                            setUsername(e.target.value.toLowerCase());
-                                            setErrors({});
-                                        }}
-                                        className="font-mono"
-                                        autoComplete="off"
-                                    />
-                                    <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
-                                        {busy === 'username' ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : usernameSaved ? (
-                                            <Check className="h-4 w-4" />
-                                        ) : null}
-                                        {usernameSaved ? t('saved') : t('save')}
-                                    </Button>
-                                </div>
-                            </Field>
-                            {usernameSaved && <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400">{t('emp_cred_username_saved')}</p>}
-                        </section>
-                    )}
+                {/* Once a password exists the dialog stops being a form: the only job left is
+                    getting this one string to the person before it disappears. Showing the
+                    untouched username editor alongside it would only compete for attention. */}
+                {newPassword ? (
+                    <div className="space-y-4 border-t px-6 py-5">
+                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-[18px] w-[18px] shrink-0" />
+                            <p className="text-sm font-semibold">{t('reset_password_success')}</p>
+                        </div>
 
-                    {/* ── Reset password ── */}
-                    {canReset && (
-                        <section>
-                            <SectionLabel>{t('emp_cred_reset_section')}</SectionLabel>
-                            {!newPassword ? (
+                        {/* The password is the hero — sized and spaced to be read aloud over a
+                            phone, which is how it usually reaches the employee. */}
+                        <div className="border-border bg-muted/40 rounded-lg border px-4 py-3.5 text-center">
+                            <div className="text-muted-foreground mb-1.5 text-[10.5px] font-bold tracking-wider uppercase">
+                                {t('reset_password_new')}
+                            </div>
+                            <div className="font-mono text-lg leading-snug font-semibold tracking-[0.12em] break-all">{newPassword}</div>
+                        </div>
+
+                        <Button className="w-full" onClick={copyPw}>
+                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            {copied ? t('cred_copied') : t('cred_copy')}
+                        </Button>
+
+                        <p className="text-muted-foreground text-xs leading-relaxed">
+                            {t('emp_cred_handover_note')}
+                            {forceChange && ` ${t('emp_cred_handover_force')}`}
+                        </p>
+                    </div>
+                ) : (
+                    <div className="space-y-5 border-t px-6 py-5">
+                        {/* ── Username ── */}
+                        {canUsername && (
+                            <section>
+                                <SectionLabel>{t('emp_cred_username_section')}</SectionLabel>
+                                <Field label={t('cred_username')} name="username" error={errors.username}>
+                                    <div className="flex items-center gap-2">
+                                        {/* Lower-cased as it's typed, matching what the API stores. */}
+                                        <Input
+                                            value={username}
+                                            onChange={(e) => {
+                                                setUsername(e.target.value.toLowerCase());
+                                                setErrors({});
+                                            }}
+                                            className="font-mono"
+                                            autoComplete="off"
+                                        />
+                                        <Button onClick={saveUsername} disabled={busy !== null || !username.trim() || !usernameDirty}>
+                                            {busy === 'username' ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : usernameSaved ? (
+                                                <Check className="h-4 w-4" />
+                                            ) : null}
+                                            {usernameSaved ? t('saved') : t('save')}
+                                        </Button>
+                                    </div>
+                                </Field>
+                                {usernameSaved && (
+                                    <p className="mt-1.5 text-xs text-emerald-600 dark:text-emerald-400">{t('emp_cred_username_saved')}</p>
+                                )}
+                            </section>
+                        )}
+
+                        {/* ── Reset password ── */}
+                        {canReset && (
+                            <section>
+                                <SectionLabel>{t('emp_cred_reset_section')}</SectionLabel>
                                 <div className="space-y-4">
                                     <Field
                                         label={t('reset_password_new')}
@@ -262,38 +293,20 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                                         {t('emp_cred_reset_btn')}
                                     </Button>
                                 </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <p className="text-muted-foreground text-sm">{t('reset_password_success')}</p>
-                                    <div className="border-border bg-muted/50 flex items-center gap-2 rounded-lg border px-3 py-2">
-                                        <span className="flex-1 font-mono text-sm font-semibold tracking-wider">{newPassword}</span>
-                                        <button
-                                            type="button"
-                                            onClick={copyPw}
-                                            className="text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                            {copied ? (
-                                                <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                                            ) : (
-                                                <Copy className="h-4 w-4" />
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </section>
-                    )}
+                            </section>
+                        )}
 
-                    {formError && (
-                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3 py-2 text-sm">
-                            {formError}
-                        </div>
-                    )}
-                </div>
+                        {formError && (
+                            <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3 py-2 text-sm">
+                                {formError}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="border-border bg-muted/20 flex justify-end border-t px-6 py-3.5">
-                    <Button variant="outline" onClick={onClose}>
-                        {t('close')}
+                    <Button variant={newPassword ? 'default' : 'outline'} onClick={onClose}>
+                        {newPassword ? t('emp_cred_done') : t('close')}
                     </Button>
                 </div>
             </DialogContent>

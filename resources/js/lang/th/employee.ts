@@ -274,4 +274,7 @@ export const employee: Dict = {
     emp_cred_reset_confirm_desc: 'ผู้ใช้งานจะหลุดออกจากระบบ และไม่สามารถใช้งานรหัสเดิมได้\nกรุณาแจ้งผู้ใช้งาน ให้ Login ด้วยรหัสผ่านใหม่',
     cred_saved_title: 'สร้างบัญชีเรียบร้อย',
     cred_copy: 'คัดลอก',
+    emp_cred_handover_note: 'รหัสนี้จะไม่แสดงอีก คัดลอกแล้วแจ้งให้พนักงานทราบ',
+    emp_cred_handover_force: 'ระบบจะให้เขาตั้งรหัสของตัวเองเมื่อเข้าสู่ระบบ',
+    emp_cred_done: 'เสร็จสิ้น',
 };
