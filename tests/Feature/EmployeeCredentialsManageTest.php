@@ -64,14 +64,23 @@ class EmployeeCredentialsManageTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('username');
     }
 
-    public function test_reset_defaults_to_employee_code_and_custom_password_wins(): void
+    /** A reset without a password generates one that satisfies the policy; a typed one wins. */
+    public function test_reset_generates_a_compliant_password_and_a_custom_one_wins(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'super']));
         $employee = $this->makeEmployeeWithAccount('EMP-7002', 'reset_me');
 
-        $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])
-            ->assertOk()->assertJsonPath('new_password', 'EMP-7002');
-        $this->assertTrue(Hash::check('EMP-7002', $employee->fresh()->user->password));
+        $generated = $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true])
+            ->assertOk()->json('new_password');
+
+        $this->assertNotSame('EMP-7002', $generated, 'the employee code must never be used as a password');
+        $this->assertTrue(Hash::check($generated, $employee->fresh()->user->password));
+        // Same policy the endpoint enforces on a typed password.
+        $this->assertMatchesRegularExpression('/[a-z]/', $generated);
+        $this->assertMatchesRegularExpression('/[A-Z]/', $generated);
+        $this->assertMatchesRegularExpression('/\d/', $generated);
+        $this->assertMatchesRegularExpression('/[^A-Za-z0-9]/', $generated);
+        $this->assertGreaterThanOrEqual(8, strlen($generated));
 
         $this->putJson("/api/employees/{$employee->id}/credentials", ['reset_password' => true, 'password' => 'Custom-Secret9'])
             ->assertOk()->assertJsonPath('new_password', 'Custom-Secret9');

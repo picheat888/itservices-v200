@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { Check, Copy, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
+import { Check, Copy, KeyRound, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
-import { isValidPassword, isValidUsername } from '../lib/credentials';
+import { isValidPassword, isValidUsername, randomPassword } from '../lib/credentials';
 import { PasswordChecklist } from './password-checklist';
 
 /**
@@ -190,12 +190,25 @@ export function ManageCredentialsModal({ employee, onClose }: { employee: Employ
                             </div>
                             {!newPassword ? (
                                 <>
-                                    <Field label={t('reset_password_new')}>
+                                    <Field
+                                        label={t('reset_password_new')}
+                                        action={
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setPassword(randomPassword())}
+                                                className="text-muted-foreground hover:text-foreground -mr-2 h-7 gap-1.5 px-2 text-xs [&_svg]:size-3.5"
+                                            >
+                                                <Wand2 />
+                                                {t('cred_auto')}
+                                            </Button>
+                                        }
+                                    >
                                         <Input
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             className="font-mono"
-                                            placeholder={shown?.code ?? ''}
                                             autoComplete="new-password"
                                         />
                                     </Field>
