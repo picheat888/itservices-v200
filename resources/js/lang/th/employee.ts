@@ -275,6 +275,5 @@ export const employee: Dict = {
     cred_saved_title: 'สร้างบัญชีเรียบร้อย',
     cred_copy: 'คัดลอก',
     emp_cred_handover_note: 'รหัสนี้จะไม่แสดงอีกครั้ง กรุณาคัดลอกแล้วแจ้งให้พนักงาน',
-    emp_cred_handover_force: 'เพื่อให้เขาตั้งรหัสของตัวเองเมื่อเข้าสู่ระบบใหม่',
     emp_cred_done: 'เสร็จสิ้น',
 };
