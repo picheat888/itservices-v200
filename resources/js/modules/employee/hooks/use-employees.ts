@@ -1,10 +1,15 @@
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { ME_KEY } from '@/shared/lib/query-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { employeeApi, type EmployeePayload, type UpdateCredentialsPayload } from '../api/employeeApi';
 import { DEPT, EMP } from './query-keys';
 
 export const useEmployees = () => useQuery({ queryKey: EMP, queryFn: employeeApi.list });
-export const useEmployeeSummary = () => useQuery({ queryKey: ['employees-summary'], queryFn: employeeApi.summary });
+export const useEmployeeSummary = (enabled = true) => useQuery({ queryKey: ['employees-summary'], queryFn: employeeApi.summary, enabled });
+
+// The Employees badge (active staff without a login account) now comes from the combined
+// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges. The same number still
+// reaches the Directory tab through `summary.no_account`.
 
 /** Fetches a single employee by id (used to open a record from a notification link). */
 export const useEmployee = (id: number | null) =>
@@ -74,6 +79,7 @@ export function useEmployeeMutations() {
         qc.invalidateQueries({ queryKey: DEPT });
         qc.invalidateQueries({ queryKey: ['employees-directory'] });
         qc.invalidateQueries({ queryKey: ['employees-summary'] });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
         // Single-employee detail + org/access views so an open dialog reflects changes live.
         qc.invalidateQueries({ queryKey: ['employee'] });
         qc.invalidateQueries({ queryKey: ['org-chart'] });

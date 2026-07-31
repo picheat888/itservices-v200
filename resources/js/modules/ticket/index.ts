@@ -8,5 +8,5 @@ export {
     TicketPriorityBadge,
     TicketStatusBadge,
 } from './components/ticket-meta';
-export { useTicketMutations, useTicketSidebarBadge, useTicketStaff, useTicketSummary, useTickets } from './hooks/use-tickets';
+export { useTicketMutations, useTicketStaff, useTicketSummary, useTickets } from './hooks/use-tickets';
 export { default as TicketsPage } from './pages';

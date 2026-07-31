@@ -1227,3 +1227,38 @@ Spec: `docs/superpowers/specs/2026-07-30-credentials-management-design.md` · Pl
 **Verification**: `php artisan test --compact` = **732 passed / 2791 assertions / 0 failed** · tsc 0 · build green · pint passed (`--dirty`)
 
 > บทเรียน: `git add` แบบระบุชื่อไฟล์ทีละตัวทำให้ไฟล์ใหม่ 11 ไฟล์ (hooks/api ที่แยกออกมา + เทสต์) ตกหล่นไม่เข้า git ทั้งที่ commit อื่นอ้างถึงอยู่ — `tsc`/Vite อ่านจากดิสก์จึงไม่ฟ้อง ตรวจเจอตอนจะ push ด้วยการ clone repo จาก git ล้วนแล้วไล่ตรวจว่าทุก import ชี้ไปยังไฟล์ที่มีจริง
+
+---
+
+## Sidebar badges — รวมเป็น endpoint เดียว + badge "ยังไม่มีบัญชี" (2026-07-31)
+
+### 1. Employee list — ลำดับการเรียงใหม่
+
+`EmployeeController@index` เพิ่ม `orderByDesc('code')` เป็นคีย์ที่ 3 — ลำดับเต็มคือ
+active ก่อน resigned → คนที่ยังไม่มีบัญชีก่อน → **รหัสพนักงานใหม่ก่อน (68xxxx ก่อน 52xxxx)** → ชื่อ → นามสกุล
+(หมายเหตุ: `code` เป็น string การเรียงจึงถูกต้องเมื่อรหัสยาวเท่ากัน)
+
+### 2. Badge "พนักงานที่ยังไม่มี Account"
+
+- `employees/summary` เพิ่มฟิลด์ `no_account` = active + `whereDoesntHave('user')` (กติกาเดียวกับ filter `?status=no_account`)
+- แท็บ **Directory** เปลี่ยนตัวเลขจาก "จำนวนพนักงานทั้งหมด" เป็นจำนวนคนที่ยังไม่มีบัญชี — pill สีอำพัน + tooltip, ซ่อนเมื่อเป็น 0
+- เมนู **Employees** บน sidebar แสดงตัวเลขเดียวกัน
+
+### 3. `GET /api/sidebar-badges` — badge ทุกตัวใน request เดียว
+
+**ปัญหาเดิม**: badge แต่ละเมนูยิง endpoint ของตัวเอง (9 requests ตอน mount) ตัวเลขจึงโผล่ทีละอัน และเห็นชัดมากบน `php artisan serve` ที่มี worker เดียว (คิวเรียงกัน)
+
+**Backend**
+- `app/Services/Sidebar/SidebarBadgeService.php` — นับทุก badge (`employees · access · tickets · assets · my_assets · contracts · stock`) พร้อม gate รายตัวในตัวเอง: สิทธิ์ไม่ถึง = คืน 0 (ไม่ใช่ 403) เท่ากับ effective permission เดิมของแต่ละ endpoint
+- `app/Http/Controllers/Api/Sidebar/SidebarBadgeController.php` + route `GET sidebar-badges` (ใต้ `auth:sanctum`)
+- ปรับให้เบาพอจะ poll ได้: stock alerts ใช้ `StockItem::withDerivedStatus('alerts')->count()` (SQL) แทนโหลดทุก SKU; access anomalies นับตรงแทนเรียก `AccessService::dashboard()` ที่สร้าง drill-down list ทั้งชุด
+- `Permissions::ticketLevelsFor()` (ย้ายจาก private `TicketController::levelsFor`) และ `TicketController@badge` เรียก service ตัวเดียวกัน — ticket badge เหลือกติกาเดียว
+
+**Frontend**
+- `shared/hooks/use-sidebar-badges.ts` — hook เดียว (poll 15s เท่า notification, background ด้วย) + export `SIDEBAR_BADGES_KEY`
+- ลบ `use*SidebarBadge` ทั้ง 7 ตัวออกจากโมดูล (stock/contract/asset×2/access/ticket/employee) และ barrel — เหลือแหล่งเดียว
+- mutation ของทุกโมดูลที่กระทบตัวเลข invalidate `SIDEBAR_BADGES_KEY` → badge อัปเดตทันทีหลังทำรายการ ไม่ต้องรอ poll
+
+**Test**: `tests/Feature/SidebarBadgeTest.php` — parity ทุกตัวเลขกับ endpoint เดิม (`employees/summary`, `contracts/summary`, `assets/summary`, `tickets/badge`, `access/dashboard`, `stock-items/summary`, `stock-requests`, `stock-counts`, `assets/mine`) + เคสสิทธิ์ไม่ถึงต้องได้ 0 · `EmployeeAccountLinkTest` เพิ่มเคสลำดับตาม code · `EmployeePermissionGatingTest` เพิ่มเคส `no_account`
+
+**Verification**: `php artisan test --compact` = **740 passed / 2855 assertions** · `tsc --noEmit` 0 · eslint 0 (ไฟล์ที่แก้) · pint passed

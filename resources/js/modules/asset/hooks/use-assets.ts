@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
 import { useToastStore } from '@/stores/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/assetApi';
@@ -67,12 +68,8 @@ export const useMyAssets = (enabled = true) =>
         refetchIntervalInBackground: true,
     });
 
-/** Count of assets awaiting the current user's acceptance — shown as a sidebar badge. */
-export function useMyAssetsSidebarBadge(enabled = true): number {
-    const { data = [] } = useMyAssets(enabled);
-
-    return data.filter((a) => a.status === 'pending_acceptance').length;
-}
+// The My Assets badge (assets awaiting my acceptance) now comes from the combined
+// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 /** Assets awaiting IT receipt back into the pool — drives the admin "to receive" card. */
 export const usePendingReturns = () =>
@@ -85,19 +82,8 @@ export const usePendingReturns = () =>
         refetchIntervalInBackground: true,
     });
 
-/** IT-side "needs attention" count for the Assets menu: assets awaiting receipt back into the pool. */
-export function useAssetsSidebarBadge(enabled = true): number {
-    const { data } = useQuery({
-        queryKey: SUMMARY,
-        queryFn: assetApi.summary,
-        enabled,
-        staleTime: 10_000,
-        refetchInterval: 15_000,
-        refetchIntervalInBackground: true,
-    });
-
-    return data?.pending_return ?? 0;
-}
+// The Assets badge (awaiting IT receipt) now comes from the combined
+// /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
 export const useAssetSummary = () => useQuery({ queryKey: SUMMARY, queryFn: assetApi.summary });
 
@@ -114,6 +100,7 @@ export function useAssetMutations() {
         qc.invalidateQueries({ queryKey: ['asset-transfers'] });
         qc.invalidateQueries({ queryKey: SUMMARY });
         qc.invalidateQueries({ queryKey: ['stock-items'] });
+        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
         create: useMutation({ mutationFn: (p: AssetPayload) => assetApi.create(p), onSuccess: invalidate }),

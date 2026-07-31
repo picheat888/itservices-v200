@@ -13,7 +13,9 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Sidebar\SidebarBadgeService;
 use App\Services\Ticket\TicketService;
+use App\Support\Permissions;
 use App\Support\TicketSla;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
@@ -65,10 +67,9 @@ class TicketController extends Controller
      */
     private static function levelsFor(?User $user): array
     {
-        return array_values(array_filter(
-            array_column(TicketCategory::cases(), 'value'),
-            fn (string $c) => (bool) $user?->hasPermission("tickets.level_{$c}"),
-        ));
+        // Implementation lives in Support\Permissions so the sidebar badge resolves the
+        // very same levels without importing this controller.
+        return Permissions::ticketLevelsFor($user);
     }
 
     /**
@@ -309,27 +310,12 @@ class TicketController extends Controller
      * any of: open and waiting for a take (staff with tickets.resolve only), the
      * viewer's own unfinished assignments, or the viewer's own unresolved requests.
      * OR'd in one query so an overlapping ticket (e.g. staff filed it themselves)
-     * is never counted twice.
+     * is never counted twice. The count itself lives in SidebarBadgeService, which
+     * serves the combined sidebar endpoint — one rule, two callers.
      */
-    public function badge(Request $request): JsonResponse
+    public function badge(Request $request, SidebarBadgeService $badges): JsonResponse
     {
-        $user = $request->user();
-        $canTake = (bool) $user?->hasPermission('tickets.resolve');
-
-        $count = Ticket::query()
-            ->where(function ($q) use ($request, $user, $canTake) {
-                $q->where(fn ($w) => $w->where('assignee_id', $user?->id)->where('status', TicketStatus::InProgress))
-                    ->orWhere(fn ($w) => $w->where('requester_id', $user?->employee_id)
-                        ->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress]));
-                if ($canTake) {
-                    // Only cases the taker's Ticket Level actually lets them pick up.
-                    $q->orWhere(fn ($w) => $w->where('status', TicketStatus::Open)->whereNull('assignee_id')
-                        ->whereIn('category', self::levelsFor($request->user())));
-                }
-            })
-            ->count();
-
-        return response()->json(['count' => $count]);
+        return response()->json(['count' => $badges->ticketsNeedingAttention($request->user())]);
     }
 
     /**

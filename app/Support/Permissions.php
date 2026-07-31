@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Enums\Ticket\TicketCategory;
+use App\Models\User;
+
 /**
  * Central catalog of RBAC permissions (module => action keys) and the default
  * grant set per role. Super Admin bypasses checks (always allowed).
@@ -80,6 +83,21 @@ class Permissions
         }
 
         return $keys;
+    }
+
+    /**
+     * Ticket categories the user is allowed to pick up, from their tickets.level_* grants.
+     * Shared by the ticket list ("jobs" scope) and the sidebar badge so both offer the
+     * same cases.
+     *
+     * @return list<string>
+     */
+    public static function ticketLevelsFor(?User $user): array
+    {
+        return array_values(array_filter(
+            array_column(TicketCategory::cases(), 'value'),
+            fn (string $category) => (bool) $user?->hasPermission("tickets.level_{$category}"),
+        ));
     }
 
     /**
