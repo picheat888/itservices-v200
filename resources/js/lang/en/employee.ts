@@ -263,7 +263,6 @@ export const employee: Dict = {
     emp_cred_username_confirm_title: 'Change this username?',
     emp_cred_username_confirm_desc: 'They can sign in with the new username from their next sign-in.',
     emp_cred_reset_section: 'Reset Password',
-    emp_cred_reset_hint: 'Type a new password, or generate one',
     emp_cred_force_change: 'Require a password change at next sign-in',
     emp_cred_reset_btn: 'Reset Password',
     emp_cred_reset_confirm_title: 'Reset this password?',
