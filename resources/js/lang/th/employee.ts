@@ -271,7 +271,7 @@ export const employee: Dict = {
     emp_cred_force_change: 'บังคับเปลี่ยนรหัสผ่านเมื่อเข้าสู่ระบบครั้งถัดไป',
     emp_cred_reset_btn: 'Reset Password',
     emp_cred_reset_confirm_title: 'ยืนยันรีเซ็ตรหัสผ่าน?',
-    emp_cred_reset_confirm_desc: 'รหัสผ่านเดิมจะใช้ไม่ได้ทันที และรหัสใหม่จะแสดงเพียงครั้งเดียว กรุณาคัดลอกก่อนปิดหน้าต่าง',
+    emp_cred_reset_confirm_desc: 'ผู้ใช้งานจะหลุดออกจากระบบ และไม่สามารถใช้งานรหัสเดิมได้\nกรุณาแจ้งผู้ใช้งาน ให้ Login ด้วยรหัสผ่านใหม่',
     cred_saved_title: 'สร้างบัญชีเรียบร้อย',
     cred_copy: 'คัดลอก',
 };
