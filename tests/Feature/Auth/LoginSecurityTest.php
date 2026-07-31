@@ -36,12 +36,11 @@ class LoginSecurityTest extends TestCase
         // The 6th attempt is locked out even though the password is now correct.
         $response = $this->postJson('/api/login', ['login' => $user->email, 'password' => 'password']);
 
-        $response->assertStatus(422)->assertJsonValidationErrors('login');
-        // The throttle message (not the generic "failed" one) must be returned.
-        $this->assertStringContainsString(
-            'too many',
-            strtolower($response->json('errors.login.0')),
-        );
+        // 429 + a message code (not a 422 validation error): the SPA has to tell a lockout
+        // apart from a wrong password to show the right message and the remaining wait.
+        $response->assertStatus(429)->assertJsonPath('message', 'too_many_attempts');
+        $this->assertGreaterThan(0, $response->json('retry_after'));
+        $this->assertGreaterThan(0, (int) $response->headers->get('Retry-After'));
         $this->assertGuest();
     }
 

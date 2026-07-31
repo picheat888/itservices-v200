@@ -90,6 +90,11 @@ http.interceptors.response.use(
                     showError('network');
                 }
             })();
+        } else if (status === 429 && error.config?.url?.endsWith('/login')) {
+            // A throttled sign-in is the login page's own business — it shows the remaining
+            // wait inline, right where the user is typing. Taking over the screen here would
+            // hide the form they are trying to use.
+            return Promise.reject(error);
         } else if (status === 429) {
             const retry = Number(error.response.headers?.['retry-after']);
             const retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;

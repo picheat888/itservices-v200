@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -17,7 +19,7 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -30,7 +32,7 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate using either an email address or a username.
      *
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws ValidationException
      */
     public function authenticate(): void
     {
@@ -51,7 +53,13 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * @throws \Illuminate\Validation\ValidationException
+     * Blocks further attempts after 5 failures on the same login + IP.
+     *
+     * Answers 429 with a message code and the remaining wait instead of a validation
+     * error: the SPA renders its own localized copy (the UI can be Thai while the API
+     * locale is English), and it must be able to tell "locked out" from "wrong password".
+     *
+     * @throws HttpResponseException
      */
     public function ensureIsNotRateLimited(): void
     {
@@ -63,12 +71,10 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
-        throw ValidationException::withMessages([
-            'login' => __('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
-        ]);
+        throw new HttpResponseException(response()->json([
+            'message' => 'too_many_attempts',
+            'retry_after' => $seconds,
+        ], 429, ['Retry-After' => $seconds]));
     }
 
     public function throttleKey(): string

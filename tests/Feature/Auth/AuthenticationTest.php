@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -40,6 +41,32 @@ class AuthenticationTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('login');
 
         $this->assertGuest();
+    }
+
+    // The 5-attempt lockout (429 + retry_after) is covered in LoginSecurityTest.
+
+    /** "Remember me" issues the long-lived remember cookie; leaving it off does not. */
+    public function test_remember_me_issues_the_remember_cookie(): void
+    {
+        $user = User::factory()->create();
+
+        $withRemember = $this->withHeader('Origin', 'http://localhost:8000')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password', 'remember' => true])
+            ->assertOk();
+
+        $this->assertNotNull($withRemember->getCookie(Auth::guard('web')->getRecallerName(), false));
+    }
+
+    /** Signing in without the checkbox leaves no remember cookie behind. */
+    public function test_sign_in_without_remember_me_sets_no_remember_cookie(): void
+    {
+        $user = User::factory()->create();
+
+        $plain = $this->withHeader('Origin', 'http://localhost:8000')
+            ->postJson('/api/login', ['login' => $user->email, 'password' => 'password'])
+            ->assertOk();
+
+        $this->assertNull($plain->getCookie(Auth::guard('web')->getRecallerName(), false));
     }
 
     /** The authenticated user can read their own account via /api/me. */
