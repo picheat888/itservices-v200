@@ -1,5 +1,17 @@
+import type { RequestOption, RequestOptionList } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { assetModelApi, brandApi, categoryApi, unitApi, vendorApi, warehouseApi, warrantyTypeApi } from '../api/masterDataApi';
+import {
+    assetModelApi,
+    brandApi,
+    categoryApi,
+    requestOptionApi,
+    unitApi,
+    vendorApi,
+    warehouseApi,
+    warrantyTypeApi,
+    type RequestOptionOrder,
+    type RequestOptionPayload,
+} from '../api/masterDataApi';
 
 const BRANDS = ['brands'] as const;
 const MODELS = ['asset-models'] as const;
@@ -8,6 +20,9 @@ const VENDORS = ['vendors'] as const;
 const WAREHOUSES = ['warehouses'] as const;
 const UNITS = ['units'] as const;
 const WARRANTY_TYPES = ['warranty-types'] as const;
+// Distinct from the request module's ['request-options'] — that key caches the
+// New Request form's whole options payload, this one the admin list.
+const REQUEST_OPTION_MASTER = ['request-option-master'] as const;
 
 export const useBrands = () => useQuery({ queryKey: BRANDS, queryFn: brandApi.list });
 export const useAssetModels = () => useQuery({ queryKey: MODELS, queryFn: assetModelApi.list });
@@ -16,6 +31,54 @@ export const useVendors = () => useQuery({ queryKey: VENDORS, queryFn: vendorApi
 export const useWarehouses = () => useQuery({ queryKey: WAREHOUSES, queryFn: warehouseApi.list });
 export const useUnits = () => useQuery({ queryKey: UNITS, queryFn: unitApi.list });
 export const useWarrantyTypes = () => useQuery({ queryKey: WARRANTY_TYPES, queryFn: warrantyTypeApi.list });
+export const useRequestOptionLists = () => useQuery({ queryKey: REQUEST_OPTION_MASTER, queryFn: requestOptionApi.list });
+
+type RequestOptionCache = { lists: RequestOptionList[]; options: RequestOption[] };
+
+/**
+ * Rebuild the cached options with one list in a new order, leaving every other
+ * list's rows exactly where they were.
+ */
+function applyOrder(options: RequestOption[], order: RequestOptionOrder): RequestOption[] {
+    const rank = new Map(order.ids.map((id, i) => [id, i]));
+    const inList = (o: RequestOption) => o.request_type === order.request_type && o.field_key === order.field_key;
+    const moved = options.filter(inList).sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+    let next = 0;
+
+    return options.map((o) => (inList(o) ? moved[next++] : o));
+}
+
+/**
+ * Editing a choice list changes what the New Request form offers, so the
+ * request module's cached form options are invalidated alongside.
+ */
+export function useRequestOptionMutations() {
+    const qc = useQueryClient();
+    const inv = () => {
+        qc.invalidateQueries({ queryKey: REQUEST_OPTION_MASTER });
+        qc.invalidateQueries({ queryKey: ['request-options'] });
+    };
+    return {
+        create: useMutation({ mutationFn: (p: RequestOptionPayload) => requestOptionApi.create(p), onSuccess: inv }),
+        update: useMutation({
+            mutationFn: (v: { id: number } & Omit<RequestOptionPayload, 'request_type' | 'field_key'>) =>
+                requestOptionApi.update(v.id, { label_en: v.label_en, label_th: v.label_th, active: v.active }),
+            onSuccess: inv,
+        }),
+        remove: useMutation({ mutationFn: (id: number) => requestOptionApi.remove(id), onSuccess: inv }),
+        reorder: useMutation({
+            mutationFn: (p: RequestOptionOrder) => requestOptionApi.reorder(p),
+            // Keep the dropped row where it was dropped: paint the new order into
+            // the cache immediately instead of letting it spring back and settle.
+            onMutate: (p) => {
+                qc.setQueryData<RequestOptionCache>(REQUEST_OPTION_MASTER, (prev) =>
+                    prev ? { ...prev, options: applyOrder(prev.options, p) } : prev,
+                );
+            },
+            onSettled: inv,
+        }),
+    };
+}
 
 export function useBrandMutations() {
     const qc = useQueryClient();

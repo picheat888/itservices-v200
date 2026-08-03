@@ -1,5 +1,16 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, AssetModel, Brand, Category, Unit, Vendor, Warehouse, WarrantyType } from '@/shared/types';
+import type {
+    ApiEnvelope,
+    AssetModel,
+    Brand,
+    Category,
+    RequestOption,
+    RequestOptionList,
+    Unit,
+    Vendor,
+    Warehouse,
+    WarrantyType,
+} from '@/shared/types';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
@@ -52,6 +63,31 @@ export const unitApi = {
     create: (payload: { name: string; description?: string }) => mutate<Unit>('post', '/units', payload),
     update: (id: number, payload: { name: string; description?: string }) => mutate<Unit>('put', `/units/${id}`, payload),
     remove: (id: number) => mutate<void>('delete', `/units/${id}`),
+};
+
+export interface RequestOptionPayload {
+    request_type: string;
+    field_key: string;
+    label_en: string;
+    label_th?: string | null;
+    active?: boolean;
+}
+
+/** The ids of one list, in the order they should be offered. */
+export interface RequestOptionOrder {
+    request_type: string;
+    field_key: string;
+    ids: number[];
+}
+
+/** Request-form choice lists (Hardware/Mobile device, Telephone handset). */
+export const requestOptionApi = {
+    list: () => http.get<ApiEnvelope<{ lists: RequestOptionList[]; options: RequestOption[] }>>('/request-options').then((r) => r.data.data),
+    create: (payload: RequestOptionPayload) => mutate<RequestOption>('post', '/request-options', payload),
+    update: (id: number, payload: Omit<RequestOptionPayload, 'request_type' | 'field_key'>) =>
+        mutate<RequestOption>('put', `/request-options/${id}`, payload),
+    remove: (id: number) => mutate<void>('delete', `/request-options/${id}`),
+    reorder: (payload: RequestOptionOrder) => mutate<RequestOption[]>('post', '/request-options/reorder', payload),
 };
 
 export const warrantyTypeApi = {
