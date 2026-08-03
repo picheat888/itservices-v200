@@ -4,6 +4,9 @@ namespace App\Services\Sidebar;
 
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\RequestStatus;
+use App\Enums\Request\WorkflowStepKind;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
@@ -13,6 +16,8 @@ use App\Models\Access\Software;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
+use App\Models\Request\RequestApproval;
+use App\Models\Request\ServiceRequest;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
@@ -33,12 +38,13 @@ class SidebarBadgeService
     /**
      * All badge counts for one user, keyed by the sidebar nav item id.
      *
-     * @return array{employees: int, access: int, tickets: int, assets: int, my_assets: int, contracts: int, stock: int}
+     * @return array{employees: int, access: int, tickets: int, requests: int, assets: int, my_assets: int, contracts: int, stock: int}
      */
     public function forUser(?User $user): array
     {
         return [
             'employees' => $this->gated($user, ['employees.view_dashboard'], fn () => $this->employeesWithoutAccount()),
+            'requests' => $this->gated($user, ['requests.submit'], fn () => $this->requestsNeedingAttention($user)),
             'access' => $this->gated($user, ['access.module', 'access.overview'], fn () => $this->accessAnomalies()),
             'tickets' => $this->gated($user, ['tickets.create'], fn () => $this->ticketsNeedingAttention($user)),
             // Mirrors assets/summary: its own gate (assets.view) plus the nav item's (assets.receive).
@@ -64,6 +70,27 @@ class SidebarBadgeService
         }
 
         return $count();
+    }
+
+    /**
+     * Things needing MY action in the Request module: approval steps currently
+     * waiting on me as the resolved approver, plus (for requests.fulfill
+     * holders) the approved queue awaiting IT. Deliberately excludes the
+     * user's own in-flight requests — those wait on someone else.
+     */
+    private function requestsNeedingAttention(?User $user): int
+    {
+        $awaitingMe = $user?->employee_id === null ? 0 : RequestApproval::query()
+            ->where('approver_employee_id', $user->employee_id)
+            ->where('status', ApprovalStatus::Current->value)
+            ->where('kind', WorkflowStepKind::Approval->value)
+            ->count();
+
+        $queue = $user?->hasPermission('requests.fulfill')
+            ? ServiceRequest::where('status', RequestStatus::Approved->value)->count()
+            : 0;
+
+        return $awaitingMe + $queue;
     }
 
     /** Active staff still without a login account — same rule as employees/summary. */

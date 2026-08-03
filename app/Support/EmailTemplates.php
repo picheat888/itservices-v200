@@ -88,7 +88,7 @@ class EmailTemplates
                 'name' => 'Request approved',
                 'subject' => 'Your request has been approved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your service request requires your attention. Please review and take action in the IT portal.</p>
+<p>Your request <strong>{{request.title}}</strong> passed every approval step. The IT team will take it from here.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -98,7 +98,38 @@ class EmailTemplates
                 'name' => 'Request rejected',
                 'subject' => 'Your request has been rejected',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your service request requires your attention. Please review and take action in the IT portal.</p>
+<p>Your request <strong>{{request.title}}</strong> was rejected by {{actor.name}}.</p>
+<p>Remark: {{remark}}</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'request.submitted',
+                'name' => 'Request submitted',
+                'subject' => 'Your request {{reference.id}} has been submitted',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>We received your request <strong>{{request.title}}</strong>. It is now waiting for {{step.label}} to approve.</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'request.ready_to_fulfill',
+                'name' => 'Request ready to fulfill',
+                'subject' => 'Request {{reference.id}} is approved and ready for IT',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p><strong>{{request.title}}</strong> (by {{requester.name}}) cleared every approval step and is waiting for IT fulfillment.</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'request.fulfilled',
+                'name' => 'Request fulfilled',
+                'subject' => 'Your request {{reference.id}} is done',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Your request <strong>{{request.title}}</strong> has been fulfilled by the IT team.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
