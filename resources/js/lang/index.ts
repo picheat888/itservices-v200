@@ -15,6 +15,7 @@ import { requests as enRequests } from '@/lang/en/requests';
 import { settings as enSettings } from '@/lang/en/settings';
 import { stock as enStock } from '@/lang/en/stock';
 import { ticket as enTickets } from '@/lang/en/ticket';
+import { workflow as enWorkflow } from '@/lang/en/workflow';
 
 import { access as thAccess } from '@/lang/th/access';
 import { asset as thAssets } from '@/lang/th/asset';
@@ -30,12 +31,14 @@ import { requests as thRequests } from '@/lang/th/requests';
 import { settings as thSettings } from '@/lang/th/settings';
 import { stock as thStock } from '@/lang/th/stock';
 import { ticket as thTickets } from '@/lang/th/ticket';
+import { workflow as thWorkflow } from '@/lang/th/workflow';
 
 const en: Dict = {
     ...enCommon,
     ...enEmployees,
     ...enTickets,
     ...enRequests,
+    ...enWorkflow,
     ...enAssets,
     ...enContracts,
     ...enStock,
@@ -52,6 +55,7 @@ const th: Dict = {
     ...thEmployees,
     ...thTickets,
     ...thRequests,
+    ...thWorkflow,
     ...thAssets,
     ...thContracts,
     ...thStock,

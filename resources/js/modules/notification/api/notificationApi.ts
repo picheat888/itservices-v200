@@ -36,6 +36,14 @@ export interface NotificationData {
     asset_model?: string;
     asset_nickname?: string | null;
     from?: string | null;
+    // Service request notifications (request) — subtype: submitted | waiting |
+    // approved_step | approved_final | rejected | fulfilled | cancelled
+    service_request_id?: number;
+    title?: string;
+    request_type?: string;
+    step_label?: string | null;
+    actor_name?: string | null;
+    remark?: string | null;
 }
 
 export interface AppNotification {

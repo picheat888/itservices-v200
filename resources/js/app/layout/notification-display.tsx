@@ -85,6 +85,15 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     if (n.data.type === 'stock_count') {
         return { Icon: ClipboardList, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
+    if (n.data.type === 'request') {
+        // Service requests: action needed = amber, progress = blue, terminal good = green, bad = red.
+        if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled')
+            return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+        if (n.data.subtype === 'approved_final' || n.data.subtype === 'fulfilled')
+            return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+        if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
+    }
     if (n.data.type === 'asset_assigned') {
         return { Icon: PackageCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
     }
@@ -104,9 +113,26 @@ export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
+    if (n.data.type === 'request') return `${n.data.reference} — ${n.data.title}`;
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested') return `${n.data.asset_model} (${n.data.asset_tag})`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
+
+/**
+ * Message key per service-request subtype (mirrors the subtypes
+ * RequestNotificationService sends). Spelled out rather than composed from the
+ * subtype so the keys stay greppable and an unrecognised subtype falls through
+ * to nothing instead of printing its own key on screen.
+ */
+const REQUEST_MESSAGE_KEY: Record<string, string> = {
+    submitted: 'notif_request_submitted',
+    waiting: 'notif_request_waiting',
+    approved_step: 'notif_request_approved_step',
+    approved_final: 'notif_request_approved_final',
+    rejected: 'notif_request_rejected',
+    fulfilled: 'notif_request_fulfilled',
+    cancelled: 'notif_request_cancelled',
+};
 
 /** Secondary descriptive line for a notification, already localised. */
 export function notificationMessage(n: AppNotification, t: Translate): string {
@@ -124,6 +150,15 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'stock_alert') return t(`notif_stock_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_request') return t(`notif_stock_req_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
+    if (n.data.type === 'request') {
+        const key = REQUEST_MESSAGE_KEY[n.data.subtype ?? ''];
+        if (!key) return '';
+
+        return t(key)
+            .replace('{step}', n.data.step_label ?? '—')
+            .replace('{actor}', n.data.actor_name ?? '—')
+            .replace('{remark}', n.data.remark ?? '');
+    }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
     if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');
     return n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required');
@@ -137,6 +172,7 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_assigned') return '/my-assets';
     if (n.data.type === 'asset_return_requested') return '/assets';
     const mod = moduleOf(n.data.type);
+    if (mod === 'requests') return `/requests?view=${n.data.service_request_id}`;
     if (mod === 'contracts') return `/contracts?view=${n.data.contract_id}`;
     if (mod === 'stock') {
         if (n.data.type === 'stock_request') return '/stock?tab=requests';

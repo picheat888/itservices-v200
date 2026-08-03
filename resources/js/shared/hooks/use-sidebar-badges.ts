@@ -6,13 +6,14 @@ export interface SidebarBadges {
     employees: number;
     access: number;
     tickets: number;
+    requests: number;
     assets: number;
     my_assets: number;
     contracts: number;
     stock: number;
 }
 
-const EMPTY: SidebarBadges = { employees: 0, access: 0, tickets: 0, assets: 0, my_assets: 0, contracts: 0, stock: 0 };
+const EMPTY: SidebarBadges = { employees: 0, access: 0, tickets: 0, requests: 0, assets: 0, my_assets: 0, contracts: 0, stock: 0 };
 
 /** Query key for the combined badge counts — modules invalidate it after an action changes a count. */
 export const SIDEBAR_BADGES_KEY = ['sidebar-badges'] as const;

@@ -12,7 +12,7 @@ const NOTIF_TABS: { id: string; label: string; live: boolean }[] = [
     { id: 'all', label: 'notif_all', live: true },
     { id: 'employees', label: 'employees', live: true },
     { id: 'tickets', label: 'tickets', live: false },
-    { id: 'requests', label: 'requests', live: false },
+    { id: 'requests', label: 'requests', live: true },
     { id: 'assets', label: 'assets', live: true },
     { id: 'contracts', label: 'contracts', live: true },
     { id: 'stock', label: 'stock', live: true },
