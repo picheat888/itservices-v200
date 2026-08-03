@@ -442,12 +442,12 @@ npm run build
 | 0 | Overall Dashboard (แยกตาม role) | ⏳ รอ |
 | 1 | Employee Management (พนักงาน / ตำแหน่ง / แผนก) | ✅ Phase-2 · Phase-5 (resign/cancel, CSV import, filters, avatar) |
 | 2 | Ticket System (เปิด/รับ/อัปเดตเคส) | ⏳ รอ |
-| 3 | Request Workflow (คำขออนุมัติ) | ⏳ รอ |
+| 3 | Request Workflow (คำขออนุมัติ) | ✅ 2026-08-01 (Request module **11 ประเภท** + Workflow engine ตามสายบังคับบัญชา/Owner + Auto Ticket + Bell/Email ทุกขั้น + หน้า Workflows admin) · 2026-08-03 ปรับ UX ตามการใช้งานจริง + Master data "ข้อมูลคำขอ" · Export/สร้าง workflow ใหม่ Coming soon |
 | 4 | Asset Management (ทรัพย์สิน / โอนย้าย / รับคืน) | ⏳ รอ |
 | 5 | Contract & Rental (สัญญา + แจ้งเตือนหมดอายุ) | ✅ Phase-6 (CRUD + dashboard/timeline + expiring filter + renew) · Phase-7 (expiry alerts: bell + email + scheduled command) · attachments/linked-assets Coming soon |
 | 6 | Stock Management (คลังอะไหล่) | 🟡 Phase-9 (Master Data lookups + Stock Items + Min/Max alerts + Dashboard + RBAC) · Movements/Requests/Audit/Notifications รอเฟสถัดไป |
 | 7 | Permission Management | ✅ Phase-3 (Roles+matrix, Groups, Audit log) · Phase-7 (Administrator protection: กัน non-super แก้ admin/role group/escalation) |
-| 8 | Notifications System (in-app) | 🟡 Bell + dropdown + tabs ตามโมดูล + ปิดทีละรายการ + event พนักงานใหม่ (Phase-5) + contract expiry (Phase-7, แท็บ Contracts live) · trigger ticket/request/asset รอ |
+| 8 | Notifications System (in-app) | 🟡 Bell + dropdown + tabs ตามโมดูล + ปิดทีละรายการ + event พนักงานใหม่ (Phase-5) + contract expiry (Phase-7) + **service request ทุก transition (2026-08-01, แท็บ Requests live)** · trigger ticket/asset รอ |
 | 9 | Email Notifications | ✅ Phase-4 (template library + SMTP + queued send) |
 | 10 | Report / Export | ⏳ รอ |
 | 11 | Settings | 🟡 Display/Branding/Company/Email/Security เสร็จ · **Master Data** (Brands/Models/Categories/Vendors/Warehouses/Locations + **Units/Stock statuses/Warranty types** Phase-9) · ส่วนอื่นรอโมดูล |
@@ -1262,3 +1262,100 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 **Test**: `tests/Feature/SidebarBadgeTest.php` — parity ทุกตัวเลขกับ endpoint เดิม (`employees/summary`, `contracts/summary`, `assets/summary`, `tickets/badge`, `access/dashboard`, `stock-items/summary`, `stock-requests`, `stock-counts`, `assets/mine`) + เคสสิทธิ์ไม่ถึงต้องได้ 0 · `EmployeeAccountLinkTest` เพิ่มเคสลำดับตาม code · `EmployeePermissionGatingTest` เพิ่มเคส `no_account`
 
 **Verification**: `php artisan test --compact` = **740 passed / 2855 assertions** · `tsc --noEmit` 0 · eslint 0 (ไฟล์ที่แก้) · pint passed
+
+---
+
+## Request + Workflow Modules (#3) — คำขอบริการ IT + สายการอนุมัติ (2026-08-01)
+
+สร้างสองโมดูลที่ทำงานร่วมกันตาม design mockup (Claude Design `IT Service Desk.html`) และ diagram `Request&Workflow.drawio`: **Workflow** เป็น engine กำหนดสายอนุมัติต่อประเภทคำขอ → **Request** วิ่งตามสายนั้นทีละขั้นจนถึงมือทีม IT
+
+### แนวคิดหลัก
+
+- **คำขอ 10 ประเภท** (computer, mobile, email, social, fileshare, mailgroup, software, recovery, telephone, other) แต่ละประเภทมี dynamic fields ของตัวเอง — schema กลางอยู่ที่ `app/Support/RequestSchemas.php` ใช้ทั้ง validation และ UI (ไม่มีวัน drift)
+- **Resolve ผู้อนุมัติตอน submit แล้ว freeze เป็น snapshot** (`request_approvals`): ขั้น chain = ผู้บังคับบัญชาลำดับ 1/2/3 ตาม `manager_id` (ผ่าน `ApprovalChainService` เดิม, กรองเฉพาะ active + มีบัญชี login) · สายสั้น → คนสุดท้ายควบหลายขั้น (merge label + SLA สูงสุด) · ไม่มีหัวหน้า → ข้ามพร้อม note · ขั้น Owner = `owner_employee_id` ของ EmailGroup/FileShare ที่เลือก (เจ้าของเป็นผู้ขอเอง/ไม่มีเจ้าของ → ข้าม) · ขั้น it_staff = คิวของผู้ถือ `requests.fulfill` — **แก้ workflow ภายหลังไม่กระทบคำขอที่วิ่งอยู่** (มี test พิสูจน์)
+- **สิทธิ์ตัดสินเป็นราย "คน" ไม่ใช่ permission**: เฉพาะ approver ของแถว current เท่านั้นที่ approve/reject ได้ (super admin ก็ 403 — ทุกการตัดสินระบุตัวคนได้เสมอ) · Remark บังคับเฉพาะ Reject (ส่งกลับผู้ขอ) · ผู้ขอ cancel คำขอตัวเองได้ระหว่าง pending
+- **Auto Ticket**: อนุมัติครบ + workflow เปิด auto_ticket (snapshot ตอน submit) → เปิด Ticket จริงผ่าน `TicketService::create()` ใน transaction เดียวกับ approve (พังก็ rollback ทั้งคู่, กดใหม่ได้) · map ประเภท→TicketCategory · เก็บ `ticket_id` ผูกกลับ + ลิงก์ในหน้า detail
+- **Bell + Email ทุก hop ตาม diagram**: submit→approver แรก · อนุมัติ→ขั้นถัดไป · ครบ→ผู้ขอ + คิว IT · reject→ผู้ขอพร้อม remark · fulfill→ผู้ขอ (`RequestNotificationService` โครงเดียวกับ Stock; reuse template `request.approval_needed/approved/rejected` เดิม + เพิ่ม `request.submitted/ready_to_fulfill/fulfilled`)
+
+### Backend
+
+- Migrations: `workflows`, `workflow_steps`, `service_requests` (reference `RQ-YYYY-NNNN` — เลี่ยง REQ- ที่ Stock ใช้), `request_approvals` (unique ต่อ position + index `(approver_employee_id,status)` ขับ badge), `restructure_request_permission_keys` (backfill role เดิม)
+- โดเมนใหม่ `App\{Models,Services,Http}\Request\*` + `App\Models\Workflow\*` + Enums 6 ตัว · `DefaultWorkflows` + `WorkflowSeeder` (firstOrCreate — ไม่ทับของที่แอดมินแก้)
+- Routes: `service-requests` (index/store/show + approve/reject/fulfill/cancel + options) · `workflows` (index/update/preview/employee-options ใต้ `permission:workflows.manage`)
+- Permissions: `requests => [submit, view_all, fulfill]` + `workflows => [manage]` (ตัด approve_manager/approve_it/reject ที่ไม่เคยถูกใช้จริง) · sidebar badge `requests` = ขั้นที่รอฉัน + คิว fulfill · AuditLog ทุก mutation + FK labels ใหม่
+- `fields` json เก็บทั้งค่า raw และ `_display` (label 2 ภาษา + ค่า resolve แล้ว ณ ตอนยื่น — point-in-time เหมือน requester_name)
+
+### Frontend (Focus Dialog เป็นหลัก ตามแพทเทิร์น Contract)
+
+- โมดูลใหม่ `modules/request/`: หน้า Requests (KPI 4 ใบ + แท็บ Dashboard/ทั้งหมด/รออนุมัติจากฉัน ผ่าน `?tab=` + localStorage) · Dashboard = คิวรอตัดสิน (อนุมัติ/ไม่อนุมัติ inline) + Service catalog (คลิกการ์ด → เปิด wizard พร้อมเลือกประเภทให้) + ความเคลื่อนไหวล่าสุด · ตาราง server-paginated (DataTable server mode + FilterPopover สถานะ/ประเภท + shimmer)
+- **New Request = Focus Dialog wizard 3 ขั้น** (reuse โครง `contract-form-drawer`: FocusDialogHeader + stepper + footer): ①เลือกบริการ+เห็นสายอนุมัติ ②กรอกรายละเอียด+ฟิลด์เฉพาะประเภท (SearchableSelect สำหรับ resource) ③รีวิว+ส่ง · validate แบบ STEP_FIELDS + map error 422 กลับ field
+- **Detail = Focus Dialog** (แทน right-sheet ของ mockup): badges + ข้อมูล + ฟิลด์ (แสดงจาก `_display`) + **RequestTrail** timeline (done/current/rejected/skipped + remark + SLA + overdue) + การ์ด Ticket ที่ผูก → `/tickets?view=` · ปุ่มตามสิทธิ์จริงจาก API (`can_approve/can_fulfill/can_cancel`) · deep-link `?view=<id>` จาก bell
+- โมดูลใหม่ `modules/workflow/`: หน้า Workflows (stat 4 ใบ + การ์ดพร้อม **WorkflowStrip**) · View dialog (read-only) · **Editor dialog**: toggle Active/Auto-ticket, แก้/เรียง/เพิ่ม/ลบ step, strip สด, **"ทดสอบกับพนักงาน"** — เลือกพนักงานจริงแล้วเห็นสายที่ resolve แล้ว (merge/ข้าม เหมือนตอน submit จริง)
+- i18n เต็มชุด `lang/{en,th}/requests.ts` (~150 คีย์) + `workflow.ts` ใหม่ + `notif_request_*` · badge/notification wiring ครบ (แท็บ Requests ใน bell = live)
+
+### Coming Soon (v1)
+
+ปุ่ม Export หน้า Requests · ปุ่มสร้าง workflow ใหม่ (แก้ 10 ตัว seed ได้เต็มรูปแบบ) · ปิด Ticket แล้ว auto-fulfill คำขอ · daily SLA reminder sweep · แนบไฟล์ในคำขอ
+
+### Tests / Verification
+
+`RequestResolutionTest` (7) · `RequestWorkflowTest` (11) · `RequestAutoTicketTest` (3) · `WorkflowAdminTest` (3) · `RequestNotificationTest` (6) — รวม 30 tests ใหม่
+**ทั้ง suite: `php artisan test --compact` = 770 passed / 3023 assertions** · `tsc --noEmit` = 0 · `npm run build` ผ่าน · pint ผ่าน · `php artisan migrate` + `WorkflowSeeder` (10 workflows / 31 steps) รันบนฐานจริงแล้ว
+
+---
+
+## Request + Workflow — ปรับตามการใช้งานจริง + Master data "ข้อมูลคำขอ" (2026-08-03)
+
+รอบปรับปรุงหลังส่งมอบ (รวบยอดหลายรอบย่อยไว้ที่เดียว) — ทุกข้อมาจากการลองใช้จริงแล้วสั่งแก้
+
+### 1. จัดให้เข้าธีมเดิมของระบบ
+
+ตอนสร้างครั้งแรกยกค่าจาก mockup มาตรง ๆ (px ดิบ, การ์ดที่ hand-roll เอง) ทำให้ดู "ตัวเล็กกว่าโมดูลอื่น" และ "ไม่สะอาด" — แก้ที่ต้นเหตุทั้งหมด: ใช้ type scale ของแอป (`text-2xl` h1 · `text-3xl` ค่า KPI · `text-sm` เนื้อหา · `text-xs` meta), เปลี่ยนการ์ดทุกใบมาใช้ `<Card>` ร่วม, ใช้ `SectionLabel` ตัวกลางแทนของที่เขียนเอง, tab bar ใช้คลาสชุดเดียวกับ Access, ไอคอน KPI เป็นสีธีมวางขวา, และเลิกซ้อน border/รัศมีลูกเกินพ่อ
+
+### 2. ตัดของซ้ำและของที่ไม่ได้ใช้
+
+- **SLA เลิกเป็นตัวชี้วัดที่มองเห็น** — เดิมโผล่ 7 จุด (strip/trail/การ์ด/ตาราง) เหลือแค่การ์ด KPI "เวลาตัดสินเฉลี่ย" ใบเดียว เพราะจริง ๆ การอนุมัติมีที่มาหลายทาง วัดเป็นตัวเลขเดียวไม่ได้
+- ลบ Service catalog ที่ซ้ำกับตอนกดขอ, ลบชื่อบริการที่ซ้ำในแถวตาราง, ตัดฟิลด์ **หัวข้อ** ออก (สร้างเองเป็น `Request + ชื่อบริการ`) พร้อมตัด **ความสำคัญ / มูลค่าโดยประมาณ** ออกทุกประเภท
+- Sidebar: "สายการอนุมัติ" → **Workflow** · เก็บ dead i18n key ที่ค้างจากการตัดออกให้หมดทุกรอบ
+
+### 3. New Request wizard
+
+ขนาด dialog คงที่ (`h-[min(760px,100vh-72px)]` × `max-w-[1100px]`) เลิกกระโดดตามเนื้อหา · ขั้น ① จัดการ์ดบริการกลางจอ ไอคอน 40px บนหัว คลิกแล้วไปขั้นถัดไปเลย (ไม่มีปุ่ม Next) · ขั้น ② จำนวนคอลัมน์**ต่อบริการ** ไม่ใช่เดาจากจำนวนฟิลด์ (`RequestSchemas::layouts()`) · ขั้น ③ รีวิวสั้นลงเหลือของที่ต้องตรวจจริง
+
+**ฟิลด์ที่เหลือต่อบริการ** (ตัดตามที่ใช้จริง): คอมพิวเตอร์ 1 คอลัมน์ (ประเภทเครื่อง) · Hardware 1 (อุปกรณ์) · อีเมล 1 · Social 2 · Files Share 2 (สิทธิ์เหลือ read/write ตาม Access Directory) · Mail Group 1 · Software 2 (**ดึงรายชื่อจาก Access Directory: Brand + ชื่อ Software** ไม่มีในรายการก็ติ๊ก "อื่น ๆ" แล้วพิมพ์เอง — `required_without` สองทาง) · กู้ข้อมูล 1 (เหลือเหตุผลเท่านั้น) · โทรศัพท์ 2 · อื่น ๆ 1
+
+### 4. แยก Hardware ออกจาก Computer (10 → 11 ประเภท)
+
+`RequestType::Hardware` + workflow ตัวที่ 11 (ใช้ step ชุดเดียวกับ Mobile) — คำขอจอภาพ/เครื่องพิมพ์/อุปกรณ์เสริมไม่ต้องไปปนกับคำขอเครื่องคอมอีก
+
+### 5. Settings → Master data → **ข้อมูลคำขอ** (ใหม่)
+
+รายการตัวเลือกในฟอร์มคำขอที่แอดมินแก้เองได้ 2 ภาษา ไม่ต้องแก้โค้ด
+
+- **เลย์เอาต์ master-detail** (ยืมของโมดูล Permission): รายการที่จัดการได้อยู่คอลัมน์ซ้าย 220px พร้อมจำนวนตัวเลือก · ตัวเลือกของรายการที่เลือกอยู่ขวา — ครั้งแรกทำเป็น pill สลับรายการซึ่งไปซ้อนใต้แท็บ Master data ที่เป็น pill ทรงเดียวกัน กลายเป็นเมนูสองชั้นที่แยกไม่ออก · frame ใช้ geometry เดียวกับ DataTable ของแท็บพี่น้อง (`rounded-xl` ไม่มีเงา) สลับแท็บแล้วขอบไม่กระตุก
+- ตาราง `request_options` + `App\Models\Settings\RequestOption` · ฟิลด์ใน `RequestSchemas` ที่ประกาศ `managed` จะถูก overlay ด้วยค่าจากตารางนี้ (query เดียวต่อ page load, ตัวที่ปิดไว้หลุดจากทั้ง UI และ validation พร้อมกัน) — ปัจจุบัน 3 รายการ: `hardware.device`, `mobile.device`, `telephone.device_type`
+- **คำขออ้างถึงตัวเลือกด้วย FK จริงในฐานข้อมูล** — เดิมเก็บ slug (`monitor`) ลง `fields` json ซึ่งเป็น soft link 2 ชั้น: (1) เป็น identity ที่สองของแถวที่มี id อยู่แล้ว (2) อยู่ใน json ซึ่ง MariaDB ผูก FOREIGN KEY ไม่ได้เลย ลบตัวเลือกทิ้งแล้วคำขอชี้ไป id ที่ไม่มีอยู่โดยฐานไม่ร้อง แก้ 2 ขั้น: เปลี่ยน key เป็น `*_id` แล้ว**ย้าย reference ทุกตัวออกจาก json ไปเป็นคอลัมน์จริงพร้อม FK**
+  - `service_requests` ได้ 6 คอลัมน์ใหม่ `request_option_id` · `file_share_id` · `email_group_id` · `social_platform_id` · `software_id` · `location_id` → FK `ON DELETE SET NULL` ทั้งหมด (รวมกับของเดิมเป็น **10 FK** บนตารางนี้) · json เหลือแต่ของที่ไม่มีตารางรองรับ (`access_level`, `address`, `sim`) + `_display`
+  - ได้ relation จริง: `$request->requestOption->label_th` · ถามย้อนกลับได้ `ServiceRequest::where('request_option_id', $id)` แทนการไล่ scan json
+  - `RequestSchemas::referenceColumns()` เป็นตัวบอกว่า field ไหนลงคอลัมน์ไหน (managed ทุกตัว → `request_option_id` เพราะเป็นแถวของตารางเดียวกัน) · `ServiceRequestResource` รวมคอลัมน์กลับเข้า `fields` map ตอนส่งออก API จึงไม่กระทบ frontend
+  - `nullOnDelete` รักษาพฤติกรรมเดิมไว้ว่าลบ master data ได้ — `_display` snapshot ยังถือ label ที่ยื่นไว้ ประวัติอ่านถูกต้องแม้ reference ถูกล้าง
+  - ทดสอบพิสูจน์ระดับฐาน: ยิงผ่าน service ตรง ๆ (เลี่ยง validation) ด้วย id ที่ไม่มี → `FOREIGN KEY constraint failed` · ลบตัวเลือกที่ถูกอ้าง → คอลัมน์เป็น null แต่ `_display` ยังอ่านชื่อเดิมได้
+  - `hardware.device` → `device_id` · `mobile.device` → `device_id` · `telephone.device_type` → `device_type_id` (migration ย้าย field_key ของ option โดยคง id เดิม + ย้าย key ใน `fields` json ของคำขอรวมถึงแถว `_display`) · `device_id`/`device_type_id` ใช้คอลัมน์ `request_option_id` ร่วมกัน เพราะ 1 ประเภทมี managed list ได้ 1 อัน
+  - validate ด้วย `Rule::exists('request_options','id')` ที่ **scope ตาม (request_type, field_key, active)** → id ที่ยืมจากรายการอื่นถูกปฏิเสธ (มี test ยืนยัน) ซึ่ง `in:` บน slug ทำไม่ได้
+  - ทิ้งคอลัมน์ `value` · unique ย้ายไป `(request_type, field_key, label_en)` — ชื่อซ้ำในรายการเดียวกันถูกปฏิเสธตรง ๆ แทนที่จะเงียบ ๆ ต่อท้าย `_2`
+  - `castReferences()` แปลงค่าจากฟอร์มเป็น int ก่อนบันทึก ทั้ง managed และ source (FK ที่เก็บเป็น `"7"` เทียบกับ id ที่เป็นตัวเลขไม่ติด)
+  - ลบตัวเลือกได้อย่างปลอดภัยเพราะคำขอเก่าอ่านจาก `_display` snapshot ของตัวเอง · เปลี่ยนชื่อได้เสรีเพราะ link เป็น id
+- **ลำดับใช้การลากสลับ** ไม่ใช่กรอกเลข: ลากแล้วแถวเลื่อนตามเมาส์ทันที ปล่อยแล้ว `POST request-options/reorder` เขียนลำดับใหม่ทั้งรายการใน transaction (ส่งไม่ครบ = 422 ไม่ยอมทำครึ่ง ๆ) · react-query เขียน cache แบบ optimistic แถวจึงไม่เด้งกลับ · มีปุ่มลูกศรขึ้น/ลงคู่กันไว้ให้คีย์บอร์ด · ตัวเลือกใหม่ไปต่อท้ายรายการเอง (native HTML5 drag — ไม่เพิ่ม dependency)
+
+### 6. เลิกประกอบคีย์ i18n ตอน runtime (soft link → คีย์จริง)
+
+เดิมโค้ดใหม่เรียก `t(\`req_${type}\`)` / `t(\`req_status_${status}\`)` 16 จุด ซึ่ง `grep req_hardware` หาที่ใช้ไม่เจอ, เพิ่มประเภทใหม่แล้ว compile ผ่านแต่หน้าจอโชว์ชื่อคีย์ดิบ (เพราะ `translate()` คืนคีย์เมื่อหาไม่เจอ)
+
+- ย้ายเป็น registry ที่เขียนคีย์ไว้ตรง ๆ แบบเดียวกับ `labelKey` ของฟอร์ม Contract: `shared/lib/request-meta.ts` → `REQUEST_TYPE_META` (icon + สี + labelKey) · `REQUEST_STATUS_META` (tone + labelKey) · `REQUEST_TYPES` / `REQUEST_STATUSES`
+- เป็น `Record<ServiceRequestType, …>` → **เพิ่มประเภทที่ 12 แล้ว build ไม่ผ่านจนใส่คีย์ให้** (ทดสอบด้วยการเพิ่ม type ปลอมแล้วได้ TS2741 จริง)
+- state ของ filter เปลี่ยนจาก `useState('')` เป็น `ServiceRequestStatus | ''` / `ServiceRequestType | ''` เพื่อ index registry ได้ตรง ๆ · แจ้งเตือน `notif_request_*` ใช้ map คีย์จริงพร้อม fallback (subtype แปลก ๆ จะไม่พิมพ์ชื่อคีย์ออกจอ)
+- registry วางที่ `shared/` เพราะ 3 โมดูลอ่าน (request/workflow/settings) และเป็นคำศัพท์ของ type ที่อยู่ใน `shared/types` อยู่แล้ว — ถ้าวางไว้ในโมดูล request จะเกิด **circular import** กับ workflow (request ดึง `WorkflowStrip`, workflow ดึง registry)
+
+### Tests / Verification
+
+`RequestOptionTest` (13) รวมลำดับ/ลาก/สิทธิ์/FK ข้ามรายการ/FK ระดับฐานข้อมูล · **ทั้ง suite = 785 passed / 3,078 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · migrate + `RequestOptionSeeder` รันบนฐานจริงแล้ว
