@@ -56,6 +56,7 @@ import { CategoryModal } from '../components/category-modal';
 import { LocationModal } from '../components/location-modal';
 import { LookupSection } from '../components/lookup-section';
 import { ModelModal } from '../components/model-modal';
+import { RequestDataSection } from '../components/request-data-section';
 import { VendorModal } from '../components/vendor-modal';
 import { WarehouseModal } from '../components/warehouse-modal';
 import {
@@ -237,7 +238,7 @@ export default function SettingsPage() {
 
 // ─── Master Data Tab ─────────────────────────────────────────────────────────
 
-type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types';
+type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types' | 'request-data';
 
 /**
  * MasterDataTab — top-level container with sub-tab navigation.
@@ -257,6 +258,7 @@ function MasterDataTab() {
         { id: 'locations', label: t('set_locations') },
         { id: 'units', label: t('md_units') },
         { id: 'warranty-types', label: t('md_warranty_types') },
+        { id: 'request-data', label: t('md_request_data') },
     ];
 
     return (
@@ -289,6 +291,7 @@ function MasterDataTab() {
             {tab === 'locations' && <LocationsList />}
             {tab === 'units' && <UnitsList />}
             {tab === 'warranty-types' && <WarrantyTypesList />}
+            {tab === 'request-data' && <RequestDataSection />}
         </div>
     );
 }
