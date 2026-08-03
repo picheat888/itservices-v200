@@ -10,8 +10,11 @@ use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Brand;
 use App\Models\Stock\StockItem;
+use App\Models\Ticket\Ticket;
+use App\Models\Workflow\Workflow;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -51,6 +54,10 @@ class AuditLog extends Model
         'asset_id' => [Asset::class, 'asset_code'],
         'related_asset_id' => [Asset::class, 'asset_code'],
         'stock_item_id' => [StockItem::class, 'name'],
+        'service_request_id' => [ServiceRequest::class, 'reference'],
+        'workflow_id' => [Workflow::class, 'name'],
+        'ticket_id' => [Ticket::class, 'ticket_no'],
+        'approver_employee_id' => [Employee::class, 'name'],
     ];
 
     /** Record an audit entry for the current (or system) actor. */

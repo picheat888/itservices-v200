@@ -19,10 +19,13 @@ use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
+use App\Http\Controllers\Api\Request\RequestController;
+use App\Http\Controllers\Api\Request\RequestOptionsController;
 use App\Http\Controllers\Api\Settings\AssetModelController;
 use App\Http\Controllers\Api\Settings\BrandController;
 use App\Http\Controllers\Api\Settings\CategoryController;
 use App\Http\Controllers\Api\Settings\LocationController;
+use App\Http\Controllers\Api\Settings\RequestOptionController;
 use App\Http\Controllers\Api\Settings\SettingsController;
 use App\Http\Controllers\Api\Settings\UnitController;
 use App\Http\Controllers\Api\Settings\VendorController;
@@ -35,6 +38,7 @@ use App\Http\Controllers\Api\Stock\StockRequestController;
 use App\Http\Controllers\Api\Stock\WarehouseController;
 use App\Http\Controllers\Api\Ticket\TicketAttachmentController;
 use App\Http\Controllers\Api\Ticket\TicketController;
+use App\Http\Controllers\Api\Workflow\WorkflowController;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
@@ -114,8 +118,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('units', [UnitController::class, 'index'])->name('api.units.index');
     Route::get('warranty-types', [WarrantyTypeController::class, 'index'])->name('api.warranty-types.index');
     Route::get('locations', [LocationController::class, 'index'])->name('api.locations.index');
+    Route::get('request-options', [RequestOptionController::class, 'index'])
+        ->middleware('permission:settings.masterdata')->name('api.request-options.index');
 
     Route::middleware('permission:settings.masterdata')->group(function () {
+        Route::post('request-options/reorder', [RequestOptionController::class, 'reorder'])->name('api.request-options.reorder');
+        Route::apiResource('request-options', RequestOptionController::class)->except(['show', 'index']);
         Route::apiResource('brands', BrandController::class)->except(['show', 'index']);
         Route::apiResource('asset-models', AssetModelController::class)->except(['show', 'index']);
         Route::apiResource('categories', CategoryController::class)->except(['show', 'index']);
@@ -186,6 +194,25 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::post('stock-requests/{stockRequest}/approve', [StockRequestController::class, 'approve'])->name('api.stock-requests.approve');
     Route::post('stock-requests/{stockRequest}/reject', [StockRequestController::class, 'reject'])->name('api.stock-requests.reject');
     Route::post('stock-requests/{stockRequest}/fulfill', [StockRequestController::class, 'fulfill'])->name('api.stock-requests.fulfill');
+
+    // Request module (IT service requests) — options + transitions before the
+    // resource so `{serviceRequest}` cannot swallow them.
+    Route::get('service-requests/options', [RequestOptionsController::class, 'index'])->name('api.service-requests.options');
+    Route::post('service-requests/{serviceRequest}/approve', [RequestController::class, 'approve'])->name('api.service-requests.approve');
+    Route::post('service-requests/{serviceRequest}/reject', [RequestController::class, 'reject'])->name('api.service-requests.reject');
+    Route::post('service-requests/{serviceRequest}/fulfill', [RequestController::class, 'fulfill'])->name('api.service-requests.fulfill');
+    Route::post('service-requests/{serviceRequest}/cancel', [RequestController::class, 'cancel'])->name('api.service-requests.cancel');
+    Route::apiResource('service-requests', RequestController::class)
+        ->only(['index', 'store', 'show'])
+        ->parameters(['service-requests' => 'serviceRequest']);
+
+    // Workflow module (approval chain definitions) — admin only.
+    Route::middleware('permission:workflows.manage')->group(function () {
+        Route::get('workflows', [WorkflowController::class, 'index'])->name('api.workflows.index');
+        Route::get('workflows/employee-options', [WorkflowController::class, 'employeeOptions'])->name('api.workflows.employee-options');
+        Route::post('workflows/preview', [WorkflowController::class, 'preview'])->name('api.workflows.preview');
+        Route::put('workflows/{workflow}', [WorkflowController::class, 'update'])->name('api.workflows.update');
+    });
     Route::post('stock-counts/{stockCount}/commit', [StockCountController::class, 'commit'])->name('api.stock-counts.commit');
     Route::apiResource('stock-counts', StockCountController::class)->except(['edit', 'create']);
 

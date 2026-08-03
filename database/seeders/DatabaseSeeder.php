@@ -67,5 +67,7 @@ class DatabaseSeeder extends Seeder
         $this->call(StockSeeder::class);
         $this->call(AssetSeeder::class);
         $this->call(TicketSeeder::class);
+        $this->call(WorkflowSeeder::class);
+        $this->call(RequestOptionSeeder::class);
     }
 }
