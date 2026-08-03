@@ -12,6 +12,7 @@ import {
     Shield,
     Users,
     Warehouse,
+    Workflow,
     Wrench,
 } from 'lucide-react';
 
@@ -31,7 +32,7 @@ export const navGroups: NavGroup[] = [
             { id: 'employees', label: 'employees', to: '/employees', icon: Users, permission: 'employees.module' },
             // Staff enter via the module master; ordinary employees via the self-service keys.
             { id: 'tickets', label: 'tickets', to: '/tickets', icon: Wrench, anyOf: ['tickets.module', 'tickets.create', 'tickets.my'] },
-            { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, permission: 'requests.submit' },
+            { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, anyOf: ['requests.submit', 'requests.view_all', 'requests.fulfill'] },
             { id: 'access', label: 'access_title', to: '/access', icon: MonitorCog, permission: 'access.module' },
             { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.module' },
             { id: 'contracts', label: 'contracts', to: '/contracts', icon: FileText, permission: 'contracts.module' },
@@ -42,6 +43,7 @@ export const navGroups: NavGroup[] = [
         label: 'nav_admin',
         items: [
             { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: ['super', 'admin', 'hr'] },
+            { id: 'workflows', label: 'wf_title', to: '/workflows', icon: Workflow, permission: 'workflows.manage' },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-templates', icon: Mail, permission: 'system.configure_notifications' },
             { id: 'settings', label: 'settings', to: '/settings', icon: Settings, permission: 'settings.access' },

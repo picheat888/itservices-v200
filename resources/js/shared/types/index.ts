@@ -830,3 +830,141 @@ export interface AccessIssueItem {
     id: number;
     name: string | null;
 }
+
+/* ============= Request + Workflow modules ============= */
+
+/** The IT service request types (mirrors App\Enums\Request\RequestType). */
+export type ServiceRequestType =
+    | 'computer'
+    | 'hardware'
+    | 'mobile'
+    | 'email'
+    | 'social'
+    | 'fileshare'
+    | 'mailgroup'
+    | 'software'
+    | 'recovery'
+    | 'telephone'
+    | 'other';
+
+export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled';
+export type ServiceRequestPriority = 'low' | 'medium' | 'high';
+export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' | 'skipped';
+export type WorkflowActorType = 'chain' | 'owner' | 'it_staff';
+export type WorkflowStepKind = 'approval' | 'fulfillment';
+
+/** One frozen step of a request's resolved approval chain. */
+export interface RequestApproval {
+    id: number;
+    position: number;
+    actor_type: WorkflowActorType;
+    kind: WorkflowStepKind;
+    label: string;
+    sla_days: number | null;
+    status: ApprovalRowStatus;
+    approver_employee_id: number | null;
+    approver_name: string | null;
+    note: string | null;
+    acted_by_name: string | null;
+    became_current_at: string | null;
+    due_at: string | null;
+    acted_at: string | null;
+    overdue: boolean;
+}
+
+/** An IT service request as the API returns it. */
+export interface ServiceRequest {
+    id: number;
+    reference: string;
+    type: ServiceRequestType;
+    title: string;
+    reason: string;
+    priority: ServiceRequestPriority;
+    estimated_value: string | null;
+    fields: Record<string, string | number | null>;
+    /** Point-in-time labels + resolved values, snapshotted at submit. */
+    fields_display: { key: string; label_en: string; label_th: string; value: string; mono: boolean }[];
+    status: ServiceRequestStatus;
+    auto_ticket: boolean;
+    requester: { employee_id: number | null; user_id: number | null; name: string; department: string | null };
+    workflow: { id: number | null; name?: string | null };
+    ticket?: { id: number; ticket_no: string; status: string | null } | null;
+    approvals?: RequestApproval[];
+    /** Compact chain summary for table rows (WorkflowMini). */
+    progress: { total: number; done: number; current_label: string | null; current_overdue: boolean };
+    can_approve: boolean;
+    can_cancel: boolean;
+    can_fulfill: boolean;
+    approved_at: string | null;
+    rejected_at: string | null;
+    fulfilled_at: string | null;
+    cancelled_at: string | null;
+    created_at: string;
+}
+
+/** One step of a workflow definition (Workflows admin). */
+export interface WorkflowStep {
+    id?: number;
+    position?: number;
+    actor_type: WorkflowActorType;
+    label: string;
+    kind: WorkflowStepKind;
+    sla_days: number;
+}
+
+/** An approval workflow definition — one per request type. */
+export interface Workflow {
+    id: number;
+    request_type: ServiceRequestType;
+    name: string;
+    active: boolean;
+    auto_ticket: boolean;
+    steps: WorkflowStep[];
+    updated_at: string | null;
+}
+
+/** One dynamic field definition of the New Request dialog (from RequestSchemas). */
+export interface RequestFieldSchema {
+    key: string;
+    label_en: string;
+    label_th: string;
+    input: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'source';
+    options?: { value: string; label_en: string; label_th: string }[];
+    source?: 'email_groups' | 'file_shares' | 'social_platforms' | 'softwares' | 'locations';
+    required?: boolean;
+    mono?: boolean;
+    placeholder?: string;
+    default?: string | number;
+    min?: number;
+    max?: number;
+    /** On a `source` field: the sibling key holding a typed-in value when the item isn't listed. */
+    allow_other?: string;
+    /** Not rendered on its own — revealed by its `allow_other` partner. */
+    internal?: boolean;
+}
+
+/** One selectable row of a source-backed field (file share, mail group, …). */
+export interface RequestSourceOption {
+    id: number;
+    label: string;
+    detail: string | null;
+}
+
+/** One editable choice of a managed request-form list (Settings → Request data). */
+export interface RequestOption {
+    id: number;
+    request_type: ServiceRequestType;
+    field_key: string;
+    label_en: string;
+    label_th: string | null;
+    sort_order: number;
+    active: boolean;
+}
+
+/** A managed list: which request type and field its choices feed. */
+export interface RequestOptionList {
+    request_type: ServiceRequestType;
+    field_key: string;
+    label_en: string;
+    label_th: string;
+}

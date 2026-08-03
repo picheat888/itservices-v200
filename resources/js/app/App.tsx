@@ -11,9 +11,11 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
+import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
 import { TicketsPage } from '@/modules/ticket';
+import { WorkflowsPage } from '@/modules/workflow';
 import { AppErrorScreen } from '@/shared/components/app-error-screen';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { queryClient } from '@/shared/lib/query-client';
@@ -23,10 +25,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
-// Placeholder ("coming soon") modules and how their routes are gated. `requests`
-// uses a permission key; `reports` is role-gated (matching the sidebar nav).
+// Placeholder ("coming soon") modules and how their routes are gated.
+// `reports` is role-gated (matching the sidebar nav).
 const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [
-    { path: 'requests', titleKey: 'requests', anyOf: ['requests.submit', 'requests.view_all'] },
     { path: 'reports', titleKey: 'reports', roles: ['super', 'admin', 'hr'] },
 ];
 
@@ -55,6 +56,22 @@ function App() {
                             element={
                                 <RequirePermission anyOf={['employees.view']}>
                                     <EmployeesPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="requests"
+                            element={
+                                <RequirePermission anyOf={['requests.submit', 'requests.view_all', 'requests.fulfill']}>
+                                    <RequestsPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="workflows"
+                            element={
+                                <RequirePermission anyOf={['workflows.manage']}>
+                                    <WorkflowsPage />
                                 </RequirePermission>
                             }
                         />
