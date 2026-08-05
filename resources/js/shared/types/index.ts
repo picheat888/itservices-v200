@@ -2,6 +2,13 @@ import { LucideIcon } from 'lucide-react';
 
 export type Role = 'super' | 'admin' | 'hr' | 'user';
 
+/**
+ * The all-access role. It bypasses permission checks rather than being granted keys
+ * (see useAuth's `can`), mirroring App\Enums\UserRole on the server. Compare against
+ * this rather than writing the string, so the key lives in one place on each side.
+ */
+export const SUPER_ROLE: Role = 'super';
+
 export type Lang = 'en' | 'th';
 export type Density = 'compact' | 'normal' | 'cozy';
 export type SidebarStyle = 'labeled' | 'icons';

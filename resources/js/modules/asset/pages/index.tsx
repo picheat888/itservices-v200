@@ -5,7 +5,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
-import type { Asset, AssetStatus, AssetType, Role } from '@/shared/types';
+import type { Asset, AssetStatus, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -125,19 +125,16 @@ function AssetDashboardSkeleton() {
 export default function AssetsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { user } = useAuth();
-    const role = (user?.role ?? 'user') as Role;
-    const perms = user?.permissions ?? [];
-    const isSuper = role === 'super';
-    const canCreate = isSuper || perms.includes('assets.register');
-    const canEdit = isSuper || perms.includes('assets.edit');
-    const canTransfer = isSuper || perms.includes('assets.transfer');
-    const canReceive = isSuper || perms.includes('assets.receive');
-    const canRetire = isSuper || perms.includes('assets.retire');
-    const canForceRecall = isSuper || perms.includes('assets.force_recall');
-    const canCancelWriteoff = isSuper || perms.includes('assets.cancel_writeoff');
-    const canDelete = isSuper || perms.includes('assets.delete');
-    const canViewDashboard = isSuper || perms.includes('assets.view_dashboard');
+    const { user, can } = useAuth();
+    const canCreate = can('assets.register');
+    const canEdit = can('assets.edit');
+    const canTransfer = can('assets.transfer');
+    const canReceive = can('assets.receive');
+    const canRetire = can('assets.retire');
+    const canForceRecall = can('assets.force_recall');
+    const canCancelWriteoff = can('assets.cancel_writeoff');
+    const canDelete = can('assets.delete');
+    const canViewDashboard = can('assets.view_dashboard');
     // Accepting a hand-over is the recipient's action only — matched by their employee code.
     const myEmpCode = user?.employee_code ?? null;
 

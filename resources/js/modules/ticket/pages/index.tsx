@@ -6,7 +6,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
-import type { Role, Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
+import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { DateInput } from '@/shared/ui/date-input';
@@ -370,11 +370,7 @@ function TicketDashboardBodySkeleton() {
 export default function TicketsPage() {
     const t = useT();
     // System-timezone formatter (Settings -> Company) — the API emits UTC timestamps.
-    const { user } = useAuth();
-    const role = (user?.role ?? 'user') as Role;
-    const perms = user?.permissions ?? [];
-    const isSuper = role === 'super';
-    const has = (p: string) => isSuper || perms.includes(p);
+    const { user, can: has } = useAuth();
     const isIT = has('tickets.view_all');
     const canCreate = has('tickets.create');
     const canDashboard = has('tickets.view_dashboard');

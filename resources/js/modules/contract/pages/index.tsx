@@ -5,7 +5,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
-import type { Contract, ContractStatus, ContractType, Role } from '@/shared/types';
+import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
@@ -102,17 +102,14 @@ const TYPE_TONE: Record<ContractType, 'blue' | 'violet' | 'amber' | 'green' | 'g
 export default function ContractsPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { user } = useAuth();
-    const role = (user?.role ?? 'user') as Role;
-    const perms = user?.permissions ?? [];
-    const isSuper = role === 'super';
-    const canCreate = isSuper || perms.includes('contracts.create');
-    const canEdit = isSuper || perms.includes('contracts.edit');
-    const canDelete = isSuper || perms.includes('contracts.delete');
-    const canImport = isSuper || perms.includes('contracts.import');
-    const canCancel = isSuper || perms.includes('contracts.cancel');
-    const canExpire = isSuper || perms.includes('contracts.expire');
-    const canReactivate = isSuper || perms.includes('contracts.reactivate');
+    const { can } = useAuth();
+    const canCreate = can('contracts.create');
+    const canEdit = can('contracts.edit');
+    const canDelete = can('contracts.delete');
+    const canImport = can('contracts.import');
+    const canCancel = can('contracts.cancel');
+    const canExpire = can('contracts.expire');
+    const canReactivate = can('contracts.reactivate');
 
     const [tab, setTab] = useState<Tab>(initialContractTab);
     const [search, setSearch] = useState('');

@@ -16,11 +16,8 @@ const REDIRECT_SECONDS = 15;
  * (the URL is left unchanged — no redirect).
  */
 export function RequirePermission({ anyOf, roles, children }: { anyOf?: string[]; roles?: Role[]; children: React.ReactNode }) {
-    const { user } = useAuth();
-    const allowed =
-        user?.role === 'super' ||
-        (anyOf?.some((p) => user?.permissions?.includes(p)) ?? false) ||
-        (!!user?.role && (roles?.includes(user.role) ?? false));
+    const { user, can } = useAuth();
+    const allowed = (anyOf?.some((p) => can(p)) ?? false) || (!!user?.role && (roles?.includes(user.role) ?? false));
 
     if (allowed) {
         return <>{children}</>;

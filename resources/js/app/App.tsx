@@ -19,7 +19,7 @@ import { WorkflowsPage } from '@/modules/workflow';
 import { AppErrorScreen } from '@/shared/components/app-error-screen';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { queryClient } from '@/shared/lib/query-client';
-import type { Role } from '@/shared/types';
+import { SUPER_ROLE, type Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
@@ -28,7 +28,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 // Placeholder ("coming soon") modules and how their routes are gated.
 // `reports` is role-gated (matching the sidebar nav).
 const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [
-    { path: 'reports', titleKey: 'reports', roles: ['super', 'admin', 'hr'] },
+    { path: 'reports', titleKey: 'reports', roles: [SUPER_ROLE, 'admin', 'hr'] },
 ];
 
 function App() {
