@@ -9,6 +9,7 @@ use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class AssetSeeder extends Seeder
 {
@@ -64,6 +65,13 @@ class AssetSeeder extends Seeder
             // position are read from the employee); a non-matching label (shared / common
             // use) stays in `owner`. Employee data is never duplicated onto the asset.
             $ownerEmployeeId = Employee::where('code', $owner)->value('id');
+
+            // A shared / location label is meant to stay text. An EMP- code that failed
+            // to resolve is not: it used to fall through into `owner` and leave the asset
+            // with nobody holding it, which is exactly the drift worth shouting about.
+            if ($ownerEmployeeId === null && $owner !== null && str_starts_with($owner, 'EMP-')) {
+                throw new RuntimeException("AssetSeeder: no employee with code {$owner} — the demo codes have drifted from OrgSeeder.");
+            }
 
             Asset::updateOrCreate(['asset_code' => $tag], [
                 'category_id' => $categoryId,
