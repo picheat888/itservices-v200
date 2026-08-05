@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Permission;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Permission\Role;
@@ -32,7 +33,10 @@ class RolePermissionController extends Controller
             ->pluck('cnt', 'role_id');
 
         $roles = Role::orderByDesc('is_system')->orderBy('name')->get()->map(function (Role $role) use ($permsByRoleId, $memberCounts) {
-            $allowed = $role->key === 'super'
+            // super bypasses the checks rather than holding grants, so its stored rows
+            // are never read — the matrix shows the whole catalogue instead.
+            $isSuper = UserRole::isSuperKey($role->key);
+            $allowed = $isSuper
                 ? Permissions::all()
                 : ($permsByRoleId[$role->id] ?? []);
 
@@ -40,7 +44,7 @@ class RolePermissionController extends Controller
                 'value' => $role->key,
                 'label' => $role->name,
                 'color' => $role->color,
-                'is_super' => $role->key === 'super',
+                'is_super' => $isSuper,
                 'is_system' => $role->is_system,
                 'members' => (int) ($memberCounts[$role->id] ?? 0),
                 'permissions' => $allowed,
@@ -58,7 +62,7 @@ class RolePermissionController extends Controller
     public function update(Request $request, string $role): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        abort_if($role === 'super', 422, 'Administrator Template permissions cannot be changed.');
+        abort_if(UserRole::isSuperKey($role), 422, 'Administrator Template permissions cannot be changed.');
         $roleId = Role::where('key', $role)->value('id');
         abort_if($roleId === null, 404);
 
