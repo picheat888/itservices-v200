@@ -98,6 +98,14 @@ nano .env
   # .env เป็นแค่ fallback -- ตั้งค่าจริงผ่านหน้า Settings
   MAIL_MAILER=log
 
+  # --- บัญชีผู้ดูแลที่ db:seed จะสร้าง (step 5) ---
+  # ถ้าไม่ตั้ง 3 ตัวนี้: ชื่อจะเป็น "Administrator", ไม่มีอีเมล, และรหัสจะถูกสุ่ม
+  # แล้วพิมพ์ออก console ครั้งเดียว (ยังใช้ได้ แต่ต้องคัดลอกไว้ทันที)
+  # *** ต้องตั้งก่อนรัน db:seed และก่อน optimize ***  ดู step 5
+  SEED_SUPER_NAME=super
+  SEED_SUPER_EMAIL=admin@example.com         # << อีเมลจริง -- การแจ้งเตือนส่งเฉพาะบัญชีที่มีอีเมล
+  SEED_SUPER_PASSWORD=                       # << ตั้งรหัสชั่วคราว (ระบบบังคับเปลี่ยนตอน login ครั้งแรก)
+
 
 --------------------------------------------------------------------------------
  5. ติดตั้ง DEPENDENCIES + BUILD FRONTEND
@@ -111,9 +119,24 @@ php artisan key:generate
 npm ci
 npm run build
 
-php artisan migrate --force      # ครั้งแรก เพิ่ม --seed ได้ถ้าต้องการ master data
+php artisan migrate --force       # สร้างตาราง -- ยังไม่มีข้อมูลแม้แถวเดียว
+
+# *** จำเป็น ไม่ใช่ทางเลือก *** migrate สร้างแต่ตาราง ตาราง users จะว่าง
+# ทำให้ login ไม่ได้เลย db:seed คือตัวที่สร้าง:
+#   - บัญชี super (บัญชีเดียวที่มี -- ไม่มีตัวนี้ก็เข้าระบบไม่ได้)
+#   - roles + role_permissions        (ไม่มี = กำหนดสิทธิ์ไม่ได้)
+#   - email templates 26 ตัว          (ไม่มี = เมลไม่ออกแม้ตั้ง SMTP ถูก)
+#   - workflows + steps               (ไม่มี = ส่งคำขอไม่ได้)
+#   - request_options                 (ไม่มี = คำขอ 3 ประเภทมีฟิลด์ required ที่เลือกไม่ได้)
+# ไม่ใส่ --class => เรียก DatabaseSeeder (production) เท่านั้น
+# *** ห้ามใช้ --class=DemoSeeder บน production *** (สร้างบัญชีรหัส "password" 5 บัญชี)
+php artisan db:seed --force       # << จดรหัสที่มันพิมพ์ออกมาไว้ทันที
+
 php artisan storage:link
 php artisan optimize              # cache config/route/view
+                                  # *** ต้องทำ "หลัง" db:seed ***
+                                  # เพราะพอ cache config แล้ว SEED_SUPER_* จะอ่านไม่เจอ
+                                  # (db:seed จะสุ่มรหัสให้แทนค่าที่ตั้งใน .env)
 
 
 --------------------------------------------------------------------------------
@@ -273,6 +296,10 @@ git pull
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 php artisan migrate --force
+# ปลอดภัยกับระบบที่ใช้งานอยู่: สร้างแต่ของที่ยังไม่มี (permission key / email template /
+# workflow ตัวใหม่ที่มาพร้อมเวอร์ชันนี้) ไม่รีเซ็ตรหัสแอดมิน ไม่เปิดสิทธิ์ที่ปิดไว้
+# ไม่ทับข้อความ template ที่แก้เอง
+php artisan db:seed --force
 php artisan optimize:clear && php artisan optimize
 sudo systemctl restart itservices-queue
 # (cert ต่ออายุอัตโนมัติ ไม่ต้องทำอะไรเพิ่มตอน deploy)
