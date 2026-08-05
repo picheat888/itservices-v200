@@ -2,6 +2,7 @@
 
 namespace App\Models\Permission;
 
+use App\Enums\UserRole;
 use App\Models\Employee\Employee;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,7 +33,7 @@ class GroupRole extends Model
             ? null
             : Role::firstOrCreate(
                 ['key' => $key],
-                ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => $key === 'super'],
+                ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => UserRole::isSuperKey($key)],
             )->id;
         unset($this->attributes['role']);
     }

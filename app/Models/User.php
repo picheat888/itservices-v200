@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
@@ -117,7 +118,7 @@ class User extends Authenticatable
             ? null
             : Role::firstOrCreate(
                 ['key' => $key],
-                ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => $key === 'super'],
+                ['name' => ucfirst($key), 'color' => '#64748b', 'is_system' => UserRole::isSuperKey($key)],
             )->id;
         unset($this->attributes['role']);
     }
@@ -131,17 +132,17 @@ class User extends Authenticatable
     }
 
     /**
-     * Returns true when this user's role key is 'super'.
+     * Returns true when this user holds the all-access role.
      */
     public function isSuper(): bool
     {
-        return $this->role?->key === 'super';
+        return UserRole::isSuperKey($this->role?->key);
     }
 
     // Super admin and HR can manage the employee directory.
     public function canManageEmployees(): bool
     {
-        return $this->hasRole('super', 'hr');
+        return $this->hasRole(UserRole::SuperAdmin->value, UserRole::HR->value);
     }
 
     // Only super admin can manage positions and departments (org structure).

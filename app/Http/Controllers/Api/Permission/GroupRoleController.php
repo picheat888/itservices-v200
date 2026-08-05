@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Permission;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
@@ -131,7 +132,7 @@ class GroupRoleController extends Controller
         }
 
         abort_if(
-            $existingRole === 'super' || $incomingRole === 'super',
+            UserRole::isSuperKey($existingRole) || UserRole::isSuperKey($incomingRole),
             403,
             'Only an Administrator can manage the Administrator role group.'
         );

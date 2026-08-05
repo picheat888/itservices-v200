@@ -50,7 +50,7 @@ class EmployeeResource extends JsonResource
             'resign_reason' => $this->resign_reason,
             'last_day' => $this->last_day?->toDateString(),
             'has_account' => (bool) $linkedUser,
-            'is_super_admin' => $linkedUser?->role?->key === 'super',
+            'is_super_admin' => (bool) $linkedUser?->isSuper(),
         ];
     }
 }
