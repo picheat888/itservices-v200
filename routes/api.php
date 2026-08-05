@@ -39,22 +39,34 @@ use App\Http\Controllers\Api\Stock\WarehouseController;
 use App\Http\Controllers\Api\Ticket\TicketAttachmentController;
 use App\Http\Controllers\Api\Ticket\TicketController;
 use App\Http\Controllers\Api\Workflow\WorkflowController;
+use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [AuthController::class, 'login'])->name('api.login');
 Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.show');
 
-Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function () {
-    Route::post('logout', [AuthController::class, 'logout'])->name('api.logout');
-    Route::get('me', [AuthController::class, 'me'])->name('api.me');
+/**
+ * CheckPasswordExpiry answers 403 password_expired while an account still owes a
+ * password change, so the forced change is enforced by the API and not only by the
+ * dialog the SPA shows. Four routes opt out, or the lock would have no exit:
+ * `me` is how the SPA learns it must ask, `password` is the way out, `logout` must
+ * always work, and the heartbeat keeps the session alive while the form is open.
+ */
+Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpiry::class])->group(function () {
+    Route::post('logout', [AuthController::class, 'logout'])
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.logout');
+    Route::get('me', [AuthController::class, 'me'])
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.me');
     // Lightweight heartbeat used by the session-timeout modal to refresh _sec_last_activity on the server.
-    Route::get('session/ping', fn () => response()->json(['ok' => true]))->name('api.session.ping');
+    Route::get('session/ping', fn () => response()->json(['ok' => true]))
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.session.ping');
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
     // Every sidebar badge count in one request (per-count permission handled in the service).
     Route::get('sidebar-badges', [SidebarBadgeController::class, 'index'])->name('api.sidebar-badges');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
-    Route::put('password', [AuthController::class, 'changePassword'])->name('api.password.change');
+    Route::put('password', [AuthController::class, 'changePassword'])
+        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');
     Route::put('settings/company', [SettingsController::class, 'updateCompany'])
         ->middleware('permission:settings.company')->name('api.settings.company');
     Route::put('settings/branding', [SettingsController::class, 'updateBranding'])
