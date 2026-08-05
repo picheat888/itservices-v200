@@ -12,6 +12,16 @@ use App\Models\Settings\Location;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
+/**
+ * Seeds the org chart: the full department / position / section master data, the
+ * demo locations, and a small employee tree — one employee per demo login.
+ *
+ * The employee list is deliberately six people rather than a large fake roster.
+ * Every one of them signs in, which is what makes the Request approval chain
+ * demonstrable: a step resolves to a manager only if that manager has a login
+ * account, so a tree padded with account-less names would collapse every
+ * multi-step workflow onto the one approver who could actually sign in.
+ */
 class OrgSeeder extends Seeder
 {
     public function run(): void
@@ -87,47 +97,15 @@ class OrgSeeder extends Seeder
             Location::firstOrCreate(['name' => $name]);
         }
 
-        // ── Employees: one VP-topped tree. dept/section null for VP & Corporate
-        //    Director. 'mgr' = the code this person reports to (null = top). ────
-        $employees = [
-            // VP (L14) then PD full ladder L13 -> L1
-            ['code' => 'EMP-0001', 'name' => 'Somchai Wattana', 'name_th' => 'สมชาย วัฒนา', 'dept' => null, 'section' => null, 'pos' => 'Vice President', 'mgr' => null],
-            ['code' => 'EMP-0002', 'name' => 'Prasert Mongkol', 'name_th' => 'ประเสริฐ มงคล', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Director', 'mgr' => 'EMP-0001'],
-            ['code' => 'EMP-0003', 'name' => 'Anan Srisuk', 'name_th' => 'อนันต์ ศรีสุข', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Senior Manager', 'mgr' => 'EMP-0002'],
-            ['code' => 'EMP-0004', 'name' => 'Wirat Chaiyo', 'name_th' => 'วิรัช ชัยโย', 'dept' => 'PD', 'section' => 'Machine Operation', 'pos' => 'Manager', 'mgr' => 'EMP-0003'],
-            ['code' => 'EMP-0005', 'name' => 'Kasem Boonma', 'name_th' => 'เกษม บุญมา', 'dept' => 'PD', 'section' => 'Packing', 'pos' => 'Asst. Manager', 'mgr' => 'EMP-0004'],
-            ['code' => 'EMP-0006', 'name' => 'Narong Dee', 'name_th' => 'ณรงค์ ดี', 'dept' => 'PD', 'section' => 'Packing', 'pos' => 'Senior Supervisor', 'mgr' => 'EMP-0005'],
-            ['code' => 'EMP-0007', 'name' => 'Suchart Pimpa', 'name_th' => 'สุชาติ พิมพา', 'dept' => 'PD', 'section' => 'Filling', 'pos' => 'Supervisor', 'mgr' => 'EMP-0006'],
-            ['code' => 'EMP-0008', 'name' => 'Adisak Rung', 'name_th' => 'อดิศักดิ์ รุ่ง', 'dept' => 'PD', 'section' => 'Filling', 'pos' => 'Asst. Supervisor', 'mgr' => 'EMP-0007'],
-            ['code' => 'EMP-0009', 'name' => 'Manop Klin', 'name_th' => 'มานพ กลิ่น', 'dept' => 'PD', 'section' => 'Retrot', 'pos' => 'Leader', 'mgr' => 'EMP-0008'],
-            ['code' => 'EMP-0010', 'name' => 'Decha Pol', 'name_th' => 'เดชา พล', 'dept' => 'PD', 'section' => 'Retrot', 'pos' => 'Sub-Leader', 'mgr' => 'EMP-0009'],
-            ['code' => 'EMP-0011', 'name' => 'Chai Thong', 'name_th' => 'ชัย ทอง', 'dept' => 'PD', 'section' => 'Raw material', 'pos' => 'Head of Line', 'mgr' => 'EMP-0010'],
-            ['code' => 'EMP-0012', 'name' => 'Wichai Saito', 'name_th' => 'วิชัย สายโต', 'dept' => 'PD', 'section' => 'Stock', 'pos' => 'Head of Shift', 'mgr' => 'EMP-0011'],
-            ['code' => 'EMP-0013', 'name' => 'Nattapong Inta', 'name_th' => 'ณัฐพงษ์ อินตา', 'dept' => 'PD', 'section' => 'Loading', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0012'],
-            ['code' => 'EMP-0014', 'name' => 'Somkid Jan', 'name_th' => 'สมคิด จันทร์', 'dept' => 'PD', 'section' => 'Warehouse', 'pos' => 'Subcontract', 'mgr' => 'EMP-0013'],
-            // Corporate Director + one manager per remaining department
-            ['code' => 'EMP-0015', 'name' => 'Wanchai Rung', 'name_th' => 'วันชัย รุ่งเรือง', 'dept' => null, 'section' => null, 'pos' => 'Director', 'mgr' => 'EMP-0001'],
-            ['code' => 'EMP-0016', 'name' => 'Krit Saengthong', 'name_th' => 'กฤต แสงทอง', 'dept' => 'It', 'section' => 'Network & Security', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0017', 'name' => 'Suwanna Pongrat', 'name_th' => 'สุวรรณา พงศ์รัตน์', 'dept' => 'QC', 'section' => 'Quality Control', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0018', 'name' => 'Siriporn Chaiyo', 'name_th' => 'ศิริพร ชัยโย', 'dept' => 'HR', 'section' => 'Payroll', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0019', 'name' => 'Nattaya Phimsen', 'name_th' => 'ณัฐญา พิมพ์เสน', 'dept' => 'Acc', 'section' => 'Accounting', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0020', 'name' => 'Apinya Rattana', 'name_th' => 'อภิญญา รัตนา', 'dept' => 'Sales', 'section' => 'Sales', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0021', 'name' => 'Manat Boonyarit', 'name_th' => 'มานัส บุญยฤทธิ์', 'dept' => 'Lg', 'section' => 'Logistic', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0022', 'name' => 'Worawut Kittisak', 'name_th' => 'วรวุฒิ กิตติศักดิ์', 'dept' => 'Mn', 'section' => 'Maintenance', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0023', 'name' => 'Pichai Thaweesup', 'name_th' => 'พิชัย ทวีทรัพย์', 'dept' => 'PU', 'section' => 'Purchasing', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0024', 'name' => 'Ratana Klinpratum', 'name_th' => 'รัตนา กลิ่นประทุม', 'dept' => 'GA', 'section' => 'General Affairs', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            ['code' => 'EMP-0025', 'name' => 'Surasak Munkong', 'name_th' => 'สุรศักดิ์ มั่นคง', 'dept' => 'SE', 'section' => 'Occupational Safety & Health', 'pos' => 'Manager', 'mgr' => 'EMP-0015'],
-            // A few staff under managers (more depth + section coverage)
-            ['code' => 'EMP-0026', 'name' => 'Thanapon Inthawong', 'name_th' => 'ธนพล อินทวงศ์', 'dept' => 'It', 'section' => 'Support', 'pos' => 'Supervisor', 'mgr' => 'EMP-0016'],
-            ['code' => 'EMP-0027', 'name' => 'Kanya Phakdee', 'name_th' => 'กัญญา ภักดี', 'dept' => 'It', 'section' => 'System analyst', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0026'],
-            ['code' => 'EMP-0028', 'name' => 'Pimchada Sutthi', 'name_th' => 'พิมพ์ชฎา สุทธิ', 'dept' => 'QC', 'section' => 'Quality Assurance', 'pos' => 'Leader', 'mgr' => 'EMP-0017'],
-            ['code' => 'EMP-0029', 'name' => 'Yuki Tanaka', 'name_th' => 'ยูกิ ทานากะ', 'dept' => 'QC', 'section' => 'Research and Development', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0028'],
-            ['code' => 'EMP-0030', 'name' => 'Waraporn Sri', 'name_th' => 'วราพร ศรี', 'dept' => 'HR', 'section' => 'Recruitment', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0018'],
-        ];
+        $employees = $this->demoEmployees();
 
-        // Pass 1: create/update each employee (no manager yet).
+        // Employee and login share one email address, matching the real provisioning
+        // flow where an account is created against the person's mailbox.
+        $loginEmails = User::pluck('email', 'username');
+
+        // Pass 1: create/update each employee (manager wired in pass 2, once every
+        // row exists and its code can be resolved to an id).
         foreach ($employees as $i => $e) {
-            $email = 'emp'.str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT).'@abcd.co.th';
             // Split the demo full names into first/last on the first space.
             [$fn, $ln] = array_pad(explode(' ', $e['name'], 2), 2, '');
             [$fnTh, $lnTh] = array_pad(explode(' ', $e['name_th'], 2), 2, '');
@@ -141,9 +119,14 @@ class OrgSeeder extends Seeder
                     'department_id' => $e['dept'] ? ($deptId[$e['dept']] ?? null) : null,
                     'section_id' => $e['section'] ? ($sectionId["{$e['dept']}::{$e['section']}"] ?? null) : null,
                     'position_id' => $posId[$e['pos']] ?? null,
-                    'email' => $email,
-                    // Spread join dates so the demo has realistic tenures (earlier rows = senior = joined earlier).
-                    'joined_at' => date('Y-m-d', strtotime('2016-01-01 +'.($i * 2).' months')),
+                    // The login this person signs in as is part of who they are in the
+                    // demo tree, so it is set here rather than only when the matching
+                    // account happens to exist.
+                    'username' => $e['login'],
+                    'email' => $loginEmails[$e['login']] ?? null,
+                    // The list runs top-down, so spreading join dates by index gives
+                    // the senior people the longer tenures.
+                    'joined_at' => date('Y-m-d', strtotime('2016-01-01 +'.($i * 8).' months')),
                     'status' => 'active',
                 ],
             );
@@ -157,44 +140,62 @@ class OrgSeeder extends Seeder
             }
         }
 
-        $this->linkDemoAccounts();
+        $this->linkDemoAccounts($employees);
         $this->seedGroupRoles();
     }
 
-    /** Link the four demo logins to the employee records that MATCH their display names. */
-    private function linkDemoAccounts(): void
+    /**
+     * The demo tree, top-down. 'mgr' is the code this person reports to (null =
+     * top of the tree) and 'login' is the demo account that signs in as them.
+     *
+     * Reporting lines, which are what the Request workflow walks:
+     *   user → hr → director → vp   (three approval levels)
+     *   it   → super → director → vp
+     *
+     * @return list<array{code:string,name:string,name_th:string,dept:?string,section:?string,pos:string,mgr:?string,login:string}>
+     */
+    private function demoEmployees(): array
     {
-        $links = [
-            'EMP-0016' => 'super', // IT Manager — Krit Saengthong (same name as the super login)
-            'EMP-0026' => 'it',    // IT Support Supervisor — Thanapon Inthawong
-            'EMP-0018' => 'hr',    // HR Manager — Siriporn Chaiyo
-            'EMP-0030' => 'user',  // HR staff — Waraporn Sri
+        return [
+            ['code' => 'EMP-0001', 'name' => 'Somchai Wattana', 'name_th' => 'สมชาย วัฒนา', 'dept' => null, 'section' => null, 'pos' => 'Vice President', 'mgr' => null, 'login' => 'vp'],
+            ['code' => 'EMP-0002', 'name' => 'Wanchai Rung', 'name_th' => 'วันชัย รุ่งเรือง', 'dept' => null, 'section' => null, 'pos' => 'Director', 'mgr' => 'EMP-0001', 'login' => 'director'],
+            ['code' => 'EMP-0003', 'name' => 'Krit Saengthong', 'name_th' => 'กฤต แสงทอง', 'dept' => 'It', 'section' => 'Network & Security', 'pos' => 'Manager', 'mgr' => 'EMP-0002', 'login' => 'super'],
+            ['code' => 'EMP-0004', 'name' => 'Thanapon Inthawong', 'name_th' => 'ธนพล อินทวงศ์', 'dept' => 'It', 'section' => 'Support', 'pos' => 'Supervisor', 'mgr' => 'EMP-0003', 'login' => 'it'],
+            ['code' => 'EMP-0005', 'name' => 'Siriporn Chaiyo', 'name_th' => 'ศิริพร ชัยโย', 'dept' => 'HR', 'section' => 'Payroll', 'pos' => 'Manager', 'mgr' => 'EMP-0002', 'login' => 'hr'],
+            ['code' => 'EMP-0006', 'name' => 'Waraporn Sri', 'name_th' => 'วราพร ศรี', 'dept' => 'HR', 'section' => 'Recruitment', 'pos' => 'Staff/Officer', 'mgr' => 'EMP-0005', 'login' => 'user'],
         ];
+    }
 
-        // Clear stale links first — updateOrCreate in pass 1 never touches `username`,
-        // so an old mapping (e.g. EMP-0001 → super) would survive a re-seed otherwise.
-        Employee::whereIn('username', array_values($links))
-            ->whereNotIn('code', array_keys($links))
+    /**
+     * Point each demo account at the employee it signs in as. Pass 1 already put
+     * the username on the employee; this wires the users.employee_id side, which
+     * only exists once the accounts do (DemoSeeder creates them before calling
+     * this seeder — running OrgSeeder alone simply leaves that side unset).
+     *
+     * @param  list<array<string, mixed>>  $employees
+     */
+    private function linkDemoAccounts(array $employees): void
+    {
+        $usernames = array_column($employees, 'login');
+
+        // Drop the username from anyone outside the current tree, so a mapping left
+        // by an earlier seed run does not leave two employees claiming one login.
+        Employee::whereIn('username', $usernames)
+            ->whereNotIn('code', array_column($employees, 'code'))
             ->update(['username' => null]);
 
-        // users.employee_id is unique — detach all four logins before re-assigning,
-        // otherwise swapped mappings collide with the previous owner mid-loop.
-        User::whereIn('username', array_values($links))->update(['employee_id' => null]);
+        // users.employee_id is unique — detach every account before re-assigning,
+        // otherwise a swapped mapping collides with the previous holder mid-loop.
+        User::whereIn('username', $usernames)->update(['employee_id' => null]);
 
-        foreach ($links as $code => $username) {
-            $employee = Employee::where('code', $code)->first();
-            if (! $employee) {
+        foreach ($employees as $e) {
+            $employee = Employee::where('code', $e['code'])->first();
+            $user = User::where('username', $e['login'])->first();
+            if ($employee === null || $user === null) {
                 continue;
             }
-            $user = User::where('username', $username)->first();
-            // Keep the pair consistent: the employee carries the login username and
-            // the account's email as their contact address (matches the real
-            // provisioning flow, where both sides share one email).
-            $employee->update([
-                'username' => $username,
-                'email' => $user?->email ?? $employee->email,
-            ]);
-            $user?->update(['employee_id' => $employee->id]);
+
+            $user->update(['employee_id' => $employee->id]);
         }
     }
 
