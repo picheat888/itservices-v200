@@ -6,6 +6,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
+import { SUPER_ROLE } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -483,8 +484,7 @@ function GroupRolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { user } = useAuth();
-    const isSuper = user?.role === 'super';
+    const { isSuper } = useAuth();
     const { data, isLoading } = useGroupRoles();
     const { remove } = useGroupRoleMutations();
     const setDefaultGroup = useSetDefaultGroup();
@@ -541,7 +541,7 @@ function GroupRolesTab() {
                 {groups.map((g) => {
                     const isDefault = g.id === defaultGroupId;
                     // Only a super admin may edit or delete the Administrator role group.
-                    const adminLocked = g.role === 'super' && !isSuper;
+                    const adminLocked = g.role === SUPER_ROLE && !isSuper;
                     return (
                         <Card key={g.id} className={cn('p-4', isDefault && 'ring-brand/40 ring-2')}>
                             <div className="flex items-start justify-between">

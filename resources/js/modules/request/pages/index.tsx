@@ -34,8 +34,8 @@ type Tab = 'dashboard' | 'all' | 'approvals';
  */
 export default function RequestsPage() {
     const t = useT();
-    const { user, can } = useAuth();
-    const canSubmit = can('requests.submit') || user?.role === 'super';
+    const { can } = useAuth();
+    const canSubmit = can('requests.submit');
 
     const [searchParams, setSearchParams] = useSearchParams();
 

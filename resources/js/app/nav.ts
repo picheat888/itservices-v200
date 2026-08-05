@@ -1,4 +1,4 @@
-import type { NavGroup } from '@/shared/types';
+import { SUPER_ROLE, type NavGroup } from '@/shared/types';
 import {
     Box,
     FileText,
@@ -42,7 +42,7 @@ export const navGroups: NavGroup[] = [
     {
         label: 'nav_admin',
         items: [
-            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: ['super', 'admin', 'hr'] },
+            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: [SUPER_ROLE, 'admin', 'hr'] },
             { id: 'workflows', label: 'wf_title', to: '/workflows', icon: Workflow, permission: 'workflows.manage' },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-templates', icon: Mail, permission: 'system.configure_notifications' },

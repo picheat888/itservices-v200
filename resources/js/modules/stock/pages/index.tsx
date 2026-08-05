@@ -6,7 +6,7 @@ import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
-import type { Role, StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
+import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -206,10 +206,10 @@ function AlertCard({
 export default function StockPage() {
     const t = useT();
     const confirm = useConfirm();
-    const { user } = useAuth();
-    const role = (user?.role ?? 'user') as Role;
-    const perms = user?.permissions ?? [];
-    const can = (p: string) => role === 'super' || perms.includes(`stock.${p}`);
+    // Every gate on this page lives under the stock.* prefix, so it is added here
+    // and the call sites below stay short.
+    const { can: hasPermission } = useAuth();
+    const can = (p: string) => hasPermission(`stock.${p}`);
     const canManage = can('manage_items');
 
     const [searchParams, setSearchParams] = useSearchParams();

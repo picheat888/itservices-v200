@@ -5,7 +5,7 @@ import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
 import { cn } from '@/shared/lib/utils';
-import type { Department, Employee, Position, Role } from '@/shared/types';
+import type { Department, Employee, Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -80,34 +80,32 @@ export default function EmployeesPage() {
     const t = useT();
     const confirm = useConfirm();
     const lang = useUiStore((s) => s.lang);
-    const { user } = useAuth();
-    const role = (user?.role ?? 'user') as Role;
-    const perms = user?.permissions ?? [];
-    const canAdd = perms.includes('employees.add') || role === 'super';
-    const canImport = perms.includes('employees.import') || role === 'super';
-    const canEdit = perms.includes('employees.edit') || role === 'super';
-    const canResetPassword = perms.includes('employees.reset_password') || role === 'super';
-    const canResign = perms.includes('employees.resign') || role === 'super';
-    const canCancelResign = perms.includes('employees.cancel_resign') || role === 'super';
-    const canSetCredentials = perms.includes('employees.set_credentials') || role === 'super';
+    const { can, isSuper } = useAuth();
+    const canAdd = can('employees.add');
+    const canImport = can('employees.import');
+    const canEdit = can('employees.edit');
+    const canResetPassword = can('employees.reset_password');
+    const canResign = can('employees.resign');
+    const canCancelResign = can('employees.cancel_resign');
+    const canSetCredentials = can('employees.set_credentials');
 
-    const canViewDashboard = perms.includes('employees.view_dashboard') || role === 'super';
-    const canViewDirectory = perms.includes('employees.view') || role === 'super';
-    const canViewSections = perms.includes('employees.view_section') || role === 'super';
-    const canViewDepartments = perms.includes('employees.view_department') || role === 'super';
-    const canViewPositions = perms.includes('employees.view_position') || role === 'super';
-    const canViewOrg = perms.includes('employees.view_org') || role === 'super';
+    const canViewDashboard = can('employees.view_dashboard');
+    const canViewDirectory = can('employees.view');
+    const canViewSections = can('employees.view_section');
+    const canViewDepartments = can('employees.view_department');
+    const canViewPositions = can('employees.view_position');
+    const canViewOrg = can('employees.view_org');
 
-    const canSectionAdd = perms.includes('employees.section_add') || role === 'super';
-    const canSectionEdit = perms.includes('employees.section_edit') || role === 'super';
-    const canSectionDelete = perms.includes('employees.section_delete') || role === 'super';
-    const canDeptAdd = perms.includes('employees.department_add') || role === 'super';
-    const canDeptEdit = perms.includes('employees.department_edit') || role === 'super';
-    const canDeptDelete = perms.includes('employees.department_delete') || role === 'super';
-    const canPosAdd = perms.includes('employees.position_add') || role === 'super';
-    const canPosEdit = perms.includes('employees.position_edit') || role === 'super';
-    const canPosDelete = perms.includes('employees.position_delete') || role === 'super';
-    const canPosSpecial = perms.includes('employees.position_special') || role === 'super';
+    const canSectionAdd = can('employees.section_add');
+    const canSectionEdit = can('employees.section_edit');
+    const canSectionDelete = can('employees.section_delete');
+    const canDeptAdd = can('employees.department_add');
+    const canDeptEdit = can('employees.department_edit');
+    const canDeptDelete = can('employees.department_delete');
+    const canPosAdd = can('employees.position_add');
+    const canPosEdit = can('employees.position_edit');
+    const canPosDelete = can('employees.position_delete');
+    const canPosSpecial = can('employees.position_special');
 
     const [tab, setTab] = useState<Tab>(initialTab);
     const { data: summary, isLoading: summaryLoading } = useEmployeeSummary();
@@ -497,7 +495,7 @@ export default function EmployeesPage() {
                         <DirectoryTab
                             departments={departments}
                             canEdit={canEdit}
-                            isSuperViewer={role === 'super'}
+                            isSuperViewer={isSuper}
                             canResetPassword={canResetPassword}
                             canResign={canResign}
                             canCancelResign={canCancelResign}
@@ -573,7 +571,7 @@ export default function EmployeesPage() {
                 employee={viewEmp ?? null}
                 onClose={() => closeEmp()}
                 canEdit={canEdit}
-                isSuperViewer={role === 'super'}
+                isSuperViewer={isSuper}
                 canResetPassword={canResetPassword}
                 canResign={canResign}
                 canCancelResign={canCancelResign}

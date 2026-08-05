@@ -119,7 +119,7 @@ function sectionFromHash(): Section {
 
 export default function SettingsPage() {
     const t = useT();
-    const { can, user } = useAuth();
+    const { can } = useAuth();
     const [section, setSection] = useState<Section>(sectionFromHash);
     const { data } = useSettings();
 
@@ -180,7 +180,7 @@ export default function SettingsPage() {
         { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
         { id: 'security', label: t('set_security'), icon: Shield, perm: 'settings.security' },
     ];
-    const nav = allNav.filter((n) => user?.role === 'super' || can(n.perm));
+    const nav = allNav.filter((n) => can(n.perm));
 
     if (nav.length === 0) return <NoAccess />;
 

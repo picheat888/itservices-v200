@@ -33,7 +33,7 @@ function Row({ label, value, mono }: { label: string; value?: string | null; mon
 export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
-    const { user } = useAuth();
+    const { user, can } = useAuth();
     const update = useUpdateProfile();
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +41,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
     // (department, position, joined date, ...), not just what's on the user.
     const { data: emp } = useEmployee(open ? (user?.employee_id ?? null) : null);
 
-    const canEdit = !!user && (user.role === 'super' || user.permissions.includes('employees.edit_own'));
+    const canEdit = can('employees.edit_own');
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
