@@ -42,9 +42,14 @@ class DemoSeedTest extends TestCase
         }
     }
 
-    public function test_demo_tickets_are_seeded_against_real_requesters(): void
+    /**
+     * Every row TicketSeeder defines has to land. Asserting only "more than zero"
+     * hid four rows still pointing at retired codes: the seeder skipped them and the
+     * six that resolved were enough to pass. Bump this when a row is added.
+     */
+    public function test_every_demo_ticket_row_is_seeded(): void
     {
-        $this->assertGreaterThan(0, Ticket::count(), 'the ticket seeder skips any row whose requester code is unknown');
+        $this->assertSame(10, Ticket::count(), 'a row whose requester code no longer exists would be missing here');
         $this->assertSame(
             0,
             Ticket::whereNull('requester_id')->count(),

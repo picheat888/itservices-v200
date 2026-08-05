@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Employee\Employee;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Generates three license-free gradient "initials" avatars (SVG) and assigns
@@ -29,10 +30,10 @@ class AvatarDemoSeeder extends Seeder
         ];
 
         foreach ($avatars as $code => $a) {
-            $employee = Employee::where('code', $code)->first();
-            if (! $employee) {
-                continue;
-            }
+            // These codes used to belong to an older numbering, and the miss was
+            // skipped quietly — so no avatar ever appeared and nothing said why.
+            $employee = Employee::where('code', $code)->first()
+                ?? throw new RuntimeException("AvatarDemoSeeder: no employee with code {$code} — the demo codes have drifted from OrgSeeder.");
 
             $path = "employees/avatar-{$code}.svg";
             Storage::disk('public')->put($path, $this->svg($a));
