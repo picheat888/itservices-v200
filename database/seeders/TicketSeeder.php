@@ -29,7 +29,7 @@ class TicketSeeder extends Seeder
             [
                 'ticket_no' => 'TKT-2861', 'subject' => 'เชื่อมต่อ VPN ฝ่ายผลิตไม่ได้',
                 'description' => 'VPN client fails to authenticate since this morning.', 'category' => 'network',
-                'priority' => null, 'status' => 'open', 'requester' => 'EMP-1042', 'assignee' => null, 'created_h' => 2,
+                'priority' => null, 'status' => 'open', 'requester' => 'EMP-0006', 'assignee' => null, 'created_h' => 2,
             ],
             [
                 'ticket_no' => 'TKT-2859', 'subject' => 'เครื่องสแกนบาร์โค้ดฝ่าย QA ไม่ตอบสนอง',
@@ -41,7 +41,7 @@ class TicketSeeder extends Seeder
             [
                 'ticket_no' => 'TKT-2860', 'subject' => 'Outlook เปิดไม่ได้ — โน้ตบุ๊กฝ่ายการเงิน',
                 'description' => 'Outlook closes immediately on open after the latest update.', 'category' => 'software',
-                'priority' => 'medium', 'status' => 'in_progress', 'requester' => 'EMP-1305', 'assignee' => 'super', 'created_h' => 5, 'resp_m' => 32,
+                'priority' => 'medium', 'status' => 'in_progress', 'requester' => 'EMP-0005', 'assignee' => 'super', 'created_h' => 5, 'resp_m' => 32,
             ],
             [
                 'ticket_no' => 'TKT-2858', 'subject' => 'Wi-Fi โรงงาน 1 ขาดๆ หายๆ — ไลน์ 3',
@@ -51,7 +51,7 @@ class TicketSeeder extends Seeder
             [
                 'ticket_no' => 'TKT-2857', 'subject' => 'ต้องการติดตั้ง SAP B1 ใหม่',
                 'description' => 'SAP Business One needs a clean reinstall after the disk swap.', 'category' => 'software',
-                'priority' => 'medium', 'status' => 'in_progress', 'requester' => 'EMP-1213', 'assignee' => 'super', 'created_h' => 10, 'resp_m' => 48,
+                'priority' => 'medium', 'status' => 'in_progress', 'requester' => 'EMP-0001', 'assignee' => 'super', 'created_h' => 10, 'resp_m' => 48,
             ],
 
             // Completed — resolved_at set (drives SLA met %). Targets: critical 4h,
@@ -71,7 +71,7 @@ class TicketSeeder extends Seeder
             [
                 'ticket_no' => 'TKT-2854', 'subject' => 'เข้าเซิร์ฟเวอร์ ERP ไม่ได้',
                 'description' => 'Production ERP was unreachable for the afternoon shift.', 'category' => 'network',
-                'priority' => 'critical', 'status' => 'completed', 'requester' => 'EMP-1213', 'assignee' => 'super', 'created_h' => 20, 'resp_m' => 15, 'resolve_h' => 6,
+                'priority' => 'critical', 'status' => 'completed', 'requester' => 'EMP-0001', 'assignee' => 'super', 'created_h' => 20, 'resp_m' => 15, 'resolve_h' => 6,
                 'resolution' => 'Restarted the core switch and the ERP service; restored access after a VLAN fix.',
             ],
 
@@ -80,13 +80,13 @@ class TicketSeeder extends Seeder
             [
                 'ticket_no' => 'TKT-2853', 'subject' => 'คำขอ VPN ซ้ำ',
                 'description' => 'User opened a second ticket for the same VPN issue.', 'category' => 'network',
-                'priority' => 'low', 'status' => 'canceled', 'requester' => 'EMP-1042', 'assignee' => 'it', 'created_h' => 40, 'resp_m' => 55, 'resolve_h' => 3,
+                'priority' => 'low', 'status' => 'canceled', 'requester' => 'EMP-0006', 'assignee' => 'it', 'created_h' => 40, 'resp_m' => 55, 'resolve_h' => 3,
                 'resolution' => 'Duplicate of TKT-2861 — consolidated into the original ticket and canceled this one.',
             ],
             [
                 'ticket_no' => 'TKT-2852', 'subject' => 'เปลี่ยนคีย์บอร์ด — พนักงานลาออก',
                 'description' => 'Keyboard replacement requested for a desk being vacated.', 'category' => 'hardware',
-                'priority' => 'medium', 'status' => 'canceled', 'requester' => 'EMP-1422', 'assignee' => 'super', 'created_h' => 26, 'resp_m' => 25, 'resolve_h' => 4,
+                'priority' => 'medium', 'status' => 'canceled', 'requester' => 'EMP-0002', 'assignee' => 'super', 'created_h' => 26, 'resp_m' => 25, 'resolve_h' => 4,
                 'resolution' => 'Requester is leaving and the device was decommissioned — canceling per the department head.',
             ],
         ];

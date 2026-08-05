@@ -12,8 +12,11 @@ use Tests\TestCase;
 /**
  * Verifies that OrgSeeder creates a valid demo org tree and that
  * ApprovalChainService correctly walks manager_id to the root (VP).
- * These tests replace the old ApprovalChainDemoSeeder tests — that
- * seeder was merged into OrgSeeder in the 11/26/14/30 demo rewrite.
+ *
+ * The tree is six people, one per demo login, in two branches under a Director:
+ * IT (super → it) and HR (hr → user). What matters here is that the bottom of
+ * each branch can still climb several managers to the VP — that depth is what
+ * gives a multi-step request workflow distinct approvers to resolve to.
  */
 class OrgSeederTest extends TestCase
 {
@@ -45,24 +48,40 @@ class OrgSeederTest extends TestCase
     }
 
     /**
-     * The PD ladder runs Subcontract (EMP-0014) → … → Director (EMP-0002) → VP (EMP-0001).
-     * A front-line employee's chain climbs every manager up to the VP.
+     * The HR branch runs Staff (EMP-0006) → Manager (EMP-0005) → Director (EMP-0002)
+     * → VP (EMP-0001). A front-line employee's chain climbs every manager up to the VP.
      */
     public function test_front_line_chain_climbs_all_the_way_to_vp(): void
     {
         $this->seedOrg();
 
-        // EMP-0014 (Somkid Jan — Subcontract) is at the bottom of the 14-level PD ladder.
-        $somkid = Employee::where('code', 'EMP-0014')->first();
-        $this->assertNotNull($somkid, 'EMP-0014 must exist');
+        // EMP-0006 (Waraporn Sri — Staff/Officer, the `user` login) sits at the bottom.
+        $staff = Employee::where('code', 'EMP-0006')->first();
+        $this->assertNotNull($staff, 'EMP-0006 must exist');
 
-        $chain = app(ApprovalChainService::class)->chainFor($somkid);
+        $chain = app(ApprovalChainService::class)->chainFor($staff);
 
-        // The chain must reach the VP (root) and must be non-empty.
-        $this->assertNotEmpty($chain, 'Chain should not be empty for a front-line employee');
+        // Three distinct approvers, ending at the VP — enough depth for a workflow
+        // with several chain steps to resolve each one to a different person.
+        $this->assertSame(
+            ['EMP-0005', 'EMP-0002', 'EMP-0001'],
+            $chain->pluck('code')->all(),
+            'The HR branch must climb Manager → Director → VP',
+        );
+    }
 
-        $topOfChain = $chain->last();
-        $this->assertSame('EMP-0001', $topOfChain->code, 'Chain must terminate at the VP (EMP-0001)');
+    /** Every demo employee is paired with a login, which is what makes them resolvable
+     *  as an approver — WorkflowResolverService skips a manager who cannot sign in. */
+    public function test_every_demo_employee_carries_a_login_username(): void
+    {
+        $this->seedOrg();
+
+        $this->assertSame(6, Employee::count(), 'the demo tree is six people');
+        $this->assertSame(
+            0,
+            Employee::whereNull('username')->count(),
+            'an employee without a login can never be resolved as an approver',
+        );
     }
 
     /** Running the seeder twice (idempotent) should not duplicate data or break the chain. */
@@ -71,12 +90,13 @@ class OrgSeederTest extends TestCase
         $this->seedOrg();
         $this->seed(OrgSeeder::class);
 
+        $this->assertSame(6, Employee::count());
+
         $vp = Employee::where('code', 'EMP-0001')->first();
         $this->assertNull($vp->manager_id);
 
-        $somkid = Employee::where('code', 'EMP-0014')->first();
-        $chain = app(ApprovalChainService::class)->chainFor($somkid);
-        $this->assertNotEmpty($chain);
-        $this->assertSame('EMP-0001', $chain->last()->code);
+        $staff = Employee::where('code', 'EMP-0006')->first();
+        $chain = app(ApprovalChainService::class)->chainFor($staff);
+        $this->assertSame(['EMP-0005', 'EMP-0002', 'EMP-0001'], $chain->pluck('code')->all());
     }
 }

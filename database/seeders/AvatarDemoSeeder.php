@@ -16,14 +16,16 @@ class AvatarDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        // employee code => flat cartoon-person avatar config (hair style + palette)
+        // employee code => flat cartoon-person avatar config (hair style + palette).
+        // Three different styles and palettes so the avatar rendering is exercised
+        // rather than showing the same picture three times.
         $avatars = [
-            // Wichai (super) — short hair, blue
-            'EMP-1617' => ['style' => 'short', 'from' => '#3b82f6', 'to' => '#1e3a8a', 'skin' => '#f1c9a5', 'hair' => '#2b2b2b', 'shirt' => '#1d4ed8'],
-            // Kanya (it) — long hair, emerald
-            'EMP-1718' => ['style' => 'long', 'from' => '#10b981', 'to' => '#065f46', 'skin' => '#f8d2b8', 'hair' => '#6b3f24', 'shirt' => '#047857'],
-            // Ratana (hr) — hair bun, violet
-            'EMP-1509' => ['style' => 'bun', 'from' => '#a78bfa', 'to' => '#4c1d95', 'skin' => '#e6b58a', 'hair' => '#1f2937', 'shirt' => '#6d28d9'],
+            // the `super` login — blue
+            'EMP-0003' => ['style' => 'short', 'from' => '#3b82f6', 'to' => '#1e3a8a', 'skin' => '#f1c9a5', 'hair' => '#2b2b2b', 'shirt' => '#1d4ed8'],
+            // the `it` login — emerald
+            'EMP-0004' => ['style' => 'long', 'from' => '#10b981', 'to' => '#065f46', 'skin' => '#f8d2b8', 'hair' => '#6b3f24', 'shirt' => '#047857'],
+            // the `hr` login — violet
+            'EMP-0005' => ['style' => 'bun', 'from' => '#a78bfa', 'to' => '#4c1d95', 'skin' => '#e6b58a', 'hair' => '#1f2937', 'shirt' => '#6d28d9'],
         ];
 
         foreach ($avatars as $code => $a) {
