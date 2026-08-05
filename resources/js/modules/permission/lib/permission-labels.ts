@@ -22,8 +22,11 @@ export const actionDescription = (module: string, action: string, lang: Lang) =>
     return v === k ? '' : v;
 };
 
-// Permission keys whose enforcement is actually live today. Everything else is
-// shown with a "(Coming soon)" tag in the matrix (toggle still persists).
+// Permission keys whose enforcement is actually live today. Everything else is shown
+// with a "(Coming soon)" tag AND locked, so a key left out of this list cannot be
+// granted through the UI at all — which is how requests.* and workflows.manage sat
+// enforced by the API but ungrantable, reading as unbuilt features.
+// A key belongs here as soon as anything checks it. PermissionMatrixTest asserts that.
 const LIVE = new Set<string>([
     'tickets.view_all',
     'tickets.create',
@@ -56,6 +59,10 @@ const LIVE = new Set<string>([
     'contracts.cancel',
     'contracts.expire',
     'contracts.reactivate',
+    'requests.submit',
+    'requests.view_all',
+    'requests.fulfill',
+    'workflows.manage',
     'stock.module',
     'stock.view_dashboard',
     'stock.view',
@@ -116,6 +123,8 @@ const LIVE = new Set<string>([
     'system.manage_roles',
     'system.manage_groups',
     'system.view_audit',
+    // EmailTemplateController refuses every route without it, so it has to be grantable.
+    'system.configure_notifications',
     'settings.access',
     'settings.company',
     'settings.system',

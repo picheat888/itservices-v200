@@ -101,7 +101,10 @@ export default function PermissionsPage() {
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
-    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
+    // `workflows` carries the single key that guards the approval-chain editor. It sits
+    // next to `requests` because that is the screen it belongs to — left out of this list
+    // it still appeared, but swept into the catch-all "Other" section further down.
+    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'workflows', 'assets', 'contracts', 'stock', 'employees', 'access'] },
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
 ];
 
