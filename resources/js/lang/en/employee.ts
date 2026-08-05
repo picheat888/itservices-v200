@@ -38,6 +38,8 @@ export const employee: Dict = {
     org_fit: 'Fit',
     org_heading: 'Organization chart',
     org_subtitle: 'Reporting lines across the company · click a card to focus · use +/– to collapse a branch',
+    // Shown on a fresh install, where the chart is empty because nobody has been added yet.
+    org_empty: 'No organization chart yet. Add employees and set who each of them reports to.',
     departments_count: 'Departments',
     headcount_by_dept: 'Headcount by department',
     recent_hires: 'Recent hires',

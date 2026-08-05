@@ -319,7 +319,7 @@ export function OrgChartTab() {
         return <div className="text-muted-foreground py-16 text-center text-sm">{t('loading')}</div>;
     }
     if (data.length === 0) {
-        return <div className="text-muted-foreground py-16 text-center text-sm">{t('pos_empty')}</div>;
+        return <div className="text-muted-foreground py-16 text-center text-sm">{t('org_empty')}</div>;
     }
 
     return (
