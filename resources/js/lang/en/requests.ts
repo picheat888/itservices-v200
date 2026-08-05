@@ -75,6 +75,8 @@ export const requests: Dict = {
 
     // Create wizard
     req_new_eyebrow: 'New request',
+    req_select_placeholder: 'Select…',
+    req_bad_email: 'Enter a valid email address',
     req_new_title: 'Open an IT service request',
     req_step_service: 'Pick service',
     req_step_details: 'Fill details',

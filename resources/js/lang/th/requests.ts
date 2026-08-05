@@ -71,6 +71,8 @@ export const requests: Dict = {
 
     // สร้างคำขอ (wizard)
     req_new_eyebrow: 'คำขอใหม่',
+    req_select_placeholder: 'เลือก…',
+    req_bad_email: 'รูปแบบอีเมลไม่ถูกต้อง',
     req_new_title: 'เปิดคำขอบริการ IT',
     req_step_service: 'เลือกบริการ',
     req_step_details: 'กรอกรายละเอียด',

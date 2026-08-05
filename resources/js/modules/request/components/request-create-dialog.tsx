@@ -6,7 +6,7 @@ import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { cn } from '@/shared/lib/utils';
+import { cn, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -14,6 +14,7 @@ import { ChoiceCard } from '@/shared/ui/choice-card';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
@@ -110,7 +111,14 @@ export function RequestCreateDialog({
                 if (!(fields[f.key] ?? '').trim() && !(fields[f.allow_other] ?? '').trim()) e[`field_${f.key}`] = requiredMsg;
                 continue;
             }
-            if (f.required && !(fields[f.key] ?? '').trim()) e[`field_${f.key}`] = requiredMsg;
+            const filled = (fields[f.key] ?? '').trim();
+            if (f.required && !filled) {
+                e[`field_${f.key}`] = requiredMsg;
+                continue;
+            }
+            // Catch a malformed address here rather than letting the server bounce
+            // the whole submit back on the last step.
+            if (f.input === 'email' && filled && !isEmail(filled)) e[`field_${f.key}`] = t('req_bad_email');
         }
         return e;
     };
@@ -534,20 +542,60 @@ function SchemaField({
         );
     }
     if (schema.input === 'select') {
+        const options = schema.options ?? [];
+
+        // Two choices fit side by side, so show them. A dropdown would hide half
+        // the answer behind a click and cost a second one to give it.
+        //
+        // Managed lists keep their dropdown whatever their length: how many rows
+        // an admin happens to have entered is data, and the control should not
+        // change shape under them when they add or remove one.
+        if (options.length === 2 && !schema.managed) {
+            return (
+                <Field label={label} required={schema.required} error={error} name={schema.key}>
+                    <div className="grid grid-cols-2 gap-2">
+                        {options.map((o) => {
+                            const on = value === o.value;
+                            return (
+                                <button
+                                    key={o.value}
+                                    type="button"
+                                    aria-pressed={on}
+                                    // An optional field can be un-answered again by
+                                    // pressing the choice that is already on.
+                                    onClick={() => onChange(on && !schema.required ? '' : o.value)}
+                                    className={cn(
+                                        'h-10 rounded-lg border px-3 text-sm font-medium transition-colors',
+                                        on
+                                            ? 'border-brand bg-brand/10 text-brand'
+                                            : error && !value
+                                              ? 'border-destructive hover:bg-accent/50'
+                                              : 'border-input hover:bg-accent/50',
+                                    )}
+                                >
+                                    {lang === 'th' ? o.label_th : o.label_en}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </Field>
+            );
+        }
+
         return (
             <Field label={label} required={schema.required} error={error} name={schema.key}>
-                <select
-                    className={cn('border-input bg-background h-10 w-full rounded-lg border px-3 text-sm', error && 'border-destructive')}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                >
-                    <option value="">{lang === 'th' ? '— เลือก —' : '— select —'}</option>
-                    {(schema.options ?? []).map((o) => (
-                        <option key={o.value} value={o.value}>
-                            {lang === 'th' ? o.label_th : o.label_en}
-                        </option>
-                    ))}
-                </select>
+                <Select value={value || undefined} onValueChange={onChange}>
+                    <SelectTrigger className={cn('h-10 w-full', error && 'border-destructive')}>
+                        <SelectValue placeholder={t('req_select_placeholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {options.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                                {lang === 'th' ? o.label_th : o.label_en}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </Field>
         );
     }
@@ -561,13 +609,16 @@ function SchemaField({
     return (
         <Field label={label} required={schema.required} error={error} name={schema.key}>
             <Input
-                type={schema.input === 'number' ? 'number' : 'text'}
+                type={schema.input === 'number' ? 'number' : schema.input === 'email' ? 'email' : 'text'}
+                // An address is typed exactly as it will exist — never autocapitalised.
+                autoCapitalize={schema.input === 'email' ? 'none' : undefined}
+                spellCheck={schema.input === 'email' ? false : undefined}
                 min={schema.min}
                 max={schema.max}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={schema.placeholder}
-                className={cn(schema.mono && 'font-mono')}
+                className={cn(schema.mono && 'font-mono', error && 'border-destructive')}
             />
         </Field>
     );

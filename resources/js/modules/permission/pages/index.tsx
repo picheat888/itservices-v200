@@ -119,6 +119,7 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
             'settings.masterdata',
             'settings.email',
             'settings.sla',
+            'settings.requestdata',
             'settings.assets',
             'settings.security',
         ],

@@ -928,8 +928,10 @@ export interface RequestFieldSchema {
     key: string;
     label_en: string;
     label_th: string;
-    input: 'text' | 'textarea' | 'number' | 'date' | 'select' | 'source';
+    input: 'text' | 'textarea' | 'email' | 'number' | 'date' | 'select' | 'source';
     options?: { value: string; label_en: string; label_th: string }[];
+    /** The choices are rows of request_options, editable in Settings → Request data. */
+    managed?: boolean;
     source?: 'email_groups' | 'file_shares' | 'social_platforms' | 'softwares' | 'locations';
     required?: boolean;
     mono?: boolean;

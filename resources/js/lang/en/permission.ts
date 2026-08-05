@@ -220,6 +220,7 @@ export const permission: Dict = {
     'perm_act_settings.masterdata': 'Master Data',
     'perm_act_settings.email': 'Email (SMTP) settings',
     'perm_act_settings.sla': 'Ticket & SLA',
+    'perm_act_settings.requestdata': 'Request Data',
     'perm_act_settings.assets': 'Asset settings',
     'perm_act_settings.security': 'Security policy',
     // --- Audit log field labels (raw DB column → friendly name; resolved by auditFieldLabel() in modules/permissions/lib/audit-format.ts) ---

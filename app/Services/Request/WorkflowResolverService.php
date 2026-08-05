@@ -167,6 +167,13 @@ class WorkflowResolverService
                     && $last['kind'] === $row['kind']) {
                     $merged[$lastIndex]['label'] = $last['label'].' · '.$row['label'];
                     $merged[$lastIndex]['sla_days'] = max((float) $last['sla_days'], (float) $row['sla_days']);
+                    // Say so on the row. Otherwise a workflow with three approval
+                    // steps quietly shows as one, and the trail gives no clue that
+                    // one person was resolved for several of them.
+                    $merged[$lastIndex]['note'] = trim(
+                        ($last['note'] ? $last['note'].' · ' : '')
+                        ."Also covers \"{$row['label']}\" — the same person resolved for both steps."
+                    );
 
                     continue;
                 }

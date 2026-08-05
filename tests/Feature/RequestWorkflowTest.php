@@ -136,6 +136,27 @@ class RequestWorkflowTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors('fields.device');
     }
 
+    /**
+     * The requested mailbox is the whole point of an email request, so a
+     * malformed address is refused rather than routed to approvers.
+     */
+    public function test_an_email_request_checks_the_address_format(): void
+    {
+        $base = [
+            'type' => 'email',
+            'title' => 'Mailbox for the new QA hire',
+            'reason' => 'They start on Monday and need a company address.',
+        ];
+
+        $this->actingAs($this->requester)
+            ->postJson('/api/service-requests', $base + ['fields' => ['address' => 'not-an-address']])
+            ->assertUnprocessable()->assertJsonValidationErrors('fields.address');
+
+        $this->actingAs($this->requester)
+            ->postJson('/api/service-requests', $base + ['fields' => ['address' => 'qa.hire@inaba.co.th']])
+            ->assertCreated();
+    }
+
     /** Software is picked from the Access Directory catalogue OR typed in — exactly one. */
     public function test_software_accepts_either_the_catalogue_or_a_typed_name(): void
     {

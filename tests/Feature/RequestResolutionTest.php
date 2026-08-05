@@ -74,6 +74,10 @@ class RequestResolutionTest extends TestCase
         $this->assertSame('Supervisor / Head · Manager / Asst. Manager · Vice President', $merged['label']);
         $this->assertSame(2.0, $merged['sla_days']); // max of 1, 1, 2
         $this->assertSame(1, $merged['position']);
+        // The row says it is doing more than one job, so a chain that shows as
+        // "0/1" can be explained without reading the database.
+        $this->assertStringContainsString('Also covers', $merged['note']);
+        $this->assertStringContainsString('Vice President', $merged['note']);
         $this->assertSame(2, $rows->last()['position']);
     }
 
