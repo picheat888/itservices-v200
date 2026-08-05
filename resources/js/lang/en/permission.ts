@@ -110,7 +110,7 @@ export const permission: Dict = {
     'perm_act_requests.view_all': 'View all requests',
     'perm_desc_requests.view_all': "See every request in the organization, not only their own and the ones waiting on them.",
     'perm_act_requests.fulfill': 'Fulfil requests',
-    'perm_desc_requests.fulfill': 'Carry out a request that has cleared every approval, and see the queue of those waiting.',
+    'perm_desc_requests.fulfill': 'Close a request that has cleared every approval, and see the queue waiting for it. A request type set to open a ticket automatically still needs this step — the ticket covers the work, this marks the request delivered.',
     perm_mod_workflows: 'Approval workflows',
     'perm_act_workflows.manage': 'Edit approval workflows',
     'perm_desc_workflows.manage': 'Change the approval steps of each request type. Requests already submitted keep the chain they were frozen with.',
