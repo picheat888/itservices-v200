@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 /**
  * The production seed: the least a fresh install needs to be usable, and nothing
@@ -48,10 +48,10 @@ class DatabaseSeeder extends Seeder
     private function seedRolesAndPermissions(): void
     {
         $roles = [
-            ['key' => 'super', 'name' => 'Administrator Template', 'color' => '#2563eb', 'is_system' => true],
-            ['key' => 'admin', 'name' => 'IT Technician Template', 'color' => '#0284c7', 'is_system' => false],
-            ['key' => 'hr', 'name' => 'HR Template', 'color' => '#059669', 'is_system' => false],
-            ['key' => 'user', 'name' => 'Staff Template', 'color' => '#64748b', 'is_system' => false],
+            ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator Template', 'color' => '#2563eb', 'is_system' => true],
+            ['key' => UserRole::ITStaff->value, 'name' => 'IT Technician Template', 'color' => '#0284c7', 'is_system' => false],
+            ['key' => UserRole::HR->value, 'name' => 'HR Template', 'color' => '#059669', 'is_system' => false],
+            ['key' => UserRole::Employee->value, 'name' => 'Staff Template', 'color' => '#64748b', 'is_system' => false],
         ];
         foreach ($roles as $role) {
             Role::firstOrCreate(['key' => $role['key']], $role);
@@ -78,44 +78,57 @@ class DatabaseSeeder extends Seeder
         }
     }
 
+    /** Sign-in name of the one account a fresh install ships with. */
+    public const SUPER_USERNAME = 'super';
+
+    /**
+     * The password that account is created with — deliberately the most ordinary
+     * string there is, and deliberately in the repository.
+     *
+     * A generated password has to be copied out of the console before it scrolls away,
+     * and losing it means editing the database to get back in, which is what happened on
+     * the first deployment. Nothing is gained by hiding this one, because it is not what
+     * protects the account: must_change_password is. A flagged account is refused on
+     * every route except the four it needs to replace the password
+     * (see CheckPasswordExpiry), so this buys exactly one sign-in and no access at all.
+     *
+     * The cost is real and worth naming: between seeding and that first sign-in the
+     * account is open to anyone who can reach the site. Change it as the very next step
+     * after seeding — before the address is given to anyone.
+     *
+     * SEED_SUPER_PASSWORD in the environment overrides it when an install would rather
+     * not have a known starting point at all.
+     */
+    public const SUPER_TEMP_PASSWORD = 'password';
+
     /**
      * The one account a fresh install ships with. The super role bypasses every
      * permission check, so this is enough to sign in and enter everything else.
-     *
-     * The password is taken from SEED_SUPER_PASSWORD when set and generated
-     * otherwise; either way it is printed once and the account must replace it at
-     * first sign-in, so no install is reachable with a password published in this
-     * repository. (Reading the environment directly means a cached config falls
-     * back to a generated password — which is printed, so nothing is lost.)
      *
      * An existing super account is left completely alone: re-seeding an installed
      * system must never reset the administrator's own password.
      */
     private function seedAdministrator(): void
     {
-        if (User::where('username', 'super')->exists()) {
+        if (User::where('username', self::SUPER_USERNAME)->exists()) {
             $this->command?->info('Administrator account already exists — left untouched.');
 
             return;
         }
 
-        $password = (string) (env('SEED_SUPER_PASSWORD') ?: Str::password(16));
-        $email = env('SEED_SUPER_EMAIL') ?: null;
+        $password = (string) (env('SEED_SUPER_PASSWORD') ?: self::SUPER_TEMP_PASSWORD);
 
         User::create([
-            'name' => env('SEED_SUPER_NAME') ?: 'Administrator',
-            'email' => $email,
-            'username' => 'super',
-            'role' => 'super',
+            'name' => env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME,
+            'email' => env('SEED_SUPER_EMAIL') ?: 'super@mail.com',
+            'username' => self::SUPER_USERNAME,
+            'role' => UserRole::SuperAdmin->value,
             'password' => $password,
             'must_change_password' => true,
         ]);
 
-        $this->command?->warn('Administrator created — sign in as "super" with: '.$password);
-        $this->command?->warn('The password must be changed at first sign-in.');
-
-        if ($email === null) {
-            $this->command?->warn('No email set on the account. Add one under Profile — alerts (contract expiry, stock, new employee) are only sent to accounts with an address.');
-        }
+        $this->command?->warn('Administrator created — sign in as "'.self::SUPER_USERNAME.'" with: '.$password);
+        $this->command?->warn('Change it at first sign-in; every other request is refused until you do.');
+        $this->command?->warn('Then set a real address under Profile — alerts (contract expiry, stock, new employee) only reach accounts with one.');
     }
 }

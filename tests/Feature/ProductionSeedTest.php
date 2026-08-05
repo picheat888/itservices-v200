@@ -51,15 +51,37 @@ class ProductionSeedTest extends TestCase
         $this->assertTrue($super->must_change_password, 'the seeded password must be replaced at first sign-in');
     }
 
-    /** The generated password is never the literal that used to ship with the demo seed. */
-    public function test_the_administrator_password_is_not_a_known_literal(): void
+    /**
+     * The starting password is a known literal on purpose, so it is pinned here: the
+     * deploy runbook prints it, and a change to one without the other would send an
+     * administrator hunting through the database. What keeps that acceptable is the
+     * assertion below it — the account cannot do anything until the password changes.
+     */
+    public function test_the_administrator_starts_on_the_documented_password(): void
     {
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertFalse(
-            Hash::check('password', User::firstOrFail()->password),
-            'the well-known demo password must not open a production install'
+        $super = User::firstOrFail();
+
+        $this->assertTrue(
+            Hash::check(DatabaseSeeder::SUPER_TEMP_PASSWORD, $super->password),
+            'the documented starting password must actually open the account'
         );
+        $this->assertTrue(
+            $super->must_change_password,
+            'a guessable starting password is only safe because it buys exactly one sign-in'
+        );
+    }
+
+    /** The starting password stops working the moment it is replaced. */
+    public function test_the_starting_password_stops_working_once_changed(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $super = User::firstOrFail();
+        $super->update(['password' => 'ChosenByTheAdmin1!', 'must_change_password' => false]);
+
+        $this->assertFalse(Hash::check(DatabaseSeeder::SUPER_TEMP_PASSWORD, $super->fresh()->password));
     }
 
     /** Re-seeding an installed system must not reset the administrator's own password. */
