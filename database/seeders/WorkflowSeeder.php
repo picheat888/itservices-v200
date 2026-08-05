@@ -7,7 +7,7 @@ use App\Support\DefaultWorkflows;
 use Illuminate\Database\Seeder;
 
 /**
- * Establishes the ten default request workflows. Matches on request_type ONLY:
+ * Establishes one default workflow per request type. Matches on request_type ONLY:
  * a workflow that already exists is left completely untouched (steps are
  * admin-edited data — re-seeding must never clobber them).
  */
