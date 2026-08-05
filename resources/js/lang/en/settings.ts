@@ -35,8 +35,9 @@ export const settings: Dict = {
     md_add_unit: 'Add unit',
     md_edit_unit: 'Edit unit',
     md_warranty_types: 'Warranty types',
-    md_request_data: 'Request data',
     md_save_failed: 'Could not save. Try again.',
+    set_request_data: 'Request data',
+    set_request_data_desc: 'The choices the service-request form offers requesters.',
 
     // Request data — the choice lists behind the request form's selects
     rd_label_en: 'Label (EN)',
@@ -46,10 +47,11 @@ export const settings: Dict = {
     rd_hidden: 'Hidden',
     rd_add: 'Add choice',
     rd_edit: 'Edit choice',
-    rd_delete_desc: 'It stops being offered on new requests. Requests that already use it keep reading correctly.',
-    rd_drag_hint: 'Drag to rearrange. This is the order requesters see on the form.',
+    rd_delete_desc:
+        'Only a choice no request has used can be deleted. If one has, hide it instead — it stops being offered while old requests keep their link.',
+    rd_drag_hint: '"Drag" to reorder what requesters see on the form',
+    rd_untranslated: 'not translated',
     rd_saving_order: 'Saving order…',
-    rd_list_note: 'The choices requesters see on the request form.',
     rd_move_up: 'Move up',
     rd_move_down: 'Move down',
     rd_empty: 'No choices in this list yet — add the first one.',

@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { REQUEST_STATUS_META, REQUEST_STATUSES, REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
@@ -21,6 +22,8 @@ import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 
 const TAB_KEY = 'requests.tab';
+/** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
+const ALL = '__all__';
 type Tab = 'dashboard' | 'all' | 'approvals';
 
 /**
@@ -442,41 +445,42 @@ export default function RequestsPage() {
                                                 <ToneDot tone={status ? REQUEST_STATUS_META[status].tone : 'gray'} />
                                                 {t('req_filter_status')}
                                             </span>
-                                            <select
-                                                className={cn(
-                                                    'border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm',
-                                                    status && 'border-brand/60',
-                                                )}
-                                                value={status}
-                                                onChange={(e) => setStatus(e.target.value as ServiceRequestStatus | '')}
-                                            >
-                                                <option value="">{t('all')}</option>
-                                                {REQUEST_STATUSES.map((s) => (
-                                                    <option key={s} value={s}>
-                                                        {t(REQUEST_STATUS_META[s].labelKey)}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <SearchableSelect
+                                                active={!!status}
+                                                value={status || ALL}
+                                                onChange={(v) => setStatus(v === ALL ? '' : (v as ServiceRequestStatus))}
+                                                options={[
+                                                    { value: ALL, label: t('all'), search: t('all'), icon: <ToneDot tone="gray" /> },
+                                                    ...REQUEST_STATUSES.map((s) => ({
+                                                        value: s,
+                                                        label: t(REQUEST_STATUS_META[s].labelKey),
+                                                        search: t(REQUEST_STATUS_META[s].labelKey),
+                                                        icon: <ToneDot tone={REQUEST_STATUS_META[s].tone} />,
+                                                    })),
+                                                ]}
+                                            />
                                         </label>
                                         <label className="space-y-1.5">
                                             <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                                                 {t('req_filter_type')}
                                             </span>
-                                            <select
-                                                className={cn(
-                                                    'border-input bg-background h-9 w-full rounded-lg border px-2.5 text-sm',
-                                                    type && 'border-brand/60',
-                                                )}
-                                                value={type}
-                                                onChange={(e) => setType(e.target.value as ServiceRequestType | '')}
-                                            >
-                                                <option value="">{t('all')}</option>
-                                                {REQUEST_TYPES.map((k) => (
-                                                    <option key={k} value={k}>
-                                                        {t(REQUEST_TYPE_META[k].labelKey)}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <SearchableSelect
+                                                active={!!type}
+                                                value={type || ALL}
+                                                onChange={(v) => setType(v === ALL ? '' : (v as ServiceRequestType))}
+                                                options={[
+                                                    { value: ALL, label: t('all'), search: t('all'), icon: <ToneDot tone="gray" /> },
+                                                    ...REQUEST_TYPES.map((k) => {
+                                                        const Icon = REQUEST_TYPE_META[k].icon;
+                                                        return {
+                                                            value: k,
+                                                            label: t(REQUEST_TYPE_META[k].labelKey),
+                                                            search: t(REQUEST_TYPE_META[k].labelKey),
+                                                            icon: <Icon className="text-muted-foreground h-4 w-4" />,
+                                                        };
+                                                    }),
+                                                ]}
+                                            />
                                         </label>
                                     </div>
                                 )}

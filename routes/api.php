@@ -118,12 +118,14 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class])->group(function 
     Route::get('units', [UnitController::class, 'index'])->name('api.units.index');
     Route::get('warranty-types', [WarrantyTypeController::class, 'index'])->name('api.warranty-types.index');
     Route::get('locations', [LocationController::class, 'index'])->name('api.locations.index');
-    Route::get('request-options', [RequestOptionController::class, 'index'])
-        ->middleware('permission:settings.masterdata')->name('api.request-options.index');
-
-    Route::middleware('permission:settings.masterdata')->group(function () {
+    // Request data — its own Settings section, with its own gate.
+    Route::middleware('permission:settings.requestdata')->group(function () {
+        Route::get('request-options', [RequestOptionController::class, 'index'])->name('api.request-options.index');
         Route::post('request-options/reorder', [RequestOptionController::class, 'reorder'])->name('api.request-options.reorder');
         Route::apiResource('request-options', RequestOptionController::class)->except(['show', 'index']);
+    });
+
+    Route::middleware('permission:settings.masterdata')->group(function () {
         Route::apiResource('brands', BrandController::class)->except(['show', 'index']);
         Route::apiResource('asset-models', AssetModelController::class)->except(['show', 'index']);
         Route::apiResource('categories', CategoryController::class)->except(['show', 'index']);

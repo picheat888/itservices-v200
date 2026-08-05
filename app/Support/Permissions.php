@@ -65,7 +65,7 @@ class Permissions
                 'software_view', 'software_add', 'software_edit', 'software_delete',
             ],
             'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
-            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'assets', 'security'],
+            'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'requestdata', 'assets', 'security'],
         ];
     }
 

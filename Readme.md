@@ -1328,17 +1328,21 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 
 `RequestType::Hardware` + workflow ตัวที่ 11 (ใช้ step ชุดเดียวกับ Mobile) — คำขอจอภาพ/เครื่องพิมพ์/อุปกรณ์เสริมไม่ต้องไปปนกับคำขอเครื่องคอมอีก
 
-### 5. Settings → Master data → **ข้อมูลคำขอ** (ใหม่)
+### 5. Settings → **ข้อมูลคำขอ** (หมวดของตัวเอง)
 
 รายการตัวเลือกในฟอร์มคำขอที่แอดมินแก้เองได้ 2 ภาษา ไม่ต้องแก้โค้ด
 
-- **เลย์เอาต์ master-detail** (ยืมของโมดูล Permission): รายการที่จัดการได้อยู่คอลัมน์ซ้าย 220px พร้อมจำนวนตัวเลือก · ตัวเลือกของรายการที่เลือกอยู่ขวา — ครั้งแรกทำเป็น pill สลับรายการซึ่งไปซ้อนใต้แท็บ Master data ที่เป็น pill ทรงเดียวกัน กลายเป็นเมนูสองชั้นที่แยกไม่ออก · frame ใช้ geometry เดียวกับ DataTable ของแท็บพี่น้อง (`rounded-xl` ไม่มีเงา) สลับแท็บแล้วขอบไม่กระตุก
+- **เป็นหมวด Settings ของตัวเอง ต่อจาก Ticket & SLA** (`#request-data`) — ตอนแรกวางเป็นแท็บย่อยที่ 9 ของ Master data แต่ที่นั่นเป็นตารางอ้างอิงที่ใช้ร่วมกันของ ทรัพย์สิน/สัญญา/คลัง ส่วนนี่เป็นของโมดูล Request โมดูลเดียว อยู่ปนกันแล้วสับสน
+- **permission ของตัวเอง `settings.requestdata`** (migration grant ให้ทุก role ที่เคยถือ `settings.masterdata` — ไม่มีใครเสียสิทธิ์เพราะหน้าย้ายที่) · API endpoints ทั้งหมดย้ายมาใช้ gate นี้ · ยังถูกปิดตาม master key `settings.access` เหมือนคีย์ settings อื่น
+- **โครงหน้า**: sub-tab แบบ pill ของรายการ (ทรง/สีเดียวกับแท็บย่อยที่โมดูลอื่นใช้) → แถบ toolbar (คำใบ้ลากซ้าย + ปุ่มเพิ่มขวา แบบเดียวกับ DataTable) → กรอบ `rounded-xl` เดียวที่ถือแถวทั้งหมด — ก่อนหน้านี้เคยทำเป็น master-detail ที่มี side nav 220px ของตัวเองในการ์ดซ้อนการ์ด ซึ่งไปวางข้าง side nav ของหน้า Settings เองแล้วดูเป็นพาเนลลอยในพาเนล
+- แถวแสดงชื่อภาษาเดียวตามภาษา UI (ปุ่มธงที่ topbar สลับให้ เหมือน master data ตัวอื่น) · ถ้าตัวไหนยังไม่มีชื่อไทยจะแสดงชื่ออังกฤษพร้อมป้าย "ยังไม่ได้แปล"
 - ตาราง `request_options` + `App\Models\Settings\RequestOption` · ฟิลด์ใน `RequestSchemas` ที่ประกาศ `managed` จะถูก overlay ด้วยค่าจากตารางนี้ (query เดียวต่อ page load, ตัวที่ปิดไว้หลุดจากทั้ง UI และ validation พร้อมกัน) — ปัจจุบัน 3 รายการ: `hardware.device`, `mobile.device`, `telephone.device_type`
 - **คำขออ้างถึงตัวเลือกด้วย FK จริงในฐานข้อมูล** — เดิมเก็บ slug (`monitor`) ลง `fields` json ซึ่งเป็น soft link 2 ชั้น: (1) เป็น identity ที่สองของแถวที่มี id อยู่แล้ว (2) อยู่ใน json ซึ่ง MariaDB ผูก FOREIGN KEY ไม่ได้เลย ลบตัวเลือกทิ้งแล้วคำขอชี้ไป id ที่ไม่มีอยู่โดยฐานไม่ร้อง แก้ 2 ขั้น: เปลี่ยน key เป็น `*_id` แล้ว**ย้าย reference ทุกตัวออกจาก json ไปเป็นคอลัมน์จริงพร้อม FK**
   - `service_requests` ได้ 6 คอลัมน์ใหม่ `request_option_id` · `file_share_id` · `email_group_id` · `social_platform_id` · `software_id` · `location_id` → FK `ON DELETE SET NULL` ทั้งหมด (รวมกับของเดิมเป็น **10 FK** บนตารางนี้) · json เหลือแต่ของที่ไม่มีตารางรองรับ (`access_level`, `address`, `sim`) + `_display`
   - ได้ relation จริง: `$request->requestOption->label_th` · ถามย้อนกลับได้ `ServiceRequest::where('request_option_id', $id)` แทนการไล่ scan json
   - `RequestSchemas::referenceColumns()` เป็นตัวบอกว่า field ไหนลงคอลัมน์ไหน (managed ทุกตัว → `request_option_id` เพราะเป็นแถวของตารางเดียวกัน) · `ServiceRequestResource` รวมคอลัมน์กลับเข้า `fields` map ตอนส่งออก API จึงไม่กระทบ frontend
-  - `nullOnDelete` รักษาพฤติกรรมเดิมไว้ว่าลบ master data ได้ — `_display` snapshot ยังถือ label ที่ยื่นไว้ ประวัติอ่านถูกต้องแม้ reference ถูกล้าง
+  - **กันลบตัวเลือกที่ถูกอ้างถึง 2 ชั้น**: controller คืน `409 {message:'in_use', count:N}` เหมือน master data ทั้ง 7 ตัว (ฝั่งหน้าเว็บใช้ `toastDeleteError` ตัวเดิม โชว์ "ยังถูกใช้งานอยู่ N รายการ") · และ FK `request_option_id` เป็น **`ON DELETE RESTRICT`** ฐานปฏิเสธเองด้วย — เดิมเป็น `SET NULL` ซึ่งลบผ่านแล้วตัดคำขอออกจากสิ่งที่มันขอแบบเงียบ ๆ (label ยังอยู่ใน `_display` แต่ link ที่ตอบว่า "คำขอไหนขอตัวนี้" หายถาวรโดยไม่มีใครเตือน)
+  - เลิกใช้ตัวเลือกให้ปิดเป็น **"ซ่อน"** (`active=false`) — หลุดจากฟอร์มและ validation ทันที ส่วนคำขอที่เลือกไว้แล้วยังถือ reference ครบ · ตัวเลือกที่ยังไม่มีคำขอไหนใช้ลบได้ปกติ
   - ทดสอบพิสูจน์ระดับฐาน: ยิงผ่าน service ตรง ๆ (เลี่ยง validation) ด้วย id ที่ไม่มี → `FOREIGN KEY constraint failed` · ลบตัวเลือกที่ถูกอ้าง → คอลัมน์เป็น null แต่ `_display` ยังอ่านชื่อเดิมได้
   - `hardware.device` → `device_id` · `mobile.device` → `device_id` · `telephone.device_type` → `device_type_id` (migration ย้าย field_key ของ option โดยคง id เดิม + ย้าย key ใน `fields` json ของคำขอรวมถึงแถว `_display`) · `device_id`/`device_type_id` ใช้คอลัมน์ `request_option_id` ร่วมกัน เพราะ 1 ประเภทมี managed list ได้ 1 อัน
   - validate ด้วย `Rule::exists('request_options','id')` ที่ **scope ตาม (request_type, field_key, active)** → id ที่ยืมจากรายการอื่นถูกปฏิเสธ (มี test ยืนยัน) ซึ่ง `in:` บน slug ทำไม่ได้
@@ -1358,4 +1362,4 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 
 ### Tests / Verification
 
-`RequestOptionTest` (13) รวมลำดับ/ลาก/สิทธิ์/FK ข้ามรายการ/FK ระดับฐานข้อมูล · **ทั้ง suite = 785 passed / 3,078 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · migrate + `RequestOptionSeeder` รันบนฐานจริงแล้ว
+`RequestOptionTest` (16) รวมลำดับ/ลาก/สิทธิ์/FK ข้ามรายการ/FK ระดับฐานข้อมูล/กันลบตัวที่ถูกใช้ · `SettingsPermissionsTest` อัปเดตเป็น 9 คีย์ · **ทั้ง suite = 788 passed / 3,090 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · migrate + `RequestOptionSeeder` รันบนฐานจริงแล้ว

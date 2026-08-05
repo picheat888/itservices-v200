@@ -19,7 +19,7 @@ use Illuminate\Validation\Rule;
  * Field shape:
  *  key         — fields JSON key
  *  label_en/th — display labels (rendered by the SPA per language)
- *  input       — text | textarea | number | date | select | source
+ *  input       — text | textarea | email | number | date | select | source
  *  options     — static choices for `select`: [{value, label_en, label_th}]
  *  managed     — the choices are rows of `request_options`, editable in Settings
  *                → Master data → Request data. The field then behaves as a
@@ -75,7 +75,7 @@ class RequestSchemas
                 ]],
             ],
             RequestType::Email->value => [
-                ['key' => 'address', 'label_en' => 'Requested address', 'label_th' => 'อีเมลที่ต้องการ', 'input' => 'text', 'required' => true, 'mono' => true, 'placeholder' => 'name@inaba.co.th'],
+                ['key' => 'address', 'label_en' => 'Requested address', 'label_th' => 'อีเมลที่ต้องการ', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'name@inaba.co.th'],
             ],
             RequestType::Social->value => [
                 ['key' => 'social_platform_id', 'label_en' => 'Platform', 'label_th' => 'แพลตฟอร์ม', 'input' => 'source', 'source' => 'social_platforms', 'required' => true],
@@ -262,6 +262,10 @@ class RequestSchemas
                 ],
                 $field['input'] === 'number' => [$required, 'nullable', 'integer', 'min:'.($field['min'] ?? 0), 'max:'.($field['max'] ?? 1000)],
                 $field['input'] === 'date' => [$required, 'nullable', 'date'],
+                // The mailbox is the point of the request, so a typo in it is the
+                // one thing worth refusing outright. Syntax only — the address does
+                // not exist yet, so nothing can be resolved.
+                $field['input'] === 'email' => [$required, 'nullable', 'string', 'email:rfc', 'max:255'],
                 $field['input'] === 'select' => [$required, 'nullable', 'string', 'in:'.implode(',', array_column($field['options'] ?? [], 'value'))],
                 $field['input'] === 'source' => [$required, 'nullable', 'integer', 'exists:'.self::sourceTable((string) $field['source']).',id'],
                 default => [$required, 'nullable', 'string', 'max:500'],

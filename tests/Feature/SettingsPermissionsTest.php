@@ -12,7 +12,7 @@ class SettingsPermissionsTest extends TestCase
     {
         $expected = [
             'settings.access', 'settings.company', 'settings.system',
-            'settings.masterdata', 'settings.email', 'settings.sla',
+            'settings.masterdata', 'settings.email', 'settings.sla', 'settings.requestdata',
             'settings.assets', 'settings.security',
         ];
 
@@ -25,7 +25,7 @@ class SettingsPermissionsTest extends TestCase
         $this->assertNotContains('settings.display', Permissions::all());
 
         $settingsKeys = array_filter(Permissions::all(), fn ($key) => str_starts_with($key, 'settings.'));
-        $this->assertCount(8, $settingsKeys);
+        $this->assertCount(9, $settingsKeys);
     }
 
     public function test_legacy_edit_settings_key_is_removed(): void

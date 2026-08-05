@@ -9,6 +9,7 @@ import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } fr
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
@@ -177,11 +178,10 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                         {i + 1}
                                     </span>
                                     <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr_84px]">
-                                        <select
-                                            className="border-input bg-background h-9 rounded-lg border px-2.5 text-sm font-medium"
+                                        <Select
                                             value={s.actor_type}
-                                            onChange={(e) => {
-                                                const actor = e.target.value as WorkflowActorType;
+                                            onValueChange={(v) => {
+                                                const actor = v as WorkflowActorType;
                                                 updStep(i, {
                                                     actor_type: actor,
                                                     // Sensible companions: IT staff fulfills; people approve.
@@ -190,10 +190,15 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                 });
                                             }}
                                         >
-                                            <option value="chain">{t('wf_actor_chain')}</option>
-                                            {ownerAllowed && <option value="owner">{t('wf_actor_owner')}</option>}
-                                            <option value="it_staff">{t('wf_actor_it')}</option>
-                                        </select>
+                                            <SelectTrigger className="h-9 font-medium">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
+                                                {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
+                                                <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <div>
                                             <Input
                                                 className="h-9 text-sm"
@@ -202,14 +207,15 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                 list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
                                             />
                                         </div>
-                                        <select
-                                            className="border-input bg-background h-9 rounded-lg border px-2.5 text-sm font-medium"
-                                            value={s.kind}
-                                            onChange={(e) => updStep(i, { kind: e.target.value as EditableStep['kind'] })}
-                                        >
-                                            <option value="approval">{t('wf_approval')}</option>
-                                            <option value="fulfillment">{t('wf_fulfillment')}</option>
-                                        </select>
+                                        <Select value={s.kind} onValueChange={(v) => updStep(i, { kind: v as EditableStep['kind'] })}>
+                                            <SelectTrigger className="h-9 font-medium">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="approval">{t('wf_approval')}</SelectItem>
+                                                <SelectItem value="fulfillment">{t('wf_fulfillment')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         <Input
                                             className="h-9 font-mono text-sm"
                                             type="number"

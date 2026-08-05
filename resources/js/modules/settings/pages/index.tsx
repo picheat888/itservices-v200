@@ -11,7 +11,7 @@ import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
 import { countryOptions, currencyOptions } from '@/shared/lib/locale-data';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
-import { cn } from '@/shared/lib/utils';
+import { cn, isEmail } from '@/shared/lib/utils';
 import type { AssetModel, Brand, Category, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -28,6 +28,7 @@ import {
     Boxes,
     Building2,
     Construction,
+    Inbox,
     Info,
     Mail,
     MapPin,
@@ -86,7 +87,7 @@ import {
     useUploadLogo,
 } from '../hooks/use-settings';
 
-type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'assets' | 'security';
+type Section = 'system' | 'company' | 'master-data' | 'email' | 'tickets' | 'request-data' | 'assets' | 'security';
 
 // Theme accent options — kept to Blue / Purple / Black per branding guidelines.
 const ACCENTS = ['#2563eb', '#7c3aed', '#0f172a'];
@@ -109,7 +110,7 @@ const emptyForm: SettingsForm = {
     currency: 'THB',
 };
 
-const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'assets', 'security'];
+const VALID_SECTIONS: Section[] = ['system', 'company', 'master-data', 'email', 'tickets', 'request-data', 'assets', 'security'];
 
 function sectionFromHash(): Section {
     const s = window.location.hash.replace('#', '') as Section;
@@ -175,6 +176,7 @@ export default function SettingsPage() {
         { id: 'master-data', label: t('set_master_data'), icon: Boxes, perm: 'settings.masterdata' },
         { id: 'email', label: t('set_email'), icon: Mail, perm: 'settings.email' },
         { id: 'tickets', label: t('set_tickets'), icon: Ticket, perm: 'settings.sla' },
+        { id: 'request-data', label: t('set_request_data'), icon: Inbox, perm: 'settings.requestdata' },
         { id: 'assets', label: t('set_assets'), icon: Box, perm: 'settings.assets' },
         { id: 'security', label: t('set_security'), icon: Shield, perm: 'settings.security' },
     ];
@@ -228,17 +230,40 @@ export default function SettingsPage() {
                     {activeSection === 'email' && <EmailTab />}
                     {activeSection === 'assets' && <AssetsTab />}
                     {activeSection === 'tickets' && <TicketsTab />}
+                    {activeSection === 'request-data' && <RequestDataTab />}
                     {activeSection === 'security' && <SecurityTab />}
-                    {!['system', 'company', 'master-data', 'email', 'assets', 'tickets', 'security'].includes(activeSection) && <ComingSoon />}
+                    {!VALID_SECTIONS.includes(activeSection) && <ComingSoon />}
                 </div>
             </Card>
         </div>
     );
 }
 
+// ─── Request Data Tab ────────────────────────────────────────────────────────
+
+/**
+ * RequestDataTab — the choice lists the request form's selects offer. Its own
+ * section rather than a ninth Master Data sub-tab: those lists are shared lookup
+ * tables for Assets/Contracts/Stock, while these belong to one module and are
+ * reached while configuring requests, not while configuring inventory.
+ */
+function RequestDataTab() {
+    const t = useT();
+
+    return (
+        <div>
+            <div className="mb-5">
+                <h2 className="text-lg font-semibold">{t('set_request_data')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_request_data_desc')}</p>
+            </div>
+            <RequestDataSection />
+        </div>
+    );
+}
+
 // ─── Master Data Tab ─────────────────────────────────────────────────────────
 
-type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types' | 'request-data';
+type MdTab = 'brands' | 'models' | 'categories' | 'vendors' | 'warehouses' | 'locations' | 'units' | 'warranty-types';
 
 /**
  * MasterDataTab — top-level container with sub-tab navigation.
@@ -258,7 +283,6 @@ function MasterDataTab() {
         { id: 'locations', label: t('set_locations') },
         { id: 'units', label: t('md_units') },
         { id: 'warranty-types', label: t('md_warranty_types') },
-        { id: 'request-data', label: t('md_request_data') },
     ];
 
     return (
@@ -291,7 +315,6 @@ function MasterDataTab() {
             {tab === 'locations' && <LocationsList />}
             {tab === 'units' && <UnitsList />}
             {tab === 'warranty-types' && <WarrantyTypesList />}
-            {tab === 'request-data' && <RequestDataSection />}
         </div>
     );
 }
@@ -914,8 +937,6 @@ function EmailTab() {
         if (errors[k as MailErrorKey]) setErrors((e) => ({ ...e, [k]: undefined }));
     };
 
-    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     // All SMTP fields are required + format-checked. Password is required only on
     // first setup; once one is stored, a blank field keeps the existing password.
     const handleSave = () => {
@@ -930,7 +951,7 @@ function EmailTab() {
         if (!hasPassword && !form.password?.trim()) next.password = t('set_err_required');
         if (!form.from_address?.trim()) {
             next.from_address = t('set_err_required');
-        } else if (!EMAIL_RE.test(form.from_address.trim())) {
+        } else if (!isEmail(form.from_address)) {
             next.from_address = t('set_email_err_address');
         }
         if (!form.from_name?.trim()) next.from_name = t('set_err_required');

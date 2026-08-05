@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Support\RequestSchemas;
 use Illuminate\Http\JsonResponse;
@@ -118,12 +119,18 @@ class RequestOptionController extends Controller
     }
 
     /**
-     * Deleting is safe for history: each request stores its own display snapshot
-     * at submit time, so a removed choice never blanks out an old request. It
-     * simply stops being offered.
+     * A choice that requests already point at is never deleted — the same 409
+     * every other master-data table answers with. Retiring one is what `active`
+     * is for: it stops being offered while the requests that chose it keep their
+     * link. Only a choice nobody used can actually go.
      */
     public function destroy(RequestOption $requestOption): JsonResponse
     {
+        $used = ServiceRequest::where('request_option_id', $requestOption->id)->count();
+        if ($used > 0) {
+            return response()->json(['message' => 'in_use', 'count' => $used], 409);
+        }
+
         AuditLog::record('Deleted request option', "{$requestOption->request_type}.{$requestOption->field_key} · {$requestOption->label_en}");
         $requestOption->delete();
         RequestSchemas::flushManagedCache();

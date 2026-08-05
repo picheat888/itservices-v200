@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Validator;
 use Tests\TestCase;
 
 /**
- * Settings → Master data → Request data: the editable choice lists behind the
+ * Settings → Request data: the editable choice lists behind the
  * request form's managed selects, and the fact that the form and its validation
  * follow whatever is stored.
  */
@@ -36,7 +36,7 @@ class RequestOptionTest extends TestCase
         RequestSchemas::flushManagedCache();
 
         $role = Role::firstOrCreate(['key' => 'mdadmin'], ['name' => 'MD Admin', 'color' => '#000', 'is_system' => false]);
-        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'settings.masterdata'], ['allowed' => true]);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'settings.requestdata'], ['allowed' => true]);
         $this->admin = User::factory()->create(['role' => 'mdadmin']);
     }
 
@@ -55,7 +55,7 @@ class RequestOptionTest extends TestCase
         $this->assertSame(2, RequestOption::where('request_type', 'telephone')->count());
     }
 
-    public function test_endpoints_require_the_master_data_permission(): void
+    public function test_endpoints_require_the_request_data_permission(): void
     {
         $plain = User::factory()->create(['role' => 'nobody']);
 
@@ -108,11 +108,6 @@ class RequestOptionTest extends TestCase
         $this->assertNotContains((string) $scanner, collect($offered)->pluck('value')->all());
     }
 
-    /**
-     * The choice lands in a foreign-keyed column, not in the json — so deleting
-     * the option clears the reference instead of leaving a dangling id, and the
-     * request still reads correctly from its own display snapshot.
-     */
     public function test_the_chosen_option_is_a_foreign_key_the_database_enforces(): void
     {
         $option = RequestOption::forField('hardware', 'device_id')->firstOrFail();
@@ -121,12 +116,56 @@ class RequestOptionTest extends TestCase
         $this->assertSame($option->id, $request->request_option_id, 'the id lives in its own column');
         $this->assertArrayNotHasKey('device_id', $request->fields, 'and not in the json as well');
         $this->assertSame($option->id, $request->requestOption->id, 'joinable through the relation');
+    }
 
-        // ON DELETE SET NULL: master data stays deletable, history stays readable.
+    /**
+     * A choice a request points at cannot be deleted — the same 409 every other
+     * master-data table answers with. Hiding it is the way to retire one.
+     */
+    public function test_a_choice_a_request_uses_cannot_be_deleted(): void
+    {
+        $option = RequestOption::forField('hardware', 'device_id')->firstOrFail();
+        $request = $this->submitHardwareRequest($option->id);
+
+        $this->actingAs($this->admin)->deleteJson("/api/request-options/{$option->id}")
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'in_use')
+            ->assertJsonPath('count', 1);
+
+        $this->assertDatabaseHas('request_options', ['id' => $option->id]);
+        $this->assertSame($option->id, $request->fresh()->request_option_id, 'the request keeps what it asked for');
+
+        // Hiding withdraws it from the form without touching the reference.
+        $this->actingAs($this->admin)->putJson("/api/request-options/{$option->id}", [
+            'label_en' => $option->label_en, 'label_th' => $option->label_th, 'active' => false,
+        ])->assertOk();
+
+        RequestSchemas::flushManagedCache();
+        $offered = collect(RequestSchemas::for(RequestType::Hardware))->firstWhere('key', 'device_id')['options'];
+        $this->assertNotContains((string) $option->id, collect($offered)->pluck('value')->all());
+        $this->assertSame($option->id, $request->fresh()->request_option_id);
+    }
+
+    /** The database refuses too, so the controller's check is not the only guard. */
+    public function test_the_database_refuses_to_delete_a_referenced_choice(): void
+    {
+        $option = RequestOption::forField('hardware', 'device_id')->firstOrFail();
+        $this->submitHardwareRequest($option->id);
+
+        $this->expectException(QueryException::class);
+        $this->expectExceptionMessageMatches('/FOREIGN KEY constraint/i');
+
         $option->delete();
-        $request->refresh();
-        $this->assertNull($request->request_option_id);
-        $this->assertSame($option->label_en, collect($request->fields['_display'])->firstWhere('key', 'device_id')['value']);
+    }
+
+    public function test_an_unused_choice_is_still_deletable(): void
+    {
+        $id = $this->actingAs($this->admin)->postJson('/api/request-options', [
+            'request_type' => 'hardware', 'field_key' => 'device_id', 'label_en' => 'Scanner',
+        ])->assertCreated()->json('data.id');
+
+        $this->actingAs($this->admin)->deleteJson("/api/request-options/{$id}")->assertOk();
+        $this->assertDatabaseMissing('request_options', ['id' => $id]);
     }
 
     /**

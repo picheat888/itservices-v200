@@ -39,3 +39,13 @@ export function focusFirstError(errors: Record<string, string>) {
         field.querySelector<HTMLElement>('input, textarea, button, [tabindex]')?.focus();
     }, 0);
 }
+
+/**
+ * Address syntax check for the UX pass — Laravel re-validates every submission,
+ * so this only exists to fail a typo in the field the user is standing in rather
+ * than on the round trip. Deliberately loose: one @, something either side, a dot
+ * in the domain.
+ */
+export function isEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
