@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Services\Access\AccessService;
 use App\Services\Employee\ApprovalChainService;
 use App\Services\Employee\EmployeeImportService;
+use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -110,6 +111,7 @@ class EmployeeController extends Controller
     public function __construct(
         private readonly EmployeeService $service,
         private readonly EmployeeImportService $importService,
+        private readonly EmployeeOnboardingService $onboarding,
     ) {}
 
     /**
@@ -455,12 +457,39 @@ class EmployeeController extends Controller
         return $rows;
     }
 
+    /**
+     * Creates the employee, then — for the day-one services ticked on the form —
+     * files one service request per service on their behalf.
+     *
+     * The requests come after the employee is saved and never roll it back: a
+     * service whose workflow is closed is reported under `onboarding.failed` so the
+     * form can say which one did not go out, while the person stays hired.
+     */
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
-        $employee = $this->service->create($this->handlePhoto($request, $request->validated()), $request->user());
+        $data = $this->handlePhoto($request, $request->validated());
+        $services = array_values((array) ($data['services'] ?? []));
+        $note = $data['onboarding_note'] ?? null;
+        unset($data['services'], $data['onboarding_note']);
+
+        $employee = $this->service->create($data, $request->user());
         AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
 
-        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response()->setStatusCode(201);
+        $onboarding = null;
+        if ($services !== []) {
+            $onboarding = $this->onboarding->fileRequests($employee, $request->user(), $services, $note);
+            AuditLog::record('Filed onboarding requests', "{$employee->name} ({$employee->code})", [
+                'created' => array_column($onboarding['created'], 'reference'),
+                'failed' => array_column($onboarding['failed'], 'service'),
+            ]);
+        }
+
+        return (new EmployeeResource($employee->load(['department', 'position', 'section'])))
+            ->additional(array_filter([
+                'message' => 'success',
+                'onboarding' => $onboarding,
+            ], fn ($value) => $value !== null))
+            ->response()->setStatusCode(201);
     }
 
     public function show(Employee $employee): JsonResponse

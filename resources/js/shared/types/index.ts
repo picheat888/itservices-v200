@@ -855,6 +855,12 @@ export type ServiceRequestType =
     | 'other';
 
 export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled';
+/**
+ * Why a request exists (mirrors App\Enums\Request\RequestOrigin): `direct` is
+ * somebody asking for themselves, `onboarding` was filed for a new employee who
+ * has no login yet — which is what approvers are shown.
+ */
+export type ServiceRequestOrigin = 'direct' | 'onboarding';
 export type ServiceRequestPriority = 'low' | 'medium' | 'high';
 export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' | 'skipped';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff';
@@ -894,6 +900,9 @@ export interface ServiceRequest {
     status: ServiceRequestStatus;
     auto_ticket: boolean;
     requester: { employee_id: number | null; user_id: number | null; name: string; department: string | null };
+    origin: ServiceRequestOrigin;
+    /** The account that filed it — set only when that is not the owner (on-behalf). */
+    submitted_by: { user_id: number; name: string | null } | null;
     workflow: { id: number | null; name?: string | null };
     ticket?: { id: number; ticket_no: string; status: string | null } | null;
     approvals?: RequestApproval[];

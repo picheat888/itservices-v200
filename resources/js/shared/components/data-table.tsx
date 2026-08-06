@@ -20,6 +20,8 @@ interface DataTableProps<T> {
     searchable?: (row: T) => string;
     rowKey: (row: T) => string | number;
     onRowClick?: (row: T) => void;
+    /** Extra classes for a single row — for marking rows that need to stand out (e.g. a left accent). */
+    rowClassName?: (row: T) => string | undefined;
     /** Hide the built-in pagination bar — use when the parent handles server-side pagination */
     hidePagination?: boolean;
     /** Content rendered on the right of the search row (e.g. an Add button). */
@@ -66,6 +68,7 @@ export function DataTable<T>({
     searchable,
     rowKey,
     onRowClick,
+    rowClassName,
     hidePagination,
     actions,
     filters,
@@ -207,7 +210,11 @@ export function DataTable<T>({
                                 <tr
                                     key={rowKey(row)}
                                     onClick={() => onRowClick?.(row)}
-                                    className={cn('border-border/60 border-b last:border-0', onRowClick && 'hover:bg-accent/50 cursor-pointer')}
+                                    className={cn(
+                                        'border-border/60 border-b last:border-0',
+                                        onRowClick && 'hover:bg-accent/50 cursor-pointer',
+                                        rowClassName?.(row),
+                                    )}
                                 >
                                     {columns.map((c) => (
                                         <td key={c.key} className={cn('px-[var(--row-px)] py-[var(--row-py)]', alignClass(c.align), c.className)}>

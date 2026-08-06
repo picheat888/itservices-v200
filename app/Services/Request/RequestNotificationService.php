@@ -26,11 +26,22 @@ class RequestNotificationService
 {
     public function __construct(private readonly EmailNotificationService $email) {}
 
+    /**
+     * Who hears about what happens to this request: its owner, or — when it was
+     * filed on their behalf and they have no login yet (a new employee's
+     * onboarding) — the person who filed it. Without the fallback every update on
+     * an onboarding request would be sent to nobody.
+     */
+    private function follower(ServiceRequest $request): ?User
+    {
+        return $request->user ?? ($request->origin?->isOnBehalf() ? $request->submittedBy : null);
+    }
+
     public function submitted(ServiceRequest $request): void
     {
         $current = $request->currentApproval();
 
-        if ($owner = $request->user) {
+        if ($owner = $this->follower($request)) {
             Notification::send($owner, new RequestWorkflowNotification($request, 'submitted', $current?->label));
             $this->emailUser($owner, 'request.submitted', $request, ['step.label' => $current?->label ?? 'IT Staff']);
         }
@@ -43,7 +54,7 @@ class RequestNotificationService
     /** An intermediate step was approved: tell the requester, poke the next approver. */
     public function advanced(ServiceRequest $request, RequestApproval $decided): void
     {
-        if ($owner = $request->user) {
+        if ($owner = $this->follower($request)) {
             $this->sendBell(
                 collect([$owner]),
                 new RequestWorkflowNotification($request, 'approved_step', $decided->label, $decided->acted_by_name),
@@ -59,7 +70,7 @@ class RequestNotificationService
     /** Every approval step passed: requester + the fulfillment queue. */
     public function finalApproved(ServiceRequest $request): void
     {
-        if ($owner = $request->user) {
+        if ($owner = $this->follower($request)) {
             Notification::send($owner, new RequestWorkflowNotification($request, 'approved_final'));
             $this->emailUser($owner, 'request.approved', $request);
         }
@@ -77,7 +88,7 @@ class RequestNotificationService
 
     public function rejected(ServiceRequest $request, RequestApproval $row): void
     {
-        if ($owner = $request->user) {
+        if ($owner = $this->follower($request)) {
             Notification::send($owner, new RequestWorkflowNotification(
                 $request, 'rejected', $row->label, $row->acted_by_name, $row->note,
             ));
@@ -90,7 +101,7 @@ class RequestNotificationService
 
     public function fulfilled(ServiceRequest $request): void
     {
-        if ($owner = $request->user) {
+        if ($owner = $this->follower($request)) {
             Notification::send($owner, new RequestWorkflowNotification($request, 'fulfilled'));
             $this->emailUser($owner, 'request.fulfilled', $request);
         }
@@ -191,7 +202,11 @@ class RequestNotificationService
 
         $this->email->sendTemplate($templateKey, $recipient->email, $extraVars + [
             'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
-            'request.title' => $request->title,
+            // An approver reading this in their inbox needs to know it is a new hire
+            // before they open anything, and the templates carry no origin field.
+            'request.title' => $request->origin?->isOnBehalf()
+                ? '[New employee] '.$request->title
+                : $request->title,
             'request.type' => $request->type?->label(),
             'requester.name' => $request->requester_name,
             'reference.id' => $request->reference,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Models\Access\FileShare;
 use App\Models\Employee\Employee;
@@ -94,16 +95,32 @@ class RequestResolutionTest extends TestCase
         $this->assertSame('it_staff', $rows->last()['actor_type']);
     }
 
-    public function test_managers_without_a_login_account_are_not_eligible(): void
+    public function test_a_manager_without_a_login_keeps_the_step_and_the_request_waits(): void
     {
         $vp = $this->employee('Vp');
-        $ghost = Employee::create(['first_name' => 'Ghost', 'manager_id' => $vp->id]); // no user account
-        $staff = $this->employee('Staff', $ghost->id);
+        $noAccount = Employee::create(['first_name' => 'NoAccount', 'manager_id' => $vp->id]); // account not provisioned yet
+        $staff = $this->employee('Staff', $noAccount->id);
 
         $rows = $this->resolve('computer', $staff); // 2 chain steps
 
-        // Ghost is invisible; VP covers both chain steps (merged).
-        $this->assertCount(2, $rows);
+        // The step belongs to the actual manager and waits until they can sign in.
+        // Passing it over their head to the VP would be an approval they never gave.
+        $this->assertSame($noAccount->id, $rows->first()['approver_employee_id']);
+        $this->assertSame(ApprovalStatus::Waiting->value, $rows->first()['status']);
+        $this->assertStringContainsString('login', $rows->first()['note']);
+        $this->assertSame($vp->id, $rows->get(1)['approver_employee_id']);
+    }
+
+    public function test_a_resigned_manager_is_passed_over(): void
+    {
+        $vp = $this->employee('Vp');
+        $gone = Employee::create(['first_name' => 'Gone', 'manager_id' => $vp->id, 'status' => EmployeeStatus::Resigned]);
+        $staff = $this->employee('Staff', $gone->id);
+
+        $rows = $this->resolve('computer', $staff);
+
+        // Nobody is coming back to approve this one, so the line continues upward —
+        // the opposite of an account that simply has not been created yet.
         $this->assertSame($vp->id, $rows->first()['approver_employee_id']);
     }
 

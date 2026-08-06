@@ -41,6 +41,8 @@ export interface NotificationData {
     service_request_id?: number;
     title?: string;
     request_type?: string;
+    /** 'onboarding' when the request was filed for a new employee (see ServiceRequestOrigin). */
+    origin?: string;
     step_label?: string | null;
     actor_name?: string | null;
     remark?: string | null;

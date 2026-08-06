@@ -3,6 +3,7 @@
 namespace App\Services\Request;
 
 use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\RequestOrigin;
 use App\Enums\Request\RequestPriority;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
@@ -12,6 +13,7 @@ use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\AuditLog;
+use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Location;
@@ -43,7 +45,7 @@ class RequestService
     ) {}
 
     /**
-     * Create a request, freeze its approval chain, and activate the first step.
+     * Create a request the submitting user is asking for themselves.
      *
      * @param  array<string, mixed>  $data  validated StoreServiceRequestRequest payload
      */
@@ -56,6 +58,38 @@ class RequestService
             ]);
         }
 
+        return $this->create($employee, $user, $user, $data, RequestOrigin::Direct);
+    }
+
+    /**
+     * Create a request that BELONGS to $subject but was filed by somebody else —
+     * the onboarding services ticked while adding an employee.
+     *
+     * The chain resolves against $subject, so approvals climb the new employee's
+     * reporting line rather than the filer's. $subject normally has no login yet,
+     * which is the whole reason the request has to remember who submitted it.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function submitFor(
+        Employee $subject,
+        User $actor,
+        array $data,
+        RequestOrigin $origin = RequestOrigin::Onboarding,
+    ): ServiceRequest {
+        return $this->create($subject, $subject->user, $actor, $data, $origin);
+    }
+
+    /**
+     * Freeze the approval chain and activate the first step.
+     *
+     * @param  Employee  $employee  whose request this is — the chain climbs their managers
+     * @param  User|null  $owner  that employee's login, when they have one
+     * @param  User  $actor  the account that pressed Save
+     * @param  array<string, mixed>  $data
+     */
+    private function create(Employee $employee, ?User $owner, User $actor, array $data, RequestOrigin $origin): ServiceRequest
+    {
         $type = RequestType::from((string) $data['type']);
         $workflow = Workflow::where('request_type', $type->value)->first();
         if ($workflow === null || ! $workflow->active) {
@@ -75,12 +109,15 @@ class RequestService
         [$references, $fields] = $this->splitReferences($type, $submitted);
         $fields['_display'] = $display;
 
-        $request = DB::transaction(function () use ($user, $employee, $type, $workflow, $data, $fields, $references, $submitted) {
+        $request = DB::transaction(function () use ($owner, $actor, $origin, $employee, $type, $workflow, $data, $fields, $references, $submitted) {
             $request = ServiceRequest::create([
                 'type' => $type->value,
+                'origin' => $origin->value,
                 'workflow_id' => $workflow->id,
                 'auto_ticket' => $workflow->auto_ticket,
-                'user_id' => $user->id,
+                'user_id' => $owner?->id,
+                'submitted_by_user_id' => $actor->id,
+                'submitted_by_name' => $actor->name,
                 'employee_id' => $employee->id,
                 'requester_name' => $employee->name,
                 'department_name' => $employee->department?->name,
@@ -215,7 +252,12 @@ class RequestService
     /** Requester withdraws their own still-pending request. */
     public function cancel(ServiceRequest $request, User $actor): ServiceRequest
     {
-        abort_unless($request->user_id === $actor->id, 403);
+        // The owner withdraws their own request; for one filed on somebody's behalf
+        // the filer may too, since the owner has no login to withdraw it with.
+        abort_unless(
+            $request->user_id === $actor->id || $request->submitted_by_user_id === $actor->id,
+            403,
+        );
 
         [$request, $wasCurrent] = DB::transaction(function () use ($request) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);

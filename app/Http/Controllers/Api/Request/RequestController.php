@@ -49,7 +49,10 @@ class RequestController extends Controller
             }
 
             return $query->where(function ($q) use ($user, $employeeId, $canFulfill) {
-                $q->where('user_id', $user->id);
+                // Own requests, plus the ones filed on somebody else's behalf — an
+                // onboarding request has no owner account to match on.
+                $q->where('user_id', $user->id)
+                    ->orWhere('submitted_by_user_id', $user->id);
                 if ($employeeId !== null) {
                     $q->orWhereHas('approvals', fn ($a) => $a->where('approver_employee_id', $employeeId));
                 }
@@ -85,7 +88,7 @@ class RequestController extends Controller
         } elseif ($request->query('scope') === 'queue' && $canFulfill) {
             $query->where('status', RequestStatus::Approved->value);
         } elseif ($request->query('scope') === 'mine') {
-            $query->where('user_id', $user->id);
+            $query->where(fn ($q) => $q->where('user_id', $user->id)->orWhere('submitted_by_user_id', $user->id));
         }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -114,6 +117,7 @@ class RequestController extends Controller
     {
         $user = $request->user();
         $isParticipant = $user->id === $serviceRequest->user_id
+            || $user->id === $serviceRequest->submitted_by_user_id
             || ($user->employee_id !== null && $serviceRequest->approvals()
                 ->where('approver_employee_id', $user->employee_id)->exists());
         abort_unless($isParticipant

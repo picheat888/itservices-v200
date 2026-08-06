@@ -154,10 +154,17 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
         const key = REQUEST_MESSAGE_KEY[n.data.subtype ?? ''];
         if (!key) return '';
 
-        return t(key)
-            .replace('{step}', n.data.step_label ?? '—')
-            .replace('{actor}', n.data.actor_name ?? '—')
-            .replace('{remark}', n.data.remark ?? '');
+        // Say it is a new hire's request up front — an approver acting from the bell
+        // never sees the violet marking on the list.
+        const prefix = n.data.origin === 'onboarding' ? `${t('req_origin_onboarding')} · ` : '';
+
+        return (
+            prefix +
+            t(key)
+                .replace('{step}', n.data.step_label ?? '—')
+                .replace('{actor}', n.data.actor_name ?? '—')
+                .replace('{remark}', n.data.remark ?? '')
+        );
     }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
     if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');

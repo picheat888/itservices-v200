@@ -37,6 +37,8 @@ class RequestWorkflowNotification extends Notification
             'reference' => $this->request->reference,
             'title' => $this->request->title,
             'request_type' => $this->request->type?->value,
+            // Lets the bell mark an onboarding request the same way the list does.
+            'origin' => $this->request->origin?->value,
             'step_label' => $this->stepLabel,
             'actor_name' => $this->actorName,
             'remark' => $this->remark,

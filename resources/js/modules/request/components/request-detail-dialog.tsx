@@ -2,7 +2,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { isOnBehalfRequest, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +10,7 @@ import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Check, PackageCheck, Ticket as TicketIcon, Trash2, X, Zap } from 'lucide-react';
+import { Check, PackageCheck, Ticket as TicketIcon, Trash2, UserPlus, X, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequest, useRequestMutations } from '../hooks/use-requests';
@@ -89,6 +89,22 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
                         }
                     />
 
+                    {/* Filed for somebody who could not file it themselves — the approver
+                        needs that before reading anything else on this request. */}
+                    {isOnBehalfRequest(request) && (
+                        <div className="flex items-start gap-2.5 border-t border-l-2 border-l-violet-500 bg-violet-500/[0.06] px-6 py-3">
+                            <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+                            <div className="min-w-0 text-sm">
+                                <div className="font-semibold text-violet-700 dark:text-violet-300">{t('req_onboarding_title')}</div>
+                                <div className="text-muted-foreground text-xs">
+                                    {request.submitted_by?.name
+                                        ? `${t('req_submitted_by')} ${request.submitted_by.name} · ${request.created_at}`
+                                        : t('req_onboarding_desc')}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="border-border/60 grid flex-1 gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                         {/* Left — summary + typed fields */}
                         <div className="min-w-0 space-y-5">
@@ -96,6 +112,7 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
                                 <KV label={t('req_requester')} value={request.requester.name} />
                                 <KV label={t('req_department')} value={request.requester.department ?? '—'} />
                                 <KV label={t('req_created')} value={request.created_at} mono />
+                                {request.submitted_by && <KV label={t('req_submitted_by')} value={request.submitted_by.name ?? '—'} />}
                             </div>
 
                             <div>
