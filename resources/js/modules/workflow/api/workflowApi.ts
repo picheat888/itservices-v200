@@ -23,6 +23,16 @@ export interface WorkflowPositionOption {
     title: string;
 }
 
+/**
+ * The titles a rung may name, plus the three ladder levels the org actually
+ * thinks in — offered as one-click presets, from the same constant the seeder
+ * builds default routes with.
+ */
+export interface WorkflowPositionOptions {
+    data: WorkflowPositionOption[];
+    meta: { rungs: Record<string, number[]> };
+}
+
 /** One resolved row of the editor's "test with employee" preview. */
 export interface ResolvedPreviewRow {
     position: number;
@@ -66,7 +76,7 @@ export const workflowApi = {
     list: () => http.get<WorkflowListResponse>('/workflows').then((r) => r.data),
     employeeOptions: () => http.get<ApiEnvelope<WorkflowEmployeeOption[]>>('/workflows/employee-options').then((r) => r.data.data),
     update: (id: number, payload: WorkflowUpdatePayload) => mutate<Workflow>('put', `/workflows/${id}`, payload),
-    positionOptions: () => http.get<ApiEnvelope<WorkflowPositionOption[]>>('/workflows/position-options').then((r) => r.data.data),
+    positionOptions: () => http.get<WorkflowPositionOptions>('/workflows/position-options').then((r) => r.data),
     preview: (payload: { request_type: ServiceRequestType; employee_id: number; steps: WorkflowStepPayload[] }) =>
         mutate<WorkflowPreviewResponse>('post', '/workflows/preview', payload),
 };

@@ -16,6 +16,7 @@ use App\Models\Employee\Position;
 use App\Models\Request\ServiceRequest;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\WorkflowResolverService;
+use App\Support\DefaultWorkflows;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -170,11 +171,21 @@ class WorkflowController extends Controller
      */
     public function positionOptions(): JsonResponse
     {
+        $positions = Position::orderBy('code')->get();
+        $idByTitle = $positions->pluck('id', 'title');
+
         return response()->json([
-            'data' => Position::orderBy('code')->get()->map(fn (Position $position) => [
+            'data' => $positions->map(fn (Position $position) => [
                 'id' => $position->id,
                 'title' => $position->title,
             ])->values(),
+            // The three ladder rungs, so the editor can offer a whole level in one
+            // click from the same constant the seeder builds routes with.
+            'meta' => [
+                'rungs' => collect(DefaultWorkflows::RUNGS)
+                    ->map(fn (array $titles) => collect($titles)->map(fn (string $title) => $idByTitle[$title] ?? null)->filter()->values())
+                    ->filter(fn ($ids) => $ids->isNotEmpty()),
+            ],
         ]);
     }
 

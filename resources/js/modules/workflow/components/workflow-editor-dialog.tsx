@@ -11,13 +11,11 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
-import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Check, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { workflowApi, type ResolvedPreviewRow } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
-import { WorkflowStrip } from './workflow-strip';
 
 /** A step being edited — positions held as ids, which is what the API takes. */
 type EditableStep = {
@@ -34,14 +32,21 @@ const OWNER_TYPES: ServiceRequestType[] = ['mailgroup', 'fileshare', 'recovery']
 const CHAIN_LABEL_PRESETS = ['Supervisor / Head', 'Manager / Asst. Manager', 'Department Manager', 'Vice President'];
 
 /**
- * Focus-dialog editor for one workflow: flags, the ordered step list, a live
- * route strip, and a "test with employee" panel that resolves the edited steps
- * along a real reporting line. Edits never touch in-flight requests — they run
- * on their submit-time snapshot.
+ * Focus-dialog editor for one workflow.
+ *
+ * The steps are drawn as a ladder on a rail, because that is what a route is: each
+ * rung a level of authority above the last, ending in a flag rather than a number
+ * (the destination is not a level). A rung states the positions that may sign it —
+ * chosen a whole level at a time, since that is how the org names its own tiers —
+ * and the full title list opens for one rung at a time so the page stays readable.
+ *
+ * There is no separate route-strip preview: the ladder IS the sequence, and the
+ * one thing it cannot show is people, which the "test with employee" panel does.
+ *
+ * Edits never touch in-flight requests — they run on their submit-time snapshot.
  */
 export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow | null; onClose: () => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { update, preview } = useWorkflowMutations();
 
     const [shown, setShown] = useState<Workflow | null>(null);
@@ -91,12 +96,16 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
     // The job titles a rung can name — Employee-module master data, read through the
     // workflows.manage gate so editing a route needs no position permission.
-    const { data: positions = [] } = useQuery({
+    const { data: positionData } = useQuery({
         queryKey: ['workflow-position-options'],
         queryFn: workflowApi.positionOptions,
         staleTime: 5 * 60_000,
         enabled: !!workflow,
     });
+    const positions = positionData?.data ?? [];
+    const rungs = positionData?.meta.rungs ?? {};
+    /** Index of the rung whose title list is open — one at a time keeps the list calm. */
+    const [openRanks, setOpenRanks] = useState<number | null>(null);
 
     // ── "Test with employee" resolution preview ──────────────────────────────
     const { data: employees = [] } = useQuery({
@@ -136,6 +145,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
     if (!wf) return null;
     const ownerAllowed = OWNER_TYPES.includes(wf.request_type);
+    const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
 
     const submit = async () => {
         setServerError('');
@@ -166,7 +176,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 <div className="border-border/60 flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     {/* Name + flags */}
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Field label={t('wf_step_label')} name="name">
+                        <Field label={t('wf_name')} name="name">
                             <Input value={name} onChange={(e) => setName(e.target.value)} />
                         </Field>
                         <div className="grid grid-cols-2 gap-3">
@@ -181,140 +191,172 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         </div>
                     </div>
 
-                    {/* Step list */}
+                    {/* ── The ladder ───────────────────────────────────────────────
+                        Rungs stacked on a rail, because that is what a route is: each
+                        one a level of authority above the last. The final step carries a
+                        flag instead of a number — it is the destination, not a level. */}
                     <div>
-                        <SectionLabel>
-                            {t('wf_steps')} <span className="text-muted-foreground font-mono text-xs">· {steps.length}</span>
-                        </SectionLabel>
-                        <div className="space-y-2">
-                            {steps.map((s, i) => (
-                                <div key={i} className="border-border flex items-start gap-2.5 rounded-xl border px-3 py-2.5">
-                                    <span
-                                        className={cn(
-                                            'mt-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
-                                            s.kind === 'fulfillment'
-                                                ? 'bg-brand/10 text-brand'
-                                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-                                        )}
-                                    >
-                                        {i + 1}
-                                    </span>
-                                    <div className="grid min-w-0 flex-1 gap-2">
-                                        <div className="grid gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr]">
-                                            <Select
-                                                value={s.actor_type}
-                                                onValueChange={(v) => {
-                                                    const actor = v as WorkflowActorType;
-                                                    updStep(i, {
-                                                        actor_type: actor,
-                                                        // Sensible companions: IT staff fulfills; people approve.
-                                                        kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
-                                                        label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
-                                                    });
-                                                }}
-                                            >
-                                                <SelectTrigger className="h-9 font-medium">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
-                                                    {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
-                                                    <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <div>
+                        <div className="mb-3 flex items-end justify-between gap-3">
+                            <SectionLabel className="mb-0">
+                                {t('wf_steps')} <span className="text-muted-foreground font-mono text-xs">· {steps.length}</span>
+                            </SectionLabel>
+                            <Button variant="outline" size="sm" onClick={addStep}>
+                                <Plus className="h-4 w-4" />
+                                {t('wf_add_step')}
+                            </Button>
+                        </div>
+
+                        <div className="border-border/70 ml-3 space-y-3 border-l pl-5">
+                            {steps.map((s, i) => {
+                                const isEnd = s.actor_type === 'it_staff';
+                                const chosen = positions.filter((p) => s.position_ids.includes(p.id));
+                                return (
+                                    <div key={i} className="relative">
+                                        {/* Rung marker, sitting on the rail. */}
+                                        <span
+                                            className={cn(
+                                                'absolute top-2 -left-[29px] flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 font-mono text-[11px] font-bold',
+                                                isEnd
+                                                    ? 'border-brand/40 bg-brand/10 text-brand'
+                                                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                                            )}
+                                        >
+                                            {isEnd ? <Flag className="h-3 w-3" /> : i + 1}
+                                        </span>
+
+                                        <div className="border-border hover:border-border rounded-xl border px-3 py-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <Select
+                                                    value={s.actor_type}
+                                                    onValueChange={(v) => {
+                                                        const actor = v as WorkflowActorType;
+                                                        updStep(i, {
+                                                            actor_type: actor,
+                                                            // Derived, never asked: IT staff fulfills, people approve.
+                                                            kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
+                                                            label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
+                                                            position_ids: actor === 'chain' ? s.position_ids : [],
+                                                        });
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="h-9 w-[168px] shrink-0 font-medium">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
+                                                        {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
+                                                        <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                                 <Input
-                                                    className="h-9 text-sm"
+                                                    className="h-9 min-w-0 flex-1 text-sm"
                                                     value={s.label}
                                                     onChange={(e) => updStep(i, { label: e.target.value })}
                                                     list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
+                                                    aria-label={t('wf_step_label')}
                                                 />
-                                            </div>
-                                            <Select value={s.kind} onValueChange={(v) => updStep(i, { kind: v as EditableStep['kind'] })}>
-                                                <SelectTrigger className="h-9 font-medium">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="approval">{t('wf_approval')}</SelectItem>
-                                                    <SelectItem value="fulfillment">{t('wf_fulfillment')}</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        {/* Which titles may sign this rung. Only a chain step routes by
-                                            position; owner and IT resolve by other means. */}
-                                        {s.actor_type === 'chain' && (
-                                            <div>
-                                                <div className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wide uppercase">
-                                                    {t('wf_step_positions')}
+                                                <div className="flex shrink-0 items-center">
+                                                    <IconBtn disabled={i === 0} onClick={() => moveStep(i, -1)} label="up">
+                                                        <ArrowUp className="h-3.5 w-3.5" />
+                                                    </IconBtn>
+                                                    <IconBtn disabled={i === steps.length - 1} onClick={() => moveStep(i, 1)} label="down">
+                                                        <ArrowDown className="h-3.5 w-3.5" />
+                                                    </IconBtn>
+                                                    <IconBtn
+                                                        onClick={() => removeStep(i)}
+                                                        label="remove"
+                                                        className="text-destructive/70 hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </IconBtn>
                                                 </div>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {positions.map((p) => {
-                                                        const on = s.position_ids.includes(p.id);
-                                                        return (
-                                                            <button
+                                            </div>
+
+                                            {/* Who may sign this rung — the chosen titles read as a sentence;
+                                                the full list opens for one rung at a time. */}
+                                            {s.actor_type === 'chain' && (
+                                                <div className="mt-2 border-t border-dashed pt-2">
+                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                                                        <span className="text-muted-foreground text-xs">{t('wf_step_positions')}</span>
+                                                        {chosen.map((p) => (
+                                                            <span
                                                                 key={p.id}
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    updStep(i, {
-                                                                        position_ids: on
-                                                                            ? s.position_ids.filter((id) => id !== p.id)
-                                                                            : [...s.position_ids, p.id],
-                                                                    })
-                                                                }
-                                                                className={cn(
-                                                                    'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
-                                                                    on
-                                                                        ? 'border-brand bg-brand/10 text-brand'
-                                                                        : 'border-border text-muted-foreground hover:bg-accent/50',
-                                                                )}
+                                                                className="border-brand/30 bg-brand/5 text-brand rounded-full border px-2 py-0.5 text-xs font-medium"
                                                             >
                                                                 {p.title}
-                                                            </button>
-                                                        );
-                                                    })}
+                                                            </span>
+                                                        ))}
+                                                        {chosen.length === 0 && (
+                                                            <span className="text-destructive text-xs">{t('wf_step_positions_required')}</span>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setOpenRanks(openRanks === i ? null : i)}
+                                                            className="text-brand ml-auto text-xs font-semibold hover:underline"
+                                                        >
+                                                            {openRanks === i ? t('wf_ranks_done') : t('wf_ranks_edit')}
+                                                        </button>
+                                                    </div>
+
+                                                    {openRanks === i && (
+                                                        <div className="border-border/70 bg-muted/30 mt-2 space-y-2.5 rounded-lg border p-2.5">
+                                                            {/* A whole level in one click — the way the org names its own tiers. */}
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className="text-muted-foreground mr-0.5 text-[11px] font-semibold">
+                                                                    {t('wf_ranks_presets')}
+                                                                </span>
+                                                                {Object.entries(rungs).map(([rung, ids]) => (
+                                                                    <button
+                                                                        key={rung}
+                                                                        type="button"
+                                                                        onClick={() => updStep(i, { position_ids: ids })}
+                                                                        className="border-border bg-background hover:border-brand/50 hover:text-brand rounded-md border px-2 py-1 text-xs font-medium"
+                                                                    >
+                                                                        {t(`wf_rung_${rung}`)}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {positions.map((p) => {
+                                                                    const on = s.position_ids.includes(p.id);
+                                                                    return (
+                                                                        <button
+                                                                            key={p.id}
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                updStep(i, {
+                                                                                    position_ids: on
+                                                                                        ? s.position_ids.filter((id) => id !== p.id)
+                                                                                        : [...s.position_ids, p.id],
+                                                                                })
+                                                                            }
+                                                                            className={cn(
+                                                                                'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                                                                                on
+                                                                                    ? 'border-brand bg-brand/10 text-brand'
+                                                                                    : 'border-border text-muted-foreground hover:bg-accent/50',
+                                                                            )}
+                                                                        >
+                                                                            {on && <Check className="h-3 w-3" />}
+                                                                            {p.title}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {s.position_ids.length === 0 && (
-                                                    <p className="text-destructive mt-1.5 text-xs">{t('wf_step_positions_required')}</p>
-                                                )}
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="flex shrink-0 flex-col gap-0.5">
-                                        <IconBtn disabled={i === 0} onClick={() => moveStep(i, -1)} label="up">
-                                            <ArrowUp className="h-3.5 w-3.5" />
-                                        </IconBtn>
-                                        <IconBtn disabled={i === steps.length - 1} onClick={() => moveStep(i, 1)} label="down">
-                                            <ArrowDown className="h-3.5 w-3.5" />
-                                        </IconBtn>
-                                    </div>
-                                    <IconBtn
-                                        onClick={() => removeStep(i)}
-                                        label="remove"
-                                        className="text-destructive/70 hover:text-destructive mt-1.5"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </IconBtn>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <datalist id="wf-chain-labels">
                             {CHAIN_LABEL_PRESETS.map((l) => (
                                 <option key={l} value={l} />
                             ))}
                         </datalist>
-                        <Button variant="outline" size="sm" className="mt-3" onClick={addStep}>
-                            <Plus className="h-4 w-4" />
-                            {t('wf_add_step')}
-                        </Button>
-                    </div>
-
-                    {/* Live route preview */}
-                    <div>
-                        <SectionLabel>{t('wf_preview_title')}</SectionLabel>
-                        <div className="bg-muted/30 rounded-xl px-4 py-4">
-                            <WorkflowStrip steps={steps} />
-                        </div>
                     </div>
 
                     {/* Resolve against a real reporting line */}
@@ -351,9 +393,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         <Button variant="outline" onClick={onClose} disabled={update.isPending}>
                             {t('cancel')}
                         </Button>
-                        <Button onClick={submit} disabled={update.isPending || saveState === 'done'}>
+                        {/* A rung naming no position is refused by the API; say so here
+                            instead of spending a round trip to find out. */}
+                        <Button onClick={submit} disabled={update.isPending || saveState === 'done' || hasEmptyRung}>
                             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                            {saveState === 'done' ? (lang === 'th' ? 'บันทึกแล้ว' : 'Saved!') : t('save')}
+                            {saveState === 'done' ? t('saved') : t('save')}
                         </Button>
                     </div>
                 </div>
