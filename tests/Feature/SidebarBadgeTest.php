@@ -9,6 +9,7 @@ use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Request\ServiceRequest;
 use App\Models\Stock\StockCount;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockRequest;
@@ -116,6 +117,26 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(3, $badges['access']);
     }
 
+    public function test_an_approval_waiting_on_me_counts_towards_the_requests_badge(): void
+    {
+        $user = $this->seedWorkForEveryBadge();
+
+        // A request whose current step is this user's to decide. This count had no test,
+        // which is how the sidebar dropping it went unnoticed for so long.
+        $request = ServiceRequest::create([
+            'type' => 'computer', 'employee_id' => $user->employee_id, 'user_id' => $user->id,
+            'requester_name' => 'Badge Owner', 'title' => 'Laptop', 'reason' => 'Testing', 'status' => 'pending',
+        ]);
+        $request->approvals()->create([
+            'position' => 1, 'actor_type' => 'chain', 'kind' => 'approval', 'label' => 'Manager',
+            'approver_employee_id' => $user->employee_id, 'approver_name' => 'Badge Owner', 'status' => 'current',
+        ]);
+
+        $badges = $this->actingAs($user)->getJson('/api/sidebar-badges')->assertOk()->json('data');
+
+        $this->assertSame(1, $badges['requests']);
+    }
+
     public function test_counts_the_user_may_not_see_come_back_as_zero(): void
     {
         $this->seedWorkForEveryBadge();
@@ -133,6 +154,7 @@ class SidebarBadgeTest extends TestCase
         $this->assertSame(0, $badges['my_assets']);
         $this->assertSame(0, $badges['access']);
         $this->assertSame(0, $badges['stock']);
+        $this->assertSame(0, $badges['requests']);
         // tickets.create is granted, but this user filed nothing and may not take cases.
         $this->assertSame(0, $badges['tickets']);
     }

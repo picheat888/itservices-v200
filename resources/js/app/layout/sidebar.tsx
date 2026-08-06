@@ -27,6 +27,8 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     // All "needs attention" counts arrive together from one endpoint, which decides per
     // count what this user is allowed to see (anything else comes back as 0).
     const counts = useSidebarBadges(user != null);
+    // Keyed by nav item id. A count the endpoint returns but that is missing here shows
+    // no badge at all — which is how the Requests count went unnoticed.
     const badges: Record<string, number> = {
         stock: counts.stock,
         contracts: counts.contracts,
@@ -35,6 +37,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
         access: counts.access,
         tickets: counts.tickets,
         employees: counts.employees,
+        requests: counts.requests,
     };
     const canSee = (i: (typeof navGroups)[number]['items'][number]) => {
         if (i.anyOf) return i.anyOf.some((p) => perms.includes(p));
