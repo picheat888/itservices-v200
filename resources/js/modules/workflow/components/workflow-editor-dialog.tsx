@@ -61,8 +61,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const [steps, setSteps] = useState<EditableStep[]>([]);
     const [serverError, setServerError] = useState('');
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
+    /** Index of the rung whose title list is open — one at a time keeps the list calm. */
+    const [openRanks, setOpenRanks] = useState<number | null>(null);
 
-    // Hydrate from the opened workflow.
+    // Hydrate from the opened workflow. Everything transient resets here, including
+    // the open rank panel: it used to survive a close and reopen of the dialog.
     useEffect(() => {
         if (!workflow) return;
         setName(workflow.name);
@@ -80,11 +83,19 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setSaveState('idle');
         setPreviewEmployee('');
         setPreviewRows(null);
+        setOpenRanks(null);
     }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const updStep = (i: number, patch: Partial<EditableStep>) => setSteps((list) => list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
-    const removeStep = (i: number) => setSteps((list) => list.filter((_, idx) => idx !== i));
-    const moveStep = (i: number, dir: -1 | 1) =>
+
+    // The open rank panel is tracked by index, so anything that reorders or shortens
+    // the list closes it — otherwise it reopens on whichever step slid into that slot.
+    const removeStep = (i: number) => {
+        setOpenRanks(null);
+        setSteps((list) => list.filter((_, idx) => idx !== i));
+    };
+    const moveStep = (i: number, dir: -1 | 1) => {
+        setOpenRanks(null);
         setSteps((list) => {
             const j = i + dir;
             if (j < 0 || j >= list.length) return list;
@@ -92,6 +103,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             [next[i], next[j]] = [next[j], next[i]];
             return next;
         });
+    };
     const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval', position_ids: [] }]);
 
     // The job titles a rung can name — Employee-module master data, read through the
@@ -103,8 +115,6 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         enabled: !!workflow,
     });
     const positions = positionData ?? [];
-    /** Index of the rung whose title list is open — one at a time keeps the list calm. */
-    const [openRanks, setOpenRanks] = useState<number | null>(null);
 
     // ── "Test with employee" resolution preview ──────────────────────────────
     const { data: employees = [] } = useQuery({
