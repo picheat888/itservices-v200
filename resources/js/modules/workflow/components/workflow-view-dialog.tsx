@@ -92,6 +92,16 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                                         <div className="text-muted-foreground text-xs">
                                             {s.kind === 'fulfillment' ? t('wf_fulfillment') : t('wf_approval')}
                                         </div>
+                                        {/* The titles this rung accepts — what resolution matches on. */}
+                                        {s.positions.length > 0 && (
+                                            <div className="mt-1.5 flex flex-wrap gap-1">
+                                                {s.positions.map((p) => (
+                                                    <span key={p.id} className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[11px]">
+                                                        {p.title}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

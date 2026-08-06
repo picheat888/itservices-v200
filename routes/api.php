@@ -225,6 +225,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpi
     Route::middleware('permission:workflows.manage')->group(function () {
         Route::get('workflows', [WorkflowController::class, 'index'])->name('api.workflows.index');
         Route::get('workflows/employee-options', [WorkflowController::class, 'employeeOptions'])->name('api.workflows.employee-options');
+        Route::get('workflows/position-options', [WorkflowController::class, 'positionOptions'])->name('api.workflows.position-options');
         Route::post('workflows/preview', [WorkflowController::class, 'preview'])->name('api.workflows.preview');
         Route::put('workflows/{workflow}', [WorkflowController::class, 'update'])->name('api.workflows.update');
     });

@@ -35,6 +35,10 @@ class UpdateWorkflowRequest extends FormRequest
             'steps.*.actor_type' => ['required', Rule::enum(StepActorType::class)],
             'steps.*.label' => ['required', 'string', 'min:2', 'max:120'],
             'steps.*.kind' => ['required', Rule::enum(WorkflowStepKind::class)],
+            // The positions allowed to sign a chain step. Required there (a rung that
+            // names nobody can never resolve) and meaningless on the other actor types.
+            'steps.*.position_ids' => ['array'],
+            'steps.*.position_ids.*' => ['integer', 'exists:positions,id'],
         ];
     }
 
@@ -57,6 +61,14 @@ class UpdateWorkflowRequest extends FormRequest
                 }
                 if ($fulfillments->first()['actor_type'] !== StepActorType::ItStaff->value) {
                     $v->errors()->add('steps', 'Fulfillment is performed by IT Staff.');
+                }
+            }
+
+            // A chain rung is defined by the positions that may sign it; without any,
+            // resolution would climb the reporting line looking for nobody.
+            foreach ($steps->values() as $index => $step) {
+                if (($step['actor_type'] ?? null) === StepActorType::Chain->value && empty($step['position_ids'])) {
+                    $v->errors()->add("steps.{$index}.position_ids", 'Choose at least one position that may approve this step.');
                 }
             }
 

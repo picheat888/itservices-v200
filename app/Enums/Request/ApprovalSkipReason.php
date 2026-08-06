@@ -15,6 +15,13 @@ enum ApprovalSkipReason: string
     /** The requester has nobody above them, so a chain step has no one to resolve to. */
     case NoManager = 'no_manager';
 
+    /**
+     * Nobody in the reporting line holds a position this step accepts — a Supervisor
+     * filing their own request has no Supervisor above them, and the level is skipped
+     * rather than handed to somebody who does not hold it.
+     */
+    case NoMatchingPosition = 'no_matching_position';
+
     /** The resource asked for carries no owner, or its owner has left the company. */
     case NoResourceOwner = 'no_resource_owner';
 

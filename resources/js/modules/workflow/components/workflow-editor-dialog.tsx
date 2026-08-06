@@ -19,7 +19,13 @@ import { workflowApi, type ResolvedPreviewRow } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
 import { WorkflowStrip } from './workflow-strip';
 
-type EditableStep = Omit<WorkflowStep, 'id' | 'position'>;
+/** A step being edited — positions held as ids, which is what the API takes. */
+type EditableStep = {
+    actor_type: WorkflowStep['actor_type'];
+    label: string;
+    kind: WorkflowStep['kind'];
+    position_ids: number[];
+};
 
 /** Types whose Access resources carry an owner — the only ones an Owner step can serve. */
 const OWNER_TYPES: ServiceRequestType[] = ['mailgroup', 'fileshare', 'recovery'];
@@ -57,7 +63,14 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setName(workflow.name);
         setActive(workflow.active);
         setAutoTicket(workflow.auto_ticket);
-        setSteps(workflow.steps.map((s) => ({ actor_type: s.actor_type, label: s.label, kind: s.kind })));
+        setSteps(
+            workflow.steps.map((s) => ({
+                actor_type: s.actor_type,
+                label: s.label,
+                kind: s.kind,
+                position_ids: s.positions.map((p) => p.id),
+            })),
+        );
         setServerError('');
         setSaveState('idle');
         setPreviewEmployee('');
@@ -74,7 +87,16 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             [next[i], next[j]] = [next[j], next[i]];
             return next;
         });
-    const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval' }]);
+    const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval', position_ids: [] }]);
+
+    // The job titles a rung can name — Employee-module master data, read through the
+    // workflows.manage gate so editing a route needs no position permission.
+    const { data: positions = [] } = useQuery({
+        queryKey: ['workflow-position-options'],
+        queryFn: workflowApi.positionOptions,
+        staleTime: 5 * 60_000,
+        enabled: !!workflow,
+    });
 
     // ── "Test with employee" resolution preview ──────────────────────────────
     const { data: employees = [] } = useQuery({
@@ -177,45 +199,86 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                     >
                                         {i + 1}
                                     </span>
-                                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr]">
-                                        <Select
-                                            value={s.actor_type}
-                                            onValueChange={(v) => {
-                                                const actor = v as WorkflowActorType;
-                                                updStep(i, {
-                                                    actor_type: actor,
-                                                    // Sensible companions: IT staff fulfills; people approve.
-                                                    kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
-                                                    label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
-                                                });
-                                            }}
-                                        >
-                                            <SelectTrigger className="h-9 font-medium">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
-                                                {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
-                                                <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <div>
-                                            <Input
-                                                className="h-9 text-sm"
-                                                value={s.label}
-                                                onChange={(e) => updStep(i, { label: e.target.value })}
-                                                list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
-                                            />
+                                    <div className="grid min-w-0 flex-1 gap-2">
+                                        <div className="grid gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr]">
+                                            <Select
+                                                value={s.actor_type}
+                                                onValueChange={(v) => {
+                                                    const actor = v as WorkflowActorType;
+                                                    updStep(i, {
+                                                        actor_type: actor,
+                                                        // Sensible companions: IT staff fulfills; people approve.
+                                                        kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
+                                                        label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
+                                                    });
+                                                }}
+                                            >
+                                                <SelectTrigger className="h-9 font-medium">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
+                                                    {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
+                                                    <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <div>
+                                                <Input
+                                                    className="h-9 text-sm"
+                                                    value={s.label}
+                                                    onChange={(e) => updStep(i, { label: e.target.value })}
+                                                    list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
+                                                />
+                                            </div>
+                                            <Select value={s.kind} onValueChange={(v) => updStep(i, { kind: v as EditableStep['kind'] })}>
+                                                <SelectTrigger className="h-9 font-medium">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="approval">{t('wf_approval')}</SelectItem>
+                                                    <SelectItem value="fulfillment">{t('wf_fulfillment')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
-                                        <Select value={s.kind} onValueChange={(v) => updStep(i, { kind: v as EditableStep['kind'] })}>
-                                            <SelectTrigger className="h-9 font-medium">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="approval">{t('wf_approval')}</SelectItem>
-                                                <SelectItem value="fulfillment">{t('wf_fulfillment')}</SelectItem>
-                                            </SelectContent>
-                                        </Select>
+
+                                        {/* Which titles may sign this rung. Only a chain step routes by
+                                            position; owner and IT resolve by other means. */}
+                                        {s.actor_type === 'chain' && (
+                                            <div>
+                                                <div className="text-muted-foreground mb-1.5 text-[11px] font-semibold tracking-wide uppercase">
+                                                    {t('wf_step_positions')}
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {positions.map((p) => {
+                                                        const on = s.position_ids.includes(p.id);
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    updStep(i, {
+                                                                        position_ids: on
+                                                                            ? s.position_ids.filter((id) => id !== p.id)
+                                                                            : [...s.position_ids, p.id],
+                                                                    })
+                                                                }
+                                                                className={cn(
+                                                                    'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                                                                    on
+                                                                        ? 'border-brand bg-brand/10 text-brand'
+                                                                        : 'border-border text-muted-foreground hover:bg-accent/50',
+                                                                )}
+                                                            >
+                                                                {p.title}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                                {s.position_ids.length === 0 && (
+                                                    <p className="text-destructive mt-1.5 text-xs">{t('wf_step_positions_required')}</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex shrink-0 flex-col gap-0.5">
                                         <IconBtn disabled={i === 0} onClick={() => moveStep(i, -1)} label="up">

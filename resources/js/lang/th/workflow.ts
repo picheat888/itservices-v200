@@ -53,6 +53,8 @@ export const workflow: Dict = {
     wf_step_actor: 'ผู้ดำเนินการ',
     wf_step_label: 'ป้ายที่แสดง',
     wf_step_kind: 'ชนิดขั้นตอน',
+    wf_step_positions: 'ตำแหน่งที่อนุมัติขั้นนี้ได้',
+    wf_step_positions_required: 'เลือกอย่างน้อย 1 ตำแหน่ง — ขั้นที่ไม่ระบุตำแหน่งจะหาผู้อนุมัติไม่ได้เลย',
     wf_actor_chain: 'สายบังคับบัญชา',
     wf_actor_owner: 'เจ้าของ Resource',
     wf_actor_it: 'ทีม IT',
