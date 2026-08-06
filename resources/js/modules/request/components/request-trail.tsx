@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
+import { REQUEST_SKIP_REASON_LABEL } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { RequestApproval, ServiceRequest } from '@/shared/types';
+import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
 import { Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
 
 type TrailTone = 'done' | 'current' | 'rejected' | 'skipped' | 'queued';
@@ -13,6 +14,8 @@ interface TrailItem {
     note?: string | null;
     /** Step is open but its approver cannot sign in yet — said in the reader's language. */
     awaitingAccount?: boolean;
+    /** Why the engine skipped the step, if it did — also written in the reader's language. */
+    skipReason?: ApprovalSkipReason | null;
 }
 
 /**
@@ -80,6 +83,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             meta: isFulfillment && row.status === 'waiting' ? t('req_trail_after_approvals') : stepMeta(row),
             note: row.note,
             awaitingAccount: row.awaiting_account,
+            skipReason: row.skip_reason,
         });
         // Fulfillment row also carries the auto-ticket footnote once opened.
         if (isFulfillment && request.ticket) {
@@ -118,6 +122,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                             {item.title}
                         </div>
                         <div className="text-muted-foreground mt-0.5 text-xs leading-snug">{item.meta}</div>
+                        {item.skipReason && (
+                            <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
+                                <SkipForward className="h-3.5 w-3.5 shrink-0" />
+                                {t(REQUEST_SKIP_REASON_LABEL[item.skipReason])}
+                            </div>
+                        )}
                         {item.awaitingAccount && (
                             <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                                 <KeyRound className="h-3.5 w-3.5 shrink-0" />

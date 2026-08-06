@@ -3,6 +3,7 @@
 namespace App\Services\Request;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\ApprovalSkipReason;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\StepActorType;
@@ -86,6 +87,7 @@ class WorkflowResolverService
                 'approver_name' => null,
                 'status' => ApprovalStatus::Waiting->value,
                 'note' => null,
+                'skip_reason' => null,
             ];
 
             if ($actorType === StepActorType::ItStaff) {
@@ -117,12 +119,12 @@ class WorkflowResolverService
             if ($owner === null) {
                 $rows->push([...$base,
                     'status' => ApprovalStatus::Skipped->value,
-                    'note' => 'Skipped — the selected resource has no eligible owner.',
+                    'skip_reason' => ApprovalSkipReason::NoResourceOwner->value,
                 ]);
             } elseif ($owner->id === $requester->id) {
                 $rows->push([...$base,
                     'status' => ApprovalStatus::Skipped->value,
-                    'note' => 'Skipped — the requester is the resource owner.',
+                    'skip_reason' => ApprovalSkipReason::RequesterIsOwner->value,
                 ]);
             } else {
                 $rows->push([...$base,
@@ -143,7 +145,8 @@ class WorkflowResolverService
                 'approver_employee_id' => null,
                 'approver_name' => null,
                 'status' => ApprovalStatus::Skipped->value,
-                'note' => 'Skipped — requester has no manager configured.',
+                'note' => null,
+                'skip_reason' => ApprovalSkipReason::NoManager->value,
             ]);
         }
 

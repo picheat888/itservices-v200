@@ -2,6 +2,7 @@
 
 namespace App\Models\Request;
 
+use App\Enums\Request\ApprovalSkipReason;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
@@ -20,7 +21,8 @@ class RequestApproval extends Model
     protected $fillable = [
         'service_request_id', 'position', 'actor_type', 'kind', 'label', 'sla_days',
         'approver_employee_id', 'approver_name',
-        'status', 'note', 'acted_by_user_id', 'acted_by_name',
+        // note = what a person wrote · skip_reason = why the engine skipped the step
+        'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name',
         'became_current_at', 'due_at', 'acted_at',
     ];
 
@@ -31,6 +33,7 @@ class RequestApproval extends Model
             'actor_type' => StepActorType::class,
             'kind' => WorkflowStepKind::class,
             'status' => ApprovalStatus::class,
+            'skip_reason' => ApprovalSkipReason::class,
             'sla_days' => 'decimal:2',
             'became_current_at' => 'datetime',
             'due_at' => 'datetime',
