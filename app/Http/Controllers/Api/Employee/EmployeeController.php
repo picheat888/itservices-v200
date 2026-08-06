@@ -11,11 +11,15 @@ use App\Http\Resources\Employee\EmployeeResource;
 use App\Http\Resources\Employee\OrgChartNodeResource;
 use App\Models\Asset\Asset;
 use App\Models\AuditLog;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Services\Access\AccessService;
 use App\Services\Employee\ApprovalChainService;
+use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -103,7 +107,10 @@ class EmployeeController extends Controller
         $user->tokens()->delete();
     }
 
-    public function __construct(private readonly EmployeeService $service) {}
+    public function __construct(
+        private readonly EmployeeService $service,
+        private readonly EmployeeImportService $importService,
+    ) {}
 
     /**
      * Pull the uploaded photo (if any) out of the validated data and replace
@@ -261,15 +268,18 @@ class EmployeeController extends Controller
     }
 
     /**
-     * Streams a CSV template (UTF-8 BOM so Excel renders Thai) with the import
-     * column headers and one example row.
+     * Streams a CSV template (UTF-8 BOM so Excel renders Thai) with the import column
+     * headers and one example row. The example is filled from the master data actually
+     * present — a real department tag, one of ITS sections, a normal position title and
+     * an existing employee code — so the file shows the spelling the import expects
+     * instead of names somebody has to guess at.
      */
     public function importTemplate(Request $request): StreamedResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
-        $headers = ['code', 'first_name', 'last_name', 'first_name_th', 'last_name_th', 'email', 'phone', 'department', 'position', 'joined_at'];
-        $sample = ['', 'John', 'Doe', 'จอห์น', 'โด', 'john.doe@abcd.co.th', '+66 81 000 0000', 'IT', 'PST-0002', '2024-01-15'];
+        $headers = EmployeeImportService::COLUMNS;
+        $sample = $this->importSampleRow();
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');
@@ -281,6 +291,67 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Example row for the template: real master-data spellings when the tables are
+     * populated, static placeholders on a bare install.
+     *
+     * @return list<string>
+     */
+    private function importSampleRow(): array
+    {
+        $department = Department::orderBy('id')->first();
+        $section = $department ? Section::where('department_id', $department->id)->orderBy('id')->first() : null;
+        $position = Position::where('allow_special_position', false)->orderBy('id')->first();
+        // Someone at the top of the tree is the safest example of a person to report to.
+        $manager = Employee::whereNotNull('code')->whereNull('manager_id')->orderBy('id')->first();
+
+        return [
+            '',                                        // employee_code — blank lets the system assign EMP-####
+            'John',
+            'Doe',
+            'จอห์น',
+            'โด',
+            'john.doe@abcd.co.th',
+            '+66 81 000 0000',
+            $department->tag ?? 'It',
+            $section->name ?? 'Support',
+            $position->title ?? 'Staff/Officer',
+            '2024-01-15',
+            $manager->code ?? 'EMP-1001',
+        ];
+    }
+
+    /**
+     * Dry-runs an uploaded CSV: same rules as the real import, nothing written. Returns
+     * every row with its resolved department / section / position / manager plus the
+     * errors it would raise, so the dialog can show what is about to be saved. A file
+     * full of errors is still a 200 — this is a report, not a failed action.
+     */
+    public function importPreview(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+
+        $rows = $this->readImportFile($request);
+        if ($rows instanceof JsonResponse) {
+            return $rows;
+        }
+
+        $result = $this->importService->importRows($rows, dryRun: true);
+        $valid = count(array_filter($result['rows'], fn (array $row) => $row['errors'] === []));
+
+        return response()->json([
+            'message' => 'success',
+            'data' => $result['rows'],
+            'errors' => $result['errors'],
+            'meta' => [
+                'total' => count($result['rows']),
+                'valid' => $valid,
+                'invalid' => count($result['rows']) - $valid,
+                'ignored_columns' => $this->unknownImportColumns($rows),
+            ],
+        ]);
+    }
+
+    /**
      * Bulk-imports employees from an uploaded CSV. Validation is all-or-nothing:
      * any bad row aborts the whole import and returns a 422 with per-row errors.
      */
@@ -288,18 +359,12 @@ class EmployeeController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
 
-        $request->validate(['file' => ['required', 'file', 'max:5120']]);
-        $file = $request->file('file');
-        if (! in_array(strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
-            return response()->json(['message' => 'รองรับเฉพาะไฟล์ .csv'], 422);
+        $rows = $this->readImportFile($request);
+        if ($rows instanceof JsonResponse) {
+            return $rows;
         }
 
-        $rows = $this->readCsv($file->getRealPath());
-        if ($rows === null || count($rows) === 0) {
-            return response()->json(['message' => 'ไฟล์ว่างหรืออ่านไม่ได้'], 422);
-        }
-
-        $result = $this->service->importRows($rows);
+        $result = $this->importService->importRows($rows);
 
         if (count($result['errors']) > 0) {
             return response()->json([
@@ -311,6 +376,44 @@ class EmployeeController extends Controller
         AuditLog::record('Imported employees', $result['imported'].' รายการ');
 
         return response()->json(['message' => 'success', 'imported' => $result['imported']]);
+    }
+
+    /**
+     * Validates the upload and parses it, or returns the 422 to send back. Shared by
+     * the preview and the real import so both accept exactly the same files.
+     *
+     * @return array<int, array<string, string>>|JsonResponse
+     */
+    private function readImportFile(Request $request): array|JsonResponse
+    {
+        $request->validate(['file' => ['required', 'file', 'max:5120']]);
+        $file = $request->file('file');
+        if (! in_array(strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
+            return response()->json(['message' => 'รองรับเฉพาะไฟล์ .csv'], 422);
+        }
+
+        $rows = $this->readCsv($file->getRealPath());
+        if ($rows === null || count($rows) === 0) {
+            return response()->json(['message' => 'ไฟล์ว่างหรืออ่านไม่ได้'], 422);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Columns in the uploaded file that the import has no field for. They are ignored
+     * rather than rejected (an HR export carries plenty of payroll columns), but the
+     * preview names them so nobody assumes a column was saved when it was not.
+     *
+     * @param  array<int, array<string, string>>  $rows
+     * @return list<string>
+     */
+    private function unknownImportColumns(array $rows): array
+    {
+        $known = array_merge(EmployeeImportService::COLUMNS, ['code']); // 'code' = the old template's name
+        $present = array_keys($rows[0] ?? []);
+
+        return array_values(array_filter($present, fn ($column) => $column !== '' && ! in_array($column, $known, true)));
     }
 
     /**

@@ -1363,3 +1363,41 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 ### Tests / Verification
 
 `RequestOptionTest` (16) รวมลำดับ/ลาก/สิทธิ์/FK ข้ามรายการ/FK ระดับฐานข้อมูล/กันลบตัวที่ถูกใช้ · `SettingsPermissionsTest` อัปเดตเป็น 9 คีย์ · **ทั้ง suite = 788 passed / 3,090 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · migrate + `RequestOptionSeeder` รันบนฐานจริงแล้ว
+
+---
+
+## Employee Import v2 — ตามผังองค์กรจริง + ตรวจก่อนนำเข้า (2026-08-05)
+
+ตัว import เดิมเขียนไว้ก่อนที่ระบบจะมี **section** และ **สายบังคับบัญชา** จึงนำเข้าได้แค่ 10 คอลัมน์และสร้างพนักงานที่ไม่มีหน่วยงาน/ไม่มีผู้บังคับบัญชา — คนที่ import เข้ามาไม่ขึ้นบนผังองค์กรและผิดกฎที่ฟอร์มปกติบังคับอยู่ (`StoreEmployeeRequest`) รอบนี้ยกเครื่องทั้งเส้น
+
+### 1. Template ใหม่ 12 คอลัมน์ (จับคู่ master data ด้วย "ข้อความ")
+
+`employee_code, first_name, last_name, first_name_th, last_name_th, email, phone, department, section, position, joined_at, report_to_employee_code`
+
+- เดิมบังคับกรอก **รหัส** (`department` = tag, `position` = `PST-0002`) ซึ่งคนกรอกไฟล์ไม่มีทางรู้ — ตอนนี้ทั้งสามช่องรับ **ข้อความที่คนใช้จริง**: department = tag / `DEP-####` / ชื่อ EN / ชื่อไทย · section = ชื่อ หรือ `SEC-####` · position = ชื่อตำแหน่ง (`Manager`) หรือ `PST-####` — ตัดช่องว่างและไม่สนตัวพิมพ์ใหญ่เล็ก
+- **section หาเฉพาะในแผนกของแถวนั้น** ไม่ใช่ทั้งระบบ (กฎเดียวกับฟอร์ม) — `department=It, section=Quality Control` ถูกปฏิเสธ เพราะ Quality Control เป็นหน่วยงานของแผนก QC
+- **ข้อความที่ตรงกับ 2 รายการ = error ไม่ใช่เดา** (index เก็บทุก id ที่คำนั้นชี้ไป) — ผังจริงตอนนี้ไม่มีคำกำกวมเลย และมีเทสต์ seed master data จริงคุมไว้ ถ้าวันหนึ่งมีชื่อชนกัน เทสต์จะแตกก่อนที่คนจะถูกใส่ผิดหน่วยงาน
+- `employee_code` เว้นว่าง = ระบบออก `EMP-####` ให้ · header เดิมชื่อ `code` ยังใช้ได้ (ไฟล์ที่โหลดไปก่อนหน้านี้ไม่พัง)
+- ตัวอย่างในไฟล์ template **ดึงจาก master data ที่มีจริง** (tag แผนกแรก, หน่วยงานของแผนกนั้น, ตำแหน่งปกติตัวแรก, รหัสคนบนสุดของผัง) ไฟล์จึงบอกตัวสะกดที่ระบบต้องการด้วยตัวเอง
+
+### 2. สายบังคับบัญชามาพร้อมไฟล์
+
+- `report_to_employee_code` ชี้ด้วยรหัสพนักงาน — **หัวหน้าอยู่แถวล่างกว่าลูกน้องได้** เพราะเขียนสองรอบใน transaction เดียว (สร้างทุกคนก่อน แล้วผูก `manager_id`)
+- ปฏิเสธก่อนเขียน: รหัสที่ไม่มีทั้งในฐานและในไฟล์ · ชี้ตัวเอง · **วนเป็นลูป** (A→B, B→A) ตามกฎกันลูปของฟอร์ม
+- กฎ **special position** เหมือนฟอร์มเป๊ะ: ตำแหน่งปกติต้องมี department + section + report_to ครบ · Vice President (`allow_special_position`) เว้นได้ทั้งสามช่องเพราะเป็นยอดของผัง
+
+### 3. ตรวจก่อนนำเข้า (dry-run) แทนการเดา
+
+- `POST employees/import/preview` — กฎเดียวกับของจริง ไม่เขียนอะไรเลย คืนทุกแถวพร้อม **หน่วยงาน/ตำแหน่ง/หัวหน้าที่ resolve ได้แล้ว** + เหตุผลที่แถวนั้นผ่านไม่ได้ · ไฟล์ที่ผิดยังตอบ 200 (เป็นรายงาน ไม่ใช่คำสั่งที่ล้มเหลว)
+- Dialog เลือกไฟล์แล้ว preview ขึ้นเอง: ชิปนับ ทั้งหมด / พร้อมนำเข้า / มีข้อผิดพลาด → ตาราง `ImportPreviewTable` (แถวผิดแดงพร้อมข้อความใต้แถว) → ปุ่มนำเข้าปลดล็อกเมื่อไฟล์สะอาดทั้งไฟล์ (ฝั่งเซิร์ฟเวอร์ยัง all-or-nothing เหมือนเดิม)
+- **คอลัมน์แปลกในไฟล์ HR ไม่ทำให้ทั้งไฟล์ตก** — ระบบข้ามให้แล้วบอกชื่อคอลัมน์ที่ข้าม (`meta.ignored_columns`) ไม่ให้ใครเข้าใจผิดว่าเงินเดือนถูกบันทึกไปด้วย
+- เลิก hardcode ข้อความในคอมโพเนนต์ (เดิม `lang === 'th' ? … : …`) → คีย์ `import_*` ครบทั้ง en/th
+
+### 4. โครงโค้ด
+
+`importRows` ย้ายออกจาก `EmployeeService` (ที่ทำ 6 หน้าที่อยู่แล้ว) ไปเป็น **`App\Services\Employee\EmployeeImportService`** — index ของ master data, กฎต่อแถว, ตรวจลูป, เขียนสองรอบ อยู่ที่เดียว · `EmployeeImportService::COLUMNS` เป็นต้นทางเดียวของหัวตาราง (template, การเช็คคอลัมน์แปลก, และเทสต์ อ่านจากค่านี้)
+
+### Tests / Verification
+
+`EmployeeImportTest` (17 tests / 72 assertions) — text matching ทั้งสามช่อง · section ผิดแผนก · ข้อความกำกวม · กฎ special position · หัวหน้าอยู่ท้ายไฟล์ · ลูป · header เดิม `code` · dry-run ไม่เขียน · endpoint preview/import/template · และ **เทสต์ที่ seed ผังองค์กรจริง** (`DepartmentSeeder`/`SectionSeeder`/`PositionSeeder`) แล้วยืนยันว่าคำที่ HR พิมพ์ resolve ได้ตัวเดียว
+**ทั้ง suite = 839 passed / 3,265 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน

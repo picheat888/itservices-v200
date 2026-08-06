@@ -3,9 +3,7 @@
 namespace App\Services\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
-use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
-use App\Models\Employee\Position;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
@@ -14,7 +12,6 @@ use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
 use App\Services\Email\EmailNotificationService;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 
@@ -134,139 +131,6 @@ class EmployeeService
         ]);
 
         return $employee->load(['department', 'position']);
-    }
-
-    /**
-     * Validates and bulk-imports employee rows parsed from a CSV.
-     * All-or-nothing: if ANY row fails validation, nothing is imported and the
-     * full error list is returned so the user can fix the file and retry.
-     * Department/Position are matched by their code. No login accounts and no
-     * "credentials needed" notifications are created (bulk import would spam);
-     * accounts are provisioned later via the normal set-credentials flow.
-     *
-     * @param  array<int, array<string, string>>  $rows  each keyed by column name
-     * @return array{imported: int, errors: list<array{row: int, message: string}>}
-     */
-    public function importRows(array $rows): array
-    {
-        $deptByTag = Department::pluck('id', 'tag');
-        $posByCode = Position::pluck('id', 'code');
-        $existingCodes = Employee::pluck('code')->flip();
-        $existingEmails = Employee::whereNotNull('email')->pluck('email')
-            ->mapWithKeys(fn ($e) => [strtolower($e) => true]);
-        // Imported rows never own a login account yet, so ANY user email is a conflict.
-        $existingUserEmails = User::whereNotNull('email')->pluck('email')
-            ->mapWithKeys(fn ($e) => [strtolower($e) => true]);
-
-        $errors = [];
-        $prepared = [];
-        $seenCodes = [];
-        $seenEmails = [];
-
-        foreach ($rows as $i => $row) {
-            $line = $i + 2; // +1 for header, +1 for 1-based line numbers
-            $code = trim($row['code'] ?? '');
-            $firstName = trim($row['first_name'] ?? '');
-            $lastName = trim($row['last_name'] ?? '');
-            $email = trim($row['email'] ?? '');
-            $deptCode = trim($row['department'] ?? '');
-            $posCode = trim($row['position'] ?? '');
-            $joined = trim($row['joined_at'] ?? '');
-            $rowErr = [];
-
-            if ($firstName === '') {
-                $rowErr[] = 'first_name ว่าง';
-            }
-            if ($lastName === '') {
-                $rowErr[] = 'last_name ว่าง';
-            }
-
-            if ($code !== '') {
-                if (isset($existingCodes[$code])) {
-                    $rowErr[] = "code '{$code}' ซ้ำกับที่มีอยู่";
-                }
-                if (isset($seenCodes[$code])) {
-                    $rowErr[] = "code '{$code}' ซ้ำในไฟล์";
-                }
-                $seenCodes[$code] = true;
-            }
-
-            if ($email !== '') {
-                $lower = strtolower($email);
-                if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    $rowErr[] = "email '{$email}' ไม่ถูกต้อง";
-                }
-                if (isset($existingEmails[$lower])) {
-                    $rowErr[] = "email '{$email}' ซ้ำกับที่มีอยู่";
-                }
-                if (isset($existingUserEmails[$lower])) {
-                    $rowErr[] = "email '{$email}' ซ้ำกับบัญชีผู้ใช้ในระบบ";
-                }
-                if (isset($seenEmails[$lower])) {
-                    $rowErr[] = "email '{$email}' ซ้ำในไฟล์";
-                }
-                $seenEmails[$lower] = true;
-            }
-
-            $deptId = null;
-            if ($deptCode !== '') {
-                $deptId = $deptByTag[$deptCode] ?? null;
-                if (! $deptId) {
-                    $rowErr[] = "department code '{$deptCode}' ไม่พบ";
-                }
-            }
-
-            $posId = null;
-            if ($posCode !== '') {
-                $posId = $posByCode[$posCode] ?? null;
-                if (! $posId) {
-                    $rowErr[] = "position code '{$posCode}' ไม่พบ";
-                }
-            }
-
-            if ($joined !== '') {
-                $d = \DateTime::createFromFormat('Y-m-d', $joined);
-                if (! $d || $d->format('Y-m-d') !== $joined) {
-                    $rowErr[] = "joined_at '{$joined}' ต้องเป็นรูปแบบ YYYY-MM-DD";
-                }
-            }
-
-            if ($rowErr) {
-                $errors[] = ['row' => $line, 'message' => implode(', ', $rowErr)];
-
-                continue;
-            }
-
-            $prepared[] = [
-                'code' => $code !== '' ? $code : null,
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'first_name_th' => trim($row['first_name_th'] ?? '') ?: null,
-                'last_name_th' => trim($row['last_name_th'] ?? '') ?: null,
-                'email' => $email !== '' ? $email : null,
-                'phone' => trim($row['phone'] ?? '') ?: null,
-                'department_id' => $deptId,
-                'position_id' => $posId,
-                'joined_at' => $joined !== '' ? $joined : null,
-                'status' => EmployeeStatus::Active,
-            ];
-        }
-
-        if (! empty($errors)) {
-            return ['imported' => 0, 'errors' => $errors];
-        }
-
-        $defaultGroupId = (int) AppSetting::get('default_employee_group_id', 0);
-        $group = $defaultGroupId ? GroupRole::find($defaultGroupId) : null;
-
-        DB::transaction(function () use ($prepared, $group) {
-            foreach ($prepared as $data) {
-                $employee = Employee::create($data); // code auto-generated when null
-                $group?->employees()->syncWithoutDetaching([$employee->id]);
-            }
-        });
-
-        return ['imported' => count($prepared), 'errors' => []];
     }
 
     /** Returns the role_id from the employee's first GroupRole, or the base 'user' role id. */
