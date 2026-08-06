@@ -61,6 +61,14 @@ class ServiceRequestResource extends JsonResource
                 'name' => $this->requester_name,
                 'department' => $this->department_name,
             ],
+            // Why this request exists — 'onboarding' is what makes the list and the
+            // detail mark it as a new hire rather than a colleague's own request.
+            'origin' => $this->origin?->value,
+            // Who filed it. Only interesting when that is somebody other than the
+            // owner, so it is null for an ordinary submission.
+            'submitted_by' => $this->origin?->isOnBehalf() && $this->submitted_by_user_id !== null
+                ? ['user_id' => $this->submitted_by_user_id, 'name' => $this->submitted_by_name]
+                : null,
             'workflow' => [
                 'id' => $this->workflow_id,
                 'name' => $this->whenLoaded('workflow', fn () => $this->workflow?->name),
@@ -79,7 +87,10 @@ class ServiceRequestResource extends JsonResource
                 'current_overdue' => $current !== null && $current->due_at !== null && $current->due_at->isPast(),
             ],
             'can_approve' => $canApprove,
-            'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending && $this->user_id === $viewer->id,
+            // The owner may withdraw their own; the filer may withdraw one they sent
+            // for somebody who cannot (a new employee without a login).
+            'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
+                && ($this->user_id === $viewer->id || $this->submitted_by_user_id === $viewer->id),
             'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved && (bool) $viewer->hasPermission('requests.fulfill'),
             'approved_at' => $this->approved_at?->toDateTimeString(),
             'rejected_at' => $this->rejected_at?->toDateTimeString(),

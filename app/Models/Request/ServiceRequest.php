@@ -3,6 +3,7 @@
 namespace App\Models\Request;
 
 use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\RequestOrigin;
 use App\Enums\Request\RequestPriority;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
@@ -27,8 +28,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ServiceRequest extends Model
 {
     protected $fillable = [
-        'reference', 'type', 'workflow_id', 'auto_ticket',
+        'reference', 'type', 'origin', 'workflow_id', 'auto_ticket',
         'user_id', 'employee_id', 'requester_name', 'department_name',
+        // Who pressed Save, which is only a different person for on-behalf origins
+        // (HR filing a new employee's onboarding requests).
+        'submitted_by_user_id', 'submitted_by_name',
         'title', 'reason', 'priority', 'estimated_value', 'fields',
         'status', 'ticket_id',
         // What the request points at — real columns with real foreign keys, so a
@@ -63,6 +67,7 @@ class ServiceRequest extends Model
     {
         return [
             'type' => RequestType::class,
+            'origin' => RequestOrigin::class,
             'status' => RequestStatus::class,
             'priority' => RequestPriority::class,
             'fields' => 'array',
@@ -90,6 +95,18 @@ class ServiceRequest extends Model
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * The account that filed the request. The same person as `user` for a direct
+     * submission; for onboarding it is the HR account, and `user` is null because
+     * the new employee has no login yet.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function submittedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by_user_id');
     }
 
     /** @return BelongsTo<Ticket, $this> */

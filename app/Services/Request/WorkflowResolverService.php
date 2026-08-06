@@ -18,14 +18,17 @@ use Illuminate\Support\Collection;
  * Turns a workflow definition into the concrete, frozen approval rows of one
  * request at submit time:
  *
- *  - chain steps resolve positionally along the requester's manager line
- *    (eligible = active + has a login account); a line shorter than the number
- *    of chain steps lets the LAST manager cover the remaining ones (merged
- *    into a single row); no manager at all collapses every chain step into one
- *    skipped row so the request keeps moving
+ *  - chain steps resolve positionally along the requester's manager line (active
+ *    employees, whether or not their login exists yet — a step assigned to
+ *    somebody without an account WAITS for it rather than being handed upward,
+ *    because passing it over their head would record an approval they never
+ *    gave); a line shorter than the number of chain steps lets the LAST manager
+ *    cover the remaining ones (merged into a single row); no manager at all
+ *    collapses every chain step into one skipped row, since there is nobody to
+ *    wait for
  *  - owner steps resolve to the owner_employee_id of the Access resource the
  *    requester picked; unresolvable (no resource / no owner / owner is the
- *    requester / owner ineligible) becomes skipped with the reason in note
+ *    requester / owner has left) becomes skipped with the reason in note
  *  - it_staff steps carry no person — they are the requests.fulfill queue
  *
  * Also powers the workflow editor's "test with employee" preview via
@@ -64,7 +67,7 @@ class WorkflowResolverService
     public function resolveSteps(RequestType $type, array $steps, Employee $requester, array $fields = []): Collection
     {
         $chain = $this->chainService->chainFor($requester)
-            ->filter(fn (Employee $manager) => $this->isEligible($manager))
+            ->filter(fn (Employee $manager) => $this->canHoldAStep($manager))
             ->values();
 
         $rows = collect();
@@ -104,6 +107,7 @@ class WorkflowResolverService
                 $rows->push([...$base,
                     'approver_employee_id' => $manager->id,
                     'approver_name' => $manager->name,
+                    'note' => $this->accountPendingNote($manager),
                 ]);
 
                 continue;
@@ -125,6 +129,7 @@ class WorkflowResolverService
                 $rows->push([...$base,
                     'approver_employee_id' => $owner->id,
                     'approver_name' => $owner->name,
+                    'note' => $this->accountPendingNote($owner),
                 ]);
             }
         }
@@ -184,12 +189,29 @@ class WorkflowResolverService
         return collect($merged)->values()->map(fn (array $row, int $i) => [...$row, 'position' => $i + 1]);
     }
 
-    /** Active employees with a login account can actually act on a step. */
-    private function isEligible(?Employee $employee): bool
+    /**
+     * Whose step this may be. An account that has not been provisioned yet is NOT a
+     * disqualification: the approval is that person's to give, so the step is
+     * assigned to them and waits until they can sign in. Somebody who has left the
+     * company is passed over — they are never coming back to act on it.
+     */
+    private function canHoldAStep(?Employee $employee): bool
     {
-        return $employee !== null
-            && $employee->status === EmployeeStatus::Active
-            && $employee->user()->exists();
+        return $employee !== null && $employee->status === EmployeeStatus::Active;
+    }
+
+    /** Whether that person can act right now. A missing login is what holds a step up. */
+    private function canActNow(Employee $employee): bool
+    {
+        return $employee->user()->exists();
+    }
+
+    /** Note put on a row whose approver cannot sign in yet, so the wait is explained. */
+    private function accountPendingNote(Employee $approver): ?string
+    {
+        return $this->canActNow($approver)
+            ? null
+            : 'Waiting — this approver has no login account yet; the step unblocks once it is created.';
     }
 
     /** The owner of the Access resource referenced by the submitted fields, if usable. */
@@ -209,6 +231,6 @@ class WorkflowResolverService
 
         $owner = $resource?->owner;
 
-        return $this->isEligible($owner) ? $owner : null;
+        return $this->canHoldAStep($owner) ? $owner : null;
     }
 }

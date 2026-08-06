@@ -1,4 +1,4 @@
-import type { ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
+import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, type LucideIcon } from 'lucide-react';
 
 /**
@@ -42,6 +42,23 @@ export const REQUEST_STATUS_META: Record<ServiceRequestStatus, { tone: 'amber' |
     rejected: { tone: 'red', labelKey: 'req_status_rejected' },
     cancelled: { tone: 'gray', labelKey: 'req_status_cancelled' },
 };
+
+/**
+ * True when the request was filed for somebody else — today that means a new
+ * employee's onboarding, which every surface an approver looks at marks in violet
+ * (the one badge tone no status uses).
+ *
+ * Reads `origin` rather than "user_id is null" so the reason stays explicit.
+ */
+export function isOnBehalfRequest(request: Pick<ServiceRequest, 'origin'>): boolean {
+    return request.origin === 'onboarding';
+}
+
+/** Tone + label for the on-behalf marker, so the badge reads the same everywhere. */
+export const REQUEST_ONBOARDING_BADGE = { tone: 'violet' as const, labelKey: 'req_origin_onboarding' };
+
+/** Left edge accent for a table row / card that belongs to an on-behalf request. */
+export const REQUEST_ONBOARDING_ROW = 'border-l-2 border-l-violet-500 bg-violet-500/[0.04]';
 
 /** Every service type in catalog order — one place decides the order they appear. */
 export const REQUEST_TYPES = Object.keys(REQUEST_TYPE_META) as ServiceRequestType[];

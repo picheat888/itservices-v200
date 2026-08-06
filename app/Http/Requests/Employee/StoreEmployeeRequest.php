@@ -6,6 +6,7 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\User;
+use App\Services\Employee\EmployeeOnboardingService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -76,6 +77,12 @@ class StoreEmployeeRequest extends FormRequest
             'status' => ['nullable', Rule::in(['active', 'resigned'])],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],
             'photo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            // Day-one services to request for a new hire. Only meaningful on create;
+            // EmployeeController files one service request per entry after the
+            // employee exists, and ignores them on update.
+            'services' => ['sometimes', 'array', 'max:'.count(EmployeeOnboardingService::SERVICES)],
+            'services.*' => [Rule::in(EmployeeOnboardingService::SERVICES)],
+            'onboarding_note' => ['nullable', 'string', 'max:500'],
         ];
     }
 

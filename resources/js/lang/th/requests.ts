@@ -104,6 +104,11 @@ export const requests: Dict = {
     req_requester: 'ผู้ขอ',
     req_department: 'แผนก',
     req_created: 'ยื่นเมื่อ',
+    // ป้ายบอกว่าเป็นคำขอที่ยื่นแทน (พนักงานใหม่) — โผล่ทุกที่ที่ผู้อนุมัติเห็นคำขอ
+    req_origin_onboarding: 'พนักงานใหม่',
+    req_submitted_by: 'ยื่นแทนโดย',
+    req_onboarding_title: 'คำขอสำหรับพนักงานใหม่',
+    req_onboarding_desc: 'ยื่นพร้อมกับการเพิ่มข้อมูลพนักงาน ตอนที่เจ้าตัวยังไม่มีบัญชีเข้าใช้งาน',
     req_trail_title: 'เส้นทางการอนุมัติ',
     req_trail_submitted: 'ยื่นคำขอ',
     req_trail_fulfillment: 'Admin / ทีม IT ดำเนินการ',

@@ -1420,3 +1420,59 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 ### Tests / Verification
 
 `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · `npm run build` ผ่าน (ฝั่ง frontend โปรเจกต์นี้ไม่มี test runner) · ไม่มีไฟล์ PHP เปลี่ยน suite เดิมจึงยังเป็น 839 passed
+
+---
+
+## Onboarding requests → ต่อเข้า Workflow อนุมัติจริง (2026-08-06)
+
+ขั้น ③ ของหน้าเพิ่มพนักงานเคยเป็น UI เปล่า — ติ๊กบริการแล้วค่าหายไปกับ state (คำว่า `onboarding` ไม่เคยปรากฏในไฟล์ PHP ไฟล์ใดเลย) ตอนนี้ติ๊กแล้ว **ยื่นคำขอเข้าโมดูล Request จริง 1 ใบต่อ 1 บริการ** โดยคำขอเป็นของพนักงานใหม่ ไม่ใช่ของ HR ที่กด
+
+### 1. แยก "เจ้าของคำขอ" ออกจาก "คนกดยื่น"
+
+เดิม `user_id` เป็นทั้งสองอย่างในคอลัมน์เดียว ซึ่งพังทันทีเมื่อ HR ยื่นแทน: คนที่เป็นเจ้าของยังไม่มีบัญชี (`user_id` = null) migration `add_origin_to_service_requests` เพิ่ม 3 คอลัมน์
+
+- `origin` (`direct` / `onboarding` — enum `RequestOrigin`; ใช้ค่า `direct` เพราะ PHP ห้ามตั้งชื่อ enum case ว่า `self`) · `submitted_by_user_id` (FK users, null on delete) · `submitted_by_name` (snapshot เหมือน `requester_name`)
+- `user_id`/`employee_id` ยังหมายถึงเจ้าของคำขอ → **สายอนุมัติไต่ manager ของพนักงานใหม่** ที่กรอกไว้ในขั้น ② ไม่ใช่สายของ HR
+- `RequestService::submit()` (ยื่นเอง) กับ **`submitFor(Employee $subject, User $actor, …)`** (ยื่นแทน) เรียก private `create()` ตัวเดียวกัน — ตรรกะ snapshot/resolver/activate ไม่ได้ถูกคัดลอก
+- **`EmployeeOnboardingService`** วนบริการที่ติ๊ก (computer / mobile / email) ยิงทีละใบ · **workflow ที่ปิดอยู่ไม่ทำให้เสียพนักงาน**: สร้าง Employee ให้เสร็จก่อน แล้วจับ error ต่อรายการ ตอบกลับ `onboarding: {created, failed}` ให้ dialog ขึ้น toast บอกว่าใบไหนยื่นไม่ได้ (แทนที่จะ rollback การจ้างคนเพราะ workflow ปิด)
+- คำขอ onboarding ไม่มีฟิลด์เฉพาะประเภท (หน้าเพิ่มพนักงานไม่ได้ถามรุ่นเครื่อง) — `title` = "Computer for <ชื่อ>" · `reason` = หมายเหตุที่ HR กรอก หรือข้อความบอกว่าให้ยืนยันรายละเอียดกับหัวหน้า
+- **สิทธิ์**: ใช้ `employees.add` ที่คนกดถืออยู่แล้ว ไม่บังคับสิทธิ์โมดูล Request (แต่ถ้าจะ *เปิดดู* คำขอในหน้า Requests ยังต้องมีสิทธิ์อ่านของโมดูลนั้นตามปกติ)
+
+### 2. สองบั๊กที่โผล่เพราะมี "คำขอที่เจ้าของไม่มีบัญชี"
+
+- `can_cancel` + `RequestService::cancel()` เช็คแค่ `user_id === actor` → คำขอที่ HR ยื่นแทน **ไม่มีใครยกเลิกได้เลย** เพราะเจ้าของยังไม่มี login ตอนนี้คนที่ยื่นแทนยกเลิกได้
+- visibility ของ `RequestController@index`, `scope=mine` และ `show()` ก็เช็คแค่ `user_id` → HR ยื่นแล้วหาคำขอของตัวเองไม่เจอและเปิดไม่ได้ ตอนนี้รวม `submitted_by_user_id`
+- แจ้งเตือนทุกชนิดของ Request เคยส่งไปที่ `$request->user` เท่านั้น → คำขอ onboarding จะไม่มีใครได้รับเลย เพิ่ม `follower()` = เจ้าของ หรือ (ถ้าเป็นการยื่นแทน) คนที่ยื่น
+
+### 3. ป้าย "พนักงานใหม่" สี violet — 4 ที่ที่ผู้อนุมัติเจอคำขอ
+
+violet เป็นโทนเดียวใน `StatusBadge` ที่ไม่มีสถานะไหนใช้ จึงไม่ชนกับ pending/approved/rejected
+
+1. **ตารางคำขอ** — badge ใต้ชื่อผู้ขอ + **แถบ violet ซ้ายแถว** (เพิ่ม prop `rowClassName?: (row) => string` ให้ `DataTable` — optional ไม่กระทบตารางอื่น)
+2. **การ์ดรออนุมัติ / กิจกรรมล่าสุด** — badge ข้างหัวเรื่อง + แถบซ้ายการ์ด
+3. **หน้า detail** — แบนเนอร์ violet ใต้ header (`คำขอสำหรับพนักงานใหม่ · ยื่นแทนโดย <ชื่อ> · <วันที่>`) + แถว KV "ยื่นแทนโดย"
+4. **กระดิ่ง + อีเมล** — bell payload มี `origin` แล้วข้อความนำหน้าด้วย "พนักงานใหม่ ·" · อีเมลใส่ `[New employee]` หน้าหัวเรื่อง (เทมเพลตไม่มีฟิลด์ origin ให้ผูก)
+
+`isOnBehalfRequest()` / `REQUEST_ONBOARDING_BADGE` / `REQUEST_ONBOARDING_ROW` อยู่ที่ `shared/lib/request-meta.ts` ที่เดียว — อ่าน `origin` ไม่ใช่เดาจาก "user_id เป็น null"
+
+### 4. "ยังไม่มีบัญชี" ไม่ใช่เหตุผลที่จะข้ามการอนุมัติ (เปลี่ยน policy)
+
+ลองใช้จริงแล้วเจอว่าคำขอ onboarding ทั้ง 3 ใบขึ้นเป็น **approved ทันทีโดยไม่มีใครอนุมัติ** พร้อมแถว `Skipped — requester has no manager configured.` ทั้งที่พนักงานใหม่มี `manager_id` ครบ
+
+สาเหตุ: `WorkflowResolverService::isEligible()` เดิมนับคนเป็นผู้อนุมัติได้เมื่อ **active + มีบัญชี login** — ฐานจริงยังไม่มีพนักงานคนไหนมีบัญชีเลย (บัญชีถูกตั้งทีหลังผ่าน set-credentials) → chain ว่าง → chain step ทุกขั้นถูกรวบเป็นแถว skipped → ไม่มีแถวที่กดได้ → `activateNextApproval()` ข้ามไป fulfillment แล้ว `finalize()` ทันที
+
+แก้เป็น: **มีหัวหน้าคือรอหัวหน้าคนนั้น** ไม่ว่าบัญชีจะสร้างแล้วหรือยัง
+
+- แยกความหมายออกเป็น 2 อย่าง: `canHoldAStep()` = ถือขั้นนั้นได้ (active เท่านั้น — **ไม่ต้องมีบัญชี**) · `canActNow()` = กดได้ตอนนี้ (มีบัญชี) ใช้แค่ตอนใส่หมายเหตุ
+- แถวที่ผู้อนุมัติยังไม่มีบัญชี = สถานะ `waiting`/`current` ตามปกติ + note `Waiting — this approver has no login account yet; the step unblocks once it is created.` → คำขอค้างเป็น **pending** จนกว่าจะตั้งบัญชีให้เขา แล้วเขาล็อกอินมากดเอง (แถวผูกด้วย `approver_employee_id` อยู่แล้ว จึงเด้งขึ้น "รออนุมัติของฉัน" ทันทีที่บัญชีถูกผูก)
+- **คนที่ลาออกยังถูกข้าม** (ไต่ขึ้นหัวหน้าคนถัดไป) เพราะเขาไม่กลับมากดแล้วจริง ๆ — ต่างจากบัญชีที่ยังไม่ได้สร้าง
+- ไม่มีหัวหน้าเลย (`manager_id` ว่าง เช่นตำแหน่งพิเศษบนยอดผัง) ยังรวบเป็นแถว skipped เหมือนเดิม เพราะไม่มีใครให้รอ
+- owner step ของ Access resource ใช้กฎเดียวกัน (เจ้าของที่ยังไม่มีบัญชี = รอ ไม่ใช่ข้าม)
+
+**ยังเป็นช่องว่าง:** ตอนนี้ถ้าผู้อนุมัติยังไม่มีบัญชี **จะไม่มีแจ้งเตือนออกไปหาใครเลย** (`notifyApprover()` ออกทันทีเมื่อหา user ไม่เจอ) คำขอค้างเงียบ ๆ โดยมีแต่ note บนแถวอธิบาย — ถ้าต้องการให้เตือนคนที่ถือ `employees.set_credentials` ว่ามีคำขอติดอยู่เพราะบัญชียังไม่ถูกสร้าง ต้องเพิ่ม subtype ใหม่ (ยังไม่ทำ)
+
+### Tests / Verification
+
+`EmployeeOnboardingRequestTest` (11 tests) — 1 บริการ = 1 คำขอ · เจ้าของ/ผู้ยื่นถูกบันทึกแยกกัน · **สายอนุมัติเป็นของพนักงานใหม่ไม่ใช่ของ HR** · **คำขอรอหัวหน้าที่ยังไม่มีบัญชี (pending) ไม่ผ่านเอง** · **หัวหน้ากดอนุมัติได้ทันทีที่บัญชีถูกสร้าง** · workflow ปิดแล้วพนักงานยังถูกสร้าง + รายงานใบที่ยื่นไม่ได้ · หมายเหตุกลายเป็น reason · คนยื่นแทนเปิด/ยกเลิก/เห็นใน `scope=mine` ได้ · API บอก origin + ชื่อคนยื่น · คนยื่นได้รับ receipt ที่เจ้าของรับไม่ได้
+`RequestResolutionTest` — เทสต์เดิมที่พินกฎ "ไม่มีบัญชี = ข้าม" ถูกเขียนใหม่เป็นกฎใหม่ + เพิ่มเทสต์ว่าคนลาออกยังถูกข้าม
+**ทั้ง suite = 851 passed / 3,312 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว · ยิง resolver กับข้อมูลจริง (read-only) ยืนยันว่าคำขอใบใหม่รอ `John Done` พร้อม note แทนที่จะ skip

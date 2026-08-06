@@ -97,6 +97,16 @@ export interface UpdateCredentialsPayload {
     force_change?: boolean;
 }
 
+/**
+ * What came of the day-one service requests: one entry per service that was
+ * filed, and one per service that could not be (a closed workflow, say). The
+ * employee is saved either way.
+ */
+export interface OnboardingResult {
+    created: { service: string; id: number; reference: string | null }[];
+    failed: { service: string; message: string }[];
+}
+
 export interface EmployeePayload {
     first_name: string;
     last_name: string;
@@ -112,12 +122,21 @@ export interface EmployeePayload {
     phone?: string | null;
     joined_at?: string | null;
     photo?: File | null;
+    /** Day-one services to request for a new hire (create only). */
+    services?: string[];
+    onboarding_note?: string | null;
 }
 
 function toFormData(payload: EmployeePayload): FormData {
     const fd = new FormData();
     Object.entries(payload).forEach(([k, v]) => {
         if (v === null || v === undefined) return;
+        // Arrays go out as `services[]=…` so Laravel reads an array; a plain append
+        // would flatten them into the string "computer,email".
+        if (Array.isArray(v)) {
+            v.forEach((item) => fd.append(`${k}[]`, String(item)));
+            return;
+        }
         fd.append(k, v as string | Blob);
     });
     return fd;
@@ -139,12 +158,17 @@ export const employeeApi = {
     summary: () => http.get<EmployeeSummary>('/employees/summary').then((r) => r.data),
     listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string; status?: string }) =>
         http.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),
+    /**
+     * Creates the employee and returns it together with what became of the day-one
+     * service requests — the employee is saved even when one of those fails, so the
+     * caller has to be able to tell the difference.
+     */
     create: async (payload: EmployeePayload) => {
         await ensureCsrf();
         // Multipart when a photo is attached, plain JSON otherwise.
         const body = payload.photo instanceof File ? toFormData(payload) : withoutPhoto(payload);
-        const { data } = await http.post<ApiEnvelope<Employee>>('/employees', body);
-        return data.data;
+        const { data } = await http.post<ApiEnvelope<Employee> & { onboarding?: OnboardingResult }>('/employees', body);
+        return { employee: data.data, onboarding: data.onboarding ?? null };
     },
     update: async (id: number, payload: EmployeePayload) => {
         await ensureCsrf();

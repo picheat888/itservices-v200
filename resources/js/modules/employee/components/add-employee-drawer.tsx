@@ -195,9 +195,21 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             phone: form.phone || null,
             joined_at: form.joinedAt || null,
             photo: photo ?? null,
+            // Ticked services are filed as service requests on the new employee's
+            // behalf, once the record exists.
+            services: form.services,
+            onboarding_note: form.onboardingNote.trim() || null,
         };
         try {
-            await create.mutateAsync(payload);
+            const { onboarding } = await create.mutateAsync(payload);
+
+            // The employee is saved either way, so a service that could not be filed
+            // has to be said out loud rather than silently dropped.
+            if (onboarding?.failed.length) {
+                pushToast(t('emp_onboarding_failed').replace('{services}', onboarding.failed.map((f) => f.service).join(', ')));
+            } else if (onboarding?.created.length) {
+                pushToast(t('emp_onboarding_filed').replace('{n}', String(onboarding.created.length)));
+            }
             onClose();
         } catch (err) {
             // Map Laravel's snake_case field errors onto the form's camelCase error slots

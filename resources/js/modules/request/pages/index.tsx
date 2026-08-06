@@ -4,7 +4,15 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
-import { REQUEST_STATUS_META, REQUEST_STATUSES, REQUEST_TYPE_META, REQUEST_TYPES } from '@/shared/lib/request-meta';
+import {
+    isOnBehalfRequest,
+    REQUEST_ONBOARDING_BADGE,
+    REQUEST_ONBOARDING_ROW,
+    REQUEST_STATUS_META,
+    REQUEST_STATUSES,
+    REQUEST_TYPE_META,
+    REQUEST_TYPES,
+} from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -158,6 +166,13 @@ export default function RequestsPage() {
                 <div className="min-w-0">
                     <div className="truncate text-sm font-medium">{r.requester.name}</div>
                     <div className="text-muted-foreground truncate text-xs">{r.requester.department ?? '—'}</div>
+                    {/* A new hire has no login of their own — say so, or the approver
+                        reads it as a colleague asking for a second laptop. */}
+                    {isOnBehalfRequest(r) && (
+                        <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="mt-1">
+                            {t(REQUEST_ONBOARDING_BADGE.labelKey)}
+                        </StatusBadge>
+                    )}
                 </div>
             ),
         },
@@ -326,11 +341,21 @@ export default function RequestsPage() {
                                             <div
                                                 key={r.id}
                                                 onClick={() => openDetail(r)}
-                                                className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                                                className={cn(
+                                                    'hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
+                                                    isOnBehalfRequest(r) && REQUEST_ONBOARDING_ROW,
+                                                )}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium">{r.title}</div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="truncate text-sm font-medium">{r.title}</span>
+                                                        {isOnBehalfRequest(r) && (
+                                                            <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="shrink-0">
+                                                                {t(REQUEST_ONBOARDING_BADGE.labelKey)}
+                                                            </StatusBadge>
+                                                        )}
+                                                    </div>
                                                     <div className="text-muted-foreground truncate text-xs">
                                                         {r.requester.name} · {r.requester.department ?? '—'} · {r.reason}
                                                     </div>
@@ -492,6 +517,7 @@ export default function RequestsPage() {
                             rowKey={(r) => r.id}
                             loading={isLoading || isFetching}
                             onRowClick={openDetail}
+                            rowClassName={(r) => (isOnBehalfRequest(r) ? REQUEST_ONBOARDING_ROW : undefined)}
                             server={{
                                 page,
                                 pageSize: perPage,
