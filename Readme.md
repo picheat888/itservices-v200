@@ -1401,3 +1401,22 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 
 `EmployeeImportTest` (17 tests / 72 assertions) — text matching ทั้งสามช่อง · section ผิดแผนก · ข้อความกำกวม · กฎ special position · หัวหน้าอยู่ท้ายไฟล์ · ลูป · header เดิม `code` · dry-run ไม่เขียน · endpoint preview/import/template · และ **เทสต์ที่ seed ผังองค์กรจริง** (`DepartmentSeeder`/`SectionSeeder`/`PositionSeeder`) แล้วยืนยันว่าคำที่ HR พิมพ์ resolve ได้ตัวเดียว
 **ทั้ง suite = 839 passed / 3,265 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน
+
+---
+
+## Add Employee → Focus Dialog wizard (2026-08-06)
+
+**Edit** พนักงานเป็น Focus Dialog อยู่แล้ว (`edit-employee-dialog.tsx`) แต่ **Add** ยังเป็น Sheet ด้านขวา 600px — เพิ่มกับแก้คนเดียวกันเลยคนละหน้าตา รอบนี้ย้าย Add มาอยู่กรอบเดียวกัน โดยยังเป็น wizard 3 ขั้นตามที่ใช้จริง
+
+- **กรอบ**: `Sheet side="right"` → `Dialog` + `focusDialogContentClass` (`h-[min(860px,100vh-72px)]` × `max-w-[1100px]`) + `FocusDialogHeader` (ไอคอน `UserPlus` · eyebrow "เพิ่มพนักงาน" · title = ชื่อที่กำลังพิมพ์ ถ้ายังว่างใช้ "พนักงานใหม่" — หัวข้อเปลี่ยนตามที่กรอก)
+- **Stepper แนวนอน** ①②③ พร้อมเส้นเชื่อมที่เปลี่ยนเป็นสีแบรนด์เมื่อผ่าน + ติ๊กถูก (คลาสชุดเดียวกับ `contract-form-drawer`) แทนการ์ดสเต็ป 3 ใบแบบเดิม · คลิกย้อนได้เสมอ กระโดดข้ามไปข้างหน้าต้อง validate ทุกขั้นที่ข้าม (`goToStep`)
+- **ใช้ความกว้าง 1100px เป็น 2 คอลัมน์** (เดิม 600px บังคับเรียงลงล่างทีเดียว): ขั้น ① รูป+อัปโหลดอยู่ในกรอบพาดเต็มกว้าง แล้วชื่อ EN / ชื่อไทย / ติดต่อ เรียงเป็นคู่ · ขั้น ② ซ้าย แผนก-หน่วยงาน-ตำแหน่ง ขวา Report to-วันเริ่มงาน-รหัสพนักงาน · ขั้น ③ กล่องแจ้งสิทธิ์เริ่มต้น + บัญชีรอตั้ง วางคู่กัน แล้วการ์ดบริการ onboarding เรียง 3 คอลัมน์
+- **หัวขั้น `StepHead`** (ขั้นที่ N → หัวข้อตัวหนา → คำอธิบาย) ใช้ `t()` ทั้งหมด ไม่ใช่ `lang === 'th' ? … : …` แบบที่ contract ทำ · เพิ่มคีย์ en+th 5 ตัว: `emp_step_n` · `emp_new_person` · `emp_personal_sub` · `emp_work_sub` · `emp_access_sub`
+- **Footer** `border-t bg-muted/30`: ยกเลิก/ย้อนกลับ · step dots · ถัดไป/บันทึก (spinner ตอนบันทึก)
+- **Enter-to-advance เข้มขึ้น**: เดิมกันแค่ `TEXTAREA` — ในกรอบใหม่ที่ stepper และการ์ดบริการเป็น `<button>` อยู่ในกรอบเดียวกัน การกด Enter จะทั้งกดปุ่มนั้นและข้ามขั้นพร้อมกัน จึงกัน `BUTTON`/`SELECT`/`OPTION` เพิ่ม (ชุดเดียวกับ Edit dialog)
+- **กดบันทึกแล้วเจอ error ของขั้นก่อน จะเด้งกลับไปขั้นนั้น** ไม่ใช่แค่โชว์ error ที่มองไม่เห็น (เดิม `submit()` validate ทั้งสองขั้นแต่ค้างอยู่หน้าเดิม)
+- ไม่แตะ form state / กฎ special position / map error 422 → field / `PhotoCropDialog` / payload — และตัวเลือกบริการ onboarding **ยังไม่ได้ส่งไป API เหมือนเดิม** (`emp_onboarding_deferred`)
+
+### Tests / Verification
+
+`tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · `npm run build` ผ่าน (ฝั่ง frontend โปรเจกต์นี้ไม่มี test runner) · ไม่มีไฟล์ PHP เปลี่ยน suite เดิมจึงยังเป็น 839 passed
