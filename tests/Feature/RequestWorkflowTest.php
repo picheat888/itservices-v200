@@ -7,12 +7,14 @@ use App\Enums\Request\RequestStatus;
 use App\Models\Access\FileShare;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Sidebar\SidebarBadgeService;
+use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,16 +43,28 @@ class RequestWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(PositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
-        // staff → sup → mgr reporting line, everyone with a login.
-        $this->mgr = Employee::create(['first_name' => 'Mgr']);
-        $this->sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $this->mgr->id]);
-        $this->staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $this->sup->id]);
+        // staff → sup → mgr reporting line, everyone with a login and holding the rung
+        // the routes ask for — chain steps resolve by position, not by counting managers.
+        $this->mgr = Employee::create(['first_name' => 'Mgr', 'position_id' => $this->positionId('Manager')]);
+        $this->sup = Employee::create([
+            'first_name' => 'Sup', 'manager_id' => $this->mgr->id, 'position_id' => $this->positionId('Supervisor'),
+        ]);
+        $this->staff = Employee::create([
+            'first_name' => 'Staff', 'manager_id' => $this->sup->id, 'position_id' => $this->positionId('Staff/Officer'),
+        ]);
 
         $this->requester = $this->makeUser('user', ['requests.submit'], $this->staff);
         $this->supUser = $this->makeUser('user', [], $this->sup);
         $this->mgrUser = $this->makeUser('user', [], $this->mgr);
+    }
+
+    /** Id of a seeded position by title. */
+    private function positionId(string $title): int
+    {
+        return Position::where('title', $title)->firstOrFail()->id;
     }
 
     /** A user on the given role key, with the role granted the listed permissions. */
@@ -306,7 +320,10 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($admin)->putJson("/api/workflows/{$workflow->id}", [
             'auto_ticket' => false,
             'steps' => [
-                ['actor_type' => 'chain', 'label' => 'Only Boss', 'kind' => 'approval'],
+                [
+                    'actor_type' => 'chain', 'label' => 'Only Boss', 'kind' => 'approval',
+                    'position_ids' => [$this->positionId('Manager')],
+                ],
             ],
         ])->assertOk();
 

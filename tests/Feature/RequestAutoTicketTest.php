@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Ticket\TicketCategory;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Ticket\TicketService;
+use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -32,9 +34,15 @@ class RequestAutoTicketTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(PositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
-        $boss = Employee::create(['first_name' => 'Boss']);
+        // The boss holds the Supervisor rung the Computer route asks for first; the
+        // Manager rung above finds nobody and is skipped, which is enough to approve.
+        $boss = Employee::create([
+            'first_name' => 'Boss',
+            'position_id' => Position::where('title', 'Supervisor')->firstOrFail()->id,
+        ]);
         $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $boss->id]);
 
         $role = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false]);

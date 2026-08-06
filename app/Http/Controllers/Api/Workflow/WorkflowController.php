@@ -12,6 +12,7 @@ use App\Http\Requests\Request\UpdateWorkflowRequest;
 use App\Http\Resources\Request\WorkflowResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Request\ServiceRequest;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\WorkflowResolverService;
@@ -43,7 +44,7 @@ class WorkflowController extends Controller
      */
     public function index(): JsonResponse
     {
-        $workflows = Workflow::with('steps')->orderBy('request_type')->get();
+        $workflows = Workflow::with('steps.positions')->orderBy('request_type')->get();
 
         return response()->json([
             'data' => WorkflowResource::collection($workflows->each(
@@ -91,12 +92,17 @@ class WorkflowController extends Controller
 
             $workflow->steps()->delete();
             foreach (array_values($data['steps']) as $index => $step) {
-                $workflow->steps()->create([
+                $created = $workflow->steps()->create([
                     'position' => $index + 1,
                     'actor_type' => $step['actor_type'],
                     'label' => $step['label'],
                     'kind' => $step['kind'],
                 ]);
+
+                // Only chain rungs carry positions; the pivot rows go with the step.
+                if ($step['actor_type'] === StepActorType::Chain->value) {
+                    $created->positions()->sync($step['position_ids'] ?? []);
+                }
             }
         });
 
@@ -107,7 +113,7 @@ class WorkflowController extends Controller
             'steps' => count($data['steps']),
         ]);
 
-        return new WorkflowResource($workflow->refresh()->load('steps'));
+        return new WorkflowResource($workflow->refresh()->load('steps.positions'));
     }
 
     /**
@@ -124,6 +130,8 @@ class WorkflowController extends Controller
             'steps.*.actor_type' => ['required', Rule::enum(StepActorType::class)],
             'steps.*.label' => ['required', 'string', 'max:120'],
             'steps.*.kind' => ['required', Rule::enum(WorkflowStepKind::class)],
+            'steps.*.position_ids' => ['array'],
+            'steps.*.position_ids.*' => ['integer', 'exists:positions,id'],
         ]);
 
         $employee = Employee::with(['position', 'department'])->findOrFail($data['employee_id']);
@@ -150,6 +158,23 @@ class WorkflowController extends Controller
                     return [...$row, 'approver_position' => $approver?->position?->title];
                 })->values(),
             ],
+        ]);
+    }
+
+    /**
+     * The job titles a chain rung can name — the editor's position picker.
+     *
+     * Read-only peek at Employee-module master data under the workflows.manage gate:
+     * choosing who approves is a workflow decision, so it must not also require the
+     * permission to administer positions.
+     */
+    public function positionOptions(): JsonResponse
+    {
+        return response()->json([
+            'data' => Position::orderBy('code')->get()->map(fn (Position $position) => [
+                'id' => $position->id,
+                'title' => $position->title,
+            ])->values(),
         ]);
     }
 

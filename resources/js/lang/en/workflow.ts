@@ -50,6 +50,8 @@ export const workflow: Dict = {
     wf_step_actor: 'Acts on the step',
     wf_step_label: 'Display label',
     wf_step_kind: 'Step type',
+    wf_step_positions: 'Positions that may approve',
+    wf_step_positions_required: 'Pick at least one position — a step naming none can never resolve.',
     wf_actor_chain: 'Reporting line',
     wf_actor_owner: 'Resource owner',
     wf_actor_it: 'IT Staff',

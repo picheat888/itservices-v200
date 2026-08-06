@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Email\EmailTemplate;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Database\Seeders\EmailTemplateSeeder;
+use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,11 +35,15 @@ class RequestNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(PositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
-        $mgr = Employee::create(['first_name' => 'Mgr']);
-        $sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $mgr->id]);
-        $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id]);
+        // Each person holds the rung the routes ask for — chain steps resolve by
+        // position, so a line without titles reaches nobody.
+        $title = fn (string $t) => Position::where('title', $t)->firstOrFail()->id;
+        $mgr = Employee::create(['first_name' => 'Mgr', 'position_id' => $title('Manager')]);
+        $sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $mgr->id, 'position_id' => $title('Supervisor')]);
+        $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id, 'position_id' => $title('Staff/Officer')]);
 
         $userRole = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false]);
         RolePermission::updateOrCreate(['role_id' => $userRole->id, 'permission' => 'requests.submit'], ['allowed' => true]);

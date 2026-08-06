@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\Request\RequestStatus;
 use App\Models\Employee\Employee;
+use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,6 +28,7 @@ class WorkflowAdminTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(PositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         $role = Role::firstOrCreate(['key' => 'wfadmin', 'name' => 'WF Admin', 'color' => '#000', 'is_system' => false]);
@@ -73,8 +76,14 @@ class WorkflowAdminTest extends TestCase
             'active' => true,
             'auto_ticket' => false,
             'steps' => [
-                ['actor_type' => 'chain', 'label' => 'Team Lead', 'kind' => 'approval'],
-                ['actor_type' => 'chain', 'label' => 'Director', 'kind' => 'approval'],
+                [
+                    'actor_type' => 'chain', 'label' => 'Team Lead', 'kind' => 'approval',
+                    'position_ids' => [Position::where('title', 'Supervisor')->firstOrFail()->id],
+                ],
+                [
+                    'actor_type' => 'chain', 'label' => 'Director', 'kind' => 'approval',
+                    'position_ids' => [Position::where('title', 'Director')->firstOrFail()->id],
+                ],
                 ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
             ],
         ])->assertOk()
@@ -133,11 +142,12 @@ class WorkflowAdminTest extends TestCase
         $request->forceFill(['created_at' => now()->subDays($filedDaysAgo)])->saveQuietly();
     }
 
-    public function test_preview_resolves_steps_along_the_reporting_line(): void
+    public function test_preview_resolves_each_rung_to_its_position_holder(): void
     {
-        $vp = Employee::create(['first_name' => 'Vp']);
-        $sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $vp->id]);
-        $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id]);
+        $title = fn (string $t) => Position::where('title', $t)->firstOrFail()->id;
+        $vp = Employee::create(['first_name' => 'Vp', 'position_id' => $title('Vice President')]);
+        $sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $vp->id, 'position_id' => $title('Supervisor')]);
+        $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id, 'position_id' => $title('Staff/Officer')]);
         foreach ([$vp, $sup] as $e) {
             User::factory()->create(['role' => 'nobody', 'employee_id' => $e->id]);
         }
@@ -146,20 +156,70 @@ class WorkflowAdminTest extends TestCase
             'request_type' => 'computer',
             'employee_id' => $staff->id,
             'steps' => [
-                ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval'],
-                ['actor_type' => 'chain', 'label' => 'Manager', 'kind' => 'approval'],
-                ['actor_type' => 'chain', 'label' => 'VP', 'kind' => 'approval'],
+                ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval', 'position_ids' => [$title('Supervisor')]],
+                ['actor_type' => 'chain', 'label' => 'Manager', 'kind' => 'approval', 'position_ids' => [$title('Manager')]],
+                ['actor_type' => 'chain', 'label' => 'VP', 'kind' => 'approval', 'position_ids' => [$title('Vice President')]],
                 ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
             ],
         ])->assertOk();
 
-        $rows = $response->json('data.rows');
-        // Two managers cover three chain steps: Sup, then Vp merged over Manager+VP.
-        $this->assertCount(3, $rows);
-        $this->assertSame('Sup', $rows[0]['approver_name']);
-        $this->assertSame('Vp', $rows[1]['approver_name']);
-        $this->assertSame('Manager · VP', $rows[1]['label']);
-        $this->assertSame('it_staff', $rows[2]['actor_type']);
+        $rows = collect($response->json('data.rows'));
+        // Supervisor and VP are in the line; nobody holds Manager, so that rung is
+        // skipped rather than handed to the VP over the requester's head.
+        $this->assertSame('Sup', $rows->firstWhere('label', 'Supervisor')['approver_name']);
+        $this->assertSame('Vp', $rows->firstWhere('label', 'VP')['approver_name']);
+        $this->assertSame('no_matching_position', $rows->firstWhere('label', 'Manager')['skip_reason']);
+        $this->assertSame('it_staff', $rows->last()['actor_type']);
         $this->assertSame('Staff', $response->json('data.employee.name'));
+    }
+
+    public function test_reseeding_fills_rungs_that_have_no_positions_yet(): void
+    {
+        // An install whose workflows predate position routing: the steps exist, the
+        // rungs are empty, so nothing would resolve.
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $supervisorRung = $workflow->steps()->where('label', 'Supervisor / Head')->firstOrFail();
+        $managerRung = $workflow->steps()->where('label', 'Manager / Asst. Manager')->firstOrFail();
+        $supervisorRung->positions()->detach();
+        // An administrator already narrowed this one down; re-seeding must not widen it.
+        $managerRung->positions()->sync([Position::where('title', 'Manager')->firstOrFail()->id]);
+
+        $this->seed(WorkflowSeeder::class);
+
+        $this->assertEqualsCanonicalizing(
+            ['Asst. Supervisor', 'Supervisor', 'Senior Supervisor'],
+            $supervisorRung->fresh()->positions->pluck('title')->all(),
+        );
+        $this->assertSame(['Manager'], $managerRung->fresh()->positions->pluck('title')->all());
+    }
+
+    public function test_a_chain_step_without_positions_is_rejected(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                ['actor_type' => 'chain', 'label' => 'Somebody', 'kind' => 'approval'],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment'],
+            ],
+        ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.position_ids');
+    }
+
+    public function test_update_stores_the_positions_of_each_rung(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $supervisorRung = Position::whereIn('title', ['Asst. Supervisor', 'Supervisor', 'Senior Supervisor'])->pluck('id');
+
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                ['actor_type' => 'chain', 'label' => 'Supervisor rung', 'kind' => 'approval', 'position_ids' => $supervisorRung->all()],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment'],
+            ],
+        ])->assertOk()->assertJsonCount(3, 'data.steps.0.positions');
+
+        $saved = $workflow->fresh()->steps()->with('positions')->orderBy('position')->get();
+        $this->assertEqualsCanonicalizing($supervisorRung->all(), $saved[0]->positions->pluck('id')->all());
+        // The fulfillment step keeps none — positions only mean something on a rung.
+        $this->assertCount(0, $saved[1]->positions);
     }
 }

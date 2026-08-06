@@ -932,6 +932,13 @@ export interface WorkflowStep {
     actor_type: WorkflowActorType;
     label: string;
     kind: WorkflowStepKind;
+    /**
+     * The job titles allowed to sign this rung. Resolution climbs the requester's
+     * reporting line until it finds a holder, so a Staff member's Supervisor rung
+     * reaches an actual Supervisor rather than whoever sits one level up. Empty on
+     * owner / it_staff steps, which resolve by other means.
+     */
+    positions: { id: number; title: string }[];
 }
 
 /**

@@ -1,11 +1,26 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
 import type { ApiEnvelope, ServiceRequestType, Workflow, WorkflowStep } from '@/shared/types';
 
+/** A step as the editor sends it: positions travel as ids, not as nested objects. */
+export interface WorkflowStepPayload {
+    actor_type: WorkflowStep['actor_type'];
+    label: string;
+    kind: WorkflowStep['kind'];
+    /** Required on chain steps — a rung naming no position can never resolve. */
+    position_ids?: number[];
+}
+
 export interface WorkflowUpdatePayload {
     name?: string;
     active?: boolean;
     auto_ticket?: boolean;
-    steps: Omit<WorkflowStep, 'id' | 'position'>[];
+    steps: WorkflowStepPayload[];
+}
+
+/** One job title a rung can name (workflows/position-options). */
+export interface WorkflowPositionOption {
+    id: number;
+    title: string;
 }
 
 /** One resolved row of the editor's "test with employee" preview. */
@@ -51,6 +66,7 @@ export const workflowApi = {
     list: () => http.get<WorkflowListResponse>('/workflows').then((r) => r.data),
     employeeOptions: () => http.get<ApiEnvelope<WorkflowEmployeeOption[]>>('/workflows/employee-options').then((r) => r.data.data),
     update: (id: number, payload: WorkflowUpdatePayload) => mutate<Workflow>('put', `/workflows/${id}`, payload),
-    preview: (payload: { request_type: ServiceRequestType; employee_id: number; steps: Omit<WorkflowStep, 'id' | 'position'>[] }) =>
+    positionOptions: () => http.get<ApiEnvelope<WorkflowPositionOption[]>>('/workflows/position-options').then((r) => r.data.data),
+    preview: (payload: { request_type: ServiceRequestType; employee_id: number; steps: WorkflowStepPayload[] }) =>
         mutate<WorkflowPreviewResponse>('post', '/workflows/preview', payload),
 };

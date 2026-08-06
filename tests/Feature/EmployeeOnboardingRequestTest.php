@@ -14,6 +14,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -48,20 +49,29 @@ class EmployeeOnboardingRequestTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(PositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         $this->it = Department::create(['code' => 'DEP-0003', 'tag' => 'It', 'name' => 'Information Technology']);
         $this->support = Section::create(['code' => 'SEC-0002', 'department_id' => $this->it->id, 'name' => 'Support']);
-        $this->staff = Position::create(['code' => 'PST-0013', 'title' => 'Staff/Officer', 'allow_special_position' => false]);
-        $vp = Position::create(['code' => 'PST-0001', 'title' => 'Vice President', 'allow_special_position' => true]);
+        $this->staff = Position::where('title', 'Staff/Officer')->firstOrFail();
+        $vp = Position::where('title', 'Vice President')->firstOrFail();
+        $manager = Position::where('title', 'Manager')->firstOrFail();
 
-        // Two separate reporting lines, so "whose manager approves this" is provable:
+        // Two separate reporting lines, so "whose manager approves this" is provable.
+        // Both managers hold the Manager rung the Computer/Email routes ask for:
         //   new employee → itManager → director
         //   hrOfficer    → hrManager → director
         $this->director = Employee::create(['first_name' => 'Dir', 'position_id' => $vp->id]);
-        $this->itManager = Employee::create(['first_name' => 'ItMgr', 'manager_id' => $this->director->id]);
-        $this->hrManager = Employee::create(['first_name' => 'HrMgr', 'manager_id' => $this->director->id]);
-        $this->hrOfficer = Employee::create(['first_name' => 'HrOfficer', 'manager_id' => $this->hrManager->id]);
+        $this->itManager = Employee::create([
+            'first_name' => 'ItMgr', 'manager_id' => $this->director->id, 'position_id' => $manager->id,
+        ]);
+        $this->hrManager = Employee::create([
+            'first_name' => 'HrMgr', 'manager_id' => $this->director->id, 'position_id' => $manager->id,
+        ]);
+        $this->hrOfficer = Employee::create([
+            'first_name' => 'HrOfficer', 'manager_id' => $this->hrManager->id, 'position_id' => $this->staff->id,
+        ]);
 
         // Approvers only count when they can sign in, so everyone in both lines gets a login.
         $this->makeUser('user', [], $this->director);
@@ -106,6 +116,12 @@ class EmployeeOnboardingRequestTest extends TestCase
             'services' => $services,
             'onboarding_note' => $note,
         ]);
+    }
+
+    /** Position of the rung the new employee's manager holds, in the approvals array. */
+    private function managerRungIndex(ServiceRequest $request): int
+    {
+        return $request->approvals->search(fn ($row) => $row->approver_employee_id === $this->itManager->id);
     }
 
     /**
@@ -222,9 +238,13 @@ class EmployeeOnboardingRequestTest extends TestCase
         $request = ServiceRequest::firstOrFail();
         $viewer = $this->makeUser('viewer', ['requests.view_all']);
 
+        // The manager's own rung — the Supervisor rung above a Manager finds nobody,
+        // so it is not the first row.
+        $rungIndex = $this->managerRungIndex($request);
+
         $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
             ->assertOk()
-            ->assertJsonPath('data.approvals.0.awaiting_account', true);
+            ->assertJsonPath("data.approvals.{$rungIndex}.awaiting_account", true);
 
         // Reported live, not snapshotted: provisioning the account clears it without
         // anything rewriting the frozen approval row.
@@ -232,7 +252,7 @@ class EmployeeOnboardingRequestTest extends TestCase
 
         $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
             ->assertOk()
-            ->assertJsonPath('data.approvals.0.awaiting_account', false);
+            ->assertJsonPath("data.approvals.{$rungIndex}.awaiting_account", false);
     }
 
     public function test_that_manager_can_approve_as_soon_as_their_account_exists(): void
@@ -248,7 +268,7 @@ class EmployeeOnboardingRequestTest extends TestCase
 
         $this->assertSame(
             ApprovalStatus::Approved,
-            $request->approvals()->orderBy('position')->first()->status,
+            $request->approvals()->where('approver_employee_id', $this->itManager->id)->firstOrFail()->status,
         );
     }
 

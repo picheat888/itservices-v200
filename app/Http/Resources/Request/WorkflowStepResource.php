@@ -24,6 +24,11 @@ class WorkflowStepResource extends JsonResource
             'actor_type' => $this->actor_type?->value,
             'label' => $this->label,
             'kind' => $this->kind?->value,
+            // The rung's positions — what resolution matches against on a chain step,
+            // and what the editor's position picker shows. Empty for owner / it_staff.
+            'positions' => $this->whenLoaded('positions', fn () => $this->positions
+                ->map(fn ($position) => ['id' => $position->id, 'title' => $position->title])
+                ->values(), []),
         ];
     }
 }

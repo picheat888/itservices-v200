@@ -47,10 +47,11 @@ class WorkflowResolverService
     {
         return $this->resolveSteps(
             $workflow->request_type,
-            $workflow->steps()->get()->map(fn ($s) => [
+            $workflow->steps()->with('positions')->get()->map(fn ($s) => [
                 'actor_type' => $s->actor_type->value,
                 'label' => $s->label,
                 'kind' => $s->kind->value,
+                'position_ids' => $s->positions->pluck('id')->all(),
             ])->all(),
             $requester,
             $fields,
@@ -58,7 +59,7 @@ class WorkflowResolverService
     }
 
     /**
-     * Resolve a transient list of steps (each: actor_type, label, kind).
+     * Resolve a transient list of steps (each: actor_type, label, kind, position_ids).
      *
      * @param  list<array<string, mixed>>  $steps
      * @param  array<string, mixed>  $fields
@@ -71,6 +72,8 @@ class WorkflowResolverService
             ->values();
 
         $rows = collect();
+        // How far up the line the previous step reached: a rung is never filled by
+        // somebody below the person who already signed a lower one.
         $chainIndex = 0;
         $skippedChainLabels = [];
 
@@ -102,8 +105,22 @@ class WorkflowResolverService
 
                     continue;
                 }
-                $manager = $chain->get(min($chainIndex, $chain->count() - 1));
-                $chainIndex++;
+
+                $found = $this->findHolder($chain, $chainIndex, $step['position_ids'] ?? []);
+                if ($found === null) {
+                    // Nobody above the requester holds this rung — a Supervisor's own
+                    // request has no Supervisor over it. The rung is skipped and the
+                    // next one still resolves; it is not handed to a non-holder.
+                    $rows->push([...$base,
+                        'status' => ApprovalStatus::Skipped->value,
+                        'skip_reason' => ApprovalSkipReason::NoMatchingPosition->value,
+                    ]);
+
+                    continue;
+                }
+
+                [$index, $manager] = $found;
+                $chainIndex = $index + 1;
                 $rows->push([...$base,
                     'approver_employee_id' => $manager->id,
                     'approver_name' => $manager->name,
@@ -147,7 +164,66 @@ class WorkflowResolverService
             ]);
         }
 
-        return $this->mergeAndNumber($rows);
+        return $this->mergeAndNumber($this->guaranteeAnApprover($rows, $chain));
+    }
+
+    /**
+     * The first person at or above $from in the line whose position this rung
+     * accepts, with their index — or null when the line holds nobody suitable.
+     *
+     * @param  Collection<int, Employee>  $chain
+     * @param  list<int>|array<int, mixed>  $positionIds
+     * @return array{0: int, 1: Employee}|null
+     */
+    private function findHolder(Collection $chain, int $from, array $positionIds): ?array
+    {
+        $accepted = array_map('intval', array_values($positionIds));
+        if ($accepted === []) {
+            return null; // a rung naming no position accepts nobody
+        }
+
+        for ($i = $from; $i < $chain->count(); $i++) {
+            $manager = $chain->get($i);
+            if ($manager->position_id !== null && in_array((int) $manager->position_id, $accepted, true)) {
+                return [$i, $manager];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Safety net: a request must not settle itself. When the line has people in it
+     * but no rung found a holder — an org chart whose titles do not line up with the
+     * workflow — the highest person in the line signs the last chain rung instead of
+     * every approval being skipped and the request finalising unapproved.
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @param  Collection<int, Employee>  $chain
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function guaranteeAnApprover(Collection $rows, Collection $chain): Collection
+    {
+        if ($chain->isEmpty()) {
+            return $rows; // nobody to fall back to; the no-manager row already says so
+        }
+
+        $chainRows = $rows->filter(fn (array $row) => $row['actor_type'] === StepActorType::Chain->value);
+        if ($chainRows->isEmpty() || $chainRows->contains(fn (array $row) => $row['approver_employee_id'] !== null)) {
+            return $rows;
+        }
+
+        $top = $chain->last();
+        $lastKey = $chainRows->keys()->last();
+
+        return $rows->map(fn (array $row, int|string $key) => $key === $lastKey
+            ? [...$row,
+                'approver_employee_id' => $top->id,
+                'approver_name' => $top->name,
+                'status' => ApprovalStatus::Waiting->value,
+                'skip_reason' => null,
+            ]
+            : $row);
     }
 
     /**

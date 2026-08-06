@@ -1476,6 +1476,36 @@ violet เป็นโทนเดียวใน `StatusBadge` ที่ไม�
 
 ---
 
+## Workflow Engine — เลือกผู้อนุมัติจาก "ตำแหน่งจริง" ไม่ใช่หัวหน้าคนที่ N (2026-08-06)
+
+อาการที่รายงาน: พนักงาน Staff ขอคอม แล้วสายอนุมัติออกมาเป็น **Leader → Supervisor** ทั้งที่ workflow เขียนว่า Supervisor/Head → Manager/Asst. Manager
+
+สาเหตุคือดีไซน์เดิม: `StepActorType::Chain` เขียนไว้ตรง ๆ ว่า *"positional along the requester's manager line (label is display only)"* — engine หยิบ **หัวหน้าคนที่ N** ไม่เคยดูตำแหน่ง ทั้งที่ชื่อขั้นทุกขั้นเป็นชื่อตำแหน่ง
+
+### กฎใหม่: ขั้น = "ระดับตำแหน่ง" แล้วไต่ report-to หาคนที่ถือตำแหน่งนั้น
+
+- ตาราง pivot **`workflow_step_positions`** (FK ทั้งสองข้าง · `positions` เป็น `restrictOnDelete` — ตำแหน่งที่ workflow อ้างอยู่ลบไม่ได้) · **1 ขั้นรับได้หลายตำแหน่ง** ตามที่ `/` ในชื่อขั้นสื่อไว้แต่แรก
+- Default 3 ระดับใน `DefaultWorkflows::RUNGS`: **Supervisor** {Asst. Supervisor · Supervisor · Senior Supervisor} → **Manager** {Asst. Manager · Manager · Senior Manager} → **Executive** {Vice President · Director} · **Leader ลงมาไม่อยู่ในระดับใดเลย** (ไม่ใช่ผู้อนุมัติ ตามที่ตกลง)
+- resolver ไต่สายขึ้นไป **ต่อจากคนที่ขั้นก่อนหน้าจับได้** (คนเดียวเป็น 2 ระดับไม่ได้) · เจอคนแรกที่ตำแหน่งอยู่ในชุดของขั้นนั้น
+- **ไม่มีใครในสายถือตำแหน่งนั้น = ข้ามขั้นนั้น** (`skip_reason` ใหม่ `no_matching_position` + คำแปล en/th) — เช่น Supervisor ยื่นเอง ก็ไม่ต้องมี Supervisor อนุมัติตัวเอง ขึ้น Manager เลย
+- **กันชนห้าม bypass**: ถ้าทุกขั้นหาคนไม่เจอเลย แต่ในสายมีคนอยู่ → **หัวหน้าคนบนสุดของสายเซ็น 1 ขั้น** ไม่ปล่อยให้คำขออนุมัติตัวเองผ่าน
+- คนลาออกยังถูกข้ามเหมือนเดิม · คนที่ยังไม่มีบัญชี login ยังถือขั้นไว้และรอ (จากรอบก่อน)
+
+### ตัวแก้ไข + seeder
+
+- หน้าแก้ Workflow: ขั้นแบบ chain เลือกตำแหน่งได้หลายตัวเป็นปุ่ม chip จาก `positions` จริง (endpoint ใหม่ `workflows/position-options` — peek ใต้ gate `workflows.manage` ไม่ต้องมีสิทธิ์จัดการตำแหน่ง) · **validation: chain ต้องมี ≥1 ตำแหน่ง** ทั้ง `UpdateWorkflowRequest` และ preview · หน้า view โชว์ตำแหน่งของแต่ละขั้นเป็น chip
+- `WorkflowSeeder` ผูกตำแหน่งให้ตอน seed (fresh install ใช้งานได้ทันที) และ **เติมย้อนหลังให้ขั้นที่ยังไม่มีตำแหน่งเลย** เมื่อรันซ้ำ — ขั้นที่แอดมินตั้งค่าไว้แล้วไม่ถูกแตะ
+- migration `create_workflow_step_positions` backfill จากชื่อขั้นเดิมให้ install ที่มีทั้ง workflow และ positions อยู่แล้ว
+
+### Tests / Verification
+
+`RequestResolutionTest` เขียนใหม่รอบใหญ่ (12 tests) — ผังจริง `Staff → Leader → Supervisor → Manager → VP` ได้ **Sup → Mgr → VP และ Leader ไม่ถูกเรียกเลย** · ขั้นที่ไม่มีคนถือตำแหน่งถูกข้าม · ทุกขั้นหาไม่เจอ → คนบนสุดเซ็น · ขั้นถัดไปไม่ย้อนไปหยิบคนเดิม · คนลาออกถูกข้ามไปหาคนถัดไปที่ถือระดับเดียวกัน · merge ยังทำงานเมื่อ owner step ตรงกับหัวหน้าคนเดียวกัน
+`WorkflowAdminTest` — preview จับคู่ตามตำแหน่ง · chain ที่ไม่ระบุตำแหน่งถูกปฏิเสธ 422 · update บันทึก pivot · re-seed เติมขั้นที่ว่างแต่ไม่ทับที่แอดมินตั้ง
+fixture ของ `RequestWorkflowTest` / `RequestNotificationTest` / `RequestAutoTicketTest` / `EmployeeOnboardingRequestTest` เปลี่ยนมา seed `PositionSeeder` แล้วให้พนักงานถือตำแหน่งจริง
+**ทั้ง suite = 862 passed / 3,343 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน · migrate รันบนฐานจริงแล้ว
+
+---
+
 ## Workflow — เลิกตั้ง SLA ในฐาน · วัดเวลาจริงแทน · ไม่มีการสร้าง workflow ใหม่ (2026-08-06)
 
 ### 1. SLA ที่ตั้งค่าไว้ถูกลบออกจากฐานข้อมูล
