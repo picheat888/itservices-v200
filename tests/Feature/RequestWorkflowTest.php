@@ -94,7 +94,8 @@ class RequestWorkflowTest extends TestCase
         $this->assertCount(3, $approvals); // Sup, Mgr, IT queue
         $this->assertSame(ApprovalStatus::Current, $approvals[0]->status);
         $this->assertSame($this->sup->id, $approvals[0]->approver_employee_id);
-        $this->assertNotNull($approvals[0]->due_at);
+        // The clock the module measures afterwards starts here; there is no deadline.
+        $this->assertNotNull($approvals[0]->became_current_at);
         $this->assertSame(ApprovalStatus::Waiting, $approvals[1]->status);
     }
 
@@ -305,7 +306,7 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($admin)->putJson("/api/workflows/{$workflow->id}", [
             'auto_ticket' => false,
             'steps' => [
-                ['actor_type' => 'chain', 'label' => 'Only Boss', 'kind' => 'approval', 'sla_days' => 3],
+                ['actor_type' => 'chain', 'label' => 'Only Boss', 'kind' => 'approval'],
             ],
         ])->assertOk();
 

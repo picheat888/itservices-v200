@@ -407,8 +407,7 @@ export function RequestCreateDialog({
                                     <div className="mt-6">
                                         <SectionLabel>{t('req_route_title')}</SectionLabel>
                                         <div className="bg-muted/30 rounded-lg px-4 py-4">
-                                            {/* showSla off: the requester sees who approves, not the clock behind it. */}
-                                            <WorkflowStrip steps={selected.workflow.steps} showSla={false} />
+                                            <WorkflowStrip steps={selected.workflow.steps} />
                                         </div>
                                         {selected.workflow.auto_ticket && (
                                             <p className="text-muted-foreground mt-2.5 flex items-center gap-2 text-xs">

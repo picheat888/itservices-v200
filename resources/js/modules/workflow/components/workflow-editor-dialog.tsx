@@ -17,7 +17,7 @@ import { ArrowDown, ArrowUp, Check, Loader2, Plus, Trash2, Users, Workflow as Wo
 import { useEffect, useMemo, useState } from 'react';
 import { workflowApi, type ResolvedPreviewRow } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
-import { fmtSla, WorkflowStrip } from './workflow-strip';
+import { WorkflowStrip } from './workflow-strip';
 
 type EditableStep = Omit<WorkflowStep, 'id' | 'position'>;
 
@@ -57,7 +57,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setName(workflow.name);
         setActive(workflow.active);
         setAutoTicket(workflow.auto_ticket);
-        setSteps(workflow.steps.map((s) => ({ actor_type: s.actor_type, label: s.label, kind: s.kind, sla_days: Number(s.sla_days) })));
+        setSteps(workflow.steps.map((s) => ({ actor_type: s.actor_type, label: s.label, kind: s.kind })));
         setServerError('');
         setSaveState('idle');
         setPreviewEmployee('');
@@ -74,7 +74,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             [next[i], next[j]] = [next[j], next[i]];
             return next;
         });
-    const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval', sla_days: 1 }]);
+    const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval' }]);
 
     // ── "Test with employee" resolution preview ──────────────────────────────
     const { data: employees = [] } = useQuery({
@@ -177,7 +177,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                     >
                                         {i + 1}
                                     </span>
-                                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr_84px]">
+                                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1.1fr_1.4fr_1fr]">
                                         <Select
                                             value={s.actor_type}
                                             onValueChange={(v) => {
@@ -216,15 +216,6 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                 <SelectItem value="fulfillment">{t('wf_fulfillment')}</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Input
-                                            className="h-9 font-mono text-sm"
-                                            type="number"
-                                            min={0}
-                                            step={0.5}
-                                            value={s.sla_days}
-                                            onChange={(e) => updStep(i, { sla_days: Number(e.target.value) })}
-                                            aria-label={t('wf_step_sla')}
-                                        />
                                     </div>
                                     <div className="flex shrink-0 flex-col gap-0.5">
                                         <IconBtn disabled={i === 0} onClick={() => moveStep(i, -1)} label="up">
@@ -284,7 +275,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         {previewRows && !preview.isPending && (
                             <div className="bg-background mt-3 space-y-3 rounded-xl px-4 py-4">
                                 {previewRows.map((row, i) => (
-                                    <ResolvedRow key={i} row={row} t={t} lang={lang} />
+                                    <ResolvedRow key={i} row={row} t={t} />
                                 ))}
                             </div>
                         )}
@@ -309,7 +300,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 }
 
 /** One resolved step of the preview timeline. */
-function ResolvedRow({ row, t, lang }: { row: ResolvedPreviewRow; t: (k: string) => string; lang: string }) {
+function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => string }) {
     const skipped = row.status === 'skipped';
     const queue = row.actor_type === 'it_staff';
     const owner = row.actor_type === 'owner' && row.approver_employee_id === null && !skipped;
@@ -326,12 +317,7 @@ function ResolvedRow({ row, t, lang }: { row: ResolvedPreviewRow; t: (k: string)
                 {row.position}
             </span>
             <div className="min-w-0">
-                <div className="text-sm font-semibold">
-                    {queue ? t('wf_actor_it') : (row.approver_name ?? row.label)}
-                    {row.sla_days != null && (
-                        <span className="text-muted-foreground ml-2 font-mono text-xs font-normal">{fmtSla(row.sla_days, lang)}</span>
-                    )}
-                </div>
+                <div className="text-sm font-semibold">{queue ? t('wf_actor_it') : (row.approver_name ?? row.label)}</div>
                 <div className="text-muted-foreground text-xs">
                     {skipped
                         ? `${t('wf_skipped')} — ${row.note ?? ''}`

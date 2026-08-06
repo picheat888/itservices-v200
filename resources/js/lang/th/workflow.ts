@@ -8,8 +8,7 @@ import type { Dict } from '@/lang/types';
  */
 export const workflow: Dict = {
     wf_title: 'Workflow',
-    wf_sub: 'กำหนดเส้นทางอนุมัติของคำขอแต่ละประเภท — ใครอนุมัติ ลำดับไหน ภายในกี่วัน',
-    wf_new: 'สร้าง Workflow ใหม่',
+    wf_sub: 'ปรับเส้นทางอนุมัติของคำขอแต่ละประเภท — ใครอนุมัติ และลำดับไหน',
     wf_coming_soon: 'เร็ว ๆ นี้',
 
     wf_kpi_active: 'Workflow ที่เปิดใช้',
@@ -17,8 +16,13 @@ export const workflow: Dict = {
     wf_kpi_steps: 'ขั้นอนุมัติรวม',
     wf_kpi_steps_sub: 'สูงสุด',
     wf_kpi_steps_sub_tail: 'ขั้นต่อคำขอ',
-    wf_kpi_sla: 'SLA เฉลี่ยต่อ Workflow',
-    wf_kpi_sla_sub: 'ตั้งแต่ยื่นจนปิดเคส',
+    // วัดจากคำขอจริง — workflow ไม่ได้ตั้งเป้าเวลาไว้
+    wf_kpi_decision: 'เวลาตัดสินเฉลี่ย',
+    wf_kpi_decision_window: 'ช่วง {days} วันย้อนหลัง',
+    wf_kpi_decision_requests: 'คำขอ',
+    wf_kpi_decision_none: 'ไม่มีคำขอที่ตัดสินใน {days} วันย้อนหลัง',
+    wf_row_decision: 'ตัดสินเฉลี่ย',
+    wf_days_suffix: ' วัน',
     wf_kpi_auto: 'เปิด Auto Ticket',
     wf_kpi_auto_sub: 'เปิดเคสให้ IT อัตโนมัติเมื่ออนุมัติครบ',
 
@@ -33,7 +37,6 @@ export const workflow: Dict = {
     wf_no_auto_ticket: 'ไม่เปิดเคสอัตโนมัติ',
     wf_applies_to: 'ใช้กับคำขอ',
     wf_steps: 'ขั้นตอน',
-    wf_total_sla: 'SLA รวม',
     wf_status: 'สถานะ',
     wf_approval: 'ขั้นอนุมัติ',
     wf_fulfillment: 'ขั้นดำเนินการ',
@@ -50,19 +53,18 @@ export const workflow: Dict = {
     wf_step_actor: 'ผู้ดำเนินการ',
     wf_step_label: 'ป้ายที่แสดง',
     wf_step_kind: 'ชนิดขั้นตอน',
-    wf_step_sla: 'SLA (วัน)',
     wf_actor_chain: 'สายบังคับบัญชา',
     wf_actor_owner: 'เจ้าของ Resource',
     wf_actor_it: 'ทีม IT',
     wf_preview_title: 'ตัวอย่างสายอนุมัติ',
     wf_test_with: 'ทดสอบกับ:',
     wf_resolve_title: 'รันตามสายบังคับบัญชาจริง',
-    wf_resolve_hint: 'ขั้นแบบสายบังคับบัญชาจะถูกแทนที่ด้วยหัวหน้าจริงของผู้ขอ หากสายสั้น คนเดียวอาจอนุมัติแทนหลายขั้น ส่วนขั้นเจ้าของ Resource จะรู้ตัวจริงเมื่อผู้ขอเลือก Resource ตอนยื่น',
+    wf_resolve_hint:
+        'ขั้นแบบสายบังคับบัญชาจะถูกแทนที่ด้วยหัวหน้าจริงของผู้ขอ หากสายสั้น คนเดียวอาจอนุมัติแทนหลายขั้น ส่วนขั้นเจ้าของ Resource จะรู้ตัวจริงเมื่อผู้ขอเลือก Resource ตอนยื่น',
     wf_requester: 'ผู้ขอ',
     wf_skipped: 'ข้ามขั้นนี้',
     wf_covers: 'อนุมัติแทน',
     wf_owner_preview: 'ระบุตัวจริงเมื่อเลือก Resource ตอนยื่นคำขอ',
     wf_queue_preview: 'คิวทีม IT · เปิด Ticket อัตโนมัติ',
     wf_save_error_steps: 'ตรวจสอบรายการขั้นตอน',
-    wf_days: ' วัน',
 };

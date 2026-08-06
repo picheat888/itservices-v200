@@ -24,7 +24,6 @@ class WorkflowStepResource extends JsonResource
             'actor_type' => $this->actor_type?->value,
             'label' => $this->label,
             'kind' => $this->kind?->value,
-            'sla_days' => (float) $this->sla_days,
         ];
     }
 }

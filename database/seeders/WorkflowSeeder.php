@@ -33,7 +33,6 @@ class WorkflowSeeder extends Seeder
                     'actor_type' => $step['actor_type'],
                     'label' => $step['label'],
                     'kind' => $step['kind'],
-                    'sla_days' => $step['sla_days'],
                 ]);
             }
         }

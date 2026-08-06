@@ -1474,7 +1474,36 @@ violet เป็นโทนเดียวใน `StatusBadge` ที่ไม�
 
 **ยังเป็นช่องว่าง:** ตอนนี้ถ้าผู้อนุมัติยังไม่มีบัญชี **จะไม่มีแจ้งเตือนออกไปหาใครเลย** (`notifyApprover()` ออกทันทีเมื่อหา user ไม่เจอ) คำขอค้างเงียบ ๆ โดยมีแต่ note บนแถวอธิบาย — ถ้าต้องการให้เตือนคนที่ถือ `employees.set_credentials` ว่ามีคำขอติดอยู่เพราะบัญชียังไม่ถูกสร้าง ต้องเพิ่ม subtype ใหม่ (ยังไม่ทำ)
 
+---
+
+## Workflow — เลิกตั้ง SLA ในฐาน · วัดเวลาจริงแทน · ไม่มีการสร้าง workflow ใหม่ (2026-08-06)
+
+### 1. SLA ที่ตั้งค่าไว้ถูกลบออกจากฐานข้อมูล
+
+`workflow_steps.sla_days` · `request_approvals.sla_days` · `request_approvals.due_at` ถูก drop (migration `drop_sla_from_workflow_and_approvals`) — ตัวเลขพวกนี้ไม่เคยมีใครตั้งจากประสบการณ์จริง เป็นค่าที่ seed มาแบบเดาไว้ แล้วถูกใช้เป็นเส้นตายจนเกิดป้าย "เกินกำหนด" ที่อ้างอิงจากการเดา
+
+- ตามไปลบทุกจุด: model/resource/validation (`UpdateWorkflowRequest`, `WorkflowController@preview`) · `WorkflowResolverService` (ไม่มี SLA บนแถว ไม่ต้องเอา max ตอน merge) · `RequestService` (เลิกคำนวณ `due_at`) · `RequestOptionsController` · `DefaultWorkflows` + `WorkflowSeeder` · ฝั่งหน้าเว็บ: ช่องกรอก SLA ในตัวแก้ไข · SLA รวม/ต่อขั้นในหน้า view · `WorkflowStrip` (+ prop `showSla`) · ฟังก์ชัน `fmtSla` และคีย์ i18n ที่ตายแล้ว
+- `overdue` / `overdue_me` / `progress.current_overdue` หายไปจากโมดูล Request ทั้งหมด เพราะไม่มีเส้นตายให้เทียบ · `became_current_at` / `acted_at` / `approved_at` ยังอยู่ครบ ซึ่งพอสำหรับวัดของจริงย้อนหลัง
+
+### 2. การ์ดใบที่ 3 ทำใหม่ — "เวลาตัดสินเฉลี่ย" ที่วัดจริง 30 วันย้อนหลัง
+
+- `WorkflowController@index` คำนวณ **เวลาตั้งแต่ยื่นจนตัดสิน (submit → approved/rejected) เฉลี่ยต่อ workflow** จากคำขอที่ปิดในช่วง `MEASURE_DAYS = 30` แล้วส่งมาที่ `data[].measured = {avg_days, requests}` + `meta.measure_days`
+- **หน้าต่างเวลาเป็นตัวคุมความเร็ว** — query เดียวมีขอบเขต ไม่ scan คำขอทั้งระบบตามที่กังวลไว้ · เฉลี่ยใน PHP เหมือน KPI ของหน้า Requests เพื่อไม่ผูกกับฟังก์ชันวันที่ของฐานข้อมูล
+- การ์ดบอกช่วงและจำนวนตัวอย่างไว้ใต้ค่า (`ช่วง 30 วันย้อนหลัง · N คำขอ`) เพื่อไม่ให้เลขที่ขยับทุกสัปดาห์ถูกอ่านเป็นเป้าที่ใครตั้ง · ถ้าช่วงนั้นไม่มีคำขอปิดเลยจะขึ้น `—` ไม่ใช่ 0 (0 วันแปลว่า "ตัดสินทันที" ซึ่งไม่จริง)
+- แถวในลิสต์และหน้า view แสดงค่าที่วัดได้ของ workflow นั้นเอง แทนที่ SLA รวมที่เคยเอามาบวกกัน
+
+### 3. ไม่มีปุ่มสร้าง Workflow
+
+Backend ไม่มี endpoint สร้าง/ลบมาตั้งแต่ต้น (มีแค่ index/update/preview/employee-options) — ปุ่มบนหน้าเป็นปุ่มหลอกที่ toast "เร็ว ๆ นี้" ถูกลบออก พร้อมแก้คำบรรยายหน้าให้ตรงว่าโมดูลนี้ **ปรับ**เส้นทางอนุมัติของประเภทคำขอที่มีอยู่ ไม่ได้สร้างใหม่
+
 ### Tests / Verification
+
+`WorkflowAdminTest` — เพิ่ม 2 เทสต์: ค่าเฉลี่ยที่วัดได้ถูกต้องและ **ไม่นับคำขอที่ปิดก่อนหน้าต่าง 30 วัน** · workflow ที่ยังไม่มีคำขอวิ่งผ่านคืน `measured = null` (ไม่ใช่ 0) · payload ของเทสต์เดิมถอด `sla_days` ออกหมด
+**ทั้ง suite = 854 passed / 3,324 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน · migrate รันบนฐานจริงแล้ว
+
+---
+
+## Onboarding requests → ต่อเข้า Workflow อนุมัติจริง — Tests / Verification
 
 `EmployeeOnboardingRequestTest` (12 tests) — 1 บริการ = 1 คำขอ · เจ้าของ/ผู้ยื่นถูกบันทึกแยกกัน · **สายอนุมัติเป็นของพนักงานใหม่ไม่ใช่ของ HR** · **คำขอรอหัวหน้าที่ยังไม่มีบัญชี (pending) ไม่ผ่านเอง** · **หัวหน้ากดอนุมัติได้ทันทีที่บัญชีถูกสร้าง** · workflow ปิดแล้วพนักงานยังถูกสร้าง + รายงานใบที่ยื่นไม่ได้ · หมายเหตุกลายเป็น reason · คนยื่นแทนเปิด/ยกเลิก/เห็นใน `scope=mine` ได้ · API บอก origin + ชื่อคนยื่น · คนยื่นได้รับ receipt ที่เจ้าของรับไม่ได้
 `RequestResolutionTest` — เทสต์เดิมที่พินกฎ "ไม่มีบัญชี = ข้าม" ถูกเขียนใหม่เป็นกฎใหม่ + เพิ่มเทสต์ว่าคนลาออกยังถูกข้าม

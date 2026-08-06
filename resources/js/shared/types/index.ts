@@ -879,7 +879,6 @@ export interface RequestApproval {
     actor_type: WorkflowActorType;
     kind: WorkflowStepKind;
     label: string;
-    sla_days: number | null;
     status: ApprovalRowStatus;
     approver_employee_id: number | null;
     approver_name: string | null;
@@ -888,9 +887,7 @@ export interface RequestApproval {
     skip_reason: ApprovalSkipReason | null;
     acted_by_name: string | null;
     became_current_at: string | null;
-    due_at: string | null;
     acted_at: string | null;
-    overdue: boolean;
     /** Step is open and its approver has no login account yet — reported live, not snapshotted. */
     awaiting_account: boolean;
 }
@@ -917,7 +914,7 @@ export interface ServiceRequest {
     ticket?: { id: number; ticket_no: string; status: string | null } | null;
     approvals?: RequestApproval[];
     /** Compact chain summary for table rows (WorkflowMini). */
-    progress: { total: number; done: number; current_label: string | null; current_overdue: boolean };
+    progress: { total: number; done: number; current_label: string | null };
     can_approve: boolean;
     can_cancel: boolean;
     can_fulfill: boolean;
@@ -935,7 +932,16 @@ export interface WorkflowStep {
     actor_type: WorkflowActorType;
     label: string;
     kind: WorkflowStepKind;
-    sla_days: number;
+}
+
+/**
+ * How long a route actually took lately — measured from the requests that ran
+ * through it (submitted → decided), never a configured target. Null when nothing
+ * on that route was decided inside the window the API reports in `meta`.
+ */
+export interface WorkflowMeasured {
+    avg_days: number;
+    requests: number;
 }
 
 /** An approval workflow definition — one per request type. */
@@ -946,6 +952,7 @@ export interface Workflow {
     active: boolean;
     auto_ticket: boolean;
     steps: WorkflowStep[];
+    measured: WorkflowMeasured | null;
     updated_at: string | null;
 }
 

@@ -45,7 +45,6 @@ class RequestOptionsController extends Controller
                         'label' => $s->label,
                         'actor_type' => $s->actor_type->value,
                         'kind' => $s->kind->value,
-                        'sla_days' => (float) $s->sla_days,
                     ])->values(),
                 ],
             ];

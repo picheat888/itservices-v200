@@ -290,10 +290,11 @@ class RequestService
             ->orderBy('position')
             ->first();
 
+        // became_current_at starts the clock we measure afterwards; there is no
+        // deadline to compare it against.
         $next?->update([
             'status' => ApprovalStatus::Current->value,
             'became_current_at' => now(),
-            'due_at' => $next->sla_days !== null ? now()->addMinutes((int) round((float) $next->sla_days * 1440)) : null,
         ]);
 
         return $next;
@@ -320,7 +321,6 @@ class RequestService
         $queueRow?->update([
             'status' => ApprovalStatus::Current->value,
             'became_current_at' => now(),
-            'due_at' => $queueRow->sla_days !== null ? now()->addMinutes((int) round((float) $queueRow->sla_days * 1440)) : null,
         ]);
 
         if (! $request->auto_ticket || $request->ticket_id !== null) {

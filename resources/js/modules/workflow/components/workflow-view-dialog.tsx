@@ -7,10 +7,9 @@ import { cn } from '@/shared/lib/utils';
 import type { Workflow } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { useUiStore } from '@/stores/ui';
 import { Pencil, Workflow as WorkflowIcon, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { fmtSla, WorkflowStrip } from './workflow-strip';
+import { WorkflowStrip } from './workflow-strip';
 
 /**
  * Read-only focus dialog for one workflow: route strip, per-step detail and
@@ -18,7 +17,6 @@ import { fmtSla, WorkflowStrip } from './workflow-strip';
  */
 export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Workflow | null; onClose: () => void; onEdit: (w: Workflow) => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
 
     // Keep the last shown workflow so content doesn't blank during the exit animation.
     const [shown, setShown] = useState<Workflow | null>(null);
@@ -29,7 +27,6 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
     if (!wf) return null;
 
     const approvals = wf.steps.filter((s) => s.kind === 'approval').length;
-    const totalSla = wf.steps.reduce((sum, s) => sum + Number(s.sla_days || 0), 0);
 
     return (
         <Dialog open={!!workflow} onOpenChange={(o) => !o && onClose()}>
@@ -59,7 +56,13 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                             label={t('wf_steps')}
                             value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_fulfillment')}`}
                         />
-                        <InfoCell label={t('wf_total_sla')} value={fmtSla(totalSla, lang)} mono />
+                        {/* Measured, not configured — and absent rather than zero when this
+                            route decided nothing inside the window. */}
+                        <InfoCell
+                            label={t('wf_row_decision')}
+                            value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')} (${wf.measured.requests})` : '—'}
+                            mono
+                        />
                     </div>
 
                     <div>
@@ -90,7 +93,6 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                                             {s.kind === 'fulfillment' ? t('wf_fulfillment') : t('wf_approval')}
                                         </div>
                                     </div>
-                                    <span className="text-muted-foreground font-mono text-xs">{fmtSla(s.sla_days, lang)}</span>
                                 </div>
                             ))}
                         </div>

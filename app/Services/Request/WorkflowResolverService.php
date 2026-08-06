@@ -51,7 +51,6 @@ class WorkflowResolverService
                 'actor_type' => $s->actor_type->value,
                 'label' => $s->label,
                 'kind' => $s->kind->value,
-                'sla_days' => (float) $s->sla_days,
             ])->all(),
             $requester,
             $fields,
@@ -59,7 +58,7 @@ class WorkflowResolverService
     }
 
     /**
-     * Resolve a transient list of steps (each: actor_type, label, kind, sla_days).
+     * Resolve a transient list of steps (each: actor_type, label, kind).
      *
      * @param  list<array<string, mixed>>  $steps
      * @param  array<string, mixed>  $fields
@@ -82,7 +81,6 @@ class WorkflowResolverService
                 'actor_type' => $actorType->value,
                 'kind' => $kind->value,
                 'label' => (string) $step['label'],
-                'sla_days' => (float) ($step['sla_days'] ?? 1),
                 'approver_employee_id' => null,
                 'approver_name' => null,
                 'status' => ApprovalStatus::Waiting->value,
@@ -141,7 +139,6 @@ class WorkflowResolverService
                 'actor_type' => StepActorType::Chain->value,
                 'kind' => WorkflowStepKind::Approval->value,
                 'label' => implode(' · ', $skippedChainLabels),
-                'sla_days' => null,
                 'approver_employee_id' => null,
                 'approver_name' => null,
                 'status' => ApprovalStatus::Skipped->value,
@@ -155,9 +152,8 @@ class WorkflowResolverService
 
     /**
      * Collapse consecutive rows that resolved to the same person and kind into
-     * one row (labels joined, largest SLA wins — one decision, one clock),
-     * then renumber positions 1..n. Asking one human to press Approve three times
-     * in a row is not three approvals.
+     * one row (labels joined), then renumber positions 1..n. Asking one human to
+     * press Approve three times in a row is not three approvals.
      *
      * @param  Collection<int, array<string, mixed>>  $rows
      * @return Collection<int, array<string, mixed>>
@@ -178,7 +174,6 @@ class WorkflowResolverService
                     // that already said it, so `note` stays free for skip reasons and
                     // for whatever the approver actually writes.
                     $merged[$lastIndex]['label'] = $last['label'].' · '.$row['label'];
-                    $merged[$lastIndex]['sla_days'] = max((float) $last['sla_days'], (float) $row['sla_days']);
 
                     continue;
                 }

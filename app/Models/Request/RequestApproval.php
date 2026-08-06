@@ -19,11 +19,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RequestApproval extends Model
 {
     protected $fillable = [
-        'service_request_id', 'position', 'actor_type', 'kind', 'label', 'sla_days',
+        'service_request_id', 'position', 'actor_type', 'kind', 'label',
         'approver_employee_id', 'approver_name',
         // note = what a person wrote · skip_reason = why the engine skipped the step
         'status', 'note', 'skip_reason', 'acted_by_user_id', 'acted_by_name',
-        'became_current_at', 'due_at', 'acted_at',
+        'became_current_at', 'acted_at',
     ];
 
     protected function casts(): array
@@ -34,9 +34,7 @@ class RequestApproval extends Model
             'kind' => WorkflowStepKind::class,
             'status' => ApprovalStatus::class,
             'skip_reason' => ApprovalSkipReason::class,
-            'sla_days' => 'decimal:2',
             'became_current_at' => 'datetime',
-            'due_at' => 'datetime',
             'acted_at' => 'datetime',
         ];
     }
