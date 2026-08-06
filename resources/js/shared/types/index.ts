@@ -883,6 +883,8 @@ export interface RequestApproval {
     due_at: string | null;
     acted_at: string | null;
     overdue: boolean;
+    /** Step is open and its approver has no login account yet — reported live, not snapshotted. */
+    awaiting_account: boolean;
 }
 
 /** An IT service request as the API returns it. */

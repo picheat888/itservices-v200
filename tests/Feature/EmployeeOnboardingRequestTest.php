@@ -213,7 +213,26 @@ class EmployeeOnboardingRequestTest extends TestCase
 
         $current = $request->approvals()->where('status', ApprovalStatus::Current->value)->firstOrFail();
         $this->assertSame($this->itManager->id, $current->approver_employee_id);
-        $this->assertStringContainsString('login', (string) $current->note);
+    }
+
+    public function test_the_api_says_the_step_is_waiting_on_an_account_and_stops_saying_it_once_created(): void
+    {
+        User::where('employee_id', $this->itManager->id)->delete();
+        $this->addEmployee(['computer'])->assertCreated();
+        $request = ServiceRequest::firstOrFail();
+        $viewer = $this->makeUser('viewer', ['requests.view_all']);
+
+        $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.approvals.0.awaiting_account', true);
+
+        // Reported live, not snapshotted: provisioning the account clears it without
+        // anything rewriting the frozen approval row.
+        $this->makeUser('user', [], $this->itManager);
+
+        $this->actingAs($viewer)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.approvals.0.awaiting_account', false);
     }
 
     public function test_that_manager_can_approve_as_soon_as_their_account_exists(): void

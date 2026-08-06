@@ -107,8 +107,10 @@ class RequestResolutionTest extends TestCase
         // Passing it over their head to the VP would be an approval they never gave.
         $this->assertSame($noAccount->id, $rows->first()['approver_employee_id']);
         $this->assertSame(ApprovalStatus::Waiting->value, $rows->first()['status']);
-        $this->assertStringContainsString('login', $rows->first()['note']);
         $this->assertSame($vp->id, $rows->get(1)['approver_employee_id']);
+        // The missing account is NOT written onto the row: it stops being true the
+        // moment the account is created, and a snapshot would keep claiming it.
+        $this->assertNull($rows->first()['note']);
     }
 
     public function test_a_resigned_manager_is_passed_over(): void

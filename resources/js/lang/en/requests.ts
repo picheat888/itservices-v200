@@ -111,6 +111,7 @@ export const requests: Dict = {
     // On-behalf (onboarding) marking — shown wherever an approver meets the request.
     req_origin_onboarding: 'New employee',
     req_submitted_by: 'Filed by',
+    req_await_account: 'Waiting - this approver has no login account yet',
     req_onboarding_title: 'Request for a new employee',
     req_onboarding_desc: 'Filed with the new employee record, before they had an account of their own.',
     req_trail_title: 'Approval trail',

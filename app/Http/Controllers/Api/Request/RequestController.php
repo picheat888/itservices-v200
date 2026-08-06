@@ -63,7 +63,9 @@ class RequestController extends Controller
         };
 
         // Actionable first (pending → approved → fulfilled → the rest), newest within each group.
-        $query = $visible(ServiceRequest::with(['approvals', 'ticket']))
+        // approver.user comes along because each row reports whether its approver still
+        // lacks a login — without it that is one extra query per approval row.
+        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket']))
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 
@@ -109,7 +111,7 @@ class RequestController extends Controller
             'type' => $serviceRequest->type->value,
         ]);
 
-        return (new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket', 'workflow'])))
+        return (new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket', 'workflow'])))
             ->response()->setStatusCode(201);
     }
 
@@ -125,7 +127,7 @@ class RequestController extends Controller
             || $user->hasPermission('requests.view_all')
             || $user->hasPermission('requests.fulfill'), 403);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket', 'workflow']));
+        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket', 'workflow']));
     }
 
     /** Approve the current step (note optional). */
@@ -136,7 +138,7 @@ class RequestController extends Controller
 
         AuditLog::record('Approved service request step', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
     }
 
     /** Reject the current step — a remark is always required. */
@@ -147,7 +149,7 @@ class RequestController extends Controller
 
         AuditLog::record('Rejected service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
     }
 
     /** Mark an approved request done (IT queue). */
@@ -157,7 +159,7 @@ class RequestController extends Controller
 
         AuditLog::record('Fulfilled service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
     }
 
     /** Requester withdraws their own pending request. */
@@ -167,7 +169,7 @@ class RequestController extends Controller
 
         AuditLog::record('Cancelled service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
     }
 
     /**
