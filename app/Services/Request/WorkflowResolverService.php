@@ -107,7 +107,6 @@ class WorkflowResolverService
                 $rows->push([...$base,
                     'approver_employee_id' => $manager->id,
                     'approver_name' => $manager->name,
-                    'note' => $this->accountPendingNote($manager),
                 ]);
 
                 continue;
@@ -129,7 +128,6 @@ class WorkflowResolverService
                 $rows->push([...$base,
                     'approver_employee_id' => $owner->id,
                     'approver_name' => $owner->name,
-                    'note' => $this->accountPendingNote($owner),
                 ]);
             }
         }
@@ -200,19 +198,10 @@ class WorkflowResolverService
         return $employee !== null && $employee->status === EmployeeStatus::Active;
     }
 
-    /** Whether that person can act right now. A missing login is what holds a step up. */
-    private function canActNow(Employee $employee): bool
-    {
-        return $employee->user()->exists();
-    }
-
-    /** Note put on a row whose approver cannot sign in yet, so the wait is explained. */
-    private function accountPendingNote(Employee $approver): ?string
-    {
-        return $this->canActNow($approver)
-            ? null
-            : 'Waiting — this approver has no login account yet; the step unblocks once it is created.';
-    }
+    // NOTE: "this approver has no login yet" is deliberately NOT written onto the
+    // row. The row is a snapshot and that fact is not: the moment HR provisions the
+    // account, a frozen note would be a lie. RequestApprovalResource reports it live
+    // as `awaiting_account` instead.
 
     /** The owner of the Access resource referenced by the submitted fields, if usable. */
     private function resolveOwner(RequestType $type, array $fields): ?Employee
