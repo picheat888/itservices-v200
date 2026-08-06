@@ -84,7 +84,6 @@ class ServiceRequestResource extends JsonResource
                 'total' => $approvalRows->count(),
                 'done' => $doneApprovals->count(),
                 'current_label' => $current?->label,
-                'current_overdue' => $current !== null && $current->due_at !== null && $current->due_at->isPast(),
             ],
             'can_approve' => $canApprove,
             // The owner may withdraw their own; the filer may withdraw one they sent

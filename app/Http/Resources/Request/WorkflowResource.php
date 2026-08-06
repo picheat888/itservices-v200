@@ -25,6 +25,10 @@ class WorkflowResource extends JsonResource
             'active' => $this->active,
             'auto_ticket' => $this->auto_ticket,
             'steps' => WorkflowStepResource::collection($this->whenLoaded('steps')),
+            // Measured, not configured: average days from submit to decision over the
+            // controller's recent window, and how many requests that rests on. Null
+            // when nothing on this route was decided in the window.
+            'measured' => $this->measured ?? null,
             'updated_at' => $this->updated_at?->toDateTimeString(),
         ];
     }

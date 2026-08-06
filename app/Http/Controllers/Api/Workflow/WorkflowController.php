@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Workflow;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
@@ -11,10 +12,12 @@ use App\Http\Requests\Request\UpdateWorkflowRequest;
 use App\Http\Resources\Request\WorkflowResource;
 use App\Models\AuditLog;
 use App\Models\Employee\Employee;
+use App\Models\Request\ServiceRequest;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\WorkflowResolverService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -26,11 +29,56 @@ use Illuminate\Validation\Rule;
  */
 class WorkflowController extends Controller
 {
+    /** How far back the measured decision times look. */
+    private const MEASURE_DAYS = 30;
+
+    /**
+     * The definitions, each carrying how long its route ACTUALLY took lately.
+     *
+     * A step no longer declares an SLA, so the number on the page is measured
+     * instead: submitted → decided, over the requests that finished in the last
+     * MEASURE_DAYS. The window is what keeps this cheap — one bounded query
+     * rather than a scan of every request ever filed — and the page states it, so
+     * a figure that moves week to week is not mistaken for a target.
+     */
     public function index(): JsonResponse
     {
         $workflows = Workflow::with('steps')->orderBy('request_type')->get();
 
-        return response()->json(['data' => WorkflowResource::collection($workflows)]);
+        return response()->json([
+            'data' => WorkflowResource::collection($workflows->each(
+                fn (Workflow $workflow) => $workflow->setAttribute('measured', $this->measuredDecisionTimes()->get($workflow->id)),
+            )),
+            'meta' => ['measure_days' => self::MEASURE_DAYS],
+        ]);
+    }
+
+    /**
+     * Average days from submit to decision per workflow, plus how many requests
+     * that average rests on. Averaged in PHP (like the request dashboard's cycle
+     * figure) so the maths does not depend on the database's date functions.
+     *
+     * @return Collection<int, array{avg_days: float, requests: int}>
+     */
+    private function measuredDecisionTimes(): Collection
+    {
+        return once(fn () => ServiceRequest::query()
+            ->whereNotNull('workflow_id')
+            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Fulfilled->value])
+            ->where('created_at', '>=', now()->subDays(self::MEASURE_DAYS))
+            ->get(['workflow_id', 'created_at', 'approved_at', 'rejected_at'])
+            ->groupBy('workflow_id')
+            ->map(function ($requests) {
+                $spans = $requests
+                    ->map(fn (ServiceRequest $r) => ($r->approved_at ?? $r->rejected_at)?->diffInMinutes($r->created_at, true))
+                    ->filter(fn ($minutes) => $minutes !== null);
+
+                return $spans->isEmpty() ? null : [
+                    'avg_days' => round($spans->avg() / 1440, 1),
+                    'requests' => $spans->count(),
+                ];
+            })
+            ->filter());
     }
 
     public function update(UpdateWorkflowRequest $request, Workflow $workflow): WorkflowResource
@@ -48,7 +96,6 @@ class WorkflowController extends Controller
                     'actor_type' => $step['actor_type'],
                     'label' => $step['label'],
                     'kind' => $step['kind'],
-                    'sla_days' => $step['sla_days'],
                 ]);
             }
         });
@@ -77,7 +124,6 @@ class WorkflowController extends Controller
             'steps.*.actor_type' => ['required', Rule::enum(StepActorType::class)],
             'steps.*.label' => ['required', 'string', 'max:120'],
             'steps.*.kind' => ['required', Rule::enum(WorkflowStepKind::class)],
-            'steps.*.sla_days' => ['required', 'numeric', 'min:0', 'max:365'],
         ]);
 
         $employee = Employee::with(['position', 'department'])->findOrFail($data['employee_id']);

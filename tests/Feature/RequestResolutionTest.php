@@ -74,7 +74,8 @@ class RequestResolutionTest extends TestCase
         $merged = $rows->first();
         $this->assertSame($boss->id, $merged['approver_employee_id']);
         $this->assertSame('Supervisor / Head · Manager / Asst. Manager · Vice President', $merged['label']);
-        $this->assertSame(2.0, $merged['sla_days']); // max of 1, 1, 2
+        // No SLA anywhere on a row: a step carries no deadline to merge.
+        $this->assertArrayNotHasKey('sla_days', $merged);
         $this->assertSame(1, $merged['position']);
         // The joined label already lists every step the row covers, so nothing is
         // written into note — it stays free for skip reasons and human remarks.

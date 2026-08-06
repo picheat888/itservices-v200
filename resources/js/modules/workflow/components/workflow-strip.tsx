@@ -1,36 +1,24 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { WorkflowStep } from '@/shared/types';
-import { useUiStore } from '@/stores/ui';
 import { Check } from 'lucide-react';
 import { Fragment } from 'react';
-
-/** "1 วัน" / "1d" — SLA day counts, trimming a trailing .0 (0.5 stays). */
-export function fmtSla(days: number | null | undefined, lang: string): string {
-    if (days == null) return '';
-    const compact = String(Number(days));
-    return lang === 'th' ? `${compact} วัน` : `${compact}d`;
-}
 
 /**
  * Horizontal approval-chain visual: Submitted → each step (approval = green,
  * fulfillment = brand) → Closed. The signature workflow element, shared by the
  * Workflows admin cards/dialogs and the New Request route panel.
+ *
+ * A step shows what kind it is and nothing about timing: the route declares no
+ * deadline, and how long it takes in practice is measured per workflow, not per
+ * step, so putting a number here would invent one.
  */
-export function WorkflowStrip({
-    steps,
-    showSla = true,
-}: {
-    steps: Pick<WorkflowStep, 'label' | 'kind' | 'sla_days'>[];
-    /** Off for requester-facing views — SLA is admin configuration, not a signal to requesters. */
-    showSla?: boolean;
-}) {
+export function WorkflowStrip({ steps }: { steps: Pick<WorkflowStep, 'label' | 'kind'>[] }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
 
-    const nodes: { label: string; kind: 'start' | 'end' | WorkflowStep['kind']; sla?: number | null }[] = [
+    const nodes: { label: string; kind: 'start' | 'end' | WorkflowStep['kind'] }[] = [
         { label: t('wf_submitted'), kind: 'start' },
-        ...steps.map((s) => ({ label: s.label, kind: s.kind, sla: s.sla_days })),
+        ...steps.map((s) => ({ label: s.label, kind: s.kind })),
         { label: t('wf_closed'), kind: 'end' },
     ];
 
@@ -63,7 +51,6 @@ export function WorkflowStrip({
                             {isStep && (
                                 <span className="text-muted-foreground text-[11px] leading-none">
                                     {node.kind === 'fulfillment' ? t('wf_fulfillment') : t('wf_approval')}
-                                    {showSla && node.sla != null && ` · ${fmtSla(node.sla, lang)}`}
                                 </span>
                             )}
                         </div>

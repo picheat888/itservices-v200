@@ -35,7 +35,6 @@ class UpdateWorkflowRequest extends FormRequest
             'steps.*.actor_type' => ['required', Rule::enum(StepActorType::class)],
             'steps.*.label' => ['required', 'string', 'min:2', 'max:120'],
             'steps.*.kind' => ['required', Rule::enum(WorkflowStepKind::class)],
-            'steps.*.sla_days' => ['required', 'numeric', 'min:0', 'max:365'],
         ];
     }
 

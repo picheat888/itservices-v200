@@ -13,7 +13,6 @@ export interface RequestPageMeta {
     fulfilled: number;
     cancelled: number;
     awaiting_me: number;
-    overdue_me: number;
     to_fulfill: number;
     avg_cycle_days: number | null;
 }
@@ -54,7 +53,7 @@ export interface RequestTypeOption {
         name: string;
         active: boolean;
         auto_ticket: boolean;
-        steps: Pick<WorkflowStep, 'label' | 'actor_type' | 'kind' | 'sla_days'>[];
+        steps: Pick<WorkflowStep, 'label' | 'actor_type' | 'kind'>[];
     } | null;
 }
 

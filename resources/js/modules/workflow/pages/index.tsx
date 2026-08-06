@@ -7,12 +7,10 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useToastStore } from '@/stores/toast';
-import { useUiStore } from '@/stores/ui';
-import { Clock, Eye, ListChecks, Pencil, Plus, Search, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
+import { Clock, Eye, ListChecks, Pencil, Search, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
-import { fmtSla, WorkflowStrip } from '../components/workflow-strip';
+import { WorkflowStrip } from '../components/workflow-strip';
 import { WorkflowViewDialog } from '../components/workflow-view-dialog';
 import { useWorkflows } from '../hooks/use-workflows';
 
@@ -23,9 +21,10 @@ import { useWorkflows } from '../hooks/use-workflows';
  */
 export default function WorkflowsPage() {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    const pushToast = useToastStore((s) => s.push);
-    const { data: workflows = [], isLoading } = useWorkflows();
+    const { data, isLoading } = useWorkflows();
+    // Memoised so the search filter below is not handed a new array every render.
+    const workflows = useMemo(() => data?.data ?? [], [data]);
+    const measureDays = data?.meta.measure_days ?? 30;
 
     const [search, setSearch] = useState('');
     const [viewing, setViewing] = useState<Workflow | null>(null);
@@ -42,22 +41,23 @@ export default function WorkflowsPage() {
     const totalSteps = workflows.reduce((sum, w) => sum + w.steps.length, 0);
     const longest = workflows.reduce((max, w) => Math.max(max, w.steps.filter((s) => s.kind === 'approval').length), 0);
     const autoCount = workflows.filter((w) => w.auto_ticket).length;
-    const avgSla = workflows.length
-        ? workflows.reduce((sum, w) => sum + w.steps.reduce((a, s) => a + Number(s.sla_days || 0), 0), 0) / workflows.length
-        : 0;
+
+    // Measured, not configured: the mean of the requests each route actually decided
+    // inside the API's window, weighted by how many there were — a route that ran
+    // twice should not swing the figure as hard as one that ran fifty times.
+    const measured = workflows.map((w) => w.measured).filter((m): m is NonNullable<typeof m> => m != null);
+    const measuredRequests = measured.reduce((sum, m) => sum + m.requests, 0);
+    const avgDecisionDays = measuredRequests
+        ? Math.round((measured.reduce((sum, m) => sum + m.avg_days * m.requests, 0) / measuredRequests) * 10) / 10
+        : null;
 
     return (
         <div className="space-y-5">
-            {/* Page head */}
-            <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <h1 className="text-2xl font-bold">{t('wf_title')}</h1>
-                    <p className="text-muted-foreground text-sm">{t('wf_sub')}</p>
-                </div>
-                <Button onClick={() => pushToast(t('wf_coming_soon'), 'info', t('wf_new'))}>
-                    <Plus className="h-4 w-4" />
-                    {t('wf_new')}
-                </Button>
+            {/* Page head — no "new workflow" action: the eleven routes come with the
+                request types, and this module exists to adjust their steps. */}
+            <div>
+                <h1 className="text-2xl font-bold">{t('wf_title')}</h1>
+                <p className="text-muted-foreground text-sm">{t('wf_sub')}</p>
             </div>
 
             {/* Stat cards */}
@@ -74,7 +74,18 @@ export default function WorkflowsPage() {
                     value={String(totalSteps)}
                     sub={`${t('wf_kpi_steps_sub')} ${longest} ${t('wf_kpi_steps_sub_tail')}`}
                 />
-                <Stat icon={Clock} label={t('wf_kpi_sla')} value={fmtSla(Math.round(avgSla * 10) / 10, lang)} sub={t('wf_kpi_sla_sub')} />
+                <Stat
+                    icon={Clock}
+                    label={t('wf_kpi_decision')}
+                    value={avgDecisionDays != null ? `${avgDecisionDays}${t('wf_days_suffix')}` : '—'}
+                    // States the window and the sample, so a figure that moves week to
+                    // week is not read as a target somebody set.
+                    sub={
+                        measuredRequests
+                            ? `${t('wf_kpi_decision_window').replace('{days}', String(measureDays))} · ${measuredRequests} ${t('wf_kpi_decision_requests')}`
+                            : t('wf_kpi_decision_none').replace('{days}', String(measureDays))
+                    }
+                />
                 <Stat icon={Zap} label={t('wf_kpi_auto')} value={`${autoCount}/${workflows.length}`} sub={t('wf_kpi_auto_sub')} />
             </div>
 
@@ -101,7 +112,6 @@ export default function WorkflowsPage() {
 
                     {filtered.map((wf) => {
                         const approvals = wf.steps.filter((s) => s.kind === 'approval').length;
-                        const totalSla = wf.steps.reduce((sum, s) => sum + Number(s.sla_days || 0), 0);
                         return (
                             <div
                                 key={wf.id}
@@ -131,9 +141,15 @@ export default function WorkflowsPage() {
                                                 {t(REQUEST_TYPE_META[wf.request_type].labelKey)}
                                             </span>
                                             <span className="font-mono">
-                                                {approvals} {t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} ·{' '}
-                                                {fmtSla(totalSla, lang)}
+                                                {approvals} {t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')}
                                             </span>
+                                            {/* What this route took in practice, or nothing at all rather than a zero. */}
+                                            {wf.measured && (
+                                                <span className="font-mono">
+                                                    · {t('wf_row_decision')} {wf.measured.avg_days}
+                                                    {t('wf_days_suffix')} ({wf.measured.requests})
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>

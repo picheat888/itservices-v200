@@ -190,12 +190,6 @@ class RequestController extends Controller
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();
-        $overdueMe = $employeeId === null ? 0 : RequestApproval::where('approver_employee_id', $employeeId)
-            ->where('status', ApprovalStatus::Current->value)
-            ->where('kind', WorkflowStepKind::Approval->value)
-            ->where('due_at', '<', now())
-            ->count();
-
         // Mean days from submit to the final decision, over the last 200 decided
         // requests (PHP-side for cross-database portability).
         $decided = $visible(ServiceRequest::query())
@@ -217,7 +211,6 @@ class RequestController extends Controller
             'fulfilled' => (int) ($counts[RequestStatus::Fulfilled->value] ?? 0),
             'cancelled' => (int) ($counts[RequestStatus::Cancelled->value] ?? 0),
             'awaiting_me' => $awaitingMe,
-            'overdue_me' => $overdueMe,
             'to_fulfill' => $canFulfill ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
             'avg_cycle_days' => $cycles->isEmpty() ? null : round($cycles->avg() / 1440, 1),
         ];

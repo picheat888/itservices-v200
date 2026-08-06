@@ -14,7 +14,6 @@ export interface ResolvedPreviewRow {
     actor_type: WorkflowStep['actor_type'];
     kind: WorkflowStep['kind'];
     label: string;
-    sla_days: number | null;
     approver_employee_id: number | null;
     approver_name: string | null;
     approver_position: string | null;
@@ -42,8 +41,14 @@ export interface WorkflowEmployeeOption {
     department: string | null;
 }
 
+/** The definitions plus the window their measured decision times were taken over. */
+export interface WorkflowListResponse {
+    data: Workflow[];
+    meta: { measure_days: number };
+}
+
 export const workflowApi = {
-    list: () => http.get<ApiEnvelope<Workflow[]>>('/workflows').then((r) => r.data.data),
+    list: () => http.get<WorkflowListResponse>('/workflows').then((r) => r.data),
     employeeOptions: () => http.get<ApiEnvelope<WorkflowEmployeeOption[]>>('/workflows/employee-options').then((r) => r.data.data),
     update: (id: number, payload: WorkflowUpdatePayload) => mutate<Workflow>('put', `/workflows/${id}`, payload),
     preview: (payload: { request_type: ServiceRequestType; employee_id: number; steps: Omit<WorkflowStep, 'id' | 'position'>[] }) =>

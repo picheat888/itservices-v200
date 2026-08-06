@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class WorkflowStep extends Model
 {
-    protected $fillable = ['workflow_id', 'position', 'actor_type', 'label', 'kind', 'sla_days'];
+    protected $fillable = ['workflow_id', 'position', 'actor_type', 'label', 'kind'];
 
     protected function casts(): array
     {
@@ -21,7 +21,6 @@ class WorkflowStep extends Model
             'position' => 'integer',
             'actor_type' => StepActorType::class,
             'kind' => WorkflowStepKind::class,
-            'sla_days' => 'decimal:2',
         ];
     }
 

@@ -5,8 +5,7 @@ import type { Dict } from '@/lang/types';
  */
 export const workflow: Dict = {
     wf_title: 'Workflows',
-    wf_sub: 'Approval routes per request type — who signs off, in what order, and how fast.',
-    wf_new: 'New workflow',
+    wf_sub: 'Adjust the approval route of each request type — who signs off, and in what order.',
     wf_coming_soon: 'Coming soon',
 
     wf_kpi_active: 'Active workflows',
@@ -14,8 +13,13 @@ export const workflow: Dict = {
     wf_kpi_steps: 'Approval steps',
     wf_kpi_steps_sub: 'up to',
     wf_kpi_steps_sub_tail: 'approvals per request',
-    wf_kpi_sla: 'Avg. SLA per workflow',
-    wf_kpi_sla_sub: 'submitted to closed',
+    // Measured from the requests themselves — a workflow declares no target.
+    wf_kpi_decision: 'Avg. decision time',
+    wf_kpi_decision_window: 'last {days} days',
+    wf_kpi_decision_requests: 'requests',
+    wf_kpi_decision_none: 'nothing decided in the last {days} days',
+    wf_row_decision: 'decided in',
+    wf_days_suffix: 'd',
     wf_kpi_auto: 'Auto-ticket on',
     wf_kpi_auto_sub: 'opens an IT ticket on approval',
 
@@ -30,7 +34,6 @@ export const workflow: Dict = {
     wf_no_auto_ticket: 'No auto ticket',
     wf_applies_to: 'Applies to',
     wf_steps: 'Steps',
-    wf_total_sla: 'Total SLA',
     wf_status: 'Status',
     wf_approval: 'Approval',
     wf_fulfillment: 'Fulfillment',
@@ -47,19 +50,18 @@ export const workflow: Dict = {
     wf_step_actor: 'Acts on the step',
     wf_step_label: 'Display label',
     wf_step_kind: 'Step type',
-    wf_step_sla: 'SLA (days)',
     wf_actor_chain: 'Reporting line',
     wf_actor_owner: 'Resource owner',
     wf_actor_it: 'IT Staff',
     wf_preview_title: 'Preview',
     wf_test_with: 'Test with:',
     wf_resolve_title: 'Resolves along the reporting line',
-    wf_resolve_hint: 'Chain steps resolve to the requester’s actual managers. A short line lets one manager cover several steps; owner steps resolve from the picked resource at submit.',
+    wf_resolve_hint:
+        'Chain steps resolve to the requester’s actual managers. A short line lets one manager cover several steps; owner steps resolve from the picked resource at submit.',
     wf_requester: 'Requester',
     wf_skipped: 'skipped',
     wf_covers: 'Covers',
     wf_owner_preview: 'Resolved from the picked resource at submit',
     wf_queue_preview: 'IT fulfillment queue · auto-opened ticket',
     wf_save_error_steps: 'Check the step list',
-    wf_days: 'd',
 };
