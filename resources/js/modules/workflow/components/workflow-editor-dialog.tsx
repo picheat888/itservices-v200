@@ -206,22 +206,32 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                             </Button>
                         </div>
 
-                        <div className="border-border/70 ml-3 space-y-3 border-l pl-5">
+                        <div className="ml-3 space-y-3 pl-5">
                             {steps.map((s, i) => {
                                 const isEnd = s.actor_type === 'it_staff';
                                 const chosen = positions.filter((p) => s.position_ids.includes(p.id));
                                 return (
                                     <div key={i} className="relative">
-                                        {/* Rung marker, sitting on the rail. */}
-                                        <span
-                                            className={cn(
-                                                'absolute top-2 -left-[29px] flex h-[22px] w-[22px] items-center justify-center rounded-full border-2 font-mono text-[11px] font-bold',
-                                                isEnd
-                                                    ? 'border-brand/40 bg-brand/10 text-brand'
-                                                    : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-                                            )}
-                                        >
-                                            {isEnd ? <Flag className="h-3 w-3" /> : i + 1}
+                                        {/* The rail is drawn in segments BETWEEN markers, not as one line
+                                            behind them: a tinted marker is translucent, so a continuous
+                                            rail showed through it — and it also has no reason to carry on
+                                            past the last rung. */}
+                                        {i < steps.length - 1 && (
+                                            <span aria-hidden className="bg-border/70 absolute top-[30px] -bottom-[22px] left-[-18px] w-px" />
+                                        )}
+                                        {/* Rung marker. The opaque base is what keeps the rail from
+                                            showing through the tint. */}
+                                        <span className="bg-background absolute top-2 -left-[29px] h-[22px] w-[22px] rounded-full">
+                                            <span
+                                                className={cn(
+                                                    'flex h-full w-full items-center justify-center rounded-full border-2 font-mono text-[11px] font-bold',
+                                                    isEnd
+                                                        ? 'border-brand/40 bg-brand/10 text-brand'
+                                                        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                                                )}
+                                            >
+                                                {isEnd ? <Flag className="h-3 w-3" /> : i + 1}
+                                            </span>
                                         </span>
 
                                         <div className="border-border hover:border-border rounded-xl border px-3 py-2.5">
