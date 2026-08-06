@@ -31,6 +31,10 @@ class RequestApprovalResource extends JsonResource
             'approver_employee_id' => $this->approver_employee_id,
             'approver_name' => $this->approver_name,
             'note' => $this->note,
+            // Why the engine skipped this step, as a code the SPA writes out in the
+            // reader's language (`req_skip_*`). Snapshotted: it stays true whatever
+            // the org chart does afterwards.
+            'skip_reason' => $this->skip_reason?->value,
             // Live, never snapshotted: the step is this person's, but they cannot act
             // until an account is provisioned for them. It flips to false the moment
             // one exists, which is why it is not written onto the row at submit time.

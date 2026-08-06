@@ -1,4 +1,4 @@
-import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
+import type { ApprovalSkipReason, ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, type LucideIcon } from 'lucide-react';
 
 /**
@@ -32,6 +32,17 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
     recovery: { icon: Archive, color: '#d97706', labelKey: 'req_recovery' },
     telephone: { icon: Phone, color: '#475569', labelKey: 'req_telephone' },
     other: { icon: MoreHorizontal, color: '#64748b', labelKey: 'req_other' },
+};
+
+/**
+ * Label key per skip reason, spelled out rather than composed from the code — a new
+ * reason cannot compile until it is given wording, and `grep req_skip_no_manager`
+ * finds where it is used. Same reasoning as REQUEST_TYPE_META's labelKey.
+ */
+export const REQUEST_SKIP_REASON_LABEL: Record<ApprovalSkipReason, string> = {
+    no_manager: 'req_skip_no_manager',
+    no_resource_owner: 'req_skip_no_resource_owner',
+    requester_is_owner: 'req_skip_requester_is_owner',
 };
 
 /** Badge tone + label key per request status, for the shared StatusBadge. */

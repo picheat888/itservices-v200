@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\ApprovalSkipReason;
 use App\Enums\Request\ApprovalStatus;
 use App\Models\Access\FileShare;
 use App\Models\Employee\Employee;
@@ -90,7 +91,10 @@ class RequestResolutionTest extends TestCase
         $skipped = $rows->first();
         $this->assertSame(ApprovalStatus::Skipped->value, $skipped['status']);
         $this->assertNull($skipped['approver_employee_id']);
-        $this->assertStringContainsString('no manager', $skipped['note']);
+        // A code, not a sentence: the SPA writes it in the reader's language, and
+        // `note` stays for what a person actually typed.
+        $this->assertSame(ApprovalSkipReason::NoManager->value, $skipped['skip_reason']);
+        $this->assertNull($skipped['note']);
         $this->assertSame('it_staff', $rows->last()['actor_type']);
     }
 
@@ -147,11 +151,14 @@ class RequestResolutionTest extends TestCase
         $orphan = FileShare::create(['code' => 'FS-T2', 'name' => 'Orphan', 'path' => '\\\\FILES\\ORPHAN']);
         $rows = $this->resolve('fileshare', $staff, ['file_share_id' => $orphan->id]);
         $this->assertSame(ApprovalStatus::Skipped->value, $rows->first()['status']);
+        $this->assertSame(ApprovalSkipReason::NoResourceOwner->value, $rows->first()['skip_reason']);
 
         // Requester owns the resource themself.
         $own = FileShare::create(['code' => 'FS-T3', 'name' => 'Own', 'path' => '\\\\FILES\\OWN', 'owner_employee_id' => $staff->id]);
         $rows = $this->resolve('fileshare', $staff, ['file_share_id' => $own->id]);
         $this->assertSame(ApprovalStatus::Skipped->value, $rows->first()['status']);
-        $this->assertStringContainsString('requester is the resource owner', $rows->first()['note']);
+        // Distinct from "no owner": the owner IS set, they are just the one asking.
+        $this->assertSame(ApprovalSkipReason::RequesterIsOwner->value, $rows->first()['skip_reason']);
+        $this->assertNull($rows->first()['note']);
     }
 }
