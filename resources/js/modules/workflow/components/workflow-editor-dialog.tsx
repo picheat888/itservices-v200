@@ -102,8 +102,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         staleTime: 5 * 60_000,
         enabled: !!workflow,
     });
-    const positions = positionData?.data ?? [];
-    const rungs = positionData?.meta.rungs ?? {};
+    const positions = positionData ?? [];
     /** Index of the rung whose title list is open — one at a time keeps the list calm. */
     const [openRanks, setOpenRanks] = useState<number | null>(null);
 
@@ -309,23 +308,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     </div>
 
                                                     {openRanks === i && (
-                                                        <div className="border-border/70 bg-muted/30 mt-2 space-y-2.5 rounded-lg border p-2.5">
-                                                            {/* A whole level in one click — the way the org names its own tiers. */}
-                                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                                <span className="text-muted-foreground mr-0.5 text-[11px] font-semibold">
-                                                                    {t('wf_ranks_presets')}
-                                                                </span>
-                                                                {Object.entries(rungs).map(([rung, ids]) => (
-                                                                    <button
-                                                                        key={rung}
-                                                                        type="button"
-                                                                        onClick={() => updStep(i, { position_ids: ids })}
-                                                                        className="border-border bg-background hover:border-brand/50 hover:text-brand rounded-md border px-2 py-1 text-xs font-medium"
-                                                                    >
-                                                                        {t(`wf_rung_${rung}`)}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
+                                                        <div className="border-border/70 bg-muted/30 mt-2 rounded-lg border p-2.5">
                                                             <div className="flex flex-wrap gap-1.5">
                                                                 {positions.map((p) => {
                                                                     const on = s.position_ids.includes(p.id);
