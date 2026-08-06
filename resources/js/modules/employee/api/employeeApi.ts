@@ -45,6 +45,38 @@ export interface EmployeeRequestedTicket {
     created_at: string | null;
 }
 
+/**
+ * One row of an import dry-run: the master data the free-text columns resolved to,
+ * plus the errors that row would raise. `errors` empty = the row is ready to save.
+ */
+export interface ImportPreviewRow {
+    row: number;
+    employee_code: string | null;
+    name: string;
+    name_th: string | null;
+    email: string | null;
+    phone: string | null;
+    department: string | null;
+    section: string | null;
+    position: string | null;
+    joined_at: string | null;
+    report_to: string | null;
+    errors: string[];
+}
+
+/** POST /employees/import/preview — the whole file checked, nothing written. */
+export interface ImportPreview {
+    data: ImportPreviewRow[];
+    errors: { row: number; message: string }[];
+    meta: {
+        total: number;
+        valid: number;
+        invalid: number;
+        /** Columns in the file the import has no field for — ignored, but worth saying so. */
+        ignored_columns: string[];
+    };
+}
+
 export interface EmployeePageMeta {
     total: number;
     per_page: number;
@@ -147,6 +179,14 @@ export const employeeApi = {
         return data;
     },
     downloadImportTemplate: () => http.get('/employees/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    /** Dry-run: validates and resolves the file with the real import rules, writing nothing. */
+    previewImport: async (file: File) => {
+        await ensureCsrf();
+        const fd = new FormData();
+        fd.append('file', file);
+        const { data } = await http.post<ImportPreview>('/employees/import/preview', fd);
+        return data;
+    },
     import: async (file: File) => {
         await ensureCsrf();
         const fd = new FormData();

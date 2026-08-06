@@ -104,6 +104,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpi
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
     Route::get('employees/import-template', [EmployeeController::class, 'importTemplate'])->name('api.employees.import-template');
+    Route::post('employees/import/preview', [EmployeeController::class, 'importPreview'])->name('api.employees.import.preview');
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('api.employees.import');
     Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('api.employees.resign');
     Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');

@@ -103,6 +103,10 @@ export function useEmployeeMutations() {
             mutationFn: (id: number) => employeeApi.cancelResign(id),
             onSuccess: invalidate,
         }),
+        // Dry-run — reads only, so nothing to invalidate.
+        previewImport: useMutation({
+            mutationFn: (file: File) => employeeApi.previewImport(file),
+        }),
         import: useMutation({
             mutationFn: (file: File) => employeeApi.import(file),
             onSuccess: invalidate,
