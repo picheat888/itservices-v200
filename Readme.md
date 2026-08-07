@@ -1497,6 +1497,12 @@ violet เป็นโทนเดียวใน `StatusBadge` ที่ไม�
 
 `RequestNotificationService::deliverPendingApprovals(Employee)` ส่ง bell "รอการตัดสินของคุณ" ของทุกขั้นที่เป็น `current` ของคนนั้น เรียกจาก `EmployeeService::createUserWithCredentials()` — **วินาทีแรกที่มีกล่องข้อความให้ส่งถึง** · ถ้าไม่มีอะไรค้างก็ไม่ส่งอะไร
 
+### 4. พนักงานใหม่อ่านคำขอของตัวเองได้
+
+คำขอ onboarding มี `employee_id` = พนักงานใหม่ แต่ `user_id` เป็น null (ตอนยื่นเขายังไม่มีบัญชี) และเงื่อนไขการมองเห็นทั้งหมดดูที่ `user_id` / `submitted_by_user_id` / การเป็นผู้อนุมัติ — **เจ้าตัวจึงมองไม่เห็นคำขอที่ HR ขอให้เขาเลย** ลิสต์ว่างและเปิดดูได้ 403
+
+เพิ่มเงื่อนไข `employee_id = ตัวเอง` ที่ 3 จุด: visibility ของ `index`, `scope=mine`, และการเช็คผู้เกี่ยวข้องใน `show()` — นิยามของ "คำขอของฉัน" คือ **เกี่ยวกับฉัน หรือ ฉันเป็นคนยื่น** · `can_cancel` **ไม่เปลี่ยน**: onboarding เป็นของคนที่รันมันคือ HR พนักงานใหม่ติดตามได้แต่ไม่ถอนคำขอคอมที่ HR ขอให้ในวันแรก (มีเทสต์คุมทั้งสองข้อ)
+
 ### ที่ยังไม่ทำ
 
 **Toast ไม่เด้งตอนล็อกอินครั้งแรก** — `notification-toaster.tsx` ตั้งใจ seed "เห็นแล้ว" จากการดึงครั้งแรกของหน้า (กัน reload แล้วเด้งรวด 13 ใบ) ผลคือแจ้งเตือนที่เกิดก่อนล็อกอินจะไม่เด้งเลย เห็นได้แต่ในกระดิ่ง · ทางแก้ที่คิดไว้คือ toast สรุปใบเดียว ("มีแจ้งเตือนที่ยังไม่ได้อ่าน N รายการ") แต่ยังติดว่ากดแล้วควรไปไหน — กระดิ่งเป็น dropdown ใน topbar ไม่ใช่ route
@@ -1504,7 +1510,8 @@ violet เป็นโทนเดียวใน `StatusBadge` ที่ไม�
 ### Tests / Verification
 
 `RequestNotificationTest` +2 (คำขอค้าง → คนตั้งบัญชีได้ bell พร้อม employee_id · แถวคิว IT ไม่ยิง) · `EmployeeApiTest` +1 (คนที่กดเพิ่มพนักงานได้ bell ด้วย) · `SidebarBadgeTest` +1 · `EmployeeOnboardingRequestTest` +2 (สร้างบัญชีแล้วได้ bell ที่ค้างครบทุกใบ · ไม่มีอะไรค้างก็ไม่ส่ง) · **ทุกตัวยืนยันด้วยการปิดโค้ดใหม่ชั่วคราวแล้วเห็น fail ก่อนคืนกลับ**
-**ทั้ง suite = 868 passed / 3,366 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน
+`EmployeeOnboardingRequestTest` +2 (พนักงานใหม่อ่านคำขอของตัวเองได้ทั้งลิสต์/mine/detail · แต่ยกเลิกไม่ได้)
+**ทั้ง suite = 870 passed / 3,377 assertions** · `tsc --noEmit` = 0 · eslint = 0 · prettier ผ่าน · pint ผ่าน · `npm run build` ผ่าน
 
 ---
 
