@@ -68,8 +68,11 @@ export function isOnBehalfRequest(request: Pick<ServiceRequest, 'origin'>): bool
 /** Tone + label for the on-behalf marker, so the badge reads the same everywhere. */
 export const REQUEST_ONBOARDING_BADGE = { tone: 'violet' as const, labelKey: 'req_origin_onboarding' };
 
-/** Left edge accent for a table row / card that belongs to an on-behalf request. */
-export const REQUEST_ONBOARDING_ROW = 'border-l-2 border-l-violet-500 bg-violet-500/[0.04]';
+/**
+ * Row tint for an on-behalf request. Tint only: the violet badge already names it,
+ * and a third marker (a left edge rule) said the same thing a third time.
+ */
+export const REQUEST_ONBOARDING_ROW = 'bg-violet-500/[0.05]';
 
 /** Every service type in catalog order — one place decides the order they appear. */
 export const REQUEST_TYPES = Object.keys(REQUEST_TYPE_META) as ServiceRequestType[];

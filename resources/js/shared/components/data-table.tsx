@@ -211,7 +211,9 @@ export function DataTable<T>({
                                     key={rowKey(row)}
                                     onClick={() => onRowClick?.(row)}
                                     className={cn(
-                                        'border-border/60 border-b last:border-0',
+                                        // border-b-0 on the last row, NOT border-0: the latter zeroes every
+                                        // side, which silently ate the left accent a rowClassName had set.
+                                        'border-border/60 border-b last:border-b-0',
                                         onRowClick && 'hover:bg-accent/50 cursor-pointer',
                                         rowClassName?.(row),
                                     )}
