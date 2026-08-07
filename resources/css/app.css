@@ -228,9 +228,10 @@
     --gap: 1.5rem;
 }
 
-/* ── Notification toast (bottom-right pop-up) ────────────────────────────────
-   Progress-ring variant: card slides in from the right, the ring around the icon
-   depletes over the 6s auto-dismiss window (paused on hover), then slides out. */
+/* ── Toast (bottom-right pop-up) ─────────────────────────────────────────────
+   One card for every toast in the app: slides in from the right, a bar along the
+   bottom depletes over its own lifetime (paused while hovered or focused), then
+   slides out. Toasts that wait to be dismissed (errors) draw no bar. */
 @keyframes toast-enter {
     from {
         transform: translateX(120%);
@@ -254,28 +255,15 @@
         margin-bottom: -0.75rem;
     }
 }
-@keyframes toast-ring-deplete {
-    from {
-        stroke-dashoffset: 0;
-    }
-    to {
-        stroke-dashoffset: 113; /* ≈ circumference of r=18 ring */
-    }
-}
-
 .toast-enter {
     animation: toast-enter 0.42s cubic-bezier(0.21, 1.02, 0.42, 1) both;
 }
 .toast-leave {
     animation: toast-leave 0.3s ease forwards;
 }
-.toast-ring-fg {
-    stroke-dasharray: 113;
-    animation: toast-ring-deplete 6s linear forwards;
-}
-/* Transient toast (bottom-right): the new standard replaces the ring with a bottom
-   progress bar that depletes over the same 6s auto-dismiss window (paused on hover /
-   while leaving). NotificationToaster keeps the ring variant above. */
+/* The bar depletes over the toast's life. The length comes from the card
+   (`[animation-duration:…]`) so it can never drift from the JS countdown; the 6s
+   here is only the fallback for a toast that names no duration. */
 @keyframes toast-bar-deplete {
     from {
         transform: scaleX(1);
@@ -288,7 +276,11 @@
     transform-origin: left;
     animation: toast-bar-deplete 6s linear forwards;
 }
+/* Pause the bar while the card is hovered, while anything inside it holds focus
+   (a keyboard reader gets the same grace a mouse reader does — WCAG 2.2.1), and
+   while it slides out. The JS dismiss timer pauses on the same events. */
 .toast-card:hover .toast-bar-fg,
+.toast-card:focus-within .toast-bar-fg,
 .toast-leave .toast-bar-fg {
     animation-play-state: paused;
 }
@@ -309,17 +301,13 @@
         inset 0 1px 0 var(--toast-top);
 }
 
-/* Pause the countdown (ring + the JS dismiss timer is paused in parallel) while hovered. */
-.toast-card:hover .toast-ring-fg {
-    animation-play-state: paused;
-}
-
 @media (prefers-reduced-motion: reduce) {
+    /* No slide, no depleting bar. The JS countdown is unaffected, so the toast
+       still dismisses itself on time — it just doesn't animate on the way. */
     .toast-enter,
     .toast-leave {
         animation-duration: 0.01ms;
     }
-    .toast-ring-fg,
     .toast-bar-fg {
         animation: none;
     }

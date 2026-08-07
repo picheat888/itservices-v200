@@ -1,7 +1,7 @@
 import '../../css/app.css';
 
 import { AppShell } from '@/app/layout/app-shell';
-import { TransientToaster } from '@/app/layout/transient-toaster';
+import { Toaster } from '@/app/layout/toaster';
 import PlaceholderPage from '@/app/placeholder';
 import { AccessControlPage } from '@/modules/access';
 import { AssetsPage, MyAssetsPage } from '@/modules/asset';
@@ -171,7 +171,9 @@ createRoot(document.getElementById('app')!).render(
         <ConfirmProvider>
             <App />
             <AppErrorScreen />
-            <TransientToaster />
+            {/* The app's one toast region — ad-hoc messages and server notifications
+                share this queue, so they can never render over each other. */}
+            <Toaster />
         </ConfirmProvider>
     </QueryClientProvider>,
 );

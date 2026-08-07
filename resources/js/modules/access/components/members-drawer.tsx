@@ -149,7 +149,9 @@ export function MembersDrawer({
                 if (!tgt) return;
                 await revokeMember.mutateAsync({ id: tgt.id, membershipId: m.id });
                 // Delete reads clearer in the destructive palette — red card + trash icon.
-                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'trash');
+                // It borrows the error tone for the colour only: this succeeded, so it
+                // expires like any other confirmation instead of waiting to be dismissed.
+                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'trash', { duration: 4000 });
             },
         });
 
@@ -166,7 +168,8 @@ export function MembersDrawer({
             action: () => remove.mutateAsync(tgt.id),
         });
         if (ok) {
-            useToastStore.getState().push(t('access_resource_deleted'), 'error', undefined, 'trash');
+            // Red for "deleted", but it succeeded — same 4s life as any confirmation.
+            useToastStore.getState().push(t('access_resource_deleted'), 'error', undefined, 'trash', { duration: 4000 });
             onClose();
         }
     };
