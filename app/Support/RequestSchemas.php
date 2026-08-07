@@ -48,9 +48,12 @@ class RequestSchemas
             // they follow different approval chains. The peripheral options moved
             // wholesale to Hardware rather than being invented there.
             RequestType::Computer->value => [
-                ['key' => 'device', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'options' => [
-                    ['value' => 'laptop', 'label_en' => 'Laptop', 'label_th' => 'โน้ตบุ๊ก'],
-                    ['value' => 'desktop', 'label_en' => 'Desktop PC', 'label_th' => 'คอมพิวเตอร์ตั้งโต๊ะ'],
+                // `managed` like Hardware below: the two choices started as fixed
+                // slugs, which meant a new kind of machine needed a deploy. They are
+                // rows now, so IT adds one in Settings → Request data.
+                ['key' => 'device_id', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'managed' => true, 'options' => [
+                    ['label_en' => 'Laptop', 'label_th' => 'โน้ตบุ๊ก'],
+                    ['label_en' => 'Desktop PC', 'label_th' => 'คอมพิวเตอร์ตั้งโต๊ะ'],
                 ]],
             ],
             RequestType::Hardware->value => [

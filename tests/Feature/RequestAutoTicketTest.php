@@ -9,10 +9,12 @@ use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Ticket\TicketService;
 use Database\Seeders\PositionSeeder;
+use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -35,6 +37,7 @@ class RequestAutoTicketTest extends TestCase
     {
         parent::setUp();
         $this->seed(PositionSeeder::class);
+        $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         // The boss holds the Supervisor rung the Computer route asks for first; the
@@ -51,6 +54,16 @@ class RequestAutoTicketTest extends TestCase
         $this->bossUser = User::factory()->create(['role' => 'user', 'employee_id' => $boss->id]);
     }
 
+    /**
+     * The seeded "Desktop PC" choice. The computer form's device list is managed
+     * data (Settings → Request data), so the payload carries an option id.
+     */
+    private function deviceOptionId(): int
+    {
+        return (int) RequestOption::where('request_type', 'computer')
+            ->where('label_en', 'Desktop PC')->value('id');
+    }
+
     private function submitComputer(): ServiceRequest
     {
         $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
@@ -58,7 +71,7 @@ class RequestAutoTicketTest extends TestCase
             'title' => 'Replacement desktop for finance',
             'reason' => 'The old machine no longer boots after the last power outage.',
             'priority' => 'high',
-            'fields' => ['device' => 'desktop', 'qty' => 1],
+            'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 
         return ServiceRequest::findOrFail($response->json('data.id'));

@@ -1592,3 +1592,20 @@ Backend ไม่มี endpoint สร้าง/ลบมาตั้งแต�
 `EmployeeOnboardingRequestTest` (12 tests) — 1 บริการ = 1 คำขอ · เจ้าของ/ผู้ยื่นถูกบันทึกแยกกัน · **สายอนุมัติเป็นของพนักงานใหม่ไม่ใช่ของ HR** · **คำขอรอหัวหน้าที่ยังไม่มีบัญชี (pending) ไม่ผ่านเอง** · **หัวหน้ากดอนุมัติได้ทันทีที่บัญชีถูกสร้าง** · workflow ปิดแล้วพนักงานยังถูกสร้าง + รายงานใบที่ยื่นไม่ได้ · หมายเหตุกลายเป็น reason · คนยื่นแทนเปิด/ยกเลิก/เห็นใน `scope=mine` ได้ · API บอก origin + ชื่อคนยื่น · คนยื่นได้รับ receipt ที่เจ้าของรับไม่ได้
 `RequestResolutionTest` — เทสต์เดิมที่พินกฎ "ไม่มีบัญชี = ข้าม" ถูกเขียนใหม่เป็นกฎใหม่ + เพิ่มเทสต์ว่าคนลาออกยังถูกข้าม
 **ทั้ง suite = 852 passed / 3,316 assertions** · `tsc --noEmit` = 0 · eslint = 0 · pint ผ่าน · `npm run build` ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว · ยิง resolver กับข้อมูลจริง (read-only) ยืนยันว่าคำขอใบใหม่รอหัวหน้าคนจริงแทนที่จะ skip · มีเทสต์คุมว่า `awaiting_account` เป็น true แล้วกลายเป็น false เองเมื่อบัญชีถูกสร้าง (ไม่มีอะไรไปเขียนแถวที่แช่ไว้)
+
+---
+
+## Settings → Request data: "การขอคอมพิวเตอร์" แก้ตัวเลือกได้แล้ว (2026-08-07)
+
+ฟิลด์ "อุปกรณ์ที่ต้องการ" ของคำขอคอมพิวเตอร์เคยเป็น slug ตายตัวใน `RequestSchemas` (`device` = laptop / desktop) — จะเพิ่ม All-in-One หรือ Workstation ต้องแก้โค้ดแล้ว deploy ตอนนี้เปลี่ยนเป็น **managed list** เหมือน Hardware / Mobile / Telephone:
+
+- คีย์เปลี่ยนเป็น `device_id` + `'managed' => true` → ค่าที่เก็บคือ **id ของ `request_options`** (ลงคอลัมน์ `request_option_id` ที่มี FK จริง) ไม่ใช่สตริง
+- `RequestOptionSeeder` หยิบตัวเลือกตั้งต้น (Laptop / Desktop PC) ให้เอง · migration `seed_computer_device_options` เติม 2 แถวนี้ให้ฐานที่ seed ไปแล้ว (idempotent — เช็คก่อนแทรก)
+- **ไม่ต้องแก้ frontend เลย** — หน้า Settings อ่าน `RequestSchemas::managedLists()` แล้วสร้างแท็บย่อยเองตามข้อมูล (จาก 3 เป็น 4 รายการ) · validation ยังคุมว่า id ต้องอยู่ในลิสต์ของฟิลด์นั้นและยัง `active`
+- คำขอเก่ายังอ่านได้ปกติ: `fields._display` เป็น snapshot ตอนยื่น หน้ารายละเอียดอ่านจากตรงนั้น ไม่ได้ resolve id ใหม่ — migration จึงไม่ไปเขียนทับข้อมูลเดิม
+
+### Tests / Verification
+
+`RequestOptionTest` — เทสต์ที่พินว่ามี 3 ลิสต์กลายเป็น 4 (+ นับ options 8→10) · เพิ่มเทสต์ "เพิ่มตัวเลือกคอมพิวเตอร์แล้วฟอร์มเสนอให้เลือกจริง" · เทสต์ "ลิสต์ที่ไม่ได้ประกาศเขียนไม่ได้" เปลี่ยนตัวอย่างไปใช้ `email.address` (ช่องพิมพ์ ไม่มีลิสต์) + `computer.ram_size` (field key ที่ไม่มีใครประกาศ)
+เทสต์ที่ยิงคำขอคอมพิวเตอร์ 4 ไฟล์ (`RequestWorkflowTest`, `RequestAutoTicketTest`, `RequestNotificationTest`, `EmployeeOnboardingRequestTest`) seed `RequestOptionSeeder` แล้วส่ง `device_id` เป็น id จริง
+**ทั้ง suite = 873 passed / 3,391 assertions** · pint ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว (ได้ `computer.device_id` = Laptop / Desktop PC) · ไม่มีไฟล์ frontend เปลี่ยน จึงไม่ต้อง build ใหม่
