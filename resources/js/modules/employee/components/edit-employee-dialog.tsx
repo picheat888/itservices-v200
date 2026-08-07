@@ -282,7 +282,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                     mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
                 }
                 setErrors((prev) => ({ ...prev, ...mapped }));
-                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'));
+                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'), 'error');
             } else {
                 throw err;
             }
