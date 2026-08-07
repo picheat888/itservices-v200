@@ -54,7 +54,11 @@ class RequestController extends Controller
                 $q->where('user_id', $user->id)
                     ->orWhere('submitted_by_user_id', $user->id);
                 if ($employeeId !== null) {
-                    $q->orWhereHas('approvals', fn ($a) => $a->where('approver_employee_id', $employeeId));
+                    // Requests that are ABOUT this person, whoever filed them: their own
+                    // onboarding was filed before they had an account, so `user_id` is
+                    // null on it and without this they cannot read their own history.
+                    $q->orWhere('employee_id', $employeeId)
+                        ->orWhereHas('approvals', fn ($a) => $a->where('approver_employee_id', $employeeId));
                 }
                 if ($canFulfill) {
                     $q->orWhereIn('status', [RequestStatus::Approved->value, RequestStatus::Fulfilled->value]);
@@ -90,7 +94,14 @@ class RequestController extends Controller
         } elseif ($request->query('scope') === 'queue' && $canFulfill) {
             $query->where('status', RequestStatus::Approved->value);
         } elseif ($request->query('scope') === 'mine') {
-            $query->where(fn ($q) => $q->where('user_id', $user->id)->orWhere('submitted_by_user_id', $user->id));
+            // "Mine" means about me or by me: the request I filed, the one I filed for
+            // somebody else, and the one somebody filed for me.
+            $query->where(function ($q) use ($user, $employeeId) {
+                $q->where('user_id', $user->id)->orWhere('submitted_by_user_id', $user->id);
+                if ($employeeId !== null) {
+                    $q->orWhere('employee_id', $employeeId);
+                }
+            });
         }
 
         $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
@@ -120,6 +131,8 @@ class RequestController extends Controller
         $user = $request->user();
         $isParticipant = $user->id === $serviceRequest->user_id
             || $user->id === $serviceRequest->submitted_by_user_id
+            // The person the request is about — their onboarding predates their account.
+            || ($user->employee_id !== null && $user->employee_id === $serviceRequest->employee_id)
             || ($user->employee_id !== null && $serviceRequest->approvals()
                 ->where('approver_employee_id', $user->employee_id)->exists());
         abort_unless($isParticipant

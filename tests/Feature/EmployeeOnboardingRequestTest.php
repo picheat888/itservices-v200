@@ -296,6 +296,45 @@ class EmployeeOnboardingRequestTest extends TestCase
         );
     }
 
+    public function test_the_new_employee_can_read_the_requests_that_were_filed_for_them(): void
+    {
+        $this->addEmployee(['computer'])->assertCreated();
+        $employee = Employee::where('first_name', 'Somchai')->firstOrFail();
+        $request = ServiceRequest::firstOrFail();
+
+        // Their own account, provisioned later. The request carries employee_id = them,
+        // but user_id is null (they had none when HR filed it) — so "my requests" used to
+        // miss it and the detail returned 403. Their own onboarding was invisible to them.
+        $own = $this->makeUser('user', ['requests.submit'], $employee);
+
+        $this->actingAs($own)->getJson('/api/service-requests')
+            ->assertOk()
+            ->assertJsonPath('data.0.reference', $request->reference);
+
+        $this->actingAs($own)->getJson('/api/service-requests?scope=mine')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->actingAs($own)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.submitted_by.name', $this->hrUser->name);
+    }
+
+    public function test_reading_it_does_not_mean_withdrawing_it(): void
+    {
+        $this->addEmployee(['computer'])->assertCreated();
+        $employee = Employee::where('first_name', 'Somchai')->firstOrFail();
+        $request = ServiceRequest::firstOrFail();
+        $own = $this->makeUser('user', ['requests.submit'], $employee);
+
+        // Onboarding belongs to whoever runs it: the new hire may follow their own
+        // request, not cancel the laptop HR asked for on their first day.
+        $this->actingAs($own)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_cancel', false);
+        $this->actingAs($own)->postJson("/api/service-requests/{$request->id}/cancel")->assertForbidden();
+    }
+
     public function test_provisioning_an_account_with_nothing_waiting_sends_nothing(): void
     {
         $employee = Employee::create(['first_name' => 'Quiet', 'position_id' => $this->staff->id]);
