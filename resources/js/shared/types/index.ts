@@ -868,7 +868,7 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  * Stored as a code and written out through `req_skip_*`, so the trail reads in the
  * viewer's language instead of the language it was submitted in.
  */
-export type ApprovalSkipReason = 'no_manager' | 'no_resource_owner' | 'requester_is_owner';
+export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff';
 export type WorkflowStepKind = 'approval' | 'fulfillment';
 

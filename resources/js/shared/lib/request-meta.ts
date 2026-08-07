@@ -41,6 +41,7 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
  */
 export const REQUEST_SKIP_REASON_LABEL: Record<ApprovalSkipReason, string> = {
     no_manager: 'req_skip_no_manager',
+    no_matching_position: 'req_skip_no_matching_position',
     no_resource_owner: 'req_skip_no_resource_owner',
     requester_is_owner: 'req_skip_requester_is_owner',
 };
