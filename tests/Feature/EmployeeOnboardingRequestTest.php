@@ -12,10 +12,12 @@ use App\Models\Employee\Section;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Employee\EmployeeService;
 use Database\Seeders\PositionSeeder;
+use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -51,6 +53,7 @@ class EmployeeOnboardingRequestTest extends TestCase
     {
         parent::setUp();
         $this->seed(PositionSeeder::class);
+        $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         $this->it = Department::create(['code' => 'DEP-0003', 'tag' => 'It', 'name' => 'Information Technology']);
@@ -352,7 +355,11 @@ class EmployeeOnboardingRequestTest extends TestCase
             'title' => 'A laptop for me',
             'reason' => 'Mine broke.',
             'priority' => 'medium',
-            'fields' => ['device' => 'laptop', 'qty' => 1],
+            'fields' => [
+                'device_id' => (int) RequestOption::where('request_type', 'computer')
+                    ->where('label_en', 'Laptop')->value('id'),
+                'qty' => 1,
+            ],
         ])->assertCreated();
 
         // Owner and filer are the same account here: one receipt, not two.

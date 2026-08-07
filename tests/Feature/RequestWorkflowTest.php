@@ -11,10 +11,12 @@ use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Sidebar\SidebarBadgeService;
 use Database\Seeders\PositionSeeder;
+use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -44,6 +46,7 @@ class RequestWorkflowTest extends TestCase
     {
         parent::setUp();
         $this->seed(PositionSeeder::class);
+        $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         // staff → sup → mgr reporting line, everyone with a login and holding the rung
@@ -59,6 +62,16 @@ class RequestWorkflowTest extends TestCase
         $this->requester = $this->makeUser('user', ['requests.submit'], $this->staff);
         $this->supUser = $this->makeUser('user', [], $this->sup);
         $this->mgrUser = $this->makeUser('user', [], $this->mgr);
+    }
+
+    /**
+     * The seeded "Laptop" choice. The computer form's device list is managed data
+     * (Settings → Request data), so the payload carries an option id.
+     */
+    private function deviceOptionId(): int
+    {
+        return (int) RequestOption::where('request_type', 'computer')
+            ->where('label_en', 'Laptop')->value('id');
     }
 
     /** Id of a seeded position by title. */
@@ -89,7 +102,7 @@ class RequestWorkflowTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'priority' => 'medium',
-            'fields' => ['device' => 'laptop', 'qty' => 1],
+            'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 
         return ServiceRequest::findOrFail($response->json('data.id'));
@@ -125,7 +138,7 @@ class RequestWorkflowTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'priority' => 'medium',
-            'fields' => ['device' => 'laptop'],
+            'fields' => ['device_id' => $this->deviceOptionId()],
         ])->assertUnprocessable()->assertJsonValidationErrors('requester');
     }
 
@@ -137,7 +150,7 @@ class RequestWorkflowTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'priority' => 'medium',
-            'fields' => ['device' => 'laptop'],
+            'fields' => ['device_id' => $this->deviceOptionId()],
         ])->assertUnprocessable()->assertJsonValidationErrors('type');
 
         // Missing the required device select for the computer schema.
@@ -148,7 +161,7 @@ class RequestWorkflowTest extends TestCase
             'reason' => 'The current machine can no longer run our test suite.',
             'priority' => 'medium',
             'fields' => [],
-        ])->assertUnprocessable()->assertJsonValidationErrors('fields.device');
+        ])->assertUnprocessable()->assertJsonValidationErrors('fields.device_id');
     }
 
     /**

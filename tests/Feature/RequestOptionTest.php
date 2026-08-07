@@ -40,10 +40,11 @@ class RequestOptionTest extends TestCase
         $this->admin = User::factory()->create(['role' => 'mdadmin']);
     }
 
-    public function test_seeder_establishes_the_three_managed_lists(): void
+    public function test_seeder_establishes_every_managed_list(): void
     {
         $this->assertSame(
             [
+                ['request_type' => 'computer', 'field_key' => 'device_id'],
                 ['request_type' => 'hardware', 'field_key' => 'device_id'],
                 ['request_type' => 'mobile', 'field_key' => 'device_id'],
                 ['request_type' => 'telephone', 'field_key' => 'device_type_id'],
@@ -51,8 +52,26 @@ class RequestOptionTest extends TestCase
             collect(RequestSchemas::managedLists())->map(fn ($l) => ['request_type' => $l['request_type'], 'field_key' => $l['field_key']])->all(),
         );
 
+        // Computer used to offer two hard-coded slugs nobody could add to.
+        $this->assertSame(2, RequestOption::where('request_type', 'computer')->count());
         $this->assertSame(3, RequestOption::where('request_type', 'hardware')->count());
         $this->assertSame(2, RequestOption::where('request_type', 'telephone')->count());
+    }
+
+    public function test_a_computer_choice_can_be_added_and_the_form_offers_it(): void
+    {
+        $this->actingAs($this->admin)->postJson('/api/request-options', [
+            'request_type' => 'computer',
+            'field_key' => 'device_id',
+            'label_en' => 'All-in-One',
+            'label_th' => 'ออลอินวัน',
+        ])->assertCreated();
+
+        RequestSchemas::flushManagedCache();
+        $choices = collect(RequestSchemas::for(RequestType::Computer))
+            ->firstWhere('key', 'device_id')['options'];
+
+        $this->assertContains('All-in-One', collect($choices)->pluck('label_en')->all());
     }
 
     public function test_endpoints_require_the_request_data_permission(): void
@@ -64,8 +83,8 @@ class RequestOptionTest extends TestCase
 
         $this->actingAs($this->admin)->getJson('/api/request-options')
             ->assertOk()
-            ->assertJsonCount(3, 'data.lists')
-            ->assertJsonCount(8, 'data.options');
+            ->assertJsonCount(4, 'data.lists')
+            ->assertJsonCount(10, 'data.options');
     }
 
     public function test_a_label_cannot_be_used_twice_in_the_same_list(): void
@@ -83,12 +102,19 @@ class RequestOptionTest extends TestCase
 
     public function test_only_declared_lists_may_be_written_to(): void
     {
-        // `computer.device` is not a managed list, so it cannot be extended here.
+        // `email.address` is typed in, not chosen, so it has no list to extend.
+        $this->actingAs($this->admin)->postJson('/api/request-options', [
+            'request_type' => 'email',
+            'field_key' => 'address',
+            'label_en' => 'Shared mailbox',
+        ])->assertUnprocessable()->assertJsonValidationErrors('request_type');
+
+        // Neither does a field key nobody declared on a type that does have a list.
         $this->actingAs($this->admin)->postJson('/api/request-options', [
             'request_type' => 'computer',
-            'field_key' => 'device_id',
-            'label_en' => 'Tablet PC',
-        ])->assertUnprocessable()->assertJsonValidationErrors('request_type');
+            'field_key' => 'ram_size',
+            'label_en' => '32 GB',
+        ])->assertUnprocessable()->assertJsonValidationErrors('field_key');
     }
 
     public function test_the_form_offers_the_stored_rows_by_id_and_hiding_one_withdraws_it(): void

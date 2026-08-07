@@ -8,9 +8,11 @@ use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
+use App\Models\Settings\RequestOption;
 use App\Models\User;
 use Database\Seeders\EmailTemplateSeeder;
 use Database\Seeders\PositionSeeder;
+use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\DatabaseNotification;
@@ -39,6 +41,7 @@ class RequestNotificationTest extends TestCase
     {
         parent::setUp();
         $this->seed(PositionSeeder::class);
+        $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         // Each person holds the rung the routes ask for — chain steps resolve by
@@ -67,6 +70,16 @@ class RequestNotificationTest extends TestCase
             ->values()->all();
     }
 
+    /**
+     * The seeded "Laptop" choice. The computer form's device list is managed data
+     * (Settings → Request data), so the payload carries an option id.
+     */
+    private function deviceOptionId(): int
+    {
+        return (int) RequestOption::where('request_type', 'computer')
+            ->where('label_en', 'Laptop')->value('id');
+    }
+
     private function submitComputer(): ServiceRequest
     {
         $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
@@ -74,7 +87,7 @@ class RequestNotificationTest extends TestCase
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
             'priority' => 'medium',
-            'fields' => ['device' => 'laptop', 'qty' => 1],
+            'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 
         return ServiceRequest::findOrFail($response->json('data.id'));
