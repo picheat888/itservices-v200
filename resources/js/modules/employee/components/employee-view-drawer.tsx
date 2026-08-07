@@ -103,11 +103,15 @@ export function EmployeeViewDrawer({
         setTab('overview');
     }, [shown?.id]);
 
+    // Every one of these is keyed to the employee on screen, so switching people
+    // leaves them empty until their own data lands. `isLoading` is what tells the
+    // tabs apart: "nothing yet" must not render as "this person has nothing" —
+    // that reads as real information and it is wrong.
     const { data: approvalChain = [] } = useApprovalChain(shown?.id ?? null);
     const { data: orgNodes = [] } = useOrgChart();
-    const { data: access } = useEmployeeAccess(shown?.id ?? null);
-    const { data: heldAssets = [] } = useEmployeeAssets(shown?.id ?? null);
-    const { data: requestedTickets = [] } = useEmployeeTickets(shown?.id ?? null);
+    const { data: access, isLoading: accessLoading } = useEmployeeAccess(shown?.id ?? null);
+    const { data: heldAssets = [], isLoading: assetsLoading } = useEmployeeAssets(shown?.id ?? null);
+    const { data: requestedTickets = [], isLoading: ticketsLoading } = useEmployeeTickets(shown?.id ?? null);
     // Live copy of the employee — refetched when mutations invalidate ['employee'], so
     // setting credentials reflects immediately (No-account badge/strip clears without reload).
     const { data: liveEmp } = useEmployee(shown?.id ?? null);
@@ -117,7 +121,10 @@ export function EmployeeViewDrawer({
 
     if (!shown) return null;
 
-    const emp = liveEmp ?? shown;
+    // The live copy only wins when it is the same person the drawer is showing — the id
+    // check is what stops a previous employee's freshly-fetched record from being drawn
+    // under this one's name.
+    const emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown;
     const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';
@@ -414,14 +421,16 @@ export function EmployeeViewDrawer({
                                     id: 'assets' as const,
                                     label: t('emp_v_tab_assets'),
                                     icon: <Laptop className="h-[15px] w-[15px]" />,
-                                    count: heldAssets.length,
+                                    // No number until this person's own count is known — a 0 that
+                                    // turns into 3 a moment later was never a count.
+                                    count: assetsLoading ? undefined : heldAssets.length,
                                     soon: false,
                                 },
                                 {
                                     id: 'tickets' as const,
                                     label: t('emp_v_tab_tickets'),
                                     icon: <Ticket className="h-[15px] w-[15px]" />,
-                                    count: requestedTickets.length,
+                                    count: ticketsLoading ? undefined : requestedTickets.length,
                                     soon: false,
                                 },
                                 // Planned tab from the design — not wired to data yet (Coming soon).
@@ -438,7 +447,7 @@ export function EmployeeViewDrawer({
                                     icon: <Shield className="h-[15px] w-[15px]" />,
                                     count: access
                                         ? access.email_groups.length + access.file_shares.length + access.social.length + access.software.length
-                                        : 0,
+                                        : undefined,
                                     soon: false,
                                 },
                             ].map((tb) => (
@@ -491,6 +500,19 @@ export function EmployeeViewDrawer({
                             )}
                             {tab === 'access' && (
                                 <div className="space-y-4">
+                                    {/* Every group renders nothing while this person's access is
+                                        loading, which looked exactly like "no access at all".
+                                        Placeholder rows say which of the two it is. */}
+                                    {accessLoading && (
+                                        <div className="space-y-2" aria-busy="true">
+                                            {Array.from({ length: 4 }).map((_, i) => (
+                                                <div key={i} className="space-y-1">
+                                                    <div className="bg-muted h-3 w-28 animate-pulse rounded" />
+                                                    <div className="border-border bg-card h-10 animate-pulse rounded-lg border" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     {access?.outstanding && (
                                         <div className="border-destructive/30 bg-destructive/5 text-destructive flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium">
                                             <TriangleAlert className="h-4 w-4 shrink-0" />
@@ -572,8 +594,8 @@ export function EmployeeViewDrawer({
                                             0 && <div className="text-muted-foreground py-12 text-center text-sm">{t('emp_v_no_access')}</div>}
                                 </div>
                             )}
-                            {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} />}
-                            {tab === 'tickets' && <TicketsPane tickets={requestedTickets} />}
+                            {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} loading={assetsLoading} />}
+                            {tab === 'tickets' && <TicketsPane tickets={requestedTickets} loading={ticketsLoading} />}
                             {tab === 'requests' && <ComingSoon icon={<Inbox className="h-6 w-6" />} title={t('requests')} />}
                         </div>
                     </div>
@@ -650,9 +672,11 @@ const HELD_STATUS_META: Record<string, { dot: string; key: string }> = {
  * Assets tab — a read-only table of what the employee currently holds (own-module data).
  * Reuses the shared DataTable (same Prev/Next pager as the asset History tab), 6 rows per page.
  */
-function AssetsPane({ assets, lang }: { assets: EmployeeHeldAsset[]; lang: string }) {
+function AssetsPane({ assets, lang, loading }: { assets: EmployeeHeldAsset[]; lang: string; loading?: boolean }) {
     const t = useT();
-    if (assets.length === 0) {
+    // Empty only counts once this person's list has actually arrived; while it is on
+    // its way the table shows its own loading rows (below).
+    if (assets.length === 0 && !loading) {
         return (
             <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
                 <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
@@ -715,7 +739,7 @@ function AssetsPane({ assets, lang }: { assets: EmployeeHeldAsset[]; lang: strin
     // wrapper tightens the density token so both tabs read as one table style.
     return (
         <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
-            <DataTable fillHeight rowHeight={48} columns={columns} rows={assets} rowKey={(a) => a.id} />
+            <DataTable fillHeight rowHeight={48} columns={columns} rows={assets} rowKey={(a) => a.id} loading={loading} />
         </div>
     );
 }
@@ -724,9 +748,9 @@ function AssetsPane({ assets, lang }: { assets: EmployeeHeldAsset[]; lang: strin
  * Tickets tab — a read-only table of the tickets this employee has requested (own-module data).
  * Reuses the shared DataTable and the ticket module's status/priority badges via its barrel.
  */
-function TicketsPane({ tickets }: { tickets: EmployeeRequestedTicket[] }) {
+function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[]; loading?: boolean }) {
     const t = useT();
-    if (tickets.length === 0) {
+    if (tickets.length === 0 && !loading) {
         return (
             <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
                 <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
@@ -782,7 +806,7 @@ function TicketsPane({ tickets }: { tickets: EmployeeRequestedTicket[] }) {
     // intact (flex-1/min-h-0) and tightens the density token so compact rows fit more.
     return (
         <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
-            <DataTable fillHeight rowHeight={44} columns={columns} rows={tickets} rowKey={(tk) => tk.id} />
+            <DataTable fillHeight rowHeight={44} columns={columns} rows={tickets} rowKey={(tk) => tk.id} loading={loading} />
         </div>
     );
 }

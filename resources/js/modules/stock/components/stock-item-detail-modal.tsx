@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockSerialStatus } from '@/shared/types';
@@ -130,18 +131,17 @@ export function StockItemDetailModal({
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     // System-timezone date for UTC timestamps (received_at) — last_move_at is a pure date, shown as-is.
-    const { data, isLoading } = useStockItem(itemId);
+    const { data } = useStockItem(itemId);
     // History is fetched here (and reused by the Movements tab via the same query key)
     // so the Movements tab count is known up front.
     const { data: history } = useStockItemHistory(itemId);
     const open = itemId !== null;
 
-    // Retain the last loaded item so the dialog renders real content while it animates closed.
-    const [shownItem, setShownItem] = useState<StockItem | null>(null);
-    useEffect(() => {
-        if (data) setShownItem(data);
-    }, [data]);
-    const item = data ?? shownItem;
+    // Retains the last item for the exit animation, but never renders it under another
+    // item's id: opening a second item from the list swaps `itemId` while the dialog is
+    // open, and until that item's data lands the dialog shows its skeleton rather than
+    // the previous item's SKU, balances and lots.
+    const { record: item } = useRecordView(itemId, data);
 
     const [tab, setTab] = useState<TabId>('overview');
     const [lotPage, setLotPage] = useState(0);
@@ -173,7 +173,7 @@ export function StockItemDetailModal({
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
             <DialogContent className={focusDialogContentClass}>
-                {isLoading || !item ? (
+                {!item ? (
                     <div className="space-y-4 px-6 py-6">
                         <DialogTitle className="text-base">{t('stock_detail')}</DialogTitle>
                         <DialogDescription className="sr-only">{t('stock_detail')}</DialogDescription>

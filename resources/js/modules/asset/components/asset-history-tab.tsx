@@ -19,7 +19,7 @@ function Party({ name, muted }: { name: string | null; muted?: boolean }) {
  * History tab: an asset's custody trail (ownership transfers + returns-to-pool),
  * rendered as a fill-height table that paginates with Prev/Next.
  */
-export function AssetHistoryTab({ transfers }: { transfers: AssetTransferEntry[] }) {
+export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransferEntry[]; loading?: boolean }) {
     const t = useT();
 
     const columns: Column<AssetTransferEntry>[] = [
@@ -51,7 +51,9 @@ export function AssetHistoryTab({ transfers }: { transfers: AssetTransferEntry[]
                 <p className="text-muted-foreground text-xs">{t('asset_history_desc')}</p>
             </div>
 
-            {transfers.length === 0 ? (
+            {/* "No history" is a claim about the asset, so it waits until this asset's
+                trail has actually arrived — until then the table shows loading rows. */}
+            {transfers.length === 0 && !loading ? (
                 <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-16 text-center text-sm">
                     <History className="text-muted-foreground/50 h-8 w-8" />
                     <div>{t('asset_history_empty')}</div>
@@ -59,7 +61,7 @@ export function AssetHistoryTab({ transfers }: { transfers: AssetTransferEntry[]
                 </div>
             ) : (
                 // Fixed 12 rows per page, paged with Prev/Next.
-                <DataTable pageSize={12} columns={columns} rows={transfers} rowKey={(r) => r.id} />
+                <DataTable pageSize={12} columns={columns} rows={transfers} rowKey={(r) => r.id} loading={loading} />
             )}
         </div>
     );

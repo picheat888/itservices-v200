@@ -2,12 +2,14 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useRecordView } from '@/shared/hooks/use-record-view';
 import { isOnBehalfRequest, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { Check, PackageCheck, Ticket as TicketIcon, Trash2, UserPlus, X, Zap } from 'lucide-react';
@@ -22,25 +24,102 @@ import { RequestTrail } from './request-trail';
  * approval trail on the right, and viewer-relative actions in the footer
  * (approve/reject for the resolved current approver, fulfill for IT, cancel
  * for the requester while pending). Deep-linked via /requests?view=<id>.
+ *
+ * Opening a second request from underneath this one (a deep link, a row behind
+ * the dialog) swaps `requestId` while the dialog stays open. `useRecordView`
+ * makes that swap honest: the body only ever renders the record whose id the
+ * dialog is on, and the gap until it arrives is a skeleton inside the same
+ * dialog frame — not the previous request's reference, title and approval trail.
  */
 export function RequestDetailDialog({ requestId, onClose }: { requestId: number | null; onClose: () => void }) {
+    const { data } = useRequest(requestId);
+    const { record: request, switching } = useRecordView(requestId, data);
+
+    const [decision, setDecision] = useState<DecisionAction | null>(null);
+    // A decision belongs to the request it was opened on; switching requests drops it.
+    useEffect(() => {
+        setDecision(null);
+    }, [requestId]);
+
+    // Nothing to show and nothing on the way: the dialog is fully closed.
+    if (!request && !switching) return null;
+
+    return (
+        <>
+            <Dialog open={requestId != null} onOpenChange={(o) => !o && onClose()}>
+                <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
+                    {request ? <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} /> : <RequestDetailLoading />}
+                </DialogContent>
+            </Dialog>
+
+            <DecisionDialog request={decision && request ? request : null} action={decision} onClose={() => setDecision(null)} />
+        </>
+    );
+}
+
+/** The dialog's own shape while the next request loads — same frame, no content claims. */
+function RequestDetailLoading() {
+    const t = useT();
+
+    return (
+        <div className="flex flex-col gap-0" aria-busy="true">
+            <DialogTitle className="sr-only">{t('req_detail_eyebrow')}</DialogTitle>
+            <DialogDescription className="sr-only">{t('req_detail_eyebrow')}</DialogDescription>
+
+            {/* Header band: icon + two lines of text + a status pill on the right. */}
+            <div className="flex items-center gap-3.5 px-6 pt-5 pb-4">
+                <Skeleton className="h-11 w-11 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-2.5 w-40" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+
+            <div className="border-border/60 grid gap-8 border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
+                <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="space-y-1.5">
+                                <Skeleton className="h-2.5 w-20" />
+                                <Skeleton className="h-4 w-32" />
+                            </div>
+                        ))}
+                    </div>
+                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                </div>
+                <div className="space-y-3">
+                    <Skeleton className="h-2.5 w-24" />
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-14 w-full rounded-xl" />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Everything the dialog shows for one request. Takes the record as a prop so it
+ * cannot render without one — the loading case is the parent's problem, not a
+ * set of `request?.` checks scattered through the body.
+ */
+function RequestDetailBody({
+    request,
+    onClose,
+    onDecide,
+}: {
+    request: ServiceRequest;
+    onClose: () => void;
+    onDecide: (action: DecisionAction) => void;
+}) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const navigate = useNavigate();
     const confirm = useConfirm();
-    const { data } = useRequest(requestId);
     const { fulfill, cancel } = useRequestMutations();
 
-    // Retain the shown request through the exit animation.
-    const [shown, setShown] = useState<ServiceRequest | null>(null);
-    useEffect(() => {
-        if (data) setShown(data);
-    }, [data]);
-    const request = requestId != null ? (data ?? shown) : shown;
-
-    const [decision, setDecision] = useState<DecisionAction | null>(null);
-
-    if (!request) return null;
     const meta = REQUEST_TYPE_META[request.type];
 
     const onError = (e: unknown) => {
@@ -73,144 +152,128 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
 
     return (
         <>
-            <Dialog open={requestId != null} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
-                    <FocusDialogHeader
-                        icon={meta.icon}
-                        accent={meta.color}
-                        eyebrow={`${t('req_detail_eyebrow')} · ${t(REQUEST_TYPE_META[request.type].labelKey)}`}
-                        title={request.title}
-                        code={request.reference}
-                        srDescription={request.title}
-                        headerRight={
-                            <StatusBadge tone={REQUEST_STATUS_META[request.status].tone}>
-                                {t(REQUEST_STATUS_META[request.status].labelKey)}
-                            </StatusBadge>
-                        }
-                    />
+            <FocusDialogHeader
+                icon={meta.icon}
+                accent={meta.color}
+                eyebrow={`${t('req_detail_eyebrow')} · ${t(REQUEST_TYPE_META[request.type].labelKey)}`}
+                title={request.title}
+                code={request.reference}
+                srDescription={request.title}
+                headerRight={
+                    <StatusBadge tone={REQUEST_STATUS_META[request.status].tone}>{t(REQUEST_STATUS_META[request.status].labelKey)}</StatusBadge>
+                }
+            />
 
-                    {/* Filed for somebody who could not file it themselves — the approver
-                        needs that before reading anything else on this request. */}
-                    {isOnBehalfRequest(request) && (
-                        <div className="flex items-start gap-2.5 border-t border-l-2 border-l-violet-500 bg-violet-500/[0.06] px-6 py-3">
-                            <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
-                            <div className="min-w-0 text-sm">
-                                <div className="font-semibold text-violet-700 dark:text-violet-300">{t('req_onboarding_title')}</div>
-                                <div className="text-muted-foreground text-xs">
-                                    {request.submitted_by?.name
-                                        ? `${t('req_submitted_by')} ${request.submitted_by.name} · ${request.created_at}`
-                                        : t('req_onboarding_desc')}
-                                </div>
+            {/* Filed for somebody who could not file it themselves — the approver
+                needs that before reading anything else on this request. */}
+            {isOnBehalfRequest(request) && (
+                <div className="flex items-start gap-2.5 border-t border-l-2 border-l-violet-500 bg-violet-500/[0.06] px-6 py-3">
+                    <UserPlus className="mt-0.5 h-4 w-4 shrink-0 text-violet-600 dark:text-violet-400" />
+                    <div className="min-w-0 text-sm">
+                        <div className="font-semibold text-violet-700 dark:text-violet-300">{t('req_onboarding_title')}</div>
+                        <div className="text-muted-foreground text-xs">
+                            {request.submitted_by?.name
+                                ? `${t('req_submitted_by')} ${request.submitted_by.name} · ${request.created_at}`
+                                : t('req_onboarding_desc')}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="border-border/60 grid flex-1 gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
+                {/* Left — summary + typed fields */}
+                <div className="min-w-0 space-y-5">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+                        <KV label={t('req_requester')} value={request.requester.name} />
+                        <KV label={t('req_department')} value={request.requester.department ?? '—'} />
+                        <KV label={t('req_created')} value={request.created_at} mono />
+                        {request.submitted_by && <KV label={t('req_submitted_by')} value={request.submitted_by.name ?? '—'} />}
+                    </div>
+
+                    <div>
+                        <SectionLabel>{t('req_reason_label')}</SectionLabel>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.reason}</p>
+                    </div>
+
+                    {request.fields_display.length > 0 && (
+                        <div>
+                            <SectionLabel>{t('req_service_section')}</SectionLabel>
+                            <div className="border-border divide-border/70 divide-y rounded-xl border">
+                                {request.fields_display.map((row) => (
+                                    <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
+                                        <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
+                                        <span className={cn('text-right font-medium break-all', row.mono && 'font-mono text-xs')}>{row.value}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
-                    <div className="border-border/60 grid flex-1 gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
-                        {/* Left — summary + typed fields */}
-                        <div className="min-w-0 space-y-5">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                                <KV label={t('req_requester')} value={request.requester.name} />
-                                <KV label={t('req_department')} value={request.requester.department ?? '—'} />
-                                <KV label={t('req_created')} value={request.created_at} mono />
-                                {request.submitted_by && <KV label={t('req_submitted_by')} value={request.submitted_by.name ?? '—'} />}
+                    {/* Linked ticket */}
+                    <div>
+                        <SectionLabel>{t('req_linked_ticket')}</SectionLabel>
+                        {request.ticket ? (
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/tickets?view=${request.ticket?.id}`)}
+                                className="border-border hover:border-brand/50 flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors"
+                            >
+                                <span className="bg-brand/10 text-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                                    <TicketIcon className="h-4.5 w-4.5" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block font-mono text-sm font-bold">{request.ticket.ticket_no}</span>
+                                    <span className="text-muted-foreground block text-xs">{t('req_ticket_auto_hint')}</span>
+                                </span>
+                            </button>
+                        ) : (
+                            <div className="border-border/80 text-muted-foreground flex items-center gap-2.5 rounded-xl border border-dashed px-3.5 py-3 text-xs">
+                                <Zap className="h-4 w-4 shrink-0" />
+                                {request.auto_ticket && request.status === 'pending' ? t('req_auto_ticket_note') : t('req_no_ticket')}
                             </div>
-
-                            <div>
-                                <SectionLabel>{t('req_reason_label')}</SectionLabel>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.reason}</p>
-                            </div>
-
-                            {request.fields_display.length > 0 && (
-                                <div>
-                                    <SectionLabel>{t('req_service_section')}</SectionLabel>
-                                    <div className="border-border divide-border/70 divide-y rounded-xl border">
-                                        {request.fields_display.map((row) => (
-                                            <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
-                                                <span className="text-muted-foreground shrink-0 text-xs">
-                                                    {lang === 'th' ? row.label_th : row.label_en}
-                                                </span>
-                                                <span className={cn('text-right font-medium break-all', row.mono && 'font-mono text-xs')}>
-                                                    {row.value}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Linked ticket */}
-                            <div>
-                                <SectionLabel>{t('req_linked_ticket')}</SectionLabel>
-                                {request.ticket ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate(`/tickets?view=${request.ticket?.id}`)}
-                                        className="border-border hover:border-brand/50 flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors"
-                                    >
-                                        <span className="bg-brand/10 text-brand flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                                            <TicketIcon className="h-4.5 w-4.5" />
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block font-mono text-sm font-bold">{request.ticket.ticket_no}</span>
-                                            <span className="text-muted-foreground block text-xs">{t('req_ticket_auto_hint')}</span>
-                                        </span>
-                                    </button>
-                                ) : (
-                                    <div className="border-border/80 text-muted-foreground flex items-center gap-2.5 rounded-xl border border-dashed px-3.5 py-3 text-xs">
-                                        <Zap className="h-4 w-4 shrink-0" />
-                                        {request.auto_ticket && request.status === 'pending' ? t('req_auto_ticket_note') : t('req_no_ticket')}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Right — the approval trail */}
-                        <div className="min-w-0">
-                            <SectionLabel>{t('req_trail_title')}</SectionLabel>
-                            <RequestTrail request={request} />
-                        </div>
-                    </div>
-
-                    {/* Footer — viewer-relative actions */}
-                    <div className="border-border/60 bg-muted/30 flex items-center gap-2.5 border-t px-6 py-3.5">
-                        {request.can_cancel && (
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={confirmCancel}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {t('req_cancel_request')}
-                            </Button>
                         )}
-                        <div className="ml-auto flex items-center gap-2.5">
-                            <Button variant="outline" onClick={onClose}>
-                                {t('close')}
-                            </Button>
-                            {request.can_fulfill && (
-                                <Button onClick={confirmFulfill} disabled={fulfill.isPending}>
-                                    <PackageCheck className="h-4 w-4" />
-                                    {t('req_fulfill')}
-                                </Button>
-                            )}
-                            {request.can_approve && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => setDecision('reject')}
-                                    >
-                                        <X className="h-4 w-4" />
-                                        {t('req_reject')}
-                                    </Button>
-                                    <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => setDecision('approve')}>
-                                        <Check className="h-4 w-4" />
-                                        {t('req_approve')}
-                                    </Button>
-                                </>
-                            )}
-                        </div>
                     </div>
-                </DialogContent>
-            </Dialog>
+                </div>
 
-            <DecisionDialog request={decision ? request : null} action={decision} onClose={() => setDecision(null)} />
+                {/* Right — the approval trail */}
+                <div className="min-w-0">
+                    <SectionLabel>{t('req_trail_title')}</SectionLabel>
+                    <RequestTrail request={request} />
+                </div>
+            </div>
+
+            {/* Footer — viewer-relative actions */}
+            <div className="border-border/60 bg-muted/30 flex items-center gap-2.5 border-t px-6 py-3.5">
+                {request.can_cancel && (
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={confirmCancel}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t('req_cancel_request')}
+                    </Button>
+                )}
+                <div className="ml-auto flex items-center gap-2.5">
+                    <Button variant="outline" onClick={onClose}>
+                        {t('close')}
+                    </Button>
+                    {request.can_fulfill && (
+                        <Button onClick={confirmFulfill} disabled={fulfill.isPending}>
+                            <PackageCheck className="h-4 w-4" />
+                            {t('req_fulfill')}
+                        </Button>
+                    )}
+                    {request.can_approve && (
+                        <>
+                            <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => onDecide('reject')}>
+                                <X className="h-4 w-4" />
+                                {t('req_reject')}
+                            </Button>
+                            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => onDecide('approve')}>
+                                <Check className="h-4 w-4" />
+                                {t('req_approve')}
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </div>
         </>
     );
 }
