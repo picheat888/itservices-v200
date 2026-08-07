@@ -188,7 +188,10 @@ export const employee: Dict = {
     emp_onboarding_sub: 'Services this employee needs on day one.',
     emp_onboarding_note: 'Note (optional)',
     emp_onboarding_deferred: 'One approval request is filed per service, routed to this employee’s own manager.',
-    emp_onboarding_filed: '{n} onboarding request(s) filed',
+    // Toast heading + its own line for the count (the card renders the two as
+    // separate lines, so the number is not buried mid-sentence).
+    emp_onboarding_filed: 'Onboarding requests filed',
+    emp_onboarding_filed_count: '{n} request(s)',
     emp_onboarding_failed: 'Employee saved, but these services could not be requested: {services}',
     pwd_set_title: 'Set your password',
     pwd_set_desc: 'Choose one only you know to continue.',

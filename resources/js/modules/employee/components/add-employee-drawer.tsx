@@ -209,7 +209,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 // Somebody has to file these by hand, so it waits to be dismissed.
                 pushToast(t('emp_onboarding_failed').replace('{services}', onboarding.failed.map((f) => f.service).join(', ')), 'error');
             } else if (onboarding?.created.length) {
-                pushToast(t('emp_onboarding_filed').replace('{n}', String(onboarding.created.length)), 'success');
+                // Heading on top, count on its own line below it.
+                pushToast(t('emp_onboarding_filed_count').replace('{n}', String(onboarding.created.length)), 'success', t('emp_onboarding_filed'));
             }
             onClose();
         } catch (err) {
