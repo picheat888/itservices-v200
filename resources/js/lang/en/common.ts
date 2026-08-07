@@ -5,6 +5,8 @@ export const common: Dict = {
     nav_workspace: 'Workspace',
     nav_admin: 'Administration',
     search_placeholder: 'Search anything…',
+    // Names the bottom-right toast area for screen readers; never rendered on screen.
+    toast_region: 'Notifications',
     filters: 'Filters',
     reset_filters: 'Clear filters',
     filter_clear_all: 'Clear all',

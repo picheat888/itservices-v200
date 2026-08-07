@@ -1609,3 +1609,34 @@ Backend ไม่มี endpoint สร้าง/ลบมาตั้งแต�
 `RequestOptionTest` — เทสต์ที่พินว่ามี 3 ลิสต์กลายเป็น 4 (+ นับ options 8→10) · เพิ่มเทสต์ "เพิ่มตัวเลือกคอมพิวเตอร์แล้วฟอร์มเสนอให้เลือกจริง" · เทสต์ "ลิสต์ที่ไม่ได้ประกาศเขียนไม่ได้" เปลี่ยนตัวอย่างไปใช้ `email.address` (ช่องพิมพ์ ไม่มีลิสต์) + `computer.ram_size` (field key ที่ไม่มีใครประกาศ)
 เทสต์ที่ยิงคำขอคอมพิวเตอร์ 4 ไฟล์ (`RequestWorkflowTest`, `RequestAutoTicketTest`, `RequestNotificationTest`, `EmployeeOnboardingRequestTest`) seed `RequestOptionSeeder` แล้วส่ง `device_id` เป็น id จริง
 **ทั้ง suite = 873 passed / 3,391 assertions** · pint ผ่าน · `php artisan migrate` รันบนฐานจริงแล้ว (ได้ `computer.device_id` = Laptop / Desktop PC) · ไม่มีไฟล์ frontend เปลี่ยน จึงไม่ต้อง build ใหม่
+
+---
+
+## Toast: คิวเดียวทั้งแอป · error รอให้กดปิด · ประกาศให้ screen reader (2026-08-07)
+
+เดิมมี toaster **2 ตัวแยกกัน** วาง `right-5 bottom-5` เหมือนกันแต่คนละ portal (`transient-toaster` z-120 กับ `notification-toaster` z-60) เด้งพร้อมกันจะทับกันสนิท และรวมกันได้ถึง 6 ใบ ปรับใหม่ตามมาตรฐาน (Material 3 snackbar · W3C ARIA APG alert/status · WCAG 2.2.1) โดย**ไม่เพิ่ม library ใด ๆ**
+
+### 1. region เดียว คิวเดียว
+`stores/toast.ts` เป็นคิวเดียวของทั้งแอป — ทั้งข้อความจากการกดบันทึก/ลบ, คำเตือน 429 จาก axios interceptor และ**การแจ้งเตือนจากเซิร์ฟเวอร์**
+- `notification-toaster.tsx` (component) → `use-notification-toasts.ts` (**hook ไม่ render อะไร**) แปลงแจ้งเตือนใหม่เป็น toast แล้ว push เข้าคิวเดียวกัน · เรียกใน `AppShell` เพราะกดแล้วต้อง navigate
+- `transient-toaster.tsx` → `toaster.tsx` = การ์ดเดียวใช้ทุกกรณี (badge สี + title + ข้อความ + ปุ่มปิด + แถบเวลา) · จำกัดรวม **3 ใบ** ที่เหลือรอคิว
+- `visibleToasts()` เป็น pure function: **error ที่ยังไม่ถูกอ่านจะไม่ถูกดันตกจอ** ด้วย toast ใหม่ · ช่องที่เหลือให้ใบล่าสุด
+- toast ที่กดได้ (แจ้งเตือน) ยังทำงานเหมือนเดิม — mark read + ไปหน้าเป้าหมาย + ปิดใบพี่น้องที่ไปที่เดียวกัน (`group` + `dismissGroup`)
+
+### 2. อายุตามความสำคัญ (เดิม 6 วิเท่ากันหมด)
+`TOAST_DURATION`: success 4 วิ · info 5 วิ · warning 6 วิ · **error = ไม่หายเอง** รอให้กดปิด (สิ่งที่ต้องแก้ต้องอ่านได้จบ) · แจ้งเตือนจากเซิร์ฟเวอร์ = 6 วิ (ไม่ค้าง เพราะกระดิ่งเก็บไว้อยู่แล้ว)
+การ์ดที่ยืม tone แดงเพื่อสื่อ "ลบแล้ว" (Access → member/resource removed) ส่ง `duration: 4000` เอง เพราะมันคือความสำเร็จ ไม่ใช่ความล้มเหลว
+แถบเวลาซิงก์กับตัวจับเวลาจริงผ่าน class `[animation-duration:…]` (ไม่ใช่ 6 วิตายตัวใน CSS อีก)
+
+### 3. Accessibility
+`role="alert"` สำหรับ error · `role="status" aria-live="polite"` สำหรับที่เหลือ · `aria-atomic` · region คงอยู่ใน DOM แม้ไม่มี toast (live region ที่เพิ่งโผล่มาพร้อมข้อความ screen reader มักไม่ประกาศ) · การ์ดที่กดได้ **โฟกัสด้วยคีย์บอร์ดและกด Enter/Space ได้** + focus ring · ปุ่มปิดใช้ `notif_dismiss` ผ่าน `useT()` (เดิม hardcode "Dismiss")
+
+### 4. เก็บกวาด
+หยุดนับเวลาเมื่อ **focus** ไม่ใช่แค่ hover (`:focus-within` + `onFocus/onBlur`) · ข้อความแจ้งเตือนแสดง **2 บรรทัด** แล้วค่อยตัด (เดิม `truncate` บรรทัดเดียว ตัดกลางประโยค) · ลบ `.toast-ring-fg` / `@keyframes toast-ring-deplete` ที่ไม่มีใครใช้แล้ว (วงแหวนนับถอยหลังของ toaster ตัวเก่า)
+หมายเหตุ: `prefers-reduced-motion` มีอยู่แล้วทั้งคู่ก่อนแก้ — ครอบ enter/leave/bar อยู่แล้ว ไม่ใช่ช่องว่างอย่างที่ประเมินไว้ตอนแรก
+
+### Tests / Verification
+
+ไม่มี test runner ฝั่ง frontend ในโปรเจกต์ (มีแต่ PHPUnit) จึงพิสูจน์กฎของคิวด้วยสคริปต์ assert รันบน Node type-stripping (`node toast-queue.test.ts` ใน scratchpad — ไม่เพิ่ม dependency): อายุต่อ tone · override ต่อใบ · burst guard ยุบเฉพาะ **key เดียวกัน** (แจ้งเตือน 2 ใบข้อความเหมือนกันไม่ถูกกลืน) · `dismissGroup` เก็บใบที่กดและกลุ่มอื่นไว้ · `visibleToasts` 4 เคส (ใบล่าสุดได้ที่ · error ไม่ถูกดันตก · error มากกว่าช่อง · คิวว่าง) — **ผ่านทั้งหมด** และพิสูจน์ว่าจับของจริงได้โดยแก้ `error: null` → `6000` ชั่วคราวแล้วเห็นเทสต์ล้ม
+`tsc --noEmit` = 0 · eslint ไฟล์ที่แก้ = 0 · prettier ผ่าน · `npm run build` ผ่าน + ยืนยันว่า CSS ที่ build ออกมามี `animation-duration` ครบทั้ง 4 ค่า (4s/5s/6s/8s)
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์จริง** — พฤติกรรมบนหน้าจอ (การซ้อน 3 ใบ, การกดแจ้งเตือนแล้วเด้งไปหน้าเป้าหมาย) ต้องกดดูเองอีกครั้ง
