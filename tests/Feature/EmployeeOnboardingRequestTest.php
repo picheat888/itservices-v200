@@ -14,6 +14,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Services\Employee\EmployeeService;
 use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -270,6 +271,39 @@ class EmployeeOnboardingRequestTest extends TestCase
             ApprovalStatus::Approved,
             $request->approvals()->where('approver_employee_id', $this->itManager->id)->firstOrFail()->status,
         );
+    }
+
+    public function test_provisioning_the_account_delivers_the_approvals_that_were_waiting_for_it(): void
+    {
+        User::where('employee_id', $this->itManager->id)->delete();
+        $this->addEmployee(['computer', 'email'])->assertCreated();
+
+        // Filed while the approver had no account: the bells they should have received
+        // went nowhere, and nothing replays on a poll — the request just sits there.
+        $pending = ServiceRequest::count();
+        $this->assertSame(2, $pending);
+
+        $account = app(EmployeeService::class)
+            ->createUserWithCredentials($this->itManager, 'itmgr', 'Str0ng!pass', true);
+
+        // The moment there is an inbox, the missed "awaiting your decision" bells land in it.
+        $bells = $account->notifications()->get()
+            ->filter(fn ($n) => ($n->data['subtype'] ?? null) === 'waiting');
+        $this->assertCount($pending, $bells);
+        $this->assertEqualsCanonicalizing(
+            ServiceRequest::all()->pluck('reference')->all(),
+            $bells->pluck('data.reference')->all(),
+        );
+    }
+
+    public function test_provisioning_an_account_with_nothing_waiting_sends_nothing(): void
+    {
+        $employee = Employee::create(['first_name' => 'Quiet', 'position_id' => $this->staff->id]);
+
+        $account = app(EmployeeService::class)
+            ->createUserWithCredentials($employee, 'quiet', 'Str0ng!pass', true);
+
+        $this->assertSame(0, $account->notifications()->count());
     }
 
     public function test_the_filer_gets_the_receipt_the_new_employee_cannot(): void

@@ -2,6 +2,9 @@
 
 namespace App\Services\Request;
 
+use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\WorkflowStepKind;
+use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
@@ -143,6 +146,33 @@ class RequestNotificationService
             ['service_request_id' => $request->id, 'subtype' => 'waiting'],
         );
         $this->emailEach(collect([$approver]), 'request.approval_needed', $request, ['step.label' => $row->label]);
+    }
+
+    /**
+     * Delivers the "awaiting your decision" bells this employee never received because
+     * they had no account when the step reached them.
+     *
+     * Notifications are pushed at the moment of the event and nothing replays them, so
+     * an approval that landed before the account existed stayed invisible: the sidebar
+     * counted it, but the person had nothing telling them to look. Called the instant an
+     * account is provisioned — the first moment there is an inbox to deliver to.
+     *
+     * @return int how many were delivered
+     */
+    public function deliverPendingApprovals(Employee $employee): int
+    {
+        $rows = RequestApproval::with('request')
+            ->where('approver_employee_id', $employee->id)
+            ->where('status', ApprovalStatus::Current->value)
+            ->where('kind', WorkflowStepKind::Approval->value)
+            ->get()
+            ->filter(fn (RequestApproval $row) => $row->request !== null);
+
+        foreach ($rows as $row) {
+            $this->notifyApprover($row->request, $row);
+        }
+
+        return $rows->count();
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Services\Request\RequestNotificationService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -67,6 +68,11 @@ class EmployeeService
 
         // Mirror the username onto the employee for display/search.
         $employee->update(['username' => $username]);
+
+        // An approval that reached this person before they had an account was never
+        // delivered — nothing replays a notification. Now that there is an inbox, hand
+        // over whatever has been waiting on them.
+        app(RequestNotificationService::class)->deliverPendingApprovals($employee);
 
         return $user;
     }
