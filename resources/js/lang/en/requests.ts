@@ -112,14 +112,14 @@ export const requests: Dict = {
     req_origin_onboarding: 'New employee',
     req_submitted_by: 'Filed by',
     req_await_account: 'Waiting - this approver has no login account yet',
-    // Each reason stands on its own ("Step skipped - ..."), because the status line
+    // Each reason stands on its own ("Skipped - ..."), because the status line
     // above no longer repeats the word "skipped".
-    req_skip_no_manager: 'Step skipped - the requester has no manager configured',
+    req_skip_no_manager: 'Skipped - the requester has no manager configured',
     // Covers every way this rung finds nobody: the requester is at that level or
     // above it, and the reporting line holds no one of that rank at all.
     req_skip_no_matching_position: 'Skipped - this level is equal to or below the requester, or missing from their reporting line',
-    req_skip_no_resource_owner: 'Step skipped - this resource has no owner who can approve',
-    req_skip_requester_is_owner: 'Step skipped - the requester owns this resource',
+    req_skip_no_resource_owner: 'Skipped - this resource has no owner who can approve',
+    req_skip_requester_is_owner: 'Skipped - the requester owns this resource',
     req_onboarding_title: 'Request for a new employee',
     req_onboarding_desc: 'Filed with the new employee record, before they had an account of their own.',
     req_trail_title: 'Approval trail',
