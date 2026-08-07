@@ -80,7 +80,15 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                     <span className="font-mono text-[11px] font-bold">{row.position}</span>
                 ),
             title: isFulfillment ? t('req_trail_fulfillment') : row.approver_name ? `${row.approver_name}` : row.label,
-            meta: isFulfillment && row.status === 'waiting' ? t('req_trail_after_approvals') : stepMeta(row),
+            // A skipped step with a reason says it all inside the amber note below, so the
+            // status line stays quiet instead of printing "skipped" twice. Rows from before
+            // reasons were stored still get the plain word.
+            meta:
+                isFulfillment && row.status === 'waiting'
+                    ? t('req_trail_after_approvals')
+                    : row.status === 'skipped' && row.skip_reason
+                      ? ''
+                      : stepMeta(row),
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,
@@ -105,23 +113,28 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
         <div className="before:bg-border relative space-y-4 before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-px">
             {items.map((item, i) => (
                 <div key={i} className="relative flex items-start gap-3">
-                    <span
-                        className={cn(
-                            'z-[1] flex h-[23px] w-[23px] shrink-0 items-center justify-center rounded-full border-[1.5px]',
-                            item.tone === 'done' && 'border-emerald-500 bg-emerald-500 text-white',
-                            item.tone === 'current' && 'border-brand bg-brand/10 text-brand ring-brand/15 ring-[3px]',
-                            item.tone === 'rejected' && 'border-destructive bg-destructive text-white',
-                            item.tone === 'skipped' && 'border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-                            item.tone === 'queued' && 'border-border bg-background text-muted-foreground',
-                        )}
-                    >
-                        {item.glyph}
+                    {/* Opaque disc under the marker: the tinted tones (current, skipped) are
+                        translucent, and without something solid behind them the rail was
+                        visible straight through the middle of the dot. */}
+                    <span className="bg-background relative z-[1] shrink-0 rounded-full">
+                        <span
+                            className={cn(
+                                'flex h-[23px] w-[23px] items-center justify-center rounded-full border-[1.5px]',
+                                item.tone === 'done' && 'border-emerald-500 bg-emerald-500 text-white',
+                                item.tone === 'current' && 'border-brand bg-brand/10 text-brand ring-brand/15 ring-[3px]',
+                                item.tone === 'rejected' && 'border-destructive bg-destructive text-white',
+                                item.tone === 'skipped' && 'border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                                item.tone === 'queued' && 'border-border bg-background text-muted-foreground',
+                            )}
+                        >
+                            {item.glyph}
+                        </span>
                     </span>
                     <div className="min-w-0 pt-0.5">
                         <div className={cn('text-sm leading-tight font-semibold', item.tone === 'queued' && 'text-muted-foreground')}>
                             {item.title}
                         </div>
-                        <div className="text-muted-foreground mt-0.5 text-xs leading-snug">{item.meta}</div>
+                        {item.meta && <div className="text-muted-foreground mt-0.5 text-xs leading-snug">{item.meta}</div>}
                         {item.skipReason && (
                             <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
                                 <SkipForward className="h-3.5 w-3.5 shrink-0" />
