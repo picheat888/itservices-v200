@@ -30,6 +30,7 @@ export const notification: Dict = {
     notif_request_rejected: 'Rejected by {actor}: {remark}',
     notif_request_fulfilled: 'Done — your request was fulfilled',
     notif_request_cancelled: 'Cancelled by the requester',
+    notif_request_blocked_no_account: 'Waiting on {actor}, who has no login account yet — create one so this can move',
     notif_asset_assigned: 'Assigned to you — tap to accept',
     notif_asset_return_requested: 'Return requested — awaiting your receipt',
     notif_ticket_sla_response_at_risk: 'Nearly overdue for pickup — take it now',

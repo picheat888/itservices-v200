@@ -13,6 +13,7 @@ use Database\Seeders\EmailTemplateSeeder;
 use Database\Seeders\PositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\DatabaseNotification;
 use Tests\TestCase;
 
 /**
@@ -32,6 +33,8 @@ class RequestNotificationTest extends TestCase
 
     private User $itUser;
 
+    private Employee $sup;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -42,7 +45,7 @@ class RequestNotificationTest extends TestCase
         // position, so a line without titles reaches nobody.
         $title = fn (string $t) => Position::where('title', $t)->firstOrFail()->id;
         $mgr = Employee::create(['first_name' => 'Mgr', 'position_id' => $title('Manager')]);
-        $sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $mgr->id, 'position_id' => $title('Supervisor')]);
+        $sup = $this->sup = Employee::create(['first_name' => 'Sup', 'manager_id' => $mgr->id, 'position_id' => $title('Supervisor')]);
         $staff = Employee::create(['first_name' => 'Staff', 'manager_id' => $sup->id, 'position_id' => $title('Staff/Officer')]);
 
         $userRole = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false]);
@@ -87,6 +90,49 @@ class RequestNotificationTest extends TestCase
 
         $bell = $this->bells($this->supUser, 'waiting')[0];
         $this->assertSame($request->reference, $bell->data['reference']);
+    }
+
+    public function test_a_request_stuck_on_an_approver_without_an_account_tells_whoever_can_create_one(): void
+    {
+        // The Supervisor rung resolves to a real person who cannot sign in yet: nobody
+        // involved can move the request, and the approver has no inbox to be told.
+        $this->supUser->delete();
+        $accountAdmin = $this->makeUserWith('employees.set_credentials');
+
+        $request = $this->submitComputer();
+
+        $bells = $this->bells($accountAdmin, 'blocked_no_account');
+        $this->assertCount(1, $bells);
+        $this->assertSame($request->reference, $bells[0]->data['reference']);
+        // Carries the person to provision, so the bell can open them rather than the
+        // request nobody can act on.
+        $this->assertSame($this->sup->id, $bells[0]->data['employee_id']);
+        $this->assertSame('Sup', $bells[0]->data['actor_name']);
+
+        // The approver themselves gets nothing — there is nowhere to send it.
+        $this->assertSame(0, DatabaseNotification::where('notifiable_id', $this->supUser->id)->count());
+    }
+
+    public function test_the_it_queue_row_does_not_raise_a_blocked_bell(): void
+    {
+        $accountAdmin = $this->makeUserWith('employees.set_credentials');
+
+        $request = $this->submitComputer();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        // The fulfillment row names no person at all: it is a queue, not somebody
+        // waiting for an account.
+        $this->assertCount(0, $this->bells($accountAdmin, 'blocked_no_account'));
+    }
+
+    /** A user whose role grants exactly the given permission. */
+    private function makeUserWith(string $permission): User
+    {
+        $role = Role::firstOrCreate(['key' => 'acct'], ['name' => 'Account admin', 'color' => '#000', 'is_system' => false]);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $permission], ['allowed' => true]);
+
+        return User::factory()->create(['role' => 'acct']);
     }
 
     public function test_each_step_hands_the_bell_to_the_next_approver(): void

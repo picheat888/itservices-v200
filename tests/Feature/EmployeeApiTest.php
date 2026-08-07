@@ -23,6 +23,26 @@ class EmployeeApiTest extends TestCase
         return User::factory()->create(['role' => 'super']);
     }
 
+    public function test_adding_an_employee_bells_everyone_who_can_provision_a_login_including_the_adder(): void
+    {
+        $adder = $this->super();
+        $otherAdmin = $this->super();
+
+        $this->actingAs($adder)->postJson('/api/employees', [
+            'first_name' => 'Needs', 'last_name' => 'Account',
+        ])->assertCreated();
+
+        // The bell is a to-do, not an announcement: the person who added the employee is
+        // usually the one who provisions the account — and often the only holder of the
+        // permission, in which case excluding them sent it to nobody at all.
+        foreach ([$adder, $otherAdmin] as $recipient) {
+            $bells = $recipient->notifications()->get()
+                ->filter(fn ($n) => ($n->data['subtype'] ?? null) === 'credentials_required');
+            $this->assertCount(1, $bells, "no credentials bell for user {$recipient->id}");
+            $this->assertSame('Needs Account', $bells->first()->data['employee_name']);
+        }
+    }
+
     public function test_editing_employee_email_mirrors_onto_linked_account(): void
     {
         $this->actingAs($this->super());

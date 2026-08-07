@@ -7,6 +7,7 @@ import {
     ClipboardList,
     Gauge,
     Inbox,
+    KeyRound,
     PackageCheck,
     PackageMinus,
     PackagePlus,
@@ -87,6 +88,8 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     }
     if (n.data.type === 'request') {
         // Service requests: action needed = amber, progress = blue, terminal good = green, bad = red.
+        // A request stuck for want of an account is an account job, not an approval one.
+        if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled')
             return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.subtype === 'approved_final' || n.data.subtype === 'fulfilled')
@@ -132,6 +135,8 @@ const REQUEST_MESSAGE_KEY: Record<string, string> = {
     rejected: 'notif_request_rejected',
     fulfilled: 'notif_request_fulfilled',
     cancelled: 'notif_request_cancelled',
+    // Goes to whoever can provision a login, not to a participant.
+    blocked_no_account: 'notif_request_blocked_no_account',
 };
 
 /** Secondary descriptive line for a notification, already localised. */
@@ -179,6 +184,9 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_assigned') return '/my-assets';
     if (n.data.type === 'asset_return_requested') return '/assets';
     const mod = moduleOf(n.data.type);
+    // The stuck-request bell asks for an account, so it opens the person who needs one
+    // rather than the request nobody can act on yet.
+    if (n.data.subtype === 'blocked_no_account' && n.data.employee_id) return `/employees?highlight=${n.data.employee_id}`;
     if (mod === 'requests') return `/requests?view=${n.data.service_request_id}`;
     if (mod === 'contracts') return `/contracts?view=${n.data.contract_id}`;
     if (mod === 'stock') {

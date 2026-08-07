@@ -127,7 +127,14 @@ class RequestNotificationService
     {
         $approver = $this->approverUser($row);
         if ($approver === null) {
-            return; // it_staff queue rows are notified at finalApproved instead
+            // it_staff queue rows carry no person and are notified at finalApproved.
+            // A row that DOES name a person but has no account behind it is a request
+            // stuck where nobody can act — tell whoever can create that account.
+            if ($row->approver_employee_id !== null) {
+                $this->notifyCredentialSettersOfBlock($request, $row);
+            }
+
+            return;
         }
 
         $this->sendBell(
@@ -136,6 +143,33 @@ class RequestNotificationService
             ['service_request_id' => $request->id, 'subtype' => 'waiting'],
         );
         $this->emailEach(collect([$approver]), 'request.approval_needed', $request, ['step.label' => $row->label]);
+    }
+
+    /**
+     * The request waits on somebody who cannot sign in yet. Nobody involved can move
+     * it, and the approver has no inbox to be told about it — so the bell goes to the
+     * people who hold employees.set_credentials, pointing at the person to provision.
+     *
+     * Without this the request simply sits there: the approver learns of it only when
+     * an account happens to be created, and no one else learns of it at all.
+     */
+    private function notifyCredentialSettersOfBlock(ServiceRequest $request, RequestApproval $row): void
+    {
+        $employee = $row->approver;
+        if ($employee === null) {
+            return;
+        }
+
+        $setters = $this->recipients('employees.set_credentials');
+        if ($setters->isEmpty()) {
+            return;
+        }
+
+        $this->sendBell(
+            $setters,
+            new RequestWorkflowNotification($request, 'blocked_no_account', $row->label, $row->approver_name, null, $employee),
+            ['service_request_id' => $request->id, 'subtype' => 'blocked_no_account'],
+        );
     }
 
     /** The login account behind an approval row, or null for queue/skipped rows. */

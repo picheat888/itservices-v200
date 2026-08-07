@@ -472,7 +472,7 @@ class EmployeeController extends Controller
         $note = $data['onboarding_note'] ?? null;
         unset($data['services'], $data['onboarding_note']);
 
-        $employee = $this->service->create($data, $request->user());
+        $employee = $this->service->create($data);
         AuditLog::record('Created employee', "{$employee->name} ({$employee->code})");
 
         $onboarding = null;
