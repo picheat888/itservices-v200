@@ -16,9 +16,21 @@ enum ApprovalSkipReason: string
     case NoManager = 'no_manager';
 
     /**
-     * Nobody in the reporting line holds a position this step accepts — a Supervisor
-     * filing their own request has no Supervisor above them, and the level is skipped
-     * rather than handed to somebody who does not hold it.
+     * The requester already holds the position this step asks for (or one the workflow
+     * places above it), so there is nobody above them to ask — a Supervisor filing
+     * their own request has no Supervisor over it.
+     *
+     * Rank comes from the workflow's own rung order, not from the positions table
+     * (which carries no level): a rung the requester's own title appears in, and every
+     * rung below it, is outranked.
+     */
+    case RequesterOutranksStep = 'requester_outranks_step';
+
+    /**
+     * Nobody in the reporting line holds a position this step accepts, and the
+     * requester is not at that level either — a Staff member reporting straight to a
+     * Manager has no Supervisor in their line at all. The level is skipped rather than
+     * handed to somebody who does not hold it.
      */
     case NoMatchingPosition = 'no_matching_position';
 

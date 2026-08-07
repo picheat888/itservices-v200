@@ -126,7 +126,9 @@ class RequestResolutionTest extends TestCase
         [, $people, $levels] = $this->ladder();
 
         // The Supervisor files it themselves — nobody above them is a Supervisor, so
-        // that level is skipped rather than handed to somebody who is not one.
+        // that level is skipped rather than handed to somebody who is not one. The
+        // reason says WHY: they already hold that level, so there is nothing above
+        // them to ask.
         $rows = app(WorkflowResolverService::class)->resolveSteps(
             RequestType::Computer,
             $this->ladderSteps($levels, 'supervisor', 'manager'),
@@ -135,8 +137,42 @@ class RequestResolutionTest extends TestCase
 
         $supervisorStep = $rows->firstWhere('label', 'Supervisor');
         $this->assertSame(ApprovalStatus::Skipped->value, $supervisorStep['status']);
-        $this->assertSame(ApprovalSkipReason::NoMatchingPosition->value, $supervisorStep['skip_reason']);
+        $this->assertSame(ApprovalSkipReason::RequesterOutranksStep->value, $supervisorStep['skip_reason']);
         $this->assertSame('Mgr', $rows->firstWhere('label', 'Manager')['approver_name']);
+    }
+
+    /**
+     * The two reasons a rung can find nobody are different facts about the request,
+     * and the trail says which: the requester is already at that level, versus the
+     * reporting line simply has no one of that rank in it.
+     */
+    public function test_the_skip_reason_separates_outranking_from_a_line_without_that_rank(): void
+    {
+        [, $people, $levels] = $this->ladder();
+        $steps = $this->ladderSteps($levels, 'supervisor', 'manager', 'executive');
+
+        // (a) A Manager files it: both rungs below the executive one are their own
+        // level or under it, so both are skipped as outranked — and the VP still signs.
+        $rows = app(WorkflowResolverService::class)->resolveSteps(RequestType::Computer, $steps, $people['mgr']);
+        foreach (['Supervisor', 'Manager'] as $label) {
+            $this->assertSame(
+                ApprovalSkipReason::RequesterOutranksStep->value,
+                $rows->firstWhere('label', $label)['skip_reason'],
+                "{$label} should be skipped because the requester already holds that level",
+            );
+        }
+        $this->assertSame('Vp', $rows->firstWhere('label', 'Executive')['approver_name']);
+
+        // (b) A Staff member whose line jumps straight to a Manager — common in a small
+        // department. The Supervisor rung is missing from the line, not outranked: the
+        // requester is nowhere near that level.
+        $mgrTitle = Position::where('title', 'Manager')->firstOrFail();
+        $boss = $this->employee('SmallDeptBoss', null, $mgrTitle->id);
+        $junior = $this->employee('Junior', $boss->id, Position::where('title', 'Staff/Officer')->firstOrFail()->id);
+
+        $rows = app(WorkflowResolverService::class)->resolveSteps(RequestType::Computer, $steps, $junior);
+        $this->assertSame(ApprovalSkipReason::NoMatchingPosition->value, $rows->firstWhere('label', 'Supervisor')['skip_reason']);
+        $this->assertSame($boss->id, $rows->firstWhere('label', 'Manager')['approver_employee_id']);
     }
 
     public function test_when_no_step_matches_anybody_the_top_of_the_line_still_signs(): void
