@@ -187,7 +187,9 @@ export const employee: Dict = {
     emp_onboarding_sub: 'บริการที่พนักงานคนนี้ต้องใช้ในวันแรก',
     emp_onboarding_note: 'หมายเหตุ (ไม่บังคับ)',
     emp_onboarding_deferred: 'ระบบจะยื่นคำขออนุมัติ 1 ใบต่อ 1 บริการ ตามสายบังคับบัญชาของพนักงานคนนี้',
-    emp_onboarding_filed: 'ยื่นคำขอ Onboarding แล้ว {n} รายการ',
+    // หัวข้อ toast + บรรทัดจำนวนแยกออกมา (การ์ดแสดง 2 บรรทัด ตัวเลขจะไม่จมอยู่กลางประโยค)
+    emp_onboarding_filed: 'ยื่นคำขอ Onboarding แล้ว',
+    emp_onboarding_filed_count: '{n} รายการ',
     emp_onboarding_failed: 'บันทึกพนักงานแล้ว แต่ยื่นคำขอบริการเหล่านี้ไม่ได้: {services}',
     pwd_set_title: 'ตั้งรหัสผ่านของคุณ',
     pwd_set_desc: 'กรุณาตั้งรหัสผ่านที่คุณรู้คนเดียวเพื่อใช้งานต่อ',
