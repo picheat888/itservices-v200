@@ -110,9 +110,15 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
     }
 
     return (
-        <div className="before:bg-border relative space-y-4 before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-px">
+        <div className="relative space-y-4">
             {items.map((item, i) => (
                 <div key={i} className="relative flex items-start gap-3">
+                    {/* One connector per gap, drawn from under this marker to just short of
+                        the next one — and none after the last step. A single rail spanning
+                        the whole list was sized by the container, so it hung ~26px below the
+                        final dot (the height of its two text lines) and poked out above the
+                        first one. */}
+                    {i < items.length - 1 && <span aria-hidden className="bg-border absolute top-[26px] -bottom-3 left-[11px] w-px" />}
                     {/* Opaque disc under the marker: the tinted tones (current, skipped) are
                         translucent, and without something solid behind them the rail was
                         visible straight through the middle of the dot. */}
