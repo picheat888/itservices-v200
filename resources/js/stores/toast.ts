@@ -74,7 +74,13 @@ export interface Toast {
 
 interface ToastState {
     toasts: Toast[];
-    push: (message: string, tone?: ToastTone, title?: string, icon?: ToastIcon, options?: ToastOptions) => void;
+    /**
+     * `tone` is required on purpose. It used to default to 'error', which quietly
+     * turned "3 onboarding requests filed" into a red card — the caller had said
+     * nothing about the tone and got the loudest one. Stating it is one word, and
+     * the compiler now asks for it.
+     */
+    push: (message: string, tone: ToastTone, title?: string, icon?: ToastIcon, options?: ToastOptions) => void;
     dismiss: (id: number) => void;
     dismissGroup: (group: string, exceptId: number) => void;
 }
@@ -94,7 +100,7 @@ export const useToastStore = create<ToastState>((set) => ({
      * parallel requests. A later repeat (e.g. a deliberate re-save) stacks a fresh
      * toast on top instead of reusing the old one.
      */
-    push: (message, tone = 'error', title, icon, options) =>
+    push: (message, tone, title, icon, options) =>
         set((s) => {
             const now = Date.now();
             const key = options?.key ?? message;

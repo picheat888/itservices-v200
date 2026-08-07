@@ -206,9 +206,10 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             // The employee is saved either way, so a service that could not be filed
             // has to be said out loud rather than silently dropped.
             if (onboarding?.failed.length) {
-                pushToast(t('emp_onboarding_failed').replace('{services}', onboarding.failed.map((f) => f.service).join(', ')));
+                // Somebody has to file these by hand, so it waits to be dismissed.
+                pushToast(t('emp_onboarding_failed').replace('{services}', onboarding.failed.map((f) => f.service).join(', ')), 'error');
             } else if (onboarding?.created.length) {
-                pushToast(t('emp_onboarding_filed').replace('{n}', String(onboarding.created.length)));
+                pushToast(t('emp_onboarding_filed').replace('{n}', String(onboarding.created.length)), 'success');
             }
             onClose();
         } catch (err) {
@@ -222,7 +223,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                     mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
                 }
                 setErrors((prev) => ({ ...prev, ...mapped }));
-                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'));
+                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'), 'error');
             } else {
                 throw err;
             }
