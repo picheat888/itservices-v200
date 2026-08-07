@@ -23,10 +23,12 @@ class EmployeeService
      * employees.set_credentials permission must set a username & password
      * later. We notify those users so they can provision the account.
      *
+     * The credentials-needed bell goes to every holder of the permission — including
+     * whoever just added this person, since provisioning the account is their next task.
+     *
      * @param  array<string, mixed>  $data
-     * @param  User|null  $actor  the user performing the action (excluded from notifications)
      */
-    public function create(array $data, ?User $actor = null): Employee
+    public function create(array $data): Employee
     {
         $employee = Employee::create($data)->load(['department', 'position']);
 
@@ -38,7 +40,7 @@ class EmployeeService
             $group?->employees()->syncWithoutDetaching([$employee->id]);
         }
 
-        $this->notifyCredentialSetters($employee, $actor);
+        $this->notifyCredentialSetters($employee);
 
         return $employee;
     }
@@ -145,22 +147,27 @@ class EmployeeService
     }
 
     /**
-     * Resolves the recipients for employee events: users holding the given
-     * permission, excluding the acting user (no point notifying yourself).
+     * Resolves the recipients for employee events: users holding the given permission.
+     * Pass $exclude to leave somebody out — used for announcements, where telling the
+     * person who just acted what they just did is noise.
      *
      * @return Collection<int, User>
      */
-    private function recipientsWithPermission(string $permission, ?User $actor): Collection
+    private function recipientsWithPermission(string $permission, ?User $exclude): Collection
     {
         return User::all()->filter(
-            fn (User $u) => $u->hasPermission($permission) && $u->id !== $actor?->id
+            fn (User $u) => $u->hasPermission($permission) && $u->id !== $exclude?->id
         );
     }
 
-    /** Notifies every user allowed to set credentials (except the actor) that an account is needed. */
-    private function notifyCredentialSetters(Employee $employee, ?User $actor = null): void
+    /** Notifies every user allowed to set credentials that this person still needs one. */
+    private function notifyCredentialSetters(Employee $employee): void
     {
-        $recipients = $this->recipientsWithPermission('employees.set_credentials', $actor);
+        // The acting user is NOT excluded here, unlike the resignation notice: this bell
+        // is a to-do ("this person still needs a login"), and adding an employee is a
+        // separate act from provisioning their account — usually by the same person, who
+        // is often the only holder of the permission. Excluding them sent it to nobody.
+        $recipients = $this->recipientsWithPermission('employees.set_credentials', null);
 
         if ($recipients->isEmpty()) {
             return;
