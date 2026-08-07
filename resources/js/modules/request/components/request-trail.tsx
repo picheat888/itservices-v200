@@ -123,9 +123,15 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                         translucent, and without something solid behind them the rail was
                         visible straight through the middle of the dot. */}
                     <span className="bg-background relative z-[1] shrink-0 rounded-full">
+                        {/* Live step: a halo swelling out from behind the dot. Sits before the
+                            marker in the DOM so the marker draws over it. */}
+                        {item.tone === 'current' && <span aria-hidden className="bg-brand/30 trail-live absolute inset-0 rounded-full" />}
                         <span
                             className={cn(
-                                'flex h-[23px] w-[23px] items-center justify-center rounded-full border-[1.5px]',
+                                // `relative`: an absolutely-positioned sibling (the halo) paints
+                                // over a static one whatever the DOM order, so the marker has to
+                                // be positioned too for it to stay on top.
+                                'relative flex h-[23px] w-[23px] items-center justify-center rounded-full border-[1.5px]',
                                 item.tone === 'done' && 'border-emerald-500 bg-emerald-500 text-white',
                                 item.tone === 'current' && 'border-brand bg-brand/10 text-brand ring-brand/15 ring-[3px]',
                                 item.tone === 'rejected' && 'border-destructive bg-destructive text-white',
