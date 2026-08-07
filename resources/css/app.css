@@ -313,6 +313,35 @@
     }
 }
 
+/* ── Approval trail: the step being waited on ────────────────────────────────
+   A halo swelling out of the marker and fading, once every 2s. It marks the one
+   step in the list that is live, which a static ring did not do in a trail where
+   several steps carry a tinted dot. Deliberately a slow swell rather than an
+   on/off blink: blinking pulls the eye off whatever you were reading, and the
+   trail is meant to be read. */
+@keyframes trail-live {
+    0% {
+        transform: scale(1);
+        opacity: 0.45;
+    }
+    70%,
+    100% {
+        transform: scale(2.1);
+        opacity: 0;
+    }
+}
+.trail-live {
+    animation: trail-live 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    /* Hold the halo still instead of removing it — it is the only marker of which
+       step is live, so it has to stay visible without moving. */
+    .trail-live {
+        animation: none;
+        opacity: 0.3;
+    }
+}
+
 /* ── Login: shake the error banner on an invalid sign-in attempt ─────────────── */
 @keyframes shake {
     10%,
