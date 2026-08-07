@@ -76,10 +76,6 @@ class WorkflowResolverService
         // somebody below the person who already signed a lower one.
         $chainIndex = 0;
         $skippedChainLabels = [];
-        // Which chain rung the requester's own title sits on, if any — used to tell the
-        // two "found nobody" cases apart when a rung is skipped (see skipReasonFor).
-        $requesterRung = $this->rungOf($steps, $requester->position_id);
-        $chainStep = 0;
 
         foreach ($steps as $step) {
             $actorType = StepActorType::from((string) $step['actor_type']);
@@ -102,8 +98,6 @@ class WorkflowResolverService
             }
 
             if ($actorType === StepActorType::Chain) {
-                $thisRung = $chainStep++;
-
                 if ($chain->isEmpty()) {
                     // Collected into ONE skipped row after the loop keeps the
                     // trail readable (no three identical "no manager" rows).
@@ -114,12 +108,12 @@ class WorkflowResolverService
 
                 $found = $this->findHolder($chain, $chainIndex, $step['position_ids'] ?? []);
                 if ($found === null) {
-                    // Nobody above the requester holds this rung. The rung is skipped and
-                    // the next one still resolves; it is not handed to a non-holder. Why
-                    // it found nobody is two different facts — see skipReasonFor.
+                    // Nobody above the requester holds this rung — a Supervisor's own
+                    // request has no Supervisor over it. The rung is skipped and the
+                    // next one still resolves; it is not handed to a non-holder.
                     $rows->push([...$base,
                         'status' => ApprovalStatus::Skipped->value,
-                        'skip_reason' => $this->skipReasonFor($thisRung, $requesterRung)->value,
+                        'skip_reason' => ApprovalSkipReason::NoMatchingPosition->value,
                     ]);
 
                     continue;
@@ -171,52 +165,6 @@ class WorkflowResolverService
         }
 
         return $this->mergeAndNumber($this->guaranteeAnApprover($rows, $chain));
-    }
-
-    /**
-     * Which chain rung a position sits on — the LAST one that names it, so a title
-     * appearing on two rungs counts as the higher of the two.
-     *
-     * The workflow's rung order is the only ranking available: `positions` carries a
-     * title and nothing else, so "higher" can only mean "asked for later in the route".
-     *
-     * @param  list<array<string, mixed>>  $steps
-     * @return int|null rung index, or null when no rung names this position
-     */
-    private function rungOf(array $steps, ?int $positionId): ?int
-    {
-        if ($positionId === null) {
-            return null;
-        }
-
-        $rung = 0;
-        $found = null;
-        foreach ($steps as $step) {
-            if (StepActorType::from((string) $step['actor_type']) !== StepActorType::Chain) {
-                continue;
-            }
-            if (in_array($positionId, array_map('intval', $step['position_ids'] ?? []), true)) {
-                $found = $rung;
-            }
-            $rung++;
-        }
-
-        return $found;
-    }
-
-    /**
-     * Why a rung found nobody: because the requester is already at that level (or
-     * above it), or because their reporting line holds no one of that rank.
-     *
-     * Both end in a skipped step, but they are different facts, and the trail says
-     * which — "you are the Supervisor" reads nothing like "there is no Supervisor in
-     * your line".
-     */
-    private function skipReasonFor(int $rung, ?int $requesterRung): ApprovalSkipReason
-    {
-        return $requesterRung !== null && $rung <= $requesterRung
-            ? ApprovalSkipReason::RequesterOutranksStep
-            : ApprovalSkipReason::NoMatchingPosition;
     }
 
     /**
