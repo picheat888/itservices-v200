@@ -30,23 +30,35 @@ class RequestNotificationService
     public function __construct(private readonly EmailNotificationService $email) {}
 
     /**
-     * Who hears about what happens to this request: its owner, or — when it was
-     * filed on their behalf and they have no login yet (a new employee's
-     * onboarding) — the person who filed it. Without the fallback every update on
-     * an onboarding request would be sent to nobody.
+     * Who hears what happens to this request: the person it is FOR, and — when
+     * somebody else filed it — the person who filed it. Both, because onboarding is
+     * an errand HR has to see finished while the new hire is the one who gets the
+     * laptop.
+     *
+     * The owner's account is looked up through the employee, not just `user_id`: an
+     * onboarding request is filed before that account exists, and resolving it live
+     * means the day it is provisioned they start hearing about their own request.
+     * When owner and filer are the same account (an ordinary submission) the list
+     * collapses to one, so nobody is told twice.
+     *
+     * @return Collection<int, User>
      */
-    private function follower(ServiceRequest $request): ?User
+    private function followers(ServiceRequest $request): Collection
     {
-        return $request->user ?? ($request->origin?->isOnBehalf() ? $request->submittedBy : null);
+        return collect([
+            $request->user ?? $request->employee?->user,
+            $request->origin?->isOnBehalf() ? $request->submittedBy : null,
+        ])->filter()->unique('id')->values();
     }
 
     public function submitted(ServiceRequest $request): void
     {
         $current = $request->currentApproval();
 
-        if ($owner = $this->follower($request)) {
-            Notification::send($owner, new RequestWorkflowNotification($request, 'submitted', $current?->label));
-            $this->emailUser($owner, 'request.submitted', $request, ['step.label' => $current?->label ?? 'IT Staff']);
+        $followers = $this->followers($request);
+        if ($followers->isNotEmpty()) {
+            Notification::send($followers, new RequestWorkflowNotification($request, 'submitted', $current?->label));
+            $this->emailEach($followers, 'request.submitted', $request, ['step.label' => $current?->label ?? 'IT Staff']);
         }
 
         if ($current !== null) {
@@ -57,13 +69,11 @@ class RequestNotificationService
     /** An intermediate step was approved: tell the requester, poke the next approver. */
     public function advanced(ServiceRequest $request, RequestApproval $decided): void
     {
-        if ($owner = $this->follower($request)) {
-            $this->sendBell(
-                collect([$owner]),
-                new RequestWorkflowNotification($request, 'approved_step', $decided->label, $decided->acted_by_name),
-                ['service_request_id' => $request->id, 'subtype' => 'approved_step'],
-            );
-        }
+        $this->sendBell(
+            $this->followers($request),
+            new RequestWorkflowNotification($request, 'approved_step', $decided->label, $decided->acted_by_name),
+            ['service_request_id' => $request->id, 'subtype' => 'approved_step'],
+        );
 
         if ($next = $request->currentApproval()) {
             $this->notifyApprover($request, $next);
@@ -73,13 +83,16 @@ class RequestNotificationService
     /** Every approval step passed: requester + the fulfillment queue. */
     public function finalApproved(ServiceRequest $request): void
     {
-        if ($owner = $this->follower($request)) {
-            Notification::send($owner, new RequestWorkflowNotification($request, 'approved_final'));
-            $this->emailUser($owner, 'request.approved', $request);
+        $followers = $this->followers($request);
+        if ($followers->isNotEmpty()) {
+            Notification::send($followers, new RequestWorkflowNotification($request, 'approved_final'));
+            $this->emailEach($followers, 'request.approved', $request);
         }
 
+        // Whoever follows the request has just been told it passed; the queue bell is
+        // for the people who now have to act on it.
         $queue = $this->recipients('requests.fulfill')
-            ->reject(fn (User $u) => $u->id === $request->user_id)
+            ->reject(fn (User $u) => $followers->contains('id', $u->id))
             ->values();
         $this->sendBell(
             $queue,
@@ -91,11 +104,12 @@ class RequestNotificationService
 
     public function rejected(ServiceRequest $request, RequestApproval $row): void
     {
-        if ($owner = $this->follower($request)) {
-            Notification::send($owner, new RequestWorkflowNotification(
+        $followers = $this->followers($request);
+        if ($followers->isNotEmpty()) {
+            Notification::send($followers, new RequestWorkflowNotification(
                 $request, 'rejected', $row->label, $row->acted_by_name, $row->note,
             ));
-            $this->emailUser($owner, 'request.rejected', $request, [
+            $this->emailEach($followers, 'request.rejected', $request, [
                 'actor.name' => $row->acted_by_name ?? $row->label,
                 'remark' => $row->note ?? '—',
             ]);
@@ -104,9 +118,10 @@ class RequestNotificationService
 
     public function fulfilled(ServiceRequest $request): void
     {
-        if ($owner = $this->follower($request)) {
-            Notification::send($owner, new RequestWorkflowNotification($request, 'fulfilled'));
-            $this->emailUser($owner, 'request.fulfilled', $request);
+        $followers = $this->followers($request);
+        if ($followers->isNotEmpty()) {
+            Notification::send($followers, new RequestWorkflowNotification($request, 'fulfilled'));
+            $this->emailEach($followers, 'request.fulfilled', $request);
         }
     }
 

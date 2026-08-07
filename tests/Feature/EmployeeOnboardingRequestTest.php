@@ -320,6 +320,48 @@ class EmployeeOnboardingRequestTest extends TestCase
             ->assertJsonPath('data.submitted_by.name', $this->hrUser->name);
     }
 
+    public function test_both_the_new_employee_and_the_filer_hear_how_it_ended(): void
+    {
+        $this->addEmployee(['computer'])->assertCreated();
+        $employee = Employee::where('first_name', 'Somchai')->firstOrFail();
+        $request = ServiceRequest::firstOrFail();
+        // Their account arrives after the request was filed, as it always does.
+        $own = $this->makeUser('user', [], $employee);
+
+        $manager = User::where('employee_id', $this->itManager->id)->firstOrFail();
+        $this->actingAs($manager)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        // The person it is for now has somewhere to be told, and the person who filed it
+        // still needs to know — onboarding is their errand to finish.
+        foreach ([$own, $this->hrUser] as $follower) {
+            $bells = $follower->notifications()->get()
+                ->filter(fn ($n) => ($n->data['subtype'] ?? null) === 'approved_final');
+            $this->assertCount(1, $bells, "no final-approval bell for user {$follower->id}");
+        }
+    }
+
+    public function test_a_request_somebody_filed_for_themselves_is_announced_once(): void
+    {
+        RolePermission::updateOrCreate(
+            ['role_id' => Role::where('key', 'hr')->firstOrFail()->id, 'permission' => 'requests.submit'],
+            ['allowed' => true],
+        );
+
+        $response = $this->actingAs($this->hrUser)->postJson('/api/service-requests', [
+            'type' => 'computer',
+            'title' => 'A laptop for me',
+            'reason' => 'Mine broke.',
+            'priority' => 'medium',
+            'fields' => ['device' => 'laptop', 'qty' => 1],
+        ])->assertCreated();
+
+        // Owner and filer are the same account here: one receipt, not two.
+        $bells = $this->hrUser->notifications()->get()
+            ->filter(fn ($n) => ($n->data['subtype'] ?? null) === 'submitted');
+        $this->assertCount(1, $bells);
+        $this->assertSame($response->json('data.reference'), $bells->first()->data['reference']);
+    }
+
     public function test_reading_it_does_not_mean_withdrawing_it(): void
     {
         $this->addEmployee(['computer'])->assertCreated();
