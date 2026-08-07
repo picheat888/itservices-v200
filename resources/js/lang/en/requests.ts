@@ -115,8 +115,7 @@ export const requests: Dict = {
     // Each reason stands on its own ("Step skipped - ..."), because the status line
     // above no longer repeats the word "skipped".
     req_skip_no_manager: 'Step skipped - the requester has no manager configured',
-    req_skip_requester_outranks_step: 'Step skipped - the requester already holds this level or above',
-    req_skip_no_matching_position: 'Step skipped - nobody in the reporting line holds this level',
+    req_skip_no_matching_position: 'Step skipped - the next person up is at the same level or below',
     req_skip_no_resource_owner: 'Step skipped - this resource has no owner who can approve',
     req_skip_requester_is_owner: 'Step skipped - the requester owns this resource',
     req_onboarding_title: 'Request for a new employee',
