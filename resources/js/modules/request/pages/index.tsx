@@ -6,8 +6,8 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import {
     isOnBehalfRequest,
+    onboardingRowClass,
     REQUEST_ONBOARDING_BADGE,
-    REQUEST_ONBOARDING_ROW,
     REQUEST_STATUS_META,
     REQUEST_STATUSES,
     REQUEST_TYPE_META,
@@ -343,7 +343,7 @@ export default function RequestsPage() {
                                                 onClick={() => openDetail(r)}
                                                 className={cn(
                                                     'hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors',
-                                                    isOnBehalfRequest(r) && REQUEST_ONBOARDING_ROW,
+                                                    onboardingRowClass(r),
                                                 )}
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -517,7 +517,7 @@ export default function RequestsPage() {
                             rowKey={(r) => r.id}
                             loading={isLoading || isFetching}
                             onRowClick={openDetail}
-                            rowClassName={(r) => (isOnBehalfRequest(r) ? REQUEST_ONBOARDING_ROW : undefined)}
+                            rowClassName={onboardingRowClass}
                             server={{
                                 page,
                                 pageSize: perPage,
