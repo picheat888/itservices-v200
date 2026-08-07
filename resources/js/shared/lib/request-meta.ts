@@ -74,6 +74,23 @@ export const REQUEST_ONBOARDING_BADGE = { tone: 'violet' as const, labelKey: 're
  */
 export const REQUEST_ONBOARDING_ROW = 'bg-violet-500/[0.05]';
 
+/**
+ * The row tint for a new employee's request, or nothing.
+ *
+ * The tint is for the reader who has to do something: a new hire's request that is
+ * waiting on *them*. Once they have decided and it moves to the next approver the
+ * tint clears from their list — it was never a permanent property of the request,
+ * and a list where every onboarding row stays violet forever stops pointing at
+ * anything. The violet badge still says who the request is for, on every row.
+ *
+ * `can_approve` is the server's word for "this is your step" (see
+ * ServiceRequestResource), so the tint follows the real chain position rather
+ * than a guess made from the status.
+ */
+export function onboardingRowClass(request: Pick<ServiceRequest, 'origin' | 'can_approve'>): string | undefined {
+    return isOnBehalfRequest(request) && request.can_approve ? REQUEST_ONBOARDING_ROW : undefined;
+}
+
 /** Every service type in catalog order — one place decides the order they appear. */
 export const REQUEST_TYPES = Object.keys(REQUEST_TYPE_META) as ServiceRequestType[];
 
