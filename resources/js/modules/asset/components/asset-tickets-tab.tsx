@@ -26,11 +26,13 @@ const PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber' | 'blue' | '
  * Repair-tickets tab: service tickets that reference this asset, rendered as a fill-height
  * table. Clicking a row deep-links into the Tickets module (/tickets?view=<id>).
  */
-export function AssetTicketsTab({ tickets }: { tickets: AssetTicket[] }) {
+export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; loading?: boolean }) {
     const t = useT();
     const navigate = useNavigate();
 
-    if (tickets.length === 0) {
+    // Empty is a fact about the asset; while its tickets are still loading the
+    // table's own loading rows say "not yet" instead.
+    if (tickets.length === 0 && !loading) {
         return (
             <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-center text-sm">
                 <Wrench className="text-muted-foreground/50 h-8 w-8" />
@@ -82,6 +84,7 @@ export function AssetTicketsTab({ tickets }: { tickets: AssetTicket[] }) {
                 columns={columns}
                 rows={tickets}
                 rowKey={(tk) => tk.id}
+                loading={loading}
                 searchable={(tk) => `${tk.ticket_no} ${tk.subject}`}
                 onRowClick={(tk) => navigate(`/tickets?view=${tk.id}`)}
             />

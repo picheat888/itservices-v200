@@ -1669,3 +1669,35 @@ Backend ไม่มี endpoint สร้าง/ลบมาตั้งแต�
 `WorkflowMini` เคยให้ขีดละ 20px คงที่ → workflow 3 ขั้นยาว 66px แต่ 5 ขั้นยาว 112px แถวในคอลัมน์เดียวกันจึงยาวไม่เท่ากัน และอ่านผิดเป็น "ใบนี้คืบหน้ามากกว่า" ทั้งที่หมายถึง "flow นี้มีขั้นมากกว่า"
 ตอนนี้ราง **กว้างคงที่ 96px** แล้วให้ขีดแบ่งกันเองด้วย `flex-1` (ขั้นเยอะ = ขีดบางลง ไม่ใช่รางยาวขึ้น) มี `min-w-[2px]` กันขีดหายเมื่อ flow ยาว · ตัวเลข `x/y` กว้างคงที่ + `tabular-nums` ชิดขวา ตัวเลขจึงตรงเป็นแนวลงมาทั้งคอลัมน์
 เทียบความกว้างต่อขีด: 3 ขั้น = 30px · 4 ขั้น ≈ 21.8px · 5 ขั้น ≈ 16.8px — ความกว้างรวมเท่ากันหมด
+
+---
+
+## View Drawer: สลับ record แล้วข้อมูลไม่ปนกันอีก (2026-08-07)
+
+**อาการ:** เปิดดูรายละเอียด record หนึ่งแล้วสลับไปดูอีก record ทันที เห็นข้อมูลของ record ก่อนหน้าแสดงใต้ชื่อ/เลขที่ของ record ใหม่ หรือเห็นแท็บย่อยขึ้นว่า "ไม่มีข้อมูล" ทั้งที่มี
+
+**สาเหตุราก:** ทุก drawer เก็บสำเนา record ล่าสุด (`shown`) ไว้กันหน้าว่างระหว่าง Radix เล่น exit animation แต่สำเนานั้น**ไม่ได้ผูกว่าเป็นของ record ไหน** เมื่อ id เปลี่ยนขณะ dialog ยังเปิดและข้อมูลของ id ใหม่ยังไม่มา โค้ดหยิบสำเนาเก่ามาแสดง — และแท็บย่อยที่ใช้ค่า default ว่าง (`= []`) ก็แยกไม่ออกว่า "ยังไม่มา" หรือ "ไม่มีจริง"
+
+### สำรวจครบทั้ง 6 drawer
+
+| Drawer | แหล่งข้อมูล | ก่อนแก้ |
+|---|---|---|
+| request | query ตาม id **ไม่มี** loading guard | 🔴 แสดงใบก่อนหน้าทั้งใบ |
+| stock item | query ตาม id + `isLoading` | 🟠 ปลอดภัยตอนสลับ แต่ถ้า query error จะ fallback ของเก่า |
+| employee | prop (ถูก) + sub-query 4 ตัว | 🟠 count = 0 และ empty state หลอกชั่วขณะ |
+| asset | prop + guard `full.id === a.id` (ถูกอยู่แล้ว) | 🟠 แท็บประวัติ/งานแจ้งซ่อมโชว์ "ไม่มี" ชั่วขณะ |
+| ticket · contract | prop ทั้งก้อน ไม่มี per-id query | 🟢 ไม่ต้องแก้ |
+
+### สิ่งที่แก้
+
+- **`shared/hooks/use-record-view.ts` (ใหม่)** — `useRecordView(id, live)` คืน `{ record, switching }` : สำเนาเก่าถูกใช้ได้**เฉพาะตอนกำลังปิด** (id = null) เท่านั้น · ระหว่างเปิดอยู่ record ต้องมี `id` ตรงกับที่ดูอยู่ ไม่ตรง = คืน `null` + `switching = true` ให้ผู้เรียกวาด skeleton · เช็ค `live.id === id` กัน query ที่คืนข้อมูลของ key ก่อนหน้า (`placeholderData`) ด้วย · แยก `pickRecordView()` เป็น pure function ให้เทสต์ได้
+- **request-detail-dialog** — ใช้ hook + แยกเนื้อหาเป็น `RequestDetailBody` (รับ record ที่ non-null) และ `RequestDetailLoading` (skeleton รูปทรงเดียวกับเนื้อหาจริง) วางใน `DialogContent` เดิม → dialog ไม่ปิด ไม่กระพริบ ไม่แสดงใบผิด · การตัดสินใจ (approve/reject) ที่ค้างถูกล้างเมื่อสลับใบ
+- **stock-item-detail-modal** — เปลี่ยนไปใช้ hook (ปิดช่อง query error ที่เคย fallback ของเก่า) เงื่อนไข skeleton เหลือ `!item`
+- **employee-view-drawer** — `emp = liveEmp && liveEmp.id === shown.id ? liveEmp : shown` (defense in depth) · count ของแท็บ Assets/Tickets/Access เป็น `undefined` ระหว่างโหลด (ไม่ใช่ 0) · `AssetsPane`/`TicketsPane` รับ `loading` → DataTable แสดง shimmer rows แทน empty state · แท็บ Access มี placeholder rows
+- **asset drawer** — `AssetHistoryTab`/`AssetTicketsTab` รับ `loading={!enriched}` → ตารางแสดง loading rows แทนข้อความ "ไม่มีประวัติ/ไม่มีงานแจ้งซ่อม"
+
+### Tests / Verification
+
+สคริปต์ assert ใน scratchpad (`node record-view.test.ts`) — 6 เคส: record ของ id ที่เปิด → แสดง · สลับแล้วข้อมูลยังไม่มา → `null` + switching (ไม่หยิบของเก่า) · query คืนข้อมูล key ก่อนหน้า → กันไว้ · ปิด (id = null) → คืนสำเนาให้ animation · ปิดโดยไม่เคยแสดง → null · สำเนาเก่าไม่เคยชนะ record สด ของ id เดียวกัน — **ผ่านทั้งหมด** และพิสูจน์ว่าจับของจริงได้โดยเปลี่ยน `record: null` → `record: retained` ชั่วคราวแล้วเห็นเทสต์ล้ม
+`tsc --noEmit` = 0 · eslint ไฟล์ที่แก้ = 0 (เหลือ 2 warnings เดิมของ stock counting/requests tab ที่ไม่ได้แตะ) · prettier ผ่าน · `npm run build` ผ่าน
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — ต้องลองสลับ record จริงเพื่อดู skeleton/จังหวะ

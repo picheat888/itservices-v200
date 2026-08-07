@@ -315,8 +315,8 @@ export function AssetDetailDrawer({
                             </div>
                         )}
 
-                        {tab === 'tickets' && <AssetTicketsTab tickets={tickets} />}
-                        {tab === 'history' && <AssetHistoryTab transfers={transfers} />}
+                        {tab === 'tickets' && <AssetTicketsTab tickets={tickets} loading={!enriched} />}
+                        {tab === 'history' && <AssetHistoryTab transfers={transfers} loading={!enriched} />}
                     </div>
 
                     {/* Footer — context action (left) / Edit (right); the ✕ handles closing. */}
