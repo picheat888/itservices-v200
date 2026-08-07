@@ -117,7 +117,7 @@ export const requests: Dict = {
     req_skip_no_manager: 'Step skipped - the requester has no manager configured',
     // Covers every way this rung finds nobody: the requester is at that level or
     // above it, and the reporting line holds no one of that rank at all.
-    req_skip_no_matching_position: 'Step skipped - this level is equal to or below the requester, or missing from their reporting line',
+    req_skip_no_matching_position: 'Skipped - this level is equal to or below the requester, or missing from their reporting line',
     req_skip_no_resource_owner: 'Step skipped - this resource has no owner who can approve',
     req_skip_requester_is_owner: 'Step skipped - the requester owns this resource',
     req_onboarding_title: 'Request for a new employee',
