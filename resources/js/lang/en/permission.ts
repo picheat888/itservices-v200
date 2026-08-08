@@ -37,7 +37,7 @@ export const permission: Dict = {
     audit_empty: 'No activity yet',
     permission_level: 'Permission level',
 
-    // --- Permission tree labels (module + action display names; resolved by moduleLabel()/actionLabel() in modules/permissions/lib/permission-labels.ts) ---
+    // modules/permissions/lib/permission-labels.ts — permission tree labels
     perm_mod_tickets: 'Tickets',
     perm_mod_requests: 'Requests',
     perm_mod_assets: 'Assets',
@@ -75,8 +75,7 @@ export const permission: Dict = {
     'perm_desc_access.software_edit': "Also covers adding/removing the software's members, and reveals the stored product key.",
     'perm_act_access.software_delete': 'Delete',
     perm_mod_system: 'System',
-    // Administration sub-groups (design split). Permission/Email/Setting reuse the
-    // live system.* keys; the rest are presentational "coming soon" placeholders.
+    // permission tree — Administration sub-groups
     perm_mod_permissions: 'Permission',
     perm_mod_email_templates: 'Email Templates',
     perm_mod_settings: 'Setting',
@@ -206,18 +205,18 @@ export const permission: Dict = {
     'perm_act_system.manage_groups': 'Manage groups',
     'perm_act_system.configure_notifications': 'Configure notifications',
     'perm_act_system.view_audit': 'View audit log',
-    // Reports module — not built yet (all coming soon).
+    // permission tree — Reports
     'perm_act_reports.view': 'View reports',
     'perm_act_reports.run': 'Run reports',
     'perm_act_reports.export': 'Export data (CSV / XLSX)',
     'perm_act_reports.schedule': 'Schedule automated runs',
     'perm_act_reports.custom': 'Create custom report',
-    // Email Templates — granular enforcement coming soon (configure_notifications is live).
+    // permission tree — Email Templates
     'perm_act_email.edit': 'Edit template content',
     'perm_act_email.enable': 'Enable / disable templates',
     'perm_act_email.create': 'Create new template',
     'perm_act_email.test': 'Send test email',
-    // Settings — granular per-section permissions
+    // permission tree — Settings
     'perm_act_settings.access': 'Settings access',
     'perm_act_settings.company': 'Company information',
     'perm_act_settings.system': 'System (branding & display)',
@@ -227,7 +226,7 @@ export const permission: Dict = {
     'perm_act_settings.requestdata': 'Request Data',
     'perm_act_settings.assets': 'Asset settings',
     'perm_act_settings.security': 'Security policy',
-    // --- Audit log field labels (raw DB column → friendly name; resolved by auditFieldLabel() in modules/permissions/lib/audit-format.ts) ---
+    // modules/permissions/lib/audit-format.ts — audit log field labels
     audit_field_name: 'Name',
     audit_field_name_th: 'Name (TH)',
     audit_field_code: 'Code',
@@ -244,7 +243,6 @@ export const permission: Dict = {
     audit_field_last_day: 'Last day',
     audit_field_title: 'Title',
     audit_field_tag: 'Tag',
-    // Foreign keys resolved by the backend (shown as names) — label them nicely too.
     audit_field_employee_id: 'Employee',
     audit_field_requester_id: 'Requester',
     audit_field_assignee_id: 'Assignee',

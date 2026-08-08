@@ -8,12 +8,12 @@ export const workflow: Dict = {
     wf_sub: 'Adjust the approval route of each request type — who signs off, and in what order.',
     wf_coming_soon: 'Coming soon',
 
+    // pages/index.tsx — KPI cards
     wf_kpi_active: 'Active workflows',
     wf_kpi_active_sub: 'request types covered',
     wf_kpi_steps: 'Approval steps',
     wf_kpi_steps_sub: 'up to',
     wf_kpi_steps_sub_tail: 'approvals per request',
-    // Measured from the requests themselves — a workflow declares no target.
     wf_kpi_decision: 'Avg. decision time',
     wf_kpi_decision_window: 'last {days} days',
     wf_kpi_decision_requests: 'requests',
@@ -23,6 +23,7 @@ export const workflow: Dict = {
     wf_kpi_auto: 'Auto-ticket on',
     wf_kpi_auto_sub: 'opens an IT ticket on approval',
 
+    // pages/index.tsx — search + workflow cards
     wf_search_ph: 'Search workflows…',
     wf_search_hint: 'Steps resolve against each requester’s reporting line at submit time.',
     wf_no_match: 'No workflows match',
@@ -35,21 +36,25 @@ export const workflow: Dict = {
     wf_applies_to: 'Applies to',
     wf_steps: 'Steps',
     wf_status: 'Status',
+
+    // workflow-strip.tsx — stage strip
     wf_approval: 'Approval',
     wf_fulfillment: 'Fulfillment',
     wf_submitted: 'Submitted',
     wf_closed: 'Closed',
+
+    // workflow-view-dialog.tsx — view dialog
     wf_chain_title: 'Approval chain',
     wf_step_detail: 'Step detail',
     wf_auto_ticket_footnote: 'An IT ticket is opened automatically after the final approval.',
 
-    // Editor
+    // workflow-editor-dialog.tsx — editor
     wf_editor_eyebrow: 'Edit workflow',
     wf_name: 'Workflow name',
     wf_auto_ticket_hint: 'Opens an IT ticket after the final approval',
     wf_add_step: 'Add step',
     wf_step_label: 'Display label',
-    wf_step_positions: 'Signed by',
+    wf_step_positions: 'Approved by',
     wf_step_positions_required: 'No position chosen — this step can never resolve.',
     wf_ranks_edit: 'Change',
     wf_ranks_done: 'Done',

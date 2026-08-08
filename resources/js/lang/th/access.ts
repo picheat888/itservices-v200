@@ -1,8 +1,13 @@
 import type { Dict } from '@/lang/types';
 
+/**
+ * โมดูล Access Directory (ทะเบียนสิทธิ์เข้าถึง) — ข้อความภาษาไทย
+ *
+ * ชื่อประเภททะเบียน (Email Groups / File Shares / …) และตัวอย่างรูปแบบ (access_ph_*)
+ * คงเป็นภาษาอังกฤษทุก locale ตามที่ตกลงไว้ — ไม่ต้องแปล
+ */
 export const access: Dict = {
     access_title: 'การเข้าถึง',
-    // Resource-type names stay in English in every locale (product decision).
     access_email_groups: 'Email Groups',
     access_file_shares: 'File Shares',
     access_social: 'Social / Internet',
@@ -81,7 +86,6 @@ export const access: Dict = {
     access_err_required: 'จำเป็นต้องระบุ',
     access_err_email: 'รูปแบบอีเมลไม่ถูกต้อง',
     access_err_email_taken: 'อีเมลนี้ถูกใช้แล้ว',
-    // Format examples — kept in English/symbols in every locale (not real UI copy).
     access_ph_email: 'group@example.com',
     access_ph_path: '\\\\server\\share',
     access_ph_size: '120',
@@ -95,7 +99,7 @@ export const access: Dict = {
     access_ph_product_key: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX',
     access_select_brand: 'เลือกยี่ห้อ',
 
-    // แท็บภาพรวม (dashboard)
+    // access dashboard — แท็บภาพรวม
     access_tab_overview: 'ภาพรวม',
     access_dash_up: '↑ เพิ่มขึ้น {n} สิทธิ์ใน 30 วัน',
     access_dash_down: '↓ ลดลง {n} สิทธิ์ใน 30 วัน',

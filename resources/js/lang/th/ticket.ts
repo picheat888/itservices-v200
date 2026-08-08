@@ -137,7 +137,7 @@ export const ticket: Dict = {
     ticket_kpi_working: 'กำลังทำ',
     ticket_kpi_vs_prev: 'เทียบช่วงก่อนหน้า',
     ticket_kpi_in_range: 'ปิดได้ในช่วงนี้',
-    // Dashboard "Right now" status card — live snapshot rows with drill-down filters.
+    // ticket dashboard — การ์ด "สถานะปัจจุบัน"
     ticket_dash_now_title: 'สถานะปัจจุบัน',
     ticket_dash_now_hint: 'ข้อมูล ณ ตอนนี้',
     ticket_dash_breached: 'เคสเกิน SLA',
