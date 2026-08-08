@@ -107,6 +107,43 @@ export interface OnboardingResult {
     failed: { service: string; message: string }[];
 }
 
+/**
+ * One field a day-one service asks for, straight from the Request module's schema.
+ * `options` is filled for a select; a `managed` field's values are request_option ids,
+ * so IT adding a device type under Settings → Request data shows up here on its own.
+ */
+export interface OnboardingServiceField {
+    key: string;
+    label_en: string;
+    label_th: string;
+    input: 'select' | 'email' | 'text' | 'number' | 'date';
+    required?: boolean;
+    placeholder?: string;
+    mono?: boolean;
+    options?: { value: string; label_en: string; label_th: string }[];
+}
+
+/** What each day-one service needs before it can be requested. */
+export interface OnboardingServiceSchema {
+    service: string;
+    fields: OnboardingServiceField[];
+}
+
+/**
+ * Whether those requests could be routed at all, asked before the employee exists.
+ *
+ * `reason` is a code — a ChainBlockReason, or `workflow_inactive` — not a sentence,
+ * so the form writes it out in the reader's language (same contract the submit path
+ * uses for a refused reporting line). `resigned_in_chain` is filled only for the
+ * resigned case: that message is useless without naming whose record to fix.
+ */
+export interface OnboardingPrecheck {
+    can_request: boolean;
+    reason: string | null;
+    blocked_services: string[];
+    resigned_in_chain: { id: number; name: string; name_th: string | null; position: string | null }[];
+}
+
 export interface EmployeePayload {
     first_name: string;
     last_name: string;
@@ -122,23 +159,38 @@ export interface EmployeePayload {
     phone?: string | null;
     joined_at?: string | null;
     photo?: File | null;
-    /** Day-one services to request for a new hire (create only). */
-    services?: string[];
+    /** Day-one services to request for a new hire, each with the detail it asks for (create only). */
+    services?: Record<string, Record<string, string>>;
     onboarding_note?: string | null;
+}
+
+/**
+ * Appends one value under Laravel's bracket notation, recursing into arrays and plain
+ * objects. `services` is a map of service → its fields, so it has to arrive as
+ * `services[computer][device_id]=3`; a plain append would flatten the whole thing into
+ * the string "[object Object]" and the required-field rules would fire on every service.
+ */
+function appendField(fd: FormData, key: string, value: unknown): void {
+    if (value === null || value === undefined) return;
+    // File extends Blob, so an uploaded photo lands here rather than in the object branch.
+    if (value instanceof Blob) {
+        fd.append(key, value);
+        return;
+    }
+    if (Array.isArray(value)) {
+        value.forEach((item) => appendField(fd, `${key}[]`, item));
+        return;
+    }
+    if (typeof value === 'object') {
+        Object.entries(value as Record<string, unknown>).forEach(([k, v]) => appendField(fd, `${key}[${k}]`, v));
+        return;
+    }
+    fd.append(key, String(value));
 }
 
 function toFormData(payload: EmployeePayload): FormData {
     const fd = new FormData();
-    Object.entries(payload).forEach(([k, v]) => {
-        if (v === null || v === undefined) return;
-        // Arrays go out as `services[]=…` so Laravel reads an array; a plain append
-        // would flatten them into the string "computer,email".
-        if (Array.isArray(v)) {
-            v.forEach((item) => fd.append(`${k}[]`, String(item)));
-            return;
-        }
-        fd.append(k, v as string | Blob);
-    });
+    Object.entries(payload).forEach(([k, v]) => appendField(fd, k, v));
     return fd;
 }
 
@@ -170,6 +222,11 @@ export const employeeApi = {
         const { data } = await http.post<ApiEnvelope<Employee> & { onboarding?: OnboardingResult }>('/employees', body);
         return { employee: data.data, onboarding: data.onboarding ?? null };
     },
+    /** Can the day-one services be routed for somebody reporting to this manager? */
+    onboardingPrecheck: (params: { manager_id: number | null; position_id: number | null }) =>
+        http.get<OnboardingPrecheck>('/employees/onboarding-precheck', { params }).then((r) => r.data),
+    /** The detail each day-one service asks for, so Step 3 can collect it. */
+    onboardingServices: () => http.get<ApiEnvelope<OnboardingServiceSchema[]>>('/employees/onboarding-services').then((r) => r.data.data),
     update: async (id: number, payload: EmployeePayload) => {
         await ensureCsrf();
         // Multipart (spoofed PUT) when a new photo is attached, JSON otherwise.

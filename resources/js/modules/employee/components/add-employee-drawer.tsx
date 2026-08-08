@@ -1,21 +1,37 @@
 import { useT } from '@/lang';
-import { useSettings } from '@/modules/settings';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn, focusFirstError } from '@/shared/lib/utils';
+import { cn, focusFirstError, isEmail } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Briefcase, Check, ChevronLeft, ChevronRight, Info, KeyRound, Laptop, Loader2, Mail, Smartphone, Upload, User, UserPlus } from 'lucide-react';
+import {
+    AlertTriangle,
+    Briefcase,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    KeyRound,
+    Laptop,
+    Loader2,
+    Mail,
+    Smartphone,
+    Upload,
+    User,
+    UserPlus,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { OnboardingServiceField } from '../api/employeeApi';
 import { useDepartments } from '../hooks/use-departments';
 import { useEmployeeMutations, useEmployees } from '../hooks/use-employees';
+import { useOnboardingPrecheck } from '../hooks/use-onboarding-precheck';
+import { useOnboardingServices } from '../hooks/use-onboarding-services';
 import { usePositions } from '../hooks/use-positions';
 import { useSections } from '../hooks/use-sections';
 import { PhotoCropDialog } from './photo-crop-dialog';
@@ -25,7 +41,6 @@ const empty = {
     lastName: '',
     firstNameTh: '',
     lastNameTh: '',
-    email: '',
     phone: '',
     code: '',
     departmentId: '',
@@ -34,6 +49,8 @@ const empty = {
     managerId: '',
     joinedAt: '',
     services: [] as string[],
+    /** Per ticked service, the detail its schema asks for: service → field key → value. */
+    serviceFields: {} as Record<string, Record<string, string>>,
     onboardingNote: '',
 };
 
@@ -43,6 +60,26 @@ const SERVICES = [
     { v: 'email', icon: Mail, labelKey: 'req_email' },
 ] as const;
 
+/**
+ * Error slot for one service field, matching the path the API validates
+ * ("services.computer.device_id") so a 422 lands under the control that caused it
+ * without a translation table in between.
+ */
+const serviceFieldName = (service: string, key: string) => `services.${service}.${key}`;
+
+/**
+ * Why the day-one services cannot be requested, code → the line that says so. The
+ * server always sends a code and never a sentence (see ChainBlockReason, plus
+ * `workflow_inactive` from the precheck), so both the Step 3 banner and the toast
+ * after Save read it in the viewer's language. Anything unrecognised falls back to
+ * whatever text the server sent.
+ */
+const BLOCK_REASON_LABEL: Record<string, string> = {
+    chain_approver_resigned: 'emp_onboarding_blocked_resigned',
+    chain_no_manager: 'emp_onboarding_blocked_no_manager',
+    workflow_inactive: 'emp_onboarding_blocked_workflow',
+};
+
 /** The three steps of the wizard: icon for the stepper, heading + sub-line for the body. */
 const STEPS = [
     { icon: User, titleKey: 'emp_personal_info', subKey: 'emp_personal_sub' },
@@ -51,6 +88,9 @@ const STEPS = [
 ] as const;
 
 const LAST_STEP = STEPS.length;
+
+/** Mirrors the `onboarding_note` rule in StoreEmployeeRequest. */
+const NOTE_MAX = 500;
 
 /**
  * Focus Dialog wizard for adding a new employee — 3 steps: personal info, work info,
@@ -69,7 +109,6 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const { data: positions = [] } = usePositions();
     const { data: employees = [] } = useEmployees();
     const { create } = useEmployeeMutations();
-    const { data: settings } = useSettings();
     const pushToast = useToastStore((s) => s.push);
 
     const [step, setStep] = useState(1);
@@ -79,6 +118,44 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     const [cropSrc, setCropSrc] = useState<string | null>(null);
     const [photoError, setPhotoError] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Can these requests be routed for this person at all? Asked only while the step
+    // that offers them is on screen; the answer depends on the Step 2 reporting line.
+    const precheck = useOnboardingPrecheck(form.managerId, form.positionId, open && step === LAST_STEP);
+    // What each service asks for. Same trigger: nothing below reads it earlier.
+    const { data: serviceSchemas = [] } = useOnboardingServices(open && step === LAST_STEP);
+    const fieldsOf = (service: string) => serviceSchemas.find((s) => s.service === service)?.fields ?? [];
+    // A definite no. Undefined while the answer is still in flight, which is NOT a no.
+    const chainBlocked = precheck.data ? !precheck.data.can_request : false;
+    // "Cannot answer" is not a no either, but it is just as much not a yes — and the
+    // rule here is that nobody is added on a reporting line we have not verified. So an
+    // endpoint that fails holds Save shut too, visibly, with a way to ask again; failing
+    // open would quietly restore the old behaviour and nobody would know the rule lapsed.
+    const precheckFailed = precheck.isError;
+    const servicesBlocked = chainBlocked || precheckFailed;
+    // Nothing may be ticked before the verdict either, so the cards never flick from
+    // enabled to disabled under the pointer.
+    const servicesLocked = servicesBlocked || precheck.isPending;
+    const blockedNames = (precheck.data?.resigned_in_chain ?? []).map((e) => (lang === 'th' ? (e.name_th ?? e.name) : e.name)).join(', ');
+    // The one line that says why, shared by the banner and the tooltip on the disabled
+    // Save button — a control nobody can press still owes an explanation on hover.
+    const blockedReasonText = precheckFailed
+        ? t('emp_onboarding_check_failed_desc')
+        : chainBlocked
+          ? t(BLOCK_REASON_LABEL[precheck.data?.reason ?? ''] ?? 'emp_onboarding_blocked_no_manager')
+          : undefined;
+
+    // Drop anything ticked before the chain turned out to be broken — the payload
+    // guard below is the authority, this is so the cards do not sit lit and dead.
+    useEffect(() => {
+        if (servicesBlocked) setForm((f) => (f.services.length ? { ...f, services: [] } : f));
+    }, [servicesBlocked]);
+
+    // The note belongs to the services; with none ticked its box is not on screen, so a
+    // note typed and then abandoned would be sent from a field nobody could see or fix.
+    useEffect(() => {
+        if (form.services.length === 0) setForm((f) => (f.onboardingNote ? { ...f, onboardingNote: '' } : f));
+    }, [form.services.length]);
 
     useEffect(() => {
         if (!open) return;
@@ -105,6 +182,21 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             if (!(k in prev)) return prev;
             const next = { ...prev };
             delete next[k];
+            return next;
+        });
+    };
+
+    /** One field of one service. Its error key mirrors the API's own path. */
+    const setServiceField = (service: string, key: string, value: string) => {
+        setForm((f) => ({
+            ...f,
+            serviceFields: { ...f.serviceFields, [service]: { ...f.serviceFields[service], [key]: value } },
+        }));
+        setErrors((prev) => {
+            const name = serviceFieldName(service, key);
+            if (!(name in prev)) return prev;
+            const next = { ...prev };
+            delete next[name];
             return next;
         });
     };
@@ -143,8 +235,6 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         if (s === 1) {
             if (!form.firstName.trim()) e.firstName = t('emp_err_first');
             if (!form.lastName.trim()) e.lastName = t('emp_err_last');
-            // ASCII-only practical pattern — rejects unicode (สมชาย@…), double @, and spaces up front.
-            if (form.email && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(form.email)) e.email = t('emp_err_email');
             // Optional, but once filled it has to be a number — free-form so "ext. 1305" is
             // allowed, matching a ticket's callback phone.
             if (form.phone.trim() && form.phone.replace(/\D/g, '').length < 3) e.phone = t('emp_err_phone');
@@ -155,6 +245,30 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             if (!form.positionId) e.positionId = t('emp_err_pos');
             if (!form.managerId && !posIsSpecial) e.managerId = t('emp_err_manager');
             if (!form.joinedAt) e.joinedAt = t('emp_err_start');
+        }
+        if (s === LAST_STEP) {
+            // The API caps this at 500; catching it here shows the count next to the box
+            // instead of a toast after the whole form has been sent.
+            if (form.onboardingNote.trim().length > NOTE_MAX) {
+                e.onboardingNote = t('emp_err_note_long').replace('{n}', String(NOTE_MAX));
+            }
+            // A ticked service has to say what it is asking for. The API refuses the same
+            // thing, but its message names the raw path ("services.email.address") in
+            // English — so the checks it can also make are made here, in the reader's
+            // language and next to the control.
+            for (const service of form.services) {
+                for (const field of fieldsOf(service)) {
+                    const value = (form.serviceFields[service]?.[field.key] ?? '').trim();
+                    const slot = serviceFieldName(service, field.key);
+
+                    if (field.required && !value) {
+                        e[slot] = t('emp_err_required');
+                    } else if (field.input === 'email' && value && !isEmail(value)) {
+                        // Same wording the employee's own email field uses.
+                        e[slot] = t('emp_err_email');
+                    }
+                }
+            }
         }
         setErrors(e);
         if (Object.keys(e).length) focusFirstError(e);
@@ -178,6 +292,19 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         setStep(target);
     };
 
+    /**
+     * What to say when the API refuses a service field. Its own message is an English
+     * sentence built around the raw path, so the wording comes from this module's keys
+     * instead — the same ones the client-side checks use, so a field reads the same
+     * whichever side caught it.
+     */
+    const serviceFieldMessage = (slot: string): string => {
+        const [, service, key] = slot.split('.');
+        const field = fieldsOf(service ?? '').find((f) => f.key === key);
+
+        return field?.input === 'email' ? t('emp_err_email') : t('emp_err_invalid');
+    };
+
     /** Builds the payload and commits the create mutation. */
     const persist = async () => {
         const payload = {
@@ -190,24 +317,35 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             section_id: form.sectionId ? Number(form.sectionId) : null,
             position_id: form.positionId ? Number(form.positionId) : null,
             manager_id: form.managerId ? Number(form.managerId) : null,
-            email: form.email || null,
+            // No email or username: a new hire has neither yet. Both stay null until the
+            // mailbox is created and the account is provisioned.
             username: null,
             phone: form.phone || null,
             joined_at: form.joinedAt || null,
             photo: photo ?? null,
             // Ticked services are filed as service requests on the new employee's
-            // behalf, once the record exists.
-            services: form.services,
+            // behalf, once the record exists, each carrying the detail Step 3 collected
+            // for it. A chain that cannot carry them sends none, however the form got
+            // into that state.
+            services: servicesBlocked ? {} : Object.fromEntries(form.services.map((s) => [s, form.serviceFields[s] ?? {}])),
             onboarding_note: form.onboardingNote.trim() || null,
         };
         try {
             const { onboarding } = await create.mutateAsync(payload);
 
             // The employee is saved either way, so a service that could not be filed
-            // has to be said out loud rather than silently dropped.
+            // has to be said out loud rather than silently dropped — and with the
+            // reason, since "computer failed" and "the manager resigned" send the
+            // reader to two different people.
             if (onboarding?.failed.length) {
+                const services = onboarding.failed.map((f) => t(SERVICES.find((s) => s.v === f.service)?.labelKey ?? f.service)).join(', ');
+                // One broken chain refuses every service, so the same reason would
+                // otherwise be repeated once per line.
+                const reasons = [...new Set(onboarding.failed.map((f) => f.message))]
+                    .map((message) => (BLOCK_REASON_LABEL[message] ? t(BLOCK_REASON_LABEL[message]) : message))
+                    .join(' · ');
                 // Somebody has to file these by hand, so it waits to be dismissed.
-                pushToast(t('emp_onboarding_failed').replace('{services}', onboarding.failed.map((f) => f.service).join(', ')), 'error');
+                pushToast(`${services} — ${reasons}`, 'error', t('emp_onboarding_failed'));
             } else if (onboarding?.created.length) {
                 // Heading on top, count on its own line below it.
                 pushToast(t('emp_onboarding_filed_count').replace('{n}', String(onboarding.created.length)), 'success', t('emp_onboarding_filed'));
@@ -221,10 +359,21 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             if (fieldErrors) {
                 const mapped: Record<string, string> = {};
                 for (const [key, msgs] of Object.entries(fieldErrors)) {
+                    if (key.startsWith('services.')) {
+                        // The slot already IS the API path (see serviceFieldName), so it
+                        // must not be camel-cased the way a top-level column is. The
+                        // server's own sentence is dropped: it names the raw path in
+                        // English ("The services.email.address field must be…"), which is
+                        // not something to put in front of the person filling this form.
+                        mapped[key] = serviceFieldMessage(key);
+                        continue;
+                    }
                     mapped[key.replace(/_(\w)/g, (_m, c: string) => c.toUpperCase())] = msgs[0] ?? '';
                 }
                 setErrors((prev) => ({ ...prev, ...mapped }));
-                pushToast(Object.values(fieldErrors)[0]?.[0] ?? t('emp_save_failed'), 'error');
+                focusFirstError(mapped);
+                // Whatever is shown under the control is what the toast repeats.
+                pushToast(Object.values(mapped)[0] ?? t('emp_save_failed'), 'error');
             } else {
                 throw err;
             }
@@ -233,12 +382,22 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
 
     /** Validate both sections then save. */
     const submit = async () => {
+        // A reporting line that cannot carry this person's onboarding requests has to
+        // be repaired first — the Save button says so, and Enter must not go around it.
+        if (servicesBlocked) {
+            setStep(LAST_STEP);
+            return;
+        }
         if (!validateStep(1)) {
             setStep(1);
             return;
         }
         if (!validateStep(2)) {
             setStep(2);
+            return;
+        }
+        // The service detail lives on this step, so it is checked last and needs no jump.
+        if (!validateStep(LAST_STEP)) {
             return;
         }
         await persist();
@@ -387,28 +546,50 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                     </div>
                                 </div>
 
-                                {/* Row-wise: English names, then Thai names, then contact. */}
+                                {/* Row-wise: English names, then Thai names, then contact.
+                                    Every field turns autofill off: this form records ANOTHER person,
+                                    so the browser's saved name/email/phone are never the right answer.
+                                    Left unset, Chrome guesses from the labels and drops the operator's
+                                    own details into several boxes at once — the surname and the email
+                                    were arriving filled with the same saved value. */}
                                 <div className="grid grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2">
                                     <Field label={t('emp_first_name')} required name="firstName" error={errors.firstName}>
-                                        <Input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="John" />
-                                    </Field>
-                                    <Field label={t('emp_last_name')} required name="lastName" error={errors.lastName}>
-                                        <Input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" />
-                                    </Field>
-                                    <Field label={t('emp_first_name_th')}>
-                                        <Input value={form.firstNameTh} onChange={(e) => set('firstNameTh', e.target.value)} placeholder="สมชาย" />
-                                    </Field>
-                                    <Field label={t('emp_last_name_th')}>
-                                        <Input value={form.lastNameTh} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="สุขสวัสดิ์" />
-                                    </Field>
-                                    <Field label={t('emp_email')} name="email" error={errors.email}>
                                         <Input
-                                            className="font-mono"
-                                            value={form.email}
-                                            onChange={(e) => set('email', e.target.value)}
-                                            placeholder="john.doe@example.com"
+                                            value={form.firstName}
+                                            onChange={(e) => set('firstName', e.target.value)}
+                                            placeholder={t('emp_first_name_ph')}
+                                            autoComplete="off"
                                         />
                                     </Field>
+                                    <Field label={t('emp_last_name')} required name="lastName" error={errors.lastName}>
+                                        <Input
+                                            value={form.lastName}
+                                            onChange={(e) => set('lastName', e.target.value)}
+                                            placeholder={t('emp_last_name_ph')}
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Field label={t('emp_first_name_th')}>
+                                        <Input
+                                            value={form.firstNameTh}
+                                            onChange={(e) => set('firstNameTh', e.target.value)}
+                                            placeholder={t('emp_first_name_th_ph')}
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    <Field label={t('emp_last_name_th')}>
+                                        <Input
+                                            value={form.lastNameTh}
+                                            onChange={(e) => set('lastNameTh', e.target.value)}
+                                            placeholder={t('emp_last_name_th_ph')}
+                                            autoComplete="off"
+                                        />
+                                    </Field>
+                                    {/* No email here: a new hire has no company mailbox yet — asking
+                                        for one is asking for something that does not exist. Step 3
+                                        requests the mailbox instead, and the address lands on the
+                                        record once it has been created. Edit still has the field, for
+                                        an employee who does have one by then. */}
                                     <Field label={t('emp_phone')} name="phone" error={errors.phone}>
                                         <Input
                                             className="font-mono"
@@ -416,6 +597,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                             onChange={(e) => set('phone', e.target.value)}
                                             placeholder="+66 81 234 5678 / ext. 1305"
                                             inputMode="tel"
+                                            autoComplete="off"
                                         />
                                     </Field>
                                 </div>
@@ -427,24 +609,27 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                             <div className="grid grid-cols-1 gap-x-10 gap-y-4 sm:grid-cols-2">
                                 {/* LEFT: the unit they belong to. */}
                                 <div className="flex flex-col gap-4">
+                                    {/* SearchableSelect for all four pickers on this step, matching the
+                                        Edit dialog: department and position were plain Selects, so two of
+                                        the four could not be typed into and looked different from their
+                                        neighbours for no reason a user could see. */}
                                     <Field label={t('department')} required={!posIsSpecial} name="departmentId" error={errors.departmentId}>
-                                        <Select value={form.departmentId} onValueChange={setDepartment}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="—" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {departments.map((d) => (
-                                                    <SelectItem key={d.id} value={String(d.id)}>
-                                                        {lang === 'th' ? (d.name_th ?? d.name) : d.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            value={form.departmentId}
+                                            onChange={setDepartment}
+                                            placeholder={t('department_ph')}
+                                            options={departments.map((d) => ({
+                                                value: String(d.id),
+                                                label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
+                                                search: `${d.name} ${d.name_th ?? ''}`,
+                                            }))}
+                                        />
                                     </Field>
                                     <Field label={t('emp_section')} required={!posIsSpecial} name="sectionId" error={errors.sectionId}>
                                         <SearchableSelect
                                             value={form.sectionId}
                                             onChange={(v) => set('sectionId', v)}
+                                            placeholder={t('emp_section_ph')}
                                             options={
                                                 form.departmentId
                                                     ? sections.map((s) => ({
@@ -458,18 +643,16 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         />
                                     </Field>
                                     <Field label={t('position')} required name="positionId" error={errors.positionId}>
-                                        <Select value={form.positionId} onValueChange={(v) => set('positionId', v)}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="—" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {positions.map((p) => (
-                                                    <SelectItem key={p.id} value={String(p.id)}>
-                                                        {p.title}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <SearchableSelect
+                                            value={form.positionId}
+                                            onChange={(v) => set('positionId', v)}
+                                            placeholder={t('position_ph')}
+                                            options={positions.map((p) => ({
+                                                value: String(p.id),
+                                                label: p.title,
+                                                search: `${p.title} ${p.code}`,
+                                            }))}
+                                        />
                                     </Field>
                                 </div>
 
@@ -485,6 +668,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <SearchableSelect
                                             value={form.managerId}
                                             onChange={(v) => set('managerId', v)}
+                                            placeholder={t('emp_manager_ph')}
                                             options={managerOptions}
                                             clearable
                                         />
@@ -493,11 +677,15 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         <DateInput value={form.joinedAt} onChange={(v) => set('joinedAt', v)} />
                                     </Field>
                                     <Field label={t('emp_employee_id')} help={t('emp_id_help')}>
+                                        {/* The code itself is mono; the placeholder is a Thai sentence and
+                                            JetBrains Mono carries no Thai glyphs, so it would fall back to
+                                            whatever the browser picks. Only font-sans names a Thai face. */}
                                         <Input
-                                            className="font-mono"
+                                            className="font-mono placeholder:font-sans"
                                             value={form.code}
                                             onChange={(e) => set('code', e.target.value)}
                                             placeholder={t('emp_id_auto')}
+                                            autoComplete="off"
                                         />
                                     </Field>
                                 </div>
@@ -507,72 +695,149 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                         {/* ── Step 3 · Access ────────────────────────── */}
                         {step === 3 && (
                             <>
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    <div className="bg-brand/5 flex items-start gap-2.5 rounded-lg p-3">
-                                        <Info className="text-brand mt-0.5 h-4 w-4 shrink-0" />
+                                {/* First thing on the step, because it no longer only refuses the
+                                    services below — it holds Save shut until the line is repaired. */}
+                                {servicesBlocked && (
+                                    <div className="border-destructive/30 bg-destructive/5 flex items-start gap-3 rounded-lg border p-4">
+                                        <AlertTriangle className="text-destructive mt-0.5 !h-5 !w-5 shrink-0" />
                                         <div>
-                                            <div className="text-foreground text-sm font-medium">
-                                                {t('emp_default_role_title')}: {settings?.default_employee_role_label ?? 'Employee'}
+                                            <div className="text-foreground text-base font-semibold">
+                                                {precheckFailed ? t('emp_onboarding_check_failed_title') : t('emp_onboarding_blocked_title')}
                                             </div>
-                                            <div className="text-muted-foreground text-xs">{t('emp_default_role_notice')}</div>
+                                            {/* Who resigned belongs inside the sentence, not on a line of its
+                                                own: the name IS the reason, and a third row only made the
+                                                reader assemble it themselves. */}
+                                            <div className="text-muted-foreground mt-1 text-sm">
+                                                {blockedNames
+                                                    ? t('emp_onboarding_blocked_resigned_named').replace('{names}', blockedNames)
+                                                    : blockedReasonText}
+                                            </div>
+                                            {/* A chain that answered "no" is fixed elsewhere — the reason line
+                                                already says so. A check that could not answer is retried right
+                                                here rather than by reopening the wizard. */}
+                                            {precheckFailed && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="mt-2.5"
+                                                    onClick={() => void precheck.refetch()}
+                                                    disabled={precheck.isFetching}
+                                                >
+                                                    {precheck.isFetching && <Loader2 className="h-4 w-4 animate-spin" />}
+                                                    {t('emp_onboarding_check_retry')}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
+                                )}
 
-                                    <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3">
-                                        <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                        <div>
-                                            <div className="text-foreground text-sm font-medium">{t('emp_account_pending_title')}</div>
-                                            <div className="text-muted-foreground mt-0.5 text-xs">{t('emp_account_pending_desc')}</div>
-                                        </div>
+                                {/* The default role used to sit beside this. It moved to the Set
+                                    Credentials dialog, where the role is actually decided and where a
+                                    missing default group actually stops the work — repeating it here
+                                    only asked HR to read something they cannot act on. */}
+                                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3">
+                                    <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <div className="text-muted-foreground text-sm">
+                                        <span className="text-foreground font-bold">{t('emp_account_pending_title')}</span> :{' '}
+                                        {t('emp_account_pending_desc')}
                                     </div>
                                 </div>
 
                                 <div>
                                     <div className="text-sm font-semibold">{t('emp_onboarding_title')}</div>
-                                    <div className="text-muted-foreground mb-3 text-xs">{t('emp_onboarding_sub')}</div>
-                                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                    <div className="text-muted-foreground mb-3 text-xs">
+                                        {precheck.isPending ? t('emp_onboarding_checking') : t('emp_onboarding_sub')}
+                                    </div>
+
+                                    {/* A list, not the three-across row this used to be: each service
+                                        now carries the detail it asks for, and grid rows equalise their
+                                        height — ticking one would have stretched all three. Stacked, only
+                                        the ticked one grows, and its fields sit inside its own row where
+                                        they visibly belong to it. This is also what the narrow layout
+                                        always showed, so the two widths now agree. */}
+                                    <div className="border-border divide-border divide-y overflow-hidden rounded-lg border">
                                         {SERVICES.map(({ v, icon: Icon, labelKey }) => {
                                             const on = form.services.includes(v);
+                                            const fields = fieldsOf(v);
                                             return (
-                                                <button
-                                                    key={v}
-                                                    type="button"
-                                                    onClick={() => set('services', on ? form.services.filter((x) => x !== v) : [...form.services, v])}
-                                                    className={cn(
-                                                        'flex items-center gap-3 rounded-lg border p-2.5 text-left transition-colors',
-                                                        on ? 'border-brand bg-brand/5' : 'border-border hover:bg-accent/50',
+                                                <div key={v} className={cn('transition-colors', on && 'bg-brand/5')}>
+                                                    <button
+                                                        type="button"
+                                                        disabled={servicesLocked}
+                                                        title={blockedReasonText}
+                                                        aria-pressed={on}
+                                                        onClick={() =>
+                                                            set('services', on ? form.services.filter((x) => x !== v) : [...form.services, v])
+                                                        }
+                                                        className={cn(
+                                                            'flex w-full items-center gap-3 p-3 text-left transition-colors',
+                                                            !on && !servicesLocked && 'hover:bg-accent/50',
+                                                            servicesLocked && 'cursor-not-allowed opacity-50',
+                                                        )}
+                                                    >
+                                                        <span
+                                                            className={cn(
+                                                                'flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
+                                                                on ? 'bg-brand text-white' : 'bg-muted text-muted-foreground',
+                                                            )}
+                                                        >
+                                                            <Icon className="h-4 w-4" />
+                                                        </span>
+                                                        <span className="flex-1 text-sm font-medium">{t(labelKey)}</span>
+                                                        <span
+                                                            className={cn(
+                                                                'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                                                                on ? 'border-brand bg-brand text-white' : 'border-input',
+                                                            )}
+                                                        >
+                                                            {on && <Check className="h-3 w-3" />}
+                                                        </span>
+                                                    </button>
+
+                                                    {/* Indented to sit under the icon and hung off a rule, so the
+                                                        fields read as part of the service above rather than as the
+                                                        next thing on the page. */}
+                                                    {on && fields.length > 0 && (
+                                                        <div className="animate-in fade-in-0 slide-in-from-top-1 px-3 pb-3 pl-14 duration-200 motion-reduce:animate-none">
+                                                            <div className="border-brand/30 space-y-3 border-l pl-4">
+                                                                {fields.map((field) => (
+                                                                    <ServiceField
+                                                                        key={field.key}
+                                                                        service={v}
+                                                                        field={field}
+                                                                        lang={lang}
+                                                                        value={form.serviceFields[v]?.[field.key] ?? ''}
+                                                                        error={errors[serviceFieldName(v, field.key)]}
+                                                                        onChange={(value) => setServiceField(v, field.key, value)}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                >
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-8 w-8 items-center justify-center rounded-md',
-                                                            on ? 'bg-brand text-white' : 'bg-muted text-muted-foreground',
-                                                        )}
-                                                    >
-                                                        <Icon className="h-4 w-4" />
-                                                    </span>
-                                                    <span className="flex-1 text-sm font-medium">{t(labelKey)}</span>
-                                                    <span
-                                                        className={cn(
-                                                            'flex h-4 w-4 items-center justify-center rounded border',
-                                                            on ? 'border-brand bg-brand text-white' : 'border-input',
-                                                        )}
-                                                    >
-                                                        {on && <Check className="h-3 w-3" />}
-                                                    </span>
-                                                </button>
+                                                </div>
                                             );
                                         })}
                                     </div>
                                 </div>
 
+                                {/* Appended to each filed request's reason, behind `**` on its own
+                                    line — see EmployeeOnboardingService::reason(). A textarea because
+                                    that is what it feeds: the Request form's own reason field, which
+                                    is a textarea there. */}
                                 {form.services.length > 0 && (
-                                    <Field label={t('emp_onboarding_note')}>
-                                        <Input value={form.onboardingNote} onChange={(e) => set('onboardingNote', e.target.value)} />
+                                    <Field label={t('emp_onboarding_note')} name="onboardingNote" error={errors.onboardingNote}>
+                                        <Textarea
+                                            value={form.onboardingNote}
+                                            onChange={(e) => set('onboardingNote', e.target.value)}
+                                            placeholder={t('emp_onboarding_note_ph')}
+                                            className="min-h-[96px]"
+                                        />
                                     </Field>
                                 )}
 
-                                <p className="text-muted-foreground text-xs">{t('emp_onboarding_deferred')}</p>
+                                {/* Describes what Save will do — silent when the banner has just
+                                    said it will not happen. */}
+                                {!servicesBlocked && <p className="text-muted-foreground text-xs">{t('emp_onboarding_deferred')}</p>}
                             </>
                         )}
                     </div>
@@ -606,7 +871,10 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     ) : (
-                        <Button onClick={submit} disabled={create.isPending}>
+                        // Held shut while the reporting line cannot carry this person's
+                        // onboarding requests: the record and the requests go out together
+                        // or not at all, so the line gets fixed before anyone is added.
+                        <Button onClick={submit} disabled={create.isPending || servicesBlocked} title={blockedReasonText}>
                             {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                             {create.isPending ? t('saving') : t('save')}
                         </Button>
@@ -614,6 +882,58 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                 </div>
             </DialogContent>
         </Dialog>
+    );
+}
+
+/**
+ * One field a day-one service asks for, rendered from the Request module's schema rather
+ * than from anything hardcoded here — a `select` becomes the same SearchableSelect the
+ * rest of the wizard uses, anything else a text input of the matching kind.
+ *
+ * Labels come from the schema too, so a device type IT renames under Settings → Request
+ * data reads the same here as it does on the request itself.
+ */
+function ServiceField({
+    service,
+    field,
+    lang,
+    value,
+    error,
+    onChange,
+}: {
+    service: string;
+    field: OnboardingServiceField;
+    lang: 'th' | 'en';
+    value: string;
+    error?: string;
+    onChange: (value: string) => void;
+}) {
+    const label = lang === 'th' ? field.label_th || field.label_en : field.label_en;
+
+    return (
+        <Field label={label} required={field.required} name={serviceFieldName(service, field.key)} error={error}>
+            {field.input === 'select' ? (
+                <SearchableSelect
+                    value={value}
+                    onChange={onChange}
+                    placeholder={label}
+                    options={(field.options ?? []).map((option) => ({
+                        value: option.value,
+                        label: lang === 'th' ? option.label_th || option.label_en : option.label_en,
+                        search: `${option.label_en} ${option.label_th}`,
+                    }))}
+                />
+            ) : (
+                <Input
+                    type={field.input === 'email' ? 'email' : 'text'}
+                    className={cn(field.mono && 'font-mono')}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    placeholder={field.placeholder}
+                    autoComplete="off"
+                />
+            )}
+        </Field>
     );
 }
 

@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Employee\Employee;
+use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,18 @@ use Tests\TestCase;
 class EmployeeCredentialsManageTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Provisioning an account needs a Role Group to take the role from, and refuses
+        // rather than falling back to a role key named in code. An administrator creates
+        // this on the Permissions page; these tests are about usernames and passwords,
+        // so they start from a system somebody has finished setting up.
+        $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
+        AppSetting::put('default_employee_group_id', (string) $default->id);
+    }
 
     private function makeEmployeeWithAccount(string $code = 'EMP-7001', string $username = 'old_name'): Employee
     {

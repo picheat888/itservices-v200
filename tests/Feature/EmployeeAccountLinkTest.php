@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Employee\Employee;
+use App\Models\Permission\GroupRole;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -10,6 +12,18 @@ use Tests\TestCase;
 class EmployeeAccountLinkTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Provisioning an account needs a Role Group to take the role from, and refuses
+        // rather than falling back to a role key named in code. An administrator creates
+        // this on the Permissions page; these tests are about the employee↔user link, so
+        // they start from a system somebody has finished setting up.
+        $default = GroupRole::create(['name' => 'All Staff', 'role' => 'user']);
+        AppSetting::put('default_employee_group_id', (string) $default->id);
+    }
 
     public function test_employee_and_user_resolve_each_other_through_the_fk(): void
     {

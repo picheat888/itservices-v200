@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useSettings } from '@/modules/settings';
 import { Field } from '@/shared/components/field';
 import { PasswordChecklist } from '@/shared/components/password-checklist';
 import { isValidPassword, randomPassword } from '@/shared/lib/password-policy';
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/shared/ui/input';
 import { Switch } from '@/shared/ui/switch';
 import { useUiStore } from '@/stores/ui';
-import { Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
+import { AlertTriangle, Check, Copy, Eye, EyeOff, Loader2, ShieldCheck, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useEmployeeMutations } from '../hooks/use-employees';
 import { isValidUsername } from '../lib/credentials';
@@ -22,6 +23,10 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { setCredentials } = useEmployeeMutations();
+    const { data: settings } = useSettings();
+    // Null means the install has neither a default Role Group nor the seeded Staff role,
+    // so an employee who is in no group of their own has no role to be given.
+    const noDefaultRole = !!settings && settings.default_employee_role_label === null;
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
@@ -152,6 +157,11 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                 const taken = { username: t('cred_err_username_taken') };
                 setErrors(taken);
                 focusFirstError(taken);
+            } else if (data?.errors?.role?.[0] === 'no_role_configured') {
+                // A code, not a sentence (see EmployeeService::NO_ROLE_CONFIGURED), so it
+                // reads in the viewer's language — the banner above says the same thing,
+                // but only the API knows whether THIS employee had a group of their own.
+                setFormError(t('cred_err_no_role'));
             } else {
                 setFormError(data?.message ?? t('cred_err_generic'));
             }
@@ -182,6 +192,18 @@ export function SetCredentialsModal({ employee, onClose }: { employee: Employee 
                     </DialogHeader>
 
                     <div className="space-y-3">
+                        {/* Said here rather than on the Add Employee form: adding somebody needs no
+                            role at all, whereas an account cannot exist without one — this is the
+                            step an unconfigured install actually stops. Worded about the system,
+                            not this person, since an employee already in their own Role Group still
+                            saves fine; the API has the final word either way. */}
+                        {noDefaultRole && (
+                            <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <div className="text-muted-foreground text-xs">{t('cred_err_no_role')}</div>
+                            </div>
+                        )}
+
                         {/* The shortcut rides the first field's label row: it fills this field and
                             the two below it, and the filled values speak for themselves. */}
                         <Field

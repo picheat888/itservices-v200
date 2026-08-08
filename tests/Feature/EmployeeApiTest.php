@@ -29,7 +29,7 @@ class EmployeeApiTest extends TestCase
         $otherAdmin = $this->super();
 
         $this->actingAs($adder)->postJson('/api/employees', [
-            'first_name' => 'Needs', 'last_name' => 'Account',
+            'first_name' => 'Needs', 'last_name' => 'Account', 'joined_at' => '2026-09-01',
         ])->assertCreated();
 
         // The bell is a to-do, not an announcement: the person who added the employee is

@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests\Employee;
 
+use App\Enums\Request\RequestType;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\User;
 use App\Services\Employee\EmployeeOnboardingService;
+use App\Support\RequestSchemas;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -73,17 +75,68 @@ class StoreEmployeeRequest extends FormRequest
             // Same shape as a ticket's callback phone: free-form (so "ext. 1305" works) but it
             // has to carry at least three digits, which rules out text that isn't a number.
             'phone' => ['nullable', 'string', 'max:50', 'regex:/(\D*\d){3,}/'],
-            'joined_at' => ['nullable', 'date'],
+            // Required when hiring, matching what Step 2 already demands. It was nullable,
+            // so the API accepted a new employee the form would have refused — and their
+            // onboarding requests then carried no first day, the one fact that tells an
+            // approver how urgent they are.
+            //
+            // Still nullable on update: the same rules serve both, and an employee who
+            // arrived through bulk import (a different path, where the column is optional)
+            // must not become uneditable because of a date nobody recorded then.
+            'joined_at' => [$this->route('employee') ? 'nullable' : 'required', 'date'],
             'status' => ['nullable', Rule::in(['active', 'resigned'])],
             'code' => ['nullable', 'string', 'max:50', Rule::unique('employees', 'code')->ignore($employeeId)],
             'photo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            // Day-one services to request for a new hire. Only meaningful on create;
-            // EmployeeController files one service request per entry after the
-            // employee exists, and ignores them on update.
-            'services' => ['sometimes', 'array', 'max:'.count(EmployeeOnboardingService::SERVICES)],
-            'services.*' => [Rule::in(EmployeeOnboardingService::SERVICES)],
+            // Day-one services to request for a new hire, as service => its submitted
+            // fields. Only meaningful on create; EmployeeController files one service
+            // request per entry after the employee exists, and ignores them on update.
+            'services' => ['sometimes', 'array', 'max:'.count(EmployeeOnboardingService::SERVICES), function (string $attribute, mixed $value, \Closure $fail) {
+                $unknown = array_diff(array_keys((array) $value), EmployeeOnboardingService::SERVICES);
+                if ($unknown !== []) {
+                    $fail('Not a day-one service: '.implode(', ', $unknown).'.');
+                }
+            }],
             'onboarding_note' => ['nullable', 'string', 'max:500'],
+            ...$this->serviceFieldRules(),
         ];
+    }
+
+    /**
+     * Validation for the detail each ticked service asks for, borrowed wholesale from
+     * the Request module's own schema so the two can never disagree about what a
+     * computer request needs.
+     *
+     * This closes a real hole: RequestService::submitFor() is called directly and never
+     * passes through StoreServiceRequestRequest, which is the only place those `required`
+     * rules used to live. Onboarding therefore filed requests with no device type at all
+     * — accepted here, while the identical request typed into the Request form was
+     * refused. IT opened "Computer for Somchai" and had to go and ask which kind.
+     *
+     * @return array<string, mixed>
+     */
+    private function serviceFieldRules(): array
+    {
+        $rules = [];
+
+        foreach (array_keys((array) $this->input('services', [])) as $service) {
+            if (! in_array($service, EmployeeOnboardingService::SERVICES, true)) {
+                continue;
+            }
+
+            $prefix = "services.{$service}";
+            foreach (RequestSchemas::rules(RequestType::from((string) $service)) as $key => $rule) {
+                // RequestSchemas addresses its own form ("fields.device_id"); the same
+                // fields sit one level deeper here. Rewritten inside rule strings too,
+                // so a cross-field rule such as required_without still points at a real
+                // path if a future day-one service uses one.
+                $rules[$prefix.'.'.substr($key, strlen('fields.'))] = array_map(
+                    fn (mixed $r) => is_string($r) ? str_replace('fields.', $prefix.'.', $r) : $r,
+                    (array) $rule,
+                );
+            }
+        }
+
+        return $rules;
     }
 
     /**

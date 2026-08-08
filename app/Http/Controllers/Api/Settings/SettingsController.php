@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
 use App\Models\Ticket\Ticket;
 use App\Services\Email\EmailNotificationService;
+use App\Services\Employee\EmployeeService;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -341,9 +341,17 @@ class SettingsController extends Controller
         $logoPath = AppSetting::get('logo_path');
         $values['logo_url'] = $logoPath ? Storage::disk('public')->url($logoPath) : null;
 
-        $defaultRole = AppSetting::get('default_employee_role', 'user');
-        $values['default_employee_role'] = $defaultRole;
-        $values['default_employee_role_label'] = Role::where('key', $defaultRole)->value('name') ?? $defaultRole;
+        // The role a new employee actually ends up with, asked of the service that puts
+        // them there. It resolves through the default Role Group set on the Permission
+        // page — the only place an Admin can choose it. Reading a separate
+        // `default_employee_role` setting here (as this used to) showed the Add Employee
+        // form a role nothing ever assigned, and the two agreed only by accident, while
+        // both happened to fall back to Staff.
+        //
+        // Null on an install with no default Role Group — not filled in with a guess, and
+        // nothing here writes. SetCredentialsModal reads the null to say why an account
+        // cannot be created yet.
+        $values['default_employee_role_label'] = app(EmployeeService::class)->defaultRoleForNewEmployee()?->name;
 
         // Asset status colors: stored saved values merged over defaults so any
         // status without an explicit override still resolves to a color.

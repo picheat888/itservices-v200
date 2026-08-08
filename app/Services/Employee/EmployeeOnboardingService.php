@@ -31,7 +31,7 @@ class EmployeeOnboardingService
     public function __construct(private readonly RequestService $requests) {}
 
     /**
-     * @param  list<string>  $services  values from self::SERVICES
+     * @param  array<string, array<string, mixed>>  $services  service from self::SERVICES => the fields Step 3 collected for it
      * @return array{
      *     created: list<array{service: string, id: int, reference: string|null}>,
      *     failed: list<array{service: string, message: string}>
@@ -42,7 +42,7 @@ class EmployeeOnboardingService
         $created = [];
         $failed = [];
 
-        foreach (array_unique($services) as $service) {
+        foreach ($services as $service => $fields) {
             if (! in_array($service, self::SERVICES, true)) {
                 continue;
             }
@@ -54,10 +54,11 @@ class EmployeeOnboardingService
                     'type' => $type->value,
                     'title' => $this->title($type, $employee),
                     'reason' => $this->reason($employee, $note),
-                    // The form asks for no type-specific detail (no model, no size):
-                    // the fulfilling team works that out with the new employee's
-                    // manager, which is what the reason line says.
-                    'fields' => [],
+                    // The detail this service asks for — device type, mailbox address —
+                    // collected on Step 3 and validated against the same schema the
+                    // Request form uses. It used to be sent empty, which left IT with a
+                    // request that did not say which kind of machine it was for.
+                    'fields' => (array) $fields,
                 ], RequestOrigin::Onboarding);
 
                 $created[] = ['service' => $service, 'id' => $request->id, 'reference' => $request->reference];
@@ -78,18 +79,28 @@ class EmployeeOnboardingService
         return mb_substr("{$type->label()} for {$employee->name}", 0, 200);
     }
 
-    /** The HR note when there is one; otherwise say plainly why the request exists. */
+    /**
+     * Why the request exists, plus whatever HR added.
+     *
+     * The generated line always stays: it carries the first day, which is the one fact
+     * an approver needs and the one nobody retypes. The note is appended on its own line
+     * behind `**` so an approver can see at a glance which half a person wrote — it used
+     * to REPLACE this text, so writing a note silently deleted the start date.
+     */
     private function reason(Employee $employee, ?string $note): string
     {
-        $note = trim((string) $note);
-        if ($note !== '') {
-            return $note;
-        }
-
         $start = $employee->joined_at?->format('Y-m-d');
+        // Two short lines rather than one long one: the first day is the fact an approver
+        // acts on, and on its own line it is read rather than scanned past. The detail
+        // view renders the reason with whitespace-pre-wrap, so the break survives.
+        //
+        // No date means no second line at all — never a dangling "first day ."
+        $generated = $start === null
+            ? 'Onboarding request with the new employee.'
+            : "Onboarding request with the new employee,\nfirst day {$start}.";
 
-        return 'Onboarding request filed with the new employee record'
-            .($start !== null ? ", first day {$start}" : '')
-            .'. Details to be confirmed with their manager.';
+        $note = trim((string) $note);
+
+        return $note === '' ? $generated : $generated."\n**".$note;
     }
 }
