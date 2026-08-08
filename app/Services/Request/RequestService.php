@@ -4,7 +4,6 @@ namespace App\Services\Request;
 
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestOrigin;
-use App\Enums\Request\RequestPriority;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\WorkflowStepKind;
@@ -98,6 +97,16 @@ class RequestService
             ]);
         }
 
+        // A reporting line that cannot carry the request stops it here. Filing it
+        // anyway would skip the approval steps and hand it to IT as if everyone above
+        // had signed — see ChainBlockReason for the two cases and why a line that
+        // simply lacks a rank is NOT one of them. The code travels to the SPA, which
+        // writes it out in the reader's language.
+        $block = $this->resolver->blockReason($workflow, $employee);
+        if ($block !== null) {
+            throw ValidationException::withMessages(['requester' => [$block->value, $block->message()]]);
+        }
+
         // Keep only the keys this type's schema knows about, then snapshot the
         // human-readable form (labels + resolved source names) under _display —
         // the detail view renders point-in-time labels, never re-resolved ids.
@@ -123,8 +132,6 @@ class RequestService
                 'department_name' => $employee->department?->name,
                 'title' => $data['title'],
                 'reason' => $data['reason'],
-                'priority' => $data['priority'] ?? RequestPriority::Medium->value,
-                'estimated_value' => $data['estimated_value'] ?? null,
                 'fields' => $fields,
                 'status' => RequestStatus::Pending->value,
                 ...$references,
@@ -353,11 +360,7 @@ class RequestService
             '',
             'Type: '.$request->type->label(),
             "Requester: {$request->requester_name}".($request->department_name ? " ({$request->department_name})" : ''),
-            'Priority: '.$request->priority->value,
         ];
-        if ($request->estimated_value) {
-            $lines[] = "Estimated value: {$request->estimated_value}";
-        }
 
         foreach ($this->fieldLines($request) as $line) {
             $lines[] = $line;

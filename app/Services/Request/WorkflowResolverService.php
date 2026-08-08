@@ -5,6 +5,7 @@ namespace App\Services\Request;
 use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalSkipReason;
 use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\ChainBlockReason;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
@@ -47,15 +48,86 @@ class WorkflowResolverService
     {
         return $this->resolveSteps(
             $workflow->request_type,
-            $workflow->steps()->with('positions')->get()->map(fn ($s) => [
-                'actor_type' => $s->actor_type->value,
-                'label' => $s->label,
-                'kind' => $s->kind->value,
-                'position_ids' => $s->positions->pluck('id')->all(),
-            ])->all(),
+            $this->stepsOf($workflow),
             $requester,
             $fields,
         );
+    }
+
+    /**
+     * Why this workflow cannot be routed for this requester, or null when it can.
+     *
+     * Asked BEFORE a request is created (see RequestService), because the two answers
+     * below are broken data rather than valid org shapes: skipping the steps would
+     * hand the request a clean run through approvals nobody gave. A rung that finds
+     * nobody for any other reason — no one of that rank in the line at all — is a
+     * skip, not a block, and is not reported here.
+     *
+     * @param  list<array<string, mixed>>|null  $steps  defaults to the workflow's own
+     */
+    public function blockReason(Workflow $workflow, Employee $requester, ?array $steps = null): ?ChainBlockReason
+    {
+        $steps ??= $this->stepsOf($workflow);
+        $chainSteps = array_values(array_filter(
+            $steps,
+            fn (array $step) => StepActorType::from((string) $step['actor_type']) === StepActorType::Chain,
+        ));
+
+        // A workflow with no chain steps (IT-only) routes for anybody.
+        if ($chainSteps === []) {
+            return null;
+        }
+
+        $line = $this->chainService->chainFor($requester);
+        $usable = $line->filter(fn (Employee $manager) => $this->canHoldAStep($manager))->values();
+
+        if ($usable->isEmpty()) {
+            // Somebody who legitimately has nobody above them still submits; their
+            // chain steps skip, exactly as before.
+            if ($requester->position?->allow_special_position) {
+                return null;
+            }
+
+            // A line that exists but is entirely made up of people who have left reads
+            // as resigned, not as "no manager set" — that is what HR has to fix.
+            return $line->isEmpty() ? ChainBlockReason::NoManager : ChainBlockReason::ApproverResigned;
+        }
+
+        // A rung that would have resolved to somebody who has since left: compare the
+        // full line against the usable one. Finding a holder only among the departed is
+        // the case HR has to fix; finding none in either is a rung nobody holds, which
+        // is allowed to skip.
+        $usableIndex = 0;
+        foreach ($chainSteps as $step) {
+            $positionIds = $step['position_ids'] ?? [];
+            $inUsable = $this->findHolder($usable, $usableIndex, $positionIds);
+            if ($inUsable !== null) {
+                $usableIndex = $inUsable[0] + 1;
+
+                continue;
+            }
+
+            if ($this->findHolder($line, 0, $positionIds) !== null) {
+                return ChainBlockReason::ApproverResigned;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The workflow's steps in the transient shape resolveSteps() takes.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function stepsOf(Workflow $workflow): array
+    {
+        return $workflow->steps()->with('positions')->get()->map(fn ($s) => [
+            'actor_type' => $s->actor_type->value,
+            'label' => $s->label,
+            'kind' => $s->kind->value,
+            'position_ids' => $s->positions->pluck('id')->all(),
+        ])->all();
     }
 
     /**
