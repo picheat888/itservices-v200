@@ -86,7 +86,6 @@ class RequestNotificationTest extends TestCase
             'type' => 'computer',
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
-            'priority' => 'medium',
             'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 

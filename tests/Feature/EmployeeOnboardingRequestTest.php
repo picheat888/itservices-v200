@@ -354,7 +354,6 @@ class EmployeeOnboardingRequestTest extends TestCase
             'type' => 'computer',
             'title' => 'A laptop for me',
             'reason' => 'Mine broke.',
-            'priority' => 'medium',
             'fields' => [
                 'device_id' => (int) RequestOption::where('request_type', 'computer')
                     ->where('label_en', 'Laptop')->value('id'),

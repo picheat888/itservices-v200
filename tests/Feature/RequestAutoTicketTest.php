@@ -70,7 +70,6 @@ class RequestAutoTicketTest extends TestCase
             'type' => 'computer',
             'title' => 'Replacement desktop for finance',
             'reason' => 'The old machine no longer boots after the last power outage.',
-            'priority' => 'high',
             'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 
