@@ -137,7 +137,7 @@ export const ticket: Dict = {
     ticket_kpi_working: 'in progress',
     ticket_kpi_vs_prev: 'vs previous period',
     ticket_kpi_in_range: 'closed in range',
-    // Dashboard "Right now" status card — live snapshot rows with drill-down filters.
+    // ticket dashboard — "Right now" card
     ticket_dash_now_title: 'Right now',
     ticket_dash_now_hint: 'live snapshot',
     ticket_dash_breached: 'Cases past SLA',

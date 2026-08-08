@@ -2,13 +2,12 @@ import type { Dict } from '@/lang/types';
 
 /**
  * Request module (IT service requests) — English strings.
- * The per-enum keys (req_<type>, req_status_<status>) are reached through the
- * registries in shared/lib/request-meta, which name each key literally. Do not
- * compose them at the call site: `translate()` falls back to the key it was
- * given, so a missing one would print itself on screen.
+ *
+ * Per-enum keys (req_<type>, req_status_<status>) are named literally by the
+ * registries in shared/lib/request-meta — never compose a key at the call site.
  */
 export const requests: Dict = {
-    // Service types
+    // shared/lib/request-meta.ts — service types
     req_computer: 'Computer',
     req_hardware: 'Hardware / peripheral',
     req_mobile: 'Mobile device',
@@ -21,7 +20,7 @@ export const requests: Dict = {
     req_telephone: 'Telephone',
     req_other: 'Other request',
 
-    // Page chrome
+    // pages/index.tsx — page header + tabs
     requests_title: 'Requests',
     requests_sub: 'Submit IT service requests and track every approval step.',
     requests_new: 'New request',
@@ -29,7 +28,7 @@ export const requests: Dict = {
     requests_tab_all: 'All requests',
     requests_tab_approvals: 'Awaiting my approval',
 
-    // KPI cards
+    // pages/index.tsx — KPI cards
     req_kpi_awaiting: 'Awaiting your approval',
     req_kpi_awaiting_of: 'of all pending:',
     req_kpi_approved: 'Approved',
@@ -38,7 +37,7 @@ export const requests: Dict = {
     req_kpi_cycle_sub: 'submitted to final decision',
     req_kpi_days_suffix: 'd',
 
-    // Dashboard tab
+    // pages/index.tsx — dashboard tab
     req_queue_title: 'Needs your decision',
     req_queue_empty: 'Nothing is waiting on you',
     req_queue_empty_sub: 'Every request that needed your approval has been decided.',
@@ -49,7 +48,7 @@ export const requests: Dict = {
     req_recent_title: 'Recent activity',
     req_inactive: 'Not accepting submissions',
 
-    // Table
+    // pages/index.tsx — request table
     req_col_title: 'Title',
     req_col_requester: 'Requester',
     req_col_workflow: 'Workflow',
@@ -60,20 +59,20 @@ export const requests: Dict = {
     req_age_today: 'today',
     req_age_days: 'd',
 
-    // Statuses
+    // shared/lib/request-meta.ts — statuses
     req_status_pending: 'Pending',
     req_status_approved: 'Approved',
     req_status_rejected: 'Rejected',
     req_status_fulfilled: 'Fulfilled',
     req_status_cancelled: 'Cancelled',
 
-    // Actions
+    // pages/index.tsx + request-detail-dialog.tsx — action buttons
     req_approve: 'Approve',
     req_reject: 'Reject',
     req_fulfill: 'Mark fulfilled',
     req_cancel_request: 'Cancel request',
 
-    // Create wizard
+    // request-create-dialog.tsx — create wizard
     req_new_eyebrow: 'New request',
     req_select_placeholder: 'Select…',
     req_bad_email: 'Enter a valid email address',
@@ -87,7 +86,6 @@ export const requests: Dict = {
     req_details_title: 'Request detail',
     req_details_sub: 'A clear title and reason help approvers decide faster.',
     req_section_general: 'The request',
-    /** Stored title, built for the requester — {service} is the service name. */
     req_auto_title: 'Request: {service}',
     req_field_reason: 'Reason / details',
     req_field_reason_ph: 'Explain why this is needed — approvers decide faster with context.',
@@ -102,26 +100,28 @@ export const requests: Dict = {
     req_awaiting_first: 'awaiting the first approver',
     req_no_employee_hint: 'Your account is not linked to an employee record. Contact IT to link it before submitting.',
 
-    // Detail dialog
+    // request-detail-dialog.tsx — detail dialog
     req_detail_eyebrow: 'Service request',
     req_reason_label: 'Reason',
     req_requester: 'Requester',
-    req_department: 'Department',
-    req_created: 'Submitted',
-    // On-behalf (onboarding) marking — shown wherever an approver meets the request.
+    req_requester_name: 'Name',
+    req_emp_code: 'Employee code',
     req_origin_onboarding: 'New employee',
     req_submitted_by: 'Filed by',
     req_await_account: 'Waiting - this approver has no login account yet',
-    // Each reason stands on its own ("Skipped - ..."), because the status line
-    // above no longer repeats the word "skipped".
+    req_onboarding_title: 'Request for a new employee',
+    req_onboarding_desc: 'Filed with the new employee record, before they had an account of their own.',
+
+    // shared/lib/request-meta.ts — blocked submissions + skipped-step reasons
+    req_block_title: 'Cannot submit yet',
+    req_block_no_manager: 'Your reporting line has no manager set. Ask HR to update it before submitting.',
+    req_block_approver_resigned: 'An approver in your reporting line has left the company. Ask HR to update it before submitting.',
     req_skip_no_manager: 'Skipped - the requester has no manager configured',
-    // Covers every way this rung finds nobody: the requester is at that level or
-    // above it, and the reporting line holds no one of that rank at all.
     req_skip_no_matching_position: 'Skipped - this level is equal to or below the requester, or missing from their reporting line',
     req_skip_no_resource_owner: 'Skipped - this resource has no owner who can approve',
     req_skip_requester_is_owner: 'Skipped - the requester owns this resource',
-    req_onboarding_title: 'Request for a new employee',
-    req_onboarding_desc: 'Filed with the new employee record, before they had an account of their own.',
+
+    // request-trail.tsx — approval trail
     req_trail_title: 'Approval trail',
     req_trail_submitted: 'Submitted',
     req_trail_fulfillment: 'Admin / IT Staff fulfillment',
@@ -133,11 +133,13 @@ export const requests: Dict = {
     req_trail_after_approvals: 'after all approvals',
     req_trail_fulfilled_done: 'done · requester notified',
     req_trail_ticket_opened: 'ticket opened automatically',
+
+    // request-detail-dialog.tsx — linked ticket block
     req_linked_ticket: 'Linked ticket',
     req_no_ticket: 'No ticket — this workflow closes without one.',
     req_ticket_auto_hint: 'Auto-opened on final approval — assigned to the IT team.',
 
-    // Decision dialog
+    // decision-dialog.tsx — approve / reject / fulfill / cancel
     req_decide_approve: 'Approve request',
     req_decide_reject: 'Reject request',
     req_decide_note: 'Remark / note',

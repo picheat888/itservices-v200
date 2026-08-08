@@ -38,7 +38,6 @@ export const employee: Dict = {
     org_fit: 'Fit',
     org_heading: 'Organization chart',
     org_subtitle: 'Reporting lines across the company · click a card to focus · use +/– to collapse a branch',
-    // Shown on a fresh install, where the chart is empty because nobody has been added yet.
     org_empty: 'No organization chart yet. Add employees and set who each of them reports to.',
     departments_count: 'Departments',
     headcount_by_dept: 'Headcount by department',
@@ -188,8 +187,6 @@ export const employee: Dict = {
     emp_onboarding_sub: 'Services this employee needs on day one.',
     emp_onboarding_note: 'Note (optional)',
     emp_onboarding_deferred: 'One approval request is filed per service, routed to this employee’s own manager.',
-    // Toast heading + its own line for the count (the card renders the two as
-    // separate lines, so the number is not buried mid-sentence).
     emp_onboarding_filed: 'Onboarding requests filed',
     emp_onboarding_filed_count: '{n} request(s)',
     emp_onboarding_failed: 'Employee saved, but these services could not be requested: {services}',

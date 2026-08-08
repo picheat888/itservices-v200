@@ -4,7 +4,7 @@ import type { Dict } from '@/lang/types';
  * โมดูลคำขอบริการ IT — ข้อความภาษาไทย (คีย์ล้อกับ en/requests.ts ทุกตัว)
  */
 export const requests: Dict = {
-    // ประเภทบริการ
+    // shared/lib/request-meta.ts — ประเภทบริการ
     req_computer: 'คอมพิวเตอร์',
     req_hardware: 'ฮาร์ดแวร์ / อุปกรณ์ต่อพ่วง',
     req_mobile: 'อุปกรณ์มือถือ',
@@ -17,7 +17,7 @@ export const requests: Dict = {
     req_telephone: 'โทรศัพท์',
     req_other: 'คำขออื่น ๆ',
 
-    // หัวหน้า
+    // pages/index.tsx — หัวหน้า + แท็บ
     requests_title: 'คำขอบริการ',
     requests_sub: 'ยื่นคำขอบริการ IT และติดตามทุกขั้นการอนุมัติ',
     requests_new: 'คำขอใหม่',
@@ -25,7 +25,7 @@ export const requests: Dict = {
     requests_tab_all: 'คำขอทั้งหมด',
     requests_tab_approvals: 'รออนุมัติจากฉัน',
 
-    // การ์ด KPI
+    // pages/index.tsx — การ์ด KPI
     req_kpi_awaiting: 'รออนุมัติจากคุณ',
     req_kpi_awaiting_of: 'จากที่รออนุมัติทั้งหมด',
     req_kpi_approved: 'อนุมัติแล้ว',
@@ -34,7 +34,7 @@ export const requests: Dict = {
     req_kpi_cycle_sub: 'ตั้งแต่ยื่นจนตัดสินครบ',
     req_kpi_days_suffix: ' วัน',
 
-    // แท็บภาพรวม
+    // pages/index.tsx — แท็บภาพรวม
     req_queue_title: 'รอการตัดสินจากคุณ',
     req_queue_empty: 'ไม่มีคำขอค้างอนุมัติ',
     req_queue_empty_sub: 'ทุกคำขอที่ต้องผ่านคุณ ได้รับการตัดสินแล้ว',
@@ -45,7 +45,7 @@ export const requests: Dict = {
     req_recent_title: 'ความเคลื่อนไหวล่าสุด',
     req_inactive: 'ปิดรับคำขอชั่วคราว',
 
-    // ตาราง
+    // pages/index.tsx — ตารางคำขอ
     req_col_title: 'หัวข้อ',
     req_col_requester: 'ผู้ขอ',
     req_col_workflow: 'สายอนุมัติ',
@@ -56,20 +56,20 @@ export const requests: Dict = {
     req_age_today: 'วันนี้',
     req_age_days: ' วัน',
 
-    // สถานะ
+    // shared/lib/request-meta.ts — สถานะ
     req_status_pending: 'รออนุมัติ',
     req_status_approved: 'อนุมัติแล้ว',
     req_status_rejected: 'ไม่อนุมัติ',
     req_status_fulfilled: 'ดำเนินการแล้ว',
     req_status_cancelled: 'ยกเลิก',
 
-    // ปุ่ม
+    // pages/index.tsx + request-detail-dialog.tsx — ปุ่มสั่งงาน
     req_approve: 'อนุมัติ',
     req_reject: 'ไม่อนุมัติ',
     req_fulfill: 'ปิดงานแล้ว',
     req_cancel_request: 'ยกเลิกคำขอ',
 
-    // สร้างคำขอ (wizard)
+    // request-create-dialog.tsx — wizard สร้างคำขอ
     req_new_eyebrow: 'คำขอใหม่',
     req_select_placeholder: 'เลือก…',
     req_bad_email: 'รูปแบบอีเมลไม่ถูกต้อง',
@@ -83,7 +83,6 @@ export const requests: Dict = {
     req_details_title: 'รายละเอียดคำขอ',
     req_details_sub: 'หัวข้อและเหตุผลที่ชัดเจน ช่วยให้ผู้อนุมัติตัดสินใจได้เร็วขึ้น',
     req_section_general: 'เรื่องที่ขอ',
-    /** หัวข้อที่ระบบตั้งให้ — {service} คือชื่อบริการ */
     req_auto_title: 'คำขอ: {service}',
     req_field_reason: 'เหตุผล / รายละเอียด',
     req_field_reason_ph: 'อธิบายความจำเป็น เพื่อให้ผู้อนุมัติตัดสินใจได้เร็วขึ้น',
@@ -98,26 +97,28 @@ export const requests: Dict = {
     req_awaiting_first: 'รออนุมัติขั้นที่ 1',
     req_no_employee_hint: 'บัญชีของคุณยังไม่ผูกกับข้อมูลพนักงาน ติดต่อ IT เพื่อผูกบัญชีก่อนยื่นคำขอ',
 
-    // หน้าต่างรายละเอียด
+    // request-detail-dialog.tsx — หน้าต่างรายละเอียด
     req_detail_eyebrow: 'คำขอบริการ',
     req_reason_label: 'เหตุผล',
     req_requester: 'ผู้ขอ',
-    req_department: 'แผนก',
-    req_created: 'ยื่นเมื่อ',
-    // ป้ายบอกว่าเป็นคำขอที่ยื่นแทน (พนักงานใหม่) — โผล่ทุกที่ที่ผู้อนุมัติเห็นคำขอ
+    req_requester_name: 'ชื่อ',
+    req_emp_code: 'รหัสพนักงาน',
     req_origin_onboarding: 'พนักงานใหม่',
     req_submitted_by: 'ยื่นแทนโดย',
     req_await_account: 'รอ - ผู้อนุมัติรายนี้ยังไม่มีบัญชีผู้ใช้งาน',
-    // แถบเหตุผลของขั้นที่ถูกข้าม — พูดให้ครบในตัวเอง ("ข้าม เนื่องจาก...")
-    // เพราะบรรทัดสถานะด้านบนไม่พูดคำว่า "ข้ามขั้นนี้" ซ้ำอีก
+    req_onboarding_title: 'คำขอสำหรับพนักงานใหม่',
+    req_onboarding_desc: 'ยื่นพร้อมกับการเพิ่มข้อมูลพนักงาน ตอนที่เจ้าตัวยังไม่มีบัญชีเข้าใช้งาน',
+
+    // shared/lib/request-meta.ts — ยื่นคำขอไม่ได้ + เหตุผลที่ข้ามขั้น
+    req_block_title: 'ยังยื่นคำขอไม่ได้',
+    req_block_no_manager: 'สายอนุมัติของคุณยังไม่ได้ตั้งผู้บังคับบัญชา กรุณาติดต่อ HR เพื่ออัปเดตข้อมูลก่อนยื่นคำขอ',
+    req_block_approver_resigned: 'ผู้อนุมัติในสายของคุณลาออกแล้ว กรุณาติดต่อ HR เพื่ออัปเดตสายอนุมัติก่อนยื่นคำขอ',
     req_skip_no_manager: 'ข้าม เนื่องจากผู้ขอยังไม่ได้ตั้งผู้บังคับบัญชา',
-    // ครอบทุกสาเหตุที่ขั้นนี้หาคนไม่ได้: ผู้ขออยู่ระดับนั้นเองหรือสูงกว่า และสายบังคับบัญชา
-    // ไม่มีใครถือตำแหน่งระดับนี้ (เช่น Staff รายงานตรงต่อ Manager)
     req_skip_no_matching_position: 'ข้าม เนื่องจากตำแหน่งเท่ากัน น้อยกว่า หรือไม่มีตำแหน่งนี้ในสายอนุมัติ',
     req_skip_no_resource_owner: 'ข้าม เนื่องจากรายการนี้ไม่มีเจ้าของที่อนุมัติได้',
     req_skip_requester_is_owner: 'ข้าม เนื่องจากผู้ขอเป็นเจ้าของรายการนี้เอง',
-    req_onboarding_title: 'คำขอสำหรับพนักงานใหม่',
-    req_onboarding_desc: 'ยื่นพร้อมกับการเพิ่มข้อมูลพนักงาน ตอนที่เจ้าตัวยังไม่มีบัญชีเข้าใช้งาน',
+
+    // request-trail.tsx — เส้นทางการอนุมัติ
     req_trail_title: 'เส้นทางการอนุมัติ',
     req_trail_submitted: 'ยื่นคำขอ',
     req_trail_fulfillment: 'Admin / ทีม IT ดำเนินการ',
@@ -129,11 +130,13 @@ export const requests: Dict = {
     req_trail_after_approvals: 'รออนุมัติครบทุกขั้น',
     req_trail_fulfilled_done: 'เสร็จสิ้น · แจ้งผู้ขอแล้ว',
     req_trail_ticket_opened: 'เปิด Ticket อัตโนมัติแล้ว',
+
+    // request-detail-dialog.tsx — กล่อง Ticket ที่เชื่อมโยง
     req_linked_ticket: 'Ticket ที่เชื่อมโยง',
     req_no_ticket: 'ไม่มี Ticket — สายนี้ปิดงานโดยไม่เปิดเคส',
     req_ticket_auto_hint: 'เปิดอัตโนมัติเมื่ออนุมัติครบ — มอบหมายให้ทีม IT',
 
-    // หน้าต่างตัดสิน
+    // decision-dialog.tsx — อนุมัติ / ไม่อนุมัติ / ปิดงาน / ยกเลิก
     req_decide_approve: 'อนุมัติคำขอ',
     req_decide_reject: 'ไม่อนุมัติคำขอ',
     req_decide_note: 'Remark / หมายเหตุ',

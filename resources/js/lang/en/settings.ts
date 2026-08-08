@@ -39,7 +39,7 @@ export const settings: Dict = {
     set_request_data: 'Request data',
     set_request_data_desc: 'The choices the service-request form offers requesters.',
 
-    // Request data — the choice lists behind the request form's selects
+    // settings — Request data tab
     rd_label_en: 'Label (EN)',
     rd_label_th: 'Label (TH)',
     rd_rename_safe: 'Safe to rename — submitted requests point at this choice by id, not by name.',

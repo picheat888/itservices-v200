@@ -5,7 +5,6 @@ export const common: Dict = {
     nav_workspace: 'พื้นที่ทำงาน',
     nav_admin: 'การจัดการระบบ',
     search_placeholder: 'ค้นหา…',
-    // ชื่อพื้นที่ toast มุมล่างขวาสำหรับ screen reader (ไม่แสดงบนหน้าจอ)
     toast_region: 'การแจ้งเตือน',
     filters: 'ตัวกรอง',
     reset_filters: 'ล้างตัวกรอง',

@@ -11,12 +11,12 @@ export const workflow: Dict = {
     wf_sub: 'ปรับเส้นทางอนุมัติของคำขอแต่ละประเภท — ใครอนุมัติ และลำดับไหน',
     wf_coming_soon: 'เร็ว ๆ นี้',
 
+    // pages/index.tsx — การ์ด KPI
     wf_kpi_active: 'Workflow ที่เปิดใช้',
     wf_kpi_active_sub: 'ประเภทคำขอที่ครอบคลุม',
     wf_kpi_steps: 'ขั้นอนุมัติรวม',
     wf_kpi_steps_sub: 'สูงสุด',
     wf_kpi_steps_sub_tail: 'ขั้นต่อคำขอ',
-    // วัดจากคำขอจริง — workflow ไม่ได้ตั้งเป้าเวลาไว้
     wf_kpi_decision: 'เวลาตัดสินเฉลี่ย',
     wf_kpi_decision_window: 'ช่วง {days} วันย้อนหลัง',
     wf_kpi_decision_requests: 'คำขอ',
@@ -26,6 +26,7 @@ export const workflow: Dict = {
     wf_kpi_auto: 'เปิด Auto Ticket',
     wf_kpi_auto_sub: 'เปิดเคสให้ IT อัตโนมัติเมื่ออนุมัติครบ',
 
+    // pages/index.tsx — ช่องค้นหา + การ์ด Workflow
     wf_search_ph: 'ค้นหา Workflow…',
     wf_search_hint: 'ทุกขั้นจะถูกจับคู่กับสายบังคับบัญชาจริงของผู้ขอ ณ ตอนยื่น',
     wf_no_match: 'ไม่พบ Workflow ที่ค้นหา',
@@ -38,23 +39,27 @@ export const workflow: Dict = {
     wf_applies_to: 'ใช้กับคำขอ',
     wf_steps: 'ขั้นตอน',
     wf_status: 'สถานะ',
+
+    // workflow-strip.tsx — แถบลำดับสถานะ
     wf_approval: 'ขั้นอนุมัติ',
     wf_fulfillment: 'ขั้นดำเนินการ',
     wf_submitted: 'ยื่นคำขอ',
     wf_closed: 'ปิดเคส',
+
+    // workflow-view-dialog.tsx — หน้าต่างดูรายละเอียด
     wf_chain_title: 'ลำดับขั้นตอน',
     wf_step_detail: 'รายละเอียดขั้นตอน',
     wf_auto_ticket_footnote: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้ทีม IT อัตโนมัติ',
 
-    // ตัวแก้ไข
+    // workflow-editor-dialog.tsx — ตัวแก้ไข
     wf_editor_eyebrow: 'แก้ไข Workflow',
     wf_name: 'ชื่อ Workflow',
     wf_auto_ticket_hint: 'หลังอนุมัติครบ ระบบเปิดเคสให้ทีม IT',
     wf_add_step: 'เพิ่มขั้นตอน',
     wf_step_label: 'ป้ายที่แสดง',
-    wf_step_positions: 'เซ็นโดย',
+    wf_step_positions: 'อนุมัติโดย',
     wf_step_positions_required: 'ยังไม่ได้เลือกตำแหน่ง — ขั้นนี้จะหาผู้อนุมัติไม่ได้',
-    wf_ranks_edit: 'แก้',
+    wf_ranks_edit: 'แก้ไข',
     wf_ranks_done: 'เสร็จ',
     wf_actor_chain: 'สายบังคับบัญชา',
     wf_actor_owner: 'เจ้าของ Resource',

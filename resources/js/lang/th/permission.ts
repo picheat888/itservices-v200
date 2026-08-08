@@ -37,7 +37,7 @@ export const permission: Dict = {
     audit_empty: 'ยังไม่มีกิจกรรม',
     permission_level: 'ระดับสิทธิ์',
 
-    // --- Permission tree labels (module + action display names; resolved by moduleLabel()/actionLabel() in modules/permissions/lib/permission-labels.ts) ---
+    // modules/permissions/lib/permission-labels.ts — ป้ายชื่อในผังสิทธิ์
     perm_mod_tickets: 'Ticket',
     perm_mod_requests: 'คำขอ',
     perm_mod_assets: 'ทรัพย์สิน',
@@ -50,7 +50,6 @@ export const permission: Dict = {
         'ดูทะเบียนทั้ง 4 ประเภท (กลุ่มอีเมล แชร์ไฟล์ โซเชียล/อินเทอร์เน็ต ซอฟต์แวร์) พร้อมรายชื่อพนักงานที่มีสิทธิ์เข้าถึงแต่ละรายการ',
     'perm_act_access.overview': 'ภาพรวม',
     'perm_desc_access.overview': 'แท็บภาพรวม — KPI การเข้าถึง การกระจายสิทธิ์ และสรุปธรรมาภิบาล',
-    // ชื่อทะเบียน (Email Groups / File Shares / …) คงเป็นอังกฤษทุกภาษา — ตรงกับชื่อแท็บจริงในโมดูล
     'perm_act_access.email_view': 'Email Groups',
     'perm_desc_access.email_view': 'เห็นแท็บ Email Groups — รายการกลุ่มและสมาชิกของแต่ละกลุ่ม',
     'perm_act_access.file_view': 'File Shares',
@@ -76,8 +75,7 @@ export const permission: Dict = {
     'perm_desc_access.software_edit': 'รวมถึงเพิ่ม/ถอนสมาชิกของซอฟต์แวร์ และเห็น Product Key ที่บันทึกไว้ด้วย',
     'perm_act_access.software_delete': 'ลบ',
     perm_mod_system: 'ระบบ',
-    // Administration sub-groups (design split). Permission/Email/Setting reuse the
-    // live system.* keys; the rest are presentational "coming soon" placeholders.
+    // ผังสิทธิ์ — กลุ่มย่อยของ Administration
     perm_mod_permissions: 'สิทธิ์การใช้งาน',
     perm_mod_email_templates: 'เทมเพลตอีเมล',
     perm_mod_settings: 'ตั้งค่า',
@@ -206,18 +204,18 @@ export const permission: Dict = {
     'perm_act_system.manage_groups': 'จัดการกลุ่มผู้ใช้',
     'perm_act_system.configure_notifications': 'ตั้งค่าการแจ้งเตือน',
     'perm_act_system.view_audit': 'ดูบันทึกการตรวจสอบ',
-    // Reports module — not built yet (all coming soon).
+    // ผังสิทธิ์ — Reports
     'perm_act_reports.view': 'ดูรายงาน',
     'perm_act_reports.run': 'เรียกใช้รายงาน',
     'perm_act_reports.export': 'ส่งออกข้อมูล (CSV / XLSX)',
     'perm_act_reports.schedule': 'ตั้งกำหนดการอัตโนมัติ',
     'perm_act_reports.custom': 'สร้างรายงานแบบกำหนดเอง',
-    // Email Templates — granular enforcement coming soon (configure_notifications is live).
+    // ผังสิทธิ์ — Email Templates
     'perm_act_email.edit': 'แก้ไขเนื้อหาเทมเพลต',
     'perm_act_email.enable': 'เปิด / ปิดเทมเพลต',
     'perm_act_email.create': 'สร้างเทมเพลตใหม่',
     'perm_act_email.test': 'ส่งอีเมลทดสอบ',
-    // Settings — granular per-section permissions
+    // ผังสิทธิ์ — Settings
     'perm_act_settings.access': 'เข้าถึงการตั้งค่า',
     'perm_act_settings.company': 'ข้อมูลบริษัท',
     'perm_act_settings.system': 'ระบบ (แบรนด์ & การแสดงผล)',
@@ -227,7 +225,7 @@ export const permission: Dict = {
     'perm_act_settings.requestdata': 'จัดการข้อมูลคำขอ',
     'perm_act_settings.assets': 'ตั้งค่าทรัพย์สิน',
     'perm_act_settings.security': 'นโยบายความปลอดภัย',
-    // --- Audit log field labels (raw DB column → friendly name; resolved by auditFieldLabel() in modules/permissions/lib/audit-format.ts) ---
+    // modules/permissions/lib/audit-format.ts — ชื่อฟิลด์ใน Audit log
     audit_field_name: 'ชื่อ',
     audit_field_name_th: 'ชื่อ (ไทย)',
     audit_field_code: 'รหัส',
@@ -244,7 +242,6 @@ export const permission: Dict = {
     audit_field_last_day: 'วันสุดท้าย',
     audit_field_title: 'ชื่อตำแหน่ง',
     audit_field_tag: 'แท็ก',
-    // Foreign keys resolved by the backend (shown as names) — label them nicely too.
     audit_field_employee_id: 'พนักงาน',
     audit_field_requester_id: 'ผู้ขอ',
     audit_field_assignee_id: 'ผู้รับผิดชอบ',

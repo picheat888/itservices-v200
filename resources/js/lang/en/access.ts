@@ -93,7 +93,7 @@ export const access: Dict = {
     access_ph_product_key: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX',
     access_select_brand: 'Select brand',
 
-    // Overview (dashboard) tab
+    // access dashboard — Overview tab
     access_tab_overview: 'Overview',
     access_dash_up: '↑ {n} grants · 30d',
     access_dash_down: '↓ {n} grants · 30d',
