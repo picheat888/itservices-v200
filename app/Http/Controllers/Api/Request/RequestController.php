@@ -23,6 +23,16 @@ use Illuminate\Http\Request;
  */
 class RequestController extends Controller
 {
+    /**
+     * What one request needs to render on its own: the frozen chain (with each
+     * approver's account, to report who still cannot sign in), the linked ticket,
+     * the route it took, and the requester's live employee record for the
+     * identity card (code / position / photo).
+     *
+     * @var list<string>
+     */
+    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket', 'workflow', 'employee.position'];
+
     public function __construct(private readonly RequestService $service) {}
 
     /**
@@ -122,7 +132,7 @@ class RequestController extends Controller
             'type' => $serviceRequest->type->value,
         ]);
 
-        return (new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket', 'workflow'])))
+        return (new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS)))
             ->response()->setStatusCode(201);
     }
 
@@ -140,7 +150,7 @@ class RequestController extends Controller
             || $user->hasPermission('requests.view_all')
             || $user->hasPermission('requests.fulfill'), 403);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket', 'workflow']));
+        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
 
     /** Approve the current step (note optional). */
@@ -151,7 +161,7 @@ class RequestController extends Controller
 
         AuditLog::record('Approved service request step', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
 
     /** Reject the current step — a remark is always required. */
@@ -162,7 +172,7 @@ class RequestController extends Controller
 
         AuditLog::record('Rejected service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
 
     /** Mark an approved request done (IT queue). */
@@ -172,7 +182,7 @@ class RequestController extends Controller
 
         AuditLog::record('Fulfilled service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
 
     /** Requester withdraws their own pending request. */
@@ -182,7 +192,7 @@ class RequestController extends Controller
 
         AuditLog::record('Cancelled service request', $serviceRequest->reference);
 
-        return new ServiceRequestResource($serviceRequest->load(['approvals.approver.user', 'ticket']));
+        return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
 
     /**

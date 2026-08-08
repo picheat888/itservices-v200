@@ -46,8 +46,6 @@ class ServiceRequestResource extends JsonResource
             'type' => $this->type?->value,
             'title' => $this->title,
             'reason' => $this->reason,
-            'priority' => $this->priority?->value,
-            'estimated_value' => $this->estimated_value,
             // One map keyed by schema field, whether the value sits in the json or
             // in one of the foreign-keyed reference columns.
             'fields' => collect($this->fields ?? [])->except('_display')->merge($this->referenceFields()),
@@ -55,11 +53,17 @@ class ServiceRequestResource extends JsonResource
             'fields_display' => ($this->fields ?? [])['_display'] ?? [],
             'status' => $this->status?->value,
             'auto_ticket' => $this->auto_ticket,
+            // Name and department are the snapshot the request was filed with; code,
+            // position and photo come off the live employee record (loaded only for
+            // the detail view, which is the one that draws the requester card).
             'requester' => [
                 'employee_id' => $this->employee_id,
                 'user_id' => $this->user_id,
                 'name' => $this->requester_name,
                 'department' => $this->department_name,
+                'code' => $this->whenLoaded('employee', fn () => $this->employee?->code),
+                'position' => $this->whenLoaded('employee', fn () => $this->employee?->position?->title),
+                'photo_url' => $this->whenLoaded('employee', fn () => $this->employee?->photo_url),
             ],
             // Why this request exists — 'onboarding' is what makes the list and the
             // detail mark it as a new hire rather than a colleague's own request.

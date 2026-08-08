@@ -32,7 +32,9 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             tone: 'done',
             glyph: <Check className="h-3 w-3" />,
             title: t('req_trail_submitted'),
-            meta: `${request.requester.name} · ${request.created_at}`,
+            // Just the timestamp: who submitted it is the requester card above, and
+            // repeating the name here made the same person read twice side by side.
+            meta: request.created_at,
         },
     ];
 

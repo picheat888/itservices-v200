@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestStatus;
 use App\Models\Access\FileShare;
@@ -101,7 +102,6 @@ class RequestWorkflowTest extends TestCase
             'type' => 'computer',
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
-            'priority' => 'medium',
             'fields' => ['device_id' => $this->deviceOptionId(), 'qty' => 1],
         ])->assertCreated();
 
@@ -137,7 +137,6 @@ class RequestWorkflowTest extends TestCase
             'type' => 'computer',
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
-            'priority' => 'medium',
             'fields' => ['device_id' => $this->deviceOptionId()],
         ])->assertUnprocessable()->assertJsonValidationErrors('requester');
     }
@@ -149,7 +148,6 @@ class RequestWorkflowTest extends TestCase
             'type' => 'computer',
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
-            'priority' => 'medium',
             'fields' => ['device_id' => $this->deviceOptionId()],
         ])->assertUnprocessable()->assertJsonValidationErrors('type');
 
@@ -159,7 +157,6 @@ class RequestWorkflowTest extends TestCase
             'type' => 'computer',
             'title' => 'New laptop for QA expansion',
             'reason' => 'The current machine can no longer run our test suite.',
-            'priority' => 'medium',
             'fields' => [],
         ])->assertUnprocessable()->assertJsonValidationErrors('fields.device_id');
     }
@@ -374,5 +371,104 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($auditor)->getJson('/api/service-requests/options')->assertForbidden();
         $this->actingAs($this->requester)->getJson('/api/service-requests/options')
             ->assertOk()->assertJsonCount(11, 'data.types');
+    }
+
+    /**
+     * A request routes along the requester's reporting line, so a line that cannot
+     * carry it is refused at the door rather than filed and quietly waved through
+     * every approval step. Two ways it can be unusable, and one way it is fine.
+     */
+    public function test_a_request_is_refused_when_the_reporting_line_cannot_carry_it(): void
+    {
+        // (a) No manager at all, on an ordinary position — the employee form requires a
+        // report-to for these, so this is broken data, not a valid shape.
+        $orphan = Employee::create(['first_name' => 'Orphan', 'position_id' => $this->positionId('Staff/Officer')]);
+        $orphanUser = $this->makeUser('user', ['requests.submit'], $orphan);
+
+        $this->actingAs($orphanUser)->postJson('/api/service-requests', $this->computerPayload())
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.requester.0', 'chain_no_manager');
+
+        // (b) The manager exists but has left: their approval is never coming, and
+        // passing the step over their head would record a decision nobody made.
+        $this->mgr->update(['status' => EmployeeStatus::Resigned->value]);
+        $this->sup->update(['status' => EmployeeStatus::Resigned->value]);
+
+        $this->actingAs($this->requester)->postJson('/api/service-requests', $this->computerPayload())
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.requester.0', 'chain_approver_resigned');
+
+        $this->assertSame(0, ServiceRequest::count());
+    }
+
+    public function test_a_special_position_may_still_submit_without_a_manager(): void
+    {
+        // "Allow special position" is how the org marks somebody who legitimately has
+        // nobody above them (an MD). Their chain steps are skipped, as before.
+        $md = Position::create(['code' => 'POS-MD', 'title' => 'Managing Director', 'allow_special_position' => true]);
+        $boss = Employee::create(['first_name' => 'Md', 'position_id' => $md->id]);
+        $bossUser = $this->makeUser('user', ['requests.submit'], $boss);
+
+        $response = $this->actingAs($bossUser)->postJson('/api/service-requests', $this->computerPayload())->assertCreated();
+
+        // Nobody has to approve it, so it lands straight on the IT queue — which is
+        // the point of the flag: this person's own approval IS the top of the line.
+        $request = ServiceRequest::findOrFail($response->json('data.id'));
+        $this->assertSame(RequestStatus::Approved, $request->status);
+        $this->assertSame(ApprovalStatus::Skipped, $request->approvals->first()->status);
+    }
+
+    public function test_a_line_that_never_had_that_rank_still_submits_and_skips_the_rung(): void
+    {
+        // A small department: Staff reports straight to a Manager. Nothing is broken —
+        // there simply is no Supervisor to ask, so that rung is skipped and the
+        // Manager still decides.
+        $boss = Employee::create(['first_name' => 'SmallBoss', 'position_id' => $this->positionId('Manager')]);
+        $this->makeUser('user', [], $boss);
+        $junior = Employee::create([
+            'first_name' => 'Junior', 'manager_id' => $boss->id, 'position_id' => $this->positionId('Staff/Officer'),
+        ]);
+        $juniorUser = $this->makeUser('user', ['requests.submit'], $junior);
+
+        $response = $this->actingAs($juniorUser)->postJson('/api/service-requests', $this->computerPayload())->assertCreated();
+
+        $request = ServiceRequest::findOrFail($response->json('data.id'));
+        $current = $request->approvals->firstWhere('status', ApprovalStatus::Current);
+        $this->assertSame($boss->id, $current->approver_employee_id);
+    }
+
+    /**
+     * The detail view draws a requester card (code / position / photo) off the live
+     * employee record, so the detail payload has to carry it — and the list, which
+     * draws no card, has to stay out of that join.
+     */
+    public function test_detail_carries_the_requester_identity_and_the_list_does_not(): void
+    {
+        $request = $this->submitComputer();
+
+        $this->actingAs($this->requester)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.requester.name', $this->staff->name)
+            ->assertJsonPath('data.requester.code', $this->staff->code)
+            ->assertJsonPath('data.requester.position', 'Staff/Officer')
+            // Present and null: the employee was loaded, this one has no photo.
+            ->assertJsonPath('data.requester.photo_url', null);
+
+        $this->actingAs($this->requester)->getJson('/api/service-requests')
+            ->assertOk()
+            ->assertJsonPath('data.0.requester.name', $this->staff->name)
+            ->assertJsonMissingPath('data.0.requester.code')
+            ->assertJsonMissingPath('data.0.requester.position');
+    }
+
+    /** The standard computer payload, so the guard tests read as one line each. */
+    private function computerPayload(): array
+    {
+        return [
+            'type' => 'computer',
+            'title' => 'New laptop for QA expansion',
+            'reason' => 'The current machine can no longer run our test suite.',
+            'fields' => ['device_id' => $this->deviceOptionId()],
+        ];
     }
 }
