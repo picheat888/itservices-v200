@@ -94,7 +94,6 @@ export function useEmployeeMutations() {
             mutationFn: (v: { id: number; payload: EmployeePayload }) => employeeApi.update(v.id, v.payload),
             onSuccess: invalidate,
         }),
-        remove: useMutation({ mutationFn: (id: number) => employeeApi.remove(id), onSuccess: invalidate }),
         resign: useMutation({
             mutationFn: (v: { id: number; reason: string; lastDay: string | null }) => employeeApi.resign(v.id, v.reason, v.lastDay),
             onSuccess: invalidate,
