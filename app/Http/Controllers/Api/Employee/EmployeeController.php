@@ -623,15 +623,6 @@ class EmployeeController extends Controller
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->additional(['message' => 'success'])->response();
     }
 
-    public function destroy(Request $request, Employee $employee): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->canManageEmployees(), 403);
-        AuditLog::record('Deleted employee', "{$employee->name} ({$employee->code})");
-        $employee->delete();
-
-        return response()->json(['message' => 'success']);
-    }
-
     /** Resets the linked system account password to the employee's code. Returns the new password. */
     /**
      * Manage an existing login account: change the username and/or reset the password.

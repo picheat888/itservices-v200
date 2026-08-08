@@ -115,7 +115,10 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpi
     Route::get('employees/{employee}/access', [EmployeeController::class, 'access'])->name('api.employees.access');
     Route::get('employees/{employee}/tickets', [EmployeeController::class, 'tickets'])->name('api.employees.tickets');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
-    Route::apiResource('employees', EmployeeController::class);
+    // No destroy: an employee who leaves is resigned, never deleted — the record keeps
+    // their name so every ticket, request and asset they touched still reads correctly.
+    // Deleting one would also cascade their whole ticket history away at the DB level.
+    Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
     Route::get('positions/{position}/members', [PositionController::class, 'members'])->name('api.positions.members');
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');

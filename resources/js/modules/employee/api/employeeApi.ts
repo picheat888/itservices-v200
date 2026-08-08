@@ -184,7 +184,6 @@ export const employeeApi = {
     },
     approvalChain: (id: number) => http.get<ApiEnvelope<ApproverNode[]>>(`/employees/${id}/approval-chain`).then((r) => r.data.data),
     orgChart: () => http.get<ApiEnvelope<OrgChartNode[]>>('/employees/org-chart').then((r) => r.data.data),
-    remove: (id: number) => mutate<void>('delete', `/employees/${id}`),
     resign: (id: number, reason: string, lastDay: string | null) =>
         mutate<Employee>('post', `/employees/${id}/resign`, { reason, last_day: lastDay }),
     cancelResign: (id: number) => mutate<Employee>('post', `/employees/${id}/cancel-resign`),
