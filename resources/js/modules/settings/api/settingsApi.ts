@@ -19,8 +19,12 @@ export interface SettingsData {
     ticket_sla: TicketSlaTargets;
     ticket_sla_response: number;
     ticket_sla_hours: TicketSlaHours;
-    default_employee_role: string;
-    default_employee_role_label: string;
+    /**
+     * Name of the role a new employee ends up with, via the default Role Group set on the
+     * Permission page. Null when no default group is set — the install has no role to give,
+     * and SetCredentialsModal says so instead of letting an account be created without one.
+     */
+    default_employee_role_label: string | null;
 }
 
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).

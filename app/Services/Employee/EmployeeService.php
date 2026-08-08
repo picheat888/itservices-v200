@@ -15,9 +15,16 @@ use App\Services\Request\RequestNotificationService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 class EmployeeService
 {
+    /**
+     * Sent when no role can be resolved for a login account. A code, not a sentence, so
+     * the SPA writes it out in the reader's language — same contract as ChainBlockReason.
+     */
+    public const NO_ROLE_CONFIGURED = 'no_role_configured';
+
     /**
      * Creates a new employee and assigns them to the default Role Group.
      * No login account is created automatically — a user with the
@@ -35,11 +42,7 @@ class EmployeeService
 
         // Assign to default group so the correct role key can be resolved
         // when the login account is provisioned later.
-        $defaultGroupId = (int) AppSetting::get('default_employee_group_id', 0);
-        if ($defaultGroupId) {
-            $group = GroupRole::find($defaultGroupId);
-            $group?->employees()->syncWithoutDetaching([$employee->id]);
-        }
+        $this->defaultGroupForNewEmployee()?->employees()->syncWithoutDetaching([$employee->id]);
 
         $this->notifyCredentialSetters($employee);
 
@@ -141,15 +144,64 @@ class EmployeeService
         return $employee->load(['department', 'position']);
     }
 
-    /** Returns the role_id from the employee's first GroupRole, or the base 'user' role id. */
+    /**
+     * The Role Group new employees are put into — whichever one an Admin marked as the
+     * default on the Permission page — or null when none is marked.
+     *
+     * The single place that setting is read: create() puts the person in this group, and
+     * defaultRoleForNewEmployee() takes the role from it. Two readers resolving it their
+     * own way is how the Add Employee form ended up displaying an unrelated
+     * `default_employee_role` setting that nothing applied, agreeing with reality only by
+     * accident.
+     */
+    private function defaultGroupForNewEmployee(): ?GroupRole
+    {
+        $groupId = (int) AppSetting::get('default_employee_group_id', 0);
+
+        return $groupId ? GroupRole::with('role')->find($groupId) : null;
+    }
+
+    /**
+     * The role a brand-new employee ends up with — whatever sits behind the default
+     * Role Group, and nothing else. Null when no default group is set.
+     *
+     * There is deliberately no fallback to a role key. An install is entitled to define
+     * its own Role Templates and delete the seeded ones, so any key named in code is a
+     * guess about somebody else's configuration; a system that has not been told which
+     * role new people get should say so, not pick one.
+     */
+    public function defaultRoleForNewEmployee(): ?Role
+    {
+        return $this->defaultGroupForNewEmployee()?->role;
+    }
+
+    /**
+     * The role_id for this employee's login account: their own Role Group's role, else
+     * the default group's — the same answer the Add Employee form showed.
+     *
+     * Refuses when neither exists. This used to firstOrCreate a role keyed `user`, which
+     * on an install that configures its own templates conjured up a "Staff" role holding
+     * no permissions at all: an account that can sign in and reach nothing, carrying a
+     * role its administrator never made. Refusing puts the choice back with the person
+     * provisioning accounts, who is the one who can go and make it.
+     *
+     * @throws ValidationException when no Role Group answers for this employee
+     */
     private function resolveGroupRole(Employee $employee): int
     {
-        $group = $employee->groupRoles()->first();
+        $roleId = $employee->groupRoles()->first()?->role_id
+            ?? $this->defaultGroupForNewEmployee()?->role_id;
 
-        return $group?->role_id ?? Role::firstOrCreate(
-            ['key' => 'user'],
-            ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false],
-        )->id;
+        if ($roleId === null) {
+            // Code first so the SPA can translate it, English sentence second for any
+            // client that does not — the shape ChainBlockReason established.
+            throw ValidationException::withMessages(['role' => [
+                self::NO_ROLE_CONFIGURED,
+                'This employee is in no Role Group, and no default Role Group is set. Create one on the Permissions page and mark it the default before creating login accounts.',
+            ]]);
+        }
+
+        return $roleId;
     }
 
     /**

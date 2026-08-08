@@ -23,6 +23,14 @@ use Illuminate\Database\Seeder;
  * Non-destructive on a second run: it creates what is missing and leaves existing
  * rows alone, so upgrading an installed system never reverts a role that was
  * renamed, a permission that was revoked, or a template that was reworded.
+ *
+ * Deliberately NOT seeded: a Role Group, and the default-group setting that decides
+ * which role new employees receive. Those are the administrator's own answer about
+ * their organisation, and an install is free to delete every template below and write
+ * its own. Until one is created and marked the default on the Permissions page,
+ * EmployeeService refuses to provision login accounts rather than guessing a role.
+ * The administrator account itself is exempt: it carries the super role directly, so
+ * there is always a way in to set this up.
  */
 class DatabaseSeeder extends Seeder
 {

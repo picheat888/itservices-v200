@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Enums\Request\ChainBlockReason;
+use App\Enums\Request\RequestType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Employee\StoreEmployeeRequest;
 use App\Http\Resources\Access\EmployeeAccessResource;
@@ -17,11 +19,14 @@ use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Models\Workflow\Workflow;
 use App\Services\Access\AccessService;
 use App\Services\Employee\ApprovalChainService;
 use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Employee\EmployeeService;
+use App\Services\Request\WorkflowResolverService;
+use App\Support\RequestSchemas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -45,6 +50,13 @@ class EmployeeController extends Controller
      * @var list<string>
      */
     private const USERNAME_RULES = ['required', 'string', 'max:30', 'regex:/^[A-Za-z][A-Za-z0-9._-]*[A-Za-z0-9]$/'];
+
+    /**
+     * The one reason a day-one service cannot be requested that is not a ChainBlockReason:
+     * the service's workflow is missing or switched off. Sits beside those codes in the
+     * precheck response so the SPA translates all of them the same way.
+     */
+    private const WORKFLOW_INACTIVE = 'workflow_inactive';
 
     /**
      * Password policy for admin-set credentials — the complexity set Active Directory and most
@@ -458,6 +470,100 @@ class EmployeeController extends Controller
     }
 
     /**
+     * The detail each day-one service asks for, so Step 3 can collect it instead of
+     * filing a request with no device type on it.
+     *
+     * Reads RequestSchemas, which resolves every `managed` choice out of
+     * request_options — so a device type IT adds under Settings → Request data appears
+     * here without a deploy, which is the whole point of those fields being rows.
+     *
+     * A separate endpoint from service-requests/options on purpose: that one is gated by
+     * requests.submit and carries every request type, its workflow and five source lists.
+     * The HR role happens to hold requests.submit today, but an administrator can revoke
+     * it, and Step 3 would then break on a permission belonging to a module this form
+     * never opens. Gated by employees.add — the cross-module "peek" rule.
+     */
+    public function onboardingServices(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+
+        $services = array_map(fn (string $service) => [
+            'service' => $service,
+            'fields' => RequestSchemas::for(RequestType::from($service)),
+        ], EmployeeOnboardingService::SERVICES);
+
+        return response()->json(['data' => $services, 'message' => 'success']);
+    }
+
+    /**
+     * Whether the day-one service requests on the Add Employee form could be filed for
+     * somebody who does not exist yet — asked while Step 3 is on screen, so the form can
+     * say why up front instead of after the employee is already saved.
+     *
+     * Routing depends on nothing but the two Step-2 answers: who they report to, and
+     * what position they hold. An unsaved Employee carrying just those two is therefore
+     * enough for the real blockReason() to judge, which is the point — the preview
+     * cannot drift from what Save actually does, because it is the same code.
+     *
+     * Advisory only. RequestService checks again at submit time, which is what catches a
+     * manager who resigns while this dialog sits open.
+     *
+     * Gated by employees.add, not workflows.view: the Add Employee form is the only
+     * caller and this reads Workflow data on its behalf — the cross-module "peek" rule.
+     */
+    public function onboardingPrecheck(Request $request, WorkflowResolverService $resolver, ApprovalChainService $chain): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.add'), 403);
+
+        $data = $request->validate([
+            'manager_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'position_id' => ['nullable', 'integer', 'exists:positions,id'],
+        ]);
+
+        $prospect = new Employee([
+            'manager_id' => $data['manager_id'] ?? null,
+            'position_id' => $data['position_id'] ?? null,
+        ]);
+
+        /** @var array<string, string> $codes service => block code */
+        $codes = [];
+        foreach (EmployeeOnboardingService::SERVICES as $service) {
+            $workflow = Workflow::where('request_type', $service)->first();
+            $code = $workflow === null || ! $workflow->active
+                ? self::WORKFLOW_INACTIVE
+                : $resolver->blockReason($workflow, $prospect)?->value;
+
+            if ($code !== null) {
+                $codes[$service] = $code;
+            }
+        }
+
+        // One banner covers all three services, so pick the reason worth putting on it:
+        // a reporting line that cannot carry the request is what the person filling this
+        // form can go and fix, while a closed workflow is the admin's and only earns the
+        // banner when nothing else is wrong.
+        $reason = collect([
+            ChainBlockReason::ApproverResigned->value,
+            ChainBlockReason::NoManager->value,
+            self::WORKFLOW_INACTIVE,
+        ])->first(fn (string $candidate) => in_array($candidate, $codes, true));
+
+        // Named only for the resigned case — that is the one message that is useless
+        // without knowing whose record to go and fix.
+        $resigned = $reason === ChainBlockReason::ApproverResigned->value
+            ? $chain->chainFor($prospect)->filter(fn (Employee $manager) => $manager->status === EmployeeStatus::Resigned)->values()
+            : collect();
+
+        return response()->json([
+            'can_request' => $codes === [],
+            'reason' => $reason,
+            'blocked_services' => array_keys($codes),
+            'resigned_in_chain' => ApproverNodeResource::collection($resigned),
+            'message' => 'success',
+        ]);
+    }
+
+    /**
      * Creates the employee, then — for the day-one services ticked on the form —
      * files one service request per service on their behalf.
      *
@@ -468,7 +574,8 @@ class EmployeeController extends Controller
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
         $data = $this->handlePhoto($request, $request->validated());
-        $services = array_values((array) ($data['services'] ?? []));
+        // Keyed by service, each carrying the fields Step 3 collected for it.
+        $services = (array) ($data['services'] ?? []);
         $note = $data['onboarding_note'] ?? null;
         unset($data['services'], $data['onboarding_note']);
 

@@ -106,6 +106,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpi
     Route::get('employees/import-template', [EmployeeController::class, 'importTemplate'])->name('api.employees.import-template');
     Route::post('employees/import/preview', [EmployeeController::class, 'importPreview'])->name('api.employees.import.preview');
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('api.employees.import');
+    // Asked from Step 3 of the Add Employee form, before the employee exists — can the
+    // day-one service requests actually be routed for somebody reporting to this manager?
+    Route::get('employees/onboarding-precheck', [EmployeeController::class, 'onboardingPrecheck'])->name('api.employees.onboarding-precheck');
+    // What each day-one service asks for (device type, mailbox address), read from the
+    // Request module's schemas so Step 3 collects it instead of filing a blank request.
+    Route::get('employees/onboarding-services', [EmployeeController::class, 'onboardingServices'])->name('api.employees.onboarding-services');
     Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('api.employees.resign');
     Route::post('employees/{employee}/cancel-resign', [EmployeeController::class, 'cancelResign'])->name('api.employees.cancel-resign');
     Route::put('employees/{employee}/credentials', [EmployeeController::class, 'updateCredentials'])->name('api.employees.credentials.update');
@@ -237,7 +243,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpi
 
     // Permissions / RBAC + audit
     Route::get('permissions', [RolePermissionController::class, 'index'])->name('api.permissions.index');
-    Route::put('permissions/default-role', [RolePermissionController::class, 'setDefaultRole'])->name('api.permissions.default-role');
     Route::get('permissions/{role}/members', [RolePermissionController::class, 'members'])->name('api.permissions.members');
     Route::put('permissions/{role}', [RolePermissionController::class, 'update'])->name('api.permissions.update');
     Route::post('roles', [RoleController::class, 'store'])->name('api.roles.store');

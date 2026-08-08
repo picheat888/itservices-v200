@@ -72,13 +72,15 @@ class RequestSchemas
                     ['label_en' => 'Tablet', 'label_th' => 'แท็บเล็ต'],
                     ['label_en' => 'Pocket Wi-Fi', 'label_th' => 'พ็อกเก็ตไวไฟ'],
                 ]],
-                ['key' => 'sim', 'label_en' => 'SIM & data plan', 'label_th' => 'ต้องการซิม / แพ็กเกจดาต้า', 'input' => 'select', 'options' => [
+                // Required: left blank, IT has to go and ask, which is the one thing the
+                // field exists to prevent. Two options, so answering costs a single click.
+                ['key' => 'sim', 'label_en' => 'SIM & data plan', 'label_th' => 'ต้องการซิม / แพ็กเกจดาต้า', 'input' => 'select', 'required' => true, 'options' => [
                     ['value' => 'yes', 'label_en' => 'Yes', 'label_th' => 'ต้องการ'],
                     ['value' => 'no', 'label_en' => 'No', 'label_th' => 'ไม่ต้องการ'],
                 ]],
             ],
             RequestType::Email->value => [
-                ['key' => 'address', 'label_en' => 'Requested address', 'label_th' => 'อีเมลที่ต้องการ', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'name@inaba.co.th'],
+                ['key' => 'address', 'label_en' => 'Requested address', 'label_th' => 'อีเมลที่ต้องการ', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'john.doe@example.com'],
             ],
             RequestType::Social->value => [
                 ['key' => 'social_platform_id', 'label_en' => 'Platform', 'label_th' => 'แพลตฟอร์ม', 'input' => 'source', 'source' => 'social_platforms', 'required' => true],

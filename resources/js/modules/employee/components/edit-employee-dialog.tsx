@@ -338,22 +338,47 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
         </div>
     );
 
+    /*
+     * Every field turns autofill off: this form records ANOTHER person, so the browser's
+     * saved name/email/phone are never the right answer. Left unset, Chrome guesses from
+     * the labels and drops the operator's own details into several boxes at once.
+     */
     const nameFields = (
         <>
             <div className="grid grid-cols-2 gap-3">
                 <Field label={t('emp_first_name')} required name="firstName" error={errors.firstName}>
-                    <Input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="John" />
+                    <Input
+                        value={form.firstName}
+                        onChange={(e) => set('firstName', e.target.value)}
+                        placeholder={t('emp_first_name_ph')}
+                        autoComplete="off"
+                    />
                 </Field>
                 <Field label={t('emp_last_name')} required name="lastName" error={errors.lastName}>
-                    <Input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Doe" />
+                    <Input
+                        value={form.lastName}
+                        onChange={(e) => set('lastName', e.target.value)}
+                        placeholder={t('emp_last_name_ph')}
+                        autoComplete="off"
+                    />
                 </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
                 <Field label={t('emp_first_name_th')}>
-                    <Input value={form.firstNameTh} onChange={(e) => set('firstNameTh', e.target.value)} placeholder="สมชาย" />
+                    <Input
+                        value={form.firstNameTh}
+                        onChange={(e) => set('firstNameTh', e.target.value)}
+                        placeholder={t('emp_first_name_th_ph')}
+                        autoComplete="off"
+                    />
                 </Field>
                 <Field label={t('emp_last_name_th')}>
-                    <Input value={form.lastNameTh} onChange={(e) => set('lastNameTh', e.target.value)} placeholder="สุขสวัสดิ์" />
+                    <Input
+                        value={form.lastNameTh}
+                        onChange={(e) => set('lastNameTh', e.target.value)}
+                        placeholder={t('emp_last_name_th_ph')}
+                        autoComplete="off"
+                    />
                 </Field>
             </div>
         </>
@@ -362,7 +387,13 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
     const contactFields = (
         <div className="grid grid-cols-2 gap-3">
             <Field label={t('emp_email')} name="email" error={errors.email}>
-                <Input className="font-mono" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="john.doe@example.com" />
+                <Input
+                    className="font-mono"
+                    value={form.email}
+                    onChange={(e) => set('email', e.target.value)}
+                    placeholder="john.doe@example.com"
+                    autoComplete="off"
+                />
             </Field>
             <Field label={t('emp_phone')} name="phone" error={errors.phone}>
                 <Input
@@ -371,6 +402,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
                     onChange={(e) => set('phone', e.target.value)}
                     placeholder="+66 81 234 5678 / ext. 1305"
                     inputMode="tel"
+                    autoComplete="off"
                 />
             </Field>
         </div>
@@ -381,6 +413,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             <SearchableSelect
                 value={form.departmentId}
                 onChange={setDepartment}
+                placeholder={t('department_ph')}
                 options={departments.map((d) => ({
                     value: String(d.id),
                     label: lang === 'th' ? (d.name_th ?? d.name) : d.name,
@@ -395,6 +428,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             <SearchableSelect
                 value={form.sectionId}
                 onChange={(v) => set('sectionId', v)}
+                placeholder={t('emp_section_ph')}
                 options={
                     form.departmentId
                         ? sections.map((s) => ({
@@ -414,6 +448,7 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             <SearchableSelect
                 value={form.positionId}
                 onChange={(v) => set('positionId', v)}
+                placeholder={t('position_ph')}
                 options={positions.map((p) => ({
                     value: String(p.id),
                     label: p.title,
@@ -425,7 +460,13 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const managerField = (
         <Field label={t('emp_manager')} help={t('emp_manager_help')} required={!posIsSpecial} name="managerId" error={errors.managerId}>
-            <SearchableSelect value={form.managerId} onChange={(v) => set('managerId', v)} options={managerOptions} clearable />
+            <SearchableSelect
+                value={form.managerId}
+                onChange={(v) => set('managerId', v)}
+                placeholder={t('emp_manager_ph')}
+                options={managerOptions}
+                clearable
+            />
         </Field>
     );
 
@@ -437,7 +478,16 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
 
     const codeField = (
         <Field label={t('emp_employee_id')} help={t('emp_id_help')}>
-            <Input className="font-mono" value={form.code} onChange={(e) => set('code', e.target.value)} placeholder={t('emp_id_auto')} />
+            {/* The code itself is mono; the placeholder is a Thai sentence and JetBrains Mono
+                carries no Thai glyphs, so it would fall back to whatever the browser picks.
+                Only font-sans names a Thai face. */}
+            <Input
+                className="font-mono placeholder:font-sans"
+                value={form.code}
+                onChange={(e) => set('code', e.target.value)}
+                placeholder={t('emp_id_auto')}
+                autoComplete="off"
+            />
         </Field>
     );
 
