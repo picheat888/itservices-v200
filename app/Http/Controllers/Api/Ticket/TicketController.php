@@ -13,6 +13,7 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Request\RequestService;
 use App\Services\Sidebar\SidebarBadgeService;
 use App\Services\Ticket\TicketService;
 use App\Support\Permissions;
@@ -544,8 +545,13 @@ class TicketController extends Controller
     /**
      * The assignee completes or cancels an in-progress case with a resolution note
      * (tickets.resolve). Only the assignee may close their own case.
+     *
+     * A case a request auto-opened settles that request too — see
+     * RequestService::settleFromTicket. Closing the case is the delivery; making the
+     * technician press Fulfil afterwards recorded one real event twice, and a request
+     * whose work was long finished sat in the queue until somebody remembered it.
      */
-    public function resolve(Request $request, Ticket $ticket): JsonResponse
+    public function resolve(Request $request, Ticket $ticket, RequestService $requests): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
         abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can resolve this ticket.');
@@ -556,8 +562,11 @@ class TicketController extends Controller
             'resolution' => ['required', 'string', 'min:10', 'max:5000'],
         ]);
 
-        $ticket = $this->service->resolve($ticket, $data['mode'] === 'complete', $data['resolution']);
+        $completed = $data['mode'] === 'complete';
+        $ticket = $this->service->resolve($ticket, $completed, $data['resolution']);
         AuditLog::record('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
+
+        $requests->settleFromTicket($ticket, $request->user(), $completed, $data['resolution']);
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();

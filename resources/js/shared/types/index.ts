@@ -921,7 +921,7 @@ export interface ServiceRequest {
     /** The account that filed it — set only when that is not the owner (on-behalf). */
     submitted_by: { user_id: number; name: string | null } | null;
     workflow: { id: number | null; name?: string | null };
-    ticket?: { id: number; ticket_no: string; status: string | null } | null;
+    ticket?: { id: number; ticket_no: string; status: string | null; assignee: string | null } | null;
     approvals?: RequestApproval[];
     /** Compact chain summary for table rows (WorkflowMini). */
     progress: { total: number; done: number; current_label: string | null };

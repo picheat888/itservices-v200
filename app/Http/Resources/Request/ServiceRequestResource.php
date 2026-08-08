@@ -81,6 +81,10 @@ class ServiceRequestResource extends JsonResource
                 'id' => $this->ticket->id,
                 'ticket_no' => $this->ticket->ticket_no,
                 'status' => $this->ticket->status?->value,
+                // Who has the case. The IT queue step is where a request actually sits
+                // for most of its life, and "waiting" says nothing about whether anybody
+                // has picked it up yet.
+                'assignee' => $this->ticket->assignee?->name,
             ]),
             'approvals' => RequestApprovalResource::collection($approvals),
             // Compact chain summary for table rows (WorkflowMini).

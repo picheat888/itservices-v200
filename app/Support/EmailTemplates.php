@@ -135,6 +135,19 @@ class EmailTemplates
                 'cadence' => 'realtime',
             ],
             [
+                // Approved, then IT could not deliver it — a different message from
+                // request.rejected, which is an approver saying no during the chain.
+                'key' => 'request.not_delivered',
+                'name' => 'Request could not be delivered',
+                'subject' => 'Your request {{reference.id}} was closed without delivery',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Your request <strong>{{request.title}}</strong> was approved, but the IT team could not deliver it.</p>
+<p><strong>Reason:</strong> {{remark}}</p>
+<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 'key' => 'asset.assigned',
                 'name' => 'Asset assigned to you',
                 'subject' => 'An asset has been assigned to you',

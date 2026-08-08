@@ -17,6 +17,7 @@ use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Location;
 use App\Models\Settings\RequestOption;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Ticket\TicketService;
@@ -257,6 +258,83 @@ class RequestService
     }
 
     /** Requester withdraws their own still-pending request. */
+    /**
+     * The ticket a request auto-opened has been closed, so the request follows it.
+     *
+     * Closing that ticket IS the delivery: the technician who resolves it is the person
+     * who handed the laptop over, and the resolution text they had to write is already
+     * the record of what happened. Asking them to go and press Fulfil afterwards was a
+     * second act of bookkeeping for one real event, and a request whose work was finished
+     * days ago would sit in the queue until somebody remembered.
+     *
+     * A cancelled ticket cancels the request rather than rejecting it: no approver
+     * refused this one — it cleared every step and then could not be delivered, so
+     * counting it as a rejection would misreport the approval chain. The ticket's own
+     * resolution is stamped on the fulfilment row, which is the same words on both sides
+     * for whoever checks later.
+     *
+     * Deliberately not gated by requests.fulfill. The gate that matters already fired:
+     * only the ticket's assignee may resolve it. Refusing here would leave the ticket
+     * closed and the request stranded, which is the state this exists to prevent.
+     *
+     * Does nothing when the ticket belongs to no request, or when that request has
+     * already settled — closing a ticket twice must not rewrite a decided request.
+     */
+    public function settleFromTicket(Ticket $ticket, User $actor, bool $completed, string $resolution): void
+    {
+        $request = ServiceRequest::where('ticket_id', $ticket->id)->first();
+        if ($request === null || $request->status !== RequestStatus::Approved) {
+            return;
+        }
+
+        $settled = DB::transaction(function () use ($request, $actor, $completed, $resolution) {
+            $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
+            if ($fresh->status !== RequestStatus::Approved) {
+                return null;
+            }
+
+            $queueRow = $fresh->approvals()
+                ->where('kind', WorkflowStepKind::Fulfillment->value)
+                ->where('status', ApprovalStatus::Current->value)
+                ->first();
+
+            $queueRow?->update([
+                'status' => ($completed ? ApprovalStatus::Approved : ApprovalStatus::Rejected)->value,
+                'note' => $resolution,
+                'acted_by_user_id' => $actor->id,
+                'acted_by_name' => $actor->name,
+                'acted_at' => now(),
+            ]);
+
+            $fresh->update($completed
+                ? ['status' => RequestStatus::Fulfilled->value, 'fulfilled_at' => now()]
+                : ['status' => RequestStatus::Cancelled->value, 'cancelled_at' => now()]);
+
+            return [$fresh, $queueRow];
+        });
+
+        if ($settled === null) {
+            return;
+        }
+
+        [$fresh, $queueRow] = $settled;
+        // Named for how it happened, so the trail says the ticket closed this and not
+        // that somebody went and pressed the button.
+        AuditLog::record(
+            $completed ? 'Fulfilled request via ticket' : 'Cancelled request via ticket',
+            $fresh->reference,
+            ['ticket' => $ticket->ticket_no],
+        );
+
+        $fresh->refresh()->load('approvals');
+        // Both go to the requester and whoever filed it for them. NOT cancelled(), which
+        // speaks to an approver still holding a pending request — there is none here, so
+        // that route reached nobody and the request closed in silence.
+        $completed
+            ? $this->notifications->fulfilled($fresh)
+            : $this->notifications->notDelivered($fresh, $queueRow?->note);
+    }
+
     public function cancel(ServiceRequest $request, User $actor): ServiceRequest
     {
         // The owner withdraws their own request; for one filed on somebody's behalf
