@@ -4,7 +4,6 @@ namespace App\Models\Request;
 
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestOrigin;
-use App\Enums\Request\RequestPriority;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Models\Access\EmailGroup;
@@ -33,7 +32,7 @@ class ServiceRequest extends Model
         // Who pressed Save, which is only a different person for on-behalf origins
         // (HR filing a new employee's onboarding requests).
         'submitted_by_user_id', 'submitted_by_name',
-        'title', 'reason', 'priority', 'estimated_value', 'fields',
+        'title', 'reason', 'fields',
         'status', 'ticket_id',
         // What the request points at — real columns with real foreign keys, so a
         // reference cannot outlive the row it names (see RequestSchemas
@@ -69,7 +68,6 @@ class ServiceRequest extends Model
             'type' => RequestType::class,
             'origin' => RequestOrigin::class,
             'status' => RequestStatus::class,
-            'priority' => RequestPriority::class,
             'fields' => 'array',
             'auto_ticket' => 'boolean',
             'approved_at' => 'datetime',

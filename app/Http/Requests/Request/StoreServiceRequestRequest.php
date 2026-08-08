@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Request;
 
-use App\Enums\Request\RequestPriority;
 use App\Enums\Request\RequestType;
 use App\Support\RequestSchemas;
 use Illuminate\Foundation\Http\FormRequest;
@@ -29,10 +28,6 @@ class StoreServiceRequestRequest extends FormRequest
             'type' => ['required', Rule::enum(RequestType::class)],
             'title' => ['required', 'string', 'min:5', 'max:200'],
             'reason' => ['required', 'string', 'min:10', 'max:5000'],
-            // The form no longer asks for these two; they stay accepted so an API
-            // caller can still set them, and default on the service when absent.
-            'priority' => ['sometimes', Rule::enum(RequestPriority::class)],
-            'estimated_value' => ['nullable', 'string', 'max:120'],
             'fields' => ['array'],
         ];
 

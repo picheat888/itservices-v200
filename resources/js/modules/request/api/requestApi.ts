@@ -36,9 +36,6 @@ export interface SubmitRequestPayload {
     type: string;
     title: string;
     reason: string;
-    /** Optional — the form no longer asks; the server defaults it. */
-    priority?: string;
-    estimated_value?: string | null;
     fields: Record<string, string | number>;
 }
 
