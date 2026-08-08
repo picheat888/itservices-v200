@@ -314,7 +314,11 @@ class RequestOptionTest extends TestCase
     {
         $this->seed(WorkflowSeeder::class);
 
-        $employee = Employee::create(['first_name' => 'Requester']);
+        // A requester needs a reporting line that can carry the request — submitting
+        // without one is refused now (see ChainBlockReason), so the fixture gives them
+        // a manager. Which rung it matches does not matter to these tests.
+        $manager = Employee::create(['first_name' => 'Boss']);
+        $employee = Employee::create(['first_name' => 'Requester', 'manager_id' => $manager->id]);
         $user = User::factory()->create(['role' => 'mdadmin', 'employee_id' => $employee->id]);
 
         return app(RequestService::class)->submit($user, [

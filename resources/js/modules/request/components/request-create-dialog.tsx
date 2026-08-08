@@ -5,7 +5,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
-import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, isEmail } from '@/shared/lib/utils';
 import type { RequestFieldSchema, ServiceRequest, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -178,7 +178,15 @@ export function RequestCreateDialog({
                 setErr(serverErrs);
                 setStep(serverErrs.type ? 0 : 1);
             }
-            useToastStore.getState().push(resp?.message ?? 'Something went wrong.', 'error');
+            // A refused reporting line arrives as a code (see ChainBlockReason) so it can
+            // be read in the viewer's language; anything else falls back to the server's
+            // own message.
+            const blockKey = REQUEST_BLOCK_REASON_LABEL[resp?.errors?.requester?.[0] ?? ''];
+            useToastStore.getState().push(
+                blockKey ? t(blockKey) : (resp?.message ?? 'Something went wrong.'),
+                'error',
+                blockKey ? t('req_block_title') : undefined,
+            );
         }
     };
 

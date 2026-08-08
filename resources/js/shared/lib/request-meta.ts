@@ -46,6 +46,17 @@ export const REQUEST_SKIP_REASON_LABEL: Record<ApprovalSkipReason, string> = {
     requester_is_owner: 'req_skip_requester_is_owner',
 };
 
+/**
+ * Wording per reason a submission is refused outright (mirrors
+ * App\Enums\Request\ChainBlockReason). The server sends the code as the first
+ * `requester` error and an English sentence as the second, so a client that does
+ * not translate still says something useful; the SPA prefers the code.
+ */
+export const REQUEST_BLOCK_REASON_LABEL: Record<string, string> = {
+    chain_no_manager: 'req_block_no_manager',
+    chain_approver_resigned: 'req_block_approver_resigned',
+};
+
 /** Badge tone + label key per request status, for the shared StatusBadge. */
 export const REQUEST_STATUS_META: Record<ServiceRequestStatus, { tone: 'amber' | 'blue' | 'green' | 'red' | 'gray'; labelKey: string }> = {
     pending: { tone: 'amber', labelKey: 'req_status_pending' },
