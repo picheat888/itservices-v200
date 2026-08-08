@@ -861,7 +861,6 @@ export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfil
  * has no login yet — which is what approvers are shown.
  */
 export type ServiceRequestOrigin = 'direct' | 'onboarding';
-export type ServiceRequestPriority = 'low' | 'medium' | 'high';
 export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' | 'skipped';
 /**
  * Why the engine skipped a step (mirrors App\Enums\Request\ApprovalSkipReason).
@@ -899,14 +898,25 @@ export interface ServiceRequest {
     type: ServiceRequestType;
     title: string;
     reason: string;
-    priority: ServiceRequestPriority;
-    estimated_value: string | null;
     fields: Record<string, string | number | null>;
     /** Point-in-time labels + resolved values, snapshotted at submit. */
     fields_display: { key: string; label_en: string; label_th: string; value: string; mono: boolean }[];
     status: ServiceRequestStatus;
     auto_ticket: boolean;
-    requester: { employee_id: number | null; user_id: number | null; name: string; department: string | null };
+    /**
+     * `name` / `department` are the snapshot taken at submit; `code` / `position` /
+     * `photo_url` come off the live employee record and are present on the detail
+     * payload only (the list does not load it).
+     */
+    requester: {
+        employee_id: number | null;
+        user_id: number | null;
+        name: string;
+        department: string | null;
+        code?: string | null;
+        position?: string | null;
+        photo_url?: string | null;
+    };
     origin: ServiceRequestOrigin;
     /** The account that filed it — set only when that is not the owner (on-behalf). */
     submitted_by: { user_id: number; name: string | null } | null;

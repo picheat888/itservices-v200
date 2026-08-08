@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { isOnBehalfRequest, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
@@ -78,13 +79,20 @@ function RequestDetailLoading() {
 
             <div className="border-border/60 grid gap-8 border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                 <div className="space-y-5">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <div key={i} className="space-y-1.5">
-                                <Skeleton className="h-2.5 w-20" />
-                                <Skeleton className="h-4 w-32" />
+                    {/* Requester: badge photo on the left, four labelled fields beside it. */}
+                    <div className="space-y-2">
+                        <Skeleton className="h-2.5 w-20" />
+                        <div className="flex items-stretch gap-4">
+                            <Skeleton className="w-[68px] shrink-0 rounded-lg" />
+                            <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3.5">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div key={i} className="space-y-1.5">
+                                        <Skeleton className="h-2.5 w-20" />
+                                        <Skeleton className="h-4 w-28" />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
                     </div>
                     <Skeleton className="h-16 w-full rounded-lg" />
                     <Skeleton className="h-24 w-full rounded-xl" />
@@ -183,11 +191,9 @@ function RequestDetailBody({
             <div className="border-border/60 grid flex-1 gap-8 overflow-y-auto border-t px-6 py-6 md:grid-cols-[1.15fr_1fr]">
                 {/* Left — summary + typed fields */}
                 <div className="min-w-0 space-y-5">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-                        <KV label={t('req_requester')} value={request.requester.name} />
-                        <KV label={t('req_department')} value={request.requester.department ?? '—'} />
-                        <KV label={t('req_created')} value={request.created_at} mono />
-                        {request.submitted_by && <KV label={t('req_submitted_by')} value={request.submitted_by.name ?? '—'} />}
+                    <div>
+                        <SectionLabel>{t('req_requester')}</SectionLabel>
+                        <RequesterCard requester={request.requester} />
                     </div>
 
                     <div>
@@ -278,6 +284,42 @@ function RequestDetailBody({
     );
 }
 
+/**
+ * Who is asking: the photo, then the same labelled fields the rest of the dialog
+ * uses. Code / position / photo come off the live employee record, so a request
+ * whose requester has no employee link shows the name and department that were
+ * snapshotted at submit and a dash for the other two.
+ */
+function RequesterCard({ requester }: { requester: ServiceRequest['requester'] }) {
+    const t = useT();
+    const getInitials = useInitials();
+
+    return (
+        <div className="flex items-stretch gap-4">
+            {/* Badge photo: a portrait tile, not a disc, and it stretches to the height
+                of the fields beside it — so the block reads as one ID card instead of
+                a circle floating in its own margin. Initials until somebody uploads. */}
+            <div className="border-border bg-muted w-[68px] shrink-0 overflow-hidden rounded-lg border">
+                {requester.photo_url ? (
+                    <img src={requester.photo_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                    <div className="text-muted-foreground flex h-full items-center justify-center text-lg font-semibold">
+                        {getInitials(requester.name || '?')}
+                    </div>
+                )}
+            </div>
+
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3.5">
+                <KV label={t('req_requester_name')} value={requester.name} />
+                <KV label={t('req_emp_code')} value={requester.code || '—'} mono />
+                <KV label={t('position')} value={requester.position || '—'} />
+                <KV label={t('department')} value={requester.department ?? '—'} />
+            </div>
+        </div>
+    );
+}
+
+/** One labelled field: small uppercase label over its value. */
 function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
     return (
         <div className="min-w-0">
