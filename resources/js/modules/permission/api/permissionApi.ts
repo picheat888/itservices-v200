@@ -8,6 +8,8 @@ export interface RoleRow {
     is_super: boolean;
     is_system: boolean;
     members: number;
+    /** How many Role Groups point at this role — deletion is refused while any do. */
+    groups: number;
     permissions: string[];
 }
 

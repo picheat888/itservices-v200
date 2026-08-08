@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Permission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
+use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
@@ -32,7 +33,15 @@ class RolePermissionController extends Controller
             ->groupBy('role_id')
             ->pluck('cnt', 'role_id');
 
-        $roles = Role::orderByDesc('is_system')->orderBy('name')->get()->map(function (Role $role) use ($permsByRoleId, $memberCounts) {
+        // Single query: how many Role Groups point at each role. Deleting one is refused
+        // while a group still uses it, so the page can say which of the three reasons
+        // applies before opening a confirm dialog it already knows will be refused.
+        $groupCounts = GroupRole::select('role_id', DB::raw('count(*) as cnt'))
+            ->whereNotNull('role_id')
+            ->groupBy('role_id')
+            ->pluck('cnt', 'role_id');
+
+        $roles = Role::orderByDesc('is_system')->orderBy('name')->get()->map(function (Role $role) use ($permsByRoleId, $memberCounts, $groupCounts) {
             // super bypasses the checks rather than holding grants, so its stored rows
             // are never read — the matrix shows the whole catalogue instead.
             $isSuper = UserRole::isSuperKey($role->key);
@@ -47,6 +56,7 @@ class RolePermissionController extends Controller
                 'is_super' => $isSuper,
                 'is_system' => $role->is_system,
                 'members' => (int) ($memberCounts[$role->id] ?? 0),
+                'groups' => (int) ($groupCounts[$role->id] ?? 0),
                 'permissions' => $allowed,
             ];
         });
@@ -99,22 +109,6 @@ class RolePermissionController extends Controller
             'Updated permissions',
             Role::where('key', $role)->value('name') ?? $role,
             ['added' => $added, 'removed' => $removed],
-        );
-
-        return $this->index($request);
-    }
-
-    public function setDefaultRole(Request $request): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-
-        $data = $request->validate([
-            'role' => ['required', 'string', Rule::exists('roles', 'key')],
-        ]);
-
-        AuditLog::record(
-            'Set default employee role',
-            Role::where('key', $data['role'])->value('name') ?? $data['role'],
         );
 
         return $this->index($request);

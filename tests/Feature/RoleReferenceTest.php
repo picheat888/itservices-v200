@@ -85,4 +85,38 @@ class RoleReferenceTest extends TestCase
         $this->assertDatabaseMissing('roles', ['id' => $custom->id]);
         $this->assertDatabaseMissing('role_permissions', ['role_id' => $custom->id]);
     }
+
+    public function test_a_refused_delete_says_which_of_the_three_reasons_applies(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $inUse = Role::create(['key' => 'inuse', 'name' => 'In Use', 'color' => '#111', 'is_system' => false]);
+        GroupRole::create(['name' => 'All Staff', 'role_id' => $inUse->id]);
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+
+        // The confirm dialog shows a 422's message verbatim, so a bare "cannot delete"
+        // would leave the reader with nothing to act on.
+        $this->deleteJson('/api/roles/inuse')
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Role is still used by a Role Group. Reassign it first.');
+
+        $this->assertDatabaseHas('roles', ['id' => $inUse->id]);
+    }
+
+    public function test_the_matrix_counts_the_groups_using_each_role(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Admin', 'color' => '#000', 'is_system' => true]);
+        $used = Role::create(['key' => 'used', 'name' => 'Used', 'color' => '#111', 'is_system' => false]);
+        Role::create(['key' => 'spare', 'name' => 'Spare', 'color' => '#222', 'is_system' => false]);
+        GroupRole::create(['name' => 'All Staff', 'role_id' => $used->id]);
+        GroupRole::create(['name' => 'IT Team', 'role_id' => $used->id]);
+
+        // The page needs this to name the blocker before opening a dialog that would
+        // only be refused — it already knows about members and system roles.
+        $rows = collect($this->actingAs(User::factory()->create(['role' => 'super']))
+            ->getJson('/api/permissions')->assertOk()->json('data.roles'))
+            ->keyBy('value');
+
+        $this->assertSame(2, $rows['used']['groups']);
+        $this->assertSame(0, $rows['spare']['groups']);
+    }
 }

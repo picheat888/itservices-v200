@@ -167,6 +167,36 @@ function RolesTab() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [role?.value, data]);
 
+    /**
+     * Delete a role template, or explain why it cannot be — the API refuses on three
+     * grounds and the page already holds the answer to all three, so asking first turns
+     * "please try again" into what to go and change. Same shape as the department and
+     * position deletes. The API still enforces it; this only reaches the reason sooner.
+     */
+    const handleDeleteRole = (r: RoleRow) => {
+        const blocked = r.is_system
+            ? t('role_del_blocked_system')
+            : r.members > 0
+              ? t('role_del_blocked_members').replace('{n}', String(r.members))
+              : r.groups > 0
+                ? t('role_del_blocked_group').replace('{n}', String(r.groups))
+                : null;
+
+        if (blocked) {
+            confirm({
+                variant: 'warn',
+                hideCancel: true,
+                title: t('role_del_blocked_title'),
+                description: blocked,
+                // Nothing to agree to here — the one button acknowledges a refusal.
+                confirmText: t('role_del_blocked_ack'),
+            });
+            return;
+        }
+
+        void confirm({ variant: 'danger', entity: { name: r.label }, action: () => roleMut.remove.mutateAsync(r.value) });
+    };
+
     const dirty = useMemo(() => {
         if (!role) return false;
         const orig = new Set(role.permissions);
@@ -253,13 +283,9 @@ function RolesTab() {
                                         <Pencil className="h-3.5 w-3.5" />
                                     </button>
                                     <button
-                                        onClick={async (e) => {
+                                        onClick={(e) => {
                                             e.stopPropagation();
-                                            await confirm({
-                                                variant: 'danger',
-                                                entity: { name: r.label },
-                                                action: () => roleMut.remove.mutateAsync(r.value),
-                                            });
+                                            handleDeleteRole(r);
                                         }}
                                         className="text-destructive hover:bg-destructive/10 flex h-7 w-7 items-center justify-center rounded-md"
                                     >
