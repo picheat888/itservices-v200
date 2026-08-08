@@ -37,7 +37,7 @@ export function AppShell() {
 
             <div className="flex min-w-0 flex-1 flex-col">
                 <div className="relative">
-                    <Topbar onToggleNotif={() => setNotifOpen((v) => !v)} />
+                    <Topbar notifOpen={notifOpen} onToggleNotif={() => setNotifOpen((v) => !v)} />
                     {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
                 </div>
 
