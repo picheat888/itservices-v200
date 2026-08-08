@@ -201,19 +201,25 @@ function RequestDetailBody({
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.reason}</p>
                     </div>
 
-                    {request.fields_display.length > 0 && (
-                        <div>
-                            <SectionLabel>{t('req_service_section')}</SectionLabel>
-                            <div className="border-border divide-border/70 divide-y rounded-xl border">
-                                {request.fields_display.map((row) => (
-                                    <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
-                                        <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
-                                        <span className={cn('text-right font-medium break-all', row.mono && 'font-mono text-xs')}>{row.value}</span>
-                                    </div>
-                                ))}
+                    {/* Subject leads the table, repeating the title from the header: by the
+                        time an approver has read the requester and the reason, the header is
+                        a screen away, and the decision is about what was asked for. Always
+                        rendered — an onboarding request carries no typed fields at all. */}
+                    <div>
+                        <SectionLabel>{t('req_detail_section')}</SectionLabel>
+                        <div className="border-border divide-border/70 divide-y rounded-xl border">
+                            <div className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
+                                <span className="text-muted-foreground shrink-0 text-xs">{t('req_subject')}</span>
+                                <span className="text-right font-medium break-all">{request.title}</span>
                             </div>
+                            {request.fields_display.map((row) => (
+                                <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
+                                    <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
+                                    <span className={cn('text-right font-medium break-all', row.mono && 'font-mono text-xs')}>{row.value}</span>
+                                </div>
+                            ))}
                         </div>
-                    )}
+                    </div>
 
                     {/* Linked ticket */}
                     <div>

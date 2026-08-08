@@ -4,7 +4,13 @@ import { cn } from '@/shared/lib/utils';
 import type { ApprovalSkipReason, RequestApproval, ServiceRequest } from '@/shared/types';
 import { Bell, Check, Flag, KeyRound, SkipForward, X } from 'lucide-react';
 
-type TrailTone = 'done' | 'current' | 'rejected' | 'skipped' | 'queued';
+/**
+ * `cancelled` is the IT queue step closed without delivery. It is kept apart from
+ * `rejected` on purpose: nobody refused this request — it cleared every approval and
+ * then could not be delivered, and a red "refused" marker said the opposite. Muted,
+ * matching the grey the status badge already uses for a cancelled request.
+ */
+type TrailTone = 'done' | 'current' | 'rejected' | 'cancelled' | 'skipped' | 'queued';
 
 interface TrailItem {
     tone: TrailTone;
@@ -43,7 +49,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
     const stepMeta = (row: RequestApproval): string => {
         switch (row.status) {
             case 'approved':
-                return `${row.kind === 'fulfillment' ? t('req_trail_fulfilled_done') : t('req_trail_approved')}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+                return `${t('req_trail_approved')}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
             case 'rejected':
                 return `${t('req_trail_rejected')}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
             case 'current':
@@ -55,13 +61,50 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
         }
     };
 
+    /**
+     * The IT queue step, said in its own words. It is not an approval rung, so the
+     * approver vocabulary above reads wrong on it: "waiting" meant "waiting for
+     * approval" on a request that was approved days ago, and "rejected" meant
+     * "not approved" on work IT simply could not deliver.
+     *
+     * Once a ticket exists, the ticket is where this step actually stands — nobody has
+     * picked it up, or somebody is on it — so that is what it reports.
+     */
+    const fulfillmentMeta = (row: RequestApproval): string => {
+        if (row.status === 'waiting') return t('req_trail_after_approvals');
+        if (row.status === 'approved') {
+            // Naming who finished it: the trail says who decided every other step, and
+            // this is the one where the work actually happened.
+            const done = row.acted_by_name ? t('req_trail_fulfilled_by').replace('{name}', row.acted_by_name) : t('req_trail_fulfilled_done');
+
+            return `${done}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+        }
+        // Closed without delivery. Every approver said yes, so this is a cancellation —
+        // and it names who called it off, the same way the completed line does.
+        if (row.status === 'rejected') {
+            const stopped = row.acted_by_name ? t('req_trail_cancelled_by').replace('{name}', row.acted_by_name) : t('req_trail_not_delivered');
+
+            return `${stopped}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
+        }
+
+        const ticket = request.ticket;
+        if (ticket?.status === 'in_progress') {
+            return ticket.assignee ? t('req_trail_ticket_in_progress').replace('{name}', ticket.assignee) : t('req_trail_ticket_taken');
+        }
+        if (ticket?.status === 'open') return t('req_trail_ticket_waiting_take');
+
+        return t('req_trail_it_pending');
+    };
+
     for (const row of approvals) {
         const isFulfillment = row.kind === 'fulfillment';
         const tone: TrailTone =
             row.status === 'approved'
                 ? 'done'
                 : row.status === 'rejected'
-                  ? 'rejected'
+                  ? isFulfillment
+                      ? 'cancelled'
+                      : 'rejected'
                   : row.status === 'current'
                     ? 'current'
                     : row.status === 'skipped'
@@ -85,20 +128,14 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // A skipped step with a reason says it all inside the amber note below, so the
             // status line stays quiet instead of printing "skipped" twice. Rows from before
             // reasons were stored still get the plain word.
-            meta:
-                isFulfillment && row.status === 'waiting'
-                    ? t('req_trail_after_approvals')
-                    : row.status === 'skipped' && row.skip_reason
-                      ? ''
-                      : stepMeta(row),
+            meta: isFulfillment ? fulfillmentMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,
         });
-        // Fulfillment row also carries the auto-ticket footnote once opened.
-        if (isFulfillment && request.ticket) {
-            items[items.length - 1].meta += ` · ${t('req_trail_ticket_opened')}`;
-        }
+        // No auto-ticket footnote: the line above already reports the ticket's own state
+        // ("waiting to be picked up", "in progress by …"), which only reads that way
+        // because a ticket exists. The linked-ticket card below carries the number.
     }
 
     // Rejection bounces a Bell + Email back to the requester (per the diagram).
@@ -137,6 +174,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                                 item.tone === 'done' && 'border-emerald-500 bg-emerald-500 text-white',
                                 item.tone === 'current' && 'border-brand bg-brand/10 text-brand ring-brand/15 ring-[3px]',
                                 item.tone === 'rejected' && 'border-destructive bg-destructive text-white',
+                                item.tone === 'cancelled' && 'border-border bg-muted text-muted-foreground',
                                 item.tone === 'skipped' && 'border-amber-500/60 bg-amber-500/10 text-amber-600 dark:text-amber-400',
                                 item.tone === 'queued' && 'border-border bg-background text-muted-foreground',
                             )}
@@ -145,7 +183,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                         </span>
                     </span>
                     <div className="min-w-0 pt-0.5">
-                        <div className={cn('text-sm leading-tight font-semibold', item.tone === 'queued' && 'text-muted-foreground')}>
+                        <div
+                            className={cn(
+                                'text-sm leading-tight font-semibold',
+                                (item.tone === 'queued' || item.tone === 'cancelled') && 'text-muted-foreground',
+                            )}
+                        >
                             {item.title}
                         </div>
                         {item.meta && <div className="text-muted-foreground mt-0.5 text-xs leading-snug">{item.meta}</div>}

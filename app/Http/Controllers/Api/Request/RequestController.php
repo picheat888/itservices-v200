@@ -31,7 +31,8 @@ class RequestController extends Controller
      *
      * @var list<string>
      */
-    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket', 'workflow', 'employee.position'];
+    // ticket.assignee: the trail says who is working the case, not just that one exists.
+    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position'];
 
     public function __construct(private readonly RequestService $service) {}
 
