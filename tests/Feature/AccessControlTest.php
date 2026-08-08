@@ -463,4 +463,55 @@ class AccessControlTest extends TestCase
         $this->assertNotNull($path);
         Storage::disk('local')->assertExists($path);
     }
+
+    /** Deleting a software / platform record takes its logo off the disk with it. */
+    public function test_deleting_a_resource_removes_its_logo(): void
+    {
+        Storage::fake('local');
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        Storage::disk('local')->put('social-logos/sm.png', 'bytes');
+        Storage::disk('local')->put('software-logos/sw.png', 'bytes');
+        $platform = SocialPlatform::create(['name' => 'LINE', 'logo_path' => 'social-logos/sm.png']);
+        $software = Software::create(['name' => 'Acrobat', 'license_type' => 'perpetual', 'logo_path' => 'software-logos/sw.png']);
+
+        $this->deleteJson("/api/social-platforms/{$platform->id}")->assertOk();
+        $this->deleteJson("/api/software/{$software->id}")->assertOk();
+
+        Storage::disk('local')->assertMissing('social-logos/sm.png');
+        Storage::disk('local')->assertMissing('software-logos/sw.png');
+    }
+
+    /**
+     * Both logo routes are one fixed URL per record and their responses are cached,
+     * so a replaced logo has to come back under a different URL or the browser keeps
+     * showing the previous one.
+     */
+    public function test_logo_url_changes_when_a_logo_is_replaced(): void
+    {
+        Storage::fake('local');
+        $this->seedDefaultPermissions();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+
+        $platform = SocialPlatform::create(['name' => 'LINE', 'logo_path' => 'social-logos/old.png']);
+        $software = Software::create(['name' => 'Acrobat', 'license_type' => 'perpetual', 'logo_path' => 'software-logos/old.png']);
+        $platformBefore = $platform->logo_url;
+        $softwareBefore = $software->logo_url;
+
+        $platformAfter = $this->post("/api/social-platforms/{$platform->id}", [
+            '_method' => 'PUT', 'name' => 'LINE', 'logo' => UploadedFile::fake()->image('new.png', 128, 128),
+        ], ['Accept' => 'application/json'])->assertOk()->json('data.logo_url');
+
+        $softwareAfter = $this->post("/api/software/{$software->id}", [
+            '_method' => 'PUT', 'name' => 'Acrobat', 'license_type' => 'perpetual',
+            'logo' => UploadedFile::fake()->image('new.png', 128, 128),
+        ], ['Accept' => 'application/json'])->assertOk()->json('data.logo_url');
+
+        $this->assertNotSame($platformBefore, $platformAfter, 'a replaced platform logo must not reuse the previous URL');
+        $this->assertNotSame($softwareBefore, $softwareAfter, 'a replaced software logo must not reuse the previous URL');
+        // Nothing changed about the logo → the URL stays put, so it keeps its cache.
+        $this->assertSame($platformAfter, $platform->fresh()->logo_url);
+        $this->assertSame($softwareAfter, $software->fresh()->logo_url);
+    }
 }

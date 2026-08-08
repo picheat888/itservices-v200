@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 class Employee extends Model
 {
@@ -34,10 +35,24 @@ class Employee extends Model
         return $th !== '' ? $th : null;
     }
 
-    /** Authenticated URL of the employee photo (private disk), or null when none uploaded. */
+    /**
+     * Authenticated URL of the employee photo (private disk), or null when none
+     * uploaded.
+     *
+     * The route is /files/employees/{id}/photo whatever the photo happens to be,
+     * and the response is cached for five minutes — so replacing a photo left the
+     * browser showing the old bytes from an unchanged URL. The `v` tag is derived
+     * from the stored filename, which is random per upload: a new photo yields a
+     * new URL and a fresh fetch, while an unchanged photo keeps its URL and stays
+     * cached.
+     */
     public function getPhotoUrlAttribute(): ?string
     {
-        return $this->photo_path ? route('files.employee-photo', $this) : null;
+        if (! $this->photo_path) {
+            return null;
+        }
+
+        return route('files.employee-photo', ['employee' => $this, 'v' => substr(sha1($this->photo_path), 0, 8)]);
     }
 
     protected function casts(): array
@@ -55,6 +70,16 @@ class Employee extends Model
             if (blank($employee->code)) {
                 $next = (static::max('id') ?? 1040) + 1;
                 $employee->code = 'EMP-'.$next;
+            }
+        });
+
+        // Replacing a photo already deletes the file it replaces; deleting the
+        // employee has to take the last one with it, or the binary stays on the
+        // private disk forever with nothing left that names it. On the model
+        // rather than the controller so every delete path is covered.
+        static::deleting(function (Employee $employee) {
+            if ($employee->photo_path) {
+                Storage::disk('local')->delete($employee->photo_path);
             }
         });
     }

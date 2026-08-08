@@ -171,6 +171,88 @@ class EmployeeApiTest extends TestCase
         Storage::disk('local')->assertExists($path);
     }
 
+    /** Replacing a photo an employee already has: new file stored, old one removed. */
+    public function test_update_replaces_an_existing_photo(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->super());
+        $position = Position::create(['title' => 'MD', 'allow_special_position' => true]);
+        Storage::disk('local')->put('employees/old.png', 'old-bytes');
+        $emp = Employee::create(['first_name' => 'Pic', 'last_name' => 'Swap', 'photo_path' => 'employees/old.png']);
+
+        $this->post("/api/employees/{$emp->id}", [
+            '_method' => 'PUT',
+            'first_name' => 'Pic',
+            'last_name' => 'Swap',
+            'position_id' => $position->id,
+            'photo' => UploadedFile::fake()->image('new.png', 600, 600),
+        ])->assertOk();
+
+        $path = $emp->fresh()->photo_path;
+        $this->assertNotSame('employees/old.png', $path, 'photo_path should point at the new file');
+        Storage::disk('local')->assertExists($path);
+        Storage::disk('local')->assertMissing('employees/old.png');
+    }
+
+    /**
+     * An employee who leaves is resigned, never deleted — the record has to keep
+     * their name for every ticket, request and asset that points at it, and a real
+     * delete would cascade their whole ticket history away at the DB level.
+     */
+    public function test_employees_cannot_be_deleted_over_the_api(): void
+    {
+        $this->actingAs($this->super());
+        $emp = Employee::create(['first_name' => 'Stays', 'last_name' => 'Put']);
+
+        $this->deleteJson("/api/employees/{$emp->id}")->assertMethodNotAllowed();
+
+        $this->assertDatabaseHas('employees', ['id' => $emp->id]);
+    }
+
+    /**
+     * The API cannot delete an employee, but a seeder or a console command still
+     * can — and the photo has to go with the record, since nothing would name that
+     * file afterwards.
+     */
+    public function test_deleting_an_employee_record_removes_their_photo(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('employees/keep.png', 'bytes');
+        $emp = Employee::create(['first_name' => 'Gone', 'last_name' => 'Soon', 'photo_path' => 'employees/keep.png']);
+
+        $emp->delete();
+
+        Storage::disk('local')->assertMissing('employees/keep.png');
+    }
+
+    /**
+     * The photo route is the same URL for the whole life of an employee and its
+     * response is cached, so a replaced photo has to arrive under a different URL
+     * or the browser keeps painting the old one.
+     */
+    public function test_photo_url_changes_when_the_photo_is_replaced(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->super());
+        $position = Position::create(['title' => 'MD', 'allow_special_position' => true]);
+        Storage::disk('local')->put('employees/old.png', 'old-bytes');
+        $emp = Employee::create(['first_name' => 'Pic', 'last_name' => 'Cache', 'photo_path' => 'employees/old.png']);
+        $before = $emp->photo_url;
+
+        $after = $this->post("/api/employees/{$emp->id}", [
+            '_method' => 'PUT',
+            'first_name' => 'Pic',
+            'last_name' => 'Cache',
+            'position_id' => $position->id,
+            'photo' => UploadedFile::fake()->image('new.png', 600, 600),
+        ])->assertOk()->json('data.photo_url');
+
+        $this->assertNotSame($before, $after, 'a replaced photo must not reuse the previous URL');
+        $this->assertStringContainsString("/files/employees/{$emp->id}/photo", $after);
+        // Nothing changed about the photo → the URL stays put, so it keeps its cache.
+        $this->assertSame($after, $emp->fresh()->photo_url);
+    }
+
     public function test_update_full_payload_with_photo_like_the_form(): void
     {
         Storage::fake('local');
