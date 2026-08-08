@@ -53,8 +53,15 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                 onClose();
             }
         };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
         window.addEventListener('mousedown', handler);
-        return () => window.removeEventListener('mousedown', handler);
+        window.addEventListener('keydown', onKey);
+        return () => {
+            window.removeEventListener('mousedown', handler);
+            window.removeEventListener('keydown', onKey);
+        };
     }, [onClose]);
 
     // Let the mouse wheel scroll the single-row tab strip left/right (non-passive so
@@ -82,117 +89,127 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     return (
         <div
             ref={ref}
-            className="border-border bg-popover absolute top-14 right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border shadow-lg"
+            className="animate-in fade-in-0 zoom-in-95 slide-in-from-top-1 absolute top-[4.5rem] right-4 z-50 w-[440px] max-w-[calc(100vw-2rem)] origin-top-right duration-150 ease-out motion-reduce:animate-none"
         >
-            <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                <div>
-                    <div className="text-sm font-semibold">{t('notif_title')}</div>
-                    {unread > 0 && (
-                        <div className="text-muted-foreground text-xs">
-                            {unread} {t('notif_unread')}
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => markAllRead.mutate()}
-                        disabled={unread === 0 || markAllRead.isPending}
-                        className="text-brand hover:bg-accent rounded-md px-2 py-1 text-xs font-medium disabled:opacity-40"
-                    >
-                        {t('notif_mark_all')}
-                    </button>
-                    <button onClick={onClose} className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md">
-                        <X className="h-4 w-4" />
-                    </button>
-                </div>
-            </div>
+            {/* Caret aimed back at the bell. The button is 36px wide and sits 16px from
+                the window edge, so its centre lands 18px in from this panel's right edge.
+                It lives outside the card so the card can keep clipping to its rounded corners. */}
+            <div className="border-border bg-popover absolute -top-[5px] right-[13px] h-2.5 w-2.5 rotate-45 border-t border-l" />
 
-            {/* Per-module filter tabs — single row; scrolls horizontally (mouse wheel) with a
-                thin, subtle scrollbar so it's clear there's more to see. */}
-            <div
-                ref={tabsRef}
-                className="border-border [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 flex gap-1 overflow-x-auto scroll-smooth border-b px-2 pt-2 pb-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
-            >
-                {shownTabs.map((tb) => {
-                    const count = tabCount(tb.id);
-                    const active = tab === tb.id;
-                    return (
-                        <button
-                            key={tb.id}
-                            onClick={(e) => {
-                                setTab(tb.id);
-                                // Bring a partially-hidden tab fully into view, smoothly.
-                                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-                            }}
-                            className={cn(
-                                'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                                active ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent',
-                            )}
-                        >
-                            {t(tb.label)}
-                            {count > 0 && (
-                                <span
-                                    className={cn(
-                                        'rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
-                                        active ? 'bg-white/20 text-white' : 'bg-brand/10 text-brand',
-                                    )}
-                                >
-                                    {count}
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-
-            <div className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[360px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                {!activeTab.live ? (
-                    <div className="px-4 py-12 text-center">
-                        <div className="text-muted-foreground text-sm font-medium">{t('coming_soon')}</div>
-                        <div className="text-muted-foreground mx-auto mt-1 max-w-[240px] text-xs">{t('notif_module_soon')}</div>
+            <div className="border-border bg-popover relative overflow-hidden rounded-xl border shadow-lg">
+                <div className="border-border flex items-center justify-between border-b px-4 py-3">
+                    <div>
+                        <div className="text-sm font-semibold">{t('notif_title')}</div>
+                        {unread > 0 && (
+                            <div className="text-muted-foreground text-xs">
+                                {unread} {t('notif_unread')}
+                            </div>
+                        )}
                     </div>
-                ) : visibleItems.length === 0 ? (
-                    <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
-                ) : (
-                    visibleItems.map((n) => {
-                        const { Icon, color, bg } = iconMeta(n);
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => markAllRead.mutate()}
+                            disabled={unread === 0 || markAllRead.isPending}
+                            className="text-brand hover:bg-accent rounded-md px-2 py-1 text-xs font-medium disabled:opacity-40"
+                        >
+                            {t('notif_mark_all')}
+                        </button>
+                        <button onClick={onClose} className="hover:bg-accent flex h-7 w-7 items-center justify-center rounded-md">
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Per-module filter tabs — single row; scrolls horizontally (mouse wheel) with a
+                thin, subtle scrollbar so it's clear there's more to see. */}
+                <div
+                    ref={tabsRef}
+                    className="border-border [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 flex gap-1 overflow-x-auto scroll-smooth border-b px-2 pt-2 pb-1.5 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent"
+                >
+                    {shownTabs.map((tb) => {
+                        const count = tabCount(tb.id);
+                        const active = tab === tb.id;
                         return (
-                            <div
-                                key={n.id}
-                                onClick={() => handleClick(n)}
+                            <button
+                                key={tb.id}
+                                onClick={(e) => {
+                                    setTab(tb.id);
+                                    // Bring a partially-hidden tab fully into view, smoothly.
+                                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+                                }}
                                 className={cn(
-                                    'group border-border/60 hover:bg-accent/50 flex cursor-pointer gap-3 overflow-hidden border-b px-4 py-3 transition-all duration-200 ease-out',
-                                    !n.read && 'bg-brand/[0.04]',
-                                    dismissing.has(n.id) ? 'max-h-0 translate-x-8 !border-b-0 !py-0 opacity-0' : 'max-h-32',
+                                    'flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                                    active ? 'bg-brand text-white' : 'text-muted-foreground hover:bg-accent',
                                 )}
                             >
-                                <div
-                                    className={cn('mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', n.read ? 'bg-muted' : bg)}
-                                >
-                                    <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>{notificationTitle(n)}</div>
-                                    <div className="text-muted-foreground mt-0.5 text-xs">{notificationMessage(n, t)}</div>
-                                </div>
-                                <div className="flex shrink-0 flex-col items-end gap-1">
-                                    <span className="text-muted-foreground text-[11px]">{n.created_at}</span>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDismiss(n.id);
-                                        }}
-                                        aria-label={t('notif_dismiss')}
-                                        title={t('notif_dismiss')}
-                                        className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                                {t(tb.label)}
+                                {count > 0 && (
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-1.5 py-0.5 text-[10px] leading-none font-semibold',
+                                            active ? 'bg-white/20 text-white' : 'bg-brand/10 text-brand',
+                                        )}
                                     >
-                                        <X className="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                            </div>
+                                        {count}
+                                    </span>
+                                )}
+                            </button>
                         );
-                    })
-                )}
+                    })}
+                </div>
+
+                <div className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[360px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+                    {!activeTab.live ? (
+                        <div className="px-4 py-12 text-center">
+                            <div className="text-muted-foreground text-sm font-medium">{t('coming_soon')}</div>
+                            <div className="text-muted-foreground mx-auto mt-1 max-w-[240px] text-xs">{t('notif_module_soon')}</div>
+                        </div>
+                    ) : visibleItems.length === 0 ? (
+                        <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
+                    ) : (
+                        visibleItems.map((n) => {
+                            const { Icon, color, bg } = iconMeta(n);
+                            return (
+                                <div
+                                    key={n.id}
+                                    onClick={() => handleClick(n)}
+                                    className={cn(
+                                        'group border-border/60 hover:bg-accent/50 flex cursor-pointer gap-3 overflow-hidden border-b px-4 py-3 transition-all duration-200 ease-out',
+                                        !n.read && 'bg-brand/[0.04]',
+                                        dismissing.has(n.id) ? 'max-h-0 translate-x-8 !border-b-0 !py-0 opacity-0' : 'max-h-32',
+                                    )}
+                                >
+                                    <div
+                                        className={cn(
+                                            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                                            n.read ? 'bg-muted' : bg,
+                                        )}
+                                    >
+                                        <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>{notificationTitle(n)}</div>
+                                        <div className="text-muted-foreground mt-0.5 text-xs">{notificationMessage(n, t)}</div>
+                                    </div>
+                                    <div className="flex shrink-0 flex-col items-end gap-1">
+                                        <span className="text-muted-foreground text-[11px]">{n.created_at}</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDismiss(n.id);
+                                            }}
+                                            aria-label={t('notif_dismiss')}
+                                            title={t('notif_dismiss')}
+                                            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                                        >
+                                            <X className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
         </div>
     );

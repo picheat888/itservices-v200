@@ -3,16 +3,19 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useNotifications } from '@/modules/notification';
 import { FlagEN, FlagTH } from '@/shared/components/flags';
+import { cn } from '@/shared/lib/utils';
 import type { Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface TopbarProps {
+    /** Whether the notifications panel is open — keeps the bell lit while it is. */
+    notifOpen: boolean;
     onToggleNotif: () => void;
 }
 
-export function Topbar({ onToggleNotif }: TopbarProps) {
+export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const t = useT();
     const { user } = useAuth();
     const { pathname } = useLocation();
@@ -68,10 +71,17 @@ export function Topbar({ onToggleNotif }: TopbarProps) {
                 {dark ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>
 
+            {/* Stays visibly "on" while its panel is open, so the panel reads as
+                belonging to this button instead of floating on its own. */}
             <button
                 data-notif-btn
                 onClick={onToggleNotif}
-                className="text-muted-foreground hover:bg-accent relative flex h-9 w-9 items-center justify-center rounded-md"
+                aria-haspopup="true"
+                aria-expanded={notifOpen}
+                className={cn(
+                    'relative flex h-9 w-9 items-center justify-center rounded-md transition-colors',
+                    notifOpen ? 'bg-accent text-brand' : 'text-muted-foreground hover:bg-accent',
+                )}
                 title={t('notif_title')}
             >
                 <Bell className="h-[18px] w-[18px]" />
