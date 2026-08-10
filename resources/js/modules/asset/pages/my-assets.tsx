@@ -192,11 +192,7 @@ export default function MyAssetsPage() {
                                         onClick={() => onAccept(a.id)}
                                         disabled={acceptingIds.has(a.id)}
                                     >
-                                        {acceptingIds.has(a.id) ? (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Check className="h-4 w-4" />
-                                        )}
+                                        {acceptingIds.has(a.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                         {t('asset_accept')}
                                     </Button>
                                 </div>
