@@ -182,11 +182,9 @@ export function RequestCreateDialog({
             // be read in the viewer's language; anything else falls back to the server's
             // own message.
             const blockKey = REQUEST_BLOCK_REASON_LABEL[resp?.errors?.requester?.[0] ?? ''];
-            useToastStore.getState().push(
-                blockKey ? t(blockKey) : (resp?.message ?? 'Something went wrong.'),
-                'error',
-                blockKey ? t('req_block_title') : undefined,
-            );
+            useToastStore
+                .getState()
+                .push(blockKey ? t(blockKey) : (resp?.message ?? 'Something went wrong.'), 'error', blockKey ? t('req_block_title') : undefined);
         }
     };
 
