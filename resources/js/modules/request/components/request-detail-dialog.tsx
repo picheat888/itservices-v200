@@ -201,10 +201,15 @@ function RequestDetailBody({
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{request.reason}</p>
                     </div>
 
-                    {/* Subject leads the table, repeating the title from the header: by the
-                        time an approver has read the requester and the reason, the header is
-                        a screen away, and the decision is about what was asked for. Always
-                        rendered — an onboarding request carries no typed fields at all. */}
+                    {/* Subject leads the table even though the header carries it too: this is
+                        the row an approver reads the decision off, beside the detail it is a
+                        decision about.
+
+                        Rendered whether or not there are fields under it, because plenty of
+                        requests have none — Recovery's schema is empty by design, and every
+                        onboarding request filed before Step 3 started collecting the device
+                        type has an empty snapshot. Hiding the table then hid the subject with
+                        it. */}
                     <div>
                         <SectionLabel>{t('req_detail_section')}</SectionLabel>
                         <div className="border-border divide-border/70 divide-y rounded-xl border">
