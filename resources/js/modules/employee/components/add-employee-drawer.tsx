@@ -916,7 +916,8 @@ function ServiceField({
                 <SearchableSelect
                     value={value}
                     onChange={onChange}
-                    placeholder={label}
+                    /* No placeholder: the label is right above it, and repeating it inside the
+                       control said nothing twice. Falls back to the shared "Select…". */
                     options={(field.options ?? []).map((option) => ({
                         value: option.value,
                         label: lang === 'th' ? option.label_th || option.label_en : option.label_en,
