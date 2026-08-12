@@ -10,7 +10,7 @@ import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Building2, Folder, Globe, KeyRound, Package, Plus, Tag, Users } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AccessDashboard } from '../components/access-dashboard';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
@@ -415,6 +415,15 @@ export default function AccessControlPage() {
         return row ? buildTarget(tab, row) : null;
     }, [viewId, tab, egRows, fsRows, spRows, swRows]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // What the drawer is still showing on its way out. `members` is null the render after
+    // ?view= drops, and the two flags below are read from it — without this they turn false
+    // on the first frame of the exit animation and the footer's Edit/Delete buttons vanish
+    // before the panel does. Open/closed still follows `members` itself.
+    const [shownMembers, setShownMembers] = useState<MemberTarget | null>(null);
+    useEffect(() => {
+        if (members) setShownMembers(members);
+    }, [members]);
+
     // Row-click / "Manage" handlers just deep-link the resource — the URL drives the drawer.
     const openEmailGroup = (g: EmailGroup) => openResource('email-groups', g.id);
     const openFileShare = (s: FileShare) => openResource('file-shares', s.id);
@@ -589,8 +598,8 @@ export default function AccessControlPage() {
             />
             <MembersDrawer
                 target={members}
-                canEdit={members ? canEdit[members.kind] : false}
-                canDelete={members ? canDelete[members.kind] : false}
+                canEdit={shownMembers ? canEdit[shownMembers.kind] : false}
+                canDelete={shownMembers ? canDelete[shownMembers.kind] : false}
                 onClose={closeDrawer}
                 onEdit={(tg) => {
                     // Open the edit modal OVER the drawer without dropping ?open, so closing/saving
