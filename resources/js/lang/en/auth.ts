@@ -17,6 +17,7 @@ export const auth: Dict = {
     login_err_throttled: 'Too many attempts. Try again in {time}.',
     login_err_throttled_wait: 'Too many attempts. Wait a moment, then try again.',
     login_err_server: 'Cannot reach the server. Check your connection and try again.',
+    login_err_closed: 'This account is closed. Contact IT.',
     login_time_seconds: '{n} seconds',
     login_time_minutes: '{n} minutes',
     login_tagline: 'Everything IT, in one place.',

@@ -337,6 +337,12 @@ class WorkflowResolverService
      * disqualification: the approval is that person's to give, so the step is
      * assigned to them and waits until they can sign in. Somebody who has left the
      * company is passed over — they are never coming back to act on it.
+     *
+     * Deliberately the RAW status, not Employee::hasLeft(): the moment a resignation is
+     * recorded, requests must route to whoever replaces them, even though that person can
+     * still sign in until their last day (which is what hasLeft() governs). The two rules
+     * differ on purpose — a resignation in hand is a signal to re-route the approval, and
+     * a notice period is not a reason to take the system away from somebody still working.
      */
     private function canHoldAStep(?Employee $employee): bool
     {
