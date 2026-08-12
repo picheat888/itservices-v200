@@ -170,10 +170,39 @@ class RequestNotificationTest extends TestCase
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
 
         $this->assertCount(1, $this->bells($this->requester, 'approved_final'));
-        $this->assertCount(1, $this->bells($this->itUser, 'waiting'));
+
+        // The queue hears its own subtype, never the approvers' one: this bell asks for a
+        // delivery, not a decision. No case was opened here, so it carries no ticket and
+        // the SPA renders the "waiting for IT to deliver" copy.
+        $bells = $this->bells($this->itUser, 'ready_to_fulfill');
+        $this->assertCount(1, $bells);
+        $this->assertNull($bells[0]->data['ticket_no']);
+        $this->assertCount(0, $this->bells($this->itUser, 'waiting'));
 
         $this->actingAs($this->itUser)->postJson("/api/service-requests/{$request->id}/fulfill")->assertOk();
         $this->assertCount(1, $this->bells($this->requester, 'fulfilled'));
+    }
+
+    /**
+     * A workflow that opens its own case leaves IT nothing to decide and nothing to press:
+     * closing the case is what fulfils the request. The bell has to say that, or it reads
+     * as a second approval step sitting next to the case's own "new case" bell.
+     */
+    public function test_the_queue_bell_names_the_case_when_one_was_opened(): void
+    {
+        $request = $this->submitComputer();
+
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        $ticket = $request->fresh()->ticket;
+        $this->assertNotNull($ticket, 'the computer workflow is the auto_ticket one');
+
+        $bells = $this->bells($this->itUser, 'ready_to_fulfill');
+        $this->assertCount(1, $bells);
+        $this->assertSame($ticket->ticket_no, $bells[0]->data['ticket_no']);
+        $this->assertSame($ticket->id, $bells[0]->data['ticket_id']);
+        $this->assertCount(0, $this->bells($this->itUser, 'waiting'));
     }
 
     public function test_reject_returns_the_remark_to_the_requester(): void
