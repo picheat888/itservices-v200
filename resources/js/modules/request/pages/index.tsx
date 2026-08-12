@@ -14,6 +14,7 @@ import {
     REQUEST_STATUSES,
     REQUEST_TYPE_META,
     REQUEST_TYPES,
+    requestTitle,
 } from '@/shared/lib/request-meta';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
@@ -218,7 +219,7 @@ export default function RequestsPage() {
                     <div className="flex max-w-[360px] min-w-0 items-center gap-2.5">
                         <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                         <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{r.title}</div>
+                            <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
                             {/* The reason, not the service name — the title already says the service. */}
                             <div className="text-muted-foreground truncate text-xs">{r.reason}</div>
                         </div>
@@ -425,7 +426,7 @@ export default function RequestsPage() {
                                                     <div className="truncate text-sm font-medium">
                                                         {r.fields_display[0]
                                                             ? `${t(REQUEST_TYPE_META[r.type].labelKey)} · ${headlineValue(r, lang)}`
-                                                            : r.title}
+                                                            : requestTitle(r, t)}
                                                     </div>
                                                     {/* Who it is for. The reason has moved out of the row: it is a sentence, it
                                                         was truncated mid-thought, and it belongs where the decision is made. */}
@@ -533,7 +534,7 @@ export default function RequestsPage() {
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="truncate text-sm font-medium">{r.title}</div>
+                                                    <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
                                                     <div className="text-muted-foreground truncate text-xs">
                                                         {activityLine(r, t)} · {ageLabel(r.activity.at ?? r.created_at)}
                                                     </div>

@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { StatusBadge } from '@/shared/components/status-badge';
-import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_ONBOARDING_BADGE, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -128,7 +128,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                     ))}
                                 </span>
                             )}
-                            {step ?? ctx.request.title}
+                            {step ?? requestTitle(ctx.request, t)}
                         </DialogDescription>
                     </div>
                     <span className="text-muted-foreground shrink-0 font-mono text-xs">{ctx.request.reference}</span>
@@ -151,7 +151,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
                                     reads identically wherever an approver meets it. */}
                                 {onBehalf && <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone}>{t(REQUEST_ONBOARDING_BADGE.labelKey)}</StatusBadge>}
                             </div>
-                            <p className="mt-1 text-sm font-semibold">{ctx.request.title}</p>
+                            <p className="mt-1 text-sm font-semibold">{requestTitle(ctx.request, t)}</p>
                         </div>
 
                         <dl className="grid grid-cols-[minmax(96px,max-content)_1fr] gap-x-3 gap-y-1.5">

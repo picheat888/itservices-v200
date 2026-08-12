@@ -97,6 +97,7 @@ export const requests: Dict = {
     req_details_sub: 'A clear title and reason help approvers decide faster.',
     req_section_general: 'The request',
     req_auto_title: 'Request: {service}',
+    req_auto_title_for: '{service} for {name}',
     req_field_reason: 'Reason / details',
     req_field_reason_ph: 'Explain why this is needed - approvers decide faster with context.',
     req_requester_label: 'Requester',

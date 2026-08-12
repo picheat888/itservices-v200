@@ -82,7 +82,7 @@ export function useNotificationToasts(): void {
             const { Icon, color } = iconMeta(n);
             const target = notificationTarget(n);
 
-            useToastStore.getState().push(notificationMessage(n, tRef.current), toneFor(color), notificationTitle(n), undefined, {
+            useToastStore.getState().push(notificationMessage(n, tRef.current), toneFor(color), notificationTitle(n, tRef.current), undefined, {
                 // The notification id, not the text: two alerts can read alike without
                 // being the same alert, and the burst guard must not swallow one.
                 key: `notification:${n.id}`,

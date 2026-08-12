@@ -94,6 +94,7 @@ export const requests: Dict = {
     req_details_sub: 'หัวข้อและเหตุผลที่ชัดเจน ช่วยให้ผู้อนุมัติตัดสินใจได้เร็วขึ้น',
     req_section_general: 'เรื่องที่ขอ',
     req_auto_title: 'คำขอ: {service}',
+    req_auto_title_for: 'คำขอ: {service} สำหรับ {name}',
     req_field_reason: 'เหตุผล / รายละเอียด',
     req_field_reason_ph: 'อธิบายความจำเป็น เพื่อให้ผู้อนุมัติตัดสินใจได้เร็วขึ้น',
     req_requester_label: 'ผู้ขอ',

@@ -41,6 +41,56 @@ enum RequestType: string
         };
     }
 
+    /**
+     * The same service name in Thai.
+     *
+     * The reader-facing copy lives in the SPA (`lang/<locale>/requests.ts`, keys `req_*`);
+     * this pair exists because the SERVER also has to name a service without knowing who
+     * will read it: it composes the stored title, and it matches a search term against
+     * both languages so a Thai reader finds a row stored in English. Keep the wording in
+     * step with those keys — RequestCanonicalTitleTest checks both sides are present.
+     */
+    public function labelTh(): string
+    {
+        return match ($this) {
+            self::Computer => 'คอมพิวเตอร์',
+            self::Hardware => 'ฮาร์ดแวร์ / อุปกรณ์ต่อพ่วง',
+            self::Mobile => 'อุปกรณ์มือถือ',
+            self::Email => 'บัญชีอีเมล',
+            self::Social => 'ขอใช้โซเชียลมีเดีย',
+            self::Fileshare => 'ขอเข้าถึงไฟล์แชร์',
+            self::Mailgroup => 'กลุ่มเมล',
+            self::Software => 'ติดตั้งซอฟต์แวร์',
+            self::Recovery => 'กู้คืนข้อมูล',
+            self::Telephone => 'โทรศัพท์',
+            self::Other => 'คำขออื่น ๆ',
+        };
+    }
+
+    /**
+     * Every type whose name, in either language, contains the given term — what the search
+     * box needs to look a request up by the service written on the row, rather than by the
+     * one string that happens to be stored.
+     *
+     * @return array<int, string>
+     */
+    public static function matching(string $term): array
+    {
+        $needle = mb_strtolower(trim($term));
+        if ($needle === '') {
+            return [];
+        }
+
+        return array_values(array_map(
+            fn (self $type) => $type->value,
+            array_filter(
+                self::cases(),
+                fn (self $type) => str_contains(mb_strtolower($type->label()), $needle)
+                    || str_contains(mb_strtolower($type->labelTh()), $needle),
+            ),
+        ));
+    }
+
     /** Ticket category used when the workflow opens an IT ticket on final approval. */
     public function ticketCategory(): TicketCategory
     {

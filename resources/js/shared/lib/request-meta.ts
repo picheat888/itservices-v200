@@ -121,6 +121,30 @@ export function onboardingRowClass(request: Pick<ServiceRequest, 'origin' | 'can
     return isOnBehalfRequest(request) && request.can_approve ? REQUEST_ONBOARDING_ROW : undefined;
 }
 
+/**
+ * What a request is called, written in the READER's language.
+ *
+ * `title` on the payload is one canonical English string the server composes — it exists
+ * for the case subject, the approval emails and the search index, not for the screen.
+ * Rendering it put the requester's language in front of everybody else: the same service
+ * arrived as "Request: Mail group" or "คำขอ: กลุ่มเมล" depending on who filed it, and an
+ * approver reading Thai got English rows from English colleagues.
+ *
+ * Derived from `type`, which is the only thing the title ever said. An on-behalf request
+ * also names the person it is for, because an approver reads the list before the detail.
+ */
+export function requestTitle(
+    request: Pick<ServiceRequest, 'type' | 'origin'> & { requester?: { name: string } },
+    t: (key: string) => string,
+): string {
+    const service = t(REQUEST_TYPE_META[request.type].labelKey);
+    const forWhom = request.requester?.name;
+
+    return isOnBehalfRequest(request) && forWhom
+        ? t('req_auto_title_for').replace('{service}', service).replace('{name}', forWhom)
+        : t('req_auto_title').replace('{service}', service);
+}
+
 /** Every service type in catalog order — one place decides the order they appear. */
 export const REQUEST_TYPES = Object.keys(REQUEST_TYPE_META) as ServiceRequestType[];
 

@@ -1,4 +1,6 @@
 import type { AppNotification } from '@/modules/notification';
+import { requestTitle } from '@/shared/lib/request-meta';
+import type { ServiceRequest, ServiceRequestType } from '@/shared/types';
 import {
     ArrowRightLeft,
     Boxes,
@@ -124,14 +126,33 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
  * more weight than the line needs, on rows that are already long (an auto-opened case
  * reads TKT-… - [RQ-…] Title). One character for all three, so the bell does not show
  * three different separators.
+ *
+ * A service request is the one kind that does not quote the stored title: that is the
+ * server's canonical English string, so the bell composes the same wording the list uses,
+ * in the reader's language. Hence the translator.
  */
-export function notificationTitle(n: AppNotification): string {
+export function notificationTitle(n: AppNotification, t: Translate): string {
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
     if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} - ${n.data.subject}`;
     if (n.data.type === 'stock_alert') return `${n.data.sku} - ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
-    if (n.data.type === 'request') return `${n.data.reference} - ${n.data.title}`;
+    if (n.data.type === 'request') {
+        const written = n.data.request_type
+            ? requestTitle(
+                  {
+                      type: n.data.request_type as ServiceRequestType,
+                      origin: (n.data.origin ?? 'direct') as ServiceRequest['origin'],
+                      requester: n.data.requester_name ? { name: n.data.requester_name } : undefined,
+                  },
+                  t,
+              )
+            : // Bells delivered before the payload carried the type: their stored title is
+              // all there is, in whatever language it was written.
+              (n.data.title ?? '');
+
+        return `${n.data.reference} - ${written}`;
+    }
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested') return `${n.data.asset_model} (${n.data.asset_tag})`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }

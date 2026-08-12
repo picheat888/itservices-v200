@@ -92,14 +92,6 @@ export function RequestCreateDialog({
             return next;
         });
 
-    /**
-     * The request's stored title. Nobody types it — a request is fully described
-     * by the service it asks for, so the title is derived and the requester only
-     * writes the reason. Frozen in the submitting user's language, like the
-     * requester-name snapshot on the record.
-     */
-    const autoTitle = (): string => (type ? t('req_auto_title').replace('{service}', t(REQUEST_TYPE_META[type].labelKey)) : '');
-
     const buildErrors = (): Record<string, string> => {
         const e: Record<string, string> = {};
         if (!type) e.type = requiredMsg;
@@ -154,7 +146,6 @@ export function RequestCreateDialog({
         try {
             const created = await submit.mutateAsync({
                 type: type as string,
-                title: autoTitle(),
                 reason: reason.trim(),
                 fields: Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== '')),
             });
