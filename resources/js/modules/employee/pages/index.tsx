@@ -1,10 +1,11 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -132,9 +133,10 @@ export default function EmployeesPage() {
     // drops the param. Row clicks seed the cache for an instant open; "view profile" jumps by id.
     const qc = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
-    const viewId = searchParams.get('view');
-    const openId = viewId ? Number(viewId) : null;
-    const { data: viewEmp } = useEmployee(openId);
+    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
+    // `!= null` guard and used to fetch /employees/NaN.
+    const openId = toRecordId(searchParams.get('view'));
+    const { data: viewEmp, isError: viewEmpMissing } = useEmployee(openId);
     const setView = (id: number | null) =>
         setSearchParams(
             (sp) => {
@@ -567,6 +569,9 @@ export default function EmployeesPage() {
             <AddEmployeeDrawer open={adding} onClose={closeAdd} />
             <EditEmployeeDialog open={!!editEmp} onClose={() => setEditEmp(null)} employee={editEmp} />
             <ImportEmployeeDialog open={importOpen} onClose={() => setImportOpen(false)} />
+            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
+                render and said nothing. This says it instead. */}
+            <RecordMissingDialog open={viewEmpMissing} onClose={() => closeEmp()} />
             <EmployeeViewDrawer
                 employee={viewEmp ?? null}
                 onClose={() => closeEmp()}

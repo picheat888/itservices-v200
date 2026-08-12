@@ -2,9 +2,10 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -188,9 +189,10 @@ export default function AssetsPage() {
     // drops the param. Opening seeds the query cache with the clicked row so the drawer shows
     // instantly; a deep-link (id not on the current page) fetches by id. URL = single source of truth.
     const qc = useQueryClient();
-    const viewId = searchParams.get('view');
-    const openId = viewId ? Number(viewId) : null;
-    const { data: detail } = useQuery({
+    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
+    // `!= null` guard and used to fetch /assets/NaN.
+    const openId = toRecordId(searchParams.get('view'));
+    const { data: detail, isError: detailMissing } = useQuery({
         queryKey: ['asset', 'view', openId],
         queryFn: () => assetApi.get(openId as number),
         enabled: openId != null,
@@ -1090,6 +1092,9 @@ export default function AssetsPage() {
                 )}
             </Card>
 
+            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
+                render and said nothing. This says it instead. */}
+            <RecordMissingDialog open={detailMissing} onClose={() => closeAsset()} />
             <AssetDetailDrawer
                 asset={detail ?? null}
                 onClose={() => closeAsset()}

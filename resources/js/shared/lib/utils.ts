@@ -49,3 +49,22 @@ export function focusFirstError(errors: Record<string, string>) {
 export function isEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
+
+/**
+ * A `?view=<id>` deep link turned into a record id, or null when the parameter is
+ * not one.
+ *
+ * `Number('abc')` is NaN and NaN passes an `!= null` guard, so a mistyped link used
+ * to reach the API as /<resource>/NaN and leave the detail dialog on its skeleton.
+ * Anything that is not a positive integer opens no dialog at all; an id that IS
+ * well-formed but has no record behind it is the dialog's own not-found state.
+ */
+export function toRecordId(param: string | null): number | null {
+    if (param === null || param.trim() === '') {
+        return null;
+    }
+
+    const id = Number(param);
+
+    return Number.isInteger(id) && id > 0 ? id : null;
+}

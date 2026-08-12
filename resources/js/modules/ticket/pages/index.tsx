@@ -2,10 +2,11 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -412,9 +413,10 @@ export default function TicketsPage() {
     // drops the param. Opening seeds the cache with the clicked ticket for an instant open; a
     // deep-link (id not on the current page) fetches by id. URL = single source of truth.
     const qc = useQueryClient();
-    const viewId = searchParams.get('view');
-    const openId = viewId ? Number(viewId) : null;
-    const { data: detail } = useQuery({
+    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
+    // `!= null` guard and used to fetch /tickets/NaN.
+    const openId = toRecordId(searchParams.get('view'));
+    const { data: detail, isError: detailMissing } = useQuery({
         queryKey: ['ticket', 'view', openId],
         queryFn: () => ticketApi.get(openId as number),
         enabled: openId != null,
@@ -1032,6 +1034,9 @@ export default function TicketsPage() {
             </Card>
 
             <CreateTicketDrawer open={adding} onClose={closeCreate} />
+            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
+                render and said nothing. This says it instead. */}
+            <RecordMissingDialog open={detailMissing} onClose={() => closeDetail()} />
             <TicketDetailDrawer
                 ticket={detail ?? null}
                 onClose={() => closeDetail()}
