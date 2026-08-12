@@ -4,7 +4,7 @@ export const auth: Dict = {
     profile_sub: 'Manage your account',
     profile_signout: 'Sign out',
     login_title: 'Sign in',
-    login_sub: 'Welcome back to the IT Service Desk',
+    login_sub: 'Welcome to the IT Service Desk',
     login_field: 'Username',
     login_email: 'Email',
     login_password: 'Password',
