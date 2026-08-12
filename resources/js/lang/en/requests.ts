@@ -70,6 +70,7 @@ export const requests: Dict = {
     req_approve: 'Approve',
     req_reject: 'Reject',
     req_fulfill: 'Mark fulfilled',
+    req_fulfill_awaits_case: 'This request closes automatically when case {no} is completed.',
     req_cancel_request: 'Cancel request',
 
     // request-create-dialog.tsx — create wizard
@@ -94,7 +95,7 @@ export const requests: Dict = {
     req_other_software: 'Not on the list — enter it myself',
     req_review_title: 'Review & submit',
     req_review_sub: 'Check everything once — the request routes to the first approver as soon as you submit.',
-    req_auto_ticket_note: 'An IT ticket opens automatically after the final approval.',
+    req_auto_ticket_note: 'A ticket opens automatically after the final approval.',
     req_submit: 'Submit request',
     req_submitted: 'Request submitted',
     req_awaiting_first: 'awaiting the first approver',
@@ -145,7 +146,7 @@ export const requests: Dict = {
     // request-detail-dialog.tsx — linked ticket block
     req_linked_ticket: 'Linked ticket',
     req_no_ticket: 'No ticket — this workflow closes without one.',
-    req_ticket_auto_hint: 'Auto-opened on final approval — assigned to the IT team.',
+    req_ticket_auto_hint: 'This case was opened automatically.',
 
     // decision-dialog.tsx — approve / reject / fulfill / cancel
     req_decide_approve: 'Approve request',

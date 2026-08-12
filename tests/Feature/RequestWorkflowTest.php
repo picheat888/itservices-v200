@@ -108,6 +108,61 @@ class RequestWorkflowTest extends TestCase
         return ServiceRequest::findOrFail($response->json('data.id'));
     }
 
+    /**
+     * The display snapshot freezes both languages, so a Thai reader is not left with an
+     * English value under a Thai label — and a request decided months ago still shows
+     * the words it was submitted with rather than today's edited option.
+     */
+    public function test_a_request_that_does_not_exist_answers_not_found(): void
+    {
+        // The detail dialog's "not here" panel keys off this status: 404 is what tells the
+        // SPA the id will never resolve, so it can stop showing a skeleton. Answering 200
+        // with an empty body would put the dialog back on that skeleton for good.
+        $this->actingAs($this->requester)->getJson('/api/service-requests/99999')->assertNotFound();
+    }
+
+    public function test_the_display_snapshot_freezes_the_thai_value_next_to_the_english_one(): void
+    {
+        $smartphone = (int) RequestOption::where('request_type', 'mobile')
+            ->where('field_key', 'device_id')->where('label_en', 'Smartphone')->value('id');
+
+        $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
+            'type' => 'mobile',
+            'title' => 'Phone for the new site supervisor',
+            'reason' => 'They are on the road daily and cannot be reached at a desk.',
+            // A managed option, a schema select, and free text — the three value kinds.
+            'fields' => ['device_id' => $smartphone, 'sim' => 'yes'],
+        ])->assertCreated();
+
+        $rows = collect($response->json('data.fields_display'))->keyBy('key');
+
+        // Managed option: label_th comes off the row IT can edit in Settings.
+        $this->assertSame('Smartphone', $rows['device_id']['value']);
+        $this->assertSame('สมาร์ตโฟน', $rows['device_id']['value_th']);
+        // Schema select: "Yes" under "ต้องการซิม / แพ็กเกจดาต้า" was the case that read
+        // like a bug — the label translated and the answer did not.
+        $this->assertSame('Yes', $rows['sim']['value']);
+        $this->assertSame('ต้องการ', $rows['sim']['value_th']);
+    }
+
+    public function test_a_typed_value_has_no_thai_form_to_freeze(): void
+    {
+        $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
+            'type' => 'email',
+            'title' => 'Mailbox for the new site supervisor',
+            'reason' => 'They need a company address before their first day on site.',
+            'fields' => ['address' => 'site.supervisor@example.com'],
+        ])->assertCreated();
+
+        $rows = collect($response->json('data.fields_display'))->keyBy('key');
+
+        // Null, not a copy: what the requester typed is the same string in either
+        // language, and the SPA reads `value` when value_th is empty — which is also how
+        // rows written before value_th existed keep rendering.
+        $this->assertSame('site.supervisor@example.com', $rows['address']['value']);
+        $this->assertNull($rows['address']['value_th']);
+    }
+
     public function test_submit_creates_request_with_rq_reference_and_frozen_chain(): void
     {
         $request = $this->submitComputer();
@@ -293,6 +348,10 @@ class RequestWorkflowTest extends TestCase
 
     public function test_fulfill_requires_permission_and_approved_status(): void
     {
+        // No auto-ticket, which is where the manual button still applies: with a case
+        // open, closing it is what fulfils the request and this endpoint refuses (see
+        // RequestAutoTicketTest). This test is about the gate and the precondition.
+        Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
         $it = $this->makeUser('it', ['requests.fulfill']);
 

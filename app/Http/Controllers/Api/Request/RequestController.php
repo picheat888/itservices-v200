@@ -79,8 +79,9 @@ class RequestController extends Controller
 
         // Actionable first (pending → approved → fulfilled → the rest), newest within each group.
         // approver.user comes along because each row reports whether its approver still
-        // lacks a login — without it that is one extra query per approval row.
-        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket']))
+        // lacks a login — without it that is one extra query per approval row. Same for
+        // ticket.assignee: every row with a case serializes who holds it.
+        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket.assignee']))
             ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
             ->latest();
 

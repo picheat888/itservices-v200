@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Request\RequestStatus;
 use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketStatus;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
@@ -91,11 +92,32 @@ class RequestAutoTicketTest extends TestCase
         $this->assertSame(TicketCategory::Hardware, $ticket->category);
         $this->assertStringContainsString($request->reference, $ticket->subject);
         $this->assertSame($request->employee_id, $ticket->requester_id);
-        $this->assertStringContainsString('Device type: Desktop PC', $ticket->description);
+        // One fact per line, and the typed fields among them: a case that says only
+        // "Computer" sends the technician back to the request to find out which machine.
+        $this->assertSame([
+            'Auto-opened',
+            '-----',
+            "Service request {$request->reference} (Approved).",
+            'Type: Computer',
+            'Requester: Staff',
+            // Only device_id: `qty` is not in the computer schema, so submit dropped it.
+            'Device type: Desktop PC',
+            '',
+            'Reason:',
+            $request->reason,
+        ], explode("\n", $ticket->description));
+        // Priority is not in here: requests stopped carrying one, and the case gets its
+        // own when a technician takes it.
+        $this->assertStringNotContainsString('Priority:', $ticket->description);
     }
 
     /**
      * The request-workflow bells this account received, by subtype.
+     *
+     * Unordered on purpose. The final approval and the settlement land in the same
+     * second, and `notifications()` orders by created_at alone, so which of the two
+     * comes back last is arbitrary — asserting on position made this flaky. What the
+     * tests below need is that the bell was raised at all.
      *
      * @return list<string>
      */
@@ -151,8 +173,7 @@ class RequestAutoTicketTest extends TestCase
 
         // …and the requester hears about it, exactly as pressing Fulfil would have told
         // them. Closing from the ticket must not become the quiet way to finish a request.
-        $bells = $this->requestBells($this->requester);
-        $this->assertSame('fulfilled', end($bells));
+        $this->assertContains('fulfilled', $this->requestBells($this->requester));
     }
 
     public function test_cancelling_the_ticket_cancels_the_request_rather_than_rejecting_it(): void
@@ -179,8 +200,7 @@ class RequestAutoTicketTest extends TestCase
         // The requester has to be told their approved request is not coming. The
         // fulfilment row is an IT-queue step with no person on it, so the approver-facing
         // cancellation notice reached nobody and this closed in silence.
-        $bells = $this->requestBells($this->requester);
-        $this->assertSame('cancelled', end($bells));
+        $this->assertContains('cancelled', $this->requestBells($this->requester));
 
         // Carrying IT's reason, so the bell answers "why" without opening anything.
         $notice = $this->requester->notifications()->get()
@@ -201,6 +221,80 @@ class RequestAutoTicketTest extends TestCase
         ]);
 
         $this->assertSame(RequestStatus::Approved, $request->refresh()->status);
+    }
+
+    /**
+     * An IT account holding the fulfilment queue's own permission. Kept on its own
+     * role so it is not the technician from approveAndAssignTicket() — the point of
+     * these tests is what the manual button does, not what the case's owner can do.
+     */
+    private function fulfiller(): User
+    {
+        $role = Role::firstOrCreate(['key' => 'it_lead'], ['name' => 'IT Lead', 'color' => '#7c3aed', 'is_system' => false]);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'requests.fulfill'], ['allowed' => true]);
+
+        return User::factory()->create([
+            'role' => 'it_lead',
+            'employee_id' => Employee::create(['first_name' => 'Lead'])->id,
+        ]);
+    }
+
+    public function test_fulfil_is_refused_while_the_linked_case_is_still_in_progress(): void
+    {
+        [$request] = $this->approveAndAssignTicket();
+        $lead = $this->fulfiller();
+
+        $this->actingAs($lead)->postJson("/api/service-requests/{$request->id}/fulfill")->assertStatus(422);
+
+        // Refused, and still in the queue the closing case will settle: the technician
+        // is mid-delivery, so finishing the request here would close it behind their
+        // back and leave the case open — settleFromTicket's mismatch, mirrored.
+        $request->refresh();
+        $this->assertSame(RequestStatus::Approved, $request->status);
+        $this->assertNull($request->fulfilled_at);
+
+        // And the button is gone rather than sitting there to return this 422.
+        $this->actingAs($lead)->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonPath('data.can_fulfill', false);
+    }
+
+    public function test_fulfil_is_refused_while_the_linked_case_waits_to_be_picked_up(): void
+    {
+        $request = $this->submitComputer();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        // Nobody has taken it: the delivery has not started, let alone finished.
+        $this->assertSame(TicketStatus::Open, $request->refresh()->ticket->status);
+
+        $this->actingAs($this->fulfiller())->postJson("/api/service-requests/{$request->id}/fulfill")->assertStatus(422);
+
+        $this->assertSame(RequestStatus::Approved, $request->refresh()->status);
+    }
+
+    public function test_fulfil_still_closes_a_request_whose_case_was_closed_before_this_rule(): void
+    {
+        [$request] = $this->approveAndAssignTicket();
+        // The shape rows from before settleFromTicket are left in: the case was closed,
+        // but nothing carried the request along with it. Refusing on "has a case" rather
+        // than on the case's state would strand every one of them for good.
+        $request->ticket->update(['status' => TicketStatus::Completed->value]);
+
+        $this->actingAs($this->fulfiller())->postJson("/api/service-requests/{$request->id}/fulfill")->assertOk();
+
+        $this->assertSame(RequestStatus::Fulfilled, $request->refresh()->status);
+    }
+
+    public function test_fulfil_is_the_only_way_through_for_a_workflow_that_opens_no_case(): void
+    {
+        Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
+        $request = $this->submitComputer();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        // With no case to close, the manual queue is the whole delivery record — this is
+        // what the permission is still for after the rule above.
+        $this->actingAs($this->fulfiller())->postJson("/api/service-requests/{$request->id}/fulfill")->assertOk();
+
+        $this->assertSame(RequestStatus::Fulfilled, $request->refresh()->status);
     }
 
     public function test_no_ticket_when_the_snapshot_flag_is_off(): void
