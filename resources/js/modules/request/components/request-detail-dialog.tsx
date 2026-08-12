@@ -6,7 +6,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
-import { isOnBehalfRequest, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_REJECT_BUTTON, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -328,11 +328,11 @@ function RequestDetailBody({
                     )}
                     {request.can_approve && (
                         <>
-                            <Button variant="outline" className="text-destructive hover:text-destructive" onClick={() => onDecide('reject')}>
+                            <Button variant="outline" className={REQUEST_REJECT_BUTTON} onClick={() => onDecide('reject')}>
                                 <X className="h-4 w-4" />
                                 {t('req_reject')}
                             </Button>
-                            <Button className="bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => onDecide('approve')}>
+                            <Button className={REQUEST_APPROVE_BUTTON} onClick={() => onDecide('approve')}>
                                 <Check className="h-4 w-4" />
                                 {t('req_approve')}
                             </Button>
