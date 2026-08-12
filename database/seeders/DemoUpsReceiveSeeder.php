@@ -25,14 +25,14 @@ class DemoUpsReceiveSeeder extends Seeder
     {
         $item = StockItem::where('sku', 'SK-UPS-001')->first();
         if (! $item) {
-            $this->command?->warn('SK-UPS-001 not found — skipped.');
+            $this->command?->warn('SK-UPS-001 not found - skipped.');
 
             return;
         }
 
         // Guard: don't double-receive if the demo serials already exist.
         if (StockItemSerial::where('serial', 'BX1100C-0001')->exists()) {
-            $this->command?->info('Demo UPS serials already present — skipped.');
+            $this->command?->info('Demo UPS serials already present - skipped.');
 
             return;
         }

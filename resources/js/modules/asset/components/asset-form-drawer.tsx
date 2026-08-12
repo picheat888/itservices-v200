@@ -171,7 +171,7 @@ export function AssetFormDrawer({ open, editing, onClose }: { open: boolean; edi
         () =>
             contracts.map((c) => ({
                 value: String(c.id),
-                label: `${c.code} — ${c.vendor ?? ''}`,
+                label: `${c.code} - ${c.vendor ?? ''}`,
                 search: `${c.code} ${c.vendor ?? ''} ${c.details ?? ''}`,
             })),
         [contracts],

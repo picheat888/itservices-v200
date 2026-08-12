@@ -93,7 +93,7 @@ class OrgSeeder extends Seeder
         }
 
         // ── Locations (unchanged generic demo set) ───────────────────────────
-        foreach (['HQ — Floor 3', 'HQ — Floor 5', 'Plant 1', 'Plant 1 — QA Lab', 'Warehouse', 'Datacenter'] as $name) {
+        foreach (['HQ - Floor 3', 'HQ - Floor 5', 'Plant 1', 'Plant 1 - QA Lab', 'Warehouse', 'Datacenter'] as $name) {
             Location::firstOrCreate(['name' => $name]);
         }
 

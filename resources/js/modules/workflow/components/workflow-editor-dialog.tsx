@@ -430,7 +430,7 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                 <div className="text-sm font-semibold">{queue ? t('wf_actor_it') : (row.approver_name ?? row.label)}</div>
                 <div className="text-muted-foreground text-xs">
                     {skipped
-                        ? `${t('wf_skipped')} — ${row.note ?? ''}`
+                        ? `${t('wf_skipped')} - ${row.note ?? ''}`
                         : queue
                           ? t('wf_queue_preview')
                           : owner

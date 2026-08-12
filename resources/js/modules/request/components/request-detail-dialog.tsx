@@ -171,7 +171,7 @@ function RequestDetailBody({
             variant: 'edit',
             title: t('req_fulfill_title'),
             description: t('req_fulfill_hint'),
-            entity: { name: `${request.reference} — ${request.title}` },
+            entity: { name: `${request.reference} - ${request.title}` },
             confirmText: t('req_fulfill'),
             action: () => fulfill.mutateAsync(request.id).catch(onError),
         });
@@ -181,7 +181,7 @@ function RequestDetailBody({
             variant: 'danger',
             title: t('req_cancel_title'),
             description: t('req_cancel_hint'),
-            entity: { name: `${request.reference} — ${request.title}` },
+            entity: { name: `${request.reference} - ${request.title}` },
             confirmText: t('req_cancel_request'),
             action: async () => {
                 await cancel.mutateAsync(request.id).catch(onError);

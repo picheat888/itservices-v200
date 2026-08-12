@@ -32,7 +32,7 @@
 <head>
     <meta charset="utf-8">
     {{-- dompdf embeds this as the PDF Title metadata → shown as the browser tab name. --}}
-    <title>{{ $titles[$view] }} · {{ $item['sku'] }} — {{ $company }}</title>
+    <title>{{ $titles[$view] }} · {{ $item['sku'] }} - {{ $company }}</title>
     <style>
         @font-face { font-family: 'Sarabun'; font-weight: normal; src: url("{{ storage_path('fonts/Sarabun-Regular.ttf') }}") format('truetype'); }
         @font-face { font-family: 'Sarabun'; font-weight: bold; src: url("{{ storage_path('fonts/Sarabun-Bold.ttf') }}") format('truetype'); }

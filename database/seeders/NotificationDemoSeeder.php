@@ -33,7 +33,7 @@ class NotificationDemoSeeder extends Seeder
         );
 
         if ($recipients->isEmpty()) {
-            $this->command?->warn('No users with employees.set_credentials — skipping notification demo.');
+            $this->command?->warn('No users with employees.set_credentials - skipping notification demo.');
 
             return;
         }
@@ -41,7 +41,7 @@ class NotificationDemoSeeder extends Seeder
         // Pick a handful of employees to reference; fall back gracefully if few exist.
         $employees = Employee::orderBy('id')->take(6)->get();
         if ($employees->isEmpty()) {
-            $this->command?->warn('No employees found — skipping notification demo.');
+            $this->command?->warn('No employees found - skipping notification demo.');
 
             return;
         }

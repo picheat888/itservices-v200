@@ -211,7 +211,7 @@ class AssetController extends Controller
     public function store(StoreAssetRequest $request): JsonResponse
     {
         $asset = $this->service->create($request->validated());
-        AuditLog::record('Registered asset', "{$asset->asset_code} — {$asset->model?->name}");
+        AuditLog::record('Registered asset', "{$asset->asset_code} - {$asset->model?->name}");
 
         return (new AssetResource($asset->load('contract.vendor', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department')))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -252,7 +252,7 @@ class AssetController extends Controller
 
         $before = $asset->getOriginal();
         $asset = $this->service->update($asset, $request->validated());
-        AuditLog::record('Updated asset', "{$asset->asset_code} — {$asset->model?->name}", AuditLog::changes($before, $asset));
+        AuditLog::record('Updated asset', "{$asset->asset_code} - {$asset->model?->name}", AuditLog::changes($before, $asset));
 
         return (new AssetResource($asset->load('contract.vendor', 'brand', 'model', 'category', 'vendor', 'warehouse', 'ownerEmployee.position', 'ownerEmployee.department')))
             ->additional(['message' => 'success'])->response();
@@ -286,9 +286,9 @@ class AssetController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.delete'), 403);
         abort_unless($asset->status === AssetStatus::Ready, 422, 'Only an asset that is Ready to deploy can be deleted.');
-        abort_if($asset->contract_id !== null, 422, 'This asset is linked to a contract — unlink it before deleting.');
+        abort_if($asset->contract_id !== null, 422, 'This asset is linked to a contract - unlink it before deleting.');
 
-        AuditLog::record('Deleted asset', "{$asset->asset_code} — {$asset->model?->name}");
+        AuditLog::record('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}");
         $asset->delete();
 
         return response()->json(['message' => 'success']);
@@ -308,7 +308,7 @@ class AssetController extends Controller
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
         // Already out of the pool (employee-deployed or shared/common) — recall or return it first.
-        abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'Asset is deployed — mark it returned first.');
+        abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'Asset is deployed - mark it returned first.');
 
         $asset = $this->service->transfer($asset, $data, $request->user()?->name);
         AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}");

@@ -25,7 +25,7 @@ class AssetSeeder extends Seeder
             ['INB-LT-00231', 'laptop',  'Lenovo', 'Lenovo ThinkPad T14s',      'EMP-0004', 'Information Technology', 'deployed',           38500,  'purchased', '2024-02-14', '2027-02-14', null],
             ['INB-LT-00232', 'laptop',  'Lenovo', 'Lenovo ThinkPad T14s',      'EMP-0005', 'Human Resources',       'deployed',           38500,  'purchased', '2024-02-14', '2027-02-14', null],
             ['INB-DK-00045', 'desktop', 'Dell',   'Dell OptiPlex 7000',        'EMP-0006', 'Human Resources',       'deployed',           28900,  'purchased', '2023-09-01', '2026-09-01', null],
-            ['INB-PR-00112', 'printer', 'HP',     'HP LaserJet M404dw',        'Shared — HR', 'Human Resources',    'deployed',           12800,  'purchased', '2023-04-10', '2026-04-10', null],
+            ['INB-PR-00112', 'printer', 'HP',     'HP LaserJet M404dw',        'Shared - HR', 'Human Resources',    'deployed',           12800,  'purchased', '2023-04-10', '2026-04-10', null],
             ['INB-SV-00003', 'server',  'Dell',   'Dell PowerEdge R750',       'Datacenter Rack 2', 'IT',           'deployed',           485000, 'purchased', '2022-11-20', '2027-11-20', null],
             ['INB-MB-00078', 'mobile',  'Apple',  'iPhone 15 (128GB)',         'EMP-0002', 'Executive',             'deployed',           32900,  'purchased', '2024-06-05', '2026-06-05', null],
             ['RNT-NW-00012', 'network', 'Cisco',  'Cisco Catalyst 9300 (24p)', 'Plant 1 IDF', 'IT',                 'deployed',           8500,   'rented',    '2024-01-01', '2027-01-01', null],
@@ -35,7 +35,7 @@ class AssetSeeder extends Seeder
             ['INB-LT-00150', 'laptop',  'Lenovo', 'Lenovo IdeaPad 5',          null,        'IT',                   'ready',              24200,  'purchased', '2024-08-12', '2027-08-12', null],
             ['INB-LT-00141', 'laptop',  'HP',     'HP EliteBook 840',          'EMP-0004', 'Information Technology', 'deployed',           42000,  'purchased', '2023-05-18', '2026-05-18', null],
             ['RNT-LT-00027', 'laptop',  'Dell',   'Dell Latitude (rental)',    'EMP-0002', 'Executive',             'deployed',           1800,   'rented',    '2024-04-01', '2026-04-01', null],
-            ['INB-PR-00118', 'printer', 'Canon',  'Canon imageRUNNER 2630',    'Shared — Plant 1', 'Production',    'deployed',           58000,  'purchased', '2022-08-15', '2025-08-15', 'Paper feed jamming — sent to vendor'],
+            ['INB-PR-00118', 'printer', 'Canon',  'Canon imageRUNNER 2630',    'Shared - Plant 1', 'Production',    'deployed',           58000,  'purchased', '2022-08-15', '2025-08-15', 'Paper feed jamming - sent to vendor'],
             // Left for the `user` login to accept / the `hr` login to hand back, so
             // My Assets has something waiting in both directions out of the box.
             ['INB-LT-00251', 'laptop',  'Dell',   'Dell Latitude 5440',        'EMP-0006', 'Human Resources',       'pending_acceptance', 32100,  'purchased', '2025-09-01', '2028-09-01', 'New hire onboarding'],
@@ -70,7 +70,7 @@ class AssetSeeder extends Seeder
             // to resolve is not: it used to fall through into `owner` and leave the asset
             // with nobody holding it, which is exactly the drift worth shouting about.
             if ($ownerEmployeeId === null && $owner !== null && str_starts_with($owner, 'EMP-')) {
-                throw new RuntimeException("AssetSeeder: no employee with code {$owner} — the demo codes have drifted from OrgSeeder.");
+                throw new RuntimeException("AssetSeeder: no employee with code {$owner} - the demo codes have drifted from OrgSeeder.");
             }
 
             Asset::updateOrCreate(['asset_code' => $tag], [

@@ -6,7 +6,7 @@
         ->take(2)
         ->implode('') ?: 'IT';
     // Hidden preheader (inbox preview line). Falls back to the eyebrow/brand.
-    $preheader = $eyebrow ? "{$brandName} — {$eyebrow}" : $brandName;
+    $preheader = $eyebrow ? "{$brandName} - {$eyebrow}" : $brandName;
     // In the in-app preview the CTA is illustrative only — render it inert.
     $isPreview = $preview ?? false;
     // Strip default paragraph spacing (inline, so Outlook honours it too) — authors
@@ -111,7 +111,7 @@
                                             <!--[if !mso]><!-->
                                             <a href="{{ $isPreview ? '#' : $actionUrl }}" style="display:inline-block;background-color:#2563eb;color:#ffffff;font-family:'Segoe UI',Arial,sans-serif;font-size:14.5px;font-weight:bold;line-height:1;padding:14px 26px;border-radius:10px;{{ $isPreview ? 'pointer-events:none;cursor:default;' : '' }}">{{ $actionLabel ?? 'Open in portal' }} &nbsp;&rarr;</a>
                                             <!--<![endif]-->
-                                            <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#94a3b8;padding-top:13px;">🔒 @if ($isPreview) Sample only — in a real email this opens the portal (sign in required). @else You'll be asked to <span style="color:#64748b;font-weight:bold;">sign in</span> to view this in the portal. @endif</div>
+                                            <div style="font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#94a3b8;padding-top:13px;">🔒 @if ($isPreview) Sample only - in a real email this opens the portal (sign in required). @else You'll be asked to <span style="color:#64748b;font-weight:bold;">sign in</span> to view this in the portal. @endif</div>
                                         </td>
                                     </tr>
                                 @endif
@@ -122,7 +122,7 @@
                     {{-- Footer --}}
                     <tr>
                         <td align="center" style="padding:20px 12px 4px;font-family:'Segoe UI',Arial,sans-serif;">
-                            <div style="font-size:11.5px;color:#94a3b8;line-height:18px;">{{ $brandName }} &middot; Automated message — please do not reply.</div>
+                            <div style="font-size:11.5px;color:#94a3b8;line-height:18px;">{{ $brandName }} &middot; Automated message - please do not reply.</div>
                         </td>
                     </tr>
 

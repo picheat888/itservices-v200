@@ -268,7 +268,7 @@ class AssetService
             'warehouse_id' => Warehouse::resolveId($destName),
             'last_reason' => $reason,
         ]);
-        $this->logTransfer($asset, $from, (string) $destName, $reason ?: 'Recalled — transfer cancelled', $performedBy);
+        $this->logTransfer($asset, $from, (string) $destName, $reason ?: 'Recalled - transfer cancelled', $performedBy);
 
         return $asset->fresh();
     }
@@ -309,7 +309,7 @@ class AssetService
             abort_if(
                 $notReady->isNotEmpty(),
                 422,
-                'Only Ready assets can be written off — recall or return these first: '.$notReady->implode(', ').'.'
+                'Only Ready assets can be written off - recall or return these first: '.$notReady->implode(', ').'.'
             );
         }
 

@@ -345,7 +345,7 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                     .map((message) => (BLOCK_REASON_LABEL[message] ? t(BLOCK_REASON_LABEL[message]) : message))
                     .join(' · ');
                 // Somebody has to file these by hand, so it waits to be dismissed.
-                pushToast(`${services} — ${reasons}`, 'error', t('emp_onboarding_failed'));
+                pushToast(`${services} - ${reasons}`, 'error', t('emp_onboarding_failed'));
             } else if (onboarding?.created.length) {
                 // Heading on top, count on its own line below it.
                 pushToast(t('emp_onboarding_filed_count').replace('{n}', String(onboarding.created.length)), 'success', t('emp_onboarding_filed'));

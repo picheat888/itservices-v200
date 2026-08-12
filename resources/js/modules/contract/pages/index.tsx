@@ -871,8 +871,8 @@ function DashboardTab({
                                     key={c.id}
                                     title={
                                         c.days <= 0
-                                            ? `${c.code} · ${c.name} — ${c.end} (${lang === 'th' ? `หมดอายุไป ${-c.days} วัน` : `expired ${-c.days}d ago`})`
-                                            : `${c.code} · ${c.name} — ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`
+                                            ? `${c.code} · ${c.name} - ${c.end} (${lang === 'th' ? `หมดอายุไป ${-c.days} วัน` : `expired ${-c.days}d ago`})`
+                                            : `${c.code} · ${c.name} - ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`
                                     }
                                     onClick={() => onSelect(c.id)}
                                     className={cn(

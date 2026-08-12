@@ -81,7 +81,7 @@ class SectionSeeder extends Seeder
 
         foreach ($sections as $tag => $rows) {
             $departmentId = $departmentIdByTag[$tag]
-                ?? throw new RuntimeException("SectionSeeder: no department tagged {$tag} — run DepartmentSeeder first.");
+                ?? throw new RuntimeException("SectionSeeder: no department tagged {$tag} - run DepartmentSeeder first.");
 
             foreach ($rows as [$code, $name]) {
                 Section::firstOrCreate(

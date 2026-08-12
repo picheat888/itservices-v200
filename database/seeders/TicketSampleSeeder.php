@@ -21,7 +21,7 @@ class TicketSampleSeeder extends Seeder
         $staff = User::whereHas('role', fn ($q) => $q->whereIn('key', ['super', 'admin']))->value('id');
 
         if (empty($emps) || $staff === null) {
-            $this->command?->warn('TicketSampleSeeder skipped — needs active employees and at least one super/admin user.');
+            $this->command?->warn('TicketSampleSeeder skipped - needs active employees and at least one super/admin user.');
 
             return;
         }
@@ -69,7 +69,7 @@ class TicketSampleSeeder extends Seeder
                 'subject' => 'เชื่อมต่อ VPN จากบ้านไม่ได้',
                 'description' => 'VPN client rejects the credentials that work fine in the office.',
                 'category' => 'network', 'priority' => 'medium', 'status' => 'completed',
-                'callback_phone' => '089-111-2222', 'resolution' => 'Reset the MFA token and reissued the VPN profile — user reconnected successfully.',
+                'callback_phone' => '089-111-2222', 'resolution' => 'Reset the MFA token and reissued the VPN profile - user reconnected successfully.',
                 'created' => $now->copy()->subDays(6), 'responded' => $now->copy()->subDays(6)->addHours(1), 'resolved' => $now->copy()->subDays(5),
             ],
             [
@@ -92,7 +92,7 @@ class TicketSampleSeeder extends Seeder
                 'subject' => 'เครื่องพิมพ์ชั้น 2 หมึกหมด',
                 'description' => 'The shared printer reports an empty toner cartridge.',
                 'category' => 'other', 'priority' => 'low', 'status' => 'canceled',
-                'callback_phone' => 'ext. 1220', 'resolution' => 'Duplicate of an existing request already handled by facilities — closing this one.',
+                'callback_phone' => 'ext. 1220', 'resolution' => 'Duplicate of an existing request already handled by facilities - closing this one.',
                 'created' => $now->copy()->subDays(10), 'responded' => $now->copy()->subDays(10)->addHours(2), 'resolved' => $now->copy()->subDays(9),
             ],
             // Completed but late — breaches the critical SLA target (drags SLA % below 100).

@@ -412,7 +412,7 @@ class TicketController extends Controller
         abort_if($employee === null, 422, 'Your account is not linked to an employee record.');
 
         $ticket = $this->service->create($request->validated(), $employee);
-        AuditLog::record('Created ticket', "{$ticket->ticket_no} — {$ticket->subject}");
+        AuditLog::record('Created ticket', "{$ticket->ticket_no} - {$ticket->subject}");
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
@@ -579,7 +579,7 @@ class TicketController extends Controller
     public function update(UpdateTicketRequest $request, Ticket $ticket): JsonResponse
     {
         $ticket = $this->service->update($ticket, $request->validated());
-        AuditLog::record('Updated ticket', "{$ticket->ticket_no} — {$ticket->subject}");
+        AuditLog::record('Updated ticket', "{$ticket->ticket_no} - {$ticket->subject}");
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();

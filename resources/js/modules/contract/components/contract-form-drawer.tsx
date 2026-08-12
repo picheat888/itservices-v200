@@ -549,7 +549,7 @@ export function ContractFormDrawer({
                                             <Input
                                                 value={form.name}
                                                 onChange={(e) => upd('name', e.target.value)}
-                                                placeholder={lang === 'th' ? 'เช่น Microsoft 365 — 320 สิทธิ์' : 'e.g. Microsoft 365 — 320 seats'}
+                                                placeholder={lang === 'th' ? 'เช่น Microsoft 365 - 320 สิทธิ์' : 'e.g. Microsoft 365 - 320 seats'}
                                             />
                                         </Field>
 
@@ -777,8 +777,8 @@ export function ContractFormDrawer({
                                     <div className="border-input bg-muted/40 text-muted-foreground flex items-center justify-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm">
                                         <Info className="h-4 w-4 shrink-0" />
                                         {lang === 'th'
-                                            ? 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware — เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้'
-                                            : 'Only Hardware contracts can link assets — change the type in step 1 to enable this.'}
+                                            ? 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware - เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้'
+                                            : 'Only Hardware contracts can link assets - change the type in step 1 to enable this.'}
                                     </div>
                                 ) : (
                                     <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
@@ -847,7 +847,7 @@ export function ContractFormDrawer({
                                     thTitle="ตรวจสอบก่อนบันทึก"
                                     enTitle="Review before saving"
                                     thSub="ตรวจสอบความถูกต้อง แก้ไขขั้นใดก็ได้จากแถบด้านบน"
-                                    enSub="Double-check the details — jump to any step from the bar above."
+                                    enSub="Double-check the details - jump to any step from the bar above."
                                 />
 
                                 <div className="border-border overflow-hidden rounded-xl border">

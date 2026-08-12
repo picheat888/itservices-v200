@@ -33,7 +33,7 @@ class AvatarDemoSeeder extends Seeder
             // These codes used to belong to an older numbering, and the miss was
             // skipped quietly — so no avatar ever appeared and nothing said why.
             $employee = Employee::where('code', $code)->first()
-                ?? throw new RuntimeException("AvatarDemoSeeder: no employee with code {$code} — the demo codes have drifted from OrgSeeder.");
+                ?? throw new RuntimeException("AvatarDemoSeeder: no employee with code {$code} - the demo codes have drifted from OrgSeeder.");
 
             $path = "employees/avatar-{$code}.svg";
             Storage::disk('public')->put($path, $this->svg($a));

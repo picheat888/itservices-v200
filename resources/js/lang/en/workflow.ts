@@ -5,7 +5,7 @@ import type { Dict } from '@/lang/types';
  */
 export const workflow: Dict = {
     wf_title: 'Workflows',
-    wf_sub: 'Adjust the approval route of each request type — who signs off, and in what order.',
+    wf_sub: 'Adjust the approval route of each request type - who signs off, and in what order.',
     wf_coming_soon: 'Coming soon',
 
     // pages/index.tsx — KPI cards
@@ -55,7 +55,7 @@ export const workflow: Dict = {
     wf_add_step: 'Add step',
     wf_step_label: 'Display label',
     wf_step_positions: 'Approved by',
-    wf_step_positions_required: 'No position chosen — this step can never resolve.',
+    wf_step_positions_required: 'No position chosen - this step can never resolve.',
     wf_ranks_edit: 'Change',
     wf_ranks_done: 'Done',
     wf_actor_chain: 'Reporting line',

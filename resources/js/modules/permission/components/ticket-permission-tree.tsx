@@ -196,8 +196,8 @@ export function TicketPermissionTree({
                             <InfoHint
                                 text={
                                     lang === 'th'
-                                        ? 'จำกัดประเภทเคสที่เจ้าหน้าที่เห็น รับ และถูกแจ้งเตือน — ไม่ติ๊กเลย = ไม่เห็นเคสใด'
-                                        : 'Scopes which categories this role may see, take and be alerted about — none ticked = no cases at all.'
+                                        ? 'จำกัดประเภทเคสที่เจ้าหน้าที่เห็น รับ และถูกแจ้งเตือน - ไม่ติ๊กเลย = ไม่เห็นเคสใด'
+                                        : 'Scopes which categories this role may see, take and be alerted about - none ticked = no cases at all.'
                                 }
                             />
                         </span>
