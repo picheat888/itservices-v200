@@ -1,8 +1,8 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { useToastStore, visibleToasts, type Toast, type ToastIcon, type ToastTone } from '@/stores/toast';
+import { nextRevealAt, useToastStore, visibleToasts, type Toast, type ToastIcon, type ToastTone } from '@/stores/toast';
 import { Check, Info, Trash2, TriangleAlert, Users, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /** Most toasts on screen at once; the rest wait in the store and pop in as slots free up. */
@@ -54,9 +54,31 @@ const BAR_LIFE: Record<number, string> = {
 export function Toaster() {
     const t = useT();
     const toasts = useToastStore((s) => s.toasts);
+    // Bumped when a queued toast comes due, purely to re-render — a burst enters one
+    // card at a time (TOAST_STAGGER_MS) rather than all in the same frame.
+    const [, setDueTick] = useState(0);
 
     // Which three are on screen — the rule itself lives in the store (visibleToasts).
-    const visible = useMemo(() => visibleToasts(toasts, MAX_VISIBLE), [toasts]);
+    const visible = visibleToasts(toasts, MAX_VISIBLE);
+
+    // Wake up exactly when the next queued toast is due, then arm the one after it.
+    // No interval — between arrivals there is nothing to recompute.
+    useEffect(() => {
+        let timer: number | undefined;
+        const armNextArrival = () => {
+            const due = nextRevealAt(toasts);
+            if (due === null) return;
+            timer = window.setTimeout(
+                () => {
+                    setDueTick((n) => n + 1); // re-render so the card that just came due mounts
+                    armNextArrival();
+                },
+                Math.max(0, due - Date.now()) + 16,
+            );
+        };
+        armNextArrival();
+        return () => window.clearTimeout(timer);
+    }, [toasts]);
 
     return createPortal(
         <div
