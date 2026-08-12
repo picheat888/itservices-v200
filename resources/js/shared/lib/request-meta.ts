@@ -87,6 +87,24 @@ export const REQUEST_ONBOARDING_BADGE = { tone: 'violet' as const, labelKey: 're
 export const REQUEST_ONBOARDING_ROW = 'bg-violet-500/[0.05]';
 
 /**
+ * How Reject looks everywhere the decision is still being CHOSEN — the queue card, the
+ * table row, the detail dialog. Outlined and red, never filled.
+ *
+ * Filled destructive is kept for the confirm dialog, the one place the decision is
+ * actually made (and for deletions, through useConfirm's danger variant). Two filled
+ * buttons side by side leave no primary path, and most requests end in an approval.
+ */
+export const REQUEST_REJECT_BUTTON = 'border-destructive/50 text-destructive hover:bg-destructive/5 hover:text-destructive';
+
+/**
+ * And its counterpart: the filled green that means "approve". Spelled out in four places
+ * before this, which is how the dashboard card ended up with an outlined Approve while the
+ * table and the dialogs had a filled one — the same decision looking like two different
+ * weights depending on where you met it.
+ */
+export const REQUEST_APPROVE_BUTTON = 'bg-emerald-600 text-white hover:bg-emerald-700';
+
+/**
  * The row tint for a new employee's request, or nothing.
  *
  * The tint is for the reader who has to do something: a new hire's request that is

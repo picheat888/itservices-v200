@@ -7,7 +7,9 @@ import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import {
     isOnBehalfRequest,
     onboardingRowClass,
+    REQUEST_APPROVE_BUTTON,
     REQUEST_ONBOARDING_BADGE,
+    REQUEST_REJECT_BUTTON,
     REQUEST_STATUS_META,
     REQUEST_STATUSES,
     REQUEST_TYPE_META,
@@ -20,6 +22,7 @@ import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { Check, CheckCircle2, ChevronRight, Clock, Download, Eye, History, Inbox, Plus, Search, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -29,10 +32,23 @@ import { RequestDetailDialog } from '../components/request-detail-dialog';
 import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 
-const TAB_KEY = 'requests.tab';
+/**
+ * The first typed field's value — the one fact that says what a request is actually for
+ * (which machine, which mailbox, which share). Only the first: a row identifies and
+ * prioritises, and the rest of the specifics are in the dialog where the decision is made.
+ */
+function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
+    const row = request.fields_display[0];
+
+    return lang === 'th' ? row.value_th || row.value : row.value;
+}
+
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
 const ALL = '__all__';
-type Tab = 'dashboard' | 'all' | 'approvals';
+/** The tab slugs, which are also what ?tab= carries. */
+const TABS = ['dashboard', 'all', 'approvals'] as const;
+type Tab = (typeof TABS)[number];
+const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 
 /**
  * Requests page — the whole service-request lifecycle in three tabs:
@@ -42,20 +58,23 @@ type Tab = 'dashboard' | 'all' | 'approvals';
  */
 export default function RequestsPage() {
     const t = useT();
+    // The queue rows print a stored value in the reader's language (value_th || value).
+    const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
     const canSubmit = can('requests.submit');
 
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Active tab — URL first, then the last choice, then the dashboard.
-    const tabParam = searchParams.get('tab') as Tab | null;
-    const [tab, setTabState] = useState<Tab>(() => tabParam ?? ((localStorage.getItem(TAB_KEY) as Tab | null) || 'dashboard'));
+    // Active tab lives in the URL and nowhere else, so a reload or a shared link is
+    // exact. Validated rather than cast: `?tab=` with a slug this page does not have used
+    // to leave the whole card empty, since no branch below matched it.
+    const tabParam = searchParams.get('tab');
+    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'dashboard'));
     useEffect(() => {
-        if (tabParam && tabParam !== tab) setTabState(tabParam);
+        if (isTab(tabParam) && tabParam !== tab) setTabState(tabParam);
     }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
     const setTab = (next: Tab) => {
         setTabState(next);
-        localStorage.setItem(TAB_KEY, next);
         setSearchParams(
             (p) => {
                 const sp = new URLSearchParams(p);
@@ -132,6 +151,35 @@ export default function RequestsPage() {
 
     const [decide, setDecide] = useState<{ request: ServiceRequest; action: DecisionAction } | null>(null);
 
+    /**
+     * Days this request has been waiting on the CURRENT approver — from when their step
+     * became current, not from when the request was filed. Null when no step is current
+     * (nothing is waiting on anybody) or on rows old enough to predate the timestamp.
+     */
+    const waitingDays = (r: ServiceRequest): number | null => {
+        const since = (r.approvals ?? []).find((a) => a.status === 'current')?.became_current_at;
+
+        return since ? Math.max(0, (Date.now() - new Date(since.replace(' ', 'T')).getTime()) / 86_400_000) : null;
+    };
+    /**
+     * Short enough to sit in a fixed slot: "New" for what arrived today, otherwise the
+     * number of days. The full sentence stays as the title, so anybody wondering what the
+     * number counts can hover — the card's own heading ("Needs your decision") is the rest
+     * of that context.
+     */
+    /**
+     * "New" goes on what reached this approver today; the older rows say nothing at all.
+     *
+     * A day count read as noise in a column that has to stay narrow, and the queue is
+     * ordered oldest-first anyway — so age is carried by the order, and the only thing
+     * worth a word is what has just landed.
+     */
+    const isNewToYou = (r: ServiceRequest): boolean => {
+        const days = waitingDays(r);
+
+        return days !== null && days < 1;
+    };
+
     // Requests older than this many days get the amber age chip (mirrors the mockup).
     const ageDays = (iso: string) => Math.max(0, (Date.now() - new Date(iso.replace(' ', 'T')).getTime()) / 86_400_000);
     const ageLabel = (iso: string) => {
@@ -193,22 +241,18 @@ export default function RequestsPage() {
                 <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                     {r.can_approve ? (
                         <>
-                            <Button
-                                size="sm"
-                                className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                onClick={() => setDecide({ request: r, action: 'approve' })}
-                            >
+                            <Button size="sm" className={REQUEST_APPROVE_BUTTON} onClick={() => setDecide({ request: r, action: 'approve' })}>
                                 <Check className="h-3.5 w-3.5" />
                                 {t('req_approve')}
                             </Button>
                             <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-destructive hover:text-destructive"
-                                title={t('req_reject')}
+                                className={REQUEST_REJECT_BUTTON}
                                 onClick={() => setDecide({ request: r, action: 'reject' })}
                             >
                                 <X className="h-3.5 w-3.5" />
+                                {t('req_reject')}
                             </Button>
                         </>
                     ) : (
@@ -351,35 +395,64 @@ export default function RequestsPage() {
                                             >
                                                 <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="truncate text-sm font-medium">{r.title}</span>
+                                                    {/* What is being asked for, which the title alone does not say — "Mobile
+                                                        device for X" is a tablet or a phone, and an approver reads this row to
+                                                        decide which ones to open. The title stands in when a service has no
+                                                        typed fields at all (a General Request). */}
+                                                    <div className="truncate text-sm font-medium">
+                                                        {r.fields_display[0]
+                                                            ? `${t(REQUEST_TYPE_META[r.type].labelKey)} · ${headlineValue(r, lang)}`
+                                                            : r.title}
+                                                    </div>
+                                                    {/* Who it is for. The reason has moved out of the row: it is a sentence, it
+                                                        was truncated mid-thought, and it belongs where the decision is made. */}
+                                                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                                                        <span className="truncate">
+                                                            {r.requester.name}
+                                                            {r.requester.department ? ` · ${r.requester.department}` : ''}
+                                                        </span>
                                                         {isOnBehalfRequest(r) && (
                                                             <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} className="shrink-0">
                                                                 {t(REQUEST_ONBOARDING_BADGE.labelKey)}
                                                             </StatusBadge>
                                                         )}
                                                     </div>
-                                                    <div className="text-muted-foreground truncate text-xs">
-                                                        {r.requester.name} · {r.requester.department ?? '—'} · {r.reason}
-                                                    </div>
                                                 </div>
-                                                <WorkflowMini request={r} />
-                                                <span className="text-muted-foreground shrink-0 text-xs whitespace-nowrap">
-                                                    {ageLabel(r.created_at)}
+                                                {/* Marks what reached THIS approver today — not what was filed today: a
+                                                    four-day-old request can have landed on your desk a minute ago, and the
+                                                    age of the request read as a reproach for somebody else's delay.
+                                                    
+                                                    Ahead of the step track, in a fixed-width slot even when empty: a slot
+                                                    that collapsed on the older rows moved the track and the buttons to a
+                                                    different x on every line. */}
+                                                <span className="flex w-10 shrink-0 justify-end">
+                                                    {isNewToYou(r) && (
+                                                        <StatusBadge tone="red" dot={false}>
+                                                            {t('req_waiting_new')}
+                                                        </StatusBadge>
+                                                    )}
                                                 </span>
+                                                <WorkflowMini request={r} />
                                                 <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
-                                                    <Button size="sm" variant="outline" onClick={() => setDecide({ request: r, action: 'approve' })}>
-                                                        <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                                                        {t('req_approve')}
-                                                    </Button>
                                                     <Button
                                                         size="sm"
-                                                        variant="ghost"
-                                                        className="text-muted-foreground hover:text-destructive"
-                                                        title={t('req_reject')}
+                                                        className={REQUEST_APPROVE_BUTTON}
+                                                        onClick={() => setDecide({ request: r, action: 'approve' })}
+                                                    >
+                                                        <Check className="h-3.5 w-3.5" />
+                                                        {t('req_approve')}
+                                                    </Button>
+                                                    {/* Named, not an icon on its own: the destructive action was the quieter
+                                                        of the pair, and a bare ✕ beside a labelled button reads as "take this
+                                                        off the list" rather than "reject it". */}
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className={REQUEST_REJECT_BUTTON}
                                                         onClick={() => setDecide({ request: r, action: 'reject' })}
                                                     >
                                                         <X className="h-3.5 w-3.5" />
+                                                        {t('req_reject')}
                                                     </Button>
                                                 </div>
                                             </div>
