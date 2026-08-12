@@ -57,7 +57,11 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     <Field label={t('ticket_select_staff')} required>
-                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} placeholder="—" />
+                        {/* No placeholder override: SearchableSelect falls back to the shared
+                            "Select…" key. An em dash is this app's marker for "no value" in
+                            tables, so on a required picker it read as "there is nobody" rather
+                            than as an invitation to choose. */}
+                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} />
                     </Field>
 
                     <div className="flex items-start gap-2 rounded-md bg-blue-500/10 px-3 py-2.5 text-sm text-blue-600 dark:text-blue-400">

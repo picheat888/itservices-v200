@@ -1,3 +1,4 @@
+import { useT } from '@/lang';
 import { ICON_OPTIONS, getLucideIcon } from '@/shared/lib/lucide-icons';
 import { cn } from '@/shared/lib/utils';
 import { ChevronsUpDown, X } from 'lucide-react';
@@ -10,12 +11,15 @@ import { useMemo, useState } from 'react';
 export function IconPicker({
     value,
     onChange,
-    placeholder = 'เลือกไอคอน',
+    // No literal default: a hook cannot run in a parameter, and the Thai string that
+    // used to sit here was invisible to whoever added the next caller.
+    placeholder,
 }: {
     value?: string | null;
     onChange: (name: string | null) => void;
     placeholder?: string;
 }) {
+    const t = useT();
     const [open, setOpen] = useState(false);
     const [q, setQ] = useState('');
     const Current = getLucideIcon(value);
@@ -38,7 +42,7 @@ export function IconPicker({
                         <span className="truncate">{value}</span>
                     </>
                 ) : (
-                    <span className="text-muted-foreground">{placeholder}</span>
+                    <span className="text-muted-foreground">{placeholder ?? t('icon_pick')}</span>
                 )}
                 <span className="ml-auto flex items-center gap-1">
                     {value && (
@@ -68,7 +72,7 @@ export function IconPicker({
                             autoFocus
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
-                            placeholder="ค้นหาไอคอน…"
+                            placeholder={t('icon_search')}
                             className="border-input focus:border-brand bg-background mb-2 h-8 w-full rounded-md border px-2 text-sm outline-none"
                         />
                         <div className="grid max-h-48 grid-cols-8 gap-1 overflow-y-auto">

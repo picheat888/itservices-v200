@@ -1682,7 +1682,7 @@ function CompanyTab({
                                 set('company_name', e.target.value);
                                 clearErr('company_name');
                             }}
-                            placeholder="Acme Co., Ltd."
+                            placeholder={t('set_company_name_ph')}
                         />
                     </Field>
                     <Field label={t('set_legal_name')} required error={errors.legal_name}>
@@ -1694,7 +1694,7 @@ function CompanyTab({
                                 set('legal_name', e.target.value);
                                 clearErr('legal_name');
                             }}
-                            placeholder="บริษัท แอคมี จำกัด"
+                            placeholder={t('set_legal_name_ph')}
                         />
                     </Field>
                 </div>
@@ -1735,7 +1735,7 @@ function CompanyTab({
                             set('address', e.target.value);
                             clearErr('address');
                         }}
-                        placeholder="123 Main Street, City, Country"
+                        placeholder={t('set_address_ph')}
                     />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
@@ -1875,10 +1875,10 @@ function BrandingTab({ form, set, logoUrl, embedded = false }: { form: SettingsF
         <div className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
                 <Field label={t('set_brand_name')}>
-                    <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder="ABCD IT" />
+                    <Input value={form.brand_name} onChange={(e) => set('brand_name', e.target.value)} placeholder={t('set_brand_name_ph')} />
                 </Field>
                 <Field label={t('set_brand_sub')}>
-                    <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder="Service Desk" />
+                    <Input value={form.brand_sub} onChange={(e) => set('brand_sub', e.target.value)} placeholder={t('set_brand_sub_ph')} />
                 </Field>
             </div>
 

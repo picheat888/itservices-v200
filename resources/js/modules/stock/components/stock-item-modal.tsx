@@ -180,7 +180,6 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             <SearchableSelect
                                 value={form.category_id != null ? String(form.category_id) : ''}
                                 onChange={(v) => set('category_id', v ? Number(v) : null)}
-                                placeholder="—"
                                 options={categories.map((c) => ({ value: String(c.id), label: c.name, search: c.name }))}
                             />
                         </Field>
@@ -199,7 +198,6 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             <SearchableSelect
                                 value={form.brand_id != null ? String(form.brand_id) : ''}
                                 onChange={(v) => setForm((f) => ({ ...f, brand_id: v ? Number(v) : null, model_id: null }))}
-                                placeholder="—"
                                 options={brands.map((b) => ({ value: String(b.id), label: b.name, search: b.name }))}
                             />
                         </Field>
@@ -207,7 +205,6 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                             <SearchableSelect
                                 value={form.model_id != null ? String(form.model_id) : ''}
                                 onChange={(v) => set('model_id', v ? Number(v) : null)}
-                                placeholder="—"
                                 options={modelOptions.map((m) => ({ value: String(m.id), label: m.name, search: m.name }))}
                             />
                         </Field>
@@ -237,7 +234,6 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                         <SearchableSelect
                             value={form.warranty_type_id != null ? String(form.warranty_type_id) : ''}
                             onChange={(v) => set('warranty_type_id', v ? Number(v) : null)}
-                            placeholder="—"
                             options={warranties.map((w) => ({ value: String(w.id), label: w.name, search: w.name }))}
                         />
                     </Field>

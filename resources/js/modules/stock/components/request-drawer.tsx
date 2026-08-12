@@ -63,7 +63,6 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                         <SearchableSelect
                             value={sku}
                             onChange={setSku}
-                            placeholder="—"
                             options={items.map((i) => ({
                                 value: String(i.id),
                                 label: `${i.sku} — ${i.name}`,

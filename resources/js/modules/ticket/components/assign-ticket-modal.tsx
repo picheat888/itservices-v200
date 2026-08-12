@@ -65,7 +65,7 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
                     <Field label={t('ticket_select_staff')} required>
-                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} placeholder="—" />
+                        <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} />
                     </Field>
 
                     <Field label={t('ticket_priority')} required>
