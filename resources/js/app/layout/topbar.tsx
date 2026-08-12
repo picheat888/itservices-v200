@@ -1,10 +1,8 @@
 import { navGroups } from '@/app/nav';
 import { useT } from '@/lang';
-import { useAuth } from '@/modules/auth';
 import { useNotifications } from '@/modules/notification';
 import { FlagEN, FlagTH } from '@/shared/components/flags';
 import { cn } from '@/shared/lib/utils';
-import type { Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -17,24 +15,27 @@ interface TopbarProps {
 
 export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const t = useT();
-    const { user } = useAuth();
     const { pathname } = useLocation();
     const dark = useUiStore((s) => s.dark);
     const toggleDark = useUiStore((s) => s.toggleDark);
     const lang = useUiStore((s) => s.lang);
     const toggleLang = useUiStore((s) => s.toggleLang);
     const toggleSidebar = useUiStore((s) => s.toggleSidebar);
-    const role = (user?.role ?? 'user') as Role;
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
 
     const current = navGroups.flatMap((g) => g.items).find((i) => i.to === pathname);
     const here = current ? t(current.label) : t('overall');
-
-    // Show the role's stored display name (role_label) sent by the API — works
-    // for both built-in roles and custom Role Templates. Falls back to the role
-    // key only when the label is missing (e.g. system accounts with no role).
-    const roleLabel = user?.role_label ?? role;
+    /**
+     * The sidebar section this page sits in — the same heading the user walked past to get
+     * here, so the trail names a place.
+     *
+     * It used to be the viewer's Role Template name, which answers "who am I" in a spot
+     * that asks "where am I" (and "Template" is our word for a permission preset, not
+     * anything a manager is looking at). Their role and group are on the account card at
+     * the foot of the sidebar, where the rest of "who am I" lives.
+     */
+    const section = navGroups.find((g) => g.items.some((i) => i.to === pathname));
 
     return (
         <header className="border-border bg-background flex h-16 shrink-0 items-center gap-3 border-b px-4">
@@ -47,8 +48,12 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
             </button>
 
             <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">{roleLabel}</span>
-                <span className="text-muted-foreground">/</span>
+                {section && (
+                    <>
+                        <span className="text-muted-foreground">{t(section.label)}</span>
+                        <span className="text-muted-foreground">/</span>
+                    </>
+                )}
                 <span className="font-medium">{here}</span>
             </div>
 

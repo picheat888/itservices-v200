@@ -32,6 +32,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AuditDetails, AuditFilters, GroupRole, RoleRow } from '../api/permissionApi';
 import { AccessPermissionTree } from '../components/access-permission-tree';
 import { AssetPermissionTree } from '../components/asset-permission-tree';
@@ -54,16 +55,44 @@ import {
 import { auditFieldLabel, resolveAuditValue, type AuditLookups } from '../lib/audit-format';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
 
-type Tab = 'roles' | 'groups' | 'audit';
+/** The tab slugs, which are also what ?tab= carries — no mapping layer to keep in step. */
+const TABS = ['templates', 'groups', 'logs'] as const;
+type Tab = (typeof TABS)[number];
+const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 
 export default function PermissionsPage() {
     const t = useT();
-    const [tab, setTab] = useState<Tab>('roles');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    // Active tab lives in the URL and nowhere else — the same as every other page with
+    // sub-tabs, so a reload or a shared link is exact. Validated rather than cast: a ?tab=
+    // this page does not have would otherwise leave the card with no tab inside it at all.
+    const tabParam = searchParams.get('tab');
+    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'templates'));
+    // Follows the URL while the page stays mounted: browser back/forward, and a link into
+    // another tab from somewhere else in the app.
+    useEffect(() => {
+        if (isTab(tabParam) && tabParam !== tab) {
+            setTabState(tabParam);
+        }
+    }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
+    const setTab = (next: Tab) => {
+        setTabState(next);
+        setSearchParams(
+            (p) => {
+                const sp = new URLSearchParams(p);
+                sp.set('tab', next);
+
+                return sp;
+            },
+            { replace: true },
+        );
+    };
 
     const tabs: { id: Tab; label: string }[] = [
-        { id: 'roles', label: t('perm_roles') },
+        { id: 'templates', label: t('perm_roles') },
         { id: 'groups', label: t('perm_groups') },
-        { id: 'audit', label: t('perm_audit') },
+        { id: 'logs', label: t('perm_audit') },
     ];
 
     return (
@@ -89,9 +118,9 @@ export default function PermissionsPage() {
                     ))}
                 </div>
 
-                {tab === 'roles' && <RolesTab />}
+                {tab === 'templates' && <RolesTab />}
                 {tab === 'groups' && <GroupRolesTab />}
-                {tab === 'audit' && <AuditTab />}
+                {tab === 'logs' && <AuditTab />}
             </Card>
         </div>
     );
