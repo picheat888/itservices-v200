@@ -13,7 +13,7 @@ import {
     REQUEST_TYPE_META,
     REQUEST_TYPES,
 } from '@/shared/lib/request-meta';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -98,7 +98,10 @@ export default function RequestsPage() {
 
     // Dialogs — create via ?add=1, detail via ?view=<id> (bell deep links land here).
     const adding = searchParams.get('add') === '1';
-    const viewId = searchParams.get('view');
+    // Only a real record id opens the dialog. `Number('abc')` is NaN, which still passes
+    // an `!= null` check, so a mistyped link used to fetch /service-requests/NaN and sit
+    // on the skeleton forever; a malformed link now leaves the list alone.
+    const viewId = toRecordId(searchParams.get('view'));
     const openCreate = () =>
         setSearchParams(
             (p) => {
@@ -534,7 +537,7 @@ export default function RequestsPage() {
             </Card>
 
             <RequestCreateDialog open={adding} onClose={() => closeParam('add')} />
-            <RequestDetailDialog requestId={viewId ? Number(viewId) : null} onClose={() => closeParam('view')} />
+            <RequestDetailDialog requestId={viewId} onClose={() => closeParam('view')} />
             <DecisionDialog request={decide?.request ?? null} action={decide?.action ?? null} onClose={() => setDecide(null)} />
         </div>
     );

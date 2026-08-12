@@ -1,5 +1,7 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useInitials } from '@/shared/hooks/use-initials';
@@ -33,7 +35,7 @@ import { RequestTrail } from './request-trail';
  * dialog frame — not the previous request's reference, title and approval trail.
  */
 export function RequestDetailDialog({ requestId, onClose }: { requestId: number | null; onClose: () => void }) {
-    const { data } = useRequest(requestId);
+    const { data, isError } = useRequest(requestId);
     const { record: request, switching } = useRecordView(requestId, data);
 
     const [decision, setDecision] = useState<DecisionAction | null>(null);
@@ -48,8 +50,25 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
     return (
         <>
             <Dialog open={requestId != null} onOpenChange={(o) => !o && onClose()}>
-                <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0">
-                    {request ? <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} /> : <RequestDetailLoading />}
+                <DialogContent
+                    className={cn(
+                        '!flex max-h-[min(860px,calc(100vh-72px))] max-w-[980px] flex-col gap-0 overflow-hidden p-0',
+                        // A two-line "not here" message in a 980px frame read as a broken screen
+                        // rather than as an answer. Same box as every other module's.
+                        isError && !request && recordMissingContentClass,
+                    )}
+                >
+                    {request ? (
+                        <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} />
+                    ) : isError ? (
+                        // The id is well-formed but fetching it failed — a deleted request, or a
+                        // link to one this account may not read. `switching` cannot tell that
+                        // apart from "still loading": it reports the record is absent, not why,
+                        // so without this branch the skeleton stays up for good.
+                        <RecordMissing onClose={onClose} />
+                    ) : (
+                        <RequestDetailLoading />
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -126,9 +145,21 @@ function RequestDetailBody({
     const lang = useUiStore((s) => s.lang);
     const navigate = useNavigate();
     const confirm = useConfirm();
+    const { can } = useAuth();
     const { fulfill, cancel } = useRequestMutations();
 
     const meta = REQUEST_TYPE_META[request.type];
+
+    /**
+     * The Fulfil button is gone because the case is still in flight — closing it is what
+     * finishes this request. Said out loud, because the same viewer sees the button on a
+     * request that opened no case: without a line here, its absence reads as a bug.
+     *
+     * `can` rather than `can_fulfill`, which is already false for exactly this reason and
+     * so cannot tell "IT, standing down" apart from "not IT at all".
+     */
+    const caseInFlight = request.ticket?.status === 'open' || request.ticket?.status === 'in_progress';
+    const awaitingCase = caseInFlight && request.status === 'approved' && can('requests.fulfill');
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -220,7 +251,15 @@ function RequestDetailBody({
                             {request.fields_display.map((row) => (
                                 <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
                                     <span className="text-muted-foreground shrink-0 text-xs">{lang === 'th' ? row.label_th : row.label_en}</span>
-                                    <span className={cn('text-right font-medium break-all', row.mono && 'font-mono text-xs')}>{row.value}</span>
+                                    {/* The Thai form when the snapshot froze one — a chosen option has a
+                                        label_th, free text and single-language names do not, and neither do
+                                        rows written before value_th existed. All three read `value`. */}
+                                    {/* mono switches the family, not the size: stepped down to text-xs it
+                                        made its own row 5px shorter than every other one, and the linked
+                                        ticket card below already sets a ticket number in mono at text-sm. */}
+                                    <span className={cn('text-right font-medium break-all', row.mono && 'font-mono')}>
+                                        {lang === 'th' ? row.value_th || row.value : row.value}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -261,6 +300,16 @@ function RequestDetailBody({
 
             {/* Footer — viewer-relative actions */}
             <div className="border-border/60 bg-muted/30 flex items-center gap-2.5 border-t px-6 py-3.5">
+                {/* Left, away from the buttons: sat next to Close it read as that button's
+                    caption, and both sentences start with the same word in Thai. Nothing
+                    else claims this side — cancelling needs a pending request, and this
+                    line only ever shows on an approved one. */}
+                {awaitingCase && request.ticket && (
+                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                        <TicketIcon className="h-3.5 w-3.5 shrink-0" />
+                        {t('req_fulfill_awaits_case').replace('{no}', request.ticket.ticket_no)}
+                    </span>
+                )}
                 {request.can_cancel && (
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={confirmCancel}>
                         <Trash2 className="h-3.5 w-3.5" />

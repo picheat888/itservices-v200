@@ -67,6 +67,7 @@ export const requests: Dict = {
     req_approve: 'อนุมัติ',
     req_reject: 'ไม่อนุมัติ',
     req_fulfill: 'ปิดงานแล้ว',
+    req_fulfill_awaits_case: 'คำขอนี้จะปิดอัตโนมัติ เมื่อเคส {no} เสร็จสิ้น',
     req_cancel_request: 'ยกเลิกคำขอ',
 
     // request-create-dialog.tsx — wizard สร้างคำขอ
@@ -91,7 +92,7 @@ export const requests: Dict = {
     req_other_software: 'ไม่มีในรายการ — กรอกชื่อเอง',
     req_review_title: 'ตรวจสอบและส่ง',
     req_review_sub: 'ตรวจอีกครั้ง — เมื่อส่งแล้วคำขอจะถูกส่งถึงผู้อนุมัติขั้นแรกทันที',
-    req_auto_ticket_note: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้ทีม IT อัตโนมัติ',
+    req_auto_ticket_note: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้อัตโนมัติ',
     req_submit: 'ส่งคำขอ',
     req_submitted: 'ส่งคำขอแล้ว',
     req_awaiting_first: 'รออนุมัติขั้นที่ 1',
@@ -142,7 +143,7 @@ export const requests: Dict = {
     // request-detail-dialog.tsx — กล่อง Ticket ที่เชื่อมโยง
     req_linked_ticket: 'Ticket ที่เชื่อมโยง',
     req_no_ticket: 'ไม่มี Ticket — สายนี้ปิดงานโดยไม่เปิดเคส',
-    req_ticket_auto_hint: 'เปิดอัตโนมัติเมื่ออนุมัติครบ — มอบหมายให้ทีม IT',
+    req_ticket_auto_hint: 'เปิดเคสอัตโนมัติเรียบร้อยแล้ว',
 
     // decision-dialog.tsx — อนุมัติ / ไม่อนุมัติ / ปิดงาน / ยกเลิก
     req_decide_approve: 'อนุมัติคำขอ',

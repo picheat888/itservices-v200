@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
+use App\Models\Workflow\Workflow;
 use Database\Seeders\EmailTemplateSeeder;
 use Database\Seeders\PositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
@@ -159,6 +160,10 @@ class RequestNotificationTest extends TestCase
 
     public function test_final_approval_notifies_requester_and_the_fulfill_queue(): void
     {
+        // No auto-ticket: this test follows the bells of the manual queue, and a request
+        // that opened a case is fulfilled by closing that case instead (the bells of that
+        // path are RequestAutoTicketTest's).
+        Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();

@@ -313,7 +313,13 @@ export function TicketDetailDrawer({
 
                                         <section>
                                             <SectionLabel>{t('ticket_description')}</SectionLabel>
-                                            <p className="bg-muted/50 rounded-md px-3 py-2.5 text-sm leading-relaxed">{view.description}</p>
+                                            {/* whitespace-pre-wrap: an auto-opened case writes one fact per
+                                                line (type, requester, each typed field, then the reason),
+                                                and without this every break collapsed into one paragraph —
+                                                which is how a structured summary came out as a wall of text. */}
+                                            <p className="bg-muted/50 rounded-md px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap">
+                                                {view.description}
+                                            </p>
                                         </section>
 
                                         {view.take_note && (

@@ -7,6 +7,7 @@ use App\Enums\Request\RequestOrigin;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Request\WorkflowStepKind;
+use App\Enums\Ticket\TicketStatus;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
@@ -225,7 +226,14 @@ class RequestService
         return $request;
     }
 
-    /** Mark an approved request done (the requests.fulfill queue's action). */
+    /**
+     * Mark an approved request done (the requests.fulfill queue's action).
+     *
+     * The button is the whole delivery record only when no case was opened — a
+     * workflow with auto_ticket off, or one whose case could not be opened. Where a
+     * case exists, closing it is what fulfils the request (settleFromTicket), so
+     * this refuses while that case is still in flight.
+     */
     public function fulfill(ServiceRequest $request, User $actor): ServiceRequest
     {
         abort_unless((bool) $actor->hasPermission('requests.fulfill'), 403);
@@ -233,6 +241,19 @@ class RequestService
         $request = DB::transaction(function () use ($request, $actor) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
             $this->assertStatus($fresh, RequestStatus::Approved);
+            // Pressing this while the technician is mid-delivery would finish the request
+            // behind them and leave the case open — the same split settleFromTicket exists
+            // to close, from the other side. Whoever cannot close a stalled case hands it
+            // on (POST tickets/{ticket}/forward) instead of finishing the request without it.
+            //
+            // Read from the case's state, not from "has a case": a request whose ticket was
+            // closed before settleFromTicket existed still sits here as Approved, and those
+            // rows have nothing left to close.
+            abort_if(
+                in_array($fresh->ticket?->status, [TicketStatus::Open, TicketStatus::InProgress], true),
+                422,
+                "Ticket {$fresh->ticket?->ticket_no} is still open — closing that case fulfils this request.",
+            );
 
             $fresh->approvals()
                 ->where('kind', WorkflowStepKind::Fulfillment->value)
@@ -434,12 +455,16 @@ class RequestService
     private function ticketDescription(ServiceRequest $request): string
     {
         $lines = [
-            "Auto-opened from service request {$request->reference} (fully approved).",
-            '',
+            'Auto-opened',
+            '-----',
+            "Service request {$request->reference} (Approved).",
             'Type: '.$request->type->label(),
             "Requester: {$request->requester_name}".($request->department_name ? " ({$request->department_name})" : ''),
         ];
 
+        // What this service actually asked for — device type, mailbox address, access
+        // level. A case that says only "Computer" sends the technician back to the request
+        // to find out which kind of machine.
         foreach ($this->fieldLines($request) as $line) {
             $lines[] = $line;
         }
@@ -509,7 +534,7 @@ class RequestService
      * plus resolved values (managed/source ids → names, select values → labels).
      *
      * @param  array<string, mixed>  $fields
-     * @return list<array{key: string, label_en: string, label_th: string, value: string, mono: bool}>
+     * @return list<array{key: string, label_en: string, label_th: string, value: string, value_th: string|null, mono: bool}>
      */
     private function buildDisplayRows(RequestType $type, array $fields): array
     {
@@ -521,22 +546,58 @@ class RequestService
                 continue;
             }
 
-            $value = match (true) {
-                ($field['managed'] ?? false) => RequestOption::find((int) $raw)?->label_en ?? (string) $raw,
-                $field['input'] === 'select' => collect($field['options'] ?? [])->firstWhere('value', $raw)['label_en'] ?? (string) $raw,
-                $field['input'] === 'source' => $this->sourceName((string) $field['source'], (int) $raw) ?? (string) $raw,
-                default => (string) $raw,
-            };
+            [$value, $valueTh] = $this->displayValue($field, $raw);
             $rows[] = [
                 'key' => $field['key'],
                 'label_en' => $field['label_en'],
                 'label_th' => $field['label_th'],
                 'value' => $value,
+                'value_th' => $valueTh,
                 'mono' => (bool) ($field['mono'] ?? false),
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * One field's value, snapshotted in both languages.
+     *
+     * `value` stays the English form every other reader of this snapshot already
+     * expects — the auto-ticket body, exports, the row a technician reads. `value_th`
+     * is added only where the choice HAS a Thai form to freeze: a managed option's
+     * label_th, a schema option's label_th. It is null for what the requester typed and
+     * for names that exist in one language only (a share path, a software title), and
+     * the SPA falls back to `value` there — which is also how rows written before this
+     * key existed keep rendering.
+     *
+     * Snapshotting both is the point: re-resolving the id at render time would show
+     * today's label on a request decided months ago, which is what _display exists to
+     * prevent. A label that was half-translated (Thai on the field, English on its
+     * value) read like a bug rather than like a policy.
+     *
+     * @param  array<string, mixed>  $field
+     * @return array{0: string, 1: string|null}
+     */
+    private function displayValue(array $field, mixed $raw): array
+    {
+        if ($field['managed'] ?? false) {
+            $option = RequestOption::find((int) $raw);
+
+            return [$option?->label_en ?? (string) $raw, $option?->label_th ?: null];
+        }
+
+        if ($field['input'] === 'select') {
+            $option = collect($field['options'] ?? [])->firstWhere('value', $raw);
+
+            return [$option['label_en'] ?? (string) $raw, ($option['label_th'] ?? null) ?: null];
+        }
+
+        if ($field['input'] === 'source') {
+            return [$this->sourceName((string) $field['source'], (int) $raw) ?? (string) $raw, null];
+        }
+
+        return [(string) $raw, null];
     }
 
     /** Display name of a source-backed field value. */

@@ -5,6 +5,7 @@ namespace App\Http\Resources\Request;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\WorkflowStepKind;
+use App\Enums\Ticket\TicketStatus;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Support\RequestSchemas;
@@ -98,13 +99,39 @@ class ServiceRequestResource extends JsonResource
             // for somebody who cannot (a new employee without a login).
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
                 && ($this->user_id === $viewer->id || $this->submitted_by_user_id === $viewer->id),
-            'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved && (bool) $viewer->hasPermission('requests.fulfill'),
+            // Held back while a linked case is still in flight: closing that case is what
+            // fulfils the request, so the button would only ever return the 422 that
+            // RequestService::fulfill answers with.
+            'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved
+                && (bool) $viewer->hasPermission('requests.fulfill')
+                && ! $this->hasCaseInFlight(),
             'approved_at' => $this->approved_at?->toDateTimeString(),
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
         ];
+    }
+
+    /**
+     * A linked case still open or in progress owns the delivery — see
+     * RequestService::fulfill for why the manual button stands down for it.
+     *
+     * Read only from a loaded relation, because a resource must not query. An absent
+     * relation counts as in flight: hiding the button costs a detour through the case,
+     * while showing it costs a press that comes back 422.
+     */
+    private function hasCaseInFlight(): bool
+    {
+        if ($this->ticket_id === null) {
+            return false;
+        }
+
+        if (! $this->relationLoaded('ticket')) {
+            return true;
+        }
+
+        return in_array($this->ticket?->status, [TicketStatus::Open, TicketStatus::InProgress], true);
     }
 
     /**

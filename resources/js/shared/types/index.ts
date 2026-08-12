@@ -900,7 +900,9 @@ export interface ServiceRequest {
     reason: string;
     fields: Record<string, string | number | null>;
     /** Point-in-time labels + resolved values, snapshotted at submit. */
-    fields_display: { key: string; label_en: string; label_th: string; value: string; mono: boolean }[];
+    // value_th is absent on rows snapshotted before it existed, and null where the value
+    // has no Thai form to freeze (free text, a share path) — read it through `value`.
+    fields_display: { key: string; label_en: string; label_th: string; value: string; value_th?: string | null; mono: boolean }[];
     status: ServiceRequestStatus;
     auto_ticket: boolean;
     /**
