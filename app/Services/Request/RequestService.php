@@ -82,6 +82,25 @@ class RequestService
     }
 
     /**
+     * The one string stored in `service_requests.title`, in one language.
+     *
+     * It is a derived label, not something anybody types: the service names it, and an
+     * onboarding request adds who it is for because an approver reads the list before the
+     * detail. English, matching the auto-ticket body it ends up in — switching the whole
+     * system to Thai subjects is `labelTh()` here and nowhere else.
+     *
+     * Static so the normalize command can rewrite old rows through the same rule.
+     */
+    public static function canonicalTitle(RequestType $type, RequestOrigin $origin, ?string $requesterName): string
+    {
+        $title = $origin->isOnBehalf() && $requesterName !== null
+            ? "{$type->label()} for {$requesterName}"
+            : "Request: {$type->label()}";
+
+        return mb_substr($title, 0, 200);
+    }
+
+    /**
      * Freeze the approval chain and activate the first step.
      *
      * @param  Employee  $employee  whose request this is — the chain climbs their managers
@@ -132,7 +151,13 @@ class RequestService
                 'employee_id' => $employee->id,
                 'requester_name' => $employee->name,
                 'department_name' => $employee->department?->name,
-                'title' => $data['title'],
+                // Composed here, never taken from the client. The wizard used to render
+                // "Request: Mail group" / "คำขอ: กลุ่มเมล" in the requester's own language and
+                // post that, and this column is what the case subject, the approval email and
+                // the search box read — so all three spoke the requester's language instead of
+                // the reader's. One canonical string; the SPA writes its own wording from
+                // `type` for whoever is looking.
+                'title' => self::canonicalTitle($type, $origin, $employee->name),
                 'reason' => $data['reason'],
                 'fields' => $fields,
                 'status' => RequestStatus::Pending->value,
@@ -454,8 +479,14 @@ class RequestService
             return;
         }
 
+        // A case for somebody who does not work here yet reads the same as any other once
+        // it is in the queue: a ticket has no field for where it came from, so the marker
+        // has to be in the words. Appended after the cut so a long title cannot eat it.
+        $marker = $this->newHireMarker($request);
+        $subject = mb_substr("[{$request->reference}] {$request->title}", 0, 200 - mb_strlen($marker)).$marker;
+
         $ticket = $this->tickets->create([
-            'subject' => mb_substr("[{$request->reference}] {$request->title}", 0, 200),
+            'subject' => $subject,
             'description' => $this->ticketDescription($request),
             'category' => $request->type->ticketCategory()->value,
         ], $employee);
@@ -463,11 +494,24 @@ class RequestService
         $request->update(['ticket_id' => $ticket->id]);
     }
 
+    /**
+     * " (New employee)" for a request filed on behalf of a new hire, or nothing.
+     *
+     * Written on the two lines a technician reads without opening anything — the subject in
+     * their queue and the first line of the body. In parentheses because it qualifies the
+     * person the case is for, and it is deliberately NOT appended to the "Requester:" line,
+     * which already carries the department in brackets.
+     */
+    private function newHireMarker(ServiceRequest $request): string
+    {
+        return $request->origin?->isOnBehalf() ? ' (New employee)' : '';
+    }
+
     /** Compose the auto-ticket body from the request's summary + typed fields. */
     private function ticketDescription(ServiceRequest $request): string
     {
         $lines = [
-            'Auto-opened',
+            'Auto-opened'.$this->newHireMarker($request),
             '-----',
             "Service request {$request->reference} (Approved).",
             'Type: '.$request->type->label(),

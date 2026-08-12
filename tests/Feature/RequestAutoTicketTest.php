@@ -13,6 +13,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Services\Request\RequestService;
 use App\Services\Ticket\TicketService;
 use Database\Seeders\PositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
@@ -109,6 +110,33 @@ class RequestAutoTicketTest extends TestCase
         // Priority is not in here: requests stopped carrying one, and the case gets its
         // own when a technician takes it.
         $this->assertStringNotContainsString('Priority:', $ticket->description);
+        // Nothing marks a new hire here, because this is an ordinary request.
+        $this->assertStringNotContainsString('New employee', $ticket->subject);
+        $this->assertStringNotContainsString('New employee', $ticket->description);
+    }
+
+    /**
+     * A case opened for somebody who does not work here yet needs saying so on the two
+     * lines a technician actually reads: the subject in their queue, and the first line of
+     * the body. Nothing else on a ticket carries the request's origin — there is no field
+     * for it, so it has to be in the words.
+     */
+    public function test_a_case_opened_for_a_new_hire_says_so_in_the_subject_and_the_body(): void
+    {
+        $newHire = Employee::create(['first_name' => 'Somchai', 'last_name' => 'Jaidee', 'manager_id' => $this->bossUser->employee_id]);
+
+        $request = app(RequestService::class)->submitFor($newHire, $this->requester, [
+            'type' => 'computer',
+            'reason' => 'Starting on the production line and needs a workstation from day one.',
+            'fields' => ['device_id' => $this->deviceOptionId()],
+        ]);
+
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        $ticket = $request->fresh()->ticket;
+        $this->assertNotNull($ticket);
+        $this->assertSame("[{$request->reference}] Computer for Somchai Jaidee (New employee)", $ticket->subject);
+        $this->assertSame('Auto-opened (New employee)', explode("\n", $ticket->description)[0]);
     }
 
     /**

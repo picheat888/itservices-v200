@@ -187,7 +187,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                         <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>{notificationTitle(n)}</div>
+                                        <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>{notificationTitle(n, t)}</div>
                                         <div className="text-muted-foreground mt-0.5 text-xs">{notificationMessage(n, t)}</div>
                                     </div>
                                     <div className="flex shrink-0 flex-col items-end gap-1">

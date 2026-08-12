@@ -52,7 +52,6 @@ class EmployeeOnboardingService
             try {
                 $request = $this->requests->submitFor($employee, $actor, [
                     'type' => $type->value,
-                    'title' => $this->title($type, $employee),
                     'reason' => $this->reason($employee, $note),
                     // The detail this service asks for — device type, mailbox address —
                     // collected on Step 3 and validated against the same schema the
@@ -73,11 +72,9 @@ class EmployeeOnboardingService
         return ['created' => $created, 'failed' => $failed];
     }
 
-    /** e.g. "Computer for Somchai Jaidee" — an approver reads the list, not the detail. */
-    private function title(RequestType $type, Employee $employee): string
-    {
-        return mb_substr("{$type->label()} for {$employee->name}", 0, 200);
-    }
+    // The title ("Computer for Somchai Jaidee") is composed by
+    // RequestService::canonicalTitle() from the type and the origin — one rule for every
+    // request, whoever files it.
 
     /**
      * Why the request exists, plus whatever HR added.

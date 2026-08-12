@@ -50,6 +50,10 @@ class RequestWorkflowNotification extends Notification
             'request_type' => $this->request->type?->value,
             // Lets the bell mark an onboarding request the same way the list does.
             'origin' => $this->request->origin?->value,
+            // Who the request is FOR. The bell writes its own headline from the type in the
+            // reader's language (`title` above is the server's canonical English one), and an
+            // on-behalf request has to name the new hire the way the list does.
+            'requester_name' => $this->request->requester_name,
             'step_label' => $this->stepLabel,
             'actor_name' => $this->actorName,
             'remark' => $this->remark,

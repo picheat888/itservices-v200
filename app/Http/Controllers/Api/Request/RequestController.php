@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Request;
 
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestStatus;
+use App\Enums\Request\RequestType;
 use App\Enums\Request\WorkflowStepKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Request\StoreServiceRequestRequest;
@@ -104,10 +105,20 @@ class RequestController extends Controller
             $query->where('type', $type);
         }
         if ($search = trim((string) $request->query('search'))) {
-            $query->where(function ($q) use ($search) {
+            // The service name is matched against the TYPE, not the stored title: the title is
+            // one canonical English string while the SPA writes the service name in the
+            // reader's language, so a Thai reader searching what they see on screen would
+            // otherwise find nothing. RequestType::matching() resolves the term against both
+            // languages, and `type` is indexed where a leading-wildcard LIKE on title cannot
+            // be. The title LIKE stays for rows written before the server owned that column.
+            $types = RequestType::matching($search);
+            $query->where(function ($q) use ($search, $types) {
                 $q->where('reference', 'like', "%{$search}%")
                     ->orWhere('title', 'like', "%{$search}%")
                     ->orWhere('requester_name', 'like', "%{$search}%");
+                if ($types !== []) {
+                    $q->orWhereIn('type', $types);
+                }
             });
         }
         // Tab scopes: awaiting my decision / the IT fulfillment queue / only my own.

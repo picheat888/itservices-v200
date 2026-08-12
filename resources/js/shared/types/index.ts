@@ -896,6 +896,12 @@ export interface ServiceRequest {
     id: number;
     reference: string;
     type: ServiceRequestType;
+    /**
+     * The canonical English title the server composes from `type` (see
+     * RequestService::canonicalTitle) — it is what the case subject, the approval emails
+     * and the search index read. Do NOT render it: use requestTitle() from
+     * shared/lib/request-meta, which writes the same thing in the reader's language.
+     */
     title: string;
     reason: string;
     fields: Record<string, string | number | null>;

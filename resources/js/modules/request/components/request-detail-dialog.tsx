@@ -6,7 +6,14 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useInitials } from '@/shared/hooks/use-initials';
 import { useRecordView } from '@/shared/hooks/use-record-view';
-import { isOnBehalfRequest, REQUEST_APPROVE_BUTTON, REQUEST_REJECT_BUTTON, REQUEST_STATUS_META, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import {
+    isOnBehalfRequest,
+    REQUEST_APPROVE_BUTTON,
+    REQUEST_REJECT_BUTTON,
+    REQUEST_STATUS_META,
+    REQUEST_TYPE_META,
+    requestTitle,
+} from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -149,6 +156,9 @@ function RequestDetailBody({
     const { fulfill, cancel } = useRequestMutations();
 
     const meta = REQUEST_TYPE_META[request.type];
+    // Written in the reader's language from `type`, not read off `request.title` — that
+    // column is the server's canonical English string for the case subject and the emails.
+    const shownTitle = requestTitle(request, t);
 
     /**
      * The Fulfil button is gone because the case is still in flight — closing it is what
@@ -171,7 +181,7 @@ function RequestDetailBody({
             variant: 'edit',
             title: t('req_fulfill_title'),
             description: t('req_fulfill_hint'),
-            entity: { name: `${request.reference} - ${request.title}` },
+            entity: { name: `${request.reference} - ${shownTitle}` },
             confirmText: t('req_fulfill'),
             action: () => fulfill.mutateAsync(request.id).catch(onError),
         });
@@ -181,7 +191,7 @@ function RequestDetailBody({
             variant: 'danger',
             title: t('req_cancel_title'),
             description: t('req_cancel_hint'),
-            entity: { name: `${request.reference} - ${request.title}` },
+            entity: { name: `${request.reference} - ${shownTitle}` },
             confirmText: t('req_cancel_request'),
             action: async () => {
                 await cancel.mutateAsync(request.id).catch(onError);
@@ -195,9 +205,9 @@ function RequestDetailBody({
                 icon={meta.icon}
                 accent={meta.color}
                 eyebrow={`${t('req_detail_eyebrow')} · ${t(REQUEST_TYPE_META[request.type].labelKey)}`}
-                title={request.title}
+                title={shownTitle}
                 code={request.reference}
-                srDescription={request.title}
+                srDescription={shownTitle}
                 headerRight={
                     <StatusBadge tone={REQUEST_STATUS_META[request.status].tone}>{t(REQUEST_STATUS_META[request.status].labelKey)}</StatusBadge>
                 }
@@ -246,7 +256,7 @@ function RequestDetailBody({
                         <div className="border-border divide-border/70 divide-y rounded-xl border">
                             <div className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">
                                 <span className="text-muted-foreground shrink-0 text-xs">{t('req_subject')}</span>
-                                <span className="text-right font-medium break-all">{request.title}</span>
+                                <span className="text-right font-medium break-all">{shownTitle}</span>
                             </div>
                             {request.fields_display.map((row) => (
                                 <div key={row.key} className="flex items-baseline justify-between gap-4 px-3.5 py-2 text-sm">

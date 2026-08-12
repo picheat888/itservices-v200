@@ -45,6 +45,8 @@ export interface NotificationData {
     /** 'onboarding' when the request was filed for a new employee (see ServiceRequestOrigin). */
     origin?: string;
     step_label?: string | null;
+    /** Who the request is for — the bell writes an on-behalf headline the way the list does. */
+    requester_name?: string | null;
     actor_name?: string | null;
     remark?: string | null;
 }

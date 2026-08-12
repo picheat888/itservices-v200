@@ -36,7 +36,6 @@ export interface RequestListParams {
 
 export interface SubmitRequestPayload {
     type: string;
-    title: string;
     reason: string;
     fields: Record<string, string | number>;
 }
