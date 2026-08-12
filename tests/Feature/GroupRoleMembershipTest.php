@@ -44,6 +44,39 @@ class GroupRoleMembershipTest extends TestCase
         return DB::table('group_role_employee')->where('employee_id', $employeeId)->count();
     }
 
+    /**
+     * Saving the default answers with the whole list, and the SPA writes that answer
+     * straight into its list cache rather than fetching again. The shape is therefore load
+     * bearing: an answer that dropped `data` (or nested it one layer deeper) empties the
+     * Permission page until the next fetch, which is exactly what it did.
+     */
+    public function test_saving_the_default_group_answers_with_the_list_the_page_caches(): void
+    {
+        $group = GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);
+
+        $response = $this->actingAs($this->super())
+            ->putJson('/api/group-roles-default', ['group_id' => $group->id])
+            ->assertOk()
+            ->assertJsonPath('default_group_id', $group->id)
+            ->assertJsonPath('data.0.id', $group->id);
+
+        // `data` is the list itself — not an envelope with another `data` inside it.
+        $this->assertIsList($response->json('data'));
+        $this->assertSame((string) $group->id, AppSetting::get('default_employee_group_id'));
+    }
+
+    public function test_clearing_the_default_group_answers_the_same_way(): void
+    {
+        GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);
+        AppSetting::put('default_employee_group_id', '1');
+
+        $this->actingAs($this->super())
+            ->putJson('/api/group-roles-default', ['group_id' => null])
+            ->assertOk()
+            ->assertJsonPath('default_group_id', null)
+            ->assertJsonCount(1, 'data');
+    }
+
     public function test_a_new_employee_ends_up_on_the_default_groups_role(): void
     {
         $default = GroupRole::create(['name' => 'All Staff', 'role' => 'admin']);
