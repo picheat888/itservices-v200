@@ -42,7 +42,7 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ticketApi, type SummaryRange } from '../api/ticketApi';
 import { AssignTicketModal } from '../components/assign-ticket-modal';
@@ -456,9 +456,22 @@ export default function TicketsPage() {
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
 
+    // The record the drawer is currently showing, which outlives `detail` on the way out:
+    // closing drops ?view=, the query switches off, and `detail` is undefined on the very
+    // next render. The drawer keeps its own copy so its body survives the exit animation —
+    // but the flags below are computed HERE from the record, and without the same retention
+    // they flipped false on the first exit frame: the "nobody owns this case" banner
+    // unmounted and the Take button left the footer, so the panel jumped a row shorter
+    // while it was still fading. Open/closed still follows `detail`, not this.
+    const [shownDetail, setShownDetail] = useState<Ticket | null>(null);
+    useEffect(() => {
+        if (detail) setShownDetail(detail);
+    }, [detail]);
+    const shownTicket = detail ?? shownDetail;
+
     // Editing is requester-only and only while the case is still Open — no
     // admin/super override (a case's content belongs to the person who opened it).
-    const canEditDetail = !!detail && detail.status === 'open' && detail.requester_id === user?.employee_id;
+    const canEditDetail = !!shownTicket && shownTicket.status === 'open' && shownTicket.requester_id === user?.employee_id;
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
@@ -1040,7 +1053,7 @@ export default function TicketsPage() {
             <TicketDetailDrawer
                 ticket={detail ?? null}
                 onClose={() => closeDetail()}
-                canTake={canTake && (detail ? hasLevel(detail.category) : false)}
+                canTake={canTake && (shownTicket ? hasLevel(shownTicket.category) : false)}
                 canAssign={canAssign}
                 canForward={canForward}
                 meId={user?.id}
