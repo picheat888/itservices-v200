@@ -104,7 +104,6 @@ export const requests: Dict = {
     req_auto_ticket_note: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้อัตโนมัติ',
     req_submit: 'ส่งคำขอ',
     req_submitted: 'ส่งคำขอแล้ว',
-    req_awaiting_first: 'รออนุมัติขั้นที่ 1',
     req_no_employee_hint: 'บัญชีของคุณยังไม่ผูกกับข้อมูลพนักงาน ติดต่อ IT เพื่อผูกบัญชีก่อนยื่นคำขอ',
 
     // request-detail-dialog.tsx — หน้าต่างรายละเอียด
