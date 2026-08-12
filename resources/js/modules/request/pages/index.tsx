@@ -33,6 +33,20 @@ import { WorkflowMini } from '../components/workflow-mini';
 import { useRequests } from '../hooks/use-requests';
 
 /**
+ * What last happened to a request, as a sentence: "Approved by X", "Filed by Y". The kind
+ * comes from the API as a code so this reads in the language the user is in, and the name
+ * is the one frozen on the row that moved.
+ *
+ * A movement with nobody attached (a request withdrawn by its owner, an older row with no
+ * name stored) prints the event alone rather than a dangling "by".
+ */
+function activityLine(request: ServiceRequest, t: (key: string) => string): string {
+    const what = t(`req_activity_${request.activity.kind}`);
+
+    return request.activity.by ? `${what} · ${request.activity.by}` : what;
+}
+
+/**
  * The first typed field's value — the one fact that says what a request is actually for
  * (which machine, which mailbox, which share). Only the first: a row identifies and
  * prioritises, and the rest of the specifics are in the dialog where the decision is made.
@@ -73,6 +87,8 @@ export default function RequestsPage() {
     useEffect(() => {
         if (isTab(tabParam) && tabParam !== tab) setTabState(tabParam);
     }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Either list scope means the list tab is the one on screen.
+    const isListTab = tab !== 'dashboard';
     const setTab = (next: Tab) => {
         setTabState(next);
         setSearchParams(
@@ -106,7 +122,7 @@ export default function RequestsPage() {
             ? { page, per_page: perPage, search, status, type, scope: 'approvals' as const }
             : tab === 'all'
               ? { page, per_page: perPage, search, status, type }
-              : { page: 1, per_page: 6 }; // dashboard: recent activity
+              : { page: 1, per_page: 6, sort: 'activity' as const }; // dashboard: the activity feed
     const { data: pageData, isLoading, isFetching } = useRequests(listParams);
     const rows = pageData?.data ?? [];
     const meta = pageData?.meta;
@@ -292,27 +308,34 @@ export default function RequestsPage() {
             {/* Tab card */}
             <Card className="overflow-hidden p-0">
                 <div className="border-border flex items-center gap-1 border-b px-2">
+                    {/* Two tabs, not three. "Awaiting my approval" was the same table with
+                        `scope=approvals` on the query — a filter wearing a tab's clothes, which
+                        also split one set of filters into two modes of itself. It is a chip
+                        inside the list now; the tab stays lit for either scope. */}
                     {(
                         [
                             ['dashboard', t('requests_tab_dashboard'), null],
-                            ['all', t('requests_tab_all'), meta?.total ?? null],
-                            ['approvals', t('requests_tab_approvals'), meta?.awaiting_me ?? null],
+                            ['all', t('requests_tab_list'), meta?.total ?? null],
                         ] as [Tab, string, number | null][]
-                    ).map(([id, label, count]) => (
-                        <button
-                            key={id}
-                            type="button"
-                            onClick={() => setTab(id)}
-                            className={cn(
-                                'relative px-3 py-3 text-sm font-medium transition-colors',
-                                tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            {label}
-                            {count != null && count > 0 && <span className="text-muted-foreground ml-1.5 font-mono text-xs">{count}</span>}
-                            {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
-                        </button>
-                    ))}
+                    ).map(([id, label, count]) => {
+                        const active = id === 'dashboard' ? tab === 'dashboard' : isListTab;
+
+                        return (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => setTab(id)}
+                                className={cn(
+                                    'relative px-3 py-3 text-sm font-medium transition-colors',
+                                    active ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                {label}
+                                {count != null && count > 0 && <span className="text-muted-foreground ml-1.5 font-mono text-xs">{count}</span>}
+                                {active && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {tab === 'dashboard' ? (
@@ -433,10 +456,16 @@ export default function RequestsPage() {
                                                     )}
                                                 </span>
                                                 <WorkflowMini request={r} />
+                                                {/* Only for the person whose decision it is. The card asks the API for
+                                                    the steps waiting on you, so every row here should be yours — but a
+                                                    card that draws its buttons without checking is how an account with
+                                                    no employee record (the administrator) ended up looking at Approve
+                                                    on somebody else's step, for the API to refuse on the press. */}
                                                 <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()}>
                                                     <Button
                                                         size="sm"
                                                         className={REQUEST_APPROVE_BUTTON}
+                                                        disabled={!r.can_approve}
                                                         onClick={() => setDecide({ request: r, action: 'approve' })}
                                                     >
                                                         <Check className="h-3.5 w-3.5" />
@@ -449,6 +478,7 @@ export default function RequestsPage() {
                                                         size="sm"
                                                         variant="outline"
                                                         className={REQUEST_REJECT_BUTTON}
+                                                        disabled={!r.can_approve}
                                                         onClick={() => setDecide({ request: r, action: 'reject' })}
                                                     >
                                                         <X className="h-3.5 w-3.5" />
@@ -505,7 +535,7 @@ export default function RequestsPage() {
                                                 <div className="min-w-0 flex-1">
                                                     <div className="truncate text-sm font-medium">{r.title}</div>
                                                     <div className="text-muted-foreground truncate text-xs">
-                                                        {r.reference} · {r.requester.name} · {ageLabel(r.created_at)}
+                                                        {activityLine(r, t)} · {ageLabel(r.activity.at ?? r.created_at)}
                                                     </div>
                                                 </div>
                                                 {/* The badge already says where this stands, so the progress ticks
@@ -522,10 +552,33 @@ export default function RequestsPage() {
                 ) : (
                     <div className="p-4">
                         <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                            {/* Reads and writes the same ?tab= as the old tab did, so a shared or
+                                bookmarked ?tab=approvals link still lands on this scope. */}
+                            <div className="border-border flex h-10 items-center gap-0.5 rounded-md border p-1">
+                                {(
+                                    [
+                                        ['all', t('all'), null],
+                                        ['approvals', t('requests_tab_approvals'), meta?.awaiting_me ?? null],
+                                    ] as [Tab, string, number | null][]
+                                ).map(([id, label, count]) => (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        onClick={() => setTab(id)}
+                                        className={cn(
+                                            'flex h-full items-center rounded px-2.5 text-xs font-medium transition-colors',
+                                            tab === id ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
+                                        )}
+                                    >
+                                        {label}
+                                        {count != null && count > 0 && <span className="ml-1.5 font-mono">{count}</span>}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                 <Input
-                                    className="h-9 pl-9"
+                                    className="pl-9"
                                     placeholder={t('req_search_ph')}
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
@@ -533,6 +586,9 @@ export default function RequestsPage() {
                             </div>
                             <FilterPopover
                                 count={filterCount}
+                                // 460 like every other filter row in the app; the 288 default left the
+                                // two-up grid at ~120px a column, which cut every service name short.
+                                width={460}
                                 resultCount={meta?.total}
                                 onClear={() => {
                                     setStatus('');

@@ -7,15 +7,20 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
 
-/** Per-module tabs. `live` modules render their notifications; others show a coming-soon note. */
-const NOTIF_TABS: { id: string; label: string; live: boolean }[] = [
-    { id: 'all', label: 'notif_all', live: true },
-    { id: 'employees', label: 'employees', live: true },
-    { id: 'tickets', label: 'tickets', live: false },
-    { id: 'requests', label: 'requests', live: true },
-    { id: 'assets', label: 'assets', live: true },
-    { id: 'contracts', label: 'contracts', live: true },
-    { id: 'stock', label: 'stock', live: true },
+/**
+ * Per-module tabs. A tab only appears once that module has something to show (see
+ * `shownTabs`), so there is nothing to gate: the Tickets tab used to carry a `live: false`
+ * flag that answered "coming soon" while its five notification types were shipping, being
+ * delivered, and showing up in the All tab beside it.
+ */
+const NOTIF_TABS: { id: string; label: string }[] = [
+    { id: 'all', label: 'notif_all' },
+    { id: 'employees', label: 'employees' },
+    { id: 'tickets', label: 'tickets' },
+    { id: 'requests', label: 'requests' },
+    { id: 'assets', label: 'assets' },
+    { id: 'contracts', label: 'contracts' },
+    { id: 'stock', label: 'stock' },
 ];
 
 export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
@@ -39,7 +44,6 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     const items = data?.data ?? [];
     const unread = data?.unread ?? 0;
 
-    const activeTab = NOTIF_TABS.find((x) => x.id === tab) ?? NOTIF_TABS[0];
     const visibleItems = tab === 'all' ? items : items.filter((n) => moduleOf(n.data.type) === tab);
 
     const tabCount = (id: string) => (id === 'all' ? items.length : items.filter((n) => moduleOf(n.data.type) === id).length);
@@ -159,12 +163,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="[&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 max-h-[360px] overflow-y-auto scroll-smooth [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                    {!activeTab.live ? (
-                        <div className="px-4 py-12 text-center">
-                            <div className="text-muted-foreground text-sm font-medium">{t('coming_soon')}</div>
-                            <div className="text-muted-foreground mx-auto mt-1 max-w-[240px] text-xs">{t('notif_module_soon')}</div>
-                        </div>
-                    ) : visibleItems.length === 0 ? (
+                    {visibleItems.length === 0 ? (
                         <div className="text-muted-foreground py-12 text-center text-sm">{t('notif_empty')}</div>
                     ) : (
                         visibleItems.map((n) => {

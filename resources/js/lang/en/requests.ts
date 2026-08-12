@@ -26,6 +26,7 @@ export const requests: Dict = {
     requests_new: 'New request',
     requests_tab_dashboard: 'Dashboard',
     requests_tab_all: 'All requests',
+    requests_tab_list: 'Requests',
     requests_tab_approvals: 'Awaiting my approval',
 
     // pages/index.tsx — KPI cards
@@ -41,10 +42,17 @@ export const requests: Dict = {
     req_queue_title: 'Needs your decision',
     req_queue_empty: 'Nothing is waiting on you',
     req_queue_empty_sub: 'Every request that needed your approval has been decided.',
-    req_recent_empty: 'No requests yet — start one with New request.',
+    req_recent_empty: 'No requests yet - start one with New request.',
     req_view_all: 'View all',
     req_catalog_approval_one: 'approval',
     req_catalog_approval_many: 'approvals',
+    // pages/index.tsx — the activity feed
+    req_activity_submitted: 'Filed',
+    req_activity_approved_step: 'Approved a step',
+    req_activity_approved: 'Fully approved',
+    req_activity_rejected: 'Rejected',
+    req_activity_cancelled: 'Cancelled',
+    req_activity_fulfilled: 'Fulfilled',
     req_recent_title: 'Recent activity',
     req_inactive: 'Not accepting submissions',
 
@@ -90,12 +98,12 @@ export const requests: Dict = {
     req_section_general: 'The request',
     req_auto_title: 'Request: {service}',
     req_field_reason: 'Reason / details',
-    req_field_reason_ph: 'Explain why this is needed — approvers decide faster with context.',
+    req_field_reason_ph: 'Explain why this is needed - approvers decide faster with context.',
     req_requester_label: 'Requester',
     req_service_section: 'Service details',
-    req_other_software: 'Not on the list — enter it myself',
+    req_other_software: 'Not on the list - enter it myself',
     req_review_title: 'Review & submit',
-    req_review_sub: 'Check everything once — the request routes to the first approver as soon as you submit.',
+    req_review_sub: 'Check everything once - the request routes to the first approver as soon as you submit.',
     req_auto_ticket_note: 'A ticket opens automatically after the final approval.',
     req_submit: 'Submit request',
     req_submitted: 'Request submitted',
@@ -147,7 +155,7 @@ export const requests: Dict = {
 
     // request-detail-dialog.tsx — linked ticket block
     req_linked_ticket: 'Linked ticket',
-    req_no_ticket: 'No ticket — this workflow closes without one.',
+    req_no_ticket: 'No ticket - this workflow closes without one.',
     req_ticket_auto_hint: 'This case was opened automatically.',
 
     // decision-dialog.tsx — approve / reject / fulfill / cancel
@@ -157,8 +165,8 @@ export const requests: Dict = {
     req_decide_note_reject: 'Why you are rejecting',
     req_decide_step: 'Step {n} of {total}',
     req_decide_note_required: 'A remark is required when rejecting',
-    req_decide_note_ph_approve: 'e.g. Approved — please have it ready before their first day',
-    req_decide_note_ph_reject: 'e.g. The department has plenty of machines — use an existing one for now',
+    req_decide_note_ph_approve: 'e.g. Approved - please have it ready before their first day',
+    req_decide_note_ph_reject: 'e.g. The department has plenty of machines - use an existing one for now',
     req_decide_notify_reject: 'Notifies the requester via Bell + Email, then closes the request.',
     req_decide_notify_next: 'Next: {name}',
     req_fulfill_title: 'Mark as fulfilled',

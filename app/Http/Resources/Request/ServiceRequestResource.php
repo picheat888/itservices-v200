@@ -11,6 +11,7 @@ use App\Models\Request\ServiceRequest;
 use App\Support\RequestSchemas;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Collection;
 
 /**
  * A service request with its frozen approval chain and viewer-relative action
@@ -105,12 +106,50 @@ class ServiceRequestResource extends JsonResource
             'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved
                 && (bool) $viewer->hasPermission('requests.fulfill')
                 && ! $this->hasCaseInFlight(),
+            // The last movement, spelled out: the feed on the dashboard orders by `at` and
+            // writes the rest of it as a sentence. Derived here rather than in the SPA so one
+            // rule decides what counts as a movement.
+            'activity' => $this->lastActivity($approvalRows),
             'approved_at' => $this->approved_at?->toDateTimeString(),
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
         ];
+    }
+
+    /**
+     * What happened to this request most recently — the kind of movement, who made it, and
+     * when. `kind` travels as a code so the SPA writes the sentence in the reader's
+     * language; `by` is the name frozen on the row that moved, never re-resolved.
+     *
+     * @param  Collection<int, RequestApproval>  $approvalRows
+     * @return array{at: string|null, kind: string, by: string|null}
+     */
+    private function lastActivity($approvalRows): array
+    {
+        $at = $this->last_activity_at?->toDateTimeString();
+        $signed = $approvalRows
+            ->filter(fn (RequestApproval $a) => $a->acted_at !== null)
+            ->sortBy('acted_at')
+            ->last();
+        $queueRow = $this->relationLoaded('approvals')
+            ? $this->approvals->first(fn (RequestApproval $a) => $a->kind === WorkflowStepKind::Fulfillment)
+            : null;
+
+        return match ($this->status) {
+            RequestStatus::Rejected => ['at' => $at, 'kind' => 'rejected', 'by' => $signed?->acted_by_name],
+            // Cancelled by the requester withdrawing it, or by IT closing the case without
+            // delivering — the fulfilment row names the second one.
+            RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $queueRow?->acted_by_name],
+            RequestStatus::Fulfilled => ['at' => $at, 'kind' => 'fulfilled', 'by' => $queueRow?->acted_by_name],
+            RequestStatus::Approved => ['at' => $at, 'kind' => 'approved', 'by' => $signed?->acted_by_name],
+            // Still in the chain: either somebody has signed a rung, or nothing has happened
+            // since it was filed.
+            default => $signed !== null
+                ? ['at' => $at, 'kind' => 'approved_step', 'by' => $signed->acted_by_name]
+                : ['at' => $at, 'kind' => 'submitted', 'by' => $this->submitted_by_name],
+        };
     }
 
     /**

@@ -23,6 +23,7 @@ export const requests: Dict = {
     requests_new: 'คำขอใหม่',
     requests_tab_dashboard: 'ภาพรวม',
     requests_tab_all: 'คำขอทั้งหมด',
+    requests_tab_list: 'คำขอ',
     requests_tab_approvals: 'รออนุมัติจากฉัน',
 
     // pages/index.tsx — การ์ด KPI
@@ -38,10 +39,17 @@ export const requests: Dict = {
     req_queue_title: 'รอการตัดสินจากคุณ',
     req_queue_empty: 'ไม่มีคำขอค้างอนุมัติ',
     req_queue_empty_sub: 'ทุกคำขอที่ต้องผ่านคุณ ได้รับการตัดสินแล้ว',
-    req_recent_empty: 'ยังไม่มีคำขอ — เริ่มได้จากปุ่ม “คำขอใหม่”',
+    req_recent_empty: 'ยังไม่มีคำขอ - เริ่มได้จากปุ่ม “คำขอใหม่”',
     req_view_all: 'ดูทั้งหมด',
     req_catalog_approval_one: 'ขั้นอนุมัติ',
     req_catalog_approval_many: 'ขั้นอนุมัติ',
+    // pages/index.tsx — ฟีดความเคลื่อนไหว
+    req_activity_submitted: 'ยื่นคำขอ',
+    req_activity_approved_step: 'อนุมัติหนึ่งขั้น',
+    req_activity_approved: 'อนุมัติครบทุกขั้น',
+    req_activity_rejected: 'ไม่อนุมัติ',
+    req_activity_cancelled: 'ยกเลิก',
+    req_activity_fulfilled: 'ปิดงาน',
     req_recent_title: 'ความเคลื่อนไหวล่าสุด',
     req_inactive: 'ปิดรับคำขอชั่วคราว',
 
@@ -90,9 +98,9 @@ export const requests: Dict = {
     req_field_reason_ph: 'อธิบายความจำเป็น เพื่อให้ผู้อนุมัติตัดสินใจได้เร็วขึ้น',
     req_requester_label: 'ผู้ขอ',
     req_service_section: 'ข้อมูลเฉพาะของบริการ',
-    req_other_software: 'ไม่มีในรายการ — กรอกชื่อเอง',
+    req_other_software: 'ไม่มีในรายการ - กรอกชื่อเอง',
     req_review_title: 'ตรวจสอบและส่ง',
-    req_review_sub: 'ตรวจอีกครั้ง — เมื่อส่งแล้วคำขอจะถูกส่งถึงผู้อนุมัติขั้นแรกทันที',
+    req_review_sub: 'ตรวจอีกครั้ง - เมื่อส่งแล้วคำขอจะถูกส่งถึงผู้อนุมัติขั้นแรกทันที',
     req_auto_ticket_note: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้อัตโนมัติ',
     req_submit: 'ส่งคำขอ',
     req_submitted: 'ส่งคำขอแล้ว',
@@ -144,7 +152,7 @@ export const requests: Dict = {
 
     // request-detail-dialog.tsx — กล่อง Ticket ที่เชื่อมโยง
     req_linked_ticket: 'Ticket ที่เชื่อมโยง',
-    req_no_ticket: 'ไม่มี Ticket — สายนี้ปิดงานโดยไม่เปิดเคส',
+    req_no_ticket: 'ไม่มี Ticket - สายนี้ปิดงานโดยไม่เปิดเคส',
     req_ticket_auto_hint: 'เปิดเคสอัตโนมัติเรียบร้อยแล้ว',
 
     // decision-dialog.tsx — อนุมัติ / ไม่อนุมัติ / ปิดงาน / ยกเลิก

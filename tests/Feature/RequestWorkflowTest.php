@@ -108,11 +108,6 @@ class RequestWorkflowTest extends TestCase
         return ServiceRequest::findOrFail($response->json('data.id'));
     }
 
-    /**
-     * The display snapshot freezes both languages, so a Thai reader is not left with an
-     * English value under a Thai label — and a request decided months ago still shows
-     * the words it was submitted with rather than today's edited option.
-     */
     public function test_a_request_that_does_not_exist_answers_not_found(): void
     {
         // The detail dialog's "not here" panel keys off this status: 404 is what tells the
@@ -121,6 +116,11 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($this->requester)->getJson('/api/service-requests/99999')->assertNotFound();
     }
 
+    /**
+     * The display snapshot freezes both languages, so a Thai reader is not left with an
+     * English value under a Thai label — and a request decided months ago still shows
+     * the words it was submitted with rather than today's edited option.
+     */
     public function test_the_display_snapshot_freezes_the_thai_value_next_to_the_english_one(): void
     {
         $smartphone = (int) RequestOption::where('request_type', 'mobile')
@@ -161,6 +161,38 @@ class RequestWorkflowTest extends TestCase
         // rows written before value_th existed keep rendering.
         $this->assertSame('site.supervisor@example.com', $rows['address']['value']);
         $this->assertNull($rows['address']['value_th']);
+    }
+
+    /**
+     * The dashboard feed orders by when a request last MOVED, and says what the movement
+     * was. Both need a stamp of their own: `updated_at` bumps on any write at all (the
+     * display-snapshot refresh rewrites every row's fields), and a rung signed mid-chain
+     * writes to request_approvals without touching the request.
+     */
+    public function test_a_signature_moves_a_request_to_the_top_of_the_activity_feed(): void
+    {
+        $older = $this->submitComputer();
+        $newer = $this->submitComputer();
+
+        // Newest first while nothing has been decided.
+        $this->actingAs($this->requester)->getJson('/api/service-requests?sort=activity')
+            ->assertJsonPath('data.0.reference', $newer->reference)
+            ->assertJsonPath('data.0.activity.kind', 'submitted')
+            ->assertJsonPath('data.0.activity.by', $this->requester->name);
+
+        // One rung signed on the older request puts it back on top — and the row now names
+        // who moved it, not who filed it.
+        $this->travel(1)->minutes();
+        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$older->id}/approve")->assertOk();
+
+        $this->actingAs($this->requester)->getJson('/api/service-requests?sort=activity')
+            ->assertJsonPath('data.0.reference', $older->reference)
+            ->assertJsonPath('data.0.activity.kind', 'approved_step')
+            ->assertJsonPath('data.0.activity.by', $this->supUser->name);
+
+        // The default order is untouched: actionable first, newest within the group.
+        $this->actingAs($this->requester)->getJson('/api/service-requests')
+            ->assertJsonPath('data.0.reference', $newer->reference);
     }
 
     public function test_submit_creates_request_with_rq_reference_and_frozen_chain(): void
@@ -418,6 +450,17 @@ class RequestWorkflowTest extends TestCase
             ->assertJsonPath('meta.total', 1)
             ->assertJsonPath('meta.awaiting_me', 1)
             ->assertJsonPath('data.0.can_approve', true);
+
+        // An account with no employee record — the administrator — cannot be anybody's
+        // approver, so "awaiting my decision" is empty for them rather than every request in
+        // the system. The dashboard card drew Approve buttons on whatever came back here.
+        $admin = User::factory()->create(['role' => 'super', 'employee_id' => null]);
+        $this->actingAs($admin)->getJson('/api/service-requests?scope=approvals')
+            ->assertOk()
+            ->assertJsonPath('meta.awaiting_me', 0)
+            ->assertJsonCount(0, 'data');
+        // …while the unscoped list still shows them everything.
+        $this->actingAs($admin)->getJson('/api/service-requests')->assertJsonPath('meta.total', 1);
 
         // view_all holders see everything.
         $auditor = $this->makeUser('auditor', ['requests.view_all']);
