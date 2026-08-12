@@ -49,7 +49,39 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        $this->ensureEmployeeHasNotResigned();
+
         RateLimiter::clear($this->throttleKey());
+    }
+
+    /**
+     * The credentials were right, but the person behind them has left the company.
+     *
+     * Resigning flips employees.status and leaves the login row alone — there is no
+     * "disabled" flag on an account to set — so without this the password of somebody who
+     * resigned keeps working, with their role and every permission on it. The session
+     * opened by Auth::attempt a moment ago is dropped again here.
+     *
+     * Answers 403 with a code rather than a 422: the sign-in form renders its own copy per
+     * status, and 422 is the "wrong username or password" case — which would send a person
+     * whose account is simply closed off to hunt for a typo, and support after them.
+     *
+     * An account with no employee record (the administrator the system ships with) is left
+     * alone: no directory record means nothing to resign.
+     *
+     * @throws HttpResponseException
+     */
+    private function ensureEmployeeHasNotResigned(): void
+    {
+        // hasLeft(), not the raw status: a resignation recorded for a last day still to
+        // come leaves the account working until that day is behind them.
+        if (Auth::user()?->employee?->hasLeft() !== true) {
+            return;
+        }
+
+        Auth::guard('web')->logout();
+
+        throw new HttpResponseException(response()->json(['message' => 'account_closed'], 403));
     }
 
     /**

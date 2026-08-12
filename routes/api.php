@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\Stock\WarehouseController;
 use App\Http\Controllers\Api\Ticket\TicketAttachmentController;
 use App\Http\Controllers\Api\Ticket\TicketController;
 use App\Http\Controllers\Api\Workflow\WorkflowController;
+use App\Http\Middleware\BlockResignedEmployees;
 use App\Http\Middleware\CheckPasswordExpiry;
 use App\Http\Middleware\CheckSessionTimeout;
 use Illuminate\Support\Facades\Route;
@@ -53,9 +54,12 @@ Route::get('settings', [SettingsController::class, 'show'])->name('api.settings.
  * `me` is how the SPA learns it must ask, `password` is the way out, `logout` must
  * always work, and the heartbeat keeps the session alive while the form is open.
  */
-Route::middleware(['auth:sanctum', CheckSessionTimeout::class, CheckPasswordExpiry::class])->group(function () {
+Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmployees::class, CheckPasswordExpiry::class])->group(function () {
+    // BlockResignedEmployees stands down here so somebody whose resignation landed
+    // mid-session can still clear their own cookie rather than being 401'd out of the
+    // only route that tidies up after them.
     Route::post('logout', [AuthController::class, 'logout'])
-        ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.logout');
+        ->withoutMiddleware([CheckPasswordExpiry::class, BlockResignedEmployees::class])->name('api.logout');
     Route::get('me', [AuthController::class, 'me'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.me');
     // Lightweight heartbeat used by the session-timeout modal to refresh _sec_last_activity on the server.

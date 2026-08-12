@@ -110,6 +110,29 @@ class Employee extends Model
         return $this->user?->isSuper() ?? false;
     }
 
+    /**
+     * The person has left for good — resigned AND their last working day is behind them.
+     *
+     * This is what closes their login account (LoginRequest at the door,
+     * BlockResignedEmployees on every request after it), so the two must read one rule:
+     * a resignation recorded today for a last day next month must NOT lock somebody out
+     * of the system they still work in. The block starts the day AFTER the last day, so
+     * the last day itself is an ordinary working day.
+     *
+     * No last day recorded means the resignation carried no notice period, and access
+     * ends with it.
+     *
+     * NOT the rule the approval chain uses. WorkflowResolverService::canHoldAStep() passes
+     * over anybody whose status is Resigned from the moment it is recorded, so a request
+     * routes to their replacement straight away — the two differ on purpose, and neither
+     * should be "corrected" to match the other.
+     */
+    public function hasLeft(): bool
+    {
+        return $this->status === EmployeeStatus::Resigned
+            && ($this->last_day === null || $this->last_day->isBefore(today()));
+    }
+
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);

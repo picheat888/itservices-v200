@@ -69,7 +69,7 @@ export default function LoginPage() {
     const errorMessage = (): string => {
         const res = (
             login.error as {
-                response?: { status?: number; data?: { retry_after?: number }; headers?: Record<string, string> };
+                response?: { status?: number; data?: { retry_after?: number; message?: string }; headers?: Record<string, string> };
             } | null
         )?.response;
         if (!res) {
@@ -89,6 +89,12 @@ export default function LoginPage() {
                     : t('login_time_seconds').replace('{n}', String(seconds));
 
             return t('login_err_throttled').replace('{time}', wait);
+        }
+        // The password was right and the account is simply closed — the person resigned.
+        // Kept apart from 422 on purpose: "check your username and password" would send
+        // somebody whose account was closed hunting for a typo that isn't there.
+        if (res.status === 403 && res.data?.message === 'account_closed') {
+            return t('login_err_closed');
         }
         if (res.status === 422) {
             return t('login_error');
