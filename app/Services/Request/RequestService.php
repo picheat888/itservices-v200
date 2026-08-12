@@ -136,6 +136,10 @@ class RequestService
                 'reason' => $data['reason'],
                 'fields' => $fields,
                 'status' => RequestStatus::Pending->value,
+                // Filing is the first movement; the activity feed orders on this column, and
+                // nothing else stored says when a request last moved (updated_at bumps on any
+                // write at all, and a rung signed mid-chain never touches this row).
+                'last_activity_at' => now(),
                 ...$references,
             ]);
 
@@ -183,6 +187,10 @@ class RequestService
             $next = $this->activateNextApproval($fresh);
             if ($next === null) {
                 $this->finalize($fresh);
+            } else {
+                // finalize() stamps the rest; a signature that only advances the chain has to
+                // stamp for itself, or the feed would never show it.
+                $fresh->update(['last_activity_at' => now()]);
             }
 
             return [$fresh, $row, $next === null];
@@ -215,6 +223,7 @@ class RequestService
             $fresh->update([
                 'status' => RequestStatus::Rejected->value,
                 'rejected_at' => now(),
+                'last_activity_at' => now(),
             ]);
 
             return [$fresh, $row];
@@ -252,7 +261,7 @@ class RequestService
             abort_if(
                 in_array($fresh->ticket?->status, [TicketStatus::Open, TicketStatus::InProgress], true),
                 422,
-                "Ticket {$fresh->ticket?->ticket_no} is still open — closing that case fulfils this request.",
+                "Ticket {$fresh->ticket?->ticket_no} is still open - closing that case fulfils this request.",
             );
 
             $fresh->approvals()
@@ -267,6 +276,7 @@ class RequestService
             $fresh->update([
                 'status' => RequestStatus::Fulfilled->value,
                 'fulfilled_at' => now(),
+                'last_activity_at' => now(),
             ]);
 
             return $fresh;
@@ -328,8 +338,8 @@ class RequestService
             ]);
 
             $fresh->update($completed
-                ? ['status' => RequestStatus::Fulfilled->value, 'fulfilled_at' => now()]
-                : ['status' => RequestStatus::Cancelled->value, 'cancelled_at' => now()]);
+                ? ['status' => RequestStatus::Fulfilled->value, 'fulfilled_at' => now(), 'last_activity_at' => now()]
+                : ['status' => RequestStatus::Cancelled->value, 'cancelled_at' => now(), 'last_activity_at' => now()]);
 
             return [$fresh, $queueRow];
         });
@@ -373,6 +383,7 @@ class RequestService
             $fresh->update([
                 'status' => RequestStatus::Cancelled->value,
                 'cancelled_at' => now(),
+                'last_activity_at' => now(),
             ]);
 
             return [$fresh, $wasCurrent];
@@ -417,6 +428,7 @@ class RequestService
         $request->update([
             'status' => RequestStatus::Approved->value,
             'approved_at' => now(),
+            'last_activity_at' => now(),
         ]);
 
         $queueRow = $request->approvals()

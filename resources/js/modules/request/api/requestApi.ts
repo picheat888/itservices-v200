@@ -23,6 +23,8 @@ export interface RequestPageResponse {
 }
 
 export interface RequestListParams {
+    /** 'activity' orders by when each request last moved — the dashboard feed. */
+    sort?: 'activity';
     page: number;
     per_page: number;
     search?: string;

@@ -81,9 +81,21 @@ class RequestController extends Controller
         // approver.user comes along because each row reports whether its approver still
         // lacks a login — without it that is one extra query per approval row. Same for
         // ticket.assignee: every row with a case serializes who holds it.
-        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket.assignee']))
-            ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
-            ->latest();
+        $query = $visible(ServiceRequest::with(['approvals.approver.user', 'ticket.assignee']));
+        // Two orders, because the two readers want different things. The list wants what is
+        // actionable first; the dashboard's activity feed wants what moved last — and under
+        // the actionable order a request approved five minutes ago sat below one that has
+        // been pending since last month, which is not what "recent activity" means.
+        //
+        // Both end on the id so the order is total: two requests filed in the same second
+        // otherwise tie, and this list is paginated server-side, where an unstable tie can
+        // repeat a row on one page and drop it from the next.
+        $request->query('sort') === 'activity'
+            ? $query->orderByDesc('last_activity_at')->latest('id')
+            : $query
+                ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
+                ->latest()
+                ->latest('id');
 
         if ($status = $request->query('status')) {
             $query->where('status', $status);
@@ -99,10 +111,17 @@ class RequestController extends Controller
             });
         }
         // Tab scopes: awaiting my decision / the IT fulfillment queue / only my own.
-        if ($request->query('scope') === 'approvals' && $employeeId !== null) {
-            $query->whereHas('approvals', fn ($a) => $a
-                ->where('approver_employee_id', $employeeId)
-                ->where('status', ApprovalStatus::Current->value));
+        if ($request->query('scope') === 'approvals') {
+            // An account with no employee record cannot be anybody's approver, so the answer
+            // is nothing — NOT the unfiltered list. The condition used to sit in the `if`,
+            // which meant the administrator (employee_id null) asked for "waiting on me" and
+            // got every request in the system back under that heading, each with
+            // can_approve false and a meta.awaiting_me of 0 contradicting the rows beside it.
+            $employeeId === null
+                ? $query->whereIn('id', [])
+                : $query->whereHas('approvals', fn ($a) => $a
+                    ->where('approver_employee_id', $employeeId)
+                    ->where('status', ApprovalStatus::Current->value));
         } elseif ($request->query('scope') === 'queue' && $canFulfill) {
             $query->where('status', RequestStatus::Approved->value);
         } elseif ($request->query('scope') === 'mine') {

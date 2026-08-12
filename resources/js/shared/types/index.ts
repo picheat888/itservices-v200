@@ -905,6 +905,12 @@ export interface ServiceRequest {
     fields_display: { key: string; label_en: string; label_th: string; value: string; value_th?: string | null; mono: boolean }[];
     status: ServiceRequestStatus;
     auto_ticket: boolean;
+    /** The last movement on this request: `kind` is a code the SPA writes out, `by` the name frozen on the row that moved. */
+    activity: {
+        at: string | null;
+        kind: 'submitted' | 'approved_step' | 'approved' | 'rejected' | 'cancelled' | 'fulfilled';
+        by: string | null;
+    };
     /**
      * `name` / `department` are the snapshot taken at submit; `code` / `position` /
      * `photo_url` come off the live employee record and are present on the detail

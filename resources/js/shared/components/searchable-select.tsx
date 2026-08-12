@@ -226,7 +226,9 @@ export function SearchableSelect({
                     {/* Leading icon of the selected option (e.g. type icon / status dot). */}
                     {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
                     {/* Label truncates; the sub (e.g. on-hand qty) stays pinned so it never gets cut. */}
-                    <span className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
+                    {/* Truncated on a narrow trigger by necessity; the title puts the whole label
+                        one hover away rather than leaving a guess. */}
+                    <span title={selected?.label} className={cn('min-w-0 truncate', !selected && 'text-muted-foreground')}>
                         {selected ? selected.label : (placeholder ?? t('select_placeholder'))}
                     </span>
                     {selected?.sub && <span className="text-muted-foreground shrink-0 font-mono text-xs">{selected.sub}</span>}
@@ -259,7 +261,14 @@ export function SearchableSelect({
                             style={{
                                 position: 'absolute',
                                 left: coords.left,
-                                width: coords.width,
+                                // The trigger's width is a floor, not the width: inside a narrow
+                                // column (the two-up grid in FilterPopover leaves ~120px) a panel
+                                // sized to the trigger cut "ฮาร์ดแวร์ / อุปกรณ์ต่อพ่วง" down to
+                                // "ฮาร์ดแว…", which is indistinguishable from the option above it.
+                                // Panels are portalled, so growing one disturbs no layout.
+                                minWidth: coords.width,
+                                maxWidth: 320,
+                                width: 'max-content',
                                 top: coords.top,
                                 bottom: coords.bottom,
                                 zIndex: 50,
@@ -274,7 +283,7 @@ export function SearchableSelect({
                     <div
                         ref={menuRef}
                         className={cn(
-                            'border-border bg-popover absolute z-50 w-full overflow-hidden rounded-md border shadow-md',
+                            'border-border bg-popover absolute z-50 w-max max-w-[320px] min-w-full overflow-hidden rounded-md border shadow-md',
                             dropUp ? 'bottom-full mb-1' : 'top-full mt-1',
                         )}
                     >
