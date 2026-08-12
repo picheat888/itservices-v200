@@ -105,9 +105,8 @@ export const requests: Dict = {
     req_review_title: 'Review & submit',
     req_review_sub: 'Check everything once - the request routes to the first approver as soon as you submit.',
     req_auto_ticket_note: 'A ticket opens automatically after the final approval.',
-    req_submit: 'Submit request',
-    req_submitted: 'Request submitted',
-    req_awaiting_first: 'awaiting the first approver',
+    req_submit: 'Submit',
+    req_submitted: 'Submitted',
     req_no_employee_hint: 'Your account is not linked to an employee record. Contact IT to link it before submitting.',
 
     // request-detail-dialog.tsx — detail dialog

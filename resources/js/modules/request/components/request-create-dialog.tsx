@@ -159,7 +159,7 @@ export function RequestCreateDialog({
                 fields: Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== '')),
             });
             setSaveState('done');
-            useToastStore.getState().push(`${created.reference} · ${t('req_awaiting_first')}`, 'success', t('req_submitted'));
+            useToastStore.getState().push(created.reference, 'success', t('req_submitted'));
             onCreated?.(created);
             setTimeout(() => {
                 setSaveState('idle');
