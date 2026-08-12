@@ -2,9 +2,10 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -148,8 +149,9 @@ export default function ContractsPage() {
     // The detail dialog is URL-driven (?view=<id>): the URL is the single source of truth, so a
     // reload / shared link reopens it and closing just drops the param. setSelectedId(null) closes.
     const [searchParams, setSearchParams] = useSearchParams();
-    const viewId = searchParams.get('view');
-    const selectedId = viewId ? Number(viewId) : null;
+    // Only a real record id opens the drawer: Number('abc') is NaN, which passes an
+    // `!= null` guard and used to fetch /contracts/NaN.
+    const selectedId = toRecordId(searchParams.get('view'));
     const setSelectedId = (id: number | null) =>
         setSearchParams(
             (sp) => {
@@ -163,7 +165,7 @@ export default function ContractsPage() {
             },
             { replace: true },
         );
-    const { data: selected } = useContract(selectedId);
+    const { data: selected, isError: selectedMissing } = useContract(selectedId);
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
@@ -621,6 +623,9 @@ export default function ContractsPage() {
                 )}
             </Card>
 
+            {/* The drawer bails out on a null record, so a dead ?view= link had nothing to
+                render and said nothing. This says it instead. */}
+            <RecordMissingDialog open={selectedMissing} onClose={() => setSelectedId(null)} />
             <ContractDetailDrawer
                 contract={selected ?? null}
                 onClose={() => setSelectedId(null)}

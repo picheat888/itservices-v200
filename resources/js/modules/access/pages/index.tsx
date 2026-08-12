@@ -5,7 +5,7 @@ import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -126,7 +126,8 @@ export default function AccessControlPage() {
     const tabAllowed = resolvedTab === 'dashboard' ? canOverview : canView[resolvedTab];
     const tab: Tab = tabAllowed ? resolvedTab : firstTab;
     // The manage drawer (?view=<id>) and the create form (?add=1) are URL-driven too; both derive below.
-    const viewId = searchParams.get('view');
+    // Only a real record id can match a row; Number('abc') is NaN and matched none.
+    const viewId = toRecordId(searchParams.get('view'));
     // ?add=1 is a presence flag — the create form's kind comes from the active (?tab) registry.
     const adding = searchParams.get('add') != null && tab !== 'dashboard';
 

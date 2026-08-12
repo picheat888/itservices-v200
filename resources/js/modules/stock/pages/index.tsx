@@ -5,7 +5,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
-import { cn } from '@/shared/lib/utils';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -257,7 +257,9 @@ export default function StockPage() {
     }, [search, cat, wh, statusFilter, itemSort]);
     const [editItem, setEditItem] = useState<StockItem | null>(null);
     // Item detail is URL-driven (?view=<id>) so a reload / shared link reopens it; closing drops it.
-    const viewId = searchParams.get('view') ? Number(searchParams.get('view')) : null;
+    // Only a real record id opens the modal: Number('abc') is NaN, which passes an
+    // `!= null` guard and used to fetch /stock-items/NaN.
+    const viewId = toRecordId(searchParams.get('view'));
     const setViewId = (id: number | null) =>
         setSearchParams(
             (sp) => {

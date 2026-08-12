@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useCurrency } from '@/modules/settings';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime as fmtDate } from '@/shared/lib/datetime';
@@ -131,11 +132,13 @@ export function StockItemDetailModal({
     const lang = useUiStore((s) => s.lang);
     const { symbol, format } = useCurrency();
     // System-timezone date for UTC timestamps (received_at) — last_move_at is a pure date, shown as-is.
-    const { data } = useStockItem(itemId);
+    const { data, isError } = useStockItem(itemId);
     // History is fetched here (and reused by the Movements tab via the same query key)
     // so the Movements tab count is known up front.
     const { data: history } = useStockItemHistory(itemId);
     const open = itemId !== null;
+    // The id resolved to nothing: the record is gone, or the link was never valid.
+    const missing = isError && !data;
 
     // Retains the last item for the exit animation, but never renders it under another
     // item's id: opening a second item from the list swaps `itemId` while the dialog is
@@ -172,8 +175,15 @@ export function StockItemDetailModal({
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-            <DialogContent className={focusDialogContentClass}>
-                {!item ? (
+            {/* The focus frame is sized for a full item sheet; the not-found panel is two
+                lines, so it drops the fixed height and takes a small box instead. */}
+            <DialogContent className={cn(focusDialogContentClass, missing && recordMissingContentClass)}>
+                {missing ? (
+                    // The id is well-formed but there is no item behind it — a deleted SKU, or a
+                    // stale link. Without this the skeleton below stayed up for good: it is shown
+                    // whenever the record is absent, and absence alone never says why.
+                    <RecordMissing onClose={onClose} />
+                ) : !item ? (
                     <div className="space-y-4 px-6 py-6">
                         <DialogTitle className="text-base">{t('stock_detail')}</DialogTitle>
                         <DialogDescription className="sr-only">{t('stock_detail')}</DialogDescription>
