@@ -37,7 +37,8 @@ export interface NotificationData {
     asset_nickname?: string | null;
     from?: string | null;
     // Service request notifications (request) — subtype: submitted | waiting |
-    // approved_step | approved_final | rejected | fulfilled | cancelled
+    // ready_to_fulfill | approved_step | approved_final | rejected | fulfilled | cancelled
+    // (ready_to_fulfill carries ticket_no when the workflow opened its own case)
     service_request_id?: number;
     title?: string;
     request_type?: string;

@@ -9,8 +9,12 @@ use Illuminate\Notifications\Notification;
 /**
  * Bell (database) notification for every service-request transition. The
  * subtype tells the SPA which message to render:
- * submitted | waiting | approved_step | approved_final | rejected | fulfilled |
- * cancelled | blocked_no_account
+ * submitted | waiting | ready_to_fulfill | approved_step | approved_final |
+ * rejected | fulfilled | cancelled | blocked_no_account
+ *
+ * `waiting` is only ever an approval rung — a person who has to decide. The IT
+ * queue gets `ready_to_fulfill` instead: nobody there decides anything, they
+ * deliver, and when the workflow opened its own case they do that in the case.
  *
  * `blocked_no_account` is the odd one out: it goes to the people who can provision
  * a login, not to a participant, and it carries the employee to provision so the
@@ -49,6 +53,11 @@ class RequestWorkflowNotification extends Notification
             'step_label' => $this->stepLabel,
             'actor_name' => $this->actorName,
             'remark' => $this->remark,
+            // The case this request opened, when it opened one. Read by the queue bell,
+            // which names it rather than asking for a decision, and by the requester's
+            // bells so "IT is on it" points at something real.
+            'ticket_id' => $this->request->ticket_id,
+            'ticket_no' => $this->request->ticket?->ticket_no,
             // Only set on blocked_no_account: who needs the account, so the bell can
             // deep-link to them in the Employee module.
             'employee_id' => $this->blockedApprover?->id,

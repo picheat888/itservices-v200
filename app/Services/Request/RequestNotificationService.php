@@ -20,7 +20,8 @@ use Illuminate\Support\Facades\Notification;
  *
  *  submitted        → requester (receipt) + first approver (action needed)
  *  advanced         → requester (step passed, bell only) + next approver
- *  finalApproved    → requester + the requests.fulfill queue
+ *  finalApproved    → requester + the requests.fulfill queue (ready_to_fulfill,
+ *                     which names the auto-opened case when there is one)
  *  rejected         → requester, carrying the decision remark
  *  fulfilled        → requester
  *  cancelled        → the waiting approver's action bell is replaced
@@ -91,13 +92,19 @@ class RequestNotificationService
 
         // Whoever follows the request has just been told it passed; the queue bell is
         // for the people who now have to act on it.
+        //
+        // Its own subtype, not the approvers' `waiting`: IT delivers, it does not decide,
+        // and a workflow that opened its own case leaves nothing here to press at all —
+        // closing that case is what fulfils the request. The bell names the case so it
+        // reads as one story with the case's own "new case" bell instead of a second
+        // approval step standing next to it.
         $queue = $this->recipients('requests.fulfill')
             ->reject(fn (User $u) => $followers->contains('id', $u->id))
             ->values();
         $this->sendBell(
             $queue,
-            new RequestWorkflowNotification($request, 'waiting', 'IT Staff'),
-            ['service_request_id' => $request->id, 'subtype' => 'waiting'],
+            new RequestWorkflowNotification($request, 'ready_to_fulfill'),
+            ['service_request_id' => $request->id, 'subtype' => 'ready_to_fulfill'],
         );
         $this->emailEach($queue, 'request.ready_to_fulfill', $request);
     }

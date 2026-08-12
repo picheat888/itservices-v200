@@ -26,6 +26,8 @@ export const notification: Dict = {
     notif_request_waiting: 'รอการตัดสินจากคุณ - {step}',
     notif_request_approved_step: '{step} อนุมัติแล้ว - ส่งต่อขั้นถัดไป',
     notif_request_approved_final: 'อนุมัติครบทุกขั้น - ทีม IT รับไปดำเนินการ',
+    notif_request_ready_case: 'เปิดเคสให้คุณเรียบร้อยแล้ว - {ticket}',
+    notif_request_ready_manual: 'อนุมัติครบทุกขั้นแล้ว - รอคุณส่งมอบและปิดคำขอ',
     notif_request_rejected: 'ไม่อนุมัติโดย {actor}: {remark}',
     notif_request_fulfilled: 'ดำเนินการเสร็จแล้ว',
     notif_request_cancelled: 'ผู้ขอยกเลิกคำขอ',

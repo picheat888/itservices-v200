@@ -26,6 +26,8 @@ export const notification: Dict = {
     notif_request_waiting: 'Awaiting your decision - {step}',
     notif_request_approved_step: '{step} approved - moving to the next step',
     notif_request_approved_final: 'Fully approved - IT will take it from here',
+    notif_request_ready_case: 'A case has been opened for you - {ticket}',
+    notif_request_ready_manual: 'Fully approved - waiting for you to deliver and close it',
     notif_request_rejected: 'Rejected by {actor}: {remark}',
     notif_request_fulfilled: 'Done - your request was fulfilled',
     notif_request_cancelled: 'Cancelled by the requester',
