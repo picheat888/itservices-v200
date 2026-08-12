@@ -424,7 +424,6 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                         <SearchableSelect
                             value={sku}
                             onChange={onSkuChange}
-                            placeholder="—"
                             options={items.map((i) => ({
                                 value: String(i.id),
                                 label: `${i.sku} — ${i.name}`,

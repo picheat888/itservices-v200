@@ -1,3 +1,4 @@
+import { useT } from '@/lang';
 import type { SelectOption } from '@/shared/lib/locale-data';
 import { cn } from '@/shared/lib/utils';
 import { Check, ChevronsUpDown, Search } from 'lucide-react';
@@ -22,6 +23,7 @@ interface DropdownRect {
 
 /** Dropdown with an inline search box, rendered as a portal so it is never clipped by parent overflow. */
 export function SearchSelect({ value, onChange, options, placeholder, className }: SearchSelectProps) {
+    const t = useT();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [rect, setRect] = useState<DropdownRect>({ top: 0, left: 0, width: 0, maxHeight: 320 });
@@ -107,7 +109,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                     className,
                 )}
             >
-                <span className="truncate">{selected ? selected.label : (placeholder ?? 'Select…')}</span>
+                <span className="truncate">{selected ? selected.label : (placeholder ?? t('select_placeholder'))}</span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </button>
 
@@ -135,7 +137,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Escape' && handleClose()}
                                 className="placeholder:text-muted-foreground flex h-10 w-full bg-transparent py-2 text-sm outline-none"
-                                placeholder="Search…"
+                                placeholder={t('search_placeholder_short')}
                             />
                         </div>
 
