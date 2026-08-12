@@ -118,9 +118,25 @@ export const roleApi = {
 };
 
 export const groupRoleApi = {
-    list: () => http.get<{ data: GroupRole[]; default_group_id: number | null }>('/group-roles').then((r) => r.data),
+    list: () => http.get<GroupRoleListResponse>('/group-roles').then((r) => r.data),
     create: (payload: GroupRolePayload) => send<GroupRole>('post', '/group-roles', payload),
     update: (id: number, payload: GroupRolePayload) => send<GroupRole>('put', `/group-roles/${id}`, payload),
     remove: (id: number) => send<void>('delete', `/group-roles/${id}`),
-    setDefault: (groupId: number | null) => send<GroupRoleListResponse>('put', '/group-roles-default', { group_id: groupId }),
+    /**
+     * Answers with the whole list (the endpoint returns index()), and that answer is
+     * written straight into the list cache — so it must keep the list's shape.
+     *
+     * NOT send(): that helper unwraps the envelope's `data`, which here IS the array of
+     * groups. The cache then held an array where the page reads `data.data`, so saving a
+     * default emptied the screen until the next fetch — the response was right, the
+     * unwrapping was one layer too deep. `send<GroupRoleListResponse>` could not catch it
+     * either: it returns T by assertion, so the type said envelope while the value was an
+     * array.
+     */
+    setDefault: async (groupId: number | null): Promise<GroupRoleListResponse> => {
+        await ensureCsrf();
+        const { data } = await http.put<GroupRoleListResponse>('/group-roles-default', { group_id: groupId });
+
+        return data;
+    },
 };
