@@ -80,7 +80,7 @@ class RequestSchemas
                 ]],
             ],
             RequestType::Email->value => [
-                ['key' => 'address', 'label_en' => 'Requested address', 'label_th' => 'อีเมลที่ต้องการ', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'john.doe@example.com'],
+                ['key' => 'address', 'label_en' => 'Address', 'label_th' => 'อีเมล', 'input' => 'email', 'required' => true, 'mono' => true, 'placeholder' => 'john.doe@example.com'],
             ],
             RequestType::Social->value => [
                 ['key' => 'social_platform_id', 'label_en' => 'Platform', 'label_th' => 'แพลตฟอร์ม', 'input' => 'source', 'source' => 'social_platforms', 'required' => true],
