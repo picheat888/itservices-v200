@@ -190,7 +190,7 @@ class StockItemController extends Controller
         $data = $request->validated();
         $data['sku'] = StockItem::nextSku();
         $item = StockItem::create($data);
-        AuditLog::record('Created stock item', "{$item->sku} — {$item->name}");
+        AuditLog::record('Created stock item', "{$item->sku} - {$item->name}");
 
         return (new StockItemResource($item))->response()->setStatusCode(201);
     }
@@ -338,7 +338,7 @@ class StockItemController extends Controller
     {
         $before = $stockItem->getOriginal();
         $stockItem->update($request->validated());
-        AuditLog::record('Updated stock item', "{$stockItem->sku} — {$stockItem->name}", AuditLog::changes($before, $stockItem));
+        AuditLog::record('Updated stock item', "{$stockItem->sku} - {$stockItem->name}", AuditLog::changes($before, $stockItem));
 
         return (new StockItemResource($stockItem))->response();
     }
@@ -354,7 +354,7 @@ class StockItemController extends Controller
             return response()->json(['message' => 'Cannot delete: item still has stock or value.'], 422);
         }
 
-        AuditLog::record('Deleted stock item', "{$stockItem->sku} — {$stockItem->name}");
+        AuditLog::record('Deleted stock item', "{$stockItem->sku} - {$stockItem->name}");
         $stockItem->delete();
 
         return response()->json(['message' => 'success']);

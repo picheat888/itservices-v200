@@ -184,7 +184,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                     </DialogHeader>
                     <div className="space-y-4">
                         <Field label={t('gr_name')}>
-                            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Plant 1 — Managers" />
+                            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Plant 1 - Managers" />
                         </Field>
                         <Field label={t('gr_role')}>
                             <Select value={role || undefined} onValueChange={setRole}>
@@ -327,8 +327,8 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                     <div className="space-y-3">
                         <p className="text-muted-foreground text-sm">
                             {lang === 'th'
-                                ? `พนักงานต่อไปนี้จะถูกย้ายมาอยู่กลุ่ม “${name}” และสิทธิ์ (role) จะเปลี่ยนตามกลุ่มใหม่ — 1 คนอยู่ได้กลุ่มเดียวเท่านั้น:`
-                                : `These employees will be moved into “${name}” and their permission role will change — an employee may belong to only one group:`}
+                                ? `พนักงานต่อไปนี้จะถูกย้ายมาอยู่กลุ่ม “${name}” และสิทธิ์ (role) จะเปลี่ยนตามกลุ่มใหม่ - 1 คนอยู่ได้กลุ่มเดียวเท่านั้น:`
+                                : `These employees will be moved into “${name}” and their permission role will change - an employee may belong to only one group:`}
                         </p>
                         <ul className="space-y-1.5">
                             {(pendingMoves ?? []).map((m) => (

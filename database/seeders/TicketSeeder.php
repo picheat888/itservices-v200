@@ -40,12 +40,12 @@ class TicketSeeder extends Seeder
 
             // In progress — taken, so responded_at is set (drives Avg. response).
             [
-                'ticket_no' => 'TKT-2860', 'subject' => 'Outlook เปิดไม่ได้ — โน้ตบุ๊กฝ่ายการเงิน',
+                'ticket_no' => 'TKT-2860', 'subject' => 'Outlook เปิดไม่ได้ - โน้ตบุ๊กฝ่ายการเงิน',
                 'description' => 'Outlook closes immediately on open after the latest update.', 'category' => 'software',
                 'priority' => 'medium', 'status' => 'in_progress', 'requester' => 'EMP-0005', 'assignee' => 'super', 'created_h' => 5, 'resp_m' => 32,
             ],
             [
-                'ticket_no' => 'TKT-2858', 'subject' => 'Wi-Fi โรงงาน 1 ขาดๆ หายๆ — ไลน์ 3',
+                'ticket_no' => 'TKT-2858', 'subject' => 'Wi-Fi โรงงาน 1 ขาดๆ หายๆ - ไลน์ 3',
                 'description' => 'Wi-Fi at production line 3 keeps dropping every few minutes.', 'category' => 'network',
                 'priority' => 'critical', 'status' => 'in_progress', 'requester' => 'EMP-0006', 'assignee' => 'it', 'created_h' => 8, 'resp_m' => 12,
             ],
@@ -64,7 +64,7 @@ class TicketSeeder extends Seeder
                 'resolution' => 'Pushed the signature template via GPO and confirmed it applied on the user’s Outlook.',
             ],
             [
-                'ticket_no' => 'TKT-2855', 'subject' => 'ขอจอใหม่ — โต๊ะออกแบบ',
+                'ticket_no' => 'TKT-2855', 'subject' => 'ขอจอใหม่ - โต๊ะออกแบบ',
                 'description' => 'Second monitor flickering, needs replacement.', 'category' => 'hardware',
                 'priority' => 'medium', 'status' => 'completed', 'requester' => 'EMP-0002', 'assignee' => 'it', 'created_h' => 50, 'resp_m' => 40, 'resolve_h' => 18,
                 'resolution' => 'Replaced the faulty monitor with a spare from stock and tested for flicker.',
@@ -82,13 +82,13 @@ class TicketSeeder extends Seeder
                 'ticket_no' => 'TKT-2853', 'subject' => 'คำขอ VPN ซ้ำ',
                 'description' => 'User opened a second ticket for the same VPN issue.', 'category' => 'network',
                 'priority' => 'low', 'status' => 'canceled', 'requester' => 'EMP-0006', 'assignee' => 'it', 'created_h' => 40, 'resp_m' => 55, 'resolve_h' => 3,
-                'resolution' => 'Duplicate of TKT-2861 — consolidated into the original ticket and canceled this one.',
+                'resolution' => 'Duplicate of TKT-2861 - consolidated into the original ticket and canceled this one.',
             ],
             [
-                'ticket_no' => 'TKT-2852', 'subject' => 'เปลี่ยนคีย์บอร์ด — พนักงานลาออก',
+                'ticket_no' => 'TKT-2852', 'subject' => 'เปลี่ยนคีย์บอร์ด - พนักงานลาออก',
                 'description' => 'Keyboard replacement requested for a desk being vacated.', 'category' => 'hardware',
                 'priority' => 'medium', 'status' => 'canceled', 'requester' => 'EMP-0002', 'assignee' => 'super', 'created_h' => 26, 'resp_m' => 25, 'resolve_h' => 4,
-                'resolution' => 'Requester is leaving and the device was decommissioned — canceling per the department head.',
+                'resolution' => 'Requester is leaving and the device was decommissioned - canceling per the department head.',
             ],
         ];
 
@@ -97,7 +97,7 @@ class TicketSeeder extends Seeder
             // tickets at all: the codes here had drifted away from the ones OrgSeeder
             // creates and nothing said so. Drift is a bug in the demo data — say it.
             $requesterId = $empId[$t['requester']]
-                ?? throw new RuntimeException("TicketSeeder: no employee with code {$t['requester']} — the demo codes have drifted from OrgSeeder.");
+                ?? throw new RuntimeException("TicketSeeder: no employee with code {$t['requester']} - the demo codes have drifted from OrgSeeder.");
 
             $createdAt = now()->subHours($t['created_h']);
             $respondedAt = isset($t['resp_m']) ? $createdAt->copy()->addMinutes($t['resp_m']) : null;

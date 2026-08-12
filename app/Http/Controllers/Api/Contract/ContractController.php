@@ -215,7 +215,7 @@ class ContractController extends Controller
         ]);
 
         $contract = $this->service->cancel($contract, $validated['reason']);
-        AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) — {$validated['reason']}");
+        AuditLog::record('Cancelled contract', "{$contract->name} ({$contract->code}) - {$validated['reason']}");
 
         return (new ContractResource($contract))
             ->additional(['message' => 'success'])->response();
@@ -279,7 +279,7 @@ class ContractController extends Controller
         abort_unless((bool) $request->user()?->hasPermission('contracts.import'), 403);
 
         $headers = ['code', 'vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle', 'notes'];
-        $sample = ['', 'Microsoft', 'Microsoft 365 — 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', ''];
+        $sample = ['', 'Microsoft', 'Microsoft 365 - 100 seats', 'software', '2025-01-01', '2026-01-01', '150000', 'yearly', ''];
 
         return response()->streamDownload(function () use ($headers, $sample) {
             $out = fopen('php://output', 'w');

@@ -216,7 +216,7 @@ class StockMovementController extends Controller
 
         if ($serials->isEmpty()) {
             throw ValidationException::withMessages([
-                'serials' => 'This item is serialized — capture a serial for every unit.',
+                'serials' => 'This item is serialized - capture a serial for every unit.',
             ]);
         }
 
@@ -255,7 +255,7 @@ class StockMovementController extends Controller
         $ids = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
         if ($ids === []) {
             throw ValidationException::withMessages([
-                'serial_ids' => 'This item is serialized — select the issued serial(s) to return.',
+                'serial_ids' => 'This item is serialized - select the issued serial(s) to return.',
             ]);
         }
 

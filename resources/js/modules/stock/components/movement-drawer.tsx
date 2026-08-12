@@ -426,7 +426,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             onChange={onSkuChange}
                             options={items.map((i) => ({
                                 value: String(i.id),
-                                label: `${i.sku} — ${i.name}`,
+                                label: `${i.sku} - ${i.name}`,
                                 sub: `(${i.current_stock})`,
                                 search: `${i.sku} ${i.name}`,
                             }))}
@@ -442,7 +442,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             <div className="flex items-center gap-1.5">
                                 <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs">
                                     <MoveRight className="h-3 w-3" />
-                                    TRF-XXXXXX — เลขเอกสารจะสร้างอัตโนมัติ
+                                    TRF-XXXXXX - เลขเอกสารจะสร้างอัตโนมัติ
                                 </span>
                                 <span
                                     className={cn(

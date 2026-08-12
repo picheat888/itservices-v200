@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import type { AssetTransferEntry } from '@/shared/types';
 import { History } from 'lucide-react';
 
-const POOL = 'Pool — IT';
+const POOL = 'Pool - IT';
 
 /** Renders one custody endpoint, highlighting the IT pool. */
 function Party({ name, muted }: { name: string | null; muted?: boolean }) {

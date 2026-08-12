@@ -34,7 +34,7 @@ const iconTone: Record<DemoTicket['tone'], string> = {
 const demoTickets: DemoTicket[] = [
     { id: 'TKT-2861', subject: 'Cannot connect to production VPN', status: 'Open', tone: 'blue' },
     { id: 'TKT-2860', subject: 'Outlook crashing on launch', status: 'In progress', tone: 'amber' },
-    { id: 'TKT-2856', subject: 'Printer toner replacement — HR', status: 'Resolved', tone: 'green' },
+    { id: 'TKT-2856', subject: 'Printer toner replacement - HR', status: 'Resolved', tone: 'green' },
     { id: 'TKT-2853', subject: 'New mouse for QA station 7', status: 'Closed', tone: 'gray' },
 ];
 

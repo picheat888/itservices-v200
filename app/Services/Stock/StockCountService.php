@@ -154,7 +154,7 @@ class StockCountService
 
         AuditLog::record(
             'Committed stock count',
-            $count->reference.($mode === StockCountAdjustMode::Manual ? ' (manual — report only)' : ' (auto — stock adjusted)')
+            $count->reference.($mode === StockCountAdjustMode::Manual ? ' (manual - report only)' : ' (auto - stock adjusted)')
         );
 
         return $count->fresh('lines');

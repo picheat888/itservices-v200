@@ -168,7 +168,7 @@ class StoreEmployeeRequest extends FormRequest
             }
             $manager = Employee::find($managerId);
             if ($manager && $employee->isAncestorOf($manager)) {
-                $v->errors()->add('manager_id', 'That person reports to this employee — it would create a loop.');
+                $v->errors()->add('manager_id', 'That person reports to this employee - it would create a loop.');
             }
         });
     }

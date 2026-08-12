@@ -109,14 +109,22 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
 }
 
-/** Headline line for a notification (vendor/contract code, stock item SKU, or employee name/code). */
+/**
+ * Headline line for a notification (vendor/contract code, stock item SKU, or employee
+ * name/code).
+ *
+ * Code and name are joined by a plain hyphen — the em dash that used to sit here carried
+ * more weight than the line needs, on rows that are already long (an auto-opened case
+ * reads TKT-… - [RQ-…] Title). One character for all three, so the bell does not show
+ * three different separators.
+ */
 export function notificationTitle(n: AppNotification): string {
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
-    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} — ${n.data.subject}`;
-    if (n.data.type === 'stock_alert') return `${n.data.sku} — ${n.data.name}`;
+    if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} - ${n.data.subject}`;
+    if (n.data.type === 'stock_alert') return `${n.data.sku} - ${n.data.name}`;
     if (n.data.type === 'stock_request') return `${n.data.reference ?? n.data.sku ?? '#' + n.data.stock_request_id} ×${n.data.qty}`;
     if (n.data.type === 'stock_count') return n.data.reference ?? `#${n.data.stock_count_id}`;
-    if (n.data.type === 'request') return `${n.data.reference} — ${n.data.title}`;
+    if (n.data.type === 'request') return `${n.data.reference} - ${n.data.title}`;
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested') return `${n.data.asset_model} (${n.data.asset_tag})`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }

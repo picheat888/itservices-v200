@@ -48,7 +48,7 @@ class EmailTemplates
                 'name' => 'Ticket forwarded',
                 'subject' => 'Ticket {{ticket.id}} was forwarded to you',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Ticket <strong>{{ticket.id}}</strong> — {{ticket.subject}} — was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in the IT portal.</p>
+<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in the IT portal.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -68,7 +68,7 @@ class EmailTemplates
                 'name' => 'Ticket SLA breached',
                 'subject' => 'Ticket {{ticket.id}} has breached its SLA',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Ticket <strong>{{ticket.id}}</strong> — {{ticket.subject}} — has passed its SLA target and needs attention.</p>
+<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} has passed its SLA target and needs attention.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -179,7 +179,7 @@ class EmailTemplates
             ],
             [
                 'key' => 'employee.account_needed',
-                'name' => 'New employee — set credentials',
+                'name' => 'New employee - set credentials',
                 'subject' => 'New employee {{employee.code}} needs a login account',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>A new employee <strong>{{employee.name}} ({{employee.code}})</strong> needs a login account. Please set their username and password from the Employee list.</p>',
@@ -212,7 +212,7 @@ class EmailTemplates
                 'subject' => 'Stock low: {{stock.sku}} ({{stock.qty}} left)',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>A stock item has dropped to or below its minimum level and may need reordering.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -222,14 +222,14 @@ class EmailTemplates
                 'subject' => 'Out of stock: {{stock.sku}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>A stock item is now out of stock. Please reorder as soon as possible.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.request_approval_needed',
                 'name' => 'Stock - waiting approve & fulfill',
-                'subject' => 'Stock requests awaiting action — {{count}}',
+                'subject' => 'Stock requests awaiting action - {{count}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>{{count}} stock request(s) awaiting approval or fulfilment:</p>
 {{items}}',
@@ -242,7 +242,7 @@ class EmailTemplates
                 'subject' => 'Your stock request has been approved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Your stock request has been approved and is ready to be fulfilled.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -252,7 +252,7 @@ class EmailTemplates
                 'subject' => 'Your stock request has been rejected',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Your stock request has been rejected. Please contact IT if you have questions.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -262,7 +262,7 @@ class EmailTemplates
                 'subject' => 'Your stock request has been fulfilled',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Your stock request has been fulfilled and the items have been issued.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -272,7 +272,7 @@ class EmailTemplates
                 'subject' => 'Overstock: {{stock.sku}} ({{stock.qty}} on hand)',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>A stock item has risen above its maximum level (overstock).</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -282,14 +282,14 @@ class EmailTemplates
                 'subject' => 'New stock request submitted: {{stock.sku}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>A new stock request has been submitted and is awaiting processing.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> — {{stock.name}}</p>',
+<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.alert_digest',
                 'name' => 'Stock - Daily alert digest',
-                'subject' => 'Daily stock alert — {{count}} item(s) need attention',
+                'subject' => 'Daily stock alert - {{count}} item(s) need attention',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>{{count}} stock item(s) need attention:</p>
 {{items}}',

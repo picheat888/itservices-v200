@@ -76,7 +76,7 @@ class UpdateWorkflowRequest extends FormRequest
             $workflow = $this->route('workflow');
             $hasOwnerStep = $steps->contains(fn ($s) => ($s['actor_type'] ?? null) === StepActorType::Owner->value);
             if ($hasOwnerStep && $workflow !== null && $workflow->request_type->ownerSource() === null) {
-                $v->errors()->add('steps', 'This request type has no resource owner — an Owner step can never resolve.');
+                $v->errors()->add('steps', 'This request type has no resource owner - an Owner step can never resolve.');
             }
         });
     }

@@ -25,13 +25,13 @@ class DemoUpsManyLotsSeeder extends Seeder
     {
         $item = StockItem::where('sku', 'SK-UPS-001')->first();
         if (! $item) {
-            $this->command?->warn('SK-UPS-001 not found — skipped.');
+            $this->command?->warn('SK-UPS-001 not found - skipped.');
 
             return;
         }
 
         if (StockMovement::where('reference', 'PO-2026-061')->exists()) {
-            $this->command?->info('Demo UPS lots already present — skipped.');
+            $this->command?->info('Demo UPS lots already present - skipped.');
 
             return;
         }

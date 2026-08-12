@@ -259,7 +259,7 @@ class StockNotificationService
             $item = $row['item'];
             $label = $labels[$row['type']] ?? $row['type'];
 
-            return '<li><strong>'.e($item->sku).'</strong> — '.e($item->name)
+            return '<li><strong>'.e($item->sku).'</strong> - '.e($item->name)
                 .' · '.$label.' (on hand: '.(int) $item->current_stock.')</li>';
         })->implode('');
 
@@ -274,7 +274,7 @@ class StockNotificationService
     private function buildRequestRows(Collection $requests): string
     {
         $items = $requests->map(function (StockRequest $r) {
-            return '<li><strong>'.e($r->reference).'</strong> — '.e($r->item?->name ?? '')
+            return '<li><strong>'.e($r->reference).'</strong> - '.e($r->item?->name ?? '')
                 .' ×'.(int) $r->qty.' · '.e($r->status).' (by '.e($r->requester_name).')</li>';
         })->implode('');
 

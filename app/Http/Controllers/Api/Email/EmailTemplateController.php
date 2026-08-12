@@ -234,9 +234,9 @@ class EmailTemplateController extends Controller
             'user.email' => $request->user()->email ?? 'user@example.com',
             'count' => 3,
             'items' => '<ul>'
-                .'<li><strong>SKU-1042</strong> — USB-C Docking Station · Below minimum (on hand: 2)</li>'
-                .'<li><strong>SKU-0387</strong> — 24-inch Monitor · Out of stock (on hand: 0)</li>'
-                .'<li><strong>REQ-2026-0042</strong> — Wireless Mouse ×5 · pending (by Somchai)</li>'
+                .'<li><strong>SKU-1042</strong> - USB-C Docking Station · Below minimum (on hand: 2)</li>'
+                .'<li><strong>SKU-0387</strong> - 24-inch Monitor · Out of stock (on hand: 0)</li>'
+                .'<li><strong>REQ-2026-0042</strong> - Wireless Mouse ×5 · pending (by Somchai)</li>'
                 .'</ul>',
             'stock.sku' => 'SKU-1042',
             'stock.name' => 'USB-C Docking Station',

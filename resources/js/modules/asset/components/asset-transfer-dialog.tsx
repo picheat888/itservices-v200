@@ -104,7 +104,7 @@ export function AssetTransferDialog({
     const description = isBulk
         ? t('asset_bulk_count').replace('{count}', String(ids?.length ?? 0))
         : asset
-          ? `${asset.asset_code} — ${asset.model ?? ''}`
+          ? `${asset.asset_code} - ${asset.model ?? ''}`
           : '';
 
     return (

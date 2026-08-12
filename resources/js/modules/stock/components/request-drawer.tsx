@@ -65,7 +65,7 @@ export function RequestDrawer({ open, onClose }: { open: boolean; onClose: () =>
                             onChange={setSku}
                             options={items.map((i) => ({
                                 value: String(i.id),
-                                label: `${i.sku} — ${i.name}`,
+                                label: `${i.sku} - ${i.name}`,
                                 sub: `(${i.current_stock})`,
                                 search: `${i.sku} ${i.name}`,
                             }))}

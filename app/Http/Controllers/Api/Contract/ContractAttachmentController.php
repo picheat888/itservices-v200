@@ -57,7 +57,7 @@ class ContractAttachmentController extends Controller
             ]);
         }
 
-        AuditLog::record('Uploaded contract attachment', count($files)." ไฟล์ — {$contract->name} ({$contract->code})");
+        AuditLog::record('Uploaded contract attachment', count($files)." ไฟล์ - {$contract->name} ({$contract->code})");
 
         return (new ContractResource($contract->load('attachments')))
             ->additional(['message' => 'success'])->response();
@@ -72,7 +72,7 @@ class ContractAttachmentController extends Controller
         Storage::disk('local')->delete($attachment->path);
         $attachment->delete();
 
-        AuditLog::record('Deleted contract attachment', "{$attachment->original_name} — {$contract->name} ({$contract->code})");
+        AuditLog::record('Deleted contract attachment', "{$attachment->original_name} - {$contract->name} ({$contract->code})");
 
         return (new ContractResource($contract->load('attachments')))
             ->additional(['message' => 'success'])->response();

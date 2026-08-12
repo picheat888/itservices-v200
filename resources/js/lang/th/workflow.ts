@@ -8,7 +8,7 @@ import type { Dict } from '@/lang/types';
  */
 export const workflow: Dict = {
     wf_title: 'Workflow',
-    wf_sub: 'ปรับเส้นทางอนุมัติของคำขอแต่ละประเภท — ใครอนุมัติ และลำดับไหน',
+    wf_sub: 'ปรับเส้นทางอนุมัติของคำขอแต่ละประเภท - ใครอนุมัติ และลำดับไหน',
     wf_coming_soon: 'เร็ว ๆ นี้',
 
     // pages/index.tsx — การ์ด KPI
@@ -58,7 +58,7 @@ export const workflow: Dict = {
     wf_add_step: 'เพิ่มขั้นตอน',
     wf_step_label: 'ป้ายที่แสดง',
     wf_step_positions: 'อนุมัติโดย',
-    wf_step_positions_required: 'ยังไม่ได้เลือกตำแหน่ง — ขั้นนี้จะหาผู้อนุมัติไม่ได้',
+    wf_step_positions_required: 'ยังไม่ได้เลือกตำแหน่ง - ขั้นนี้จะหาผู้อนุมัติไม่ได้',
     wf_ranks_edit: 'แก้ไข',
     wf_ranks_done: 'เสร็จ',
     wf_actor_chain: 'สายบังคับบัญชา',

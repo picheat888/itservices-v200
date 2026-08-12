@@ -79,7 +79,7 @@ export function RequestsTab({
     };
 
     // One-line summary of the request, shown inside the confirm dialogs.
-    const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} — ${r.item_name ?? ''}  ·  ×${r.qty}  ·  ${r.requester_name}`;
+    const reqSummary = (r: (typeof requests)[number]) => `${r.sku ?? ''} - ${r.item_name ?? ''}  ·  ×${r.qty}  ·  ${r.requester_name}`;
 
     const confirmApprove = async (r: (typeof requests)[number]) => {
         await confirm({

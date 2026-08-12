@@ -21,16 +21,16 @@ class MasterDataSeeder extends Seeder
     {
         // ── Brands ──────────────────────────────────────────────────────────────
         $brands = [
-            ['name' => 'Dell',    'description' => 'Dell Technologies — เซิร์ฟเวอร์, แล็ปท็อป, จอภาพ'],
-            ['name' => 'HP',      'description' => 'HP Inc. — เครื่องพิมพ์, แล็ปท็อป, เดสก์ท็อป'],
-            ['name' => 'Lenovo',  'description' => 'Lenovo — ThinkPad, ThinkCentre, ThinkStation'],
-            ['name' => 'Apple',   'description' => 'Apple Inc. — MacBook, iPad'],
-            ['name' => 'Cisco',   'description' => 'Cisco Systems — สวิตช์, เราเตอร์, ไฟร์วอลล์'],
-            ['name' => 'Samsung', 'description' => 'Samsung — จอภาพ, SSD, อุปกรณ์มือถือ'],
-            ['name' => 'Fujitsu', 'description' => 'Fujitsu — เซิร์ฟเวอร์, สแกนเนอร์'],
-            ['name' => 'APC',     'description' => 'APC by Schneider Electric — UPS, PDU'],
-            ['name' => 'D-Link',  'description' => 'D-Link — สวิตช์, Access Point ระดับ SMB'],
-            ['name' => 'Epson',   'description' => 'Epson — เครื่องพิมพ์, สแกนเนอร์'],
+            ['name' => 'Dell',    'description' => 'Dell Technologies - เซิร์ฟเวอร์, แล็ปท็อป, จอภาพ'],
+            ['name' => 'HP',      'description' => 'HP Inc. - เครื่องพิมพ์, แล็ปท็อป, เดสก์ท็อป'],
+            ['name' => 'Lenovo',  'description' => 'Lenovo - ThinkPad, ThinkCentre, ThinkStation'],
+            ['name' => 'Apple',   'description' => 'Apple Inc. - MacBook, iPad'],
+            ['name' => 'Cisco',   'description' => 'Cisco Systems - สวิตช์, เราเตอร์, ไฟร์วอลล์'],
+            ['name' => 'Samsung', 'description' => 'Samsung - จอภาพ, SSD, อุปกรณ์มือถือ'],
+            ['name' => 'Fujitsu', 'description' => 'Fujitsu - เซิร์ฟเวอร์, สแกนเนอร์'],
+            ['name' => 'APC',     'description' => 'APC by Schneider Electric - UPS, PDU'],
+            ['name' => 'D-Link',  'description' => 'D-Link - สวิตช์, Access Point ระดับ SMB'],
+            ['name' => 'Epson',   'description' => 'Epson - เครื่องพิมพ์, สแกนเนอร์'],
         ];
 
         $brandMap = [];
@@ -178,9 +178,9 @@ class MasterDataSeeder extends Seeder
                 'address' => 'อาคาร Glas Haus ชั้น 15 ถนนสุขุมวิท 25 กรุงเทพฯ 10110',
             ],
             [
-                'old' => 'บริษัท อีซี่บาย จำกัด (มหาชน) — ฝ่ายขายองค์กร',
-                'name' => 'EasyBuy PCL — Corporate Sales',
-                'name_th' => 'บริษัท อีซี่บาย จำกัด (มหาชน) — ฝ่ายขายองค์กร',
+                'old' => 'บริษัท อีซี่บาย จำกัด (มหาชน) - ฝ่ายขายองค์กร',
+                'name' => 'EasyBuy PCL - Corporate Sales',
+                'name_th' => 'บริษัท อีซี่บาย จำกัด (มหาชน) - ฝ่ายขายองค์กร',
                 'contact' => 'Corporate Account',
                 'phone' => '02-685-3888',
                 'email' => 'corporate@easybuying.net',
@@ -205,9 +205,9 @@ class MasterDataSeeder extends Seeder
                 'address' => '18 อาคาร True Tower ถนนรัชดาภิเษก กรุงเทพฯ 10310',
             ],
             [
-                'old' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) — ฝ่าย IT',
-                'name' => 'SE-Education PCL — IT Dept.',
-                'name_th' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) — ฝ่าย IT',
+                'old' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) - ฝ่าย IT',
+                'name' => 'SE-Education PCL - IT Dept.',
+                'name_th' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) - ฝ่าย IT',
                 'contact' => 'ฝ่ายจัดซื้อ IT',
                 'phone' => '02-826-8000',
                 'email' => 'procurement@se-ed.com',

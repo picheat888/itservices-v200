@@ -119,7 +119,7 @@ class DatabaseSeeder extends Seeder
     private function seedAdministrator(): void
     {
         if (User::where('username', self::SUPER_USERNAME)->exists()) {
-            $this->command?->info('Administrator account already exists — left untouched.');
+            $this->command?->info('Administrator account already exists - left untouched.');
 
             return;
         }
@@ -135,8 +135,8 @@ class DatabaseSeeder extends Seeder
             'must_change_password' => true,
         ]);
 
-        $this->command?->warn('Administrator created — sign in as "'.self::SUPER_USERNAME.'" with: '.$password);
+        $this->command?->warn('Administrator created - sign in as "'.self::SUPER_USERNAME.'" with: '.$password);
         $this->command?->warn('Change it at first sign-in; every other request is refused until you do.');
-        $this->command?->warn('Then set a real address under Profile — alerts (contract expiry, stock, new employee) only reach accounts with one.');
+        $this->command?->warn('Then set a real address under Profile - alerts (contract expiry, stock, new employee) only reach accounts with one.');
     }
 }
