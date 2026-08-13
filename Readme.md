@@ -2095,3 +2095,21 @@ Auto-opened (New employee)
 **ทั้ง suite = 965 passed / 3,747 assertions** (เดิม 957) · tsc 0 · eslint 0 · prettier · pint · `npm run build` ผ่าน
 
 **ยังไม่ได้ทดสอบบนเบราว์เซอร์** — ฐานจริงมีทรัพย์สิน 1 รายการและ transfer 1 แถว กราฟจะขึ้นข้อความว่างเกือบทุกมุมมอง · ต้องดูด้วยตาว่าการ์ดคู่กันเรียงสวยจริง, ปุ่มสลับใช้ได้, และ `HiresTrendCard` หน้า Employee หน้าตาไม่เปลี่ยนหลังย้ายแกนกราฟ
+
+---
+
+## Workflow: View / Edit มี URL แล้ว (2026-08-13)
+
+หน้า Workflow เป็นโมดูลเดียวที่ dialog ยังเป็น state ในหน่วยความจำล้วน — reload แล้วปิด, ส่งลิงก์ให้คนอื่นไม่ได้ ตอนนี้ทั้งสองตัวขับด้วย URL เหมือนอีก 7 โมดูล
+
+- **`?view=<id>` และ `?edit=<id>`** เขียนผ่าน `open(mode, id)` ตัวเดียวที่ **ลบพารามิเตอร์อีกตัวทิ้งเสมอ** — "เปิดได้ทีละอัน" จึงเป็นคุณสมบัติของ URL ไม่ใช่กฎที่ต้องจำ · `{ replace: true }` ไม่ถมประวัติ back button · ปุ่ม Edit ในหน้า View = สลับพารามิเตอร์ด้วย id เดิม
+- **หา record จาก list ไม่ใช่ยิง API** — `WorkflowController` ไม่มี `show` (มีแค่ index/update/preview/employee-options) และเส้นทางอนุมัติมาคู่กับประเภทคำขอ ~12 รายการที่โหลดมาแล้วทั้งหมด ⇒ ไม่ต้องเพิ่ม endpoint
+- **`RecordMissingDialog`** สำหรับ id ที่ไม่มีจริง — เงื่อนไขเช็ค `data != null` ไม่ใช่ `!isLoading` เพราะ refetch ระหว่างใช้งานไม่ควรกล่าวหา URL ว่าตาย และตอนโหลดครั้งแรก id ที่ยังจับคู่ไม่ได้ก็ไม่ใช่ลิงก์เสีย
+- `toRecordId()` กรอง `?view=abc` (บั๊ก NaN ที่ 7 โมดูลแก้ไปเมื่อ 2026-08-12 — โมดูลนี้ไม่มีเพราะยังไม่มี URL ให้พัง)
+- **ต่างจากแพทเทิร์นเดิมข้อเดียว**: contract/asset จงใจให้ edit เป็น local (`edit stays local`) เพราะฟอร์มมี draft ที่ reload แล้วหาย · ที่นี่ตัวแก้ไขโหลดค่าจาก workflow ใหม่ทุกครั้งไม่มี draft ค้าง จึงให้ URL ได้
+
+### Tests / Verification
+
+backend ไม่แตะเลย (`WorkflowAdminTest` 8 ตัวยังผ่าน) · logic เป็น React ล้วนและโมดูลนี้ไม่มีเทสต์ frontend ⇒ `tsc` 0 · eslint 0 · prettier · `npm run build` ผ่าน
+
+**ยังไม่ได้ทดสอบบนเบราว์เซอร์** — 4 เคสที่ต้องกดเอง: `/workflows?view=1` และ `?edit=1` เปิด dialog ถูกตัว · เปิดจากปุ่มแล้ว URL เปลี่ยน · ปุ่ม Edit ในหน้า View สลับ `view` → `edit` · `?view=999` ขึ้นกล่อง "ไม่พบรายการ"
