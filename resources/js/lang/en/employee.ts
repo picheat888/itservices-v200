@@ -46,7 +46,6 @@ export const employee: Dict = {
     emp_hires_trend: 'Hiring trend',
     emp_hires_trend_cap: 'Employees who started each month',
     emp_hires_window: 'Last 12 months',
-    emp_current_month: 'Current',
     emp_no_hires: 'No hires on record',
     emp_status_title: 'Employee status',
     emp_people: 'people',

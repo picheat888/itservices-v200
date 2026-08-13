@@ -99,6 +99,7 @@ export const common: Dict = {
     reset_default: 'Reset to default',
     branding_apply_note: 'Changes apply instantly across the entire portal.',
     export: 'Export',
+    current_month: 'Current',
     all_contracts: 'All contracts',
     all_contracts_hint: 'All contracts in the organization.',
     new_contract: 'New contract',

@@ -99,6 +99,7 @@ export const common: Dict = {
     reset_default: 'รีเซ็ตเป็นค่าเริ่มต้น',
     branding_apply_note: 'การเปลี่ยนแปลงจะใช้ทันทีทั่วทั้งระบบ',
     export: 'ส่งออก',
+    current_month: 'ปัจจุบัน',
     all_contracts: 'สัญญาทั้งหมด',
     all_contracts_hint: 'สัญญาทั้งหมดในองค์กร',
     new_contract: 'เพิ่มสัญญา',
