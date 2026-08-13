@@ -124,6 +124,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('employees/{employee}/assets', [EmployeeController::class, 'assets'])->name('api.employees.assets');
     Route::get('employees/{employee}/access', [EmployeeController::class, 'access'])->name('api.employees.access');
     Route::get('employees/{employee}/tickets', [EmployeeController::class, 'tickets'])->name('api.employees.tickets');
+    Route::get('employees/{employee}/requests', [EmployeeController::class, 'requests'])->name('api.employees.requests');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
     // No destroy: an employee who leaves is resigned, never deleted — the record keeps
     // their name so every ticket, request and asset they touched still reads correctly.

@@ -17,6 +17,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\Request\ServiceRequest;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
@@ -680,6 +681,50 @@ class EmployeeController extends Controller
             ]);
 
         return response()->json(['data' => $tickets]);
+    }
+
+    /**
+     * Read-only list of the service requests this employee owns, for the Employee detail's
+     * Requests tab. Gated by employees.view — same own-module "peek" pattern as the tabs above.
+     *
+     * Ownership spans two columns because a request can be filed before its owner has a login:
+     * `employee_id` holds the person it is for (how onboarding requests HR filed are found) and
+     * `user_id` holds the account that filed it for themselves. Requests this person merely
+     * submitted for somebody else (`submitted_by_user_id`) belong on that person's tab, not here.
+     *
+     * `title` is deliberately absent: the column stores one canonical English string for the
+     * ticket subject and the approval emails, while the screen writes the name in the reader's
+     * language via `requestTitle()`. Sending it would put the filer's language in the table.
+     */
+    public function requests(Request $request, Employee $employee): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.view'), 403);
+
+        $userId = $employee->user()->value('id');
+
+        $requests = ServiceRequest::query()
+            ->where(function ($query) use ($employee, $userId) {
+                $query->where('employee_id', $employee->id);
+
+                if ($userId !== null) {
+                    $query->orWhere('user_id', $userId);
+                }
+            })
+            // `id` breaks the tie: several onboarding requests are filed in the same second,
+            // and without it the newest of them lands wherever the database felt like.
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (ServiceRequest $sr) => [
+                'id' => $sr->id,
+                'reference' => $sr->reference,
+                'type' => $sr->type->value,
+                'origin' => $sr->origin->value,
+                'status' => $sr->status->value,
+                'created_at' => $sr->created_at?->toIso8601String(),
+            ]);
+
+        return response()->json(['data' => $requests]);
     }
 
     /**

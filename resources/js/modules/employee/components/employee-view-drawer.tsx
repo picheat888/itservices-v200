@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { TicketCategoryIcon, TicketStatusBadge } from '@/modules/ticket';
 import { type Column, DataTable } from '@/shared/components/data-table';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { initials } from '@/shared/components/user-avatar';
 import { formatDateTime } from '@/shared/lib/datetime';
+import { isOnBehalfRequest, REQUEST_ONBOARDING_BADGE, REQUEST_STATUS_META, REQUEST_TYPE_META, requestTitle } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { Employee, EmployeeAccessRow, OrgChartNode } from '@/shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar';
@@ -40,8 +42,16 @@ import {
     Users,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { EmployeeHeldAsset, EmployeeRequestedTicket } from '../api/employeeApi';
-import { useApprovalChain, useEmployee, useEmployeeAccess, useEmployeeAssets, useEmployeeTickets, useOrgChart } from '../hooks/use-employees';
+import type { EmployeeHeldAsset, EmployeeRequestedTicket, EmployeeServiceRequest } from '../api/employeeApi';
+import {
+    useApprovalChain,
+    useEmployee,
+    useEmployeeAccess,
+    useEmployeeAssets,
+    useEmployeeRequests,
+    useEmployeeTickets,
+    useOrgChart,
+} from '../hooks/use-employees';
 import { deptColor } from '../lib/org-tree';
 
 /** Whole-year + month tenure from a YYYY-MM-DD joined date. */
@@ -112,6 +122,7 @@ export function EmployeeViewDrawer({
     const { data: access, isLoading: accessLoading } = useEmployeeAccess(shown?.id ?? null);
     const { data: heldAssets = [], isLoading: assetsLoading } = useEmployeeAssets(shown?.id ?? null);
     const { data: requestedTickets = [], isLoading: ticketsLoading } = useEmployeeTickets(shown?.id ?? null);
+    const { data: ownedRequests = [], isLoading: requestsLoading } = useEmployeeRequests(shown?.id ?? null);
     // Live copy of the employee — refetched when mutations invalidate ['employee'], so
     // setting credentials reflects immediately (No-account badge/strip clears without reload).
     const { data: liveEmp } = useEmployee(shown?.id ?? null);
@@ -433,13 +444,12 @@ export function EmployeeViewDrawer({
                                     count: ticketsLoading ? undefined : requestedTickets.length,
                                     soon: false,
                                 },
-                                // Planned tab from the design — not wired to data yet (Coming soon).
                                 {
                                     id: 'requests' as const,
                                     label: t('requests'),
                                     icon: <Inbox className="h-[15px] w-[15px]" />,
-                                    count: undefined,
-                                    soon: true,
+                                    count: requestsLoading ? undefined : ownedRequests.length,
+                                    soon: false,
                                 },
                                 {
                                     id: 'access' as const,
@@ -596,7 +606,7 @@ export function EmployeeViewDrawer({
                             )}
                             {tab === 'assets' && <AssetsPane assets={heldAssets} lang={lang} loading={assetsLoading} />}
                             {tab === 'tickets' && <TicketsPane tickets={requestedTickets} loading={ticketsLoading} />}
-                            {tab === 'requests' && <ComingSoon icon={<Inbox className="h-6 w-6" />} title={t('requests')} />}
+                            {tab === 'requests' && <RequestsPane requests={ownedRequests} loading={requestsLoading} />}
                         </div>
                     </div>
                 </div>
@@ -642,20 +652,6 @@ export function EmployeeViewDrawer({
                 </div>
             </DialogContent>
         </Dialog>
-    );
-}
-
-/** Placeholder pane for tabs from the design that aren't wired to data yet. */
-function ComingSoon({ icon, title }: { icon: React.ReactNode; title: string }) {
-    const t = useT();
-    return (
-        <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
-            <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">{icon}</div>
-            <div>
-                <div className="text-foreground text-sm font-semibold">{title}</div>
-                <div className="mt-0.5 text-xs">{t('emp_v_coming_soon')}</div>
-            </div>
-        </div>
     );
 }
 
@@ -807,6 +803,84 @@ function TicketsPane({ tickets, loading }: { tickets: EmployeeRequestedTicket[];
     return (
         <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
             <DataTable fillHeight rowHeight={44} columns={columns} rows={tickets} rowKey={(tk) => tk.id} loading={loading} />
+        </div>
+    );
+}
+
+/**
+ * Requests tab — a read-only table of the service requests this employee owns, whether they
+ * filed them or HR filed them on their behalf on day one (own-module data, gated by
+ * employees.view). Rows are not clickable: opening one would need the Request module's own
+ * permission, which a reader of this drawer is not required to hold.
+ */
+function RequestsPane({ requests, loading }: { requests: EmployeeServiceRequest[]; loading?: boolean }) {
+    const t = useT();
+    if (requests.length === 0 && !loading) {
+        return (
+            <div className="text-muted-foreground flex min-h-[220px] flex-col items-center justify-center gap-3 py-12 text-center">
+                <div className="bg-muted text-muted-foreground grid h-14 w-14 place-items-center rounded-2xl">
+                    <Inbox className="h-6 w-6" />
+                </div>
+                <div className="text-sm">{t('emp_v_no_requests')}</div>
+            </div>
+        );
+    }
+
+    const columns: Column<EmployeeServiceRequest>[] = [
+        {
+            key: 'submitted',
+            header: t('req_col_submitted'),
+            className: 'w-[14%]',
+            render: (r) => <span className="text-muted-foreground text-xs font-semibold whitespace-nowrap">{formatDateTime(r.created_at)}</span>,
+        },
+        {
+            key: 'title',
+            // max-w-0 keeps the truncating cell inside its share of the table (see TicketsPane).
+            className: 'w-[50%] max-w-0',
+            header: t('req_col_title'),
+            // The service name is written in the reader's language, never the filer's; the
+            // reference underneath is what both of them would quote to each other.
+            render: (r) => (
+                <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate text-xs font-medium">{requestTitle(r, t)}</span>
+                        {isOnBehalfRequest(r) && (
+                            <StatusBadge tone={REQUEST_ONBOARDING_BADGE.tone} dot={false} className="shrink-0">
+                                {t(REQUEST_ONBOARDING_BADGE.labelKey)}
+                            </StatusBadge>
+                        )}
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[10px]">{r.reference}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'type',
+            header: t('req_col_type'),
+            className: 'w-[16%]',
+            render: (r) => {
+                const meta = REQUEST_TYPE_META[r.type];
+                const Icon = meta.icon;
+                return (
+                    <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs whitespace-nowrap">
+                        <Icon className="h-3.5 w-3.5" style={{ color: meta.color }} />
+                        {t(meta.labelKey)}
+                    </span>
+                );
+            },
+        },
+        {
+            key: 'status',
+            header: t('req_col_status'),
+            className: 'w-[20%]',
+            render: (r) => <StatusBadge tone={REQUEST_STATUS_META[r.status].tone}>{t(REQUEST_STATUS_META[r.status].labelKey)}</StatusBadge>,
+        },
+    ];
+
+    // Same sizing as the Tickets tab so the two read as one table style.
+    return (
+        <div className="flex min-h-0 flex-1 flex-col [--row-py:0.375rem]">
+            <DataTable fillHeight rowHeight={44} columns={columns} rows={requests} rowKey={(r) => r.id} loading={loading} />
         </div>
     );
 }
