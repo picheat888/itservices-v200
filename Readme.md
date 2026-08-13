@@ -1286,9 +1286,15 @@ active ก่อน resigned → คนที่ยังไม่มีบั�
 - โมดูลใหม่ `modules/workflow/`: หน้า Workflows (stat 4 ใบ + การ์ดพร้อม **WorkflowStrip**) · View dialog (read-only) · **Editor dialog**: toggle Active/Auto-ticket, แก้/เรียง/เพิ่ม/ลบ step, strip สด, **"ทดสอบกับพนักงาน"** — เลือกพนักงานจริงแล้วเห็นสายที่ resolve แล้ว (merge/ข้าม เหมือนตอน submit จริง)
 - i18n เต็มชุด `lang/{en,th}/requests.ts` (~150 คีย์) + `workflow.ts` ใหม่ + `notif_request_*` · badge/notification wiring ครบ (แท็บ Requests ใน bell = live)
 
-### Coming Soon (v1)
+### Coming Soon (v1) — สถานะ ณ 2026-08-13
 
-ปุ่ม Export หน้า Requests · ปุ่มสร้าง workflow ใหม่ (แก้ 10 ตัว seed ได้เต็มรูปแบบ) · ปิด Ticket แล้ว auto-fulfill คำขอ · daily SLA reminder sweep · แนบไฟล์ในคำขอ
+| รายการ | สถานะ |
+|---|---|
+| ปิด Ticket แล้ว auto-fulfill คำขอ | ✅ ทำแล้ว 2026-08-08 (`RequestService::settleFromTicket()`) |
+| ปุ่มสร้าง workflow ใหม่ | ❌ ไม่ทำ — ตัดสินใจ 2026-08-06 (โมดูลนี้**ปรับ**เส้นทางของประเภทคำขอที่มีอยู่ ไม่สร้างใหม่) |
+| daily SLA reminder sweep | ❌ ตกไปเอง — SLA ถูกลบออกจากฐาน 2026-08-06 จึงไม่มีเส้นตายให้เตือนถึง (ถ้าจะทำต้องเป็นฟีเจอร์ใหม่: เตือนคำขอที่ค้างเกิน N วัน ซึ่งวัดจากเวลาที่ผ่านไป ไม่ใช่กำหนดส่ง) |
+| แนบไฟล์ในคำขอ | ❌ ไม่ทำ — ตัดสินใจ 2026-08-13 |
+| ปุ่ม Export หน้า Requests | 🕗 ยังไม่ทำ — รวมอยู่ในเรื่อง Export ทั้งระบบ (ยังไม่มี `maatwebsite/excel` ในโปรเจกต์) |
 
 ### Tests / Verification
 
