@@ -41,15 +41,15 @@ export const workflow: Dict = {
     wf_status: 'สถานะ',
 
     // workflow-strip.tsx — แถบลำดับสถานะ
-    wf_approval: 'ขั้นอนุมัติ',
-    wf_fulfillment: 'ขั้นดำเนินการ',
+    wf_approval: 'ผู้อนุมัติ',
+    wf_fulfillment: 'ผู้ดำเนินการ',
+    wf_fulfillment_role: 'ผู้ดำเนินการหลังอนุมัติจบ',
     wf_submitted: 'ยื่นคำขอ',
     wf_closed: 'ปิดเคส',
 
     // workflow-view-dialog.tsx — หน้าต่างดูรายละเอียด
     wf_chain_title: 'ลำดับขั้นตอน',
     wf_step_detail: 'รายละเอียดขั้นตอน',
-    wf_auto_ticket_footnote: 'เมื่ออนุมัติครบ ระบบจะเปิด Ticket ให้ทีม IT อัตโนมัติ',
 
     // workflow-editor-dialog.tsx — ตัวแก้ไข
     wf_editor_eyebrow: 'แก้ไข Workflow',

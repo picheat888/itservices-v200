@@ -12,8 +12,9 @@ import { useEffect, useState } from 'react';
 import { WorkflowStrip } from './workflow-strip';
 
 /**
- * Read-only focus dialog for one workflow: route strip, per-step detail and
- * the auto-ticket behavior — with a shortcut into the editor.
+ * Read-only focus dialog for one workflow: route strip and per-step detail, with a shortcut
+ * into the editor. Auto-ticket is named by the header badge alone — the footnote under the
+ * steps said the same thing a second time.
  */
 export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Workflow | null; onClose: () => void; onEdit: (w: Workflow) => void }) {
     const t = useT();
@@ -54,15 +55,11 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                         <InfoCell label={t('wf_applies_to')} value={t(REQUEST_TYPE_META[wf.request_type].labelKey)} />
                         <InfoCell
                             label={t('wf_steps')}
-                            value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_fulfillment')}`}
+                            value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_fulfillment_role')}`}
                         />
                         {/* Measured, not configured — and absent rather than zero when this
                             route decided nothing inside the window. */}
-                        <InfoCell
-                            label={t('wf_row_decision')}
-                            value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')} (${wf.measured.requests})` : '—'}
-                            mono
-                        />
+                        <InfoCell label={t('wf_row_decision')} value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')}` : '—'} mono />
                     </div>
 
                     <div>
@@ -90,7 +87,7 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-semibold">{s.label}</div>
                                         <div className="text-muted-foreground text-xs">
-                                            {s.kind === 'fulfillment' ? t('wf_fulfillment') : t('wf_approval')}
+                                            {s.kind === 'fulfillment' ? t('wf_fulfillment_role') : t('wf_approval')}
                                         </div>
                                         {/* The titles this rung accepts — what resolution matches on. */}
                                         {s.positions.length > 0 && (
@@ -107,13 +104,6 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                             ))}
                         </div>
                     </div>
-
-                    {wf.auto_ticket && (
-                        <div className="border-border text-muted-foreground flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-xs">
-                            <Zap className="text-brand h-4 w-4 shrink-0" />
-                            {t('wf_auto_ticket_footnote')}
-                        </div>
-                    )}
                 </div>
 
                 <div className="border-border/60 bg-muted/30 flex items-center justify-end gap-3 border-t px-6 py-3.5">

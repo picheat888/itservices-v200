@@ -38,15 +38,15 @@ export const workflow: Dict = {
     wf_status: 'Status',
 
     // workflow-strip.tsx — stage strip
-    wf_approval: 'Approval',
-    wf_fulfillment: 'Fulfillment',
+    wf_approval: 'Approver',
+    wf_fulfillment: 'Fulfiller',
+    wf_fulfillment_role: 'Fulfiller, after the last approval',
     wf_submitted: 'Submitted',
     wf_closed: 'Closed',
 
     // workflow-view-dialog.tsx — view dialog
     wf_chain_title: 'Approval chain',
     wf_step_detail: 'Step detail',
-    wf_auto_ticket_footnote: 'An IT ticket is opened automatically after the final approval.',
 
     // workflow-editor-dialog.tsx — editor
     wf_editor_eyebrow: 'Edit workflow',
