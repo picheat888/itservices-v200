@@ -4,6 +4,7 @@ namespace App\Services\Asset;
 
 use App\Enums\Asset\AssetSource;
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetTransferKind;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Employee\Employee;
@@ -15,13 +16,23 @@ use Illuminate\Support\Facades\Notification;
 
 class AssetService
 {
-    /** Append a row to the asset's ownership-change history. */
-    private function logTransfer(Asset $asset, ?string $from, string $to, ?string $reason, ?string $performedBy): void
-    {
+    /**
+     * Append a row to the asset's ownership-change history. `kind` says what the move was,
+     * so counting hand-overs or returns never has to read the free-text reason.
+     */
+    private function logTransfer(
+        Asset $asset,
+        AssetTransferKind $kind,
+        ?string $from,
+        string $to,
+        ?string $reason,
+        ?string $performedBy,
+    ): void {
         AssetTransfer::create([
             'asset_id' => $asset->id,
             'asset_tag' => $asset->asset_code,
             'asset_model' => $asset->model?->name,
+            'kind' => $kind->value,
             'from_owner' => $from,
             'to_owner' => $to,
             'reason' => $reason,
@@ -152,7 +163,7 @@ class AssetService
                 'status' => AssetStatus::PendingAcceptance,
                 'last_reason' => $reason,
             ]);
-            $this->logTransfer($asset, $from, $employee->code, $reason, $performedBy);
+            $this->logTransfer($asset, AssetTransferKind::Handover, $from, $employee->code, $reason, $performedBy);
             $this->notifyRecipient($asset->fresh('ownerEmployee'), $from);
 
             return $asset->fresh();
@@ -169,7 +180,7 @@ class AssetService
             'status' => AssetStatus::Common,
             'last_reason' => $reason,
         ]);
-        $this->logTransfer($asset, $from, $data['owner_label'], $reason, $performedBy);
+        $this->logTransfer($asset, AssetTransferKind::Handover, $from, $data['owner_label'], $reason, $performedBy);
 
         return $asset->fresh();
     }
@@ -243,7 +254,7 @@ class AssetService
             'location_id' => null,
             'warehouse_id' => Warehouse::resolveId($destName),
         ]);
-        $this->logTransfer($asset, $from, (string) $destName, 'Returned to pool', $performedBy);
+        $this->logTransfer($asset, AssetTransferKind::Return, $from, (string) $destName, 'Returned to pool', $performedBy);
 
         return $asset->fresh();
     }
@@ -268,7 +279,7 @@ class AssetService
             'warehouse_id' => Warehouse::resolveId($destName),
             'last_reason' => $reason,
         ]);
-        $this->logTransfer($asset, $from, (string) $destName, $reason ?: 'Recalled - transfer cancelled', $performedBy);
+        $this->logTransfer($asset, AssetTransferKind::Recall, $from, (string) $destName, $reason ?: 'Recalled - transfer cancelled', $performedBy);
 
         return $asset->fresh();
     }

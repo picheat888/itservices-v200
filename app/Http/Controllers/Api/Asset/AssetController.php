@@ -165,7 +165,53 @@ class AssetController extends Controller
             'total_value' => round($assets->sum(fn (Asset $a) => $a->annualValue())),
             'by_type' => $byType,
             'top_value' => AssetResource::collection($topValue),
+            'activity_12m' => $this->activityByMonth(),
         ]);
+    }
+
+    /**
+     * Hand-overs and returns per month for the rolling 12-month window ending this month,
+     * oldest first — the shape the dashboard's activity chart draws.
+     *
+     * Every month in the window is present even with nothing in it: a missing month would
+     * slide the remaining bars along the axis and label them wrongly.
+     *
+     * Grouping happens in PHP rather than SQL because the test suite runs on SQLite while
+     * production is MariaDB, and month extraction is spelled differently in each. The query
+     * itself stays bounded — two columns, twelve months.
+     *
+     * Recalls count as returns: both put the asset back in the pool, and the chart answers
+     * "how much came back", not "why". `kind` keeps them apart in the table for later.
+     *
+     * @return list<array{month: string, handover: int, returned: int}>
+     */
+    private function activityByMonth(): array
+    {
+        $start = now()->startOfMonth()->subMonths(11);
+
+        $rows = AssetTransfer::query()
+            ->where('created_at', '>=', $start)
+            ->get(['kind', 'created_at']);
+
+        $months = [];
+        for ($i = 0; $i < 12; $i++) {
+            $months[$start->copy()->addMonths($i)->format('Y-m')] = ['handover' => 0, 'returned' => 0];
+        }
+
+        foreach ($rows as $row) {
+            $key = $row->created_at?->format('Y-m');
+            if ($key === null || ! isset($months[$key])) {
+                continue;
+            }
+            $bucket = $row->kind?->isInbound() ? 'returned' : 'handover';
+            $months[$key][$bucket]++;
+        }
+
+        return array_map(
+            fn (string $month, array $counts) => ['month' => $month, ...$counts],
+            array_keys($months),
+            $months,
+        );
     }
 
     /**

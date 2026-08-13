@@ -330,6 +330,12 @@ export interface AssetSummary {
     total_value: number;
     by_type: { type: AssetType; count: number }[];
     top_value: Asset[];
+    /**
+     * Custody activity per month for the rolling 12-month window, oldest first. Every month
+     * is present even when nothing happened in it, so the bars keep their place on the axis.
+     * `returned` counts recalls too — both put the asset back in the pool.
+     */
+    activity_12m: { month: string; handover: number; returned: number }[];
 }
 
 // Ticket module types

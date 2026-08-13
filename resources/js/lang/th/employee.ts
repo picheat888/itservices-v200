@@ -46,7 +46,6 @@ export const employee: Dict = {
     emp_hires_trend: 'แนวโน้มการรับเข้า',
     emp_hires_trend_cap: 'จำนวนพนักงานที่เริ่มงานในแต่ละเดือน',
     emp_hires_window: '12 เดือนล่าสุด',
-    emp_current_month: 'ปัจจุบัน',
     emp_no_hires: 'ยังไม่มีข้อมูลการรับเข้า',
     emp_status_title: 'สถานะพนักงาน',
     emp_people: 'คน',

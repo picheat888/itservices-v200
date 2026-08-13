@@ -43,6 +43,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
+import { AssetActivityCard } from '../components/asset-activity-card';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
@@ -80,7 +81,7 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
 
 const ALL = '__all__';
 
-/** Pulse skeleton mirroring the dashboard layout (KPI row + two cards) while the summary loads. */
+/** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
 function AssetDashboardSkeleton() {
     return (
         <div className="space-y-6 p-5">
@@ -95,20 +96,44 @@ function AssetDashboardSkeleton() {
                     </Card>
                 ))}
             </div>
-            <Card className="overflow-hidden">
-                <div className="border-border border-b px-5 py-3.5">
-                    <div className="bg-muted h-4 w-40 animate-pulse rounded" />
-                </div>
-                <div className="space-y-3.5 p-5">
-                    {Array.from({ length: 7 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                            <div className="bg-muted h-4 w-36 shrink-0 animate-pulse rounded" />
-                            <div className="bg-muted h-2 flex-1 animate-pulse rounded-full" />
-                            <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
+            <div className="grid items-start gap-4 lg:grid-cols-2">
+                <Card className="overflow-hidden">
+                    <div className="border-border border-b px-5 py-3.5">
+                        <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                    </div>
+                    <div className="space-y-3.5 p-5">
+                        {Array.from({ length: 7 }).map((_, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <div className="bg-muted h-4 w-36 shrink-0 animate-pulse rounded" />
+                                <div className="bg-muted h-2 flex-1 animate-pulse rounded-full" />
+                                <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+                {/* Activity chart: header with its view switch, then twelve bars of
+                    staggered height so the placeholder reads as a chart, not a block. */}
+                <Card className="overflow-hidden">
+                    <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                        <div className="bg-muted h-4 w-40 animate-pulse rounded" />
+                        <div className="bg-muted h-6 w-28 animate-pulse rounded-lg" />
+                    </div>
+                    <div className="px-5 pt-5 pb-3.5">
+                        <div className="mb-2.5 flex items-center justify-between gap-3">
+                            <div className="bg-muted h-3 w-48 animate-pulse rounded" />
+                            <div className="bg-muted h-3 w-16 animate-pulse rounded" />
                         </div>
-                    ))}
-                </div>
-            </Card>
+                        <div className="flex h-[172px] items-end gap-2.5 pt-[22px]">
+                            {[40, 65, 30, 80, 55, 45, 70, 35, 60, 50, 75, 90].map((h, i) => (
+                                <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
+                                    <div className="bg-muted w-full max-w-[32px] animate-pulse rounded-t-md" style={{ height: `${h}%` }} />
+                                    <div className="bg-muted h-6 w-6 animate-pulse rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </Card>
+            </div>
             <Card className="overflow-hidden">
                 <div className="border-border border-b px-5 py-3.5">
                     <div className="bg-muted h-4 w-40 animate-pulse rounded" />
@@ -488,27 +513,37 @@ export default function AssetsPage() {
                             <StatCard label={t('asset_pending_return')} value={summary?.pending_return ?? 0} icon={RefreshCcw} />
                         </div>
 
-                        <Card className="overflow-hidden">
-                            <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
-                                <Layers className="text-muted-foreground h-4 w-4" />
-                                <span className="text-sm font-semibold">{t('asset_by_type')}</span>
-                            </div>
-                            <div className="space-y-3.5 p-5">
-                                {typeBars.map((b) => (
-                                    <div key={b.type} className="flex items-center gap-3">
-                                        <div className="flex w-36 shrink-0 items-center gap-2 overflow-hidden text-sm" title={catLabel(b.type)}>
-                                            <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
-                                            <span className="truncate">{catLabel(b.type)}</span>
+                        {/* By type grows a row per category while the activity chart is a fixed
+                            height — items-start lets each card end where its content does instead
+                            of stretching the shorter one to fake a matching height. */}
+                        <div className="grid items-start gap-4 lg:grid-cols-2">
+                            <Card className="overflow-hidden">
+                                <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
+                                    <Layers className="text-muted-foreground h-4 w-4" />
+                                    <span className="text-sm font-semibold">{t('asset_by_type')}</span>
+                                </div>
+                                <div className="space-y-3.5 p-5">
+                                    {typeBars.map((b) => (
+                                        <div key={b.type} className="flex items-center gap-3">
+                                            <div className="flex w-36 shrink-0 items-center gap-2 overflow-hidden text-sm" title={catLabel(b.type)}>
+                                                <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                <span className="truncate">{catLabel(b.type)}</span>
+                                            </div>
+                                            <div className="bg-secondary h-2 flex-1 overflow-hidden rounded-full">
+                                                <div
+                                                    className="bg-brand h-full rounded-full"
+                                                    style={{ width: `${(b.count / maxTypeCount) * 100}%` }}
+                                                />
+                                            </div>
+                                            <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
                                         </div>
-                                        <div className="bg-secondary h-2 flex-1 overflow-hidden rounded-full">
-                                            <div className="bg-brand h-full rounded-full" style={{ width: `${(b.count / maxTypeCount) * 100}%` }} />
-                                        </div>
-                                        <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
-                                    </div>
-                                ))}
-                                {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
-                            </div>
-                        </Card>
+                                    ))}
+                                    {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
+                                </div>
+                            </Card>
+
+                            <AssetActivityCard data={summary?.activity_12m ?? []} />
+                        </div>
 
                         <Card className="overflow-hidden">
                             <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
