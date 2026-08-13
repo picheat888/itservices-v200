@@ -19,6 +19,7 @@ export const workflow: Dict = {
     wf_kpi_decision_requests: 'requests',
     wf_kpi_decision_none: 'nothing decided in the last {days} days',
     wf_row_decision: 'decided in',
+    wf_cell_decision: 'Avg. decision time (last {days} days)',
     wf_days_suffix: 'd',
     wf_kpi_auto: 'Auto-ticket on',
     wf_kpi_auto_sub: 'opens an IT ticket on approval',
