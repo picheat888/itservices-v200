@@ -16,7 +16,18 @@ import { WorkflowStrip } from './workflow-strip';
  * into the editor. Auto-ticket is named by the header badge alone — the footnote under the
  * steps said the same thing a second time.
  */
-export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Workflow | null; onClose: () => void; onEdit: (w: Workflow) => void }) {
+export function WorkflowViewDialog({
+    workflow,
+    measureDays,
+    onClose,
+    onEdit,
+}: {
+    workflow: Workflow | null;
+    /** How far back the measured figure looks — the API decides it, so the label quotes it. */
+    measureDays: number;
+    onClose: () => void;
+    onEdit: (w: Workflow) => void;
+}) {
     const t = useT();
 
     // Keep the last shown workflow so content doesn't blank during the exit animation.
@@ -58,8 +69,14 @@ export function WorkflowViewDialog({ workflow, onClose, onEdit }: { workflow: Wo
                             value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_fulfillment_role')}`}
                         />
                         {/* Measured, not configured — and absent rather than zero when this
-                            route decided nothing inside the window. */}
-                        <InfoCell label={t('wf_row_decision')} value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')}` : '—'} mono />
+                            route decided nothing inside the window. The label carries the window
+                            because the value is already in days: two day-figures side by side
+                            would read as "takes 30 days", which is the opposite of the answer. */}
+                        <InfoCell
+                            label={t('wf_cell_decision').replace('{days}', String(measureDays))}
+                            value={wf.measured ? `${wf.measured.avg_days}${t('wf_days_suffix')}` : '—'}
+                            mono
+                        />
                     </div>
 
                     <div>

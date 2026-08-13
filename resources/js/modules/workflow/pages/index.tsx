@@ -203,7 +203,7 @@ export default function WorkflowsPage() {
             {/* A ?view= / ?edit= id that matches nothing rendered a page with no dialog and no
                 explanation. This says the record is gone and clears the dead param. */}
             <RecordMissingDialog open={missing} onClose={() => open(null)} />
-            <WorkflowViewDialog workflow={viewing} onClose={() => open(null)} onEdit={(w) => open('edit', w.id)} />
+            <WorkflowViewDialog workflow={viewing} measureDays={measureDays} onClose={() => open(null)} onEdit={(w) => open('edit', w.id)} />
             <WorkflowEditorDialog workflow={editing} onClose={() => open(null)} />
         </div>
     );
