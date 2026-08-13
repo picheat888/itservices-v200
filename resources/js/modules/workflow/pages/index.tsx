@@ -1,14 +1,15 @@
 import { useT } from '@/lang';
+import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
-import { cn } from '@/shared/lib/utils';
-import type { Workflow } from '@/shared/types';
+import { cn, toRecordId } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { Clock, Eye, ListChecks, Pencil, Search, Workflow as WorkflowIcon, Zap, type LucideIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { WorkflowEditorDialog } from '../components/workflow-editor-dialog';
 import { WorkflowStrip } from '../components/workflow-strip';
 import { WorkflowViewDialog } from '../components/workflow-view-dialog';
@@ -27,8 +28,37 @@ export default function WorkflowsPage() {
     const measureDays = data?.meta.measure_days ?? 30;
 
     const [search, setSearch] = useState('');
-    const [viewing, setViewing] = useState<Workflow | null>(null);
-    const [editing, setEditing] = useState<Workflow | null>(null);
+
+    // Both dialogs are URL-driven (?view=<id> / ?edit=<id>), so a reload or a shared link
+    // reopens exactly what was open. `open()` writes one param and drops the other, which is
+    // what makes "open one at a time" a property of the URL rather than a rule to remember.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const open = (mode: 'view' | 'edit' | null, id?: number) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.delete('view');
+                p.delete('edit');
+                if (mode && id != null) {
+                    p.set(mode, String(id));
+                }
+                return p;
+            },
+            { replace: true },
+        );
+
+    // toRecordId rejects '?view=abc': Number('abc') is NaN, which slips past an `!= null`
+    // guard and would look up a workflow that can never exist.
+    const viewingId = toRecordId(searchParams.get('view'));
+    const editingId = toRecordId(searchParams.get('edit'));
+    // Resolved from the list rather than fetched: this module has no show endpoint, and the
+    // routes come with the request types — a dozen rows, all of them already here.
+    const byId = (id: number | null) => (id == null ? null : (workflows.find((w) => w.id === id) ?? null));
+    const viewing = byId(viewingId);
+    const editing = byId(editingId);
+    // Only once the list has actually arrived: while it is loading, an id nobody can match yet
+    // is not a dead link. `data` rather than `isLoading` — a refetch must not accuse the URL.
+    const missing = data != null && (viewingId != null || editingId != null) && !viewing && !editing;
 
     const filtered = useMemo(() => {
         if (!search.trim()) return workflows;
@@ -120,7 +150,7 @@ export default function WorkflowsPage() {
                                     'border-border hover:border-brand/40 cursor-pointer rounded-md border px-4 pt-3.5 pb-4 transition-colors',
                                     !wf.active && 'opacity-70',
                                 )}
-                                onClick={() => setViewing(wf)}
+                                onClick={() => open('view', wf.id)}
                             >
                                 <div className="mb-3.5 flex items-center gap-3">
                                     <div className="min-w-0 flex-1">
@@ -153,11 +183,11 @@ export default function WorkflowsPage() {
                                         </div>
                                     </div>
                                     <div className="flex shrink-0 gap-2" onClick={(e) => e.stopPropagation()}>
-                                        <Button variant="outline" size="sm" onClick={() => setViewing(wf)}>
+                                        <Button variant="outline" size="sm" onClick={() => open('view', wf.id)}>
                                             <Eye className="h-3.5 w-3.5" />
                                             {t('wf_view')}
                                         </Button>
-                                        <Button variant="outline" size="sm" onClick={() => setEditing(wf)}>
+                                        <Button variant="outline" size="sm" onClick={() => open('edit', wf.id)}>
                                             <Pencil className="h-3.5 w-3.5" />
                                             {t('wf_edit')}
                                         </Button>
@@ -170,15 +200,11 @@ export default function WorkflowsPage() {
                 </div>
             </Card>
 
-            <WorkflowViewDialog
-                workflow={viewing}
-                onClose={() => setViewing(null)}
-                onEdit={(w) => {
-                    setViewing(null);
-                    setEditing(w);
-                }}
-            />
-            <WorkflowEditorDialog workflow={editing} onClose={() => setEditing(null)} />
+            {/* A ?view= / ?edit= id that matches nothing rendered a page with no dialog and no
+                explanation. This says the record is gone and clears the dead param. */}
+            <RecordMissingDialog open={missing} onClose={() => open(null)} />
+            <WorkflowViewDialog workflow={viewing} onClose={() => open(null)} onEdit={(w) => open('edit', w.id)} />
+            <WorkflowEditorDialog workflow={editing} onClose={() => open(null)} />
         </div>
     );
 }
