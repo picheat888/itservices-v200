@@ -1,5 +1,17 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, ApproverNode, Employee, EmployeeAccess, OrgChartNode, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
+import type {
+    ApiEnvelope,
+    ApproverNode,
+    Employee,
+    EmployeeAccess,
+    OrgChartNode,
+    ServiceRequestOrigin,
+    ServiceRequestStatus,
+    ServiceRequestType,
+    TicketCategory,
+    TicketPriority,
+    TicketStatus,
+} from '@/shared/types';
 import { mutate } from './http-helpers';
 
 /** One month on the hiring-trend chart. `month` is 'YYYY-MM'. */
@@ -42,6 +54,20 @@ export interface EmployeeRequestedTicket {
     category: TicketCategory;
     priority: TicketPriority | null;
     status: TicketStatus;
+    created_at: string | null;
+}
+
+/**
+ * A read-only service request row owned by an employee — for the Employee detail's Requests tab.
+ * No `title`: the table writes the request's name in the reader's language with `requestTitle()`,
+ * so the server's canonical English title would only put the filer's language on screen.
+ */
+export interface EmployeeServiceRequest {
+    id: number;
+    reference: string;
+    type: ServiceRequestType;
+    origin: ServiceRequestOrigin;
+    status: ServiceRequestStatus;
     created_at: string | null;
 }
 
@@ -207,6 +233,8 @@ export const employeeApi = {
     assets: (id: number) => http.get<ApiEnvelope<EmployeeHeldAsset[]>>(`/employees/${id}/assets`).then((r) => r.data.data),
     access: (id: number) => http.get<ApiEnvelope<EmployeeAccess>>(`/employees/${id}/access`).then((r) => r.data.data),
     tickets: (id: number) => http.get<ApiEnvelope<EmployeeRequestedTicket[]>>(`/employees/${id}/tickets`).then((r) => r.data.data),
+    // Service requests the employee owns — filed by themselves or for them (onboarding).
+    requests: (id: number) => http.get<ApiEnvelope<EmployeeServiceRequest[]>>(`/employees/${id}/requests`).then((r) => r.data.data),
     summary: () => http.get<EmployeeSummary>('/employees/summary').then((r) => r.data),
     listDirectory: (params: { page: number; per_page: number; search?: string; department_id?: string; status?: string }) =>
         http.get<EmployeePageResponse>('/employees', { params }).then((r) => r.data),

@@ -58,6 +58,8 @@ export const requests: Dict = {
 
     // pages/index.tsx — request table
     req_col_title: 'Title',
+    req_col_submitted: 'Submitted',
+    req_col_type: 'Type',
     req_col_requester: 'Requester',
     req_col_workflow: 'Workflow',
     req_col_status: 'Status',

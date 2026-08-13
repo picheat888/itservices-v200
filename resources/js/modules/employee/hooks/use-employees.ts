@@ -35,6 +35,14 @@ export const useEmployeeTickets = (id: number | null) =>
         enabled: id != null,
     });
 
+/** Service requests the employee owns — powers the Employee detail's read-only Requests tab. */
+export const useEmployeeRequests = (id: number | null) =>
+    useQuery({
+        queryKey: ['employee-requests', id],
+        queryFn: () => employeeApi.requests(id as number),
+        enabled: id != null,
+    });
+
 /** Access memberships the employee holds — powers the Employee detail's read-only Access tab. */
 export const useEmployeeAccess = (id: number | null) =>
     useQuery({

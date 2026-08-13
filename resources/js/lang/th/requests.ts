@@ -55,6 +55,8 @@ export const requests: Dict = {
 
     // pages/index.tsx — ตารางคำขอ
     req_col_title: 'หัวข้อ',
+    req_col_submitted: 'วันที่ยื่น',
+    req_col_type: 'ประเภท',
     req_col_requester: 'ผู้ขอ',
     req_col_workflow: 'สายอนุมัติ',
     req_col_status: 'สถานะ',
