@@ -838,26 +838,19 @@ npm run lint                       # eslint --fix
 
 ---
 
-## 🕗 รอทำ (Pending / TODO) — อัปเดต 2026-06-14
+## 🕗 รอทำ (Pending / TODO) — อัปเดต 2026-08-13
 
-### Access Control — Phase 2 (ยังไม่ทำ · ผูกกับโมดูล Request/Workflow)
-- **Access Requests + approval workflow**: ตาราง `workflows` + `access_requests` · แท็บ **Dashboard** (ตารางคำขอ + chain progress bars), **Workflows** (รายการ + `WorkflowStrip` stepper + editor drawer), **Requests** + request drawer (approve/reject) — ตามดีไซน์ `pages-7.jsx`/`pages-8.jsx`
-- **จุดเชื่อม**: เมื่อคำขออนุมัติครบทุกขั้น → เรียก `AccessService::grant()` (membership model ออกแบบรองรับไว้แล้ว) + auto-open Ticket ให้ทีม IT
-- KPI "คำขอค้าง" (ตอนนี้แทนด้วย **Total grants** ไปก่อน)
+### Access Control — Phase 2 ✅ ทำแล้ว / ปิดเรื่องแล้ว
+- **Access Requests + approval workflow** — ทำแล้วเมื่อ 2026-08-01 แต่**ไม่ได้แยกเป็นตาราง `access_requests` ตามแผนเดิม**: คำขอสิทธิ์เข้าถึง (email / fileshare / social / software) เป็น 4 ประเภทในโมดูล Request ที่วิ่งบน `workflows` ตัวเดียวกับคำขออื่น ๆ — ไม่มีระบบอนุมัติซ้อนสองชุด
+- **การให้สิทธิ์จริง = งานมือของเจ้าหน้าที่ ตามที่ตัดสินใจไว้ (2026-08-13)** ไม่เรียก `AccessService::grant()` อัตโนมัติเมื่ออนุมัติครบ · วงจรปิดครบอยู่แล้วโดยไม่ต้องมีโค้ดเชื่อม: อนุมัติครบ → `auto_ticket` เปิดเคสให้ทีม IT → IT เพิ่มสมาชิกในทะเบียนด้วยมือ (ซึ่งเป็นขั้นที่ต้องตรวจของจริงบน AD/Server อยู่ดี) → ปิดเคส → `RequestService::settleFromTicket()` ปิดคำขอตามให้เอง
+- KPI "คำขอค้าง" บนหน้า Access — ไม่ทำ (หน้า Requests มีตัวเลขรออนุมัติของตัวเองแล้ว) หน้า Access คงเป็น **Total grants** ต่อไป
 
 ### Access Control — เก็บรายละเอียดเล็ก
 - คอลัมน์ **"Created"** ในตาราง mail groups/file shares: ยังไม่โชว์ (ต้องเพิ่ม `created_at` ใน `EmailGroupResource`/`FileShareResource` ก่อน)
 - ปุ่ม **Export** บน header (ดีไซน์มี) ยังไม่ทำ
 
-### Employee detail — แท็บจากดีไซน์เดิมที่ยังไม่ได้ทำ
-- **Assets ต่อพนักงาน**: ต้องมี endpoint ดึง assets ตามผู้ถือครอง (ตอนนี้ `assets.owner` เป็น string ไม่มี FK)
-- **Tickets ต่อพนักงาน**: endpoint ดึง tickets ตาม requester ของพนักงานคนอื่น (ปัจจุบันกรองได้แค่ของตัวเอง)
-- **Requests / Activity feed**: ผูกกับ Request/Workflow module (Phase 2)
-- _(แท็บ Overview / Organization / Access — ทำแล้ว ✅)_
-
-### Git
-- branch **`feat/access-control`** ยังไม่ merge เข้า main
-- งานค้างอีก ~65 ไฟล์ใน working tree (employee detail redesign, การลบ position levels, spec/plan docs) ยังไม่ commit — รอจัดการแยกเอง
+### Employee detail — แท็บจากดีไซน์เดิม ✅ ครบแล้ว
+- Overview / Organization / Access / **Assets** / **Tickets** / **Requests** ทำแล้วทั้งหมด (Requests เป็นตัวสุดท้าย 2026-08-13)
 
 ---
 
