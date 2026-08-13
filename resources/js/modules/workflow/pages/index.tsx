@@ -177,7 +177,7 @@ export default function WorkflowsPage() {
                                             {wf.measured && (
                                                 <span className="font-mono">
                                                     · {t('wf_row_decision')} {wf.measured.avg_days}
-                                                    {t('wf_days_suffix')} ({wf.measured.requests})
+                                                    {t('wf_days_suffix')}
                                                 </span>
                                             )}
                                         </div>
