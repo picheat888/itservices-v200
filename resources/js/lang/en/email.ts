@@ -55,7 +55,7 @@ export const email: Dict = {
     email_reset_title: 'Reset to standard?',
     email_reset_text: 'This template will be restored to its standard content. Your changes will be lost.',
     email_reset_confirm: 'Reset',
-    email_reset_all: 'Reset all to standard',
+    email_reset_all: 'Reset All',
     email_reset_all_title: 'Reset all templates?',
     email_reset_all_text: 'Every standard template will be restored to its standard content. All your edits will be lost.',
     email_reset_all_done: 'All templates reset to standard',
