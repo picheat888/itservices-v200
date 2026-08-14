@@ -78,12 +78,12 @@ class TicketSlaAlertService
 
         if ($state === 'breached') {
             foreach ($recipients as $user) {
-                $this->email->sendTemplate('ticket.sla_breach', (string) $user->email, [
+                $this->email->sendTemplate('ticket.sla_breach', $user->email, [
                     'user.first_name' => strtok((string) $user->name, ' '),
                     'ticket.id' => $ticket->ticket_no,
                     'ticket.subject' => $ticket->subject,
                     'reference.id' => $ticket->ticket_no,
-                ], url("/tickets?view={$ticket->id}"), 'Open ticket');
+                ], url("/tickets?view={$ticket->id}"), 'Open ticket', $user->name);
             }
         }
     }

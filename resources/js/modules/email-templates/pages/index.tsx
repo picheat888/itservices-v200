@@ -1,9 +1,12 @@
 import { useT } from '@/lang';
-import { emailTemplateApi, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
-import { useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
+import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
+import { useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
 import { settingsApi, useSettings } from '@/modules/settings';
+import { DataTable, type Column } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
 import { TableSkeleton } from '@/shared/components/skeletons';
+import { StatusBadge } from '@/shared/components/status-badge';
+import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -32,6 +35,7 @@ import {
     Send,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
 const SAMPLE_VARS: Record<string, string> = {
@@ -71,6 +75,22 @@ const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: 
     daily: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_daily' },
     weekly: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_weekly' },
 };
+
+// The page's two halves: what gets sent, and what happened when it was.
+const TAB_IDS = ['templates', 'log'] as const;
+type EmailTab = (typeof TAB_IDS)[number];
+const isEmailTab = (v: string | null): v is EmailTab => v != null && (TAB_IDS as readonly string[]).includes(v);
+
+// Badge per delivery outcome. `skipped` is amber rather than red: nothing broke, there was
+// simply nobody to send to — which is a person to fix, not a server.
+const LOG_STATUS_META: Record<EmailLogStatus, { tone: 'green' | 'red' | 'amber'; labelKey: string }> = {
+    sent: { tone: 'green', labelKey: 'email_log_sent' },
+    failed: { tone: 'red', labelKey: 'email_log_failed' },
+    skipped: { tone: 'amber', labelKey: 'email_log_skipped' },
+};
+
+/** Filter chips over the log: everything, then one per outcome. '' means no filter. */
+const LOG_FILTERS = ['', 'sent', 'failed', 'skipped'] as const;
 
 // localStorage key for the page's remembered list filters (search + module tab).
 const FILTER_KEY = 'email-templates.filters';
@@ -163,9 +183,24 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
     );
 }
 
-function StatCard({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Mail }) {
+function StatCard({
+    label,
+    value,
+    icon: Icon,
+    onClick,
+}: {
+    label: string;
+    value: string | number;
+    icon: typeof Mail;
+    /** Makes the card a button — only for a figure that has somewhere to lead. */
+    onClick?: () => void;
+}) {
     return (
-        <Card className="p-5">
+        <Card
+            className={cn('p-5', onClick && 'hover:border-brand/40 cursor-pointer transition-colors')}
+            onClick={onClick}
+            role={onClick ? 'button' : undefined}
+        >
             <div className="flex items-start justify-between">
                 <div className="text-muted-foreground text-sm">{label}</div>
                 <span className="bg-brand/10 text-brand flex h-9 w-9 items-center justify-center rounded-lg">
@@ -196,6 +231,21 @@ export default function EmailTemplatesPage() {
     const [editing, setEditing] = useState<EmailTemplate | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
     const [pageTesting, setPageTesting] = useState(false);
+
+    // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
+    // the same half of the screen. List filters keep using localStorage; a tab is a place.
+    const [searchParams, setSearchParams] = useSearchParams();
+    const fromUrl = searchParams.get('tab');
+    const tab: EmailTab = isEmailTab(fromUrl) ? fromUrl : 'templates';
+    const changeTab = (next: EmailTab) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('tab', next);
+                return p;
+            },
+            { replace: true },
+        );
 
     // Remember search + module across reloads.
     useEffect(() => {
@@ -285,128 +335,161 @@ export default function EmailTemplatesPage() {
                 <StatCard label={t('email_templates')} value={stats?.templates ?? '—'} icon={Mail} />
                 <StatCard label={t('email_enabled')} value={stats?.enabled ?? '—'} icon={Check} />
                 <StatCard label={t('email_sent_today')} value={stats?.sent_today ?? '—'} icon={Send} />
-                <StatCard label={t('email_delivery')} value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'} icon={Mail} />
+                {/* The delivery rate is the one card with somewhere to go: the log behind it
+                    names the sends that make up the missing per cent. */}
+                <StatCard
+                    label={t('email_delivery')}
+                    value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
+                    icon={Mail}
+                    onClick={() => changeTab('log')}
+                />
             </div>
 
-            <Card className="overflow-hidden">
-                <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
-                    <div>
-                        <div className="font-semibold">{t('email_templates')}</div>
-                        <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
-                    </div>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
-                    </div>
-                </div>
-
-                {/* Module filter tabs */}
-                <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
+            <div className="border-border flex items-center gap-1 border-b px-2">
+                {TAB_IDS.map((id) => (
                     <button
+                        key={id}
                         type="button"
-                        onClick={() => setModule('')}
+                        onClick={() => changeTab(id)}
                         className={cn(
-                            'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                            module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                            'relative px-3 py-3 text-sm font-medium',
+                            tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
                         )}
                     >
-                        {lang === 'th' ? 'ทั้งหมด' : 'All'}
-                        <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === '' ? 'bg-white/20' : 'bg-background')}>
-                            {templates.length}
-                        </span>
+                        {t(id === 'templates' ? 'email_tab_templates' : 'email_tab_log')}
+                        {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
                     </button>
-                    {modules.map(([mod, count]) => (
+                ))}
+            </div>
+
+            {tab === 'log' && <DeliveryLogCard />}
+
+            {tab === 'templates' && (
+                <Card className="overflow-hidden">
+                    <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                        <div>
+                            <div className="font-semibold">{t('email_templates')}</div>
+                            <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
+                        </div>
+                        <div className="relative w-full max-w-xs">
+                            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
+                        </div>
+                    </div>
+
+                    {/* Module filter tabs */}
+                    <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
                         <button
-                            key={mod}
                             type="button"
-                            onClick={() => setModule(mod)}
+                            onClick={() => setModule('')}
                             className={cn(
-                                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                                module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                                module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
                             )}
                         >
-                            {mod}
-                            <span
-                                className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === mod ? 'bg-white/20' : 'bg-background')}
-                            >
-                                {count}
+                            {lang === 'th' ? 'ทั้งหมด' : 'All'}
+                            <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === '' ? 'bg-white/20' : 'bg-background')}>
+                                {templates.length}
                             </span>
                         </button>
-                    ))}
-                </div>
+                        {modules.map(([mod, count]) => (
+                            <button
+                                key={mod}
+                                type="button"
+                                onClick={() => setModule(mod)}
+                                className={cn(
+                                    'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                    module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                )}
+                            >
+                                {mod}
+                                <span
+                                    className={cn(
+                                        'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                                        module === mod ? 'bg-white/20' : 'bg-background',
+                                    )}
+                                >
+                                    {count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
 
-                {isLoading ? (
-                    <div className="p-4">
-                        <TableSkeleton rows={8} cols={6} />
-                    </div>
-                ) : rows.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-                        <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
-                            <Mail className="h-6 w-6" />
-                        </span>
-                        <div className="font-medium">{t('email_empty_title')}</div>
-                        <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                    <th className="px-4 py-2.5">ID</th>
-                                    <th className="px-4 py-2.5">{t('email_template')}</th>
-                                    <th className="px-4 py-2.5">{t('email_trigger')}</th>
-                                    <th className="px-4 py-2.5">{t('email_type')}</th>
-                                    <th className="px-4 py-2.5">{t('email_last_sent')}</th>
-                                    <th className="px-4 py-2.5">{t('email_enabled')}</th>
-                                    <th className="px-4 py-2.5 text-right">{t('actions')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.map((tp) => (
-                                    <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
-                                        <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
-                                        <td className="px-4 py-2.5 font-medium">
-                                            <span className="flex items-center gap-2">
-                                                {tp.name}
-                                                {tp.is_modified && (
-                                                    <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
-                                                        {t('email_modified')}
-                                                    </span>
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <span className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}>
-                                                {t(CADENCE_META[tp.cadence].labelKey)}
-                                            </span>
-                                        </td>
-                                        <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
-                                            {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
-                                        </td>
-                                        <td className="px-4 py-2.5">
-                                            <div className="flex justify-end">
-                                                <button
-                                                    onClick={() => setEditing(tp)}
-                                                    title={t('email_edit_preview')}
-                                                    className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                                                >
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                    {isLoading ? (
+                        <div className="p-4">
+                            <TableSkeleton rows={8} cols={6} />
+                        </div>
+                    ) : rows.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                            <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
+                                <Mail className="h-6 w-6" />
+                            </span>
+                            <div className="font-medium">{t('email_empty_title')}</div>
+                            <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                        <th className="px-4 py-2.5">ID</th>
+                                        <th className="px-4 py-2.5">{t('email_template')}</th>
+                                        <th className="px-4 py-2.5">{t('email_trigger')}</th>
+                                        <th className="px-4 py-2.5">{t('email_type')}</th>
+                                        <th className="px-4 py-2.5">{t('email_last_sent')}</th>
+                                        <th className="px-4 py-2.5">{t('email_enabled')}</th>
+                                        <th className="px-4 py-2.5 text-right">{t('actions')}</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </Card>
+                                </thead>
+                                <tbody>
+                                    {rows.map((tp) => (
+                                        <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
+                                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
+                                            <td className="px-4 py-2.5 font-medium">
+                                                <span className="flex items-center gap-2">
+                                                    {tp.name}
+                                                    {tp.is_modified && (
+                                                        <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                                                            {t('email_modified')}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                <span
+                                                    className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}
+                                                >
+                                                    {t(CADENCE_META[tp.cadence].labelKey)}
+                                                </span>
+                                            </td>
+                                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
+                                                {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
+                                            </td>
+                                            <td className="px-4 py-2.5">
+                                                <div className="flex justify-end">
+                                                    <button
+                                                        onClick={() => setEditing(tp)}
+                                                        title={t('email_edit_preview')}
+                                                        className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                                    >
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            )}
 
             <EditorDialog
                 template={editing}
@@ -606,6 +689,135 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
 }
 
 // Live email preview framed like an inbox message (from/to/subject + rendered body).
+/**
+ * Delivery log — every email the system tried to send, newest first.
+ *
+ * Includes the ones that never left because the recipient has no address: those used to be
+ * dropped inside whichever service was sending, so "why didn't they hear about it" had no
+ * answer anywhere. Paginated server-side; the table grows by a row per email and is never
+ * pruned, so it must never be fetched whole.
+ */
+function DeliveryLogCard() {
+    const t = useT();
+    const [status, setStatus] = useState<EmailLogStatus | ''>('');
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [perPage, setPerPage] = useState(20);
+
+    // Debounced so typing does not fire a request per keystroke.
+    const [debounced, setDebounced] = useState('');
+    useEffect(() => {
+        const id = window.setTimeout(() => setDebounced(search), 350);
+        return () => window.clearTimeout(id);
+    }, [search]);
+    // Any change of filter starts again at the first page — page 4 of a different list is
+    // not where anybody meant to be.
+    useEffect(() => setPage(1), [debounced, status, perPage]);
+
+    const { data, isLoading, isFetching } = useEmailLogs(
+        { page, per_page: perPage, search: debounced || undefined, status: status || undefined },
+        true,
+    );
+
+    const rows = data?.data ?? [];
+    const meta = data?.meta;
+    const counts = meta?.counts;
+
+    const columns: Column<EmailLogRow>[] = [
+        {
+            key: 'created_at',
+            header: t('email_log_time'),
+            className: 'w-[15%]',
+            render: (r) => <span className="text-muted-foreground text-xs whitespace-nowrap">{formatDateTime(r.created_at)}</span>,
+        },
+        {
+            key: 'template',
+            header: t('email_log_template'),
+            className: 'w-[22%] max-w-0',
+            render: (r) => (
+                <div className="min-w-0">
+                    <div className="truncate font-mono text-[11px]">{r.template_key ?? '—'}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{r.subject}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'recipient',
+            header: t('email_log_recipient'),
+            className: 'w-[23%] max-w-0',
+            // Name over address: a skipped row has no address at all, and the name is the
+            // only thing that says who was left out.
+            render: (r) => (
+                <div className="min-w-0">
+                    <div className="truncate text-xs font-medium">{r.recipient_name ?? '—'}</div>
+                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
+                </div>
+            ),
+        },
+        {
+            key: 'status',
+            header: t('status'),
+            className: 'w-[12%]',
+            render: (r) => <StatusBadge tone={LOG_STATUS_META[r.status].tone}>{t(LOG_STATUS_META[r.status].labelKey)}</StatusBadge>,
+        },
+        {
+            key: 'error',
+            header: t('email_log_reason'),
+            className: 'w-[28%] max-w-0',
+            render: (r) => <span className="text-muted-foreground block truncate text-xs">{r.error ?? '—'}</span>,
+        },
+    ];
+
+    return (
+        <Card className="overflow-hidden">
+            <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                <div>
+                    <div className="font-semibold">{t('email_tab_log')}</div>
+                    <div className="text-muted-foreground text-xs">{t('email_log_sub')}</div>
+                </div>
+                <div className="relative w-full max-w-xs">
+                    <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                    <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_log_search')} className="pl-9" />
+                </div>
+            </div>
+
+            {/* Status chips carry counts for the whole log, not the page. */}
+            <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
+                {LOG_FILTERS.map((value) => (
+                    <button
+                        key={value || 'all'}
+                        type="button"
+                        onClick={() => setStatus(value)}
+                        className={cn(
+                            'rounded-full px-3 py-1 text-xs font-medium transition',
+                            status === value ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
+                        )}
+                    >
+                        {value === '' ? t('all') : t(LOG_STATUS_META[value].labelKey)}
+                        {counts && <span className="ml-1.5 font-mono opacity-70">{value === '' ? meta?.total : counts[value]}</span>}
+                    </button>
+                ))}
+            </div>
+
+            <DataTable
+                columns={columns}
+                rows={rows}
+                rowKey={(r) => r.id}
+                loading={isLoading || isFetching}
+                rowHeight={52}
+                server={{
+                    page,
+                    pageSize: perPage,
+                    total: meta?.total ?? 0,
+                    onPageChange: setPage,
+                    onPageSizeChange: setPerPage,
+                }}
+                emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
+            />
+        </Card>
+    );
+}
+
 function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: string; previewHtml: string }) {
     const lang = useUiStore((s) => s.lang);
     return (

@@ -186,17 +186,13 @@ class ContractExpiryAlertService
     private function emailRecipients(Contract $contract, Collection $recipients, string $template, array $extraVars): void
     {
         foreach ($recipients as $recipient) {
-            if (! $recipient->email) {
-                continue;
-            }
-
             $this->email->sendTemplate($template, $recipient->email, array_merge([
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
                 'contract.vendor' => $contract->vendor?->name,
                 'contract.name' => $contract->name,
                 'contract.code' => $contract->code,
                 'contract.end_date' => $contract->end_date->toDateString(),
-            ], $extraVars));
+            ], $extraVars), null, null, $recipient->name);
         }
     }
 

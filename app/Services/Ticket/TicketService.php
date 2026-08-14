@@ -57,10 +57,9 @@ class TicketService
         )->values();
         Notification::send($takers, new TicketCreatedNotification($ticket));
 
-        // Email the requester a confirmation carrying the case number for reference.
-        if ($ownerEmail = $this->ownerEmail($ticket)) {
-            $this->email->sendTemplate('ticket.created', $ownerEmail, $this->ownerVars($ticket));
-        }
+        // Email the requester a confirmation carrying the case number for reference. A
+        // requester with no address anywhere is logged as skipped, not dropped in silence.
+        $this->email->sendTemplate('ticket.created', $this->ownerEmail($ticket), $this->ownerVars($ticket), null, null, $ticket->requester?->name);
 
         return $ticket;
     }
@@ -128,12 +127,12 @@ class TicketService
 
         $staff->notify(new TicketAssignedNotification($ticket->fresh()));
         // The assigned staff also gets the templated email (bell alone is easy to miss).
-        $this->email->sendTemplate('ticket.assigned', (string) $staff->email, [
+        $this->email->sendTemplate('ticket.assigned', $staff->email, [
             'user.first_name' => strtok((string) $staff->name, ' '),
             'ticket.id' => $ticket->ticket_no,
             'ticket.subject' => $ticket->subject,
             'reference.id' => $ticket->ticket_no,
-        ]);
+        ], null, null, $staff->name);
         // Tell the owner their case is now in someone's hands.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'taken', $staff->name));
 
@@ -152,13 +151,13 @@ class TicketService
 
         $staff->notify(new TicketForwardedNotification($ticket->fresh(), $fromName));
         // The receiving staff also gets the templated email (bell alone is easy to miss).
-        $this->email->sendTemplate('ticket.forwarded', (string) $staff->email, [
+        $this->email->sendTemplate('ticket.forwarded', $staff->email, [
             'user.first_name' => strtok((string) $staff->name, ' '),
             'ticket.id' => $ticket->ticket_no,
             'ticket.subject' => $ticket->subject,
             'from.name' => $fromName ?? '—',
             'reference.id' => $ticket->ticket_no,
-        ]);
+        ], null, null, $staff->name);
         // Tell the owner who is responsible for their case now.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'forwarded', $staff->name));
 
@@ -180,8 +179,8 @@ class TicketService
         // Tell the owner their case is finished — and on a successful close, email
         // them too (cancellations stay bell-only; the reason shows in the drawer).
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), $complete ? 'resolved' : 'cancelled'));
-        if ($complete && ($ownerEmail = $this->ownerEmail($ticket))) {
-            $this->email->sendTemplate('ticket.resolved', $ownerEmail, $this->ownerVars($ticket));
+        if ($complete) {
+            $this->email->sendTemplate('ticket.resolved', $this->ownerEmail($ticket), $this->ownerVars($ticket), null, null, $ticket->requester?->name);
         }
 
         return $ticket->fresh();

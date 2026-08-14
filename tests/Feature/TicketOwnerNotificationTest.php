@@ -46,17 +46,24 @@ class TicketOwnerNotificationTest extends TestCase
         return [$owner, $ticket];
     }
 
-    /** Inserts an enabled email template so sendTemplate() actually queues. */
+    /**
+     * Ensures an enabled email template with this key exists so sendTemplate() queues.
+     *
+     * updateOrCreate, not create: the standard catalog is inserted by migration now, so the
+     * table already holds these keys before any test touches it.
+     */
     private function template(string $key): void
     {
-        EmailTemplate::create([
-            'key' => $key,
-            'name' => $key,
-            'subject' => 'Ticket {{ticket.id}}',
-            'body_html' => '<p>Hi {{user.first_name}} — {{reference.id}}</p>',
-            'enabled' => true,
-            'cadence' => 'realtime',
-        ]);
+        EmailTemplate::updateOrCreate(
+            ['key' => $key],
+            [
+                'name' => $key,
+                'subject' => 'Ticket {{ticket.id}}',
+                'body_html' => '<p>Hi {{user.first_name}} — {{reference.id}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+        );
     }
 
     /** Asserts the owner got exactly one ticket_owner bell with the given event. */

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Contract\ContractAttachmentController;
 use App\Http\Controllers\Api\Contract\ContractController;
+use App\Http\Controllers\Api\Email\EmailLogController;
 use App\Http\Controllers\Api\Email\EmailTemplateController;
 use App\Http\Controllers\Api\Employee\DepartmentController;
 use App\Http\Controllers\Api\Employee\EmployeeController;
@@ -103,6 +104,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
     Route::post('email-templates/render-preview', [EmailTemplateController::class, 'renderPreview'])->name('api.email-templates.render-preview');
     Route::post('email-templates/reset-all', [EmailTemplateController::class, 'resetAll'])->name('api.email-templates.reset-all');
+    Route::get('email-logs', [EmailLogController::class, 'index'])->name('api.email-logs.index');
     Route::post('email-templates/{emailTemplate}/reset', [EmailTemplateController::class, 'reset'])->name('api.email-templates.reset');
 
     // Employee module
