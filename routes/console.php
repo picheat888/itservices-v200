@@ -15,6 +15,13 @@ Schedule::command('contracts:send-expiry-alerts')->dailyAt('08:00');
 
 Schedule::command('stock:send-notifications')->dailyAt('08:05');
 
+// Approvals nobody has acted on. The bell goes out every morning behind the other
+// two sweeps; the mail is weekly on purpose — a list on Monday is a piece of work,
+// the same list every day is something people learn to filter.
+Schedule::command('requests:send-stalled-reminders')->dailyAt('08:10');
+
+Schedule::command('requests:send-stalled-digest')->weeklyOn(1, '12:00');
+
 // Runs around the clock on purpose — the SLA working window is configurable in
 // Settings, so the schedule must not hardcode it. Outside the window states
 // don't move and the sweep is a cheap no-op (each alert stage fires once per

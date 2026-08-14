@@ -19,6 +19,9 @@ use Illuminate\Notifications\Notification;
  * `blocked_no_account` is the odd one out: it goes to the people who can provision
  * a login, not to a participant, and it carries the employee to provision so the
  * bell can open that person rather than the request.
+ *
+ * `stalled` is `waiting` said again days later, and carries `stalled_days` so the bell
+ * can say how long rather than just repeating itself.
  */
 class RequestWorkflowNotification extends Notification
 {
@@ -29,6 +32,7 @@ class RequestWorkflowNotification extends Notification
         private readonly ?string $actorName = null,
         private readonly ?string $remark = null,
         private readonly ?Employee $blockedApprover = null,
+        private readonly ?int $stalledDays = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -66,6 +70,8 @@ class RequestWorkflowNotification extends Notification
             // deep-link to them in the Employee module.
             'employee_id' => $this->blockedApprover?->id,
             'employee_name' => $this->blockedApprover?->name,
+            // Only set on `stalled`: how long the step has been waiting.
+            'stalled_days' => $this->stalledDays,
         ];
     }
 }

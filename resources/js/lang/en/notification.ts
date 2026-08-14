@@ -24,6 +24,7 @@ export const notification: Dict = {
     notif_stock_count_draft: 'Stock count still in draft',
     notif_request_submitted: 'Submitted - waiting for {step}',
     notif_request_waiting: 'Awaiting your decision - {step}',
+    notif_request_stalled: 'Waiting {days} days for your decision - {step}',
     notif_request_approved_step: '{step} approved - moving to the next step',
     notif_request_approved_final: 'Fully approved - waiting for Admin/IT to pick up the case',
     notif_request_ready_case: 'A case has been opened for you - {ticket}',

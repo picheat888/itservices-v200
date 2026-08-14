@@ -15,6 +15,7 @@ export const email: Dict = {
     email_type: 'Type',
     email_cadence_realtime: 'Real-time',
     email_cadence_daily: 'Daily',
+    email_cadence_weekly: 'Weekly',
     email_var_hint: 'Values are filled in automatically when the email is sent.',
     email_edit_preview: 'Edit & preview',
     email_last_sent: 'Last sent',

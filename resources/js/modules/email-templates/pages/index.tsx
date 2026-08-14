@@ -58,6 +58,14 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
     count: { en: 'number', th: 'จำนวน' },
 };
 
+// Badge per cadence. Blue = sent the moment the event happens; amber = sent by a
+// scheduled sweep, so the reader knows the template is not tied to one action.
+const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: string }> = {
+    realtime: { badge: 'bg-blue-500/12 text-blue-600', labelKey: 'email_cadence_realtime' },
+    daily: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_daily' },
+    weekly: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_weekly' },
+};
+
 // localStorage key for the page's remembered list filters (search + module tab).
 const FILTER_KEY = 'email-templates.filters';
 
@@ -365,13 +373,8 @@ export default function EmailTemplatesPage() {
                                             <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
                                         </td>
                                         <td className="px-4 py-2.5">
-                                            <span
-                                                className={cn(
-                                                    'rounded-md px-2 py-0.5 text-[11px] font-semibold',
-                                                    tp.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
-                                                )}
-                                            >
-                                                {t(tp.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
+                                            <span className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}>
+                                                {t(CADENCE_META[tp.cadence].labelKey)}
                                             </span>
                                         </td>
                                         <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
@@ -828,10 +831,10 @@ function EditorDialog({
                                     <span
                                         className={cn(
                                             'shrink-0 rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
-                                            template.cadence === 'daily' ? 'bg-amber-500/12 text-amber-600' : 'bg-blue-500/12 text-blue-600',
+                                            CADENCE_META[template.cadence].badge,
                                         )}
                                     >
-                                        {t(template.cadence === 'daily' ? 'email_cadence_daily' : 'email_cadence_realtime')}
+                                        {t(CADENCE_META[template.cadence].labelKey)}
                                     </span>
                                 </div>
                                 <div className="text-muted-foreground truncate font-mono text-xs">{template.key}</div>

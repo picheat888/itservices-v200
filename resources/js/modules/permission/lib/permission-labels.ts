@@ -62,6 +62,8 @@ const LIVE = new Set<string>([
     'requests.submit',
     'requests.view_all',
     'requests.fulfill',
+    'requests.notify_approved',
+    'requests.notify_stalled',
     'workflows.manage',
     'stock.module',
     'stock.view_dashboard',

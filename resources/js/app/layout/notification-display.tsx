@@ -7,6 +7,7 @@ import {
     CalendarClock,
     CheckCircle2,
     ClipboardList,
+    Clock,
     Gauge,
     Inbox,
     KeyRound,
@@ -97,6 +98,8 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if (n.data.subtype === 'approved_final' || n.data.subtype === 'fulfilled')
             return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
         if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+        // A step nobody has touched for days — the clock, not the inbox tray.
+        if (n.data.subtype === 'stalled') return { Icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         // The queue bell is amber only while somebody there still has to press Fulfil. Once
         // a case carries the delivery it is news, not a task — the case has its own bell.
         if (n.data.subtype === 'ready_to_fulfill') {
@@ -166,6 +169,9 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
 const REQUEST_MESSAGE_KEY: Record<string, string> = {
     submitted: 'notif_request_submitted',
     waiting: 'notif_request_waiting',
+    // The morning reminder for a step nobody has acted on. Says how long, because
+    // "still waiting" repeated daily reads as the same bell arriving twice.
+    stalled: 'notif_request_stalled',
     // The IT queue, which delivers rather than decides. Two readings of the same
     // subtype: with a case open the work lives in the case and this bell only names
     // it; without one, somebody here still has to press Fulfil.
@@ -211,6 +217,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
                 .replace('{actor}', n.data.actor_name ?? '—')
                 .replace('{remark}', n.data.remark ?? '')
                 .replace('{ticket}', n.data.ticket_no ?? '—')
+                .replace('{days}', String(n.data.stalled_days ?? 0))
         );
     }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');

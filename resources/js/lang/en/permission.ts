@@ -117,6 +117,12 @@ export const permission: Dict = {
     'perm_act_requests.fulfill': 'Fulfil requests',
     'perm_desc_requests.fulfill':
         'Close a request that has cleared every approval, and see the queue waiting for it. A request type set to open a ticket automatically still needs this step - the ticket covers the work, this marks the request delivered.',
+    'perm_act_requests.notify_approved': 'Hear about approved requests',
+    'perm_desc_requests.notify_approved':
+        'Receive the bell and mail when a request clears its last approval and reaches IT, and the daily reminder while it sits there. Separate from fulfilling on purpose - the rota that closes requests is not always the list of people who want to know.',
+    'perm_act_requests.notify_stalled': 'Weekly summary of waiting approvals',
+    'perm_desc_requests.notify_stalled':
+        "Receive a Monday email listing the requests that have waited more than a week for this person's decision. Without it they still get the daily bell in the app.",
     perm_mod_workflows: 'Approval workflows',
     'perm_act_workflows.manage': 'Edit approval workflows',
     'perm_desc_workflows.manage': 'Change the approval steps of each request type. Requests already submitted keep the chain they were frozen with.',

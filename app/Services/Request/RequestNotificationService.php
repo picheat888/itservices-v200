@@ -98,7 +98,9 @@ class RequestNotificationService
         // closing that case is what fulfils the request. The bell names the case so it
         // reads as one story with the case's own "new case" bell instead of a second
         // approval step standing next to it.
-        $queue = $this->recipients('requests.fulfill')
+        // Gated by notify_approved, not by fulfill: closing a request and wanting to hear
+        // that one is ready are separate jobs, and the rota that does the closing changes.
+        $queue = $this->recipients('requests.notify_approved')
             ->reject(fn (User $u) => $followers->contains('id', $u->id))
             ->values();
         $this->sendBell(
@@ -317,6 +319,105 @@ class RequestNotificationService
             'requester.name' => $request->requester_name,
             'reference.id' => $request->reference,
         ], $this->requestUrl($request), 'View request');
+    }
+
+    /**
+     * Bell-only reminder that a step has been sitting with this approver. No mail: the
+     * "awaiting your approval" mail already went out when the step arrived, and repeating
+     * it daily teaches people to filter the address rather than to act.
+     *
+     * `sendBell` clears the matching bell before resending, so a request reminded every
+     * morning stays one unread bell rather than a stack of identical ones.
+     */
+    public function remindApprover(ServiceRequest $request, RequestApproval $row, int $days): void
+    {
+        $approver = $this->approverUser($row);
+        if ($approver === null) {
+            return;
+        }
+
+        $this->sendBell(
+            collect([$approver]),
+            new RequestWorkflowNotification($request, 'stalled', $row->label, $request->requester_name, null, null, $days),
+            ['service_request_id' => $request->id, 'subtype' => 'stalled'],
+        );
+    }
+
+    /**
+     * The same reminder for a rung that names no person — the IT queue. It goes to whoever
+     * asked to hear about requests that reached fulfilment, since there is no individual
+     * holding the step to poke.
+     */
+    public function remindQueue(ServiceRequest $request, RequestApproval $row, int $days): void
+    {
+        $this->sendBell(
+            $this->recipients('requests.notify_approved'),
+            new RequestWorkflowNotification($request, 'stalled', $row->label, $request->requester_name, null, null, $days),
+            ['service_request_id' => $request->id, 'subtype' => 'stalled'],
+        );
+    }
+
+    /**
+     * One weekly mail per person listing every approval they have left sitting, rather than
+     * one mail per request: five reminders in an inbox on a Monday morning are five things
+     * to dismiss, while one list is a piece of work.
+     *
+     * The table is rendered here and passed in as a single variable, so the template stays
+     * something an administrator can reword without hand-writing HTML rows.
+     *
+     * @param  Collection<int, array{request: ServiceRequest, days: int}>  $items
+     */
+    public function stalledDigest(User $recipient, Collection $items): void
+    {
+        if (! $recipient->email || $items->isEmpty()) {
+            return;
+        }
+
+        $this->email->sendTemplate('request.stalled_digest', $recipient->email, [
+            'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
+            'digest.count' => (string) $items->count(),
+            'digest.table' => $this->digestTable($items),
+        ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals');
+    }
+
+    /**
+     * The digest's table: reference (linked to the request), what it is, who asked, and how
+     * long it has waited — longest first, because that is the order they should be cleared in.
+     *
+     * Inline styles only: mail clients drop <style> blocks, and this HTML is handed to the
+     * same template the administrator edits.
+     *
+     * @param  Collection<int, array{request: ServiceRequest, days: int}>  $items
+     */
+    private function digestTable(Collection $items): string
+    {
+        $cell = 'padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;';
+        $head = 'padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;text-transform:uppercase;'
+            .'letter-spacing:.04em;color:#64748b;text-align:left;';
+
+        $rows = $items
+            ->sortByDesc('days')
+            ->map(function (array $item) use ($cell) {
+                $request = $item['request'];
+                $link = $this->requestUrl($request);
+
+                return '<tr>'
+                    .'<td style="'.$cell.'"><a href="'.e($link).'" style="color:#2563eb;font-weight:600;text-decoration:none;">'
+                    .e($request->reference).'</a></td>'
+                    .'<td style="'.$cell.'">'.e($request->title).'</td>'
+                    .'<td style="'.$cell.'">'.e($request->requester_name ?? '—').'</td>'
+                    .'<td style="'.$cell.'text-align:right;white-space:nowrap;font-weight:600;">'.$item['days'].'</td>'
+                    .'</tr>';
+            })
+            ->implode('');
+
+        return '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">'
+            .'<thead><tr>'
+            .'<th style="'.$head.'">Reference</th>'
+            .'<th style="'.$head.'">Request</th>'
+            .'<th style="'.$head.'">Requested by</th>'
+            .'<th style="'.$head.'text-align:right;">Days waiting</th>'
+            .'</tr></thead><tbody>'.$rows.'</tbody></table>';
     }
 
     /** Absolute SPA deep link to one request. The SPA gates it behind login. */
