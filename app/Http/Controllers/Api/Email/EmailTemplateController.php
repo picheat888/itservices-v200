@@ -47,23 +47,13 @@ class EmailTemplateController extends Controller
     }
 
     /** Creates a new template. */
-    public function store(Request $request): JsonResponse
-    {
-        $this->gate($request);
-
-        $data = $request->validate([
-            'key' => ['required', 'string', 'max:100', 'unique:email_templates,key'],
-            'name' => ['required', 'string', 'max:150'],
-            'subject' => ['required', 'string', 'max:255'],
-            'body_html' => ['required', 'string'],
-            'enabled' => ['sometimes', 'boolean'],
-        ]);
-
-        $template = EmailTemplate::create($data);
-        AuditLog::record('Created email template', $template->name);
-
-        return (new EmailTemplateResource($template))->additional(['message' => 'success'])->response()->setStatusCode(201);
-    }
+    /*
+     * No store(): a template is only ever sent by code calling sendTemplate() with its key,
+     * and every one of those keys is written in App\Support\EmailTemplates. A row created
+     * through the API would be editable, switchable and testable, and nothing would ever
+     * send it. Templates arrive with the code that sends them (see the migration that copies
+     * missing standard templates into installations seeded before they existed).
+     */
 
     /** Updates a template — used for both inline enable toggle and full edit. */
     public function update(Request $request, EmailTemplate $emailTemplate): JsonResponse

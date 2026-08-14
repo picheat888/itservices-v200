@@ -28,7 +28,6 @@ import {
     MoreVertical,
     PenLine,
     Pilcrow,
-    Plus,
     RotateCcw,
     Save,
     Search,
@@ -229,7 +228,6 @@ export default function EmailTemplatesPage() {
     const [search, setSearch] = useState(savedFilters.search ?? '');
     const [module, setModule] = useState(savedFilters.module ?? '');
     const [editing, setEditing] = useState<EmailTemplate | null>(null);
-    const [createOpen, setCreateOpen] = useState(false);
     const [pageTesting, setPageTesting] = useState(false);
 
     // The active tab lives in the URL only (?tab=), so a reload or a shared link lands on
@@ -327,7 +325,6 @@ export default function EmailTemplatesPage() {
                         {pageTesting && <Loader2 className="h-4 w-4 animate-spin" />}
                         {t('email_test')}
                     </Button>
-                    <Button onClick={() => setCreateOpen(true)}>{t('email_new')}</Button>
                 </div>
             </div>
 
@@ -511,7 +508,6 @@ export default function EmailTemplatesPage() {
                 onReset={(id) => reset.mutateAsync(id)}
                 resetting={reset.isPending}
             />
-            <CreateDialog open={createOpen} onClose={() => setCreateOpen(false)} />
         </div>
     );
 }
@@ -1129,101 +1125,10 @@ function EditorDialog({
     );
 }
 
-function CreateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-    const t = useT();
-    const { create } = useEmailTemplateMutations();
-    const [key, setKey] = useState('');
-    const [name, setName] = useState('');
-    const [subject, setSubject] = useState('');
-    const [body, setBody] = useState('<p>Hi {{user.first_name}},</p>\n<p></p>');
-    const [error, setError] = useState('');
-    const { data: settings } = useSettings();
-    const brand = settings?.brand_name || 'ABCD IT';
-    const { previewHtml, rendering } = useLivePreview(open, name, subject, body);
-
-    const reset = () => {
-        setKey('');
-        setName('');
-        setSubject('');
-        setBody('<p>Hi {{user.first_name}},</p>\n<p></p>');
-        setError('');
-    };
-
-    const submit = async () => {
-        setError('');
-        if (!key.trim() || !name.trim() || !subject.trim()) {
-            setError(t('emp_err_first'));
-            return;
-        }
-        try {
-            await create.mutateAsync({ key: key.trim(), name: name.trim(), subject: subject.trim(), body_html: body, enabled: true });
-            reset();
-            onClose();
-        } catch (e: unknown) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            setError(msg ?? t('cred_err_generic'));
-        }
-    };
-
-    return (
-        <Dialog
-            open={open}
-            onOpenChange={(o) => {
-                if (!o) {
-                    reset();
-                    onClose();
-                }
-            }}
-        >
-            <DialogContent
-                aria-describedby={undefined}
-                className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
-            >
-                <DialogHeader className="border-border space-y-0 border-b px-6 py-3.5 pr-14 text-left">
-                    <DialogTitle className="text-base">{t('email_create')}</DialogTitle>
-                </DialogHeader>
-
-                <PaneHeaders rendering={rendering} />
-
-                {/* Body — live preview (left) · new-template form (right) */}
-                <div className="grid min-h-0 flex-1 grid-cols-2">
-                    <PreviewPane brand={brand} subject={subject} previewHtml={previewHtml} />
-
-                    <div className="flex min-h-0 flex-col">
-                        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-                            <Field label={t('email_key')}>
-                                <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="ticket.escalated" className="font-mono" />
-                            </Field>
-                            <Field label={t('email_template')}>
-                                <Input value={name} onChange={(e) => setName(e.target.value)} />
-                            </Field>
-                            <Field label={t('email_subject')}>
-                                <SubjectField value={subject} onChange={setSubject} />
-                            </Field>
-                            <Field label={t('email_body')}>
-                                <BodyEditor value={body} onChange={setBody} extraText={subject} />
-                            </Field>
-                            {error && <div className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</div>}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="border-border flex items-center justify-end gap-2 border-t px-6 py-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            reset();
-                            onClose();
-                        }}
-                    >
-                        {t('cancel')}
-                    </Button>
-                    <Button onClick={submit} disabled={create.isPending}>
-                        {create.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-                        {t('email_create')}
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
-}
+/*
+ * There is no create dialog: a template only leaves the building when code calls
+ * sendTemplate() with its key, and every one of those keys is written in the source
+ * (App\Support\EmailTemplates). A row added by hand would be editable, switchable and
+ * testable, and no event in the system would ever send it — the Workflow module dropped
+ * its own "new workflow" button for the same reason.
+ */

@@ -34,14 +34,6 @@ export interface EmailTemplatePayload {
     enabled?: boolean;
 }
 
-export interface CreateEmailTemplatePayload {
-    key: string;
-    name: string;
-    subject: string;
-    body_html: string;
-    enabled?: boolean;
-}
-
 /** One attempted send. `to_email` is null when the recipient had no address to send to. */
 export interface EmailLogRow {
     id: number;
@@ -83,12 +75,6 @@ export const emailTemplateApi = {
     update: async (id: number, payload: EmailTemplatePayload) => {
         await ensureCsrf();
         const { data } = await http.put(`/email-templates/${id}`, payload);
-        return data;
-    },
-
-    create: async (payload: CreateEmailTemplatePayload) => {
-        await ensureCsrf();
-        const { data } = await http.post('/email-templates', payload);
         return data;
     },
 

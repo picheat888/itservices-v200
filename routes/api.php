@@ -98,7 +98,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
 
     // Email Notifications (templates)
     Route::get('email-templates', [EmailTemplateController::class, 'index'])->name('api.email-templates.index');
-    Route::post('email-templates', [EmailTemplateController::class, 'store'])->name('api.email-templates.store');
     Route::put('email-templates/{emailTemplate}', [EmailTemplateController::class, 'update'])->name('api.email-templates.update');
     Route::post('email-templates/{emailTemplate}/test', [EmailTemplateController::class, 'test'])->name('api.email-templates.test');
     Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
