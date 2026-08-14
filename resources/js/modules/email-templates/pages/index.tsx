@@ -34,6 +34,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'ticket.subject': 'Printer not responding',
     'ticket.category': 'Hardware',
     'ticket.details': 'The printer on the 3rd floor shows a paper jam error.',
+    'ticket.requester': 'Somchai Suksawat',
     'contract.vendor': 'Acme Co.',
     'contract.days_remaining': '30',
     'contract.days_overdue': '5',
@@ -41,12 +42,16 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
     'digest.count': '2',
+    'digest.open_count': '2',
+    'digest.working_count': '3',
     // Overridden with the real brand where it is rendered; this is the chip-list entry.
     'app.name': 'IT Service Desk',
-    // Placeholder only. The body preview is rendered by the API (EmailTemplateController's
-    // own sample vars), which holds the real example table; this map drives the variable
+    // Placeholders only. The body preview is rendered by the API (EmailTemplateController's
+    // own sample vars), which holds the real example tables; this map drives the variable
     // chips and the subject line above the preview frame.
     'digest.table': '',
+    'digest.open_table': '',
+    'digest.working_table': '',
 };
 
 // Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
@@ -59,6 +64,8 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
     items: { en: 'auto-generated list', th: 'ลิสต์อัตโนมัติ' },
     count: { en: 'number', th: 'จำนวน' },
     'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'digest.open_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'digest.working_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
 };
 
 // Badge per cadence. Blue = sent the moment the event happens; amber = sent by a

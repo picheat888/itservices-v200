@@ -10,6 +10,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Notifications\RequestWorkflowNotification;
 use App\Services\Email\EmailNotificationService;
+use App\Support\EmailTable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
@@ -387,33 +388,22 @@ class RequestNotificationService
      */
     private function digestTable(Collection $items): string
     {
-        $cell = 'padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;';
-        $head = 'padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;text-transform:uppercase;'
-            .'letter-spacing:.04em;color:#64748b;text-align:left;';
-
         $rows = $items
             ->sortByDesc('days')
-            ->map(function (array $item) use ($cell) {
+            ->map(function (array $item) {
                 $request = $item['request'];
-                $link = $this->requestUrl($request);
 
-                return '<tr>'
-                    .'<td style="'.$cell.'"><a href="'.e($link).'" style="color:#2563eb;font-weight:600;text-decoration:none;">'
-                    .e($request->reference).'</a></td>'
-                    .'<td style="'.$cell.'">'.e($request->title).'</td>'
-                    .'<td style="'.$cell.'">'.e($request->requester_name ?? '—').'</td>'
-                    .'<td style="'.$cell.'text-align:right;white-space:nowrap;font-weight:600;">'.$item['days'].'</td>'
-                    .'</tr>';
+                return [
+                    EmailTable::link($this->requestUrl($request), $request->reference),
+                    e($request->title),
+                    e($request->requester_name ?? '-'),
+                    (string) $item['days'],
+                ];
             })
-            ->implode('');
+            ->values()
+            ->all();
 
-        return '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">'
-            .'<thead><tr>'
-            .'<th style="'.$head.'">Reference</th>'
-            .'<th style="'.$head.'">Request</th>'
-            .'<th style="'.$head.'">Requested by</th>'
-            .'<th style="'.$head.'text-align:right;">Days waiting</th>'
-            .'</tr></thead><tbody>'.$rows.'</tbody></table>';
+        return EmailTable::render(['Reference', 'Request', 'Requested by', 'Days waiting'], $rows, [3]);
     }
 
     /** Absolute SPA deep link to one request. The SPA gates it behind login. */
