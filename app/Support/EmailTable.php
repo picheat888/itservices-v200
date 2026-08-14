@@ -28,15 +28,14 @@ class EmailTable
      */
     public static function render(array $headers, array $rows, array $rightAligned = [], array $widths = []): string
     {
-        $cols = '';
-        foreach ($widths as $width) {
-            $cols .= '<col style="width:'.$width.';">';
-        }
-
         $head = '';
         foreach ($headers as $i => $header) {
             $align = in_array($i, $rightAligned, true) ? 'text-align:right;' : 'text-align:left;';
-            $head .= '<th style="'.self::HEAD.$align.'">'.$header.'</th>';
+            // Width rides on the heading cell, as an attribute and again inline. <colgroup>
+            // reads better but does not survive the trip: Outlook's Word engine ignores it
+            // outright, and at least one sanitizer dropped the message body along with it.
+            $width = $widths[$i] ?? null;
+            $head .= '<th'.($width ? ' width="'.$width.'"' : '').' style="'.self::HEAD.$align.($width ? 'width:'.$width.';' : '').'">'.$header.'</th>';
         }
 
         $body = '';
@@ -56,8 +55,7 @@ class EmailTable
             $body .= '</tr>';
         }
 
-        return '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">'
-            .($cols !== '' ? '<colgroup>'.$cols.'</colgroup>' : '')
+        return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">'
             .'<thead><tr>'.$head.'</tr></thead>'
             .'<tbody>'.$body.'</tbody>'
             .'</table>';
