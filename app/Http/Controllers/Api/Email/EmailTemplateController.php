@@ -240,6 +240,8 @@ class EmailTemplateController extends Controller
             'stock.qty' => 2,
             'ticket.id' => 'TKT-2856',
             'ticket.subject' => 'Printer not responding',
+            'ticket.category' => 'Hardware',
+            'ticket.details' => 'The printer on the 3rd floor shows a paper jam error,<br>but there is no paper stuck inside.',
             'contract.vendor' => 'Acme Co.',
             'contract.name' => 'Annual support',
             'contract.code' => 'CT-2026-014',

@@ -30,9 +30,17 @@ class EmailTemplates
                 // Ticket templates say {{ticket.id}} throughout. reference.id carries the same
                 // ticket number, and offering an editor two names for one value invited them
                 // to be used as if they were different things.
+                //
+                // The receipt repeats what was filed — subject, type and the description in
+                // the requester's own words — so they can check it arrived as they meant it
+                // without signing in.
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
-<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
+<p>We\'ve received your ticket and assigned it to our team.<br>
+You can track progress in the IT portal.</p>
+<p><span style="color:#64748b">Ticket No.:</span> <strong>{{ticket.id}}</strong><br>
+<span style="color:#64748b">Subject:</span> {{ticket.subject}}<br>
+<span style="color:#64748b">Issue type:</span> {{ticket.category}}<br>
+<span style="color:#64748b">Details:</span> {{ticket.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],

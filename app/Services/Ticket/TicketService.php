@@ -209,6 +209,12 @@ class TicketService
             'user.first_name' => strtok((string) ($ticket->requester?->name ?? ''), ' '),
             'ticket.id' => (string) $ticket->ticket_no,
             'ticket.subject' => (string) $ticket->subject,
+            'ticket.category' => $ticket->category?->label() ?? '-',
+            // The only variable carrying free text the requester typed. It goes into an HTML
+            // email, so it is escaped — otherwise a description containing a stray tag would
+            // break the message, or worse — and its line breaks are turned into <br> so a
+            // multi-line description does not arrive as one run-on paragraph.
+            'ticket.details' => nl2br(e((string) $ticket->description)),
             'reference.id' => (string) $ticket->ticket_no,
         ];
     }
