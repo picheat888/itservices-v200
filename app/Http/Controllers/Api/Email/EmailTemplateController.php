@@ -139,6 +139,13 @@ class EmailTemplateController extends Controller
         $subject = $this->service->render($emailTemplate->subject, $vars);
         $html = $this->service->render($emailTemplate->body_html, $vars);
 
+        // Every test send carries the time it was sent. Two test sends of one template are
+        // otherwise identical down to the character, and a mailbox that groups by subject
+        // then files the second one into the first one's conversation and hides the repeated
+        // body behind a "show trimmed content" toggle — which reads as an email that arrived
+        // empty. The stamp also tells the reader which press of the button they are looking at.
+        $subject .= ' (test '.now()->format('H:i').')';
+
         // Match the real send: branded wrapper + eyebrow + a sample Quick link.
         $ok = $this->service->deliver(
             $to,
