@@ -345,151 +345,161 @@ export default function EmailTemplatesPage() {
                 />
             </div>
 
-            <div className="border-border flex items-center gap-1 border-b px-2">
-                {TAB_IDS.map((id) => (
-                    <button
-                        key={id}
-                        type="button"
-                        onClick={() => changeTab(id)}
-                        className={cn(
-                            'relative px-3 py-3 text-sm font-medium',
-                            tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                        )}
-                    >
-                        {t(id === 'templates' ? 'email_tab_templates' : 'email_tab_log')}
-                        {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
-                    </button>
-                ))}
-            </div>
-
-            {tab === 'log' && <DeliveryLogCard />}
-
-            {tab === 'templates' && (
-                <Card className="overflow-hidden">
-                    <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
-                        <div>
-                            <div className="font-semibold">{t('email_templates')}</div>
-                            <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
-                        </div>
-                        <div className="relative w-full max-w-xs">
-                            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
-                        </div>
-                    </div>
-
-                    {/* Module filter tabs */}
-                    <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
+            {/* Tabs are the card's top edge, the way every other tabbed page in the app sets
+                them: a row of labels floating on the page background belongs to nothing. */}
+            <Card className="overflow-hidden">
+                <div className="border-border flex items-center gap-1 border-b px-2">
+                    {TAB_IDS.map((id) => (
                         <button
+                            key={id}
                             type="button"
-                            onClick={() => setModule('')}
+                            onClick={() => changeTab(id)}
                             className={cn(
-                                'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
-                                module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                'relative px-3 py-3 text-sm font-medium',
+                                tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
-                            {lang === 'th' ? 'ทั้งหมด' : 'All'}
-                            <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === '' ? 'bg-white/20' : 'bg-background')}>
-                                {templates.length}
-                            </span>
+                            {t(id === 'templates' ? 'email_tab_templates' : 'email_tab_log')}
+                            {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
                         </button>
-                        {modules.map(([mod, count]) => (
+                    ))}
+                </div>
+
+                {tab === 'log' && <DeliveryLogPane />}
+
+                {tab === 'templates' && (
+                    <>
+                        {/* No heading here: the tab above already named this half of the page. */}
+                        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                            <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
+                            <div className="relative w-full max-w-xs">
+                                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_search')} className="pl-9" />
+                            </div>
+                        </div>
+
+                        {/* Module filter tabs */}
+                        <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
                             <button
-                                key={mod}
                                 type="button"
-                                onClick={() => setModule(mod)}
+                                onClick={() => setModule('')}
                                 className={cn(
-                                    'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                                    module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                    'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                                    module === '' ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
                                 )}
                             >
-                                {mod}
+                                {lang === 'th' ? 'ทั้งหมด' : 'All'}
                                 <span
                                     className={cn(
                                         'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                                        module === mod ? 'bg-white/20' : 'bg-background',
+                                        module === '' ? 'bg-white/20' : 'bg-background',
                                     )}
                                 >
-                                    {count}
+                                    {templates.length}
                                 </span>
                             </button>
-                        ))}
-                    </div>
+                            {modules.map(([mod, count]) => (
+                                <button
+                                    key={mod}
+                                    type="button"
+                                    onClick={() => setModule(mod)}
+                                    className={cn(
+                                        'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
+                                        module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
+                                    )}
+                                >
+                                    {mod}
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                                            module === mod ? 'bg-white/20' : 'bg-background',
+                                        )}
+                                    >
+                                        {count}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
 
-                    {isLoading ? (
-                        <div className="p-4">
-                            <TableSkeleton rows={8} cols={6} />
-                        </div>
-                    ) : rows.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-                            <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
-                                <Mail className="h-6 w-6" />
-                            </span>
-                            <div className="font-medium">{t('email_empty_title')}</div>
-                            <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                        <th className="px-4 py-2.5">ID</th>
-                                        <th className="px-4 py-2.5">{t('email_template')}</th>
-                                        <th className="px-4 py-2.5">{t('email_trigger')}</th>
-                                        <th className="px-4 py-2.5">{t('email_type')}</th>
-                                        <th className="px-4 py-2.5">{t('email_last_sent')}</th>
-                                        <th className="px-4 py-2.5">{t('email_enabled')}</th>
-                                        <th className="px-4 py-2.5 text-right">{t('actions')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((tp) => (
-                                        <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
-                                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
-                                            <td className="px-4 py-2.5 font-medium">
-                                                <span className="flex items-center gap-2">
-                                                    {tp.name}
-                                                    {tp.is_modified && (
-                                                        <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
-                                                            {t('email_modified')}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <span
-                                                    className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}
-                                                >
-                                                    {t(CADENCE_META[tp.cadence].labelKey)}
-                                                </span>
-                                            </td>
-                                            <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
-                                                {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
-                                            </td>
-                                            <td className="px-4 py-2.5">
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        onClick={() => setEditing(tp)}
-                                                        title={t('email_edit_preview')}
-                                                        className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                                                    >
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                        {isLoading ? (
+                            <div className="p-4">
+                                <TableSkeleton rows={8} cols={6} />
+                            </div>
+                        ) : rows.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                                <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
+                                    <Mail className="h-6 w-6" />
+                                </span>
+                                <div className="font-medium">{t('email_empty_title')}</div>
+                                <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                            <th className="px-4 py-2.5">ID</th>
+                                            <th className="px-4 py-2.5">{t('email_template')}</th>
+                                            <th className="px-4 py-2.5">{t('email_trigger')}</th>
+                                            <th className="px-4 py-2.5">{t('email_type')}</th>
+                                            <th className="px-4 py-2.5">{t('email_last_sent')}</th>
+                                            <th className="px-4 py-2.5">{t('email_enabled')}</th>
+                                            <th className="px-4 py-2.5 text-right">{t('actions')}</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </Card>
-            )}
+                                    </thead>
+                                    <tbody>
+                                        {rows.map((tp) => (
+                                            <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
+                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
+                                                <td className="px-4 py-2.5 font-medium">
+                                                    <span className="flex items-center gap-2">
+                                                        {tp.name}
+                                                        {tp.is_modified && (
+                                                            <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                                                                {t('email_modified')}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <span
+                                                        className={cn(
+                                                            'rounded-md px-2 py-0.5 text-[11px] font-semibold',
+                                                            CADENCE_META[tp.cadence].badge,
+                                                        )}
+                                                    >
+                                                        {t(CADENCE_META[tp.cadence].labelKey)}
+                                                    </span>
+                                                </td>
+                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
+                                                    {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
+                                                </td>
+                                                <td className="px-4 py-2.5">
+                                                    <div className="flex justify-end">
+                                                        <button
+                                                            onClick={() => setEditing(tp)}
+                                                            title={t('email_edit_preview')}
+                                                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
+                                                        >
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </>
+                )}
+            </Card>
 
             <EditorDialog
                 template={editing}
@@ -697,7 +707,7 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
  * answer anywhere. Paginated server-side; the table grows by a row per email and is never
  * pruned, so it must never be fetched whole.
  */
-function DeliveryLogCard() {
+function DeliveryLogPane() {
     const t = useT();
     const [status, setStatus] = useState<EmailLogStatus | ''>('');
     const [search, setSearch] = useState('');
@@ -745,14 +755,19 @@ function DeliveryLogCard() {
             key: 'recipient',
             header: t('email_log_recipient'),
             className: 'w-[23%] max-w-0',
-            // Name over address: a skipped row has no address at all, and the name is the
-            // only thing that says who was left out.
-            render: (r) => (
-                <div className="min-w-0">
-                    <div className="truncate text-xs font-medium">{r.recipient_name ?? '—'}</div>
-                    <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
-                </div>
-            ),
+            // Name first when there is one — a skipped row has no address, so the name is
+            // all that says who was left out. With no name (rows written before the column
+            // existed) the address becomes the main line rather than sitting under a dash,
+            // which reads as missing data instead of "we only know the address".
+            render: (r) =>
+                r.recipient_name ? (
+                    <div className="min-w-0">
+                        <div className="truncate text-xs font-medium">{r.recipient_name}</div>
+                        <div className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
+                    </div>
+                ) : (
+                    <div className="truncate font-mono text-[11px]">{r.to_email ?? t('email_log_no_address')}</div>
+                ),
         },
         {
             key: 'status',
@@ -769,12 +784,10 @@ function DeliveryLogCard() {
     ];
 
     return (
-        <Card className="overflow-hidden">
+        <>
+            {/* No heading: the tab above already named this half of the page. */}
             <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
-                <div>
-                    <div className="font-semibold">{t('email_tab_log')}</div>
-                    <div className="text-muted-foreground text-xs">{t('email_log_sub')}</div>
-                </div>
+                <div className="text-muted-foreground text-xs">{t('email_log_sub')}</div>
                 <div className="relative w-full max-w-xs">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                     <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('email_log_search')} className="pl-9" />
@@ -814,7 +827,7 @@ function DeliveryLogCard() {
                 }}
                 emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
             />
-        </Card>
+        </>
     );
 }
 
