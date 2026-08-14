@@ -2,7 +2,7 @@ import type { Dict } from '@/lang/types';
 
 export const email: Dict = {
     email_title: 'Email Notifications',
-    email_sub: 'Template library for automated system emails.',
+    email_sub: 'How emails are worded, and what has been sent',
     email_templates: 'Templates',
     email_templates_sub: 'Every email template in the system',
     email_test: 'Send test',
