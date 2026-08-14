@@ -49,6 +49,10 @@ const SAMPLE_VARS: Record<string, string> = {
     'digest.table': '',
 };
 
+// Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
+// maintains it; the menu is read by someone hunting for one name, and hunting is alphabetical.
+const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b));
+
 // Short notes for the "magic" placeholders that aren't a simple field — shown
 // beside the variable chips in the Edit drawer so a short body doesn't look broken.
 const VAR_NOTE: Record<string, { en: string; th: string }> = {
@@ -619,7 +623,12 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
             return { text, selStart: pos, selEnd: pos };
         });
 
-    const tokens = Array.from(new Set(Array.from(`${extraText} ${value}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1])));
+    // The variables this template uses, A-Z. Occurrence order put them in whatever sequence
+    // the wording happened to reach them, which reshuffles the row on every edit — a list you
+    // scan for one name should keep names where you last saw them.
+    const tokens = Array.from(new Set(Array.from(`${extraText} ${value}`.matchAll(/\{\{([\w.]+)\}\}/g), (m) => m[1]))).sort((a, b) =>
+        a.localeCompare(b),
+    );
 
     return (
         <>
@@ -656,7 +665,7 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                         className="text-muted-foreground hover:text-foreground ml-auto h-7 cursor-pointer rounded bg-transparent px-1.5 text-xs outline-none"
                     >
                         <option value="">{`{{ }} ${t('email_insert_var')}`}</option>
-                        {Object.keys(SAMPLE_VARS).map((k) => (
+                        {VARIABLE_NAMES.map((k) => (
                             <option key={k} value={k}>{`{{${k}}}`}</option>
                         ))}
                     </select>
