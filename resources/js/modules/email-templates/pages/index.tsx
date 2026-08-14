@@ -41,6 +41,8 @@ const SAMPLE_VARS: Record<string, string> = {
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
     'digest.count': '2',
+    // Overridden with the real brand where it is rendered; this is the chip-list entry.
+    'app.name': 'IT Service Desk',
     // Placeholder only. The body preview is rendered by the API (EmailTemplateController's
     // own sample vars), which holds the real example table; this map drives the variable
     // chips and the subject line above the preview frame.
@@ -967,7 +969,8 @@ function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: 
                             <span className="font-mono">{user?.email || SAMPLE_VARS['user.email']}</span>
                         </div>
                         <div className="text-foreground w-full truncate font-semibold">
-                            [{brand}] {render(subject, SAMPLE_VARS)}
+                            {/* app.name resolves to the real brand, the way the send path fills it. */}[{brand}]{' '}
+                            {render(subject, { ...SAMPLE_VARS, 'app.name': brand })}
                         </div>
                     </div>
                     {previewHtml ? (

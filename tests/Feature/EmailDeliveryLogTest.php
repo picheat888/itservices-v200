@@ -7,6 +7,7 @@ use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Services\Email\EmailNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -142,6 +143,31 @@ class EmailDeliveryLogTest extends TestCase
         $this->service()->deliver('manee@example.com', 'Subject', '<p>Hi Manee</p>', 'test.template');
 
         $this->assertSame('<p>Hi Manee</p>', EmailLog::firstOrFail()->body_html);
+    }
+
+    /**
+     * The installation names itself. Callers never pass app.name — it is injected for every
+     * template, so renaming the service in Settings renames it in the emails too.
+     */
+    public function test_templates_can_name_the_installation_without_the_caller_passing_it(): void
+    {
+        Queue::fake();
+        AppSetting::updateOrCreate(['key' => 'brand_name'], ['value' => 'INA-Tech V2']);
+        EmailTemplate::updateOrCreate(
+            ['key' => 'test.template'],
+            [
+                'name' => 'Test template',
+                'subject' => 'Hello from {{app.name}}',
+                'body_html' => '<p>Track it in {{app.name}}.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+        );
+
+        $this->service()->sendTemplate('test.template', 'manee@example.com');
+
+        Queue::assertPushed(SendTemplatedEmail::class, fn (SendTemplatedEmail $job) => str_contains($job->html, 'Track it in INA-Tech V2.')
+            && str_contains($job->subject, 'Hello from INA-Tech V2'));
     }
 
     /** A message nobody could receive is still worth keeping: it is what they missed. */
