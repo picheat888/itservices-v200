@@ -144,6 +144,10 @@ class EmailNotificationService
             $error = null;
         } catch (\Throwable $e) {
             $status = 'failed';
+            // The mailer's own words, kept verbatim on purpose. Whoever reads the delivery
+            // log is the person who has to fix the mail server, and a friendlier sentence
+            // would drop the part they need — the malformed address, the refused
+            // connection, the rejecting host. Deliberately not translated or summarised.
             $error = $e->getMessage();
             Log::warning('Email send failed', ['to' => $toEmail, 'error' => $error]);
         }
