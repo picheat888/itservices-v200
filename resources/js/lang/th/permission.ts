@@ -92,7 +92,7 @@ export const permission: Dict = {
     'perm_desc_tickets.view_all': 'เห็นแท็บ Tickets ทั้งหมด โดยถูกจำกัดด้วย Tickets Level ด้านล่าง',
     'perm_act_tickets.resolve': 'Take Case',
     'perm_desc_tickets.resolve':
-        'ทำงานกับเคส: รับเคส แก้ไข ปิดงาน และยกเลิก - รายชื่อผู้รับมอบ/ส่งต่อ และการแจ้งเตือนเคสใหม่ อิงคีย์นี้ + Tickets Level ที่ตรงประเภท',
+        '- เปิดเพื่อรับเคส แก้ไข ปิดงาน และยกเลิก\n- เปิดเพื่อมีรายชื่อผู้รับมอบ/ส่งต่อ เคส\n- เปิดเพื่อรับการแจ้งเตือนเคสใหม่',
     'perm_act_tickets.forward': 'Forward Case',
     'perm_desc_tickets.forward': 'ส่งต่อเคสที่กำลังทำ เมื่อเจ้าหน้าที่ปัจจุบันไม่สามารถแก้ไขปัญหาได้',
     'perm_act_tickets.assign': 'Assign to',

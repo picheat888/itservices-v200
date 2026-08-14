@@ -92,7 +92,7 @@ export const permission: Dict = {
     'perm_desc_tickets.view_all': 'See the all-tickets tab, scoped by the Ticket Levels below.',
     'perm_act_tickets.resolve': 'Take Case',
     'perm_desc_tickets.resolve':
-        'Work cases: take, resolve and cancel. Assign/Forward target lists and new-case alerts follow this key + the matching Ticket Level.',
+        '- Turn on to take, edit, resolve and cancel cases\n- Turn on to appear in the assign / forward lists\n- Turn on to receive new-case alerts',
     'perm_act_tickets.forward': 'Forward Case',
     'perm_desc_tickets.forward': 'Hand an in-progress case to another staff when the current assignee cannot fix it.',
     'perm_act_tickets.assign': 'Assign to',
