@@ -55,6 +55,20 @@ class EmailNotificationService
         return 'data:image/png;base64,'.base64_encode((string) file_get_contents($file));
     }
 
+    /**
+     * The subject as it leaves the building: every outgoing mail is prefixed with the brand.
+     *
+     * Lives here rather than inside deliver() because a send that never happens is logged
+     * without going through it, and a `skipped` row recording the bare subject made the same
+     * email look like two different ones depending on whether it reached anybody.
+     */
+    private function brandedSubject(string $subject): string
+    {
+        $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
+
+        return "[{$brand}] {$subject}";
+    }
+
     /** Substitutes {{variables}} in a string from the given map. */
     public function render(string $text, array $vars): string
     {
@@ -102,7 +116,8 @@ class EmailNotificationService
                 'template_key' => $key,
                 'to_email' => null,
                 'recipient_name' => $recipientName,
-                'subject' => $subject,
+                // Branded like a real send: the row records what they would have received.
+                'subject' => $this->brandedSubject($subject),
                 // Kept even though nothing was sent: what they would have received is the
                 // useful half of "nobody told them".
                 'body_html' => $html,
@@ -134,7 +149,7 @@ class EmailNotificationService
     public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null): bool
     {
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
-        $subject = "[{$brand}] {$subject}";
+        $subject = $this->brandedSubject($subject);
 
         $this->mailConfig->apply();
 

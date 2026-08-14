@@ -150,9 +150,14 @@ class EmailDeliveryLogTest extends TestCase
         Queue::fake();
         $this->template();
 
-        $this->service()->sendTemplate('test.template', null, [], null, null, 'Manee Jaidee');
+        $this->service()->sendTemplate('test.template', null, ['user.first_name' => 'Manee'], null, null, 'Manee Jaidee');
 
-        $this->assertSame('<p>Body</p>', EmailLog::where('status', 'skipped')->firstOrFail()->body_html);
+        $log = EmailLog::where('status', 'skipped')->firstOrFail();
+        $this->assertSame('<p>Body</p>', $log->body_html);
+        // Branded like every delivered mail: a skipped row that stored the bare subject made
+        // the same email look like two different ones in the log.
+        $this->assertStringStartsWith('[', $log->subject);
+        $this->assertStringContainsString('Hello Manee', $log->subject);
     }
 
     public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
