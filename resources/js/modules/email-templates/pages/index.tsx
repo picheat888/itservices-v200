@@ -1101,8 +1101,16 @@ function EditorDialog({
                                     {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
                                     {sentOk ? t('email_sent') : t('email_test')}
                                 </Button>
+                                {/* Disabled until the template actually differs from its standard
+                                    content: resetting an untouched one restores what it already
+                                    says, which looks like an action and is none. */}
                                 {template.is_standard && (
-                                    <Button variant="outline" onClick={handleReset} disabled={resetting} title={t('email_reset_hint')}>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleReset}
+                                        disabled={resetting || !template.is_modified}
+                                        title={t('email_reset_hint')}
+                                    >
                                         {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
                                         {resetOk ? t('email_reset_done') : t('email_reset')}
                                     </Button>
