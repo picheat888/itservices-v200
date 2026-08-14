@@ -36,7 +36,7 @@ export interface NotificationData {
     asset_model?: string;
     asset_nickname?: string | null;
     from?: string | null;
-    // Service request notifications (request) — subtype: submitted | waiting |
+    // Service request notifications (request) — subtype: submitted | waiting | stalled |
     // ready_to_fulfill | approved_step | approved_final | rejected | fulfilled | cancelled
     // (ready_to_fulfill carries ticket_no when the workflow opened its own case)
     service_request_id?: number;
@@ -49,6 +49,8 @@ export interface NotificationData {
     requester_name?: string | null;
     actor_name?: string | null;
     remark?: string | null;
+    /** Only on `stalled`: whole days the step has been waiting. */
+    stalled_days?: number | null;
 }
 
 export interface AppNotification {

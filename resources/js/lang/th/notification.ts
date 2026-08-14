@@ -24,6 +24,7 @@ export const notification: Dict = {
     notif_stock_count_draft: 'การนับสต็อกยังเป็นฉบับร่าง',
     notif_request_submitted: 'ส่งคำขอแล้ว - รอ {step} อนุมัติ',
     notif_request_waiting: 'รอการตัดสินจากคุณ - {step}',
+    notif_request_stalled: 'รอการตัดสินจากคุณมา {days} วันแล้ว - {step}',
     notif_request_approved_step: '{step} อนุมัติแล้ว - ส่งต่อขั้นถัดไป',
     notif_request_approved_final: 'อนุมัติครบทุกขั้น - รอ Admin/IT รับเคส',
     notif_request_ready_case: 'เปิดเคสให้คุณเรียบร้อยแล้ว - {ticket}',

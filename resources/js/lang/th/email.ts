@@ -15,6 +15,7 @@ export const email: Dict = {
     email_type: 'ประเภท',
     email_cadence_realtime: 'เรียลไทม์',
     email_cadence_daily: 'รายวัน',
+    email_cadence_weekly: 'รายสัปดาห์',
     email_var_hint: 'ค่าจะถูกเติมอัตโนมัติตอนส่งอีเมล',
     email_edit_preview: 'แก้ไข & พรีวิว',
     email_last_sent: 'ส่งล่าสุด',

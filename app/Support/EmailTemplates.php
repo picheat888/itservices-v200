@@ -148,6 +148,20 @@ class EmailTemplates
                 'cadence' => 'realtime',
             ],
             [
+                // The Monday summary of approvals somebody has left sitting. `digest.table`
+                // arrives as ready-made HTML rows — an administrator rewords the message
+                // around it, but nobody should have to hand-write table markup here.
+                'key' => 'request.stalled_digest',
+                'name' => 'Weekly summary of requests waiting on you',
+                'subject' => '{{digest.count}} request(s) still waiting for your approval',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>These requests have been waiting for your approval for more than a week.</p>
+{{digest.table}}
+<p style="color:#64748b">Approving or rejecting each one takes a moment in the IT portal.</p>',
+                'enabled' => true,
+                'cadence' => 'weekly',
+            ],
+            [
                 'key' => 'asset.assigned',
                 'name' => 'Asset assigned to you',
                 'subject' => 'An asset has been assigned to you',

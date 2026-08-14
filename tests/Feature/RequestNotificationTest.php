@@ -55,7 +55,11 @@ class RequestNotificationTest extends TestCase
         $userRole = Role::firstOrCreate(['key' => 'user'], ['name' => 'Staff', 'color' => '#64748b', 'is_system' => false]);
         RolePermission::updateOrCreate(['role_id' => $userRole->id, 'permission' => 'requests.submit'], ['allowed' => true]);
         $itRole = Role::firstOrCreate(['key' => 'it'], ['name' => 'IT', 'color' => '#0284c7', 'is_system' => false]);
-        RolePermission::updateOrCreate(['role_id' => $itRole->id, 'permission' => 'requests.fulfill'], ['allowed' => true]);
+        // Closing requests and hearing about them are separate permissions: the queue bell
+        // follows notify_approved, so an IT user needs both to appear in these tests.
+        foreach (['requests.fulfill', 'requests.notify_approved'] as $permission) {
+            RolePermission::updateOrCreate(['role_id' => $itRole->id, 'permission' => $permission], ['allowed' => true]);
+        }
 
         $this->requester = User::factory()->create(['role' => 'user', 'employee_id' => $staff->id]);
         $this->supUser = User::factory()->create(['role' => 'user', 'employee_id' => $sup->id]);

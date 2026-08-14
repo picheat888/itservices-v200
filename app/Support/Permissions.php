@@ -25,7 +25,10 @@ class Permissions
                 'create', 'edit_own',
                 'my', 'jobs',
             ],
-            'requests' => ['submit', 'view_all', 'fulfill'],
+            // notify_* gate who HEARS about a request, separately from who may act on it:
+            // the fulfilment queue is a rota, and the people who want the mail about a
+            // stalled approval are not always the ones allowed to close it.
+            'requests' => ['submit', 'view_all', 'fulfill', 'notify_approved', 'notify_stalled'],
             'workflows' => ['manage'],
             'assets' => [
                 'module',
@@ -116,6 +119,7 @@ class Permissions
                 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
                 'requests.submit', 'requests.view_all', 'requests.fulfill',
+                'requests.notify_approved', 'requests.notify_stalled',
                 'workflows.manage',
                 'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
                 'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
