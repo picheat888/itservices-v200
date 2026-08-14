@@ -95,6 +95,7 @@ class EmailNotificationService
         }
 
         $subject = $this->render($template->subject, $vars);
+        $html = $this->render($template->body_html, $vars);
 
         if (blank($toEmail)) {
             EmailLog::create([
@@ -102,14 +103,15 @@ class EmailNotificationService
                 'to_email' => null,
                 'recipient_name' => $recipientName,
                 'subject' => $subject,
+                // Kept even though nothing was sent: what they would have received is the
+                // useful half of "nobody told them".
+                'body_html' => $html,
                 'status' => 'skipped',
                 'error' => 'Recipient has no email address',
             ]);
 
             return;
         }
-
-        $html = $this->render($template->body_html, $vars);
 
         // The template name doubles as the email's "eyebrow" category label.
         SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key, $actionUrl, $actionLabel, $template->name, $recipientName);
@@ -151,6 +153,9 @@ class EmailNotificationService
             'to_email' => $toEmail,
             'recipient_name' => $recipientName,
             'subject' => $subject,
+            // The rendered message only. The frame it was sent in is rebuilt from the
+            // layout when somebody reads the log, since it is the same on every email.
+            'body_html' => $html,
             'status' => $status,
             'error' => $error,
         ]);

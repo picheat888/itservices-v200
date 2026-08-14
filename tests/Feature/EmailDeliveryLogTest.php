@@ -136,6 +136,64 @@ class EmailDeliveryLogTest extends TestCase
             ->assertJsonPath('data.0.template_key', 'b');
     }
 
+    /** Delivery writes the message it sent, not just the fact that it sent one. */
+    public function test_the_sent_message_is_kept_on_the_log_row(): void
+    {
+        $this->service()->deliver('manee@example.com', 'Subject', '<p>Hi Manee</p>', 'test.template');
+
+        $this->assertSame('<p>Hi Manee</p>', EmailLog::firstOrFail()->body_html);
+    }
+
+    /** A message nobody could receive is still worth keeping: it is what they missed. */
+    public function test_a_skipped_send_keeps_what_would_have_been_sent(): void
+    {
+        Queue::fake();
+        $this->template();
+
+        $this->service()->sendTemplate('test.template', null, [], null, null, 'Manee Jaidee');
+
+        $this->assertSame('<p>Body</p>', EmailLog::where('status', 'skipped')->firstOrFail()->body_html);
+    }
+
+    public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
+    {
+        $this->actingAs($this->userWith('system.configure_notifications'));
+
+        $log = EmailLog::create([
+            'template_key' => 'test.template',
+            'to_email' => 'manee@example.com',
+            'recipient_name' => 'Manee Jaidee',
+            'subject' => 'Your request is ready',
+            'body_html' => '<p>Signed, the IT team</p>',
+            'status' => 'sent',
+        ]);
+
+        $response = $this->getJson("/api/email-logs/{$log->id}")->assertOk();
+
+        $html = $response->json('data.preview_html');
+        // The stored message is in there, wrapped in the layout the mailer uses.
+        $this->assertStringContainsString('Signed, the IT team', $html);
+        $this->assertStringContainsString('<!doctype html>', strtolower($html));
+        $this->assertSame('Manee Jaidee', $response->json('data.recipient_name'));
+    }
+
+    /** Rows written before bodies were kept say so instead of rendering an empty frame. */
+    public function test_the_detail_endpoint_returns_no_preview_for_older_rows(): void
+    {
+        $this->actingAs($this->userWith('system.configure_notifications'));
+
+        $log = EmailLog::create([
+            'template_key' => 'test.template',
+            'to_email' => 'manee@example.com',
+            'subject' => 'Older send',
+            'status' => 'sent',
+        ]);
+
+        $this->getJson("/api/email-logs/{$log->id}")
+            ->assertOk()
+            ->assertJsonPath('data.preview_html', null);
+    }
+
     public function test_the_log_endpoint_is_gated(): void
     {
         Role::firstOrCreate(['key' => 'no_perms'], ['name' => 'No Perms']);
