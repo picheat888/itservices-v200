@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
 import { settingsApi, useSettings } from '@/modules/settings';
@@ -946,6 +947,10 @@ function DeliveryLogPane() {
 
 function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: string; previewHtml: string }) {
     const lang = useUiStore((s) => s.lang);
+    // The signed-in account, because that is where "Send test" delivers and whose first name
+    // the body below already greets. The line used to print the literal {{user.email}} while
+    // every other field on the row was filled in, which read as data that failed to arrive.
+    const { user } = useAuth();
     return (
         <div className="bg-muted/30 border-border flex min-h-0 flex-col border-r">
             <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -957,7 +962,7 @@ function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: 
                         </div>
                         <div>
                             <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
-                            <span className="font-mono">{'{{user.email}}'}</span>
+                            <span className="font-mono">{user?.email || SAMPLE_VARS['user.email']}</span>
                         </div>
                         <div className="text-foreground w-full truncate font-semibold">
                             [{brand}] {render(subject, SAMPLE_VARS)}
