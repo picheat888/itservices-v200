@@ -323,7 +323,10 @@ class SettingsController extends Controller
 
         $ok = $service->sendTest($to);
 
-        return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok, 'to' => $to], $ok ? 200 : 502);
+        // 200 either way — see EmailTemplateController::test(). A failed delivery is the
+        // result being reported, not a server fault, and a 5xx would cover the page with
+        // the fatal-error screen instead of letting the toast say what went wrong.
+        return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok, 'to' => $to]);
     }
 
     /**

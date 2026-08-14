@@ -199,6 +199,28 @@ class EmailDeliveryLogTest extends TestCase
             ->assertJsonPath('data.preview_html', null);
     }
 
+    /**
+     * A test send that cannot be delivered still answers with 200.
+     *
+     * The client turns any 5xx into a full-screen "Something went wrong" takeover meant for
+     * a broken server. Reporting an unreachable mail host that way covered the settings
+     * screen with a fatal error and left the admin with nothing but a Reload button.
+     */
+    public function test_a_failed_test_send_is_not_reported_as_a_server_fault(): void
+    {
+        $user = $this->userWith('system.configure_notifications');
+        // An address the mailer will refuse, which is what a broken account looks like.
+        $user->forceFill(['email' => '[NULL]'])->save();
+        $this->actingAs($user);
+        $template = $this->template();
+
+        $this->postJson("/api/email-templates/{$template->id}/test")
+            ->assertOk()
+            ->assertJsonPath('sent', false);
+
+        $this->assertSame('failed', EmailLog::latest('id')->first()?->status);
+    }
+
     public function test_the_log_endpoint_is_gated(): void
     {
         Role::firstOrCreate(['key' => 'no_perms'], ['name' => 'No Perms']);

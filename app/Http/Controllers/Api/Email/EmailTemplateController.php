@@ -148,7 +148,14 @@ class EmailTemplateController extends Controller
             $emailTemplate->name,
         );
 
-        return response()->json(['message' => $ok ? 'success' : 'failed', 'sent' => $ok], $ok ? 200 : 502);
+        // 200 either way. A rejected address or an unreachable SMTP host is an answer to
+        // the question the button asked, not a broken server: a 5xx here trips the client's
+        // "Something went wrong" takeover, which hides the very screen holding the settings
+        // that need fixing. The caller reads `sent`.
+        return response()->json([
+            'message' => $ok ? 'success' : 'failed',
+            'sent' => $ok,
+        ]);
     }
 
     /**

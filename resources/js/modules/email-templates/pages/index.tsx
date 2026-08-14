@@ -1030,7 +1030,8 @@ function EditorDialog({
     onClose: () => void;
     onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => Promise<unknown>;
     saving: boolean;
-    onTest: (id: number) => Promise<unknown>;
+    /** Resolves with whether the mail actually left — a rejected address is not a thrown error. */
+    onTest: (id: number) => Promise<{ sent: boolean }>;
     testing: boolean;
     onReset: (id: number) => Promise<unknown>;
     resetting: boolean;
@@ -1087,11 +1088,19 @@ function EditorDialog({
     const handleTest = async () => {
         if (!template || testing) return;
         try {
-            await onTest(template.id);
+            // The request succeeds even when the mail does not: the address may be
+            // malformed or the SMTP host unreachable, and the answer is in `sent`.
+            const { sent } = await onTest(template.id);
+            if (!sent) {
+                useToastStore.getState().push(t('email_test_failed'), 'error', t('email_test_failed_title'));
+
+                return;
+            }
             setSentOk(true);
             window.setTimeout(() => setSentOk(false), 1600);
-        } catch {
-            useToastStore.getState().push(t('email_test_failed'), 'error', t('email_test_failed_title'));
+        } catch (e: unknown) {
+            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            useToastStore.getState().push(msg ?? t('email_test_failed'), 'error', t('email_test_failed_title'));
         }
     };
 
