@@ -47,7 +47,7 @@ export const email: Dict = {
     email_empty: 'ยังไม่มี Template Email',
     email_empty_filtered: 'ไม่พบ Template ที่ตรงกับการค้นหา',
     email_test_hint: 'ส่ง Template นี้ไปยังอีเมลของคุณ',
-    email_reset: 'รีเซ็ตเป็นค่ามาตรฐาน',
+    email_reset: 'Reset',
     email_reset_hint: 'คืนค่า Template นี้เป็นเนื้อหามาตรฐาน',
     email_reset_done: 'รีเซ็ตแล้ว',
     email_reset_title: 'รีเซ็ตเป็นค่ามาตรฐาน?',

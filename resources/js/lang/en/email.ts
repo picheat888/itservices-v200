@@ -47,7 +47,7 @@ export const email: Dict = {
     email_empty: 'No email templates yet.',
     email_empty_filtered: 'No templates match your search.',
     email_test_hint: 'Sends this template to your email',
-    email_reset: 'Reset to standard',
+    email_reset: 'Reset',
     email_reset_hint: 'Restore this template to its standard content',
     email_reset_done: 'Reset',
     email_reset_title: 'Reset to standard?',
