@@ -69,6 +69,23 @@ class EmailNotificationService
         return "[{$brand}] {$subject}";
     }
 
+    /**
+     * Variables every template gets without any caller passing them.
+     *
+     * The system's own name was written into the wording as "the IT portal", so renaming the
+     * installation left the emails calling it something nobody recognised. It belongs here
+     * rather than in each service's variable map: none of them should have to remember a
+     * value that has nothing to do with what they are notifying about.
+     *
+     * @return array<string, string>
+     */
+    private function globalVars(): array
+    {
+        return [
+            'app.name' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+        ];
+    }
+
     /** Substitutes {{variables}} in a string from the given map. */
     public function render(string $text, array $vars): string
     {
@@ -108,6 +125,7 @@ class EmailNotificationService
             return;
         }
 
+        $vars += $this->globalVars();
         $subject = $this->render($template->subject, $vars);
         $html = $this->render($template->body_html, $vars);
 

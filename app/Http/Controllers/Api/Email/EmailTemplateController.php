@@ -227,6 +227,9 @@ class EmailTemplateController extends Controller
         $name = (string) ($request->user()->name ?? 'Kanya Phakdee');
 
         return [
+            // Same value the send path injects, so the preview names the installation the
+            // way a delivered email does.
+            'app.name' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
             'user.first_name' => explode(' ', $name)[0] ?: 'there',
             'user.email' => $request->user()->email ?? 'user@example.com',
             'count' => 3,

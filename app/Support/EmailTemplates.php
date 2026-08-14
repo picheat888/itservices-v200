@@ -36,7 +36,7 @@ class EmailTemplates
                 // without signing in.
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team.<br>
-You can track progress in the IT portal.</p>
+You can track progress in {{app.name}}.</p>
 <p><span style="color:#64748b">Ticket No.:</span> <strong>{{ticket.id}}</strong><br>
 <span style="color:#64748b">Subject:</span> {{ticket.subject}}<br>
 <span style="color:#64748b">Issue type:</span> {{ticket.category}}<br>
@@ -49,7 +49,7 @@ You can track progress in the IT portal.</p>
                 'name' => 'Ticket assigned',
                 'subject' => 'Ticket {{ticket.id}} has been assigned',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
+<p>We\'ve received your ticket and assigned it to our team. You can track progress in {{app.name}}.</p>
 <p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -59,7 +59,7 @@ You can track progress in the IT portal.</p>
                 'name' => 'Ticket forwarded',
                 'subject' => 'Ticket {{ticket.id}} was forwarded to you',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in the IT portal.</p>
+<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in {{app.name}}.</p>
 <p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -69,7 +69,7 @@ You can track progress in the IT portal.</p>
                 'name' => 'Ticket resolved',
                 'subject' => 'Ticket {{ticket.id}} has been resolved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
+<p>We\'ve received your ticket and assigned it to our team. You can track progress in {{app.name}}.</p>
 <p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -89,7 +89,7 @@ You can track progress in the IT portal.</p>
                 'name' => 'Request awaiting your approval',
                 'subject' => 'A request is awaiting your approval',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your service request requires your attention. Please review and take action in the IT portal.</p>
+<p>Your service request requires your attention. Please review and take action in {{app.name}}.</p>
 <p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
@@ -168,7 +168,7 @@ You can track progress in the IT portal.</p>
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>These requests have been waiting for your approval for more than a week.</p>
 {{digest.table}}
-<p style="color:#64748b">Approving or rejecting each one takes a moment in the IT portal.</p>',
+<p style="color:#64748b">Approving or rejecting each one takes a moment in {{app.name}}.</p>',
                 'enabled' => true,
                 'cadence' => 'weekly',
             ],
