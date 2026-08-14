@@ -716,6 +716,40 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
  * pruned, so it must never be fetched whole.
  */
 /**
+ * The sent email, at its own height.
+ *
+ * A fixed-height frame clipped the message and put a second scrollbar inside a dialog that
+ * already scrolls, so a long email read as a broken one. The frame grows to whatever the
+ * email needs and the dialog does the scrolling.
+ *
+ * Sandboxed down to `allow-same-origin`, which is the one permission the measurement needs —
+ * a fully sandboxed frame reports no document at all, so the height could never be read and
+ * the email stayed clipped. Scripts, forms, popups and top-level navigation stay blocked.
+ */
+function SentEmailFrame({ html, title }: { html: string; title: string }) {
+    const ref = useRef<HTMLIFrameElement>(null);
+    const [height, setHeight] = useState(420);
+
+    const fit = () => {
+        const body = ref.current?.contentDocument?.body;
+        // A couple of pixels of slack: an exact fit leaves a scrollbar on some renderers.
+        if (body?.scrollHeight) setHeight(body.scrollHeight + 8);
+    };
+
+    return (
+        <iframe
+            ref={ref}
+            title={title}
+            srcDoc={html}
+            sandbox="allow-same-origin"
+            onLoad={fit}
+            style={{ height }}
+            className="border-border block w-full rounded-xl border bg-white"
+        />
+    );
+}
+
+/**
  * One log entry: who it went to, what it said, and the email itself rebuilt as it was
  * received. Older rows carry no body — they were written before sent messages were kept —
  * and say so rather than showing an empty frame.
@@ -762,11 +796,7 @@ function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: 
                     <div>
                         <SectionLabel>{t('email_log_content')}</SectionLabel>
                         {log.preview_html ? (
-                            <iframe
-                                title={t('email_log_content')}
-                                srcDoc={log.preview_html}
-                                className="border-border block h-[420px] w-full rounded-xl border bg-white"
-                            />
+                            <SentEmailFrame html={log.preview_html} title={t('email_log_content')} />
                         ) : (
                             <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
                                 {t('email_log_no_content')}
