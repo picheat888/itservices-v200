@@ -425,10 +425,13 @@ export default function EmailTemplatesPage() {
 
                 {tab === 'log' && <DeliveryLogPane />}
 
+                {/* Tab content sits inset in a padded block, the way every other tabbed list in
+                    the app lays out — full-width strips ruled off from each other made the table
+                    look bolted to the card rather than held by it. */}
                 {tab === 'templates' && (
-                    <>
+                    <div className="space-y-3 p-5">
                         {/* No heading here: the tab above already named this half of the page. */}
-                        <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="text-muted-foreground text-xs">{t('email_templates_sub')}</div>
                             <div className="relative w-full max-w-xs">
                                 <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -436,8 +439,8 @@ export default function EmailTemplatesPage() {
                             </div>
                         </div>
 
-                        {/* Module filter tabs */}
-                        <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
+                        {/* Module filter chips */}
+                        <div className="flex flex-wrap gap-1.5">
                             <button
                                 type="button"
                                 onClick={() => setModule('')}
@@ -500,7 +503,7 @@ export default function EmailTemplatesPage() {
                                 </div>
                             }
                         />
-                    </>
+                    </div>
                 )}
             </Card>
 
@@ -786,9 +789,9 @@ function DeliveryLogPane() {
     ];
 
     return (
-        <>
+        <div className="space-y-3 p-5">
             {/* No heading: the tab above already named this half of the page. */}
-            <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-muted-foreground text-xs">{t('email_log_sub')}</div>
                 <div className="relative w-full max-w-xs">
                     <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -797,7 +800,7 @@ function DeliveryLogPane() {
             </div>
 
             {/* Status chips carry counts for the whole log, not the page. */}
-            <div className="border-border flex flex-wrap gap-1.5 border-b px-4 py-2.5">
+            <div className="flex flex-wrap gap-1.5">
                 {LOG_FILTERS.map((value) => (
                     <button
                         key={value || 'all'}
@@ -829,7 +832,7 @@ function DeliveryLogPane() {
                 }}
                 emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
             />
-        </>
+        </div>
     );
 }
 
