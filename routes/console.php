@@ -27,3 +27,8 @@ Schedule::command('requests:send-stalled-digest')->weeklyOn(1, '12:00');
 // don't move and the sweep is a cheap no-op (each alert stage fires once per
 // ticket, deduped by the alert-level columns).
 Schedule::command('tickets:send-sla-alerts')->everyTenMinutes();
+
+// The team's board on Monday morning, ahead of the working day: what nobody has
+// taken, and what is taken but still open. Weekly for the same reason as the
+// approvals digest — a daily copy of the same list stops being read.
+Schedule::command('tickets:send-weekly-digest')->weeklyOn(1, '08:30');

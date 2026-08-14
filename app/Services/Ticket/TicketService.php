@@ -57,6 +57,19 @@ class TicketService
         )->values();
         Notification::send($takers, new TicketCreatedNotification($ticket));
 
+        // The same people, by mail. A bell is only seen by somebody already looking at the
+        // portal, and a case nobody has picked up is exactly the thing nobody is looking at.
+        foreach ($takers as $taker) {
+            $this->email->sendTemplate(
+                'ticket.new_case',
+                $taker->email,
+                ['user.first_name' => strtok((string) $taker->name, ' ')] + $this->staffVars($ticket),
+                url("/tickets?view={$ticket->id}"),
+                'Open the case',
+                $taker->name,
+            );
+        }
+
         // Email the requester a confirmation carrying the case number for reference. A
         // requester with no address anywhere is logged as skipped, not dropped in silence.
         $this->email->sendTemplate('ticket.created', $this->ownerEmail($ticket), $this->ownerVars($ticket), null, null, $ticket->requester?->name);
@@ -203,6 +216,27 @@ class TicketService
      *
      * @return array<string, string>
      */
+    /**
+     * Ticket fields for the staff-facing mail about a case.
+     *
+     * Carries who raised it — the requester needs no telling who they are, the person
+     * deciding whether to pick the case up does. Deliberately WITHOUT user.first_name: this
+     * mail goes to several people and each is greeted by their own name, so the caller adds
+     * it. Reusing ownerVars() here would have greeted every IT staff as the requester.
+     *
+     * @return array<string, string>
+     */
+    private function staffVars(Ticket $ticket): array
+    {
+        return [
+            'ticket.id' => (string) $ticket->ticket_no,
+            'ticket.subject' => (string) $ticket->subject,
+            'ticket.category' => $ticket->category?->label() ?? '-',
+            'ticket.details' => nl2br(e((string) $ticket->description)),
+            'ticket.requester' => (string) ($ticket->requester?->name ?? '-'),
+        ];
+    }
+
     private function ownerVars(Ticket $ticket): array
     {
         return [

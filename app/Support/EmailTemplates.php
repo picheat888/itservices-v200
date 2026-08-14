@@ -46,6 +46,25 @@ You can track progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
+                // Goes to the IT staff who are allowed to take this type of case, not to the
+                // requester — hence {{ticket.requester}}, the one field the receipt has no use
+                // for. The bell fires at the same moment; this reaches whoever is not looking
+                // at the portal, which is exactly when a case sits unclaimed.
+                'key' => 'ticket.new_case',
+                'name' => 'New case waiting to be taken',
+                'subject' => 'New ticket {{ticket.id}} is waiting to be taken',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>A new case has been raised and nobody has taken it yet.</p>
+<br>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Raised by:</strong> {{ticket.requester}}<br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 'key' => 'ticket.assigned',
                 'name' => 'Ticket assigned',
                 'subject' => 'Ticket {{ticket.id}} has been assigned',
@@ -84,6 +103,24 @@ You can track progress in {{app.name}}.</p>
 <p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
+            ],
+            [
+                // Monday morning's picture of the board. Both tables arrive as ready-made HTML;
+                // an administrator rewords the message around them. The two lists answer
+                // different questions — what nobody has picked up, and what the team is
+                // holding — so they are separate variables rather than one merged table.
+                'key' => 'ticket.weekly_digest',
+                'name' => 'Weekly summary of open cases',
+                'subject' => '{{digest.open_count}} case(s) waiting to be taken',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Here is where the team\'s cases stand this morning.</p>
+<p><strong>Waiting to be taken ({{digest.open_count}})</strong></p>
+{{digest.open_table}}
+<p><strong>Taken but not closed ({{digest.working_count}})</strong></p>
+{{digest.working_table}}
+<p style="color:#64748b">Open a case in {{app.name}} to take it or finish it.</p>',
+                'enabled' => true,
+                'cadence' => 'weekly',
             ],
             [
                 'key' => 'request.approval_needed',
