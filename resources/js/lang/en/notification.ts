@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const notification: Dict = {
-    notifications: 'Email Templates',
+    notifications: 'Email',
     notif_title: 'Notifications',
     notif_all: 'All',
     notif_mark_all: 'Mark all read',
