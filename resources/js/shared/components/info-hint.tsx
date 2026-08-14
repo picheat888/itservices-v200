@@ -19,7 +19,9 @@ export function InfoHint({ text, className }: { text: string; className?: string
                 role="tooltip"
                 className={cn(
                     'border-border bg-popover text-popover-foreground pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-[240px]',
-                    '-translate-x-1/2 scale-95 rounded-lg border px-3 py-2 text-xs leading-relaxed font-normal opacity-0 shadow-lg',
+                    // Newlines in a hint are meant: a permission that grants three separate
+                    // things reads as three lines, not one sentence with dashes in it.
+                    '-translate-x-1/2 scale-95 rounded-lg border px-3 py-2 text-xs leading-relaxed font-normal whitespace-pre-line opacity-0 shadow-lg',
                     'transition-[opacity,transform] duration-150 group-hover/hint:scale-100 group-hover/hint:opacity-100',
                     'group-focus-within/hint:scale-100 group-focus-within/hint:opacity-100',
                 )}
