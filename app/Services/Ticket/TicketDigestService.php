@@ -80,10 +80,10 @@ class TicketDigestService
             (string) $this->daysOpen($t),
         ])->values()->all();
 
-        return EmailTable::render(['Ticket', 'Subject', 'Type', 'Raised by', 'Days open'], $rows, [4]);
+        return EmailTable::render(['Ticket', 'Subject', 'Type', 'Requester', 'Days open'], $rows, [4]);
     }
 
-    /** Cases somebody holds — the extra column is who, so the team can see where each sits. */
+    /** Cases somebody holds — the assignee column is why: this is the team's board, not one queue. */
     private function workingTable(Collection $tickets): string
     {
         $rows = $tickets->map(fn (Ticket $t) => [
@@ -94,7 +94,7 @@ class TicketDigestService
             (string) $this->daysOpen($t),
         ])->values()->all();
 
-        return EmailTable::render(['Ticket', 'Subject', 'Type', 'With', 'Days open'], $rows, [4]);
+        return EmailTable::render(['Ticket', 'Subject', 'Type', 'Assignee', 'Days open'], $rows, [4]);
     }
 
     /** Whole days since the case was raised. */

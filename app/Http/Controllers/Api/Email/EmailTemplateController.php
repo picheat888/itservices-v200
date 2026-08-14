@@ -270,7 +270,7 @@ class EmailTemplateController extends Controller
                 [3],
             ),
             'digest.open_table' => EmailTable::render(
-                ['Ticket', 'Subject', 'Type', 'Raised by', 'Days open'],
+                ['Ticket', 'Subject', 'Type', 'Requester', 'Days open'],
                 [
                     [EmailTable::link('#', 'TKT-2856'), 'Printer not responding', 'Hardware', 'Somchai Suksawat', '4'],
                     [EmailTable::link('#', 'TKT-2861'), 'Cannot open shared drive', 'Network', 'Manee Jaidee', '2'],
@@ -278,7 +278,7 @@ class EmailTemplateController extends Controller
                 [4],
             ),
             'digest.working_table' => EmailTable::render(
-                ['Ticket', 'Subject', 'Type', 'With', 'Days open'],
+                ['Ticket', 'Subject', 'Type', 'Assignee', 'Days open'],
                 [
                     [EmailTable::link('#', 'TKT-2840'), 'Email signature missing', 'Software', 'Thanapon', '7'],
                 ],
