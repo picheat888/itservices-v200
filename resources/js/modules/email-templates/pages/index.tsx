@@ -49,6 +49,11 @@ const SAMPLE_VARS: Record<string, string> = {
     'reference.id': 'REF-0001',
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
+    'digest.count': '2',
+    // Placeholder only. The body preview is rendered by the API (EmailTemplateController's
+    // own sample vars), which holds the real example table; this map drives the variable
+    // chips and the subject line above the preview frame.
+    'digest.table': '',
 };
 
 // Short notes for the "magic" placeholders that aren't a simple field — shown
@@ -56,6 +61,7 @@ const SAMPLE_VARS: Record<string, string> = {
 const VAR_NOTE: Record<string, { en: string; th: string }> = {
     items: { en: 'auto-generated list', th: 'ลิสต์อัตโนมัติ' },
     count: { en: 'number', th: 'จำนวน' },
+    'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
 };
 
 // Badge per cadence. Blue = sent the moment the event happens; amber = sent by a
