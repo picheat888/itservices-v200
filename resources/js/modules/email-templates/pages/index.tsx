@@ -23,6 +23,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 // Sample values used to render {{variables}} in the preview / test drawer.
+//
+// Must list every variable the standard templates use — the chips below are the only place
+// an author finds out a variable exists, so one missing here is a variable nobody inserts.
+// EmailTemplateController::sampleVars() is the matching map on the server.
 const SAMPLE_VARS: Record<string, string> = {
     'user.first_name': 'Thanapon',
     'user.email': 'thanapon@abcd.co.th',
@@ -35,10 +39,19 @@ const SAMPLE_VARS: Record<string, string> = {
     'ticket.category': 'Hardware',
     'ticket.details': 'The printer on the 3rd floor shows a paper jam error.',
     'ticket.requester': 'Somchai Suksawat',
+    'from.name': 'Anong Wattana',
     'contract.vendor': 'Acme Co.',
+    'contract.name': 'Annual support',
+    'contract.code': 'CT-2026-014',
     'contract.days_remaining': '30',
     'contract.days_overdue': '5',
+    'contract.end_date': '31 Dec 2026',
     'reference.id': 'REF-0001',
+    'request.title': 'Request: Mail group',
+    'requester.name': 'Manee Jaidee',
+    'actor.name': 'Anong Wattana',
+    'step.label': 'Department manager',
+    remark: 'The licence is not available on the current agreement.',
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
     'digest.count': '2',
@@ -47,8 +60,9 @@ const SAMPLE_VARS: Record<string, string> = {
     // Overridden with the real brand where it is rendered; this is the chip-list entry.
     'app.name': 'IT Service Desk',
     // Placeholders only. The body preview is rendered by the API (EmailTemplateController's
-    // own sample vars), which holds the real example tables; this map drives the variable
-    // chips and the subject line above the preview frame.
+    // own sample vars), which holds the real example lists and tables; this map drives the
+    // variable chips and the subject line above the preview frame.
+    items: '',
     'digest.table': '',
     'digest.open_table': '',
     'digest.working_table': '',

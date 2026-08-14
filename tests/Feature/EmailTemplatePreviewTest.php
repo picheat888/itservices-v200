@@ -41,6 +41,34 @@ class EmailTemplatePreviewTest extends TestCase
         $this->assertStringNotContainsString('{{count}}', $html);
     }
 
+    /**
+     * Every variable any standard template uses has a sample value.
+     *
+     * The sample data lives beside the controller, the variables live in the catalog, and
+     * adding one to a template without the other shows the administrator a raw
+     * {{ticket.requester}} where the recipient will see a name — which is exactly what
+     * happened when the new-case mail started naming who raised the case.
+     */
+    public function test_no_standard_template_previews_with_an_unfilled_variable(): void
+    {
+        Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
+        $admin = User::factory()->create(['role' => 'super']);
+
+        foreach (EmailTemplate::all() as $template) {
+            $html = $this->actingAs($admin)
+                ->get("/api/email-templates/{$template->id}/preview")
+                ->assertOk()
+                ->getContent();
+
+            preg_match_all('/\{\{\s*([\w.]+)\s*\}\}/', $html, $matches);
+            $this->assertSame(
+                [],
+                array_unique($matches[1]),
+                "Template {$template->key} previews with variables that have no sample value.",
+            );
+        }
+    }
+
     public function test_render_preview_renders_unsaved_draft_content(): void
     {
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
