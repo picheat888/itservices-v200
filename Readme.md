@@ -2253,3 +2253,7 @@ migration เติมคีย์ใหม่ให้ทุก role ที่�
 เขียนเทสต์ไล่**ทุกเทมเพลตมาตรฐาน** ยิง endpoint พรีวิวจริงแล้วหา `{{...}}` ที่เหลือค้าง — เจอว่าขาด **7 ตัว ไม่ใช่ตัวเดียว**: `from.name` (ticket.forwarded) · `contract.end_date` · `request.title` · `requester.name` · `actor.name` · `step.label` · `remark` ⇒ เทมเพลตกลุ่มคำขอกับสัญญาโชว์ตัวแปรดิบมาตั้งแต่ต้น เติมครบทั้ง 2 ฝั่ง (controller + chip list หน้าเว็บ ซึ่งขาด `items` ด้วย แปลว่า stock template แทรกตัวแปรนี้จากเมนูไม่ได้เลย)
 
 **ยืนยันด้วยการถอด `ticket.requester` ออกแล้วเห็นแดงก่อนคืนกลับ** · Email/Ticket/Request suites 302 passed
+
+### ลิงก์ในอีเมลพาไปแท็บด้วย ไม่ใช่แค่เปิด drawer (2026-08-14)
+
+`?view=15` เปิด drawer ได้ก็จริง แต่พอปิด drawer คนอ่านจะค้างอยู่บนแท็บ default ของ role ตัวเอง (ส่วนใหญ่คือ Dashboard) ไม่ใช่รายการที่เคสนั้นอยู่ ⇒ เปลี่ยนเป็น `?tab=all&view=15` ทั้ง 4 จุดที่ประกอบ URL ฝั่ง server: อีเมลเคสใหม่ · ทุกแถวในสรุปรายสัปดาห์ · ปุ่มท้ายสรุป (`?tab=all`) · อีเมลเตือน SLA breach
