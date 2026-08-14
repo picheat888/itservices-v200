@@ -34,7 +34,9 @@ class ApiAuthorizationTest extends TestCase
             'create stock item' => ['post', '/api/stock-items', 'stock.manage_items'],
             'create role' => ['post', '/api/roles', 'system.manage_roles'],
             'create group role' => ['post', '/api/group-roles', 'system.manage_groups'],
-            'create email template' => ['post', '/api/email-templates', 'system.configure_notifications'],
+            // Email templates have no create endpoint: they arrive with the code that sends
+            // them, so the gated write here is the edit.
+            'edit email template' => ['put', '/api/email-templates/1', 'system.configure_notifications'],
         ];
     }
 

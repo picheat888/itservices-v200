@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { emailTemplateApi, type CreateEmailTemplatePayload, type EmailLogParams, type EmailTemplatePayload } from '../api/emailTemplateApi';
+import { emailTemplateApi, type EmailLogParams, type EmailTemplatePayload } from '../api/emailTemplateApi';
 
 const KEY = ['email-templates'] as const;
 
@@ -23,10 +23,6 @@ export function useEmailTemplateMutations() {
     return {
         update: useMutation({
             mutationFn: (v: { id: number; payload: EmailTemplatePayload }) => emailTemplateApi.update(v.id, v.payload),
-            onSuccess: invalidate,
-        }),
-        create: useMutation({
-            mutationFn: (payload: CreateEmailTemplatePayload) => emailTemplateApi.create(payload),
             onSuccess: invalidate,
         }),
         test: useMutation({
