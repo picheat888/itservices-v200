@@ -60,7 +60,7 @@ class TicketDigestService
                 'digest.open_table' => $this->openTable($open),
                 'digest.working_count' => (string) $working->count(),
                 'digest.working_table' => $this->workingTable($working),
-            ], rtrim((string) config('app.url'), '/').'/tickets', 'Open the case list', $user->name);
+            ], rtrim((string) config('app.url'), '/').'/tickets?tab=all', 'Open the case list', $user->name);
 
             $sent['recipients']++;
             $sent['tickets'] += $mine->count();
@@ -103,8 +103,13 @@ class TicketDigestService
         return (int) ($ticket->created_at?->diffInDays(now()) ?? 0);
     }
 
+    /**
+     * Where a row goes when clicked: the All tab with the case open. The tab matters —
+     * without it the drawer still opens, but closing it drops the reader on whatever tab
+     * their role lands on by default rather than the list they were reading.
+     */
     private function ticketUrl(Ticket $ticket): string
     {
-        return rtrim((string) config('app.url'), '/')."/tickets?view={$ticket->id}";
+        return rtrim((string) config('app.url'), '/')."/tickets?tab=all&view={$ticket->id}";
     }
 }

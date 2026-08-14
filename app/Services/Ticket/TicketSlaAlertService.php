@@ -83,7 +83,7 @@ class TicketSlaAlertService
                     'ticket.id' => $ticket->ticket_no,
                     'ticket.subject' => $ticket->subject,
                     'reference.id' => $ticket->ticket_no,
-                ], url("/tickets?view={$ticket->id}"), 'Open ticket', $user->name);
+                ], url("/tickets?tab=all&view={$ticket->id}"), 'Open ticket', $user->name);
             }
         }
     }

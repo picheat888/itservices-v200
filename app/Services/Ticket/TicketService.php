@@ -64,7 +64,10 @@ class TicketService
                 'ticket.new_case',
                 $taker->email,
                 ['user.first_name' => strtok((string) $taker->name, ' ')] + $this->staffVars($ticket),
-                url("/tickets?view={$ticket->id}"),
+                // ?tab=all as well as ?view=: the drawer opens either way, but closing it
+                // on the default tab leaves the reader looking at the dashboard instead of
+                // the case they just came from.
+                url("/tickets?tab=all&view={$ticket->id}"),
                 'Open the case',
                 $taker->name,
             );

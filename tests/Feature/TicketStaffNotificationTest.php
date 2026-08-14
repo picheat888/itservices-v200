@@ -96,6 +96,9 @@ class TicketStaffNotificationTest extends TestCase
         $this->assertSame($taker->email, $jobs[0]->toEmail);
         $this->assertStringContainsString('VPN client will not authenticate', $jobs[0]->html);
         $this->assertStringContainsString('Requester', $jobs[0]->html);
+        // The tab travels with the link: ?view= alone opens the case, but closing it would
+        // drop the reader on the dashboard rather than the list the case came from.
+        $this->assertStringContainsString('/tickets?tab=all&view=', (string) $jobs[0]->actionUrl);
     }
 
     public function test_a_new_case_skips_staff_without_the_matching_level(): void
@@ -167,6 +170,7 @@ class TicketStaffNotificationTest extends TestCase
         $this->assertStringContainsString('Somebody is on this', $mine->html);
         // Team-wide, so a case in a colleague's hands has to name them.
         $this->assertStringContainsString('Holder', $mine->html);
+        $this->assertStringContainsString('tab=all&amp;view=', $mine->html, 'each row links to the case on the All tab');
         $this->assertStringNotContainsString('Already finished', $mine->html);
         $this->assertStringNotContainsString('Different level', $mine->html);
     }
