@@ -395,15 +395,20 @@ class RequestNotificationService
 
                 return [
                     EmailTable::link($this->requestUrl($request), $request->reference),
-                    e($request->title),
-                    e($request->requester_name ?? '-'),
+                    EmailTable::text((string) $request->title),
+                    EmailTable::text((string) ($request->requester_name ?? '-'), 32),
                     (string) $item['days'],
                 ];
             })
             ->values()
             ->all();
 
-        return EmailTable::render(['Reference', 'Request', 'Requested by', 'Days waiting'], $rows, [3]);
+        return EmailTable::render(
+            ['Reference', 'Request', 'Requested by', 'Days waiting'],
+            $rows,
+            [3],
+            ['18%', '40%', '26%', '16%'],
+        );
     }
 
     /** Absolute SPA deep link to one request. The SPA gates it behind login. */

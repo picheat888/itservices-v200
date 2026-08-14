@@ -47,7 +47,7 @@
            inline styles + table attributes so it stays intact there too. */
         body { margin: 0; padding: 0; width: 100% !important; }
         a { text-decoration: none; }
-        @media only screen and (max-width: 620px) {
+        @media only screen and (max-width: 700px) {
             .container { width: 100% !important; }
             .px { padding-left: 22px !important; padding-right: 22px !important; }
         }
@@ -61,8 +61,11 @@
         <tr>
             <td align="center" style="padding:32px 12px;">
 
-                <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-                <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                {{-- 680 rather than the usual 600: the digest emails carry 5-column tables,
+                     and at 600 the ticket number and the column headings broke across two
+                     lines. Still inside the ~700px an Outlook reading pane gives you. --}}
+                <!--[if mso]><table role="presentation" width="680" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+                <table role="presentation" class="container" width="680" cellpadding="0" cellspacing="0" border="0" style="width:680px;max-width:680px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
                     {{-- Brand header --}}
                     <tr>
