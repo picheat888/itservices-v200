@@ -251,6 +251,26 @@ class EmailTemplateController extends Controller
             'reference.id' => 'REF-0001',
             'employee.name' => 'Somchai Suksawat',
             'employee.code' => 'EMP-1042',
+            'digest.count' => 2,
+            // The weekly digest builds its rows in PHP, so the preview needs a stand-in.
+            // Without one an administrator rewording the mail sees a literal
+            // {{digest.table}} and cannot tell what they are writing around.
+            'digest.table' => '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:12px 0;">'
+                .'<thead><tr>'
+                .'<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;color:#64748b;text-align:left;">Reference</th>'
+                .'<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;color:#64748b;text-align:left;">Request</th>'
+                .'<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;color:#64748b;text-align:left;">Requested by</th>'
+                .'<th style="padding:8px 10px;border-bottom:2px solid #cbd5e1;font-size:12px;color:#64748b;text-align:right;">Days waiting</th>'
+                .'</tr></thead><tbody>'
+                .'<tr><td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;"><a href="#" style="color:#2563eb;font-weight:600;text-decoration:none;">RQ-2026-0018</a></td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;">Request: Mail group</td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;">Somchai Suksawat</td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;text-align:right;font-weight:600;">14</td></tr>'
+                .'<tr><td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;"><a href="#" style="color:#2563eb;font-weight:600;text-decoration:none;">RQ-2026-0021</a></td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;">Request: Computer</td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;">Manee Jaidee</td>'
+                .'<td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:14px;text-align:right;font-weight:600;">9</td></tr>'
+                .'</tbody></table>',
         ];
     }
 }
