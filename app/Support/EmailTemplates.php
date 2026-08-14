@@ -54,7 +54,7 @@ You can track progress in {{app.name}}.</p>
                 'name' => 'New case waiting to be taken',
                 'subject' => 'New ticket {{ticket.id}} is waiting to be taken',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A new case has been raised and nobody has taken it yet.</p>
+<p>A new case has been created and is waiting for support</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
 <strong style="color:#64748b">Requester:</strong> {{ticket.requester}}<br>
