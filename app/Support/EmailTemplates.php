@@ -27,9 +27,12 @@ class EmailTemplates
                 'key' => 'ticket.created',
                 'name' => 'Ticket created',
                 'subject' => 'Your ticket {{ticket.id}} has been created',
+                // Ticket templates say {{ticket.id}} throughout. reference.id carries the same
+                // ticket number, and offering an editor two names for one value invited them
+                // to be used as if they were different things.
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -39,7 +42,7 @@ class EmailTemplates
                 'subject' => 'Ticket {{ticket.id}} has been assigned',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -49,7 +52,7 @@ class EmailTemplates
                 'subject' => 'Ticket {{ticket.id}} was forwarded to you',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in the IT portal.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -59,7 +62,7 @@ class EmailTemplates
                 'subject' => 'Ticket {{ticket.id}} has been resolved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team. You can track progress in the IT portal.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -69,7 +72,7 @@ class EmailTemplates
                 'subject' => 'Ticket {{ticket.id}} has breached its SLA',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} has passed its SLA target and needs attention.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
