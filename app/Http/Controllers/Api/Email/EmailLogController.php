@@ -64,8 +64,11 @@ class EmailLogController extends Controller
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
             'logoData' => $service->brandLogoDataUri(),
-            // Renders the call-to-action inert: this is a record, not a live email.
-            'preview' => true,
+            // NOT preview mode. This is a record of a real send, and the preview flag swaps
+            // the footnote for "Sample only - in a real email this opens the portal", which
+            // is a sentence the recipient never saw. The screen shows it inside a sandboxed
+            // frame instead, so the link is inert without the wording having to lie.
+            'preview' => false,
         ])->render();
     }
 
