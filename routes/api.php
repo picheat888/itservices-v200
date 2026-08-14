@@ -104,6 +104,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('email-templates/render-preview', [EmailTemplateController::class, 'renderPreview'])->name('api.email-templates.render-preview');
     Route::post('email-templates/reset-all', [EmailTemplateController::class, 'resetAll'])->name('api.email-templates.reset-all');
     Route::get('email-logs', [EmailLogController::class, 'index'])->name('api.email-logs.index');
+    Route::get('email-logs/{emailLog}', [EmailLogController::class, 'show'])->name('api.email-logs.show');
     Route::post('email-templates/{emailTemplate}/reset', [EmailTemplateController::class, 'reset'])->name('api.email-templates.reset');
 
     // Employee module

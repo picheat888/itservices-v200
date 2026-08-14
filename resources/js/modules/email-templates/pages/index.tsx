@@ -1,10 +1,13 @@
 import { useT } from '@/lang';
 import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
-import { useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
+import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
+import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -712,8 +715,79 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
  * answer anywhere. Paginated server-side; the table grows by a row per email and is never
  * pruned, so it must never be fetched whole.
  */
+/**
+ * One log entry: who it went to, what it said, and the email itself rebuilt as it was
+ * received. Older rows carry no body — they were written before sent messages were kept —
+ * and say so rather than showing an empty frame.
+ */
+function DeliveryLogDrawer({ logId, onClose }: { logId: number | null; onClose: () => void }) {
+    const t = useT();
+    const { data } = useEmailLog(logId);
+    const { record: log } = useRecordView(logId, data);
+
+    if (!log) return null;
+
+    const meta = LOG_STATUS_META[log.status];
+
+    return (
+        <Dialog open={logId != null} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent className="!flex max-h-[min(860px,calc(100vh-72px))] max-w-[820px] flex-col gap-0 overflow-hidden p-0">
+                <FocusDialogHeader
+                    icon={Mail}
+                    eyebrow={log.template_key ?? '—'}
+                    title={log.subject}
+                    srDescription={t('email_log_sub')}
+                    subtitle={
+                        <span className="text-muted-foreground text-xs">
+                            {formatDateTime(log.created_at)}
+                            {' · '}
+                            {log.recipient_name
+                                ? `${log.recipient_name} (${log.to_email ?? t('email_log_no_address')})`
+                                : (log.to_email ?? t('email_log_no_address'))}
+                        </span>
+                    }
+                    headerRight={<StatusBadge tone={meta.tone}>{t(meta.labelKey)}</StatusBadge>}
+                />
+
+                <div className="border-border/60 flex-1 space-y-4 overflow-y-auto border-t p-6">
+                    {/* Only failures have something to explain; a delivered email would just
+                        get a row of em dashes. */}
+                    {log.error && (
+                        <div className="bg-muted/40 border-border rounded-xl border px-4 py-3">
+                            <div className="text-muted-foreground text-xs font-medium tracking-wide uppercase">{t('email_log_reason')}</div>
+                            <div className="mt-1 text-sm">{log.error}</div>
+                        </div>
+                    )}
+
+                    <div>
+                        <SectionLabel>{t('email_log_content')}</SectionLabel>
+                        {log.preview_html ? (
+                            <iframe
+                                title={t('email_log_content')}
+                                srcDoc={log.preview_html}
+                                className="border-border block h-[420px] w-full rounded-xl border bg-white"
+                            />
+                        ) : (
+                            <div className="border-border text-muted-foreground rounded-xl border border-dashed px-4 py-10 text-center text-sm">
+                                {t('email_log_no_content')}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="border-border/60 bg-muted/30 flex items-center justify-end border-t px-6 py-3.5">
+                    <Button variant="outline" onClick={onClose}>
+                        {t('close')}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function DeliveryLogPane() {
     const t = useT();
+    const [viewing, setViewing] = useState<number | null>(null);
     const [status, setStatus] = useState<EmailLogStatus | ''>('');
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
@@ -747,19 +821,20 @@ function DeliveryLogPane() {
         },
         {
             key: 'template',
-            header: t('email_log_template'),
-            className: 'w-[22%] max-w-0',
-            render: (r) => (
-                <div className="min-w-0">
-                    <div className="truncate font-mono text-[11px]">{r.template_key ?? '—'}</div>
-                    <div className="text-muted-foreground mt-0.5 truncate text-xs">{r.subject}</div>
-                </div>
-            ),
+            header: t('email_trigger'),
+            className: 'w-[16%] max-w-0',
+            render: (r) => <span className="block truncate font-mono text-[11px]">{r.template_key ?? '—'}</span>,
+        },
+        {
+            key: 'subject',
+            header: t('email_subject'),
+            className: 'w-[24%] max-w-0',
+            render: (r) => <span className="block truncate text-xs">{r.subject}</span>,
         },
         {
             key: 'recipient',
             header: t('email_log_recipient'),
-            className: 'w-[23%] max-w-0',
+            className: 'w-[19%] max-w-0',
             // Name first when there is one — a skipped row has no address, so the name is
             // all that says who was left out. With no name (rows written before the column
             // existed) the address becomes the main line rather than sitting under a dash,
@@ -777,13 +852,13 @@ function DeliveryLogPane() {
         {
             key: 'status',
             header: t('status'),
-            className: 'w-[12%]',
+            className: 'w-[11%]',
             render: (r) => <StatusBadge tone={LOG_STATUS_META[r.status].tone}>{t(LOG_STATUS_META[r.status].labelKey)}</StatusBadge>,
         },
         {
             key: 'error',
             header: t('email_log_reason'),
-            className: 'w-[28%] max-w-0',
+            className: 'w-[15%] max-w-0',
             render: (r) => <span className="text-muted-foreground block truncate text-xs">{r.error ?? '—'}</span>,
         },
     ];
@@ -822,7 +897,8 @@ function DeliveryLogPane() {
                 rows={rows}
                 rowKey={(r) => r.id}
                 loading={isLoading || isFetching}
-                rowHeight={52}
+                rowHeight={44}
+                onRowClick={(r) => setViewing(r.id)}
                 server={{
                     page,
                     pageSize: perPage,
@@ -832,6 +908,8 @@ function DeliveryLogPane() {
                 }}
                 emptyState={<div className="text-muted-foreground py-10 text-center text-sm">{t('email_log_empty')}</div>}
             />
+
+            <DeliveryLogDrawer logId={viewing} onClose={() => setViewing(null)} />
         </div>
     );
 }

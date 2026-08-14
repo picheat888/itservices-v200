@@ -60,6 +60,15 @@ export interface EmailLogListResponse {
     };
 }
 
+/**
+ * One log entry with the email rebuilt as it was received. `preview_html` is null for rows
+ * written before sent bodies were kept.
+ */
+export interface EmailLogDetail extends Omit<EmailLogRow, 'template_key'> {
+    template_key: string | null;
+    preview_html: string | null;
+}
+
 export interface EmailLogParams {
     page: number;
     per_page: number;
@@ -71,6 +80,8 @@ export const emailTemplateApi = {
     list: (): Promise<EmailTemplateListResponse> => http.get<EmailTemplateListResponse>('/email-templates').then((r) => r.data),
 
     logs: (params: EmailLogParams): Promise<EmailLogListResponse> => http.get<EmailLogListResponse>('/email-logs', { params }).then((r) => r.data),
+
+    log: (id: number): Promise<EmailLogDetail> => http.get<{ data: EmailLogDetail }>(`/email-logs/${id}`).then((r) => r.data.data),
 
     update: async (id: number, payload: EmailTemplatePayload) => {
         await ensureCsrf();

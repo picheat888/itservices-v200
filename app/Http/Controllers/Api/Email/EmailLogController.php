@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Email;
 
 use App\Http\Controllers\Controller;
 use App\Models\Email\EmailLog;
+use App\Models\Settings\AppSetting;
+use App\Services\Email\EmailNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +23,50 @@ class EmailLogController extends Controller
     private function gate(Request $request): void
     {
         abort_unless((bool) $request->user()?->hasPermission('system.configure_notifications'), 403);
+    }
+
+    /**
+     * One log entry with the email rebuilt as it was received: the stored message put back
+     * inside the branded layout, which is the same on every send and therefore not stored.
+     *
+     * `preview_html` is null for rows written before bodies were kept — the screen says the
+     * content was not recorded rather than showing an empty frame.
+     */
+    public function show(Request $request, EmailLog $emailLog): JsonResponse
+    {
+        $this->gate($request);
+
+        return response()->json([
+            'data' => [
+                'id' => $emailLog->id,
+                'template_key' => $emailLog->template_key,
+                'to_email' => $emailLog->to_email,
+                'recipient_name' => $emailLog->recipient_name,
+                'subject' => $emailLog->subject,
+                'status' => $emailLog->status,
+                'error' => $emailLog->error,
+                'created_at' => $emailLog->created_at?->toIso8601String(),
+                'preview_html' => $emailLog->body_html === null ? null : $this->renderSentEmail($emailLog),
+            ],
+        ]);
+    }
+
+    /** Wraps a stored message in the same layout the mailer sends it in. */
+    private function renderSentEmail(EmailLog $log): string
+    {
+        $service = app(EmailNotificationService::class);
+
+        return view('emails.templated', [
+            'subjectLine' => $log->subject,
+            'bodyHtml' => $log->body_html,
+            'eyebrow' => $log->template_key,
+            'actionUrl' => rtrim((string) config('app.url'), '/').'/',
+            'actionLabel' => 'Open in portal',
+            'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
+            'logoData' => $service->brandLogoDataUri(),
+            // Renders the call-to-action inert: this is a record, not a live email.
+            'preview' => true,
+        ])->render();
     }
 
     /**

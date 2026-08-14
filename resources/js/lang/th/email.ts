@@ -32,6 +32,8 @@ export const email: Dict = {
     email_log_skipped: 'ไม่มีอีเมล',
     email_log_no_address: 'ไม่มีที่อยู่อีเมล',
     email_log_empty: 'ยังไม่มีประวัติการส่ง',
+    email_log_content: 'เนื้อหาอีเมล',
+    email_log_no_content: 'ไม่ได้เก็บเนื้อหาไว้ สำหรับรายการที่ส่งก่อนเริ่มบันทึก',
     email_preview: 'ตัวอย่าง',
     email_insert_var: 'แทรกตัวแปร',
     email_variables: 'ตัวแปรที่ใช้ได้',

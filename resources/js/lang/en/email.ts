@@ -32,6 +32,8 @@ export const email: Dict = {
     email_log_skipped: 'No address',
     email_log_no_address: 'no email address',
     email_log_empty: 'Nothing sent yet',
+    email_log_content: 'The email',
+    email_log_no_content: 'The message was not kept for sends from before this was recorded.',
     email_preview: 'Preview',
     email_insert_var: 'Insert variable',
     email_variables: 'Available variables',
