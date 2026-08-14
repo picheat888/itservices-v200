@@ -37,10 +37,11 @@ class EmailTemplates
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>We\'ve received your ticket and assigned it to our team.<br>
 You can track progress in {{app.name}}.</p>
-<p><span style="color:#64748b">Ticket No.:</span> <strong>{{ticket.id}}</strong><br>
-<span style="color:#64748b">Subject:</span> {{ticket.subject}}<br>
-<span style="color:#64748b">Issue type:</span> {{ticket.category}}<br>
-<span style="color:#64748b">Details:</span> {{ticket.details}}</p>',
+<br>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
