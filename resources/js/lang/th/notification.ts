@@ -1,7 +1,7 @@
 import type { Dict } from '@/lang/types';
 
 export const notification: Dict = {
-    notifications: 'Email',
+    notifications: 'Email & Notification',
     notif_title: 'การแจ้งเตือน',
     notif_all: 'ทั้งหมด',
     notif_mark_all: 'อ่านทั้งหมด',
