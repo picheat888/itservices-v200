@@ -32,6 +32,8 @@ const SAMPLE_VARS: Record<string, string> = {
     'stock.qty': '2',
     'ticket.id': 'TKT-2856',
     'ticket.subject': 'Printer not responding',
+    'ticket.category': 'Hardware',
+    'ticket.details': 'The printer on the 3rd floor shows a paper jam error.',
     'contract.vendor': 'Acme Co.',
     'contract.days_remaining': '30',
     'contract.days_overdue': '5',

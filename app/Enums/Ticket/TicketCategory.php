@@ -10,6 +10,17 @@ enum TicketCategory: string
     case Network = 'network';
     case Other = 'other';
 
+    /** English label for places that render outside the SPA's translations, such as emails. */
+    public function label(): string
+    {
+        return match ($this) {
+            self::Hardware => 'Hardware',
+            self::Software => 'Software',
+            self::Network => 'Network',
+            self::Other => 'Other',
+        };
+    }
+
     /** Short code used inside the ticket number (e.g. TKT-SW-YYMMDD-NNN). */
     public function shortCode(): string
     {

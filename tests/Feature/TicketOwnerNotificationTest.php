@@ -173,6 +173,43 @@ class TicketOwnerNotificationTest extends TestCase
         Queue::assertPushed(SendTemplatedEmail::class, fn ($job) => $job->toEmail === $requester->email && $job->templateKey === 'ticket.created');
     }
 
+    /**
+     * The receipt repeats what was filed, and the description arrives as HTML the requester
+     * did not write: it is escaped, and its line breaks survive.
+     */
+    public function test_the_confirmation_carries_the_subject_type_and_details(): void
+    {
+        Queue::fake();
+        EmailTemplate::updateOrCreate(
+            ['key' => 'ticket.created'],
+            [
+                'name' => 'Ticket created',
+                'subject' => 'Ticket {{ticket.id}}',
+                'body_html' => '<p>{{ticket.subject}} | {{ticket.category}} | {{ticket.details}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+        );
+        $requester = $this->userWithEmployee('super', 'Requester');
+
+        $this->actingAs($requester)->postJson('/api/tickets', [
+            'subject' => 'Cannot connect to production VPN',
+            'description' => "First line <b>bold</b>\nSecond line",
+            'category' => 'network',
+            'callback_phone' => '+66 81 234 5678',
+        ])->assertCreated();
+
+        Queue::assertPushed(SendTemplatedEmail::class, function (SendTemplatedEmail $job) {
+            return str_contains($job->html, 'Cannot connect to production VPN')
+                && str_contains($job->html, 'Network')
+                // Escaped, not rendered as markup, and the newline became a <br>.
+                && str_contains($job->html, '&lt;b&gt;bold&lt;/b&gt;')
+                && str_contains($job->html, 'First line')
+                && str_contains($job->html, '<br />')
+                && ! str_contains($job->html, '<b>bold</b>');
+        });
+    }
+
     public function test_an_owner_without_a_login_account_breaks_nothing(): void
     {
         Notification::fake();
