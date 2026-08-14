@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Email;
 
 use App\Http\Controllers\Controller;
 use App\Models\Email\EmailLog;
+use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Services\Email\EmailNotificationService;
 use Illuminate\Http\JsonResponse;
@@ -56,10 +57,15 @@ class EmailLogController extends Controller
     {
         $service = app(EmailNotificationService::class);
 
+        // The eyebrow under the brand is the template's NAME in a real send, not its key —
+        // "Request awaiting your approval", not request.approval_needed. Resolved live like
+        // the rest of the frame; a template that has since been deleted falls back to the key.
+        $eyebrow = EmailTemplate::where('key', $log->template_key)->value('name') ?? $log->template_key;
+
         return view('emails.templated', [
             'subjectLine' => $log->subject,
             'bodyHtml' => $log->body_html,
-            'eyebrow' => $log->template_key,
+            'eyebrow' => $eyebrow,
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),

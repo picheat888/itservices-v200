@@ -158,6 +158,7 @@ class EmailDeliveryLogTest extends TestCase
     public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
     {
         $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->template();
 
         $log = EmailLog::create([
             'template_key' => 'test.template',
@@ -175,6 +176,10 @@ class EmailDeliveryLogTest extends TestCase
         $this->assertStringContainsString('Signed, the IT team', $html);
         $this->assertStringContainsString('<!doctype html>', strtolower($html));
         $this->assertSame('Manee Jaidee', $response->json('data.recipient_name'));
+        // The label under the brand is the template's name, the way a real send shows it —
+        // not the trigger key, which is plumbing.
+        $this->assertStringContainsString('Test template', $html);
+        $this->assertStringNotContainsString('test.template', $html);
     }
 
     /** Rows written before bodies were kept say so instead of rendering an empty frame. */
