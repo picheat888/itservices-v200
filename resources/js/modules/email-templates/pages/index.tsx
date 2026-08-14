@@ -4,7 +4,6 @@ import { useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/mo
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { Field } from '@/shared/components/field';
-import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { formatDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
@@ -15,24 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/di
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import {
-    Bold,
-    Check,
-    CornerDownLeft,
-    Eye,
-    Italic,
-    Link2,
-    List,
-    Loader2,
-    Mail,
-    MoreVertical,
-    PenLine,
-    Pilcrow,
-    RotateCcw,
-    Save,
-    Search,
-    Send,
-} from 'lucide-react';
+import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, PenLine, Pilcrow, RotateCcw, Save, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -273,6 +255,85 @@ export default function EmailTemplatesPage() {
 
     const toggle = (tp: EmailTemplate) => update.mutate({ id: tp.id, payload: { enabled: !tp.enabled } });
 
+    const templateColumns: Column<EmailTemplate>[] = [
+        {
+            key: 'code',
+            header: 'ID',
+            className: 'w-[8%]',
+            render: (tp) => <span className="text-muted-foreground font-mono text-xs">{tp.code}</span>,
+        },
+        {
+            key: 'name',
+            header: t('email_template'),
+            className: 'w-[28%] max-w-0',
+            render: (tp) => (
+                <span className="flex items-center gap-2">
+                    <span className="truncate font-medium">{tp.name}</span>
+                    {tp.is_modified && (
+                        <span className="shrink-0 rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
+                            {t('email_modified')}
+                        </span>
+                    )}
+                </span>
+            ),
+        },
+        {
+            key: 'key',
+            header: t('email_trigger'),
+            className: 'w-[24%]',
+            render: (tp) => <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>,
+        },
+        {
+            key: 'cadence',
+            header: t('email_type'),
+            className: 'w-[12%]',
+            render: (tp) => (
+                <span className={cn('rounded-md px-2 py-0.5 text-[11px] font-semibold', CADENCE_META[tp.cadence].badge)}>
+                    {t(CADENCE_META[tp.cadence].labelKey)}
+                </span>
+            ),
+        },
+        {
+            key: 'last_sent',
+            header: t('email_last_sent'),
+            className: 'w-[14%]',
+            render: (tp) => (
+                <span className="text-muted-foreground font-mono text-xs">{relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}</span>
+            ),
+        },
+        {
+            key: 'enabled',
+            header: t('email_enabled'),
+            className: 'w-[8%]',
+            // The switch lives inside a clickable row, so it has to keep its click.
+            render: (tp) => (
+                <span onClick={(e) => e.stopPropagation()}>
+                    <Toggle on={tp.enabled} onClick={() => toggle(tp)} label={tp.name} />
+                </span>
+            ),
+        },
+        {
+            key: 'actions',
+            header: t('actions'),
+            align: 'right',
+            className: 'w-[6%]',
+            // The row opens the editor too; this is the affordance that says so.
+            render: (tp) => (
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing(tp);
+                    }}
+                    title={t('email_edit_preview')}
+                    className="hover:bg-accent text-muted-foreground inline-flex h-8 w-8 items-center justify-center rounded-md"
+                >
+                    <PenLine className="h-4 w-4" />
+                </button>
+            ),
+        },
+    ];
+
     // Whether any standard template currently differs from its standard (drives the
     // visibility of the page-level "Reset all" button).
     const anyModified = useMemo(() => templates.some((tp) => tp.is_modified), [templates]);
@@ -418,82 +479,27 @@ export default function EmailTemplatesPage() {
                             ))}
                         </div>
 
-                        {isLoading ? (
-                            <div className="p-4">
-                                <TableSkeleton rows={8} cols={6} />
-                            </div>
-                        ) : rows.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
-                                <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
-                                    <Mail className="h-6 w-6" />
-                                </span>
-                                <div className="font-medium">{t('email_empty_title')}</div>
-                                <div className="text-muted-foreground text-sm">{search || module ? t('email_empty_filtered') : t('email_empty')}</div>
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                            <th className="px-4 py-2.5">ID</th>
-                                            <th className="px-4 py-2.5">{t('email_template')}</th>
-                                            <th className="px-4 py-2.5">{t('email_trigger')}</th>
-                                            <th className="px-4 py-2.5">{t('email_type')}</th>
-                                            <th className="px-4 py-2.5">{t('email_last_sent')}</th>
-                                            <th className="px-4 py-2.5">{t('email_enabled')}</th>
-                                            <th className="px-4 py-2.5 text-right">{t('actions')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {rows.map((tp) => (
-                                            <tr key={tp.id} className="border-border/60 hover:bg-accent/40 border-b last:border-0">
-                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tp.code}</td>
-                                                <td className="px-4 py-2.5 font-medium">
-                                                    <span className="flex items-center gap-2">
-                                                        {tp.name}
-                                                        {tp.is_modified && (
-                                                            <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">
-                                                                {t('email_modified')}
-                                                            </span>
-                                                        )}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-2.5">
-                                                    <span className="bg-muted rounded-md px-2 py-0.5 font-mono text-xs">{tp.key}</span>
-                                                </td>
-                                                <td className="px-4 py-2.5">
-                                                    <span
-                                                        className={cn(
-                                                            'rounded-md px-2 py-0.5 text-[11px] font-semibold',
-                                                            CADENCE_META[tp.cadence].badge,
-                                                        )}
-                                                    >
-                                                        {t(CADENCE_META[tp.cadence].labelKey)}
-                                                    </span>
-                                                </td>
-                                                <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">
-                                                    {relativeTime(tp.last_sent_at, lang, t('email_never_sent'))}
-                                                </td>
-                                                <td className="px-4 py-2.5">
-                                                    <Toggle on={tp.enabled} onClick={() => toggle(tp)} />
-                                                </td>
-                                                <td className="px-4 py-2.5">
-                                                    <div className="flex justify-end">
-                                                        <button
-                                                            onClick={() => setEditing(tp)}
-                                                            title={t('email_edit_preview')}
-                                                            className="hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md"
-                                                        >
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                        {/* Same shared table as the Logs tab — the two halves of this page used
+                            to be a hand-rolled <table> and a DataTable side by side. */}
+                        <DataTable
+                            columns={templateColumns}
+                            rows={rows}
+                            rowKey={(tp) => tp.id}
+                            loading={isLoading}
+                            rowHeight={45}
+                            onRowClick={setEditing}
+                            emptyState={
+                                <div className="flex flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+                                    <span className="bg-muted text-muted-foreground flex h-12 w-12 items-center justify-center rounded-full">
+                                        <Mail className="h-6 w-6" />
+                                    </span>
+                                    <div className="font-medium">{t('email_empty_title')}</div>
+                                    <div className="text-muted-foreground text-sm">
+                                        {search || module ? t('email_empty_filtered') : t('email_empty')}
+                                    </div>
+                                </div>
+                            }
+                        />
                     </>
                 )}
             </Card>
