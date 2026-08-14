@@ -9,6 +9,7 @@ use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Services\Email\EmailNotificationService;
+use App\Services\Ticket\TicketDigestService;
 use App\Support\EmailTable;
 use App\Support\EmailTemplates;
 use Illuminate\Http\JsonResponse;
@@ -276,21 +277,24 @@ class EmailTemplateController extends Controller
                     [EmailTable::link('#', 'RQ-2026-0021'), 'Request: Computer', 'Manee Jaidee', '9'],
                 ],
                 [3],
+                ['18%', '40%', '26%', '16%'],
             ),
             'digest.open_table' => EmailTable::render(
-                ['Ticket', 'Subject', 'Type', 'Requester', 'Days open'],
+                TicketDigestService::HEADERS_OPEN,
                 [
                     [EmailTable::link('#', 'TKT-2856'), 'Printer not responding', 'Hardware', 'Somchai Suksawat', '4'],
                     [EmailTable::link('#', 'TKT-2861'), 'Cannot open shared drive', 'Network', 'Manee Jaidee', '2'],
                 ],
-                [4],
+                TicketDigestService::NUMERIC,
+                TicketDigestService::WIDTHS,
             ),
             'digest.working_table' => EmailTable::render(
-                ['Ticket', 'Subject', 'Type', 'Assignee', 'Days open'],
+                TicketDigestService::HEADERS_WORKING,
                 [
                     [EmailTable::link('#', 'TKT-2840'), 'Email signature missing', 'Software', 'Thanapon', '7'],
                 ],
-                [4],
+                TicketDigestService::NUMERIC,
+                TicketDigestService::WIDTHS,
             ),
         ];
     }

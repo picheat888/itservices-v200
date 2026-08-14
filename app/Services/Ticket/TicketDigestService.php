@@ -22,6 +22,20 @@ use Illuminate\Support\Collection;
  */
 class TicketDigestService
 {
+    /**
+     * The shape of both tables in the mail — shared so the two sections line up under each
+     * other, and so the preview on the Email screen is laid out by the same numbers as the
+     * mail itself. Only the fourth heading differs between them.
+     */
+    public const HEADERS_OPEN = ['Ticket', 'Subject', 'Type', 'Requester', 'Days open'];
+
+    public const HEADERS_WORKING = ['Ticket', 'Subject', 'Type', 'Assignee', 'Days open'];
+
+    public const WIDTHS = ['14%', '34%', '13%', '25%', '14%'];
+
+    /** Index of the only column holding a number. */
+    public const NUMERIC = [4];
+
     public function __construct(private readonly EmailNotificationService $email) {}
 
     /**
@@ -74,13 +88,13 @@ class TicketDigestService
     {
         $rows = $tickets->map(fn (Ticket $t) => [
             EmailTable::link($this->ticketUrl($t), (string) $t->ticket_no),
-            e((string) $t->subject),
-            e($t->category?->label() ?? '-'),
-            e((string) ($t->requester?->name ?? '-')),
+            EmailTable::text((string) $t->subject),
+            EmailTable::text($t->category?->label() ?? '-'),
+            EmailTable::text((string) ($t->requester?->name ?? '-'), 32),
             (string) $this->daysOpen($t),
         ])->values()->all();
 
-        return EmailTable::render(['Ticket', 'Subject', 'Type', 'Requester', 'Days open'], $rows, [4]);
+        return EmailTable::render(self::HEADERS_OPEN, $rows, self::NUMERIC, self::WIDTHS);
     }
 
     /** Cases somebody holds — the assignee column is why: this is the team's board, not one queue. */
@@ -88,13 +102,13 @@ class TicketDigestService
     {
         $rows = $tickets->map(fn (Ticket $t) => [
             EmailTable::link($this->ticketUrl($t), (string) $t->ticket_no),
-            e((string) $t->subject),
-            e($t->category?->label() ?? '-'),
-            e((string) ($t->assignee?->name ?? '-')),
+            EmailTable::text((string) $t->subject),
+            EmailTable::text($t->category?->label() ?? '-'),
+            EmailTable::text((string) ($t->assignee?->name ?? '-'), 32),
             (string) $this->daysOpen($t),
         ])->values()->all();
 
-        return EmailTable::render(['Ticket', 'Subject', 'Type', 'Assignee', 'Days open'], $rows, [4]);
+        return EmailTable::render(self::HEADERS_WORKING, $rows, self::NUMERIC, self::WIDTHS);
     }
 
     /** Whole days since the case was raised. */

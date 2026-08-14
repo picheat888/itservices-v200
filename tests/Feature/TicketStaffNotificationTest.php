@@ -175,6 +175,25 @@ class TicketStaffNotificationTest extends TestCase
         $this->assertStringNotContainsString('Different level', $mine->html);
     }
 
+    /**
+     * A long subject is cut, not wrapped. CSS cannot do this in a mail client, and one
+     * five-line subject turns the whole table into a wall.
+     */
+    public function test_a_long_subject_is_clipped_in_the_digest_table(): void
+    {
+        Queue::fake();
+        $this->template('ticket.weekly_digest', '{{digest.open_table}}');
+        $this->accountWith([...self::BASE, 'tickets.level_network'], 'Reader');
+        $subject = 'The VPN client refuses to authenticate for anybody in the sales office since the power cut';
+        Ticket::factory()->create(['category' => 'network', 'status' => 'open', 'subject' => $subject]);
+
+        $this->artisan('tickets:send-weekly-digest')->assertExitCode(0);
+
+        $html = $this->pushedFor('ticket.weekly_digest')[0]->html;
+        $this->assertStringNotContainsString($subject, $html);
+        $this->assertStringContainsString('The VPN client refuses to authenticate for anybody in the s…', $html);
+    }
+
     public function test_the_weekly_digest_skips_staff_who_cannot_work_any_open_case(): void
     {
         Queue::fake();
