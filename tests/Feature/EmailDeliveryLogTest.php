@@ -186,6 +186,22 @@ class EmailDeliveryLogTest extends TestCase
         $this->assertStringContainsString('Hello Manee', $log->subject);
     }
 
+    /**
+     * Two presses of Send test must not produce two identical messages: a mailbox that
+     * groups by subject files the second into the first one's conversation and hides the
+     * repeated body, which looks exactly like an email that arrived empty.
+     */
+    public function test_each_test_send_carries_a_distinguishing_stamp(): void
+    {
+        $this->actingAs($this->userWith('system.configure_notifications'));
+        $template = $this->template();
+
+        $this->postJson("/api/email-templates/{$template->id}/test")->assertOk();
+
+        $subject = EmailLog::latest('id')->first()->subject;
+        $this->assertMatchesRegularExpression('/\(test \d{2}:\d{2}\)$/', $subject);
+    }
+
     public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
     {
         $this->actingAs($this->userWith('system.configure_notifications'));
