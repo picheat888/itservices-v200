@@ -57,7 +57,7 @@ You can track progress in {{app.name}}.</p>
 <p>A new case has been raised and nobody has taken it yet.</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
-<strong style="color:#64748b">Raised by:</strong> {{ticket.requester}}<br>
+<strong style="color:#64748b">Requester:</strong> {{ticket.requester}}<br>
 <strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
 <strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
 <strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
