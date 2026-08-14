@@ -114,7 +114,8 @@ class StockNotificationService
     }
 
     /**
-     * Queue a templated email to each recipient with an address.
+     * Queue a templated email to each recipient. Whether an address exists is decided by
+     * EmailNotificationService, which logs the ones it cannot reach.
      *
      * @param  Collection<int, User>  $recipients
      * @param  array<string, mixed>  $vars
@@ -122,12 +123,9 @@ class StockNotificationService
     private function emailEach(Collection $recipients, string $templateKey, array $vars, ?string $actionUrl = null, ?string $actionLabel = null): void
     {
         foreach ($recipients as $recipient) {
-            if (! $recipient->email) {
-                continue;
-            }
             $this->email->sendTemplate($templateKey, $recipient->email, $vars + [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
-            ], $actionUrl, $actionLabel);
+            ], $actionUrl, $actionLabel, $recipient->name);
         }
     }
 
@@ -161,11 +159,9 @@ class StockNotificationService
 
         Notification::send($owner, new StockRequestNotification($request, $outcome));
 
-        if ($owner->email) {
-            $this->email->sendTemplate("stock.request_{$outcome}", $owner->email, $this->requestVars($request) + [
-                'user.first_name' => explode(' ', (string) $owner->name)[0] ?: 'there',
-            ], $this->stockUrl('requests'), 'View my request');
-        }
+        $this->email->sendTemplate("stock.request_{$outcome}", $owner->email, $this->requestVars($request) + [
+            'user.first_name' => explode(' ', (string) $owner->name)[0] ?: 'there',
+        ], $this->stockUrl('requests'), 'View my request', $owner->name);
     }
 
     /**

@@ -13,6 +13,6 @@ class EmailLog extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'template_key', 'to_email', 'subject', 'status', 'error',
+        'template_key', 'to_email', 'recipient_name', 'subject', 'status', 'error',
     ];
 }

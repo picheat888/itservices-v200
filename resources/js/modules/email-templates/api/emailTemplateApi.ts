@@ -42,8 +42,43 @@ export interface CreateEmailTemplatePayload {
     enabled?: boolean;
 }
 
+/** One attempted send. `to_email` is null when the recipient had no address to send to. */
+export interface EmailLogRow {
+    id: number;
+    template_key: string | null;
+    to_email: string | null;
+    recipient_name: string | null;
+    subject: string;
+    status: EmailLogStatus;
+    error: string | null;
+    created_at: string | null;
+}
+
+export type EmailLogStatus = 'sent' | 'failed' | 'skipped';
+
+export interface EmailLogListResponse {
+    data: EmailLogRow[];
+    meta: {
+        total: number;
+        per_page: number;
+        current_page: number;
+        last_page: number;
+        /** Counts across the whole log, not the current page. */
+        counts: Record<EmailLogStatus, number>;
+    };
+}
+
+export interface EmailLogParams {
+    page: number;
+    per_page: number;
+    status?: EmailLogStatus;
+    search?: string;
+}
+
 export const emailTemplateApi = {
     list: (): Promise<EmailTemplateListResponse> => http.get<EmailTemplateListResponse>('/email-templates').then((r) => r.data),
+
+    logs: (params: EmailLogParams): Promise<EmailLogListResponse> => http.get<EmailLogListResponse>('/email-logs', { params }).then((r) => r.data),
 
     update: async (id: number, payload: EmailTemplatePayload) => {
         await ensureCsrf();

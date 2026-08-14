@@ -66,24 +66,53 @@ class EmailNotificationService
     }
 
     /**
-     * Queues an enabled template for delivery. No-op if the template is missing
-     * or disabled. Variables fill both subject and body placeholders.
+     * Queues an enabled template for delivery, or records why it could not be sent.
+     *
+     * The address is nullable on purpose: callers used to check `if (! $user->email)` and
+     * return where they stood, seven services each dropping the message their own silent
+     * way. Whether somebody can be emailed is one decision, and it belongs here — where
+     * there is a log to write it down in. A recipient with no address produces a `skipped`
+     * row naming them, so "nobody told them" is a fact somebody can look up rather than a
+     * thing that quietly never happened.
+     *
+     * A missing or disabled template is not logged: that is the administrator's own switch,
+     * and every send would otherwise write a row saying they turned it off.
      *
      * @param  array<string, mixed>  $vars
      */
-    public function sendTemplate(string $key, string $toEmail, array $vars = [], ?string $actionUrl = null, ?string $actionLabel = null): void
-    {
+    public function sendTemplate(
+        string $key,
+        ?string $toEmail,
+        array $vars = [],
+        ?string $actionUrl = null,
+        ?string $actionLabel = null,
+        ?string $recipientName = null,
+    ): void {
         $template = EmailTemplate::where('key', $key)->where('enabled', true)->first();
 
-        if (! $template || empty($toEmail)) {
+        if (! $template) {
             return;
         }
 
         $subject = $this->render($template->subject, $vars);
+
+        if (blank($toEmail)) {
+            EmailLog::create([
+                'template_key' => $key,
+                'to_email' => null,
+                'recipient_name' => $recipientName,
+                'subject' => $subject,
+                'status' => 'skipped',
+                'error' => 'Recipient has no email address',
+            ]);
+
+            return;
+        }
+
         $html = $this->render($template->body_html, $vars);
 
         // The template name doubles as the email's "eyebrow" category label.
-        SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key, $actionUrl, $actionLabel, $template->name);
+        SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key, $actionUrl, $actionLabel, $template->name, $recipientName);
     }
 
     /** Sends a one-off test email synchronously; returns true on success. */
@@ -100,7 +129,7 @@ class EmailNotificationService
      * Core send: applies DB SMTP config, sends the mailable, logs the result,
      * and bumps the template's last_sent_at. Returns true on success.
      */
-    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null): bool
+    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null): bool
     {
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = "[{$brand}] {$subject}";
@@ -120,6 +149,7 @@ class EmailNotificationService
         EmailLog::create([
             'template_key' => $templateKey,
             'to_email' => $toEmail,
+            'recipient_name' => $recipientName,
             'subject' => $subject,
             'status' => $status,
             'error' => $error,

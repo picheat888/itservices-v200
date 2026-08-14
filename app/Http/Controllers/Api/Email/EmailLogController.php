@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Http\Controllers\Api\Email;
+
+use App\Http\Controllers\Controller;
+use App\Models\Email\EmailLog;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Read-only history of what the system tried to email.
+ *
+ * The header cards on the Email Templates screen have always counted these rows, but there
+ * was nowhere to look at them: a success rate of 94% named neither the six per cent nor the
+ * people behind it. Rows now also include sends that never left, because the recipient had
+ * no address — the case that used to disappear inside each service.
+ */
+class EmailLogController extends Controller
+{
+    /** Same gate as the templates themselves — this is the other half of that screen. */
+    private function gate(Request $request): void
+    {
+        abort_unless((bool) $request->user()?->hasPermission('system.configure_notifications'), 403);
+    }
+
+    /**
+     * Newest first, filtered by status and a search across recipient, address, subject and
+     * template key. Paginated server-side: the table grows by one row per email forever.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $this->gate($request);
+
+        $query = EmailLog::query()->latest('created_at')->latest('id');
+
+        if (in_array($status = (string) $request->query('status'), ['sent', 'failed', 'skipped'], true)) {
+            $query->where('status', $status);
+        }
+
+        if ($search = trim((string) $request->query('search'))) {
+            $query->where(function ($q) use ($search) {
+                foreach (['recipient_name', 'to_email', 'subject', 'template_key'] as $column) {
+                    $q->orWhere($column, 'like', "%{$search}%");
+                }
+            });
+        }
+
+        $perPage = max(10, min(100, (int) $request->query('per_page', 20)));
+        $paginator = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => collect($paginator->items())->map(fn (EmailLog $log) => [
+                'id' => $log->id,
+                'template_key' => $log->template_key,
+                'to_email' => $log->to_email,
+                'recipient_name' => $log->recipient_name,
+                'subject' => $log->subject,
+                'status' => $log->status,
+                'error' => $log->error,
+                'created_at' => $log->created_at?->toIso8601String(),
+            ]),
+            'meta' => [
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                // Counts for the whole log, not the page — the tab's own filter chips read
+                // these, and a count that changed with the page would be a lie.
+                'counts' => [
+                    'sent' => EmailLog::where('status', 'sent')->count(),
+                    'failed' => EmailLog::where('status', 'failed')->count(),
+                    'skipped' => EmailLog::where('status', 'skipped')->count(),
+                ],
+            ],
+        ]);
+    }
+}

@@ -304,10 +304,6 @@ class RequestNotificationService
     /** @param array<string, mixed> $extraVars */
     private function emailUser(User $recipient, string $templateKey, ServiceRequest $request, array $extraVars = []): void
     {
-        if (! $recipient->email) {
-            return;
-        }
-
         $this->email->sendTemplate($templateKey, $recipient->email, $extraVars + [
             'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
             // An approver reading this in their inbox needs to know it is a new hire
@@ -318,7 +314,7 @@ class RequestNotificationService
             'request.type' => $request->type?->label(),
             'requester.name' => $request->requester_name,
             'reference.id' => $request->reference,
-        ], $this->requestUrl($request), 'View request');
+        ], $this->requestUrl($request), 'View request', $recipient->name);
     }
 
     /**
@@ -369,7 +365,7 @@ class RequestNotificationService
      */
     public function stalledDigest(User $recipient, Collection $items): void
     {
-        if (! $recipient->email || $items->isEmpty()) {
+        if ($items->isEmpty()) {
             return;
         }
 
@@ -377,7 +373,7 @@ class RequestNotificationService
             'user.first_name' => explode(' ', (string) $recipient->name)[0] ?: 'there',
             'digest.count' => (string) $items->count(),
             'digest.table' => $this->digestTable($items),
-        ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals');
+        ], rtrim((string) config('app.url'), '/').'/requests?tab=mine', 'Open my approvals', $recipient->name);
     }
 
     /**

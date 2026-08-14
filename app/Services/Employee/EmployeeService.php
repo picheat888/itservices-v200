@@ -237,14 +237,11 @@ class EmployeeService
         // Email — queued, via the employee.account_needed template (if enabled).
         $emailService = app(EmailNotificationService::class);
         foreach ($recipients as $recipient) {
-            if (! $recipient->email) {
-                continue;
-            }
             $emailService->sendTemplate('employee.account_needed', $recipient->email, [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
                 'employee.name' => $employee->name,
                 'employee.code' => $employee->code,
-            ]);
+            ], null, null, $recipient->name);
         }
     }
 

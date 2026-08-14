@@ -25,6 +25,8 @@ class SendTemplatedEmail implements ShouldQueue
         public ?string $actionUrl = null,
         public ?string $actionLabel = null,
         public ?string $eyebrow = null,
+        /** Carried only so the delivery log can name the person behind the address. */
+        public ?string $recipientName = null,
     ) {}
 
     public function handle(EmailNotificationService $service): void
@@ -37,6 +39,7 @@ class SendTemplatedEmail implements ShouldQueue
             $this->actionUrl,
             $this->actionLabel,
             $this->eyebrow,
+            $this->recipientName,
         );
     }
 }
