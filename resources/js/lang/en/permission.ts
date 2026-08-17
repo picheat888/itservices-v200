@@ -124,6 +124,8 @@ export const permission: Dict = {
     'perm_desc_requests.notify_stalled':
         "Receive a Monday email listing the requests that have waited more than a week for this person's decision. Without it they still get the daily bell in the app.",
     perm_mod_workflows: 'Approval workflows',
+    'perm_act_workflows.module': 'Workflows access',
+    'perm_desc_workflows.module': 'Open the Workflows screen and read the approval chain of each request type. Changing one needs the switch below.',
     'perm_act_workflows.manage': 'Edit approval workflows',
     'perm_desc_workflows.manage': 'Change the approval steps of each request type. Requests already submitted keep the chain they were frozen with.',
     'perm_act_assets.module': 'Assets access',

@@ -29,7 +29,10 @@ class Permissions
             // the fulfilment queue is a rota, and the people who want the mail about a
             // stalled approval are not always the ones allowed to close it.
             'requests' => ['submit', 'view_all', 'fulfill', 'notify_approved', 'notify_stalled'],
-            'workflows' => ['manage'],
+            // Reads like every other module: the master opens the screen and its sidebar
+            // entry, `manage` is the right to change a chain. Before the master existed,
+            // "may look at the approval chains" and "may rewrite them" were one switch.
+            'workflows' => ['module', 'manage'],
             'assets' => [
                 'module',
                 'view_dashboard', 'view', 'register', 'edit', 'delete',
@@ -120,7 +123,7 @@ class Permissions
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
                 'requests.submit', 'requests.view_all', 'requests.fulfill',
                 'requests.notify_approved', 'requests.notify_stalled',
-                'workflows.manage',
+                'workflows.module', 'workflows.manage',
                 'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
                 'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
                 'assets.my', 'assets.return',
@@ -514,6 +517,38 @@ class Permissions
         }
 
         return array_keys($set);
+    }
+
+    /**
+     * Workflow permission tree — the smallest of the family: the master gates the module
+     * and its sidebar entry, and the one group under it is the right to change a chain.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function workflowHierarchy(): array
+    {
+        return [
+            'master' => 'workflows.module',
+            'groups' => [
+                'workflows.manage' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the workflow gate: without the master, every workflow key is dropped.
+     * Non-workflow keys pass through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeWorkflows(array $granted): array
+    {
+        if (in_array(self::workflowHierarchy()['master'], $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'workflows.')));
     }
 
     /**

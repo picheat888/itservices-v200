@@ -43,6 +43,7 @@ import { ModulePermissionCard, type ModuleMaster } from '../components/module-pe
 import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
+import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
 import {
     useAuditLogs,
     useGroupRoleMutations,
@@ -130,10 +131,9 @@ export default function PermissionsPage() {
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
-    // `workflows` carries the single key that guards the approval-chain editor. It sits
-    // next to `requests` because that is the screen it belongs to — left out of this list
-    // it still appeared, but swept into the catch-all "Other" section further down.
-    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'workflows', 'assets', 'contracts', 'stock', 'employees', 'access'] },
+    { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
+    // `workflows` is listed under ADMIN_GROUPS, not here — the sidebar puts the screen
+    // under Administration, and the matrix mirrors the sidebar.
     { label: 'nav_admin', icon: Shield, modules: ['system'] },
 ];
 
@@ -141,6 +141,7 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 // Setting reuse the live `system.*` keys (toggleable + persisted); the remaining
 // rows are presentational "coming soon" placeholders for features not yet built.
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
+    { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
     { module: 'email_templates', keys: ['system.configure_notifications', 'email.edit', 'email.enable', 'email.create', 'email.test'] },
     {
@@ -422,6 +423,17 @@ function RolesTab() {
                                             if (group.module === 'tickets') {
                                                 return (
                                                     <TicketPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'workflows') {
+                                                return (
+                                                    <WorkflowPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}
