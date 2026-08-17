@@ -237,12 +237,16 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
         ->only(['index', 'store', 'show'])
         ->parameters(['service-requests' => 'serviceRequest']);
 
-    // Workflow module (approval chain definitions) — admin only.
-    Route::middleware('permission:workflows.manage')->group(function () {
+    // Workflow module (approval chain definitions) — admin only. Reading the chains needs
+    // the module master; rewriting one needs `manage` on top, the same split every other
+    // module makes between opening a screen and changing what is on it.
+    Route::middleware('permission:workflows.module')->group(function () {
         Route::get('workflows', [WorkflowController::class, 'index'])->name('api.workflows.index');
         Route::get('workflows/employee-options', [WorkflowController::class, 'employeeOptions'])->name('api.workflows.employee-options');
         Route::get('workflows/position-options', [WorkflowController::class, 'positionOptions'])->name('api.workflows.position-options');
         Route::post('workflows/preview', [WorkflowController::class, 'preview'])->name('api.workflows.preview');
+    });
+    Route::middleware('permission:workflows.manage')->group(function () {
         Route::put('workflows/{workflow}', [WorkflowController::class, 'update'])->name('api.workflows.update');
     });
     Route::post('stock-counts/{stockCount}/commit', [StockCountController::class, 'commit'])->name('api.stock-counts.commit');

@@ -16,8 +16,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * The Workflows admin surface: gated by workflows.manage, replaces steps with
- * shape validation, and previews a step list along a real reporting line.
+ * The Workflows admin surface: reading is gated by workflows.module and rewriting a
+ * chain by workflows.manage, steps are replaced with shape validation, and a preview
+ * resolves the step list along a real reporting line.
  */
 class WorkflowAdminTest extends TestCase
 {
@@ -32,11 +33,13 @@ class WorkflowAdminTest extends TestCase
         $this->seed(WorkflowSeeder::class);
 
         $role = Role::firstOrCreate(['key' => 'wfadmin', 'name' => 'WF Admin', 'color' => '#000', 'is_system' => false]);
-        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'workflows.manage'], ['allowed' => true]);
+        foreach (['workflows.module', 'workflows.manage'] as $permission) {
+            RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $permission], ['allowed' => true]);
+        }
         $this->admin = User::factory()->create(['role' => 'wfadmin']);
     }
 
-    public function test_endpoints_require_the_manage_permission(): void
+    public function test_endpoints_require_the_workflow_permissions(): void
     {
         $plain = User::factory()->create(['role' => 'nobody']);
         $workflow = Workflow::firstOrFail();
@@ -46,6 +49,18 @@ class WorkflowAdminTest extends TestCase
 
         $this->actingAs($this->admin)->getJson('/api/workflows')
             ->assertOk()->assertJsonCount(11, 'data');
+    }
+
+    /** The master opens the screen; rewriting a chain is a second decision on top of it. */
+    public function test_reading_the_chains_does_not_carry_the_right_to_change_them(): void
+    {
+        $role = Role::firstOrCreate(['key' => 'wfreader', 'name' => 'WF Reader', 'color' => '#000', 'is_system' => false]);
+        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => 'workflows.module'], ['allowed' => true]);
+        $reader = User::factory()->create(['role' => 'wfreader']);
+        $workflow = Workflow::firstOrFail();
+
+        $this->actingAs($reader)->getJson('/api/workflows')->assertOk();
+        $this->actingAs($reader)->putJson("/api/workflows/{$workflow->id}", [])->assertForbidden();
     }
 
     public function test_update_replaces_steps_and_validates_the_shape(): void

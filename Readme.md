@@ -2285,3 +2285,15 @@ migration เติมคีย์ใหม่ให้ทุก role ที่�
 เหตุผลจริง: **การส่งทดสอบซ้ำได้ข้อความเหมือนกันเป๊ะทุกตัวอักษร** กล่องจดหมายที่จัดกลุ่มตามหัวเรื่อง (Gmail) จะยัดฉบับที่ 2 เข้าไปในเธรดของฉบับแรกแล้วซ่อนเนื้อหาที่ซ้ำไว้หลังปุ่ม **"…"** ⇒ เปิดมาเห็นหน้าขาวมีจุดสามจุด · ฉบับแรกของแต่ละเทมเพลตจึงเห็นครบเสมอ ฉบับถัดไปขาวหมด
 
 ⇒ ต่อท้ายหัวเรื่องของ **การส่งทดสอบ** ด้วยเวลา `(test 17:52)` ทุกฉบับไม่ซ้ำกันอีก และคนอ่านรู้ด้วยว่ากำลังดูการกดปุ่มครั้งไหน (`EmailDeliveryLogTest` +1) — อีเมลจริงจากเหตุการณ์ในระบบไม่ถูกแตะ เพราะเนื้อหาต่างกันตามข้อมูลอยู่แล้ว
+
+## Workflows: มี Master gate เหมือนโมดูลอื่น + ย้ายไป Administration (2026-08-17)
+
+หน้า Permissions วางการ์ด Workflows ไว้ใน **Workspace** ข้าง Requests และมีสวิตช์เดียว (`workflows.manage`) ขณะที่ sidebar ย้ายเมนู Workflows ไปอยู่ Administration ไปแล้ว — ตำแหน่งไม่ตรงกัน และ "เข้าดูสายอนุมัติได้" กับ "แก้สายอนุมัติได้" เป็นสวิตช์เดียวกัน
+
+- **คีย์ใหม่ `workflows.module`** เป็น master ตามแพทเทิร์นเดียวกับทุกโมดูล (`workflowHierarchy()` + `normalizeWorkflows()` เรียกต่อจาก normalize ตัวอื่นใน `RolePermissionController@update`)
+- **แยกสิทธิ์อ่าน/แก้**: `GET /workflows`, `employee-options`, `position-options`, `preview` ใช้ `workflows.module` · `PUT /workflows/{id}` ใช้ `workflows.manage`
+- **sidebar** เปลี่ยน gate เป็น `workflows.module` (master คุมเมนู ตามที่การ์ดบอกว่ามันคุม)
+- **การ์ดย้ายไป section Administration** (`ADMIN_GROUPS`) และเปลี่ยนเป็นทรี master → group แบบเดียวกับ Contracts (`WorkflowPermissionTree`) — หัวการ์ด `Workflows access` + บรรทัด `Master · gates the module and the sidebar icon` + ลูกคือ `Edit approval workflows`
+- **migration เติม `workflows.module` ให้ทุก role ที่ถือ `workflows.manage` อยู่** กันเมนูหายตอน deploy — บนฐานจริงเติม 0 แถว เพราะไม่มี role ไหนถือคีย์นี้ (มีแต่ super ที่ข้ามการเช็คอยู่แล้ว) พฤติกรรมจึงไม่เปลี่ยน
+
+`WorkflowAdminTest` +1 (**ถือ master อย่างเดียว = เปิดหน้าได้ แต่ PUT ถูกปฏิเสธ**) · เทสต์เดิม 2 ไฟล์แก้ให้ role ทดสอบถือ master ด้วย (เทสต์เดิมยืนยันกฎเก่า) · **ทั้ง suite 998 passed / 3,921 assertions** · tsc 0 · eslint 0 · prettier · pint · **ยืนยันบนเบราว์เซอร์**: การ์ดขึ้นใน Administration นับ 2/2 หน้าตาตรงกับการ์ด Stock/Employee

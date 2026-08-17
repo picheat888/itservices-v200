@@ -416,7 +416,7 @@ class RequestWorkflowTest extends TestCase
         $before = $request->approvals->pluck('approver_employee_id', 'position')->all();
 
         // Admin rewrites the computer workflow to a single fulfillment-less step.
-        $admin = $this->makeUser('wfadmin', ['workflows.manage']);
+        $admin = $this->makeUser('wfadmin', ['workflows.module', 'workflows.manage']);
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
         $this->actingAs($admin)->putJson("/api/workflows/{$workflow->id}", [
             'auto_ticket' => false,
