@@ -23,10 +23,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
- * Workflows admin (routes carry permission:workflows.manage): list the ten
- * definitions, replace a workflow's steps/flags, and preview how a step list
- * resolves along a real employee's reporting line. Editing never touches
- * in-flight requests — they run on their submit-time snapshot.
+ * Workflows admin (reads gated by permission:workflows.module, writes by
+ * permission:workflows.manage): list the ten definitions, replace a workflow's
+ * steps/flags, and preview how a step list resolves along a real employee's
+ * reporting line. Editing never touches in-flight requests — they run on their
+ * submit-time snapshot.
  */
 class WorkflowController extends Controller
 {
@@ -164,7 +165,7 @@ class WorkflowController extends Controller
     /**
      * The job titles a chain rung can name — the editor's position picker.
      *
-     * Read-only peek at Employee-module master data under the workflows.manage gate:
+     * Read-only peek at Employee-module master data under the workflows.module gate:
      * choosing who approves is a workflow decision, so it must not also require the
      * permission to administer positions.
      */
@@ -180,7 +181,7 @@ class WorkflowController extends Controller
 
     /**
      * Active employees with a login account — the editor's "test with" picker.
-     * Own-module endpoint under the workflows.manage gate (read-only peek).
+     * Own-module endpoint under the workflows.module gate (read-only peek).
      */
     public function employeeOptions(): JsonResponse
     {
