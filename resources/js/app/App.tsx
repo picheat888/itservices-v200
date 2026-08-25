@@ -40,6 +40,10 @@ function App() {
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route element={<ProtectedRoute />}>
+                    {/* Every gate below must accept each key nav.ts shows the menu entry for —
+                        a narrower route turns a visible icon into the 403 screen. Wider is fine:
+                        the master key opens the page, the tabs inside gate themselves.
+                        SidebarRouteGateTest holds the two lists together. */}
                     <Route element={<AppShell />}>
                         <Route index element={<DashboardPage />} />
                         {/* Employee self-service — gated by the My Assets permission (not assets.view). */}
@@ -54,7 +58,7 @@ function App() {
                         <Route
                             path="employees"
                             element={
-                                <RequirePermission anyOf={['employees.view']}>
+                                <RequirePermission anyOf={['employees.module', 'employees.view']}>
                                     <EmployeesPage />
                                 </RequirePermission>
                             }
@@ -70,7 +74,7 @@ function App() {
                         <Route
                             path="workflows"
                             element={
-                                <RequirePermission anyOf={['workflows.manage']}>
+                                <RequirePermission anyOf={['workflows.module', 'workflows.manage']}>
                                     <WorkflowsPage />
                                 </RequirePermission>
                             }
@@ -86,7 +90,7 @@ function App() {
                         <Route
                             path="tickets"
                             element={
-                                <RequirePermission anyOf={['tickets.create', 'tickets.view_all']}>
+                                <RequirePermission anyOf={['tickets.module', 'tickets.create', 'tickets.my', 'tickets.view_all']}>
                                     <TicketsPage />
                                 </RequirePermission>
                             }
@@ -94,7 +98,7 @@ function App() {
                         <Route
                             path="assets"
                             element={
-                                <RequirePermission anyOf={['assets.view']}>
+                                <RequirePermission anyOf={['assets.module', 'assets.view']}>
                                     <AssetsPage />
                                 </RequirePermission>
                             }
@@ -102,7 +106,7 @@ function App() {
                         <Route
                             path="contracts"
                             element={
-                                <RequirePermission anyOf={['contracts.view']}>
+                                <RequirePermission anyOf={['contracts.module', 'contracts.view']}>
                                     <ContractsPage />
                                 </RequirePermission>
                             }

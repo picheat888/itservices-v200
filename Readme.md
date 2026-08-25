@@ -2297,3 +2297,30 @@ migration เติมคีย์ใหม่ให้ทุก role ที่�
 - **migration เติม `workflows.module` ให้ทุก role ที่ถือ `workflows.manage` อยู่** กันเมนูหายตอน deploy — บนฐานจริงเติม 0 แถว เพราะไม่มี role ไหนถือคีย์นี้ (มีแต่ super ที่ข้ามการเช็คอยู่แล้ว) พฤติกรรมจึงไม่เปลี่ยน
 
 `WorkflowAdminTest` +1 (**ถือ master อย่างเดียว = เปิดหน้าได้ แต่ PUT ถูกปฏิเสธ**) · เทสต์เดิม 2 ไฟล์แก้ให้ role ทดสอบถือ master ด้วย (เทสต์เดิมยืนยันกฎเก่า) · **ทั้ง suite 998 passed / 3,921 assertions** · tsc 0 · eslint 0 · prettier · pint · **ยืนยันบนเบราว์เซอร์**: การ์ดขึ้นใน Administration นับ 2/2 หน้าตาตรงกับการ์ด Stock/Employee
+
+## เมนูที่กดแล้วเจอ 403: route gate ไม่ตรงกับ sidebar 5 โมดูล (2026-08-25)
+
+การแยก `workflows.module` ออกจาก `workflows.manage` รอบที่แล้วเปลี่ยน gate ครบทุกที่ **ยกเว้น route ฝั่ง React** — `App.tsx` ยังขอ `workflows.manage` ขณะที่ `nav.ts` โชว์เมนูด้วย `workflows.module` และ `GET /workflows` ยอมรับ master ⇒ role ที่ถือ master อย่างเดียว (เคสที่ `WorkflowAdminTest` เพิ่งเขียนเทสต์รองรับ) เห็นไอคอนแต่กดแล้วได้หน้า 403
+
+ไล่เทียบทั้งสองไฟล์แล้วพบว่า**ไม่ใช่จุดเดียว — เป็น 5 โมดูล**:
+
+| โมดูล | sidebar โชว์เมื่อ | route เดิมขอ | คนที่ตกหล่น |
+|---|---|---|---|
+| workflows | `workflows.module` | `workflows.manage` | ผู้ดูสายอนุมัติแบบอ่านอย่างเดียว |
+| tickets | `tickets.module` · `create` · `my` | `create` · `view_all` | **พนักงานที่ถือ `tickets.my` อย่างเดียว** |
+| employees | `employees.module` | `employees.view` | role ที่ได้แค่แดชบอร์ดพนักงาน |
+| assets | `assets.module` | `assets.view` | role ที่ได้แค่แดชบอร์ดทรัพย์สิน |
+| contracts | `contracts.module` | `contracts.view` | role ที่ได้แค่แดชบอร์ดสัญญา |
+
+- **กฎที่ใช้แก้**: route ต้องยอมรับ**ทุก key ที่ sidebar ใช้โชว์เมนู** · กว้างกว่าได้ (เข้าทาง URL โดยไม่มีเมนูเป็นการตั้งใจ) แต่แคบกว่าคือเมนูที่กดไม่ได้เสมอ
+- ปลอดภัยเพราะ**แต่ละหน้ากรองแท็บของตัวเองอยู่แล้ว** (ticket/employee/asset มี fallback เมื่อไม่มีแท็บที่ดูได้) และ `http.ts` ปล่อย 403 ให้ผู้เรียกจัดการ ไม่เด้งจอ error ทั้งแอป
+- คง key เดิมไว้คู่กับ master ทุกจุด (`['x.module', 'x.view']`) เพราะ normalize บังคับ master เฉพาะตอนบันทึกสิทธิ์ — แถว role เก่าที่ถือ child โดยไม่มี master จึงไม่หลุด
+- คอมเมนต์ `WorkflowController` ที่ยังเขียนว่า "routes carry permission:workflows.manage" แก้ให้ตรงกับของจริง (อ่าน = `workflows.module`, เขียน = `workflows.manage`) ทั้ง 3 จุด
+
+### Tests / Verification
+
+`SidebarRouteGateTest` ใหม่ 2 ตัว — parse `nav.ts` กับ `App.tsx` จากฝั่ง PHP แบบเดียวกับ `PermissionMatrixTest` (ทั้งสองฝั่งเป็นข้อมูลดิบ TypeScript จับให้ไม่ได้): ทุกเมนูต้องเปิดหน้าที่มันลิงก์ไปได้ · ทุก key ที่ใช้ gate ต้องมีอยู่จริงใน `Permissions::all()` — **ยืนยันด้วยการย้อน `workflows` กลับเป็น `manage` แล้วเห็นแดงพร้อมข้อความชี้ตัวจุดก่อนคืนกลับ**
+
+**ทั้ง suite = 1,000 passed / 3,925 assertions** (เดิม 998) · tsc 0 · eslint 0 · prettier · pint · build ผ่าน
+
+> **ยังไม่ได้ทำ**: role ที่ถือ master + `view_dashboard` (ไม่มี `.view`) ตอนนี้เข้าหน้า Assets/Contracts ได้แล้วแต่จะเห็นแท็บรายการที่ว่างเปล่า เพราะ API ยังตอบ 403 ให้ list — หน้า Tickets/Employees กรองแท็บตามสิทธิ์ครบแล้ว ส่วน Assets (แท็บ Inventory/Transfers) กับ Contracts (ทั้ง 2 แท็บ) ยังไม่กรอง ถ้าจะทำให้ครบต้องกรองแท็บ + ใส่ `enabled` ให้ query รายการเหมือนหน้าอื่น
