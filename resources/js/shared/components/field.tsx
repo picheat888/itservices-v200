@@ -9,6 +9,7 @@ export function Field({
     help,
     name,
     action,
+    grow,
     children,
 }: {
     label: string;
@@ -19,6 +20,9 @@ export function Field({
     name?: string;
     /** Optional control shown at the right end of the label row (e.g. a "generate for me" shortcut). */
     action?: React.ReactNode;
+    /** Stretch to fill a flex-column parent and hand the leftover height to the control inside
+     *  — for a textarea that has to end level with a neighbouring column. */
+    grow?: boolean;
     children: React.ReactNode;
 }) {
     const labelNode = (
@@ -29,7 +33,7 @@ export function Field({
     );
 
     return (
-        <div data-field={name} className="space-y-1.5">
+        <div data-field={name} className={cn('space-y-1.5', grow && 'flex min-h-0 flex-1 flex-col')}>
             {action ? (
                 <div className="flex min-h-6 items-center justify-between gap-2">
                     {labelNode}
@@ -40,13 +44,17 @@ export function Field({
             )}
             {/* On error, tint the control(s) inside red — input/textarea/select and
                 button-style triggers (SearchableSelect) all pick up the border.
-                The focus: overrides must stay: the controls' own focus-visible:border-brand
-                outranks the plain descendant override, so without them the border flips to
-                the theme colour while focused. */}
+                The hover: and focus: overrides must stay: the controls' own
+                hover:border-brand/50 and focus-visible:border-brand outrank the plain
+                descendant override, so without them the border flips to the theme colour
+                the moment the pointer lands on a field that is still flagged wrong. */}
             <div
                 className={cn(
+                    // Under `grow` the wrapper takes the leftover height and passes it to the
+                    // control, so the field ends where its column ends.
+                    grow && 'min-h-0 flex-1 [&_textarea]:h-full',
                     error &&
-                        '[&_input]:border-destructive [&_textarea]:border-destructive [&_select]:border-destructive [&_button]:border-destructive [&_input]:focus:border-destructive [&_textarea]:focus:border-destructive [&_select]:focus:border-destructive [&_button]:focus:border-destructive [&_input]:focus-visible:ring-destructive/25 [&_textarea]:focus-visible:ring-destructive/25 [&_select]:focus:ring-destructive/25 [&_button]:focus:ring-destructive/25 [&_button]:ring-destructive/25 [&_button]:data-[state=open]:border-destructive [&_button]:data-[state=open]:ring-destructive/25',
+                        '[&_input]:border-destructive [&_textarea]:border-destructive [&_select]:border-destructive [&_button]:border-destructive [&_input]:hover:border-destructive [&_textarea]:hover:border-destructive [&_select]:hover:border-destructive [&_button]:hover:border-destructive [&_input]:focus:border-destructive [&_textarea]:focus:border-destructive [&_select]:focus:border-destructive [&_button]:focus:border-destructive [&_input]:focus-visible:ring-destructive/25 [&_textarea]:focus-visible:ring-destructive/25 [&_select]:focus:ring-destructive/25 [&_button]:focus:ring-destructive/25 [&_button]:ring-destructive/25 [&_button]:data-[state=open]:border-destructive [&_button]:data-[state=open]:ring-destructive/25',
                 )}
             >
                 {children}
