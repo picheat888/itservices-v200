@@ -11,6 +11,7 @@ export const common: Dict = {
     filter_clear_all: 'ล้างทั้งหมด',
     filter_found: 'พบ',
     filter_items: 'รายการ',
+    filter_item: 'รายการ',
     done: 'เสร็จสิ้น',
     tickets: 'Ticket',
     requests: 'คำขอ',

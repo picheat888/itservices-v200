@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resign Dialog Mockup — IT Services V2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ===== DESIGN TOKENS (mirrors resources/css/app.css) ===== */
+    :root {
+      --brand: #2563eb;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --fg: hsl(222,30%,12%);
+      --muted: hsl(210,20%,96%);
+      --muted-fg: hsl(215,16%,47%);
+      --accent: hsl(210,24%,95%);
+      --border: hsl(214,20%,90%);
+      --input: hsl(214,20%,88%);
+      --destructive: hsl(0,72%,51%);
+      --amber: #d97706;
+      --emerald: #10b981;
+      --radius: 0.625rem;
+      --overlay: rgba(2,6,23,.55);
+      --shadow: 0 10px 15px -3px rgba(15,23,42,.10), 0 4px 6px -4px rgba(15,23,42,.10);
+    }
+    [data-theme="dark"] {
+      --brand: #3b82f6;
+      --bg: hsl(222,28%,7%);
+      --card: hsl(222,24%,10%);
+      --fg: hsl(210,20%,96%);
+      --muted: hsl(217,19%,15%);
+      --muted-fg: hsl(215,15%,65%);
+      --accent: hsl(217,19%,18%);
+      --border: hsl(217,19%,20%);
+      --input: hsl(217,19%,22%);
+      --destructive: hsl(0,72%,55%);
+      --amber: #f59e0b;
+      --emerald: #34d399;
+      --overlay: rgba(0,0,0,.70);
+      --shadow: 0 10px 15px -3px rgba(0,0,0,.4), 0 4px 6px -4px rgba(0,0,0,.4);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Manrope','Noto Sans Thai',system-ui,sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      -webkit-font-smoothing: antialiased;
+      transition: background .3s, color .3s;
+    }
+    :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+    /* ===== Page chrome ===== */
+    .page { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+    header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 8px; }
+    .title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
+    .subtitle { color: var(--muted-fg); margin: 8px 0 0; font-size: 15px; max-width: 640px; line-height: 1.6; }
+    .toolbar { display: flex; gap: 8px; }
+    .tbtn {
+      font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border);
+      background: var(--card); color: var(--fg); transition: all .15s;
+    }
+    .tbtn:hover { border-color: var(--brand); color: var(--brand); }
+    .tbtn svg { width: 15px; height: 15px; }
+
+    .tile-label {
+      display: flex; align-items: center; gap: 8px; margin: 40px 0 12px;
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted-fg);
+    }
+    .tile-label .pill {
+      font-size: 10px; padding: 2px 8px; border-radius: 999px; letter-spacing: .04em;
+      background: var(--muted); color: var(--muted-fg); text-transform: none; font-weight: 600;
+    }
+
+    /* The faux backdrop the dialog floats on */
+    .stage {
+      position: relative; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(120% 120% at 80% 0%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 60%),
+        var(--muted);
+      padding: 40px 28px;
+      display: grid; place-items: center;
+    }
+    .stage::before { content: ""; position: absolute; inset: 0; background: var(--overlay); }
+
+    /* ===== The dialog ===== */
+    .dlg {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 960px;
+      background: var(--card); color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      animation: pop .2s ease-out;
+    }
+    @keyframes pop { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: none; } }
+
+    /* Header — the warning mark is drawn bare, not in a chip: it reads as a road sign,
+       not as another rounded UI element. */
+    .dlg-head { display: flex; align-items: flex-start; gap: 18px; padding: 24px 24px 0; }
+    .warn-mark { flex-shrink: 0; color: var(--amber); }
+    .warn-mark svg { width: 46px; height: 46px; stroke-width: 1.75; }
+    .dlg-title { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 0; line-height: 1.2; }
+    .dlg-desc { font-size: 15px; color: var(--muted-fg); line-height: 1.5; margin: 6px 0 0; }
+    .dlg-desc b { color: var(--fg); font-weight: 600; }
+    .dlg-desc .code { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+    .x-btn {
+      margin-left: auto; flex-shrink: 0; cursor: pointer;
+      width: 34px; height: 34px; border-radius: 8px; border: 1px solid transparent;
+      background: transparent; color: var(--muted-fg);
+      display: grid; place-items: center; transition: background .15s, color .15s;
+    }
+    .x-btn:hover { background: var(--muted); color: var(--fg); }
+    .x-btn svg { width: 18px; height: 18px; }
+
+    /* Amber banner — states the three things confirming actually does */
+    .banner {
+      margin: 18px 24px 0; padding: 11px 14px; border-radius: 10px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; line-height: 1.5;
+      background: color-mix(in srgb, var(--amber) 12%, transparent);
+      color: color-mix(in srgb, var(--amber) 78%, var(--fg));
+    }
+    .banner svg { width: 17px; height: 17px; flex-shrink: 0; }
+
+    /* Two columns: what you are deciding (left) · what leaves with them (right).
+       The consequence sits beside the confirm button instead of below the fold. */
+    .dlg-body {
+      display: grid; grid-template-columns: 1fr 1.06fr; gap: 30px;
+      padding: 22px 24px 6px;
+    }
+    .col-title { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 14px; }
+
+    /* Read-only identity pair at the head of the left column */
+    .id-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin-bottom: 16px; }
+    .id-val { display: block; font-size: 15px; font-weight: 600; line-height: 1.4; }
+    .id-val.code { font-family: 'JetBrains Mono', monospace; font-size: 14px; }
+    .fld { display: block; margin-bottom: 14px; }
+    /* The reason box takes whatever height is left, so the two columns always end level
+       no matter how many read-only fields sit above it. */
+    .dlg-body > section { display: flex; flex-direction: column; min-width: 0; }
+    .fld-grow { flex: 1; display: flex; flex-direction: column; margin-bottom: 14px; }
+    .fld-grow .ta { flex: 1; }
+    .lbl { display: block; font-size: 13.5px; font-weight: 500; color: var(--muted-fg); margin-bottom: 6px; }
+    .lbl .req { color: var(--destructive); margin-inline-start: 3px; }
+    .inp-wrap { position: relative; }
+    .inp, .ta {
+      font: inherit; width: 100%; color: var(--fg);
+      background: var(--card); border: 1px solid var(--input); border-radius: 10px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .inp { height: 46px; padding: 0 42px 0 14px; font-size: 15px; }
+    .ta { min-height: 124px; padding: 12px 14px; font-size: 15px; line-height: 1.6; resize: vertical; font-family: inherit; }
+    .inp::placeholder, .ta::placeholder { color: var(--muted-fg); }
+    .inp:focus, .ta:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+    .inp-icon { position: absolute; inset-inline-end: 13px; top: 50%; transform: translateY(-50%); color: var(--muted-fg); pointer-events: none; }
+    .inp-icon svg { width: 18px; height: 18px; display: block; }
+
+    /* Right column — outstanding equipment */
+    .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .list-cap { font-size: 13.5px; color: var(--muted-fg); }
+    .count {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      font-size: 12.5px; font-weight: 700; padding: 5px 11px; border-radius: 8px;
+      background: color-mix(in srgb, var(--amber) 13%, transparent);
+      color: color-mix(in srgb, var(--amber) 82%, var(--fg));
+    }
+    /* Nothing outstanding is not a warning — it drops back to neutral grey. */
+    .count.is-clear { background: var(--muted); color: var(--muted-fg); }
+    .count svg { width: 14px; height: 14px; }
+    .count .n { font-variant-numeric: tabular-nums; }
+
+    .assets { display: flex; flex-direction: column; gap: 9px; }
+    .asset {
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--border); border-radius: 11px;
+      background: var(--card); padding: 9px 12px;
+      transition: border-color .15s, background .15s;
+    }
+    .asset:hover { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); }
+    .asset .chip {
+      width: 38px; height: 38px; flex-shrink: 0; border-radius: 9px;
+      background: var(--accent); color: var(--muted-fg);
+      display: grid; place-items: center;
+    }
+    .asset .chip svg { width: 18px; height: 18px; }
+    .asset .who { min-width: 0; flex: 1; }
+    .asset .name { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .asset .meta { display: flex; align-items: center; gap: 7px; margin-top: 3px; font-size: 12px; color: var(--muted-fg); }
+    .asset .dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; background: var(--emerald); }
+    .asset .dot.amber { background: var(--amber); }
+    .tagpill {
+      display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+      font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+      background: color-mix(in srgb, var(--brand) 11%, transparent); color: var(--brand);
+    }
+    .tagpill svg { width: 12px; height: 12px; opacity: .7; }
+    .sn { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted-fg); }
+
+    /* Pager — same shape as the DataTable footer in the app: range left, navigation right. */
+    .pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; font-size: 13px; color: var(--muted-fg); }
+    .pager .range { font-variant-numeric: tabular-nums; }
+    .pager .nav { display: flex; align-items: center; gap: 6px; }
+    .pager .of { color: var(--fg); font-weight: 600; padding: 0 4px; font-variant-numeric: tabular-nums; }
+    .pgbtn {
+      width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--card); color: var(--fg);
+      display: grid; place-items: center; transition: background .15s;
+    }
+    .pgbtn:hover:not(:disabled) { background: var(--accent); }
+    .pgbtn:disabled { opacity: .4; cursor: default; }
+    .pgbtn svg { width: 16px; height: 16px; }
+
+    /* Empty / unavailable / loading panes */
+    .pane {
+      border: 1px dashed var(--border); border-radius: 11px;
+      min-height: 232px; display: grid; place-items: center; align-content: center; gap: 10px;
+      text-align: center; padding: 24px; color: var(--muted-fg);
+    }
+    .pane .mark { width: 46px; height: 46px; border-radius: 13px; background: var(--muted); display: grid; place-items: center; }
+    .pane .mark svg { width: 21px; height: 21px; }
+    .pane .head { font-size: 14.5px; font-weight: 600; color: var(--fg); }
+    .pane .sub { font-size: 13px; line-height: 1.55; max-width: 34ch; }
+    .skel { background: var(--muted); border-radius: 6px; animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+
+    /* Footer */
+    .dlg-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 24px 22px; }
+    .btn {
+      font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer;
+      height: 44px; padding: 0 20px; border-radius: 10px; border: 1px solid transparent;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      transition: filter .15s, background .15s;
+    }
+    .btn-outline { background: var(--card); border-color: var(--border); color: var(--fg); }
+    .btn-outline:hover { background: var(--muted); }
+    .btn-danger { background: var(--destructive); color: #fff; }
+    .btn-danger:hover { filter: brightness(.93); }
+    .btn svg { width: 17px; height: 17px; }
+
+    /* Notes + spec sheet */
+    .note { margin-top: 40px; padding: 18px 20px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted-fg); font-size: 13.5px; line-height: 1.75; }
+    .note b { color: var(--fg); }
+    .note code, .spec code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--muted); padding: 2px 6px; border-radius: 5px; color: var(--fg); }
+    .summary { margin-top: 52px; }
+    .summary > h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 4px; }
+    .summary > .lead { color: var(--muted-fg); font-size: 14px; margin: 0 0 22px; }
+    .spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .spec { border: 1px solid var(--border); border-radius: 12px; background: var(--card); padding: 16px 18px; }
+    .spec h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted-fg); margin: 0 0 12px; }
+    .spec ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; font-size: 13.5px; line-height: 1.5; }
+    .spec li { display: flex; gap: 9px; align-items: baseline; }
+    .sdot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; transform: translateY(2px); }
+    .sdot.red { background: var(--destructive); } .sdot.blue { background: var(--brand); }
+    .sdot.amber { background: var(--amber); } .sdot.grey { background: var(--muted-fg); }
+
+    /* Narrow screens: the columns stack and equipment comes first — it is the part
+       that changes the answer. */
+    @media (max-width: 780px) {
+      .dlg-body { grid-template-columns: 1fr; gap: 22px; }
+      .dlg-body .col-assets { order: -1; }
+      .ta { min-height: 150px; }
+      .dlg-title { font-size: 22px; }
+      .stage { padding: 20px 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+
+    .lang-th { display: none; }
+    [data-lang="th"] .lang-en { display: none; }
+    [data-lang="th"] .lang-th { display: inline; }
+
+    /* Skeleton row — mirrors the real asset row so the list does not reflow on load */
+    .skel-row { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: 11px; padding: 9px 12px; }
+    .skel-chip { width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0; }
+    .skel-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+    .skel-l1 { height: 11px; width: 62%; }
+    .skel-l2 { height: 9px; width: 38%; }
+    .skel-pill { width: 62px; height: 20px; border-radius: 999px; flex-shrink: 0; }
+    .state-card .assets { margin-top: 2px; }
+  </style>
+</head>
+<body data-theme="light" data-lang="th">
+  <!-- Icon sprite (lucide paths) — declared once, referenced with <use>. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <g id="i-warn" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></g>
+      <g id="i-x" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></g>
+      <g id="i-cal" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></g>
+      <g id="i-box" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></g>
+      <g id="i-laptop" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></g>
+      <g id="i-tag" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></g>
+      <g id="i-userminus" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/></g>
+      <g id="i-left" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></g>
+      <g id="i-right" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></g>
+      <g id="i-check" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></g>
+      <g id="i-off" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4M12 16h.01"/><circle cx="12" cy="12" r="10"/></g>
+    </defs>
+  </svg>
+
+  <div class="page">
+    <header class="top">
+      <div>
+        <h1 class="title">Resign Dialog</h1>
+        <p class="subtitle">
+          <span class="lang-th">หน้าจอยืนยันการลาออก แบบ 2 คอลัมน์ — ซ้ายคือสิ่งที่ต้องกรอก ขวาคืออุปกรณ์ที่จะถูกเรียกคืนพร้อมกับคน ๆ นั้น เข้าธีมแอป (Manrope + Noto Sans Thai, dark mode, 2 ภาษา)</span>
+          <span class="lang-en">The resignation confirmation, in two columns — what you fill in on the left, what leaves with the person on the right. On-brand (Manrope + Noto Sans Thai, dark mode, bilingual).</span>
+        </p>
+      </div>
+      <div class="toolbar">
+        <button class="tbtn" id="langBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span class="lang-th">EN</span><span class="lang-en">ไทย</span>
+        </button>
+        <button class="tbtn" id="themeBtn" type="button">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></svg>
+          <span class="lang-th">โหมดมืด</span><span class="lang-en">Dark</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="tile-label">
+      <span class="lang-th">สถานะหลัก — มีอุปกรณ์ค้าง</span><span class="lang-en">Default — equipment outstanding</span>
+      <span class="pill">resign-modal.tsx</span>
+    </div>
+
+    <div class="stage">
+      <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+        <div class="dlg-head">
+          <div class="warn-mark"><svg viewBox="0 0 24 24"><use href="#i-warn"/></svg></div>
+          <div>
+            <h2 class="dlg-title" id="dlgTitle">
+              <span class="lang-th">ยืนยันการลาออก?</span><span class="lang-en">Mark employee as resigned?</span>
+            </h2>
+            <p class="dlg-desc">
+              <span class="lang-th">โปรดยืนยันการลาออกของพนักงานท่านนี้</span>
+              <span class="lang-en">Confirm this employee is leaving.</span>
+            </p>
+          </div>
+          <button class="x-btn" type="button" aria-label="Close"><svg viewBox="0 0 24 24"><use href="#i-x"/></svg></button>
+        </div>
+
+        <div class="banner">
+          <svg viewBox="0 0 24 24"><use href="#i-warn"/></svg>
+          <span>
+            <span class="lang-th">ระบบจะปรับสถานะพนักงานเป็นลาออก ปิดการใช้งานบัญชี และขอเรียกคืนอุปกรณ์ทั้งหมด</span>
+            <span class="lang-en">This sets their status to Resigned, disables their account, and requests return of everything they hold.</span>
+          </span>
+        </div>
+
+        <div class="dlg-body">
+          <section>
+            <h3 class="col-title"><span class="lang-th">ข้อมูลการลาออก</span><span class="lang-en">Resignation details</span></h3>
+
+            <!-- Read-only identity: who this decision is about. Plain values, not inputs —
+                 nothing here is editable from a resignation. -->
+            <div class="id-row">
+              <div>
+                <span class="lbl"><span class="lang-th">ชื่อ - นามสกุล</span><span class="lang-en">Name</span></span>
+                <span class="id-val"><span class="lang-th">สมชาย ใจดี</span><span class="lang-en">Somchai Jaidee</span></span>
+              </div>
+              <div>
+                <span class="lbl"><span class="lang-th">รหัสพนักงาน</span><span class="lang-en">Employee code</span></span>
+                <span class="id-val code">EMP-1042</span>
+              </div>
+              <div>
+                <span class="lbl"><span class="lang-th">ตำแหน่ง</span><span class="lang-en">Position</span></span>
+                <span class="id-val"><span class="lang-th">เจ้าหน้าที่</span><span class="lang-en">Officer</span></span>
+              </div>
+              <div>
+                <span class="lbl"><span class="lang-th">แผนก</span><span class="lang-en">Department</span></span>
+                <span class="id-val"><span class="lang-th">เทคโนโลยีสารสนเทศ</span><span class="lang-en">Information Technology</span></span>
+              </div>
+            </div>
+
+            <label class="fld">
+              <span class="lbl"><span class="lang-th">วันที่ทำงานวันสุดท้าย</span><span class="lang-en">Last working day</span><span class="req">*</span></span>
+              <span class="inp-wrap">
+                <input class="inp" type="text" placeholder="เลือกวันที่" data-ph-en="Pick a date" data-ph-th="เลือกวันที่">
+                <span class="inp-icon"><svg viewBox="0 0 24 24"><use href="#i-cal"/></svg></span>
+              </span>
+            </label>
+
+            <label class="fld fld-grow">
+              <span class="lbl"><span class="lang-th">เหตุผล</span><span class="lang-en">Reason</span><span class="req">*</span></span>
+              <textarea class="ta" placeholder="เช่น โอนย้ายตำแหน่ง ลาออกโดยสมัครใจ ฯลฯ" data-ph-th="เช่น โอนย้ายตำแหน่ง ลาออกโดยสมัครใจ ฯลฯ" data-ph-en="e.g. Voluntary resignation, role change…"></textarea>
+            </label>
+          </section>
+
+          <section class="col-assets">
+            <h3 class="col-title"><span class="lang-th">อุปกรณ์ที่ต้องคืน</span><span class="lang-en">Assets to return</span></h3>
+
+            <div class="list-head">
+              <span class="list-cap"><span class="lang-th">รายการอุปกรณ์ที่ต้องคืนทั้งหมด</span><span class="lang-en">Everything still in their hands</span></span>
+              <span class="count"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg><span class="n">6</span> <span class="lang-th">รายการ</span><span class="lang-en">items</span></span>
+            </div>
+
+            <div class="assets">
+              <div class="asset">
+                <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-laptop"/></svg></span>
+                <span class="who">
+                  <span class="name">ThinkCentre Neo 55a 24 G6</span>
+                  <span class="meta"><i class="dot"></i><span class="lang-th">คอมพิวเตอร์ · ใช้งานอยู่</span><span class="lang-en">Desktop · In use</span></span>
+                </span>
+                <span class="tagpill"><svg viewBox="0 0 24 24"><use href="#i-tag"/></svg>PC001</span>
+                <span class="sn">SN-123456</span>
+              </div>
+              <div class="asset">
+                <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-laptop"/></svg></span>
+                <span class="who">
+                  <span class="name">Latitude 5440</span>
+                  <span class="meta"><i class="dot"></i><span class="lang-th">โน้ตบุ๊ก · ใช้งานอยู่</span><span class="lang-en">Laptop · In use</span></span>
+                </span>
+                <span class="tagpill"><svg viewBox="0 0 24 24"><use href="#i-tag"/></svg>NB014</span>
+                <span class="sn">SN-884201</span>
+              </div>
+              <div class="asset">
+                <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-laptop"/></svg></span>
+                <span class="who">
+                  <span class="name">EliteDisplay E243</span>
+                  <span class="meta"><i class="dot"></i><span class="lang-th">จอภาพ · ใช้งานอยู่</span><span class="lang-en">Monitor · In use</span></span>
+                </span>
+                <span class="tagpill"><svg viewBox="0 0 24 24"><use href="#i-tag"/></svg>MN052</span>
+                <span class="sn">SN-233910</span>
+              </div>
+              <div class="asset">
+                <span class="chip"><svg viewBox="0 0 24 24"><use href="#i-laptop"/></svg></span>
+                <span class="who">
+                  <span class="name">iPhone 13</span>
+                  <span class="meta"><i class="dot amber"></i><span class="lang-th">โทรศัพท์ · รอรับมอบ</span><span class="lang-en">Phone · Pending acceptance</span></span>
+                </span>
+                <span class="tagpill"><svg viewBox="0 0 24 24"><use href="#i-tag"/></svg>MB007</span>
+                <span class="sn">SN-771044</span>
+              </div>
+            </div>
+
+            <div class="pager">
+              <span class="range">1&ndash;4 <span class="lang-th">จาก</span><span class="lang-en">of</span> 6</span>
+              <span class="nav">
+                <button class="pgbtn" type="button" disabled aria-label="Previous"><svg viewBox="0 0 24 24"><use href="#i-left"/></svg></button>
+                <span class="of">1 / 2</span>
+                <button class="pgbtn" type="button" aria-label="Next"><svg viewBox="0 0 24 24"><use href="#i-right"/></svg></button>
+              </span>
+            </div>
+          </section>
+        </div>
+
+        <div class="dlg-foot">
+          <button class="btn btn-outline" type="button"><span class="lang-th">ยกเลิก</span><span class="lang-en">Cancel</span></button>
+          <button class="btn btn-danger" type="button">
+            <svg viewBox="0 0 24 24"><use href="#i-userminus"/></svg>
+            <span class="lang-th">ยืนยันลาออก</span><span class="lang-en">Mark as resigned</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tile-label">
+      <span class="lang-th">คอลัมน์ขวา — สถานะอื่น</span><span class="lang-en">Right column — other states</span>
+      <span class="pill">useEmployeeAssets()</span>
+    </div>
+
+    <div class="spec-grid">
+      <div class="spec state-card">
+        <h3><span class="lang-th">ไม่มีอุปกรณ์ค้าง</span><span class="lang-en">Nothing outstanding</span></h3>
+        <div class="list-head">
+          <span class="list-cap"><span class="lang-th">รายการอุปกรณ์ที่ต้องคืนทั้งหมด</span><span class="lang-en">Everything still in their hands</span></span>
+          <span class="count is-clear"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg><span class="lang-th">ไม่มี</span><span class="lang-en">None</span></span>
+        </div>
+        <div class="pane">
+          <span class="mark" style="color:var(--emerald)"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span>
+          <span class="head"><span class="lang-th">ไม่มีอุปกรณ์ค้าง</span><span class="lang-en">No assets outstanding</span></span>
+          <span class="sub"><span class="lang-th">พนักงานคนนี้คืนของครบแล้ว ยืนยันลาออกได้เลย</span><span class="lang-en">This person has handed everything back. Safe to confirm.</span></span>
+        </div>
+      </div>
+
+      <div class="spec state-card">
+        <h3><span class="lang-th">ดูรายการไม่ได้</span><span class="lang-en">Assets unavailable</span></h3>
+        <div class="list-head">
+          <span class="list-cap"><span class="lang-th">รายการอุปกรณ์ที่ต้องคืนทั้งหมด</span><span class="lang-en">Everything still in their hands</span></span>
+          <span class="count is-clear"><svg viewBox="0 0 24 24"><use href="#i-box"/></svg><span class="lang-th">ดูไม่ได้</span><span class="lang-en">Unavailable</span></span>
+        </div>
+        <div class="pane">
+          <span class="mark"><svg viewBox="0 0 24 24"><use href="#i-off"/></svg></span>
+          <span class="head"><span class="lang-th">ดูรายการอุปกรณ์ไม่ได้</span><span class="lang-en">Cannot load the asset list</span></span>
+          <span class="sub"><span class="lang-th">ตรวจสอบกับ IT ก่อนยืนยัน — ยังไม่ทราบว่ามีของค้างหรือไม่</span><span class="lang-en">Check with IT before confirming — whether anything is outstanding is unknown.</span></span>
+        </div>
+      </div>
+
+      <div class="spec state-card">
+        <h3><span class="lang-th">กำลังโหลด</span><span class="lang-en">Loading</span></h3>
+        <div class="list-head">
+          <span class="list-cap"><span class="lang-th">รายการอุปกรณ์ที่ต้องคืนทั้งหมด</span><span class="lang-en">Everything still in their hands</span></span>
+          <span class="skel" style="width:74px;height:26px;border-radius:8px"></span>
+        </div>
+        <div class="assets">
+          <div class="skel-row"><span class="skel skel-chip"></span><span class="skel-lines"><span class="skel skel-l1"></span><span class="skel skel-l2"></span></span><span class="skel skel-pill"></span></div>
+          <div class="skel-row"><span class="skel skel-chip"></span><span class="skel-lines"><span class="skel skel-l1"></span><span class="skel skel-l2"></span></span><span class="skel skel-pill"></span></div>
+          <div class="skel-row"><span class="skel skel-chip"></span><span class="skel-lines"><span class="skel skel-l1"></span><span class="skel skel-l2"></span></span><span class="skel skel-pill"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <span class="lang-th">
+        <b>ทำไมแยกเป็นสองคอลัมน์</b> — ของเดิมเอารายการอุปกรณ์ไว้ใต้ช่องเหตุผล คนกดจึงเห็นปุ่มแดงก่อนเห็นว่ามีของค้างกี่ชิ้น พอย้ายมาอยู่ข้าง ๆ ปุ่ม ผลลัพธ์ของการกดกับตัวปุ่มจึงอยู่ในสายตาเดียวกัน<br>
+        <b>สามสถานะต้องแยกจากกัน</b> — <code>ไม่มีอุปกรณ์ค้าง</code> (โหลดสำเร็จและว่างจริง) ต่างจาก <code>ดูรายการไม่ได้</code> (403 / เน็ตหลุด) คนละข้อความคนละไอคอน เพราะขึ้นว่า "ไม่มี" ตอนที่จริง ๆ ไม่รู้ คือรายงานผิดในจอที่กดแล้วย้อนไม่ได้<br>
+        <b>ป้ายนับเป็นสีเหลืองเฉพาะตอนมีของค้าง</b> — คนที่คืนของครบไม่ควรถูกทำให้ดูเหมือนมีปัญหา
+      </span>
+      <span class="lang-en">
+        <b>Why two columns</b> — the old layout put the equipment list under the reason box, so the red button came into view before the count did. Beside the button, the consequence and the action share one glance.<br>
+        <b>Three states, kept apart</b> — <code>No assets outstanding</code> (loaded, genuinely empty) is not <code>Cannot load the asset list</code> (403 / dropped connection). Different copy, different icon: saying "none" when the truth is "unknown" is a false report on a screen you cannot undo.<br>
+        <b>The count pill turns amber only when something is outstanding</b> — a person who returned everything should not be dressed up as a problem.
+      </span>
+    </div>
+
+    <section class="summary">
+      <h2><span class="lang-th">สเปกที่ต้องเอาไปทำจริง</span><span class="lang-en">Build spec</span></h2>
+      <p class="lead"><span class="lang-th">ค่าที่ mockup นี้ใช้ ทั้งหมดอ้างอิง token เดียวกับ <code>resources/css/app.css</code></span><span class="lang-en">Everything here reads from the same tokens as <code>resources/css/app.css</code>.</span></p>
+
+      <div class="spec-grid">
+        <div class="spec">
+          <h3><span class="lang-th">โครง</span><span class="lang-en">Layout</span></h3>
+          <ul>
+            <li><span class="sdot blue"></span><span><span class="lang-th">Dialog กว้าง <code>max-w-4xl</code> (960px) · body เป็น grid <code>1fr 1.06fr</code> gap 30px</span><span class="lang-en">Dialog <code>max-w-4xl</code> (960px) · body grid <code>1fr 1.06fr</code>, 30px gap</span></span></li>
+            <li><span class="sdot blue"></span><span><span class="lang-th">ต่ำกว่า 780px คอลัมน์ซ้อนกัน และ <b>อุปกรณ์ขึ้นก่อน</b></span><span class="lang-en">Under 780px the columns stack, <b>equipment first</b></span></span></li>
+            <li><span class="sdot blue"></span><span><span class="lang-th">หัวคอลัมน์ซ้ายเป็น ชื่อ-นามสกุล · รหัสพนักงาน · ตำแหน่ง · แผนก แบบอ่านอย่างเดียว ไม่ใช่ input</span><span class="lang-en">Left column opens with name · code · position · department as read-only values, not inputs</span></span></li>
+            <li><span class="sdot blue"></span><span><span class="lang-th">รายการแบ่งหน้า 4 แถว/หน้า ความสูงคงที่ ไม่ทำให้ dialog ยืด</span><span class="lang-en">4 rows per page, fixed height — the dialog never grows</span></span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">สี</span><span class="lang-en">Colour</span></h3>
+          <ul>
+            <li><span class="sdot amber"></span><span><span class="lang-th">แบนเนอร์ + ป้ายนับ = <code>--amber</code> ผสม 12&ndash;13%</span><span class="lang-en">Banner + count pill = <code>--amber</code> at 12&ndash;13%</span></span></li>
+            <li><span class="sdot red"></span><span><span class="lang-th">ปุ่มยืนยัน = <code>--destructive</code> ปุ่มเดียวในจอที่เป็นสีแดง</span><span class="lang-en">Confirm = <code>--destructive</code>, the only red on screen</span></span></li>
+            <li><span class="sdot blue"></span><span><span class="lang-th">ป้าย tag = <code>--brand</code> ผสม 11% · serial ใช้ JetBrains Mono</span><span class="lang-en">Tag pill = <code>--brand</code> at 11% · serials in JetBrains Mono</span></span></li>
+            <li><span class="sdot grey"></span><span><span class="lang-th">จุดสถานะ: เขียว = ใช้งานอยู่ · เหลือง = รอรับมอบ/รอรับคืน</span><span class="lang-en">Status dot: green = in use · amber = pending acceptance/return</span></span></li>
+          </ul>
+        </div>
+
+        <div class="spec">
+          <h3><span class="lang-th">ข้อมูลที่ใช้</span><span class="lang-en">Data</span></h3>
+          <ul>
+            <li><span class="sdot grey"></span><span><code>GET /api/employees/{id}/assets</code> &rarr; <code>useEmployeeAssets()</code></span></li>
+            <li><span class="sdot grey"></span><span><span class="lang-th">แถวหนึ่ง = <code>model ?? asset_code</code> · <code>type_th ?? type</code> · <code>status</code> · <code>tag</code> · <code>serial ?? asset_code</code></span><span class="lang-en">One row = <code>model ?? asset_code</code> · <code>type_th ?? type</code> · <code>status</code> · <code>tag</code> · <code>serial ?? asset_code</code></span></span></li>
+            <li><span class="sdot grey"></span><span><span class="lang-th">คีย์ใหม่: <code>resign_assets_none</code> · <code>resign_assets_unavailable</code> · หัวคอลัมน์ 2 คีย์</span><span class="lang-en">New keys: <code>resign_assets_none</code> · <code>resign_assets_unavailable</code> · 2 column headings</span></span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const root = document.body;
+    const themeBtn = document.getElementById('themeBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const sun = 'M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4';
+    themeBtn.addEventListener('click', () => {
+      const dark = root.getAttribute('data-theme') === 'dark';
+      root.setAttribute('data-theme', dark ? 'light' : 'dark');
+      themeIcon.innerHTML = dark
+        ? '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'
+        : '<circle cx="12" cy="12" r="4"/>' + sun.split('M').filter(Boolean).map(s => '<path d="M'+s+'"/>').join('');
+    });
+
+    // Placeholders live outside the .lang-th/.lang-en spans, so they are swapped by hand.
+    const syncPlaceholders = (lang) => {
+      document.querySelectorAll('[data-ph-th]').forEach((el) => {
+        el.setAttribute('placeholder', el.getAttribute('data-ph-' + lang));
+      });
+    };
+    document.getElementById('langBtn').addEventListener('click', () => {
+      const next = root.getAttribute('data-lang') === 'th' ? 'en' : 'th';
+      root.setAttribute('data-lang', next);
+      root.setAttribute('lang', next);
+      syncPlaceholders(next);
+    });
+    syncPlaceholders('th');
+  </script>
+</body>
+</html>
