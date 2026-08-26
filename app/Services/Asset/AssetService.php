@@ -233,6 +233,47 @@ class AssetService
     }
 
     /**
+     * Flags everything an employee still holds as pending return — fired when a resignation
+     * lands, so IT sees the hand-back queue without having to open each asset by hand.
+     *
+     * Deliberately ungated: whoever records the resignation holds employees.resign and need
+     * not hold any assets permission. Only what the person actually has in hand moves
+     * (deployed / pending acceptance); anything already pending return is left alone rather
+     * than ringing IT's bell a second time.
+     *
+     * Returns how many assets were moved.
+     */
+    public function requestReturnForEmployee(Employee $employee, ?string $reason = null): int
+    {
+        $assets = Asset::with('model')
+            ->where('owner_employee_id', $employee->id)
+            ->whereIn('status', [AssetStatus::Deployed->value, AssetStatus::PendingAcceptance->value])
+            ->get();
+
+        if ($assets->isEmpty()) {
+            return 0;
+        }
+
+        // Resolved once for the whole batch — requestReturn() reloads every user per asset,
+        // which a leaver holding a dozen devices would repeat a dozen times over.
+        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
+
+        foreach ($assets as $asset) {
+            $holder = $asset->ownerCode();
+            $asset->update([
+                'status' => AssetStatus::PendingReturn,
+                'last_reason' => $reason,
+            ]);
+
+            if ($recipients->isNotEmpty()) {
+                Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
+            }
+        }
+
+        return $assets->count();
+    }
+
+    /**
      * IT receives a returned asset back into the pool: pending return → ready.
      * When a destination warehouse is supplied, the asset is stored there;
      * otherwise it keeps whatever warehouse it already had.

@@ -10,6 +10,7 @@ use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
+use App\Services\Asset\AssetService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
 use Illuminate\Support\Collection;
@@ -24,6 +25,12 @@ class EmployeeService
      * the SPA writes it out in the reader's language — same contract as ChainBlockReason.
      */
     public const NO_ROLE_CONFIGURED = 'no_role_configured';
+
+    /**
+     * The Asset service is here so a resignation can hand the leaver's devices back on its
+     * own — see resign(). Injected rather than resolved inline so tests can swap it out.
+     */
+    public function __construct(private readonly AssetService $assets) {}
 
     /**
      * Creates a new employee and assigns them to the default Role Group.
@@ -121,8 +128,10 @@ class EmployeeService
             'last_day' => $lastDay,
         ]);
 
-        // NOTE: returning the employee's assigned assets is handled by the
-        // Assets module (not yet built) — it will flag them as "Returning".
+        // A leaver's devices are recalled with them: everything still in their hands turns
+        // Pending return and IT is belled to collect it. Ungated on purpose — recording a
+        // resignation must not also require an assets permission.
+        $this->assets->requestReturnForEmployee($employee, "Resignation — {$employee->code}");
 
         $this->notifyResignation($employee, $actor);
 
