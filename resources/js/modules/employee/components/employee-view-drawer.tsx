@@ -52,6 +52,7 @@ import {
     useEmployeeTickets,
     useOrgChart,
 } from '../hooks/use-employees';
+import { HELD_STATUS_META } from '../lib/held-assets';
 import { deptColor } from '../lib/org-tree';
 
 /** Whole-year + month tenure from a YYYY-MM-DD joined date. */
@@ -490,11 +491,22 @@ export function EmployeeViewDrawer({
                         </div>
 
                         {/* Pane — the Organization tab fills the whole area (no padding/scroll
-                            here; OrgPane manages its own layout + single scroll). */}
+                            here; OrgPane manages its own layout + single scroll).
+
+                            Assets / Tickets / Requests MUST get `flex flex-col`: each renders a
+                            `fillHeight` DataTable that sizes rows-per-page from its measured
+                            height. Under the plain `overflow-y-auto` branch the pane is a block
+                            child, its `flex-1` does nothing, and the height collapses to the
+                            content — so the table measures itself shrinking, drops a row, shrinks
+                            again, and spirals down to one row per page. */}
                         <div
                             className={cn(
                                 'min-h-0 flex-1',
-                                tab === 'org' ? 'flex flex-col' : tab === 'assets' || tab === 'tickets' ? 'flex flex-col p-5' : 'overflow-y-auto p-5',
+                                tab === 'org'
+                                    ? 'flex flex-col'
+                                    : tab === 'assets' || tab === 'tickets' || tab === 'requests'
+                                      ? 'flex flex-col p-5'
+                                      : 'overflow-y-auto p-5',
                             )}
                         >
                             {tab === 'overview' && (
@@ -654,15 +666,6 @@ export function EmployeeViewDrawer({
         </Dialog>
     );
 }
-
-/** Status → dot colour + i18n label key for the read-only held-assets table. */
-const HELD_STATUS_META: Record<string, { dot: string; key: string }> = {
-    deployed: { dot: 'bg-emerald-500', key: 'emp_v_st_deployed' },
-    pending_acceptance: { dot: 'bg-amber-500', key: 'emp_v_st_pending_acceptance' },
-    pending_return: { dot: 'bg-amber-500', key: 'emp_v_st_pending_return' },
-    ready: { dot: 'bg-emerald-500', key: 'emp_v_st_ready' },
-    writeoff: { dot: 'bg-red-500', key: 'emp_v_st_writeoff' },
-};
 
 /**
  * Assets tab — a read-only table of what the employee currently holds (own-module data).
