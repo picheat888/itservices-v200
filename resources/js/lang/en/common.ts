@@ -11,6 +11,7 @@ export const common: Dict = {
     filter_clear_all: 'Clear all',
     filter_found: 'Found',
     filter_items: 'items',
+    filter_item: 'item',
     done: 'Done',
     tickets: 'Tickets',
     requests: 'Requests',
