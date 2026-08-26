@@ -827,11 +827,13 @@ export interface AccessSummary {
         owners_complete: boolean;
         resigned_holders: number;
         added_30d: number;
-        // Drill-down lists behind each status row (resigned rows also carry the holder).
+        // Drill-down lists behind each status row. Resigned rows name the person whose grant
+        // is still on; ownership rows say why the resource has no custodian — nobody was ever
+        // named, or the one who was has left.
         issues: {
             empty: AccessIssueItem[];
-            no_owner: AccessIssueItem[];
-            resigned: (AccessIssueItem & { employee: string | null })[];
+            no_owner: (AccessIssueItem & { employee: string | null; reason: 'resigned' | 'none' })[];
+            resigned: (AccessIssueItem & { employee: string | null; membership_id: number })[];
         };
     };
     top_resources: AccessTopResource[];

@@ -539,7 +539,7 @@ export default function AccessControlPage() {
                 </div>
 
                 <div className="p-4">
-                    {tab === 'dashboard' && <AccessDashboard onOpenTab={setTab} onOpenResource={openResource} />}
+                    {tab === 'dashboard' && <AccessDashboard onOpenTab={setTab} onOpenResource={openResource} canEdit={canEdit} />}
                     {tab === 'email-groups' && (
                         <DataTable
                             columns={egColumns}

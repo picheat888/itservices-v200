@@ -46,6 +46,24 @@ export const useSetFileShareOwner = () => {
 export const useResourceMembers = (kind: AccessKind, id: number | null) =>
     useQuery({ queryKey: [kind, id, 'members'], queryFn: () => accessApi.members(kind, id as number), enabled: id != null });
 
+/**
+ * Revoke one grant from the governance queue. Routed through the registry's own endpoint so
+ * that registry's edit permission still decides — the drill-down lists rows from all four,
+ * so the kind travels with the call rather than being baked into the hook.
+ */
+export const useRevokeGrant = () => {
+    const qc = useQueryClient();
+
+    return useMutation({
+        mutationFn: (v: { kind: AccessKind; id: number; membershipId: number }) => accessApi.revokeMember(v.kind, v.id, v.membershipId),
+        onSuccess: (_data, v) => {
+            qc.invalidateQueries({ queryKey: [v.kind] });
+            qc.invalidateQueries({ queryKey: ['employee-access'] });
+            qc.invalidateQueries({ queryKey: ['access-summary'] });
+            qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
+        },
+    });
+};
 export function useAccessMutations(kind: AccessKind) {
     const qc = useQueryClient();
     const invalidate = () => {
