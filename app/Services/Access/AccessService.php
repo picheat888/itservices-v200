@@ -182,12 +182,44 @@ class AccessService
             'email_group' => 'email-groups', 'file_share' => 'file-shares',
             'social_platform' => 'social-platforms', 'software' => 'software',
         ];
+        // Sorted by person, then by resource: a work queue that reshuffles between visits is
+        // one you cannot work down. The query itself has no ORDER BY, so the order was
+        // whatever the database happened to return.
         $resignedList = $resignedGrants->map(fn (AccessMembership $m) => [
             'kind' => $kindByType[$m->resource_type] ?? 'software',
             'id' => $m->resource_id,
+            // The grant's own id, so the drill-down can revoke it in place through the
+            // registry's existing endpoint — which keeps that registry's edit permission
+            // in the loop instead of inventing a gate-free shortcut.
+            'membership_id' => $m->id,
             'name' => $m->resource?->name,
             'employee' => $m->employee?->name,
-        ])->values();
+        ])->sortBy([['employee', 'asc'], ['name', 'asc']])->values();
+
+        // Resources still OWNED by someone who has left. Ownership is not a membership row,
+        // so this never surfaced anywhere — yet the resource has a named custodian who is
+        // gone, which is the same problem as having no owner at all and takes the same
+        // remedy, so it joins the ownerless list rather than the revoke queue.
+        $ownerResigned = fn ($q) => $q->where('status', 'resigned');
+        $resignedOwned = FileShare::whereHas('owner', $ownerResigned)->with('owner')->orderBy('name')->get()
+            ->map(fn (FileShare $s) => [
+                'kind' => 'file-shares', 'id' => $s->id, 'name' => $s->name,
+                'employee' => $s->owner?->name, 'reason' => 'resigned',
+            ])
+            ->concat(EmailGroup::whereHas('owner', $ownerResigned)->with('owner')->orderBy('name')->get()
+                ->map(fn (EmailGroup $g) => [
+                    'kind' => 'email-groups', 'id' => $g->id, 'name' => $g->name,
+                    'employee' => $g->owner?->name, 'reason' => 'resigned',
+                ]))
+            ->values();
+
+        // Ownership gaps are one job with one remedy — find a custodian — whether the
+        // resource never had an owner or its owner has left. They travel as one list with a
+        // reason on each row so the drill-down can still tell them apart; the ones with a
+        // name to hand over from come first.
+        $ownerlessIssues = $resignedOwned->concat(
+            $noOwnerList->map(fn (array $row) => $row + ['employee' => null, 'reason' => 'none'])
+        )->values();
 
         return [
             'channels' => $channels,
@@ -195,13 +227,17 @@ class AccessService
             'governance' => [
                 'empty_resources' => $emptyList->count(),
                 'empty_sample' => $emptyList->first()['name'] ?? null,
-                'no_owner' => $noOwnerList->count(),
-                'owners_complete' => $noOwnerList->isEmpty(),
-                'resigned_holders' => $resignedGrants->unique('employee_id')->count(),
+                'no_owner' => $ownerlessIssues->count(),
+                'owners_complete' => $ownerlessIssues->isEmpty(),
+                // Counts the rows the drill-down actually lists, not the distinct people
+                // behind them — the card said 1 while the list showed 3 because one is a
+                // headcount and the other a work queue. Every other row on this card counts
+                // items to fix, so this one does too.
+                'resigned_holders' => $resignedList->count(),
                 'added_30d' => (int) AccessMembership::query()->active()->where('created_at', '>=', $since)->count(),
                 'issues' => [
                     'empty' => $emptyList,
-                    'no_owner' => $noOwnerList,
+                    'no_owner' => $ownerlessIssues,
                     'resigned' => $resignedList,
                 ],
             ],

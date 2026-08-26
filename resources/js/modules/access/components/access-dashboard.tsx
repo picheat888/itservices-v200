@@ -2,7 +2,9 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { AccessIssueItem, AccessKind, AccessSummary } from '@/shared/types';
 import { Card } from '@/shared/ui/card';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/shared/ui/sheet';
+import { useToastStore } from '@/stores/toast';
 import {
     AlertTriangle,
     CheckCircle2,
@@ -12,13 +14,15 @@ import {
     LayoutGrid,
     type LucideIcon,
     Package,
+    ShieldAlert,
     ShieldCheck,
     TrendingUp,
     UserCheck,
+    UserMinus,
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useAccessSummary } from '../hooks/use-access';
+import { useAccessSummary, useRevokeGrant } from '../hooks/use-access';
 
 /** Per-channel identity: brand-neutral colour (same hexes the registry NameCell uses) + icon + label key. */
 const CHANNEL: Record<AccessKind, { color: string; icon: LucideIcon; labelKey: string }> = {
@@ -121,6 +125,8 @@ function IssueSection({
     hint,
     items,
     onPick,
+    onRevoke,
+    canEdit,
     t,
 }: {
     tone: 'red' | 'amber';
@@ -128,49 +134,82 @@ function IssueSection({
     title: string;
     /** Problem line under each row when the item has no holder (resigned rows name the holder instead). */
     hint: string;
-    items: (AccessIssueItem & { employee?: string | null })[];
+    items: (AccessIssueItem & { employee?: string | null; reason?: 'resigned' | 'none'; membership_id?: number })[];
     onPick: (kind: AccessKind, id: number) => void;
+    /** Clear the row without leaving the drawer. Absent when the remedy is not a one-click one
+     *  (finding a new owner) or when the viewer cannot edit that registry. */
+    onRevoke?: (item: AccessIssueItem & { employee?: string | null; membership_id?: number }) => void;
+    /** Per-registry edit permission — a row the viewer cannot edit shows no action. */
+    canEdit?: Record<AccessKind, boolean>;
     t: (k: string) => string;
 }) {
     if (items.length === 0) return null;
     const toneText = tone === 'red' ? 'text-destructive' : 'text-amber-600 dark:text-amber-400';
     const toneRail = tone === 'red' ? 'border-l-destructive' : 'border-l-amber-500';
-    const tonePill = tone === 'red' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
     return (
-        // The left rail carries the severity — red = act now, amber = needs a look.
+        // Severity is carried by the rail and the header icon together — one treatment, read
+        // as a unit. The count badge stays neutral: how many is information, not a warning.
         <div className={cn('border-border rounded-lg border border-l-2', toneRail)}>
             <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
                 <Icon className={cn('h-4 w-4 shrink-0', toneText)} />
                 <span className="text-sm font-semibold">{title}</span>
-                <span className={cn('ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold', tonePill)}>{items.length}</span>
+                <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 font-mono text-[11px] font-bold">
+                    {items.length}
+                </span>
             </div>
             <div className="divide-border/60 divide-y p-1.5">
                 {items.map((item, i) => {
                     const meta = CHANNEL[item.kind];
                     const ChannelIcon = meta.icon;
                     return (
-                        <button
+                        // A row is two controls, not one: open the resource, or clear the grant
+                        // here. Nesting the second button inside the first would be invalid, so
+                        // the hover tint moves to the wrapper and both children sit inside it.
+                        <div
                             key={`${item.kind}-${item.id}-${i}`}
-                            type="button"
-                            onClick={() => onPick(item.kind, item.id)}
-                            className="hover:bg-muted/40 flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-left transition-colors"
+                            className="hover:bg-muted/40 flex w-full items-center gap-1 rounded-md pr-1.5 transition-colors"
                         >
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={tint(meta.color)}>
-                                <ChannelIcon className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="truncate text-sm font-medium">{item.name ?? '—'}</span>
-                                    <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold" style={tint(meta.color)}>
-                                        {t(meta.labelKey)}
-                                    </span>
+                            <button
+                                type="button"
+                                onClick={() => onPick(item.kind, item.id)}
+                                className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 py-2.5 text-left"
+                            >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={tint(meta.color)}>
+                                    <ChannelIcon className="h-4 w-4" />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                    {/* No type pill beside the name: the tinted icon on the left already
+                                        says which registry this is, in the same colour, and the pill was
+                                        eating the width that long resource names need. */}
+                                    <div className="truncate text-sm font-medium">{item.name ?? '—'}</div>
+                                    {/* The reason line stays neutral in every section — severity is the
+                                        rail's job, and a coloured reason used to be keyed to whether a
+                                        person's name happened to come with the row, which meant an
+                                        ownerless resource would render grey inside a red section.
+                                        Emphasis goes on the name instead, where the eye needs it. */}
+                                    <div className="text-muted-foreground mt-0.5 truncate text-xs">
+                                        {item.employee ? (
+                                            <>
+                                                {t(item.reason === 'resigned' ? 'access_dash_issue_owner' : 'access_dash_issue_holder')}{' '}
+                                                <span className="text-foreground font-medium">{item.employee}</span>
+                                            </>
+                                        ) : (
+                                            hint
+                                        )}
+                                    </div>
                                 </div>
-                                <div className={cn('text-xs', item.employee ? toneText : 'text-muted-foreground')}>
-                                    {item.employee ? `${t('access_dash_issue_holder')} ${item.employee}` : hint}
-                                </div>
-                            </div>
-                            <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                        </button>
+                                <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                            </button>
+                            {onRevoke && item.membership_id != null && canEdit?.[item.kind] && (
+                                <button
+                                    type="button"
+                                    onClick={() => onRevoke(item)}
+                                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-destructive/25 shrink-0 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors focus-visible:ring-[3px] focus-visible:outline-hidden"
+                                >
+                                    {t('access_issue_revoke')}
+                                </button>
+                            )}
+                        </div>
                     );
                 })}
             </div>
@@ -186,22 +225,46 @@ function IssueSection({
 function IssuesDrawer({
     open,
     governance,
+    canEdit,
     onClose,
     onOpenResource,
     t,
 }: {
     open: boolean;
     governance: AccessSummary['governance'];
+    /** Per-registry edit permission — the same gate the revoke endpoint enforces server-side. */
+    canEdit: Record<AccessKind, boolean>;
     onClose: () => void;
     onOpenResource: (kind: AccessKind, id: number) => void;
     t: (k: string) => string;
 }) {
     const { issues } = governance;
+    const confirm = useConfirm();
+    const revoke = useRevokeGrant();
     const total = issues.resigned.length + issues.no_owner.length + issues.empty.length;
     const pick = (kind: AccessKind, id: number) => {
         onClose();
         onOpenResource(kind, id);
     };
+
+    // Clearing a grant is destructive, so it confirms with the person's name first — the same
+    // flow the members drawer uses. The default danger copy is overridden because it is not
+    // true here: nothing is deleted and nothing is permanent — the grant is soft-revoked and
+    // the person can be added back from the resource. The queue stays open afterwards, so a
+    // run of leftovers can be worked down without leaving.
+    const askRevoke = (item: AccessIssueItem & { employee?: string | null; membership_id?: number }) =>
+        confirm({
+            variant: 'danger',
+            icon: UserMinus,
+            title: t('access_revoke_confirm_title'),
+            description: t('access_revoke_confirm_desc'),
+            confirmText: t('access_issue_revoke'),
+            entity: { name: item.employee ?? '—', sub: item.name ?? undefined },
+            action: async () => {
+                await revoke.mutateAsync({ kind: item.kind, id: item.id, membershipId: item.membership_id as number });
+                useToastStore.getState().push(t('access_member_removed'), 'error', undefined, 'users', { duration: 4000 });
+            },
+        });
     return (
         <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
             <SheetContent side="right" className="flex w-[480px] flex-col sm:max-w-[480px]">
@@ -225,6 +288,9 @@ function IssuesDrawer({
                         </div>
                     ) : (
                         <>
+                            {/* Only the grant queue gets an in-place action: revoking is one
+                                click with nothing to choose. Finding a new owner is not, so
+                                those rows still send you to the resource. */}
                             <IssueSection
                                 tone="red"
                                 icon={UserCheck}
@@ -232,10 +298,12 @@ function IssuesDrawer({
                                 hint=""
                                 items={issues.resigned}
                                 onPick={pick}
+                                onRevoke={askRevoke}
+                                canEdit={canEdit}
                                 t={t}
                             />
                             <IssueSection
-                                tone="amber"
+                                tone="red"
                                 icon={ShieldCheck}
                                 title={t('access_dash_owners_missing')}
                                 hint={t('access_issue_no_owner_hint')}
@@ -269,10 +337,13 @@ function IssuesDrawer({
 export function AccessDashboard({
     onOpenTab,
     onOpenResource,
+    canEdit,
 }: {
     onOpenTab: (kind: AccessKind) => void;
     /** Open a specific resource: switch to its tab and open its manage drawer. */
     onOpenResource: (kind: AccessKind, id: number) => void;
+    /** Per-registry edit permission, so the triage drawer only offers an action the API will accept. */
+    canEdit: Record<AccessKind, boolean>;
 }) {
     const t = useT();
     const { data, isLoading } = useAccessSummary();
@@ -459,8 +530,8 @@ export function AccessDashboard({
                                       node: (
                                           <StatusRow
                                               key="owners"
-                                              icon={AlertTriangle}
-                                              tone="amber"
+                                              icon={ShieldAlert}
+                                              tone="red"
                                               title={t('access_dash_owners_missing')}
                                               sub={t('access_dash_owners_missing_sub')}
                                               value={gov.no_owner}
@@ -566,7 +637,14 @@ export function AccessDashboard({
             </Card>
 
             {/* Triage drawer behind the governance rows — item click jumps to the resource drawer. */}
-            <IssuesDrawer open={issuesOpen} governance={gov} onClose={() => setIssuesOpen(false)} onOpenResource={onOpenResource} t={t} />
+            <IssuesDrawer
+                open={issuesOpen}
+                governance={gov}
+                canEdit={canEdit}
+                onClose={() => setIssuesOpen(false)}
+                onOpenResource={onOpenResource}
+                t={t}
+            />
         </div>
     );
 }
