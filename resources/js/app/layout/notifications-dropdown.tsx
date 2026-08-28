@@ -1,9 +1,8 @@
-import { useT } from '@/lang';
 import type { AppNotification } from '@/modules/notification';
-import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications } from '@/modules/notification';
+import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { cn } from '@/shared/lib/utils';
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
 
@@ -25,7 +24,9 @@ const NOTIF_TABS: { id: string; label: string }[] = [
 ];
 
 export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
-    const t = useT();
+    // Prefers the wording an administrator set on the Bell tab; falls through to the
+    // bundled string for every other key, so this still serves the surrounding UI text.
+    const t = useNotificationText();
     const navigate = useNavigate();
     const ref = useRef<HTMLDivElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
@@ -44,10 +45,28 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
     const items = data?.data ?? [];
     const unread = data?.unread ?? 0;
+    const total = data?.total ?? items.length;
 
-    const visibleItems = tab === 'all' ? items : items.filter((n) => moduleOf(n.data.type) === tab);
+    const visibleItems = tab === 'all' ? items : items.filter((n) => moduleOf(n.data.type, n.data.module) === tab);
 
-    const tabCount = (id: string) => (id === 'all' ? items.length : items.filter((n) => moduleOf(n.data.type) === id).length);
+    /**
+     * Real totals per module, folded from the server's per-type tallies.
+     *
+     * The chips used to count the rows they had been handed, and the list is capped at 30 —
+     * so "All 30" meant "the window is full", and dismissing one left it saying 30 again.
+     * The server counts; moduleOf classifies, which keeps that mapping in one place.
+     */
+    const countsByModule = useMemo(() => {
+        const tally: Record<string, number> = {};
+        (data?.counts ?? []).forEach((c) => {
+            const mod = moduleOf(c.type ?? '', c.module ?? undefined);
+            tally[mod] = (tally[mod] ?? 0) + c.count;
+        });
+
+        return tally;
+    }, [data?.counts]);
+
+    const tabCount = (id: string) => (id === 'all' ? total : (countsByModule[id] ?? 0));
     // Show "All" plus only the module tabs this user actually has notifications in —
     // each role sees just its relevant categories instead of every possible type.
     const shownTabs = NOTIF_TABS.filter((tb) => tb.id === 'all' || tabCount(tb.id) > 0);
@@ -188,8 +207,17 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                         <Icon className={cn('h-[18px] w-[18px]', n.read ? 'text-muted-foreground' : color)} />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <div className={cn('text-sm leading-snug', !n.read && 'font-semibold')}>{notificationTitle(n, t)}</div>
-                                        <div className="text-muted-foreground mt-0.5 text-xs">{notificationMessage(n, t)}</div>
+                                        {/* One line of title, two of body, then an ellipsis — the same
+                                            shape a toast uses. Before this a long message (a leaver's
+                                            outstanding access runs to four lines) pushed the rows below it
+                                            out of the tray, so the newest alerts were the ones you had to
+                                            scroll to find. */}
+                                        <div className={cn('line-clamp-1 text-sm leading-snug', !n.read && 'font-semibold')}>
+                                            {notificationTitle(n, t)}
+                                        </div>
+                                        <div className="text-muted-foreground mt-0.5 line-clamp-2 text-xs leading-relaxed">
+                                            {notificationMessage(n, t)}
+                                        </div>
                                     </div>
                                     <div className="flex shrink-0 flex-col items-end gap-1">
                                         <span className="text-muted-foreground text-[11px]">{n.created_at}</span>
@@ -210,6 +238,16 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                         })
                     )}
                 </div>
+
+                {/* The list is capped, so the chips can legitimately outnumber the rows below
+                    them. Saying so is the difference between a figure that looks wrong and one
+                    that explains itself — and dismissing from here refills the window, which
+                    otherwise looks like the count refusing to move. */}
+                {total > items.length && (
+                    <div className="border-border text-muted-foreground border-t px-4 py-2 text-center text-[11px]">
+                        {t('notif_showing').replace('{shown}', String(items.length)).replace('{total}', String(total))}
+                    </div>
+                )}
             </div>
         </div>
     );

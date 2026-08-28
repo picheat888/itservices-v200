@@ -1,6 +1,5 @@
-import { useT } from '@/lang';
 import type { AppNotification } from '@/modules/notification';
-import { useMarkRead, useNotifications } from '@/modules/notification';
+import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
@@ -40,7 +39,9 @@ function toneFor(color: string): ToastTone {
  * with every other toast instead of stacking a second region on top.
  */
 export function useNotificationToasts(): void {
-    const t = useT();
+    // Prefers the wording an administrator set on the Bell tab; falls through to the
+    // bundled string for every other key, so this still serves the surrounding UI text.
+    const t = useNotificationText();
     const navigate = useNavigate();
     const markRead = useMarkRead();
     const { data } = useNotifications();
@@ -48,6 +49,21 @@ export function useNotificationToasts(): void {
     // Ids we've already reacted to. Seeded from the first fetch so pre-existing
     // notifications never pop on page load — only genuinely new ones do.
     const seen = useRef<Set<string> | null>(null);
+
+    /**
+     * The newest notification that already existed when this session started watching.
+     *
+     * The id set alone was not enough. `/notifications` returns a capped window of the most
+     * recent rows, so dismissing one pulls an older one in from behind it — an id the set has
+     * never seen, on a row that is months old. Dismissing a single alert popped four toasts
+     * for a backlog nobody had asked to hear about again.
+     *
+     * Compared against the server's own timestamps at both ends, so a browser clock that
+     * disagrees with the server cannot make old alerts look new (or hide real ones).
+     * Null means the tray was empty when watching began: there is no backlog to confuse, so
+     * anything that turns up genuinely arrived.
+     */
+    const watermark = useRef<string | null>(null);
 
     // The toast callbacks below are created once per arrival but read at click time,
     // so they go through refs — otherwise a toast that outlives a re-render would
@@ -69,13 +85,24 @@ export function useNotificationToasts(): void {
 
         if (seen.current === null) {
             seen.current = new Set(items.map((n) => n.id));
+            watermark.current = items.reduce<string | null>(
+                (newest, n) => (n.created_at_iso && (newest === null || n.created_at_iso > newest) ? n.created_at_iso : newest),
+                null,
+            );
             return;
         }
 
-        const fresh = items.filter((n) => !n.read && !seen.current!.has(n.id));
-        if (fresh.length === 0) return;
+        const unseen = items.filter((n) => !n.read && !seen.current!.has(n.id));
+        if (unseen.length === 0) return;
 
-        fresh.forEach((n) => seen.current!.add(n.id));
+        // Mark them all seen, including the ones that will not toast: a backlog row that
+        // surfaces once must not be reconsidered every time the list refetches.
+        unseen.forEach((n) => seen.current!.add(n.id));
+
+        // Toast only what was created after watching began. A row without a timestamp is an
+        // older payload shape, and is treated as backlog rather than risking a false alarm.
+        const fresh = unseen.filter((n) => watermark.current === null || (n.created_at_iso != null && n.created_at_iso > watermark.current));
+        if (fresh.length === 0) return;
 
         // Oldest first, so a burst reads in the order it happened as slots free up.
         [...fresh].reverse().forEach((n: AppNotification) => {
