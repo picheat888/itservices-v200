@@ -6,6 +6,8 @@ import { assetApi, type AssetPayload, type AssetTransferPayload } from '../api/a
 
 const ASSETS = ['assets'] as const;
 const SUMMARY = ['assets-summary'] as const;
+/** Mutation key for accepting a hand-over — see the accept mutation and MyAssetsPage. */
+export const ACCEPT_KEY = ['asset-accept'] as const;
 
 /** Paginated asset list with search + type/source/status filters. */
 export const useAssets = (params: {
@@ -53,6 +55,10 @@ export const useAssetContract = (assetId: number | null | undefined) =>
 export const useAssetContractOptions = (enabled = true) =>
     useQuery({ queryKey: ['asset-contract-options'], queryFn: assetApi.contractOptions, enabled });
 
+/** Who cannot accept a hand-over on their own — fetched only while the transfer dialog is open. */
+export const useRecipientReadiness = (enabled = true) =>
+    useQuery({ queryKey: ['asset-recipient-readiness'], queryFn: assetApi.recipientReadiness, enabled });
+
 /**
  * Assets assigned to the current user (My Assets page + sidebar badge). Polls on the
  * same cadence as notifications so the badge appears in step with the bell/toast when
@@ -92,16 +98,22 @@ export const useAssetTransfers = () => useQuery({ queryKey: ['asset-transfers'],
 export function useAssetMutations() {
     const qc = useQueryClient();
     const t = useT();
-    const invalidate = () => {
-        qc.invalidateQueries({ queryKey: ASSETS });
-        qc.invalidateQueries({ queryKey: ['assets-list'] });
-        qc.invalidateQueries({ queryKey: ['assets-mine'] });
-        qc.invalidateQueries({ queryKey: ['assets-pending-return'] });
-        qc.invalidateQueries({ queryKey: ['asset-transfers'] });
-        qc.invalidateQueries({ queryKey: SUMMARY });
-        qc.invalidateQueries({ queryKey: ['stock-items'] });
-        qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
-    };
+    /**
+     * Refresh everything an asset change can touch. Returns the combined promise so a caller
+     * that needs to stay busy until the screen agrees with the server can await it; callers
+     * that pass it as `onSuccess: invalidate` simply ignore the return value as before.
+     */
+    const invalidate = () =>
+        Promise.all([
+            qc.invalidateQueries({ queryKey: ASSETS }),
+            qc.invalidateQueries({ queryKey: ['assets-list'] }),
+            qc.invalidateQueries({ queryKey: ['assets-mine'] }),
+            qc.invalidateQueries({ queryKey: ['assets-pending-return'] }),
+            qc.invalidateQueries({ queryKey: ['asset-transfers'] }),
+            qc.invalidateQueries({ queryKey: SUMMARY }),
+            qc.invalidateQueries({ queryKey: ['stock-items'] }),
+            qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY }),
+        ]);
     return {
         create: useMutation({ mutationFn: (p: AssetPayload) => assetApi.create(p), onSuccess: invalidate }),
         update: useMutation({
@@ -114,6 +126,12 @@ export function useAssetMutations() {
             onSuccess: invalidate,
         }),
         accept: useMutation({
+            // Keyed so the My Assets page can read which accepts are in flight straight from the
+            // mutation cache (useMutationState) instead of keeping its own list. A local list
+            // could only be cleared from mutate()'s per-call onSettled, and MutationObserver
+            // drops those callbacks the moment a second accept starts — so the first row's
+            // id was never removed and its button span forever.
+            mutationKey: ACCEPT_KEY,
             mutationFn: (id: number) => assetApi.accept(id),
             // A 403 means the hand-over is no longer this user's to accept — most often IT
             // cancelled/recalled it while they were on the page. Surface it instead of failing
@@ -126,7 +144,11 @@ export function useAssetMutations() {
                     useToastStore.getState().push(t('asset_action_failed'), 'error');
                 }
             },
-            onSettled: invalidate,
+            // Returned, not fired and forgotten: React Query holds the mutation `pending` until
+            // this resolves, so the button keeps spinning until the refreshed list is on screen.
+            // Without it the spinner stopped ~380ms before the row moved — a dead zone in which
+            // the button was live again on a hand-over that had already been accepted.
+            onSettled: () => invalidate(),
         }),
         requestReturn: useMutation({
             mutationFn: (v: { id: number; reason?: string }) => assetApi.requestReturn(v.id, v.reason),
