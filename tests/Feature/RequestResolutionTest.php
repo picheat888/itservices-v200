@@ -180,7 +180,7 @@ class RequestResolutionTest extends TestCase
         $rows = $this->resolve('social', $staff);
 
         $this->assertSame($boss->id, $rows->firstWhere('label', 'Manager / Asst. Manager')['approver_employee_id']);
-        foreach (['Supervisor / Head', 'Vice President'] as $emptyRung) {
+        foreach (['Supervisor', 'Vice President'] as $emptyRung) {
             $row = $rows->firstWhere('label', $emptyRung);
             $this->assertSame(ApprovalStatus::Skipped->value, $row['status']);
             $this->assertSame(ApprovalSkipReason::NoMatchingPosition->value, $row['skip_reason']);

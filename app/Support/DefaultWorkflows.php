@@ -5,34 +5,36 @@ namespace App\Support;
 use App\Enums\Request\RequestType;
 
 /**
- * Canonical default workflow per request type, straight from the approved
- * Request & Workflow diagram: chain approvals climb the requester's manager
- * line, owner approvals go to the Access resource owner, and IT Staff performs
- * the final fulfillment. Seeded once by WorkflowSeeder; admins edit from the
- * Workflows page afterwards (re-seeding never overwrites their edits).
+ * Canonical default workflow per request type — a copy of the routes this organisation
+ * actually runs, so a fresh install starts where the live system already is rather than at
+ * a generic template somebody then has to re-edit by hand.
  *
- * A chain step names the POSITIONS allowed to sign it (see RUNGS): resolution
- * climbs the requester's reporting line until it finds a holder, so a Staff
- * member's "Supervisor / Head" step reaches an actual Supervisor rather than
- * whichever manager happens to sit one level up.
+ * Seeded once by WorkflowSeeder; admins edit from the Workflows page afterwards, and
+ * re-seeding never overwrites their edits.
  *
- * A step carries no SLA. How long each route actually takes is measured from the
- * requests that ran through it, not declared here.
+ * A chain step names the POSITIONS allowed to sign it (see RUNGS): resolution climbs the
+ * requester's reporting line until it finds a holder, so a Staff member's Supervisor step
+ * reaches an actual Supervisor rather than whichever manager happens to sit one level up.
+ *
+ * A step carries no SLA. How long each route actually takes is measured from the requests
+ * that ran through it, not declared here.
  */
 class DefaultWorkflows
 {
     /**
-     * The three rungs of the ladder a chain step can ask for, by position title.
-     * A rung accepts every title at that level — "Supervisor" and "Senior
-     * Supervisor" are the same rung, and somebody below it (Leader and down) is not
-     * an approver at all.
+     * The rungs of the ladder a chain step can ask for, by position title. A rung accepts
+     * every title at that level — "Supervisor" and "Senior Supervisor" are the same rung,
+     * and somebody below it (Leader and down) is not an approver at all.
+     *
+     * `executive` is Vice President alone. Director sits at the same level on the org chart
+     * but is not on this rung in practice, and every chain route here reflects that.
      *
      * @var array<string, list<string>>
      */
     public const RUNGS = [
         'supervisor' => ['Asst. Supervisor', 'Supervisor', 'Senior Supervisor'],
         'manager' => ['Asst. Manager', 'Manager', 'Senior Manager'],
-        'executive' => ['Vice President', 'Director'],
+        'executive' => ['Vice President'],
     ];
 
     /**
@@ -41,7 +43,7 @@ class DefaultWorkflows
     public static function all(): array
     {
         $chain3 = [
-            ['actor_type' => 'chain', 'label' => 'Supervisor / Head', 'kind' => 'approval', 'positions' => self::RUNGS['supervisor']],
+            ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval', 'positions' => self::RUNGS['supervisor']],
             ['actor_type' => 'chain', 'label' => 'Manager / Asst. Manager', 'kind' => 'approval', 'positions' => self::RUNGS['manager']],
             ['actor_type' => 'chain', 'label' => 'Vice President', 'kind' => 'approval', 'positions' => self::RUNGS['executive']],
         ];
@@ -49,53 +51,62 @@ class DefaultWorkflows
         $owner = ['actor_type' => 'owner', 'label' => 'Resource Owner', 'kind' => 'approval'];
 
         return [
-            RequestType::Mailgroup->value => [
-                'name' => 'Email Group Access', 'auto_ticket' => true,
-                'steps' => [$owner, $it],
-            ],
-            RequestType::Fileshare->value => [
-                'name' => 'File Share Access', 'auto_ticket' => true,
-                'steps' => [$owner, $it],
-            ],
-            RequestType::Social->value => [
-                'name' => 'Social Media Access', 'auto_ticket' => true,
-                'steps' => [...$chain3, $it],
-            ],
+            // The one route that stops at Manager — a computer is standard issue, so it does
+            // not climb to the executive rung the way the others do.
             RequestType::Computer->value => [
-                'name' => 'Computer', 'auto_ticket' => true,
+                'name' => 'คำขอใช้งานคอมพิวเตอร์', 'auto_ticket' => true,
                 'steps' => [$chain3[0], $chain3[1], $it],
             ],
             // Same chain as Mobile — kept as its own workflow so the two can diverge
             // without touching each other.
             RequestType::Hardware->value => [
-                'name' => 'Hardware / Peripheral', 'auto_ticket' => true,
+                'name' => 'คำขอใช้งานอุปกรณ์ Hardware / อุปกรณ์ต่อพ่วง', 'auto_ticket' => true,
                 'steps' => [...$chain3, $it],
             ],
             RequestType::Mobile->value => [
-                'name' => 'Mobile Device', 'auto_ticket' => true,
+                'name' => 'คำขอใช้งานอุปกรณ์มือถือ', 'auto_ticket' => true,
                 'steps' => [...$chain3, $it],
             ],
             RequestType::Email->value => [
-                'name' => 'Email Account', 'auto_ticket' => true,
+                'name' => 'คำขอใช้งานบัญชี Email', 'auto_ticket' => true,
+                'steps' => [...$chain3, $it],
+            ],
+            RequestType::Social->value => [
+                'name' => 'คำขอสิทธิ์เข้าใช้งาน Social Media', 'auto_ticket' => true,
+                'steps' => [...$chain3, $it],
+            ],
+            // Access to something that already has a custodian: the owner decides and IT
+            // carries out, with no chain at all. Email Group below is the same shape.
+            RequestType::Fileshare->value => [
+                'name' => 'คำขอสิทธิ์เข้าใช้งาน File Share', 'auto_ticket' => true,
+                'steps' => [$owner, $it],
+            ],
+            RequestType::Software->value => [
+                'name' => 'คำขอใช้งาน / ติดตั้ง Software', 'auto_ticket' => true,
+                'steps' => [...$chain3, $it],
+            ],
+            // Narrower than the supervisor rung on purpose: recovering someone's data is
+            // signed by their own Supervisor, not by an Asst. or Senior standing in.
+            RequestType::Recovery->value => [
+                'name' => 'คำขอ Data Recovery', 'auto_ticket' => true,
                 'steps' => [
-                    ['actor_type' => 'chain', 'label' => 'Department Manager', 'kind' => 'approval', 'positions' => self::RUNGS['manager']],
+                    ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval', 'positions' => ['Supervisor']],
                     $it,
                 ],
             ],
-            RequestType::Software->value => [
-                'name' => 'Software Install', 'auto_ticket' => true,
-                'steps' => [...$chain3, $it],
-            ],
-            RequestType::Recovery->value => [
-                'name' => 'Data Recovery', 'auto_ticket' => true,
+            // Owner-approved, like File Share above.
+            RequestType::Mailgroup->value => [
+                'name' => 'คำขอสิทธิ์เข้าใช้งาน Email Group', 'auto_ticket' => true,
                 'steps' => [$owner, $it],
             ],
             RequestType::Telephone->value => [
-                'name' => 'Telephone', 'auto_ticket' => true,
+                'name' => 'คำขอโทรศัพท์สำนักงาน', 'auto_ticket' => true,
                 'steps' => [...$chain3, $it],
             ],
+            // The only route that does not open a ticket by itself: "other" covers work
+            // nobody has typed yet, so what it becomes is decided after it is approved.
             RequestType::Other->value => [
-                'name' => 'General Request', 'auto_ticket' => false,
+                'name' => 'คำขอใช้งานอื่น ๆ', 'auto_ticket' => false,
                 'steps' => [...$chain3, $it],
             ],
         ];

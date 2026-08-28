@@ -45,7 +45,14 @@ class WorkflowController extends Controller
      */
     public function index(): JsonResponse
     {
-        $workflows = Workflow::with('steps.positions')->orderBy('request_type')->get();
+        // Ordered by how RequestType declares its cases, not by the column. Sorting on the
+        // string put Computer next to Email and Hardware after Fileshare — alphabetical order
+        // of an internal key, which tells a reader nothing. Sorted in PHP because the list is
+        // one row per request type, so there is nothing to gain from doing it in SQL.
+        $order = array_flip(array_column(RequestType::cases(), 'value'));
+        $workflows = Workflow::with('steps.positions')->get()
+            ->sortBy(fn (Workflow $workflow) => $order[$workflow->request_type->value] ?? PHP_INT_MAX)
+            ->values();
 
         return response()->json([
             'data' => WorkflowResource::collection($workflows->each(
