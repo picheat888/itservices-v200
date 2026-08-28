@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Employee\Employee;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -15,14 +16,15 @@ use Illuminate\Notifications\Notification;
  */
 class NewEmployeeNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Employee $employee,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_cred_required';
     }
 
     /** @return array<string, mixed> */

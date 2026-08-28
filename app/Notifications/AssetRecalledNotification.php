@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Asset\Asset;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -17,15 +18,16 @@ use Illuminate\Notifications\Notification;
  */
 class AssetRecalledNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Asset $asset,
         private readonly string $subtype,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_asset_recalled_'.$this->subtype;
     }
 
     /** @return array<string, mixed> */

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Ticket\Ticket;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -12,15 +13,16 @@ use Illuminate\Notifications\Notification;
  */
 class TicketSlaAlertNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Ticket $ticket,
         private readonly string $subtype,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_ticket_sla_'.$this->subtype;
     }
 
     /** @return array<string, mixed> */

@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Employee\Employee;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -19,15 +20,16 @@ use Illuminate\Notifications\Notification;
  */
 class AssetOffboardingNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Employee $employee,
         private readonly int $count,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_asset_offboarding';
     }
 
     /** @return array<string, mixed> */

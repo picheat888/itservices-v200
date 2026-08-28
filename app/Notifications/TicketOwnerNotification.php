@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Ticket\Ticket;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -13,16 +14,17 @@ use Illuminate\Notifications\Notification;
  */
 class TicketOwnerNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Ticket $ticket,
         private readonly string $event,
         private readonly ?string $by = null,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_ticket_owner_'.$this->event;
     }
 
     /** @return array<string, mixed> */

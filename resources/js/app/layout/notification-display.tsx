@@ -8,6 +8,7 @@ import {
     CheckCircle2,
     ClipboardList,
     Clock,
+    FlaskConical,
     Gauge,
     Inbox,
     KeyRound,
@@ -33,7 +34,9 @@ import {
 type Translate = (key: string) => string;
 
 /** Maps a notification's data.type to the owning module tab id. */
-export function moduleOf(type: string): string {
+export function moduleOf(type: string, module?: string): string {
+    // A test row is a sample of some other notification; it belongs in that one's tab.
+    if (type === 'test') return module ?? 'employees';
     if (type.startsWith('ticket')) return 'tickets';
     if (type.startsWith('stock')) return 'stock';
     if (type.startsWith('request')) return 'requests';
@@ -49,6 +52,11 @@ export function moduleOf(type: string): string {
  * new-account = emerald, stock alerts and requests coloured by severity/status.
  */
 export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; color: string; bg: string } {
+    // A sample sent from Settings. Violet is the one tone no real alert uses, so a test can
+    // never be mistaken for the thing it is imitating.
+    if (n.data.type === 'test') {
+        return { Icon: FlaskConical, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+    }
     if (n.data.type === 'contract_expiring') {
         // Already past due → red; still inside the reminder window → amber.
         if ((n.data.days_remaining ?? 0) <= 0) {
@@ -158,6 +166,10 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
  * in the reader's language. Hence the translator.
  */
 export function notificationTitle(n: AppNotification, t: Translate): string {
+    // Named by the notification it samples, in the reader's own language.
+    if (n.data.type === 'test') {
+        return `${t('notif_test_prefix')} ${t(`notification_name_${(n.data.source_key ?? '').replace(/^notif_/, '')}`)}`;
+    }
     if (n.data.type === 'contract_expiring') return `${n.data.contract_vendor} (${n.data.contract_code})`;
     if (n.data.type?.startsWith('ticket_')) return `${n.data.ticket_no} - ${n.data.subject}`;
     if (n.data.type === 'stock_alert') return `${n.data.sku} - ${n.data.name}`;
@@ -211,6 +223,10 @@ const REQUEST_MESSAGE_KEY: Record<string, string> = {
 
 /** Secondary descriptive line for a notification, already localised. */
 export function notificationMessage(n: AppNotification, t: Translate): string {
+    // Rendered through the same translate the real one uses, so an administrator's override is
+    // what gets tested. Placeholders keep their braces: there is no request behind a sample to
+    // fill them from, and inventing values would test wording nobody will ever receive.
+    if (n.data.type === 'test') return t(n.data.source_key ?? '');
     if (n.data.type === 'contract_expiring') {
         return (n.data.days_remaining ?? 0) <= 0
             ? t('notif_contract_expired').replace('{days}', String(Math.abs(n.data.days_remaining ?? 0)))
@@ -273,6 +289,8 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
 /** SPA route a notification should open when clicked. */
 export function notificationTarget(n: AppNotification): string {
     // Every ticket notification opens the case's detail drawer directly.
+    // Straight back to the tab it was sent from.
+    if (n.data.type === 'test') return '/email-templates?tab=notification';
     if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
     // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
     if (n.data.type === 'asset_assigned') return '/my-assets';
@@ -281,7 +299,7 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_recalled') return '/my-assets';
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
-    const mod = moduleOf(n.data.type);
+    const mod = moduleOf(n.data.type, n.data.module);
     // The stuck-request bell asks for an account, so it opens the person who needs one
     // rather than the request nobody can act on yet.
     if (n.data.subtype === 'blocked_no_account' && n.data.employee_id) return `/employees?highlight=${n.data.employee_id}`;

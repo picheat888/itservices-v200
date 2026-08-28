@@ -2,14 +2,16 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { emailTemplateApi, type EmailLogRow, type EmailLogStatus, type EmailTemplate } from '@/modules/email-templates/api/emailTemplateApi';
 import { useEmailLog, useEmailLogs, useEmailTemplateMutations, useEmailTemplates } from '@/modules/email-templates/hooks/use-email-templates';
+import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/notification';
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { SettingToggle } from '@/shared/components/setting-toggle';
 import { Field } from '@/shared/components/field';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
-import { formatDateTime } from '@/shared/lib/datetime';
+import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -101,7 +103,7 @@ const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: 
 };
 
 // The page's two halves: what gets sent, and what happened when it was.
-const TAB_IDS = ['templates', 'log'] as const;
+const TAB_IDS = ['email', 'notification', 'log'] as const;
 type EmailTab = (typeof TAB_IDS)[number];
 const isEmailTab = (v: string | null): v is EmailTab => v != null && (TAB_IDS as readonly string[]).includes(v);
 
@@ -157,40 +159,6 @@ function highlightHtml(src: string): string {
 // Body overlay needs a trailing newline so its height tracks the textarea's.
 function highlightBody(src: string): string {
     return highlightHtml(src) + '\n';
-}
-
-function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
-    if (!iso) return neverLabel;
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.round(diff / 60000);
-    if (mins < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
-    if (mins < 60) return lang === 'th' ? `${mins} นาทีที่แล้ว` : `${mins} min ago`;
-    const hrs = Math.round(mins / 60);
-    if (hrs < 24) return lang === 'th' ? `${hrs} ชั่วโมงที่แล้ว` : `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
-    const days = Math.round(hrs / 24);
-    return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
-}
-
-function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label?: string }) {
-    return (
-        <button
-            type="button"
-            role="switch"
-            aria-checked={on}
-            aria-label={label}
-            onClick={onClick}
-            className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', on ? 'bg-brand' : 'bg-muted')}
-        >
-            <span
-                className={cn(
-                    'absolute top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white transition-all',
-                    on ? 'left-[1.125rem]' : 'left-0.5',
-                )}
-            >
-                {on && <Check className="text-brand h-2.5 w-2.5" />}
-            </span>
-        </button>
-    );
 }
 
 // Single quick-tool button in the Body editor toolbar (icon + tooltip).
@@ -259,7 +227,7 @@ export default function EmailTemplatesPage() {
     // the same half of the screen. List filters keep using localStorage; a tab is a place.
     const [searchParams, setSearchParams] = useSearchParams();
     const fromUrl = searchParams.get('tab');
-    const tab: EmailTab = isEmailTab(fromUrl) ? fromUrl : 'templates';
+    const tab: EmailTab = isEmailTab(fromUrl) ? fromUrl : 'email';
     const changeTab = (next: EmailTab) =>
         setSearchParams(
             (sp) => {
@@ -351,7 +319,7 @@ export default function EmailTemplatesPage() {
             // The switch lives inside a clickable row, so it has to keep its click.
             render: (tp) => (
                 <span onClick={(e) => e.stopPropagation()}>
-                    <Toggle on={tp.enabled} onClick={() => toggle(tp)} label={tp.name} />
+                    <SettingToggle on={tp.enabled} onClick={() => toggle(tp)} label={tp.name} />
                 </span>
             ),
         },
@@ -418,7 +386,9 @@ export default function EmailTemplatesPage() {
                     <h1 className="text-2xl font-bold">{t('email_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('email_sub')}</p>
                 </div>
-                <div className="flex gap-2">
+                {/* Both actions belong to the email templates; the Bell tab has its own
+                    per-bell reset and nothing to send. */}
+                <div className={cn('flex gap-2', tab === 'notification' && 'hidden')}>
                     {anyModified && (
                         <Button variant="outline" onClick={resetAllToStandard} disabled={resetAll.isPending} title={t('email_reset_all')}>
                             {resetAll.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
@@ -432,19 +402,24 @@ export default function EmailTemplatesPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <StatCard label={t('email_templates')} value={stats?.templates ?? '—'} icon={Mail} />
-                <StatCard label={t('email_enabled')} value={stats?.enabled ?? '—'} icon={Check} />
-                <StatCard label={t('email_sent_today')} value={stats?.sent_today ?? '—'} icon={Send} />
-                {/* The delivery rate is the one card with somewhere to go: the log behind it
+            {/* One row of figures, belonging to whichever tab is open. */}
+            {tab === 'notification' ? (
+                <NotificationSettingsStats />
+            ) : (
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <StatCard label={t('email_templates')} value={stats?.templates ?? '—'} icon={Mail} />
+                    <StatCard label={t('email_enabled')} value={stats?.enabled ?? '—'} icon={Check} />
+                    <StatCard label={t('email_sent_today')} value={stats?.sent_today ?? '—'} icon={Send} />
+                    {/* The delivery rate is the one card with somewhere to go: the log behind it
                     names the sends that make up the missing per cent. */}
-                <StatCard
-                    label={t('email_delivery')}
-                    value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
-                    icon={Mail}
-                    onClick={() => changeTab('log')}
-                />
-            </div>
+                    <StatCard
+                        label={t('email_delivery')}
+                        value={stats?.delivery_rate != null ? `${stats.delivery_rate}%` : '—'}
+                        icon={Mail}
+                        onClick={() => changeTab('log')}
+                    />
+                </div>
+            )}
 
             {/* Tabs are the card's top edge, the way every other tabbed page in the app sets
                 them: a row of labels floating on the page background belongs to nothing. */}
@@ -460,18 +435,19 @@ export default function EmailTemplatesPage() {
                                 tab === id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
-                            {t(id === 'templates' ? 'email_tab_templates' : 'email_tab_log')}
+                            {t(id === 'email' ? 'email_tab_email' : id === 'notification' ? 'email_tab_notification' : 'email_tab_log')}
                             {tab === id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
                         </button>
                     ))}
                 </div>
 
+                {tab === 'notification' && <NotificationSettingsPane />}
                 {tab === 'log' && <DeliveryLogPane />}
 
                 {/* Tab content sits inset in a padded block, the way every other tabbed list in
                     the app lays out — full-width strips ruled off from each other made the table
                     look bolted to the card rather than held by it. */}
-                {tab === 'templates' && (
+                {tab === 'email' && (
                     <div className="space-y-3 p-5">
                         {/* No heading here: the tab above already named this half of the page. */}
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1244,7 +1220,7 @@ function EditorDialog({
                             </div>
                             <label className="flex shrink-0 items-center gap-2 text-sm">
                                 <span className="text-muted-foreground">{t('email_enabled')}</span>
-                                <Toggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                                <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
                             </label>
                         </div>
 

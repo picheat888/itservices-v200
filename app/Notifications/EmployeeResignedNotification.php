@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Employee\Employee;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -15,16 +16,17 @@ use Illuminate\Notifications\Notification;
  */
 class EmployeeResignedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Employee $employee,
         /** 'offboarding' (a task) or 'departure' (news). */
         private readonly string $subtype = 'offboarding',
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return $this->subtype === 'departure' ? 'notif_departure' : 'notif_resigned';
     }
 
     /** @return array<string, mixed> */
