@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Employee\Employee;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -15,6 +16,8 @@ use Illuminate\Notifications\Notification;
  */
 class AccessOffboardingNotification extends Notification
 {
+    use ConfigurableNotification;
+
     /**
      * @param  array{grants: int, owned: int, total: int}  $outstanding
      */
@@ -23,10 +26,9 @@ class AccessOffboardingNotification extends Notification
         private readonly array $outstanding,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_access_offboarding';
     }
 
     /** @return array<string, mixed> */

@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Employee\Employee;
 use App\Models\Request\ServiceRequest;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -25,6 +26,8 @@ use Illuminate\Notifications\Notification;
  */
 class RequestWorkflowNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly ServiceRequest $request,
         private readonly string $subtype,
@@ -35,9 +38,22 @@ class RequestWorkflowNotification extends Notification
         private readonly ?int $stalledDays = null,
     ) {}
 
-    public function via(object $notifiable): array
+    /**
+     * The catalogue key for this subtype — the same key the SPA picks when it renders the
+     * bell, so switching one off in Settings silences exactly the message an administrator
+     * was looking at.
+     *
+     * `ready_to_fulfill` splits in two on purpose: with a case open the work lives in the
+     * case and the bell only names it, without one somebody in the queue still has to press
+     * Fulfil. They read differently and are silenced separately.
+     */
+    protected function notificationKey(): string
     {
-        return ['database'];
+        if ($this->subtype === 'ready_to_fulfill') {
+            return $this->request->ticket?->ticket_no ? 'notif_request_ready_case' : 'notif_request_ready_manual';
+        }
+
+        return 'notif_request_'.$this->subtype;
     }
 
     /**

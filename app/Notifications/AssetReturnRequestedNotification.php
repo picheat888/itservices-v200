@@ -3,20 +3,22 @@
 namespace App\Notifications;
 
 use App\Models\Asset\Asset;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell alert to IT that a holder has requested to return an asset (awaiting receipt). */
 class AssetReturnRequestedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Asset $asset,
         private readonly ?string $from = null,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_asset_return_requested';
     }
 
     /** @return array<string, mixed> */

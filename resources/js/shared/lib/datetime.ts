@@ -14,3 +14,19 @@ export function formatDateTime(value: string | null | undefined, withTime = true
     if (!withTime || !timePart) return datePart;
     return `${datePart} ${timePart.slice(0, 5)}`;
 }
+
+/**
+ * "5 hours ago" for a settings list — coarse on purpose: these columns answer "is this thing
+ * actually in use", not "exactly when". Shared by the Email and Notification tabs so the two
+ * halves of that page phrase the same fact the same way.
+ */
+export function relativeTime(iso: string | null, lang: string, neverLabel: string): string {
+    if (!iso) return neverLabel;
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
+    if (mins < 60) return lang === 'th' ? `${mins} นาทีที่แล้ว` : `${mins} min ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return lang === 'th' ? `${hrs} ชั่วโมงที่แล้ว` : `${hrs} hour${hrs > 1 ? 's' : ''} ago`;
+    const days = Math.round(hrs / 24);
+    return lang === 'th' ? `${days} วันที่แล้ว` : `${days} day${days > 1 ? 's' : ''} ago`;
+}

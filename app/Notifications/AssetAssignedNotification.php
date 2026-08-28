@@ -3,20 +3,22 @@
 namespace App\Notifications;
 
 use App\Models\Asset\Asset;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell alert sent to the employee an asset has just been handed over to. */
 class AssetAssignedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Asset $asset,
         private readonly ?string $from = null,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_asset_assigned';
     }
 
     /** @return array<string, mixed> */

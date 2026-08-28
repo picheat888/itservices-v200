@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Contract\Contract;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -14,15 +15,16 @@ use Illuminate\Notifications\Notification;
  */
 class ContractExpiryNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Contract $contract,
         private readonly int $daysRemaining,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return $this->daysRemaining <= 0 ? 'notif_contract_expired' : 'notif_contract_expiring';
     }
 
     /** @return array<string, mixed> */

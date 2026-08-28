@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\Employee\EmployeeController;
 use App\Http\Controllers\Api\Employee\PositionController;
 use App\Http\Controllers\Api\Employee\SectionController;
 use App\Http\Controllers\Api\Notification\NotificationController;
+use App\Http\Controllers\Api\Notification\NotificationTemplateController;
 use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
@@ -103,6 +104,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('email-templates/{emailTemplate}/preview', [EmailTemplateController::class, 'preview'])->name('api.email-templates.preview');
     Route::post('email-templates/render-preview', [EmailTemplateController::class, 'renderPreview'])->name('api.email-templates.render-preview');
     Route::post('email-templates/reset-all', [EmailTemplateController::class, 'resetAll'])->name('api.email-templates.reset-all');
+    // In-app bells: the catalogue + wording is admin config; `notification-messages` is the wording
+    // alone, which every signed-in user needs to render their own tray.
+    Route::get('notification-templates', [NotificationTemplateController::class, 'index'])->name('api.notification-templates.index');
+    Route::put('notification-templates/{key}', [NotificationTemplateController::class, 'update'])->name('api.notification-templates.update');
+    Route::post('notification-templates/{key}/reset', [NotificationTemplateController::class, 'reset'])->name('api.notification-templates.reset');
+    Route::post('notification-templates/{key}/test', [NotificationTemplateController::class, 'test'])->name('api.notification-templates.test');
+    Route::get('notification-messages', [NotificationTemplateController::class, 'messages'])->name('api.notification-messages');
     Route::get('email-logs', [EmailLogController::class, 'index'])->name('api.email-logs.index');
     Route::get('email-logs/{emailLog}', [EmailLogController::class, 'show'])->name('api.email-logs.show');
     Route::post('email-templates/{emailTemplate}/reset', [EmailTemplateController::class, 'reset'])->name('api.email-templates.reset');

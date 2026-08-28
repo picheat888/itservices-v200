@@ -3,17 +3,19 @@
 namespace App\Notifications;
 
 use App\Models\Stock\StockCount;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell reminder that a stock count session is still in draft. */
 class StockCountDraftNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(private readonly StockCount $count) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_stock_count_draft';
     }
 
     /** @return array<string, mixed> */

@@ -3,17 +3,19 @@
 namespace App\Notifications;
 
 use App\Models\Ticket\Ticket;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell for IT staff (tickets.resolve + matching Level) when a new case arrives. */
 class TicketCreatedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(private readonly Ticket $ticket) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_ticket_new';
     }
 
     /** @return array<string, mixed> */

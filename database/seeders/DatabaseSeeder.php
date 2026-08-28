@@ -55,6 +55,7 @@ class DatabaseSeeder extends Seeder
         // Each of these reads its own catalogue class and is itself idempotent.
         $this->call(MailSettingSeeder::class);      // the single editable SMTP row
         $this->call(EmailTemplateSeeder::class);    // App\Support\EmailTemplates
+        $this->call(NotificationTemplateSeeder::class);     // App\Support\NotificationCatalogue
         $this->call(WorkflowSeeder::class);         // App\Support\DefaultWorkflows
         $this->call(RequestOptionSeeder::class);    // the managed choice lists in RequestSchemas
     }

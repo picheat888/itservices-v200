@@ -3,20 +3,22 @@
 namespace App\Notifications;
 
 use App\Models\Ticket\Ticket;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell for the receiving staff when an in-progress case is forwarded to them. */
 class TicketForwardedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly Ticket $ticket,
         private readonly ?string $fromName,
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_ticket_forwarded';
     }
 
     /** @return array<string, mixed> */

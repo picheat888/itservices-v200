@@ -3,20 +3,22 @@
 namespace App\Notifications;
 
 use App\Models\Stock\StockItem;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell alert that a stock item entered an out/low/over state. */
 class StockAlertNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(
         private readonly StockItem $item,
         private readonly string $subtype, // out | low | over
     ) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_stock_'.$this->subtype;
     }
 
     /** @return array<string, mixed> */

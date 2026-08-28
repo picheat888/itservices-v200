@@ -3,17 +3,19 @@
 namespace App\Notifications;
 
 use App\Models\Ticket\Ticket;
+use App\Notifications\Concerns\ConfigurableNotification;
 use Illuminate\Notifications\Notification;
 
 /** In-app bell for the staff a case was assigned to (by a dispatcher). */
 class TicketAssignedNotification extends Notification
 {
+    use ConfigurableNotification;
+
     public function __construct(private readonly Ticket $ticket) {}
 
-    /** @return list<string> */
-    public function via(object $notifiable): array
+    protected function notificationKey(): string
     {
-        return ['database'];
+        return 'notif_ticket_assigned';
     }
 
     /** @return array<string, mixed> */
