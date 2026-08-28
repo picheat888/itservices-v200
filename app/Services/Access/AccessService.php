@@ -115,6 +115,22 @@ class AccessService
     }
 
     /**
+     * How much access a departed employee still holds: grants left switched on plus resources
+     * they still own. The same two things the Access overview counts, so an offboarding notice
+     * and the governance card can never disagree about how much is outstanding.
+     *
+     * @return array{grants: int, owned: int, total: int}
+     */
+    public function outstandingFor(Employee $employee): array
+    {
+        $grants = AccessMembership::query()->active()->where('employee_id', $employee->id)->count();
+        $owned = EmailGroup::where('owner_employee_id', $employee->id)->count()
+            + FileShare::where('owner_employee_id', $employee->id)->count();
+
+        return ['grants' => $grants, 'owned' => $owned, 'total' => $grants + $owned];
+    }
+
+    /**
      * Aggregate figures for the Access Directory "overview" tab: per-channel
      * counts (resources / active grants / grants added in the last 30 days), the
      * active-grant distribution total, a handful of governance-hygiene checks,
