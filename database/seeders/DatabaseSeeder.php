@@ -16,9 +16,22 @@ use Illuminate\Database\Seeder;
  * Everything here comes from a catalogue in code — permissions, email templates,
  * request workflows, request-form choices — plus one account to sign in with.
  * That is the dividing line: system configuration is seeded, business data is
- * entered by the administrator. Demo content (employees, master data, assets,
- * tickets, contracts, stock, access registries) lives in DemoSeeder, which this
- * seeder never calls.
+ * entered by the administrator.
+ *
+ * There is no demo dataset any more. The seeders that invented employees, assets,
+ * tickets, contracts, stock and access records were removed once the system carried
+ * real data — fake rows in the repository are only a liability at that point.
+ *
+ * Four seeders remain outside this one, run by hand on a fresh install because they
+ * carry the ORGANISATION's own reference data rather than invented content:
+ *
+ *   php artisan db:seed --class=DepartmentSeeder   # 11 departments, DEP-#### codes
+ *   php artisan db:seed --class=PositionSeeder     # 14 job titles, PST-#### codes
+ *   php artisan db:seed --class=SectionSeeder      # 26 sections (needs departments first)
+ *   php artisan db:seed --class=MasterDataSeeder   # brands, models, categories, vendors, warehouses
+ *
+ * They are deliberately not called from here: an install that is not this company
+ * should start with an empty org chart rather than somebody else's.
  *
  * Non-destructive on a second run: it creates what is missing and leaves existing
  * rows alone, so upgrading an installed system never reverts a role that was
