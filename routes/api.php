@@ -196,6 +196,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('assets/contract-options', [AssetController::class, 'contractOptions'])->name('api.assets.contract-options');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
     Route::get('assets/mine', [AssetController::class, 'mine'])->name('api.assets.mine');
+    Route::get('assets/recipient-readiness', [AssetController::class, 'recipientReadiness'])->name('api.assets.recipient-readiness');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
     Route::post('assets/bulk-transfer', [AssetController::class, 'bulkTransfer'])->name('api.assets.bulk-transfer');
     Route::post('assets/bulk-recall', [AssetController::class, 'bulkRecall'])->name('api.assets.bulk-recall');

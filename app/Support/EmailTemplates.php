@@ -211,36 +211,84 @@ You can track progress in {{app.name}}.</p>
                 'cadence' => 'weekly',
             ],
             [
+                // The bell fires at the same moment and links to My Assets; this reaches the
+                // recipient who is not in the portal — which is most people, most of the time,
+                // and a hand-over nobody accepts sits in limbo until they do.
                 'key' => 'asset.assigned',
-                'name' => 'Asset assigned to you',
-                'subject' => 'An asset has been assigned to you',
+                'name' => 'Asset transferred to you (ทรัพย์สินที่โอนไปยังผู้ใช้งาน)',
+                'subject' => 'Asset Management: Your new asset is ready: {{asset.code}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>An asset has been assigned to you. Please confirm receipt at your earliest convenience.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>An asset has been transferred to you.</p>
+<p>Please confirm receipt in {{app.name}}.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+<p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
+<strong style="color:#64748b">Model:</strong> {{asset.model}}<br>
+<strong style="color:#64748b">Tag:</strong> {{asset.tag}}<br>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
-                'key' => 'asset.transferred',
-                'name' => 'Asset transfer confirmation',
-                'subject' => 'Asset transfer confirmation',
+                // Goes to whoever can receive assets back into the pool, not to the holder —
+                // the holder already knows, they are the one sending it back.
+                'key' => 'asset.return_requested',
+                'name' => 'The assets have been returned to the IT department. (ส่งคืนทรัพย์สินโดยผู้ใช้งาน)',
+                'subject' => 'Asset Management: Asset returned by {{asset.holder}} ({{asset.code}})',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>An asset has been assigned to you. Please confirm receipt at your earliest convenience.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
-                'enabled' => false,
+<p>An asset has been returned and is waiting to be received into the inventory.</p>
+<p>Please review and confirm receipt in the system.</p>
+<br>
+<p><strong><u>Return Details</u>:</strong></p>
+<p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
+<strong style="color:#64748b">Model:</strong> {{asset.model}}<br>
+<strong style="color:#64748b">Tag:</strong> {{asset.tag}}<br>
+<strong style="color:#64748b">Returned by:</strong> {{asset.holder}}</p>',
+                'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
-                'key' => 'schedule.weekly',
-                'name' => 'Weekly digest',
-                'subject' => 'Your weekly IT service summary',
+                // One mail per departure, matching the single bell — a leaver holding five
+                // machines is one collection trip, not five separate pieces of news.
+                //
+                // It carries the devices themselves ({{asset.table}}, built in PHP like the
+                // digests): whoever collects them walks the floor with this open, and a bare
+                // count told them how many to look for but not what.
+                'key' => 'asset.offboarding',
+                'name' => 'Assets to Collect from Resigning Employees (ตรวจสอบทรัพย์สินพนักงานสิ้นสุดการทำงาน)',
+                'subject' => 'Offboarding: {{employee.name}} - {{asset.count}} asset(s) to collect',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Here is your weekly summary of IT service activity across the organization.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>{{employee.name}} has resigned, and we need to collect their company assets.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+<p><strong style="color:#64748b">Employee ID:</strong> <strong>{{employee.code}}</strong><br>
+<strong style="color:#64748b">Full name:</strong> {{employee.name}}<br>
+<strong style="color:#64748b">Last working day:</strong> {{employee.last_working}}<br>
+<strong style="color:#64748b">Assets to collect:</strong> {{asset.count}}</p>
+{{asset.table}}
+<p style="color:#64748b">The list is on the Assets management, filtered to Pending return.</p>',
                 'enabled' => true,
-                'cadence' => 'daily',
+                'cadence' => 'realtime',
             ],
             [
+                // Deliberately one template for both kinds of recall — a hand-over called off
+                // before it was accepted and a device taken back out of someone\'s hands read
+                // the same to the reader: it is not yours and there is nothing to do.
+                'key' => 'asset.recalled',
+                'name' => 'Asset recalled from you (บังคับเรียกคืนทรัพย์)',
+                'subject' => 'Asset Management: {{asset.code}} has been recalled',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Just letting you know that the following asset has been returned to us and removed from your account. You don\'t need to confirm anything else.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+<p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
+<p><strong style="color:#64748b">Type:</strong> {{asset.type}}<br>
+<strong style="color:#64748b">Model:</strong> {{asset.model}}<br>
+<strong style="color:#64748b">Tag:</strong> {{asset.tag}}</p>
+<br>
+<p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],            [
                 'key' => 'employee.account_needed',
                 'name' => 'New employee - set credentials',
                 'subject' => 'New employee {{employee.code}} needs a login account',

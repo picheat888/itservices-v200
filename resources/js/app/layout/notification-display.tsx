@@ -14,6 +14,8 @@ import {
     PackageCheck,
     PackageMinus,
     PackagePlus,
+    PackageX,
+    ShieldAlert,
     Undo2,
     UserCheck,
     UserMinus,
@@ -37,6 +39,7 @@ export function moduleOf(type: string): string {
     if (type.startsWith('request')) return 'requests';
     if (type.startsWith('asset')) return 'assets';
     if (type.startsWith('contract')) return 'contracts';
+    if (type.startsWith('access')) return 'access';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -115,8 +118,28 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     if (n.data.type === 'asset_return_requested') {
         return { Icon: Undo2, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
+    // A leaver's whole kit in one bell — a job to do, so amber like the return request it
+    // replaces, but PackageMinus for "these are leaving your floor" rather than one send-back.
+    if (n.data.type === 'asset_offboarding') {
+        return { Icon: PackageMinus, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
+    // A recall is news, never a task: the reader has nothing to press either way, so it
+    // wears slate rather than joining the amber "you owe someone something" bells.
+    if (n.data.type === 'asset_recalled') {
+        return { Icon: PackageX, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-500/10' };
+    }
+    // Access left behind reads with the same urgency as the offboarding bell it arrives
+    // beside, but wears the shield the Access Directory uses for its governance rows.
+    if (n.data.type === 'access_offboarding') {
+        return { Icon: ShieldAlert, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+    }
     if (n.data.subtype === 'offboarding') {
         return { Icon: UserMinus, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+    }
+    // The same departure, read by someone who cannot act on it: still the leaving icon, but
+    // slate rather than red — nothing here is waiting on the reader.
+    if (n.data.subtype === 'departure') {
+        return { Icon: UserMinus, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-500/10' };
     }
     return { Icon: UserPlus, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
 }
@@ -156,7 +179,8 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
 
         return `${n.data.reference} - ${written}`;
     }
-    if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested') return `${n.data.asset_model} (${n.data.asset_tag})`;
+    if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested' || n.data.type === 'asset_recalled')
+        return `${n.data.asset_model} (${n.data.asset_tag})`;
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
@@ -222,7 +246,28 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     }
     if (n.data.type === 'asset_assigned') return t('notif_asset_assigned');
     if (n.data.type === 'asset_return_requested') return t('notif_asset_return_requested');
-    return n.data.subtype === 'offboarding' ? t('notif_resigned') : t('notif_cred_required');
+    // Two different pieces of news wearing one type: a hand-over called off before it was
+    // accepted, or a device actually taken back out of someone's hands.
+    if (n.data.type === 'asset_recalled') {
+        return t(n.data.subtype === 'taken_back' ? 'notif_asset_recalled_taken_back' : 'notif_asset_recalled_cancelled');
+    }
+    // Names the count: "has assets to hand back" alone does not say whether this is one
+    // machine to collect or a trolley's worth.
+    if (n.data.type === 'asset_offboarding') {
+        return t('notif_asset_offboarding').replace('{count}', String(n.data.count ?? 0));
+    }
+    // Says how much is waiting and which kind, because "still holds access" alone does not
+    // tell the reader whether this is one revoke or an afternoon's work.
+    if (n.data.type === 'access_offboarding') {
+        return t('notif_access_offboarding')
+            .replace('{grants}', String(n.data.grants ?? 0))
+            .replace('{owned}', String(n.data.owned ?? 0))
+            .replace('{total}', String(n.data.total ?? 0));
+    }
+    if (n.data.subtype === 'offboarding') return t('notif_resigned');
+    if (n.data.subtype === 'departure') return t('notif_departure');
+
+    return t('notif_cred_required');
 }
 
 /** SPA route a notification should open when clicked. */
@@ -232,6 +277,10 @@ export function notificationTarget(n: AppNotification): string {
     // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
     if (n.data.type === 'asset_assigned') return '/my-assets';
     if (n.data.type === 'asset_return_requested') return '/assets';
+    // Nothing to act on, but the reader's own list is what changed — open it there.
+    if (n.data.type === 'asset_recalled') return '/my-assets';
+    if (n.data.type === 'asset_offboarding') return '/assets';
+    if (n.data.type === 'access_offboarding') return '/access';
     const mod = moduleOf(n.data.type);
     // The stuck-request bell asks for an account, so it opens the person who needs one
     // rather than the request nobody can act on yet.

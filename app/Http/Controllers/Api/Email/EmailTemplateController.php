@@ -250,6 +250,26 @@ class EmailTemplateController extends Controller
             'stock.sku' => 'SKU-1042',
             'stock.name' => 'USB-C Docking Station',
             'stock.qty' => 2,
+            'asset.code' => 'INK-IT-26-0042',
+            'asset.model' => 'ThinkCentre Neo 55a 24 G6',
+            'asset.tag' => 'PC042',
+            'asset.type' => 'Computer',
+            'asset.from' => 'Store IT',
+            'asset.holder' => 'Somchai Suksawat',
+            'asset.count' => 3,
+            'employee.last_working' => '31-12-2026',
+            // Built in PHP by AssetService, so the preview needs a stand-in — same reason
+            // the digests below carry one.
+            'asset.table' => EmailTable::render(
+                ['Device', 'Type', 'Serial', 'Tag'],
+                [
+                    ['ThinkCentre Neo 55a 24 G6', 'Computer', 'DN2312123', 'PC042'],
+                    ['ThinkPad E14 Gen 5', 'Notebook', 'PF3X9K21', 'NB018'],
+                    ['Dell P2422H 24"', 'Monitor', 'CN0J7T44', 'MN107'],
+                ],
+                [],
+                ['38%', '20%', '24%', '18%'],
+            ),
             'ticket.id' => 'TKT-2856',
             'ticket.subject' => 'Printer not responding',
             'ticket.category' => 'Hardware',

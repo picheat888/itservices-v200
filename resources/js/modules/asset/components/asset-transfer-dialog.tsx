@@ -9,9 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { Loader2, Share2, Users } from 'lucide-react';
+import { AlertTriangle, Loader2, Share2, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useAssetMutations } from '../hooks/use-assets';
+import { useAssetMutations, useRecipientReadiness } from '../hooks/use-assets';
 
 type Mode = 'employee' | 'shared';
 
@@ -42,6 +42,8 @@ export function AssetTransferDialog({
     const isBulk = ids != null;
     const isOpen = isBulk ? !!open : !!asset;
     const busy = isBulk ? bulkTransfer.isPending : transfer.isPending;
+    // Asked for only while the dialog is open — a closed dialog picks nobody.
+    const { data: readiness } = useRecipientReadiness(isOpen);
 
     const locationOptions = useMemo(() => locations.map((l) => ({ value: String(l.id), label: l.name, search: l.name })), [locations]);
     const employeeOptions = useMemo(
@@ -74,6 +76,11 @@ export function AssetTransferDialog({
         setReason('');
         setErr({});
     }, [asset, open]);
+
+    // Why the picked employee cannot press Accept, or undefined when they can. IT may still
+    // hand the asset over — most staff have no login and receive their kit in person — so
+    // this only says what to expect afterwards.
+    const cannotAccept = mode === 'employee' && employeeId ? readiness?.[Number(employeeId)] : undefined;
 
     const submit = async () => {
         const required = t('asset_err_required');
@@ -141,6 +148,21 @@ export function AssetTransferDialog({
                                 preferDown
                                 placeholder={t('transfer_pick_employee')}
                             />
+                            {cannotAccept && (
+                                <div className="mt-2 flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3.5 py-3 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                    <div className="flex-1">
+                                        <div className="text-sm font-semibold">{t('transfer_cannot_accept_title')}</div>
+                                        <div className="mt-0.5 text-xs leading-relaxed">
+                                            {t(
+                                                cannotAccept === 'no_account'
+                                                    ? 'transfer_cannot_accept_no_account'
+                                                    : 'transfer_cannot_accept_no_permission',
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </Field>
                     ) : (
                         <Field label={t('transfer_shared_label')} required error={err.shared}>

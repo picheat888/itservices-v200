@@ -25,8 +25,14 @@ class EmailTable
      * @param  list<string>  $widths  optional per-column widths ('15%'); two tables given the
      *                                same widths line up under each other, which is the whole
      *                                point when a mail carries more than one of them
+     * @param  list<int>  $wrapAnywhere  column indexes holding a long value with nowhere
+     *                                   natural to break — a serial number, a device name.
+     *                                   They are exempt from the first-column nowrap and may
+     *                                   break mid-token rather than push the table wider than
+     *                                   the message. Leave empty for the digests, whose first
+     *                                   column is a short reference the nowrap exists for.
      */
-    public static function render(array $headers, array $rows, array $rightAligned = [], array $widths = []): string
+    public static function render(array $headers, array $rows, array $rightAligned = [], array $widths = [], array $wrapAnywhere = []): string
     {
         $head = '';
         foreach ($headers as $i => $header) {
@@ -47,6 +53,9 @@ class EmailTable
                 // lines stops looking like a record number.
                 $extra = match (true) {
                     in_array($i, $rightAligned, true) => 'text-align:right;white-space:nowrap;font-weight:600;',
+                    // Both properties on purpose: Outlook's Word engine ignores overflow-wrap,
+                    // and word-break is what it does understand.
+                    in_array($i, $wrapAnywhere, true) => 'word-break:break-word;overflow-wrap:anywhere;',
                     $i === 0 => 'white-space:nowrap;',
                     default => '',
                 };

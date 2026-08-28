@@ -164,6 +164,11 @@ export const asset: Dict = {
     transfer_mode_employee: 'Employee',
     transfer_mode_shared: 'Shared / common use',
     transfer_pick_employee: 'Select an employee',
+    transfer_cannot_accept_title: 'This employee cannot accept it themselves',
+    transfer_cannot_accept_no_account:
+        'They have no login account. You can still hand it over, but it stays in pending acceptance until someone confirms receipt.',
+    transfer_cannot_accept_no_permission:
+        'Their account cannot open My Assets, so they never see the Accept button. You can still hand it over, but it stays in pending acceptance.',
     transfer_shared_label: 'Shared label',
     transfer_shared_label_ph: 'e.g. Rack 2, HR shared printer',
     asset_transfer_failed: 'Transfer failed',

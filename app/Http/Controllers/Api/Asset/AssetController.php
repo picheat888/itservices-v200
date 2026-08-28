@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Asset;
 
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
+use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Asset\StoreAssetRequest;
 use App\Http\Resources\Asset\AssetResource;
@@ -12,6 +13,8 @@ use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
+use App\Models\Employee\Employee;
+use App\Models\User;
 use App\Services\Asset\AssetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -212,6 +215,41 @@ class AssetController extends Controller
             array_keys($months),
             $months,
         );
+    }
+
+    /**
+     * Which employees cannot confirm receipt themselves — the hand-over dialog warns before
+     * IT picks one of them.
+     *
+     * Accepting an asset needs two things that are decided outside this module: a login
+     * account linked to the employee, and the assets.my permission that opens My Assets,
+     * the only page carrying an Accept button. Without either, the hand-over lands in
+     * pending acceptance and stays there, because nobody can act on it. Handing over is
+     * still allowed — plenty of staff have no account and receive kit in person — so this
+     * only tells IT what to expect.
+     *
+     * Returns the exceptions rather than the whole roster: a map of employee id → why.
+     * Read-only peek at accounts under the assets.transfer gate (choosing a recipient is an
+     * Assets decision and must not also require permission to administer users).
+     */
+    public function recipientReadiness(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('assets.transfer'), 403);
+
+        // Every account, resolved once: hasPermission() walks the role's permission rows, so
+        // asking per employee would re-read them for each of them.
+        $accepting = User::whereNotNull('employee_id')->get()
+            ->filter(fn (User $user) => $user->hasPermission('assets.my'))
+            ->pluck('employee_id')
+            ->all();
+        $accounted = User::whereNotNull('employee_id')->pluck('employee_id')->all();
+
+        $blocked = Employee::where('status', EmployeeStatus::Active->value)
+            ->pluck('id')
+            ->reject(fn (int $id) => in_array($id, $accepting, true))
+            ->mapWithKeys(fn (int $id) => [$id => in_array($id, $accounted, true) ? 'no_permission' : 'no_account']);
+
+        return response()->json(['data' => $blocked]);
     }
 
     /**
