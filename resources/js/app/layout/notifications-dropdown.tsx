@@ -19,6 +19,7 @@ const NOTIF_TABS: { id: string; label: string }[] = [
     { id: 'tickets', label: 'tickets' },
     { id: 'requests', label: 'requests' },
     { id: 'assets', label: 'assets' },
+    { id: 'access', label: 'access_title' },
     { id: 'contracts', label: 'contracts' },
     { id: 'stock', label: 'stock' },
 ];

@@ -866,7 +866,7 @@ class EmployeeController extends Controller
             'last_day' => ['nullable', 'date'],
         ]);
 
-        $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null, $request->user());
+        $employee = $this->service->resign($employee, $data['reason'] ?? null, $data['last_day'] ?? null);
         AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
