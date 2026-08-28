@@ -84,7 +84,7 @@ export function Toaster() {
         <div
             role="region"
             aria-label={t('toast_region')}
-            className="pointer-events-none fixed right-5 bottom-5 z-[120] flex w-80 max-w-[calc(100vw-2.5rem)] flex-col items-end gap-3"
+            className="pointer-events-none fixed right-5 bottom-5 z-[120] flex w-[320px] max-w-[calc(100vw-2.5rem)] flex-col items-end gap-2.5"
         >
             {visible.map((toast) => (
                 <ToastItem key={toast.id} toast={toast} />
@@ -187,26 +187,33 @@ function ToastItem({ toast }: { toast: Toast }) {
             }
             tabIndex={activatable ? 0 : undefined}
             className={cn(
-                'toast-card bg-popover pointer-events-auto w-80 max-w-full overflow-hidden rounded-xl border',
+                // One width for every toast, narrower than the notification tray on purpose: a
+                // toast is glanced at, not read. Anything past the one title line and two body
+                // lines is clipped with an ellipsis — the full text is one click away in the
+                // tray, and a message needing three lines to land was written too long for this
+                // surface rather than given too small a box.
+                'toast-card bg-popover pointer-events-auto w-[320px] max-w-full overflow-hidden rounded-xl border',
                 'focus-visible:ring-ring ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
                 border,
                 activatable && 'cursor-pointer',
                 leaving ? 'toast-leave' : 'toast-enter',
             )}
         >
-            <div className={cn('flex min-h-[2.5rem] gap-3 px-4 py-3.5', hasTitle ? 'items-start' : 'items-center')}>
-                <span className={cn('grid h-8 w-8 shrink-0 place-items-center rounded-full text-white', badge)}>
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2.5} />
+            <div className={cn('flex min-h-[2.25rem] gap-2.5 px-3.5 py-3', hasTitle ? 'items-start' : 'items-center')}>
+                <span className={cn('grid h-7 w-7 shrink-0 place-items-center rounded-full text-white', badge)}>
+                    <Icon className="h-4 w-4" strokeWidth={2.5} />
                 </span>
 
-                <div className="min-w-0 flex-1 text-sm leading-snug">
+                {/* Compact on purpose: a toast is read at a glance and out of the corner of the
+                    eye, so it is set a step smaller than body copy rather than at it. */}
+                <div className="min-w-0 flex-1 text-[13px] leading-snug">
                     {hasTitle && <div className="text-foreground line-clamp-1 font-bold">{toast.title}</div>}
                     {/* Two lines, then ellipsis: a message worth showing is worth reading,
                         and one truncated line cut most of ours off mid-sentence. */}
                     <div
                         className={cn(
                             'line-clamp-2',
-                            hasTitle ? 'text-muted-foreground mt-0.5 text-[13px] font-medium' : 'text-foreground font-bold',
+                            hasTitle ? 'text-muted-foreground mt-0.5 text-[11.5px] font-medium' : 'text-foreground font-bold',
                         )}
                     >
                         {toast.message}
@@ -220,9 +227,9 @@ function ToastItem({ toast }: { toast: Toast }) {
                     }}
                     aria-label={t('notif_dismiss')}
                     title={t('notif_dismiss')}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring -mr-1 flex h-6 w-6 shrink-0 items-center justify-center self-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring -mr-0.5 flex h-5 w-5 shrink-0 items-center justify-center self-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none"
                 >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                 </button>
             </div>
 
