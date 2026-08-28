@@ -12,15 +12,23 @@ use App\Enums\Ticket\TicketCategory;
  */
 enum RequestType: string
 {
+    /*
+     * Declaration order IS the display order — the type picker, the Requests filter and the
+     * Workflows page all read it rather than sorting alphabetically, which would scatter
+     * related types apart. Kit first (computer → hardware → mobile), then the accounts and
+     * shares somebody is granted into, then the odds and ends, with `other` last because it
+     * is the fallback. resources/js/shared/lib/request-meta.ts holds the same order for the
+     * front end; the two are checked against each other by RequestTypeOrderTest.
+     */
     case Computer = 'computer';
     case Hardware = 'hardware';
     case Mobile = 'mobile';
     case Email = 'email';
     case Social = 'social';
     case Fileshare = 'fileshare';
-    case Mailgroup = 'mailgroup';
     case Software = 'software';
     case Recovery = 'recovery';
+    case Mailgroup = 'mailgroup';
     case Telephone = 'telephone';
     case Other = 'other';
 

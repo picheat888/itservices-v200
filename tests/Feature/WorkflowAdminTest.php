@@ -193,7 +193,7 @@ class WorkflowAdminTest extends TestCase
         // An install whose workflows predate position routing: the steps exist, the
         // rungs are empty, so nothing would resolve.
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
-        $supervisorRung = $workflow->steps()->where('label', 'Supervisor / Head')->firstOrFail();
+        $supervisorRung = $workflow->steps()->where('label', 'Supervisor')->firstOrFail();
         $managerRung = $workflow->steps()->where('label', 'Manager / Asst. Manager')->firstOrFail();
         $supervisorRung->positions()->detach();
         // An administrator already narrowed this one down; re-seeding must not widen it.

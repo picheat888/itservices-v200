@@ -19,6 +19,10 @@ import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Ph
  * greppable, and a new service type cannot compile until it is given one. A
  * composed key would silently render its own name on screen, because
  * `translate()` falls back to the key when it misses.
+ *
+ * Key order IS the display order — REQUEST_TYPES below is derived from it, and the Requests
+ * filter renders that. It mirrors App\Enums\Request\RequestType case for case; the two are
+ * checked against each other by RequestTypeOrderTest, so neither can drift alone.
  */
 export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; color: string; labelKey: string }> = {
     computer: { icon: Laptop, color: '#2563eb', labelKey: 'req_computer' },
@@ -27,9 +31,9 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
     email: { icon: Mail, color: '#7c3aed', labelKey: 'req_email' },
     social: { icon: Share2, color: '#db2777', labelKey: 'req_social' },
     fileshare: { icon: FolderOpen, color: '#0d9488', labelKey: 'req_fileshare' },
-    mailgroup: { icon: Users, color: '#7c3aed', labelKey: 'req_mailgroup' },
     software: { icon: Code2, color: '#059669', labelKey: 'req_software' },
     recovery: { icon: Archive, color: '#d97706', labelKey: 'req_recovery' },
+    mailgroup: { icon: Users, color: '#7c3aed', labelKey: 'req_mailgroup' },
     telephone: { icon: Phone, color: '#475569', labelKey: 'req_telephone' },
     other: { icon: MoreHorizontal, color: '#64748b', labelKey: 'req_other' },
 };
