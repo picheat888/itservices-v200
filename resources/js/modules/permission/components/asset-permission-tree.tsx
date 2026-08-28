@@ -2,7 +2,8 @@ import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
-import { actionDescription, actionLabel, moduleLabel } from '../lib/permission-labels';
+import { actionDescription, actionLabel } from '../lib/permission-labels';
+import { PermissionCardHeader } from './permission-card-header';
 
 // Mirrors App\Support\Permissions::assetHierarchy() — keep in sync.
 const MASTER = 'assets.module';
@@ -126,12 +127,7 @@ export function AssetPermissionTree({
 
     return (
         <div className="border-border rounded-lg border">
-            <div className="border-border flex items-center justify-between border-b px-3.5 py-2.5">
-                <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{moduleLabel('assets', lang)}</span>
-                <span className={cn('font-mono text-[10.5px] font-bold', activeCount === 0 ? 'text-muted-foreground' : 'text-brand')}>
-                    {activeCount}/{totalCount}
-                </span>
-            </div>
+            <PermissionCardHeader module="assets" on={activeCount} total={totalCount} lang={lang} />
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">

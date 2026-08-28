@@ -59,6 +59,7 @@ const LIVE = new Set<string>([
     'contracts.cancel',
     'contracts.expire',
     'contracts.reactivate',
+    'requests.module',
     'requests.submit',
     'requests.view_all',
     'requests.fulfill',

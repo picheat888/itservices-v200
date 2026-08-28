@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel, isLivePermission, moduleLabel } from '../lib/permission-labels';
+import { PermissionCardHeader } from './permission-card-header';
 
 /**
  * Master-row behaviour for a card:
@@ -36,18 +37,6 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
                 {locked && !on && <Lock className="text-muted-foreground h-2.5 w-2.5" />}
             </span>
         </button>
-    );
-}
-
-/** Header strip: uppercase module name + active/total count. */
-function CardHeader({ title, on, total }: { title: string; on: number; total: number }) {
-    return (
-        <div className="border-border flex items-center justify-between border-b px-3.5 py-2.5">
-            <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{title}</span>
-            <span className={cn('font-mono text-[10.5px] font-bold', on === 0 ? 'text-muted-foreground' : 'text-brand')}>
-                {on}/{total}
-            </span>
-        </div>
     );
 }
 
@@ -187,7 +176,7 @@ export function ModulePermissionCard({
 
         return (
             <div className="border-border rounded-lg border">
-                <CardHeader title={moduleLabel(module, lang)} on={activeCount} total={keys.length} />
+                <PermissionCardHeader module={module} on={activeCount} total={keys.length} lang={lang} />
                 <MasterBand title={label(masterKey)} subtitle={sub} on={masterOn} locked={isSuper} onToggle={toggleMaster} />
                 <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
                     {children.map((key) => {
@@ -246,7 +235,7 @@ export function ModulePermissionCard({
 
     return (
         <div className="border-border rounded-lg border">
-            <CardHeader title={moduleLabel(module, lang)} on={onCount} total={keys.length} />
+            <PermissionCardHeader module={module} on={onCount} total={keys.length} lang={lang} />
             <MasterBand title={moduleLabel(module, lang)} subtitle={sub} on={allOn} locked={isSuper} onToggle={toggleAll} />
             <div className="px-3.5 py-1">
                 {keys.map((key) => {

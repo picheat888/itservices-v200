@@ -109,6 +109,8 @@ export const permission: Dict = {
     'perm_desc_tickets.my': 'See the My Tickets tab to track their own filed cases.',
     'perm_act_tickets.jobs': 'My Jobs',
     'perm_desc_tickets.jobs': 'See the My Jobs tab - cases assigned to this user.',
+    'perm_act_requests.module': 'Requests access',
+    'perm_desc_requests.module': 'Open the Requests screen and its sidebar entry. What they may do once inside is set by the switches below.',
     'perm_act_requests.submit': 'Submit requests',
     'perm_desc_requests.submit':
         'Open the request form and file a request. Approving is never a permission - a step goes to the person the workflow resolves, and only they can decide it.',

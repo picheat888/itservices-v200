@@ -5,21 +5,24 @@ import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
 
-// Mirrors App\Support\Permissions::stockHierarchy() — keep in sync.
-const MASTER = 'stock.module';
-// `chip: false` hides the "View" tag — used for single-switch groups (Counting,
-// Event) that gate their whole feature rather than a view/management split.
+// Mirrors App\Support\Permissions::requestHierarchy() — keep in sync.
+const MASTER = 'requests.module';
+// Three capabilities, none of them a view/management split, so no group wears the "View" chip.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
-    { view: 'stock.view_dashboard', children: [] },
-    { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
-    { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
-    { view: 'stock.view_count', children: [], chip: false },
-    { view: 'stock.view_events', children: [], chip: false },
+    { view: 'requests.submit', children: [], chip: false },
+    { view: 'requests.view_all', children: [], chip: false },
+    { view: 'requests.fulfill', children: [], chip: false },
 ];
-const ALL_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+// Who HEARS about the fulfilment queue, which is not the same question as who may work it —
+// a manager can want to know a request landed without being the one who closes it. Grouped
+// under a heading rather than under `fulfill` so neither key implies the other; the master
+// is their only gate. (Same shape as the Ticket card's level cluster.)
+const NOTIFY = ['requests.notify_approved', 'requests.notify_stalled'];
+// Every gated key under the master.
+const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children]), ...NOTIFY];
 
-const label = (key: string, lang: Lang) => actionLabel('stock', key.replace('stock.', ''), lang);
-const info = (key: string, lang: Lang) => actionDescription('stock', key.replace('stock.', ''), lang);
+const label = (key: string, lang: Lang) => actionLabel('requests', key.replace('requests.', ''), lang);
+const info = (key: string, lang: Lang) => actionDescription('requests', key.replace('requests.', ''), lang);
 
 /** True when every ancestor (master, and the group view for a child) is on. */
 function hasAncestors(key: string, has: (k: string) => boolean): boolean {
@@ -58,11 +61,15 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
 }
 
 /**
- * Renders the Stock permission card as a master → view → management tree with
- * cascade: turning a parent off clears + locks its children; turning a child on
- * implies its ancestors. Super is read-only (everything shown on + locked).
+ * Renders the Requests permission card as a master → group → child tree with cascade, the
+ * same shape as every other module card: turning a parent off clears + locks its children,
+ * turning a child on implies its ancestors. Super is read-only (everything shown on + locked).
+ * An (i) hint is shown for keys that carry a description.
+ *
+ * Requests used to fall through to the page's plain fallback card — a flat list of five
+ * switches — because the module had no master to hang a tree off. It has one now.
  */
-export function StockPermissionTree({
+export function RequestPermissionTree({
     draft,
     setDraft,
     isSuper,
@@ -85,7 +92,7 @@ export function StockPermissionTree({
             if (next.has(key)) {
                 next.delete(key);
                 if (key === MASTER) {
-                    ALL_KEYS.forEach((k) => next.delete(k));
+                    GATED_KEYS.forEach((k) => next.delete(k));
                 }
                 const group = GROUPS.find((g) => g.view === key);
                 if (group) {
@@ -106,18 +113,16 @@ export function StockPermissionTree({
         });
     };
 
-    const activeCount = masterOn ? ALL_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const totalCount = GATED_KEYS.length;
 
     return (
         <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="stock" on={activeCount} total={ALL_KEYS.length} lang={lang} />
+            <PermissionCardHeader module="requests" on={activeCount} total={totalCount} lang={lang} />
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-sm font-semibold">
-                        {label(MASTER, lang)}
-                        {info(MASTER, lang) && <InfoHint text={info(MASTER, lang)} />}
-                    </div>
+                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
                     <div className="text-muted-foreground text-[10.5px]">
                         {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
                     </div>
@@ -168,6 +173,39 @@ export function StockPermissionTree({
                         </div>
                     );
                 })}
+
+                {/* Notification cluster — a heading, not a switch: there is no "may be
+                    notified" right to grant, only the two mails underneath it. */}
+                <div className="py-0.5">
+                    <div className="flex min-h-[34px] items-center gap-2">
+                        <span className="flex items-center gap-1 text-sm font-medium">
+                            {lang === 'th' ? 'แจ้งเตือน' : 'Notifications'}
+                            <InfoHint
+                                text={
+                                    lang === 'th'
+                                        ? 'ใครได้ยินเรื่องคิวดำเนินการ - แยกจากใครมีสิทธิ์ปิดงาน หัวหน้าที่อยากรู้ว่ามีงานเข้าเปิดได้โดยไม่ต้องเป็นคนทำเอง'
+                                        : 'Who hears about the fulfilment queue - separate from who may work it, so a manager can follow it without closing anything.'
+                                }
+                            />
+                        </span>
+                    </div>
+                    <div className="border-border ml-2 space-y-0.5 border-l pl-3">
+                        {NOTIFY.map((key) => {
+                            const keyInfo = info(key, lang);
+                            return (
+                                <div key={key} className="flex min-h-[30px] items-center gap-2">
+                                    <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
+                                        {label(key, lang)}
+                                        {keyInfo && <InfoHint text={keyInfo} />}
+                                    </span>
+                                    <span className="ml-auto">
+                                        <Switch on={has(key) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(key)} />
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     );
