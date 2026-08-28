@@ -28,7 +28,11 @@ class Permissions
             // notify_* gate who HEARS about a request, separately from who may act on it:
             // the fulfilment queue is a rota, and the people who want the mail about a
             // stalled approval are not always the ones allowed to close it.
-            'requests' => ['submit', 'view_all', 'fulfill', 'notify_approved', 'notify_stalled'],
+            // `module` opens the screen and its sidebar entry, like every other module.
+            // Before it existed the page was gated on "holds any of submit/view_all/fulfill",
+            // which meant there was no single switch to hand somebody the module — and the
+            // permission card had no master row to hang the rest off.
+            'requests' => ['module', 'submit', 'view_all', 'fulfill', 'notify_approved', 'notify_stalled'],
             // Reads like every other module: the master opens the screen and its sidebar
             // entry, `manage` is the right to change a chain. Before the master existed,
             // "may look at the approval chains" and "may rewrite them" were one switch.
@@ -121,7 +125,7 @@ class Permissions
                 'tickets.resolve', 'tickets.forward', 'tickets.assign',
                 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
-                'requests.submit', 'requests.view_all', 'requests.fulfill',
+                'requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill',
                 'requests.notify_approved', 'requests.notify_stalled',
                 'workflows.module', 'workflows.manage',
                 'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
@@ -153,13 +157,13 @@ class Permissions
                 'access.module', 'access.overview',
                 'access.email_view', 'access.file_view', 'access.social_view', 'access.software_view',
                 'assets.my', 'assets.return',
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.submit',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
@@ -517,6 +521,49 @@ class Permissions
         }
 
         return array_keys($set);
+    }
+
+    /**
+     * Request permission tree. The master gates the module and its sidebar entry; everything
+     * else sits flat beneath it.
+     *
+     * The two notify_* keys deliberately do NOT hang off `fulfill`. They answer "who hears
+     * that a request reached the queue", which is a different question from "who may work
+     * that queue" — a manager can want to follow it without closing anything, and the rota
+     * that does the closing changes. RequestNotificationService gates on notify_approved
+     * alone for the same reason.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function requestHierarchy(): array
+    {
+        return [
+            'master' => 'requests.module',
+            'groups' => [
+                'requests.submit' => [],
+                'requests.view_all' => [],
+                'requests.fulfill' => [],
+                'requests.notify_approved' => [],
+                'requests.notify_stalled' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the request gate: without the master, every request key is dropped. Nothing
+     * else cascades — see requestHierarchy() on why the notification keys stand alone.
+     * Non-request keys pass through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeRequests(array $granted): array
+    {
+        if (in_array(self::requestHierarchy()['master'], $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'requests.')));
     }
 
     /**

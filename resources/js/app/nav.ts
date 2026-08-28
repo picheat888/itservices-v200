@@ -32,7 +32,16 @@ export const navGroups: NavGroup[] = [
             { id: 'employees', label: 'employees', to: '/employees', icon: Users, permission: 'employees.module' },
             // Staff enter via the module master; ordinary employees via the self-service keys.
             { id: 'tickets', label: 'tickets', to: '/tickets', icon: Wrench, anyOf: ['tickets.module', 'tickets.create', 'tickets.my'] },
-            { id: 'requests', label: 'requests', to: '/requests', icon: Inbox, anyOf: ['requests.submit', 'requests.view_all', 'requests.fulfill'] },
+            // Master first, with the old keys kept beside it: normalisation only forces the
+            // master when permissions are saved, so a role granted before it existed still
+            // holds submit/view_all/fulfill on their own and must not lose the menu.
+            {
+                id: 'requests',
+                label: 'requests',
+                to: '/requests',
+                icon: Inbox,
+                anyOf: ['requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill'],
+            },
             { id: 'access', label: 'access_title', to: '/access', icon: MonitorCog, permission: 'access.module' },
             { id: 'assets', label: 'assets', to: '/assets', icon: Box, permission: 'assets.module' },
             { id: 'contracts', label: 'contracts', to: '/contracts', icon: FileText, permission: 'contracts.module' },

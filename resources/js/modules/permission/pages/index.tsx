@@ -40,6 +40,8 @@ import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRoleModal } from '../components/group-role-modal';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
+import { PermissionCardHeader } from '../components/permission-card-header';
+import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleModal } from '../components/role-modal';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
@@ -374,7 +376,17 @@ function RolesTab() {
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    {/* Columns, not a grid: these cards range from one row (Workflows)
+                                        to eighteen (Employees), and a grid stretches every card in a
+                                        row to the tallest one — leaving a short card with a large
+                                        empty area inside its own border, which reads as missing
+                                        content rather than as a small module. Columns let each card
+                                        be exactly as tall as what it holds and pack the rest against
+                                        it. Reading order stays source order, top of one column then
+                                        the next. `[&>*]` targets each card's root: mb for the vertical
+                                        rhythm (gap only spaces columns) and break-inside so no card is
+                                        ever split down the middle. */}
+                                    <div className="columns-1 gap-4 md:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
                                         {groups.map((group) => {
                                             if (group.module === 'stock') {
                                                 return (
@@ -442,6 +454,17 @@ function RolesTab() {
                                                     />
                                                 );
                                             }
+                                            if (group.module === 'requests') {
+                                                return (
+                                                    <RequestPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
                                             if (group.module === 'access') {
                                                 return (
                                                     <AccessPermissionTree
@@ -471,21 +494,9 @@ function RolesTab() {
                                             }
                                             const moduleOn = group.keys.filter(isOn).length;
                                             return (
-                                                <div key={group.module} className="border-border rounded-lg border p-3.5">
-                                                    <div className="mb-2.5 flex items-center justify-between gap-2">
-                                                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                                            {moduleLabel(group.module, lang)}
-                                                        </span>
-                                                        <span
-                                                            className={cn(
-                                                                'font-mono text-[10.5px] font-bold',
-                                                                moduleOn === 0 ? 'text-muted-foreground' : 'text-brand',
-                                                            )}
-                                                        >
-                                                            {moduleOn}/{group.keys.length}
-                                                        </span>
-                                                    </div>
-                                                    <div className="space-y-2">
+                                                <div key={group.module} className="border-border rounded-lg border">
+                                                    <PermissionCardHeader module={group.module} on={moduleOn} total={group.keys.length} lang={lang} />
+                                                    <div className="space-y-2 p-3.5">
                                                         {group.keys.map((key) => {
                                                             const [mod, action] = key.split('.');
                                                             const live = isLivePermission(key);

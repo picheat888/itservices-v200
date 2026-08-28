@@ -66,7 +66,7 @@ function App() {
                         <Route
                             path="requests"
                             element={
-                                <RequirePermission anyOf={['requests.submit', 'requests.view_all', 'requests.fulfill']}>
+                                <RequirePermission anyOf={['requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill']}>
                                     <RequestsPage />
                                 </RequirePermission>
                             }
