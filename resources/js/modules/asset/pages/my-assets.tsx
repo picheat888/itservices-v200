@@ -6,11 +6,12 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
+import { useMutationState } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, Clock, Inbox, Loader2, type LucideIcon, Package, Tag, Undo2 } from 'lucide-react';
 import { useState } from 'react';
 import { AssetTypeIcon } from '../components/asset-meta';
 import { AssetTagBadge } from '../components/asset-tag-badge';
-import { useAssetMutations, useMyAssets } from '../hooks/use-assets';
+import { ACCEPT_KEY, useAssetMutations, useMyAssets } from '../hooks/use-assets';
 
 const HELD_PAGE_SIZES = [10, 20, 50];
 
@@ -58,21 +59,19 @@ export default function MyAssetsPage() {
     const { accept, requestReturn } = useAssetMutations();
     const confirm = useConfirm();
 
-    // Ids with an accept request in flight. Tracked as a Set here (not via `accept.variables`)
-    // because the mutation object only remembers its LATEST call — accepting a second asset
-    // while the first is still saving would stop the first row's spinner.
-    const [acceptingIds, setAcceptingIds] = useState<Set<number>>(new Set());
-    const onAccept = (id: number) => {
-        setAcceptingIds((prev) => new Set(prev).add(id));
-        accept.mutate(id, {
-            onSettled: () =>
-                setAcceptingIds((prev) => {
-                    const next = new Set(prev);
-                    next.delete(id);
-                    return next;
-                }),
-        });
-    };
+    // Ids with an accept in flight, read straight from the mutation cache.
+    //
+    // This used to be a Set kept here and cleared from `accept.mutate(id, { onSettled })`.
+    // MutationObserver keeps only the LATEST call's callbacks and detaches from the previous
+    // mutation as soon as a second one starts, so accepting a second asset while the first was
+    // still saving meant the first id was never removed: its button span forever, and because
+    // the id outlived the hand-over it kept spinning even after IT recalled and re-issued the
+    // same asset. Asking the cache which accepts are actually running cannot drift.
+    const acceptingIds = useMutationState({
+        filters: { mutationKey: ACCEPT_KEY, status: 'pending' },
+        select: (mutation) => mutation.state.variables as number,
+    });
+    const onAccept = (id: number) => accept.mutate(id);
 
     /** Ask before sending a held asset back to IT (goes to "pending return"). */
     const onReturn = (id: number, name: string, assetId: string) =>
@@ -190,9 +189,9 @@ export default function MyAssetsPage() {
                                         size="sm"
                                         className="bg-emerald-600 text-white hover:bg-emerald-700"
                                         onClick={() => onAccept(a.id)}
-                                        disabled={acceptingIds.has(a.id)}
+                                        disabled={acceptingIds.includes(a.id)}
                                     >
-                                        {acceptingIds.has(a.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                        {acceptingIds.includes(a.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                         {t('asset_accept')}
                                     </Button>
                                 </div>
