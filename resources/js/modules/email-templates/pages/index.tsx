@@ -34,6 +34,14 @@ const SAMPLE_VARS: Record<string, string> = {
     'stock.sku': 'SKU-1042',
     'stock.name': 'USB-C Docking Station',
     'stock.qty': '2',
+    'asset.code': 'INK-IT-26-0042',
+    'asset.model': 'ThinkCentre Neo 55a 24 G6',
+    'asset.tag': 'PC042',
+    'asset.type': 'Computer',
+    'asset.from': 'Store IT',
+    'asset.holder': 'Somchai Suksawat',
+    'asset.count': '3',
+    'employee.last_working': '31-12-2026',
     'ticket.id': 'TKT-2856',
     'ticket.subject': 'Printer not responding',
     'ticket.category': 'Hardware',
@@ -63,6 +71,7 @@ const SAMPLE_VARS: Record<string, string> = {
     // own sample vars), which holds the real example lists and tables; this map drives the
     // variable chips and the subject line above the preview frame.
     items: '',
+    'asset.table': '',
     'digest.table': '',
     'digest.open_table': '',
     'digest.working_table': '',
@@ -77,6 +86,7 @@ const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b
 const VAR_NOTE: Record<string, { en: string; th: string }> = {
     items: { en: 'auto-generated list', th: 'ลิสต์อัตโนมัติ' },
     count: { en: 'number', th: 'จำนวน' },
+    'asset.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.open_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.working_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },

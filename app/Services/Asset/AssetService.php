@@ -11,11 +11,102 @@ use App\Models\Employee\Employee;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Notifications\AssetAssignedNotification;
+use App\Notifications\AssetOffboardingNotification;
+use App\Notifications\AssetRecalledNotification;
 use App\Notifications\AssetReturnRequestedNotification;
+use App\Services\Email\EmailNotificationService;
+use App\Support\EmailTable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 class AssetService
 {
+    public function __construct(private readonly EmailNotificationService $email) {}
+
+    /**
+     * The fields every asset mail names, so one machine reads the same in all four.
+     * `reference.id` repeats the code: it is the generic placeholder the older templates
+     * were written against, and an admin who kept it should not end up with a blank line.
+     *
+     * @return array<string, string>
+     */
+    private function assetVars(Asset $asset): array
+    {
+        return [
+            'asset.code' => (string) $asset->asset_code,
+            'asset.model' => (string) ($asset->model?->name ?? '-'),
+            // Category from Master Data, stored mixed TH/EN like the rest of it.
+            'asset.type' => (string) ($asset->category?->name ?: '-'),
+            'asset.tag' => (string) ($asset->tag ?: '-'),
+            'reference.id' => (string) $asset->asset_code,
+        ];
+    }
+
+    /**
+     * The leaver's devices as an email table — what to physically go and collect.
+     *
+     * Built here rather than written into the template because the rows are data, not
+     * wording; an admin editing the mail moves {{asset.table}} around, the same way the
+     * request and stock digests hand over {{digest.table}}. Rendered through EmailTable so
+     * it survives the mail clients the digests already had to be fixed for.
+     *
+     * @param  Collection<int, Asset>  $assets
+     */
+    private function assetTable($assets): string
+    {
+        return EmailTable::render(
+            ['Device', 'Type', 'Serial', 'Tag'],
+            // Every cell through text(): it escapes (these are user-entered fields — a serial
+            // typed with an ampersand or a stray tag would otherwise reach the message as
+            // markup) and clips, so one absurd value cannot turn a row into a paragraph.
+            $assets->map(fn (Asset $asset) => [
+                EmailTable::text($asset->model?->name ?? $asset->asset_code),
+                // The category is the Master Data name, which is stored mixed TH/EN.
+                EmailTable::text($asset->category?->name ?: '-'),
+                EmailTable::text($asset->serial ?: '-'),
+                EmailTable::text($asset->tag ?: '-', 24),
+            ])->all(),
+            [],
+            ['38%', '20%', '24%', '18%'],
+            // Device and Serial: the two that carry a long unbroken value.
+            [0, 2],
+        );
+    }
+
+    /**
+     * Who is holding the asset, written for a person to read.
+     *
+     * ownerCode() is the custody trail's identifier and stays a code (EMP-14) because the
+     * history has to survive a rename. A mail standing on its own in someone's inbox has no
+     * such context, and "Returned by: EMP-14" tells the reader nothing — so the mails name
+     * the person, falling back to the free-text label a shared or pooled asset carries.
+     */
+    private function holderLabel(Asset $asset): ?string
+    {
+        return $asset->owner_employee_id ? $asset->ownerEmployee?->name : $asset->owner;
+    }
+
+    /**
+     * Queue one templated mail per recipient. Address-less recipients are logged as skipped
+     * by EmailNotificationService rather than dropped silently.
+     *
+     * @param  iterable<User>  $recipients
+     * @param  array<string, string>  $vars
+     */
+    private function emailEach(iterable $recipients, string $templateKey, array $vars, string $path, string $actionLabel): void
+    {
+        foreach ($recipients as $recipient) {
+            $this->email->sendTemplate(
+                $templateKey,
+                $recipient->email,
+                $vars + ['user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there'],
+                url($path),
+                $actionLabel,
+                $recipient->name,
+            );
+        }
+    }
+
     /**
      * Append a row to the asset's ownership-change history. `kind` says what the move was,
      * so counting hand-overs or returns never has to read the free-text reason.
@@ -148,6 +239,8 @@ class AssetService
         // A pooled asset has no owner — it "leaves" its warehouse, so stamp that
         // warehouse as the custody-trail origin instead of a blank sender.
         $from = $asset->ownerCode() ?: $asset->warehouse?->name;
+        // Read before the update overwrites the owner: the mail names a person, the trail a code.
+        $fromLabel = $this->holderLabel($asset) ?: $asset->warehouse?->name ?: $from;
         $reason = $data['reason'] ?? null;
 
         if ($data['mode'] === 'employee') {
@@ -164,7 +257,7 @@ class AssetService
                 'last_reason' => $reason,
             ]);
             $this->logTransfer($asset, AssetTransferKind::Handover, $from, $employee->code, $reason, $performedBy);
-            $this->notifyRecipient($asset->fresh('ownerEmployee'), $from);
+            $this->notifyRecipient($asset->fresh('ownerEmployee'), $from, $fromLabel);
 
             return $asset->fresh();
         }
@@ -190,7 +283,7 @@ class AssetService
      * owner_employee_id FK. Only fires if the employee has a login account that can use
      * My Assets (permission gates the bell).
      */
-    private function notifyRecipient(Asset $asset, ?string $from): void
+    private function notifyRecipient(Asset $asset, ?string $from, ?string $fromLabel = null): void
     {
         $employee = $asset->ownerEmployee;
         if (! $employee) {
@@ -200,6 +293,33 @@ class AssetService
         $user = User::where('employee_id', $employee->id)->first();
         if ($user && $user->hasPermission('assets.my')) {
             $user->notify(new AssetAssignedNotification($asset, $from));
+            // Same person by mail: a hand-over nobody accepts sits in limbo, and the people
+            // most likely to miss the bell are the ones who rarely open the portal.
+            $this->emailEach([$user], 'asset.assigned', $this->assetVars($asset) + [
+                'asset.from' => (string) ($fromLabel ?: $from ?: '-'),
+            ], '/my-assets', 'Accept the hand-over');
+        }
+    }
+
+    /**
+     * Bell alert to the employee an asset was pulled back from. Same shape as
+     * notifyRecipient(): resolved through the employee's login account and gated by
+     * assets.my, because the bell opens My Assets — a reader without that page has
+     * nowhere to land.
+     *
+     * A shared (owner-less) asset has no employee to tell, so nothing is sent.
+     */
+    private function notifyRecalledHolder(?Employee $holder, Asset $asset, string $subtype): void
+    {
+        if (! $holder) {
+            return;
+        }
+
+        $user = User::where('employee_id', $holder->id)->first();
+        if ($user && $user->hasPermission('assets.my')) {
+            $user->notify(new AssetRecalledNotification($asset, $subtype));
+            // One template for both subtypes — see asset.recalled in EmailTemplates.
+            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/my-assets', 'View my assets');
         }
     }
 
@@ -218,6 +338,7 @@ class AssetService
     public function requestReturn(Asset $asset, ?string $reason = null): Asset
     {
         $holder = $asset->ownerCode();
+        $holderLabel = $this->holderLabel($asset) ?: $holder;
         $asset->update([
             'status' => AssetStatus::PendingReturn,
             'last_reason' => $reason,
@@ -227,6 +348,9 @@ class AssetService
         $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
         if ($recipients->isNotEmpty()) {
             Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
+            $this->emailEach($recipients, 'asset.return_requested', $this->assetVars($asset) + [
+                'asset.holder' => (string) ($holderLabel ?: '-'),
+            ], '/assets', 'Receive it back');
         }
 
         return $asset->fresh();
@@ -245,7 +369,7 @@ class AssetService
      */
     public function requestReturnForEmployee(Employee $employee, ?string $reason = null): int
     {
-        $assets = Asset::with('model')
+        $assets = Asset::with(['model', 'category'])
             ->where('owner_employee_id', $employee->id)
             ->whereIn('status', [AssetStatus::Deployed->value, AssetStatus::PendingAcceptance->value])
             ->get();
@@ -254,20 +378,29 @@ class AssetService
             return 0;
         }
 
-        // Resolved once for the whole batch — requestReturn() reloads every user per asset,
-        // which a leaver holding a dozen devices would repeat a dozen times over.
-        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
-
         foreach ($assets as $asset) {
-            $holder = $asset->ownerCode();
             $asset->update([
                 'status' => AssetStatus::PendingReturn,
                 'last_reason' => $reason,
             ]);
+        }
 
-            if ($recipients->isNotEmpty()) {
-                Notification::send($recipients, new AssetReturnRequestedNotification($asset, $holder));
-            }
+        // One bell for the whole departure, not one per device — see AssetOffboardingNotification.
+        // Resolved once for the batch as well: asking per asset would reload every user's
+        // permissions as many times as the leaver held machines.
+        $recipients = User::all()->filter(fn (User $u) => $u->hasPermission('assets.receive'));
+        if ($recipients->isNotEmpty()) {
+            Notification::send($recipients, new AssetOffboardingNotification($employee, $assets->count()));
+            $this->emailEach($recipients, 'asset.offboarding', [
+                'employee.name' => (string) $employee->name,
+                'employee.code' => (string) $employee->code,
+                // Set by resign() before this runs, so the mail can state it. Nullable:
+                // a resignation may be recorded without a last day agreed yet.
+                'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+                'asset.count' => (string) $assets->count(),
+                'asset.table' => $this->assetTable($assets),
+                'reference.id' => (string) $employee->code,
+            ], '/assets', 'Open the assets list');
         }
 
         return $assets->count();
@@ -301,15 +434,20 @@ class AssetService
     }
 
     /**
-     * Recall a hand-over that was never accepted (pending acceptance → ready), pulling the
-     * asset back into the pool. Clears the intended holder and stamps the chosen warehouse,
-     * recording the reversal in the custody trail. Used when an asset was transferred to the
-     * wrong person by mistake, before they accepted it.
+     * Pull an asset back into the pool (→ ready). Clears the holder and stamps the chosen
+     * warehouse, recording the reversal in the custody trail.
+     *
+     * Ordinarily this undoes a hand-over the recipient never accepted — the wrong person was
+     * picked. A force recall (see AssetController::recall) also reaches an asset an employee
+     * is actually holding, which is why the bell distinguishes the two.
      */
     public function recall(Asset $asset, ?string $performedBy = null, ?string $warehouse = null, ?string $reason = null): Asset
     {
         // The intended (not-yet-accepted) recipient becomes the custody-trail origin.
         $from = $asset->ownerCode();
+        // Read before the update clears them: afterwards there is no holder left to tell.
+        $holder = $asset->ownerEmployee;
+        $wasHeld = $asset->status === AssetStatus::Deployed;
         $destName = filled($warehouse) ? $warehouse : $asset->warehouse?->name;
         $asset->update([
             'status' => AssetStatus::Ready,
@@ -321,6 +459,7 @@ class AssetService
             'last_reason' => $reason,
         ]);
         $this->logTransfer($asset, AssetTransferKind::Recall, $from, (string) $destName, $reason ?: 'Recalled - transfer cancelled', $performedBy);
+        $this->notifyRecalledHolder($holder, $asset, $wasHeld ? 'taken_back' : 'cancelled');
 
         return $asset->fresh();
     }

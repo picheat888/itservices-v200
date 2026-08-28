@@ -164,6 +164,10 @@ export const asset: Dict = {
     transfer_mode_employee: 'พนักงาน',
     transfer_mode_shared: 'ของกลาง',
     transfer_pick_employee: 'เลือกพนักงาน',
+    transfer_cannot_accept_title: 'พนักงานคนนี้กดรับเองไม่ได้',
+    transfer_cannot_accept_no_account: 'ยังไม่มีบัญชีเข้าใช้งานระบบ มอบได้ตามปกติ แต่ทรัพย์สินจะค้างสถานะรอรับมอบจนกว่าจะมีคนยืนยันรับ',
+    transfer_cannot_accept_no_permission:
+        'มีบัญชีแต่ไม่มีสิทธิ์เปิดหน้าทรัพย์สินของฉัน จึงไม่เห็นปุ่มกดรับ มอบได้ตามปกติ แต่ทรัพย์สินจะค้างสถานะรอรับมอบ',
     transfer_shared_label: 'ชื่อเรียกของกลาง',
     transfer_shared_label_ph: 'เช่น Rack 2, เครื่องพิมพ์ส่วนกลาง HR',
     asset_transfer_failed: 'โอนไม่สำเร็จ',

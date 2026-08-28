@@ -7,6 +7,7 @@ use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\User;
+use App\Notifications\AssetOffboardingNotification;
 use App\Notifications\AssetReturnRequestedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -14,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * Recording a resignation recalls the leaver's devices: everything still in their hands
- * turns Pending return and whoever can receive assets is belled to collect it.
+ * turns Pending return and whoever can receive assets is belled once to collect them.
  *
  * Covers the gating trap too — the person recording the resignation holds employees.resign
  * and nothing from the Assets module, so the recall must not be permission-checked.
@@ -89,7 +90,7 @@ class EmployeeResignAssetsTest extends TestCase
         $this->assertSame('Swapping the keyboard', $alreadyReturning->fresh()->last_reason);
     }
 
-    public function test_it_is_belled_once_per_recalled_asset(): void
+    public function test_a_departure_rings_one_bell_however_many_devices_it_recalls(): void
     {
         Notification::fake();
 
@@ -104,8 +105,31 @@ class EmployeeResignAssetsTest extends TestCase
         $this->actingAs(User::factory()->create(['role' => 'super']));
         $this->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'Moving on'])->assertOk();
 
-        Notification::assertSentToTimes($receiver, AssetReturnRequestedNotification::class, 3);
-        Notification::assertNotSentTo($bystander, AssetReturnRequestedNotification::class);
+        // One departure, one bell — and it carries the tally so the reader knows the size of the job.
+        Notification::assertSentToTimes($receiver, AssetOffboardingNotification::class, 1);
+        Notification::assertSentTo($receiver, AssetOffboardingNotification::class, function ($notification) use ($receiver, $employee) {
+            $payload = $notification->toDatabase($receiver);
+
+            return $payload['type'] === 'asset_offboarding'
+                && $payload['count'] === 3
+                && $payload['employee_code'] === $employee->code;
+        });
+        // The per-asset bell belongs to the self-service return, not to this path.
+        Notification::assertNotSentTo($receiver, AssetReturnRequestedNotification::class);
+        Notification::assertNotSentTo($bystander, AssetOffboardingNotification::class);
+    }
+
+    public function test_a_leaver_holding_nothing_rings_no_bell_at_all(): void
+    {
+        Notification::fake();
+
+        $employee = $this->leaver();
+        $receiver = $this->userWith(['assets.module', 'assets.receive']);
+
+        $this->actingAs(User::factory()->create(['role' => 'super']));
+        $this->postJson("/api/employees/{$employee->id}/resign", ['reason' => 'Moving on'])->assertOk();
+
+        Notification::assertNotSentTo($receiver, AssetOffboardingNotification::class);
     }
 
     public function test_recall_does_not_require_an_assets_permission(): void

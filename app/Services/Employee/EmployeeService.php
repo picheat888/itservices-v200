@@ -8,8 +8,10 @@ use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Notifications\AccessOffboardingNotification;
 use App\Notifications\EmployeeResignedNotification;
 use App\Notifications\NewEmployeeNotification;
+use App\Services\Access\AccessService;
 use App\Services\Asset\AssetService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
@@ -120,7 +122,7 @@ class EmployeeService
         $user->update(['email' => $employee->email]);
     }
 
-    public function resign(Employee $employee, ?string $reason, ?string $lastDay, ?User $actor = null): Employee
+    public function resign(Employee $employee, ?string $reason, ?string $lastDay): Employee
     {
         $employee->update([
             'status' => EmployeeStatus::Resigned,
@@ -133,7 +135,13 @@ class EmployeeService
         // resignation must not also require an assets permission.
         $this->assets->requestReturnForEmployee($employee, "Resignation — {$employee->code}");
 
-        $this->notifyResignation($employee, $actor);
+        // Access is NOT revoked automatically — the system's standing rule is that IT does
+        // access by hand (the same reason an approved request never auto-grants). What was
+        // missing was anyone being told: the leaver's grants and owned resources simply sat
+        // there until somebody happened to open the Access Directory.
+        $this->notifyAccessOffboarding($employee);
+
+        $this->notifyResignation($employee);
 
         return $employee->load(['department', 'position']);
     }
@@ -254,16 +262,73 @@ class EmployeeService
         }
     }
 
-    /** Notifies IT (employees.set_credentials, except the actor) to offboard a resigned employee. */
-    private function notifyResignation(Employee $employee, ?User $actor = null): void
+    /**
+     * Bells whoever can actually clear a leaver's access. Silent when they hold none — an
+     * alert about nothing trains people to ignore the tray.
+     *
+     * Gated on both halves of what the bell asks for, reusing the keys the module already
+     * defines rather than inventing one: access.module because the bell links to /access and
+     * that master opens the page (a bell whose link 403s is worse than no bell), plus any
+     * access.*_edit because revoking a grant and reassigning an owner both need edit — a
+     * viewer would get a to-do they cannot carry out. Normalisation makes edit imply the
+     * master on save, but older roles can still hold a child without it, so both are checked.
+     *
+     * The acting user is NOT excluded, for the reason spelled out on notifyCredentialSetters:
+     * clearing access is a separate act from recording the resignation, and the person who
+     * can do it is often the only holder of the permission — dropping them leaves the bell
+     * with nobody to go to. Whoever files the resignation still has to clear the access later.
+     */
+    private function notifyAccessOffboarding(Employee $employee): void
     {
-        $recipients = $this->recipientsWithPermission('employees.set_credentials', $actor);
+        $outstanding = app(AccessService::class)->outstandingFor($employee);
+
+        if ($outstanding['total'] === 0) {
+            return;
+        }
+
+        $editKeys = ['access.email_edit', 'access.file_edit', 'access.social_edit', 'access.software_edit'];
+        $recipients = User::all()->filter(
+            fn (User $u) => $u->hasPermission('access.module')
+                && collect($editKeys)->contains(fn (string $key) => $u->hasPermission($key))
+        );
 
         if ($recipients->isEmpty()) {
             return;
         }
 
-        // In-app (database) bell only — no email template for offboarding yet.
-        Notification::send($recipients, new EmployeeResignedNotification($employee));
+        Notification::send($recipients, new AccessOffboardingNotification($employee, $outstanding));
+    }
+
+    /**
+     * Notifies IT (employees.set_credentials) to offboard a resigned employee.
+     *
+     * The actor used to be excluded, which quietly killed the bell: a single admin holds
+     * this permission in most installs, so filing a resignation removed the only recipient
+     * and nobody was ever told to close the account. Closing a login is a later job than
+     * recording that someone left, even when the same person does both.
+     */
+    private function notifyResignation(Employee $employee): void
+    {
+        $offboarders = $this->recipientsWithPermission('employees.set_credentials', null);
+
+        if ($offboarders->isNotEmpty()) {
+            // In-app (database) bell only — no email template for offboarding yet.
+            Notification::send($offboarders, new EmployeeResignedNotification($employee));
+        }
+
+        // Everyone else who works with the directory hears it as news rather than a task:
+        // they cannot close the account, but a departure changes who they route work to and
+        // who they expect to see on a list. Reuses employees.view — the key that already
+        // decides who may look at staff records at all — minus the people above, so nobody
+        // gets told twice about the same person.
+        $offboarderIds = $offboarders->pluck('id');
+        $watchers = $this->recipientsWithPermission('employees.view', null)
+            ->reject(fn (User $u) => $offboarderIds->contains($u->id));
+
+        if ($watchers->isEmpty()) {
+            return;
+        }
+
+        Notification::send($watchers, new EmployeeResignedNotification($employee, 'departure'));
     }
 }

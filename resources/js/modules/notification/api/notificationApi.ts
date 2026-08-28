@@ -30,7 +30,8 @@ export interface NotificationData {
     // Ticket owner notifications (ticket_owner) — event: taken | forwarded | resolved | cancelled
     event?: string;
     by?: string | null;
-    // Asset assigned notifications (asset_assigned)
+    // Asset bells (asset_assigned, asset_return_requested, asset_recalled — the last one's
+    // subtype says whether a hand-over was cancelled or a held device was taken back)
     asset_id?: number;
     asset_tag?: string;
     asset_model?: string;
@@ -51,6 +52,13 @@ export interface NotificationData {
     remark?: string | null;
     /** Only on `stalled`: whole days the step has been waiting. */
     stalled_days?: number | null;
+    // Access left behind by a departed employee (access_offboarding). Split as well as
+    // totalled: a grant to revoke and a resource needing a new owner are different jobs.
+    /** asset_offboarding: how many devices the leaver still had in hand. */
+    count?: number;
+    grants?: number;
+    owned?: number;
+    total?: number;
 }
 
 export interface AppNotification {
