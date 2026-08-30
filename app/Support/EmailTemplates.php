@@ -287,8 +287,11 @@ You can tracking progress in {{app.name}}.</p>
 <br>
 <p><u><strong>Information</strong></u></p>
 <p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
+<strong style="color:#64748b">Type:</strong> {{asset.type}}<br>
 <strong style="color:#64748b">Model:</strong> {{asset.model}}<br>
-<strong style="color:#64748b">Tag:</strong> {{asset.tag}}<br>',
+<strong style="color:#64748b">Tag:</strong> {{asset.tag}}</p>
+<br>
+<p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -345,7 +348,7 @@ You can tracking progress in {{app.name}}.</p>
 <br>
 <p><u><strong>Information</strong></u></p>
 <p><strong style="color:#64748b">Asset:</strong> <strong>{{asset.code}}</strong><br>
-<p><strong style="color:#64748b">Type:</strong> {{asset.type}}<br>
+<strong style="color:#64748b">Type:</strong> {{asset.type}}<br>
 <strong style="color:#64748b">Model:</strong> {{asset.model}}<br>
 <strong style="color:#64748b">Tag:</strong> {{asset.tag}}</p>
 <br>

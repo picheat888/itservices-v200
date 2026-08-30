@@ -194,7 +194,7 @@ class ContractExpiryAlertService
                 // Written the way the reader writes a date, not the way the column stores it.
                 'contract.end_date' => $contract->end_date->format('d-m-Y'),
                 'contract.details' => filled($contract->details) ? $contract->details : '-',
-            ], $extraVars), null, null, $recipient->name);
+            ], $extraVars), url("/contracts?view={$contract->id}"), 'Open the contract', $recipient->name);
         }
     }
 
