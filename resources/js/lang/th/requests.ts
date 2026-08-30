@@ -166,7 +166,7 @@ export const requests: Dict = {
     req_decide_note_required: 'ต้องระบุเหตุผลเมื่อไม่อนุมัติ',
     req_decide_note_ph_approve: 'เช่น อนุมัติแล้ว รบกวนจัดเครื่องให้ก่อนวันเริ่มงาน',
     req_decide_note_ph_reject: 'เช่น เครื่องในแผนกมีจำนวนเยอะแล้ว ให้ใช้เครื่องที่มีอยู่ก่อน',
-    req_decide_notify_reject: 'แจ้งกลับผู้ขอทาง Bell + Email แล้วปิดคำขอ',
+    req_decide_notify_reject: 'แจ้งกลับผู้ขอทาง Notification + Email แล้วปิดคำขอ',
     req_decide_notify_next: 'ถัดไป: {name}',
     req_fulfill_title: 'ยืนยันปิดงาน',
     req_fulfill_hint: 'ยืนยันว่างานเสร็จแล้ว ระบบจะแจ้งผู้ขอ',
