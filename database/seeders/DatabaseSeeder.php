@@ -138,19 +138,137 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        $password = (string) (env('SEED_SUPER_PASSWORD') ?: self::SUPER_TEMP_PASSWORD);
+        $details = $this->administratorDetails();
 
         User::create([
-            'name' => env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME,
-            'email' => env('SEED_SUPER_EMAIL') ?: 'super@mail.com',
+            'name' => $details['name'],
+            'email' => $details['email'],
             'username' => self::SUPER_USERNAME,
             'role' => UserRole::SuperAdmin->value,
-            'password' => $password,
-            'must_change_password' => true,
+            'password' => $details['password'],
+            'must_change_password' => $details['must_change_password'],
         ]);
 
-        $this->command?->warn('Administrator created - sign in as "'.self::SUPER_USERNAME.'" with: '.$password);
-        $this->command?->warn('Change it at first sign-in; every other request is refused until you do.');
-        $this->command?->warn('Then set a real address under Profile - alerts (contract expiry, stock, new employee) only reach accounts with one.');
+        if ($details['must_change_password']) {
+            $this->command?->warn('Administrator created - sign in as "'.self::SUPER_USERNAME.'" with: '.$details['password']);
+            $this->command?->warn('Change it at first sign-in; every other request is refused until you do.');
+        } else {
+            $this->command?->info('Administrator created - sign in as "'.self::SUPER_USERNAME.'" with the password you just chose.');
+        }
+
+        if (blank($details['email'])) {
+            $this->command?->warn('No address set - alerts (contract expiry, stock, new employee) only reach accounts with one. Add it under Profile.');
+        }
+    }
+
+    /**
+     * Where the administrator's own details come from, in order of how deliberate they are.
+     *
+     * 1. The environment, when SEED_SUPER_* is set. Scripted installs and CI keep working
+     *    exactly as before, and nothing below can interrupt them.
+     * 2. A question, when there is somebody at the console to answer it. Putting a password
+     *    in .env means it survives in a file on the server long after it is needed, and the
+     *    step is easy to miss: a cached config makes env() return null (Laravel skips
+     *    loading .env entirely when the config is cached), so the account is quietly created
+     *    on the fallback below instead, with no error to notice.
+     * 3. The documented starting password, when nobody is there to ask — tests, and any
+     *    run passed --no-interaction.
+     *
+     * A password typed and confirmed at the console is not a known starting point, so that
+     * one path does NOT flag the account: there is nothing for a forced change to protect
+     * against. The other two do, for the reason spelled out on SUPER_TEMP_PASSWORD.
+     *
+     * @return array{name: string, email: string, password: string, must_change_password: bool}
+     */
+    private function administratorDetails(): array
+    {
+        if (filled(env('SEED_SUPER_PASSWORD'))) {
+            return [
+                'name' => (string) (env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME),
+                'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'super@mail.com'),
+                'password' => (string) env('SEED_SUPER_PASSWORD'),
+                'must_change_password' => true,
+            ];
+        }
+
+        if ($this->canAsk()) {
+            return $this->askForAdministrator();
+        }
+
+        return [
+            'name' => (string) (env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME),
+            'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'super@mail.com'),
+            'password' => self::SUPER_TEMP_PASSWORD,
+            'must_change_password' => true,
+        ];
+    }
+
+    /**
+     * Whether there is somebody at the console to answer a question.
+     *
+     * Read from --no-interaction rather than the input object: the seeder is handed the
+     * SeedCommand, which exposes options but not the input itself. Laravel's own
+     * $this->seed() helper passes --no-interaction, so a test can never hang here.
+     */
+    private function canAsk(): bool
+    {
+        return $this->command !== null && ! $this->command->option('no-interaction');
+    }
+
+    /**
+     * Asks for the administrator's details, refusing the answers that would undo the point
+     * of asking.
+     *
+     * @return array{name: string, email: string, password: string, must_change_password: bool}
+     */
+    private function askForAdministrator(): array
+    {
+        $command = $this->command;
+
+        $command->line('');
+        $command->info('Setting up the administrator account ("'.self::SUPER_USERNAME.'").');
+
+        $name = trim((string) $command->ask('Display name', self::SUPER_USERNAME)) ?: self::SUPER_USERNAME;
+
+        $email = '';
+        while (true) {
+            $email = trim((string) $command->ask('Email address (leave blank for none)', ''));
+            if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                break;
+            }
+            $command->error('That is not an email address.');
+        }
+
+        $password = '';
+        while (true) {
+            $password = (string) $command->secret('Password (at least 8 characters)');
+
+            if (mb_strlen($password) < 8) {
+                $command->error('Too short - at least 8 characters.');
+
+                continue;
+            }
+
+            if ($password === self::SUPER_TEMP_PASSWORD) {
+                $command->error('That is the documented fallback password. Choose another.');
+
+                continue;
+            }
+
+            if ($password !== (string) $command->secret('Confirm password')) {
+                $command->error('The two did not match.');
+
+                continue;
+            }
+
+            break;
+        }
+
+        return [
+            'name' => $name,
+            'email' => $email,
+            'password' => $password,
+            'must_change_password' => false,
+        ];
     }
 }

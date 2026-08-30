@@ -168,6 +168,51 @@ class ProductionSeedTest extends TestCase
         }
     }
 
+    /**
+     * The interactive path: run without --no-interaction and the seeder asks instead of
+     * inventing a password.
+     *
+     * Worth a test of its own because the guard is easy to get wrong in the direction that
+     * hangs a test suite forever — and because a password the administrator typed and
+     * confirmed is not a known starting point, so this path deliberately does NOT flag the
+     * account for a forced change.
+     */
+    public function test_it_asks_for_the_administrator_when_somebody_is_there_to_ask(): void
+    {
+        $this->artisan('db:seed')
+            ->expectsQuestion('Display name', 'Piches')
+            ->expectsQuestion('Email address (leave blank for none)', 'admin@inaba.co.th')
+            ->expectsQuestion('Password (at least 8 characters)', 'ChosenAtTheConsole1!')
+            ->expectsQuestion('Confirm password', 'ChosenAtTheConsole1!')
+            ->assertSuccessful();
+
+        $super = User::firstOrFail();
+        $this->assertSame('Piches', $super->name);
+        $this->assertSame('admin@inaba.co.th', $super->email);
+        $this->assertTrue(Hash::check('ChosenAtTheConsole1!', $super->password));
+        $this->assertFalse($super->must_change_password, 'they chose it themselves — there is nothing to force');
+        // And the documented fallback must not also open the account.
+        $this->assertFalse(Hash::check(DatabaseSeeder::SUPER_TEMP_PASSWORD, $super->password));
+    }
+
+    /** An answer that would undo the point of asking is refused, not accepted quietly. */
+    public function test_it_refuses_a_short_password_and_a_mismatched_confirmation(): void
+    {
+        $this->artisan('db:seed')
+            ->expectsQuestion('Display name', 'super')
+            ->expectsQuestion('Email address (leave blank for none)', '')
+            ->expectsQuestion('Password (at least 8 characters)', 'short')
+            ->expectsOutputToContain('Too short')
+            ->expectsQuestion('Password (at least 8 characters)', 'LongEnoughOne1!')
+            ->expectsQuestion('Confirm password', 'SomethingElse1!')
+            ->expectsOutputToContain('The two did not match.')
+            ->expectsQuestion('Password (at least 8 characters)', 'LongEnoughOne1!')
+            ->expectsQuestion('Confirm password', 'LongEnoughOne1!')
+            ->assertSuccessful();
+
+        $this->assertTrue(Hash::check('LongEnoughOne1!', User::firstOrFail()->password));
+    }
+
     public function test_it_leaves_every_business_table_empty(): void
     {
         $this->seed(DatabaseSeeder::class);
