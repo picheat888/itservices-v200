@@ -341,6 +341,7 @@ class EmailTemplateController extends Controller
             'ticket.details' => 'The printer on the 3rd floor shows a paper jam error,<br>but there is no paper stuck inside.',
             'ticket.resolution' => 'Replaced the fuser roller and cleared the jam sensor.',
             'ticket.requester' => 'Somchai Suksawat',
+            'ticket.assignee' => 'Piches Srisuk',
             'from.name' => 'Anong Wattana',
             'contract.vendor' => 'Acme Co.',
             'contract.name' => 'Annual support',

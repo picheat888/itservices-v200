@@ -125,7 +125,10 @@ class NewEmployeeEmailTest extends TestCase
 
         $this->assertStringNotContainsString('{{', $html);
         $this->assertStringContainsString('EMP-1043', $html);
-        $this->assertSame(4, substr_count($html, '</strong> -'), 'Position, section, department and start date should each read "-".');
+        $text = html_entity_decode(strip_tags($html));
+        foreach (['Position: -', 'Section: -', 'Department: -', 'Working Start: -'] as $label) {
+            $this->assertStringContainsString($label, $text);
+        }
     }
 
     public function test_a_section_with_only_a_thai_name_is_named_rather_than_left_blank(): void

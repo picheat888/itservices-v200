@@ -64,7 +64,7 @@ class TicketClosureEmailTest extends TestCase
         app(TicketService::class)->resolve($ticket, $complete, $resolution);
     }
 
-    /** @return array{key: string, html: string, subject: string}|null the closure mail queued */
+    /** @return array{key: string, html: string, subject: string, url: string, label: string}|null the closure mail queued */
     private function closureMail(): ?array
     {
         $job = collect(Bus::dispatched(SendTemplatedEmail::class))
@@ -78,6 +78,8 @@ class TicketClosureEmailTest extends TestCase
             'key' => $this->prop($job, 'templateKey'),
             'html' => $this->prop($job, 'html'),
             'subject' => $this->prop($job, 'subject'),
+            'url' => $this->prop($job, 'actionUrl'),
+            'label' => $this->prop($job, 'actionLabel'),
         ];
     }
 
@@ -126,6 +128,23 @@ class TicketClosureEmailTest extends TestCase
         $this->assertStringContainsString("Swapped the &lt;b&gt;fuser&lt;/b&gt;<br />\nTested 20 pages.", $html);
     }
 
+    public function test_the_requester_gets_a_button_that_opens_their_own_ticket(): void
+    {
+        Bus::fake();
+        $ticket = $this->ticketFor();
+        $this->close($ticket, true, 'Replaced the fuser roller.');
+
+        // Without an action URL the layout renders no button at all — while the preview on
+        // the Email screen always draws one, so the template looked finished and the mail
+        // that actually left had nothing to click.
+        $mail = $this->closureMail();
+        $this->assertSame(url("/tickets?tab=my&view={$ticket->id}"), $mail['url']);
+        $this->assertSame('Open the ticket', $mail['label']);
+        // tab=my, not tab=all: a requester has no All tab, and landing on one that is not
+        // theirs drops them on whatever the page shows first.
+        $this->assertStringNotContainsString('tab=all', $mail['url']);
+    }
+
     public function test_a_closure_with_no_note_reads_as_a_dash_not_a_gap(): void
     {
         Bus::fake();
@@ -133,7 +152,8 @@ class TicketClosureEmailTest extends TestCase
 
         // The template prints "Resolution:" whatever happens, so an empty note would leave a
         // label with nothing after it.
-        $this->assertStringContainsString('Resolution:</strong> -', $this->closureMail()['html']);
+        $text = html_entity_decode(strip_tags($this->closureMail()['html']));
+        $this->assertStringContainsString('Resolution: -', $text);
     }
 
     public function test_a_breached_case_bells_the_team_without_mailing_them(): void
