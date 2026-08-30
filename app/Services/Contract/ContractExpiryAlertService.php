@@ -191,7 +191,9 @@ class ContractExpiryAlertService
                 'contract.vendor' => $contract->vendor?->name,
                 'contract.name' => $contract->name,
                 'contract.code' => $contract->code,
-                'contract.end_date' => $contract->end_date->toDateString(),
+                // Written the way the reader writes a date, not the way the column stores it.
+                'contract.end_date' => $contract->end_date->format('d-m-Y'),
+                'contract.details' => filled($contract->details) ? $contract->details : '-',
             ], $extraVars), null, null, $recipient->name);
         }
     }

@@ -48,6 +48,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'ticket.subject': 'Printer not responding',
     'ticket.category': 'Hardware',
     'ticket.details': 'The printer on the 3rd floor shows a paper jam error.',
+    'ticket.resolution': 'Replaced the fuser roller and cleared the jam sensor.',
     'ticket.requester': 'Somchai Suksawat',
     'from.name': 'Anong Wattana',
     'contract.vendor': 'Acme Co.',
@@ -55,18 +56,26 @@ const SAMPLE_VARS: Record<string, string> = {
     'contract.code': 'CT-2026-014',
     'contract.days_remaining': '30',
     'contract.days_overdue': '5',
-    'contract.end_date': '31 Dec 2026',
+    'contract.end_date': '31-12-2026',
+    'contract.details': 'Microsoft 365 E3 License Agreement, 320 seats',
     'reference.id': 'REF-0001',
     'request.title': 'Request: Mail group',
     'requester.name': 'Manee Jaidee',
     'actor.name': 'Anong Wattana',
     'step.label': 'Department manager',
     remark: 'The licence is not available on the current agreement.',
+    'access.count': '4',
     'employee.name': 'Somchai Suksawat',
     'employee.code': 'EMP-1042',
+    'employee.position': 'Asst. Manager',
+    'employee.section': 'System analyst',
+    'employee.department': 'Information Technology',
+    'employee.working': '01-09-2026',
     'digest.count': '2',
     'digest.open_count': '2',
     'digest.working_count': '3',
+    'digest.expiring_count': '2',
+    'digest.overdue_count': '1',
     // Overridden with the real brand where it is rendered; this is the chip-list entry.
     'app.name': 'IT Service Desk',
     // Placeholders only. The body preview is rendered by the API (EmailTemplateController's
@@ -77,6 +86,9 @@ const SAMPLE_VARS: Record<string, string> = {
     'digest.table': '',
     'digest.open_table': '',
     'digest.working_table': '',
+    'digest.expiring_table': '',
+    'digest.overdue_table': '',
+    'access.table': '',
 };
 
 // Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
@@ -92,14 +104,21 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
     'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.open_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.working_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'digest.expiring_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'digest.overdue_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'access.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
 };
 
-// Badge per cadence. Blue = sent the moment the event happens; amber = sent by a
-// scheduled sweep, so the reader knows the template is not tied to one action.
+// Badge per cadence, one colour each. Blue = sent the moment the event happens; amber and
+// violet = sent by a scheduled sweep, so the reader knows the template is not tied to one
+// action. Daily and weekly shared amber and so read as one thing at a glance, which is the
+// distinction that actually matters here: how long you wait before the next one goes out.
+// Each steps up a shade in dark mode, as every other badge in the app does (status-badge.tsx)
+// — the -600 shades alone were the one place that did not, and went muddy on a dark row.
 const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: string }> = {
-    realtime: { badge: 'bg-blue-500/12 text-blue-600', labelKey: 'email_cadence_realtime' },
-    daily: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_daily' },
-    weekly: { badge: 'bg-amber-500/12 text-amber-600', labelKey: 'email_cadence_weekly' },
+    realtime: { badge: 'bg-blue-500/12 text-blue-600 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
+    daily: { badge: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', labelKey: 'email_cadence_daily' },
+    weekly: { badge: 'bg-violet-500/12 text-violet-600 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
 };
 
 // The page's two halves: what gets sent, and what happened when it was.
@@ -542,7 +561,7 @@ export default function EmailTemplatesPage() {
 
 // Debounced render of the unsaved content through the real email layout, so the
 // preview matches what recipients get. Disabled (skipped) when `enabled` is false.
-function useLivePreview(enabled: boolean, name: string, subject: string, body: string) {
+function useLivePreview(enabled: boolean, templateKey: string | undefined, name: string, subject: string, body: string) {
     const [previewHtml, setPreviewHtml] = useState('');
     const [rendering, setRendering] = useState(false);
     useEffect(() => {
@@ -550,13 +569,13 @@ function useLivePreview(enabled: boolean, name: string, subject: string, body: s
         setRendering(true);
         const id = window.setTimeout(() => {
             emailTemplateApi
-                .renderPreview({ name, subject, body_html: body })
+                .renderPreview({ key: templateKey, name, subject, body_html: body })
                 .then(setPreviewHtml)
                 .catch(() => {})
                 .finally(() => setRendering(false));
         }, 400);
         return () => window.clearTimeout(id);
-    }, [enabled, name, subject, body]);
+    }, [enabled, templateKey, name, subject, body]);
     return { previewHtml, rendering, setPreviewHtml };
 }
 
@@ -1073,7 +1092,7 @@ function EditorDialog({
     const [sentOk, setSentOk] = useState(false);
     const [resetOk, setResetOk] = useState(false);
 
-    const { previewHtml, rendering, setPreviewHtml } = useLivePreview(!!template, name, subject, body);
+    const { previewHtml, rendering, setPreviewHtml } = useLivePreview(!!template, template?.key, name, subject, body);
 
     // Sync the form when a different template is opened (and clear the stale preview).
     useEffect(() => {

@@ -22,6 +22,8 @@ class TemplatedMail extends Mailable
         public ?string $actionLabel = null,
         public ?string $brand = null,
         public ?string $logoFile = null,
+        /** Frame width in pixels; null takes the standard one. See EmailTemplates::widthFor(). */
+        public ?int $width = null,
     ) {}
 
     public function envelope(): Envelope
@@ -39,6 +41,7 @@ class TemplatedMail extends Mailable
             'actionLabel' => $this->actionLabel,
             'brand' => $this->brand,
             'logoFile' => $this->logoFile,
+            'width' => $this->width,
         ]);
     }
 }

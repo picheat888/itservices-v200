@@ -8,6 +8,7 @@ use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
+use App\Support\EmailTable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -128,6 +129,109 @@ class AccessService
             + FileShare::where('owner_employee_id', $employee->id)->count();
 
         return ['grants' => $grants, 'owned' => $owned, 'total' => $grants + $owned];
+    }
+
+    /**
+     * Everything outstandingFor() counts, written out as the one table an offboarding email
+     * carries — because a count alone ("5 access items") tells the reader there is work
+     * without telling them what it is.
+     *
+     * One list, not two. Being a member and being the owner do call for different things
+     * done to them, but that difference is a word in the "Held as" column, and splitting the
+     * mail into two tables made the reader check two places to answer "what does this person
+     * still have". Grants first, owners after, so the rows that are simply revoked are not
+     * interleaved with the ones that need somebody found.
+     *
+     * Kept here rather than in the sender: naming a resource means knowing which of the four
+     * registries it came from, which is this service's knowledge and nobody else's.
+     */
+    public function outstandingTableFor(Employee $employee): string
+    {
+        $rows = AccessMembership::query()->active()
+            ->with('resource')
+            ->where('employee_id', $employee->id)
+            ->get()
+            ->map(fn (AccessMembership $m) => $this->accessRow($m->resource, $m->resource_type, $this->heldAs($m)))
+            ->concat(
+                EmailGroup::where('owner_employee_id', $employee->id)->get()
+                    ->map(fn (EmailGroup $g) => $this->accessRow($g, 'email_group', 'Owner'))
+            )
+            ->concat(
+                FileShare::where('owner_employee_id', $employee->id)->get()
+                    ->map(fn (FileShare $share) => $this->accessRow($share, 'file_share', 'Owner'))
+            );
+
+        return EmailTable::render(self::ACCESS_HEADERS, $rows->values()->all(), [], self::ACCESS_WIDTHS, self::ACCESS_WRAP);
+    }
+
+    /** What each registry is called in a message to a person. */
+    private const TYPE_LABELS = [
+        'email_group' => 'Email group',
+        'file_share' => 'File share',
+        'social_platform' => 'Social platform',
+        'software' => 'Software',
+    ];
+
+    /**
+     * The column holding a resource's address — the value somebody clearing the access
+     * actually searches for at the other end. Software has none: a seat is identified by the
+     * product, which is already the name.
+     */
+    private const ADDRESS_COLUMNS = [
+        'email_group' => 'email',
+        'file_share' => 'path',
+        'social_platform' => 'url',
+    ];
+
+    /**
+     * What a stored level is called on screen. "Write" grants read as well as write, and the
+     * Access Directory has always shown it as "Read/Write" — the mail says the same thing,
+     * or it looks like a different level from the one in the app.
+     */
+    private const LEVEL_LABELS = ['Read' => 'Read', 'Write' => 'Read/Write'];
+
+    public const ACCESS_HEADERS = ['Code', 'Type', 'Name', 'Resource', 'Held as'];
+
+    public const ACCESS_WIDTHS = ['12%', '15%', '25%', '32%', '16%'];
+
+    /** Name and Resource: the two columns carrying a long value with nowhere natural to break. */
+    public const ACCESS_WRAP = [2, 3];
+
+    /**
+     * How the access is held, in the terms the Access Directory itself uses.
+     *
+     * Only file shares grade access (Read / Read-Write) and only email groups and file shares
+     * have an owner; a social or software membership carries no level at all, so the honest
+     * answer for those is simply that they are a member. A blank cell here would read as
+     * missing data in the one column that says what has to be done to the row.
+     */
+    private function heldAs(AccessMembership $membership): string
+    {
+        $level = (string) $membership->access_level;
+
+        return $level === '' ? 'Member' : (self::LEVEL_LABELS[$level] ?? $level);
+    }
+
+    /**
+     * One row of the table.
+     *
+     * Every cell through text(): names and paths are typed by hand, so an ampersand or a
+     * stray angle bracket would otherwise reach the message as markup.
+     *
+     * @return list<string>
+     */
+    private function accessRow(?Model $resource, string $morphKey, string $heldAs): array
+    {
+        $addressColumn = self::ADDRESS_COLUMNS[$morphKey] ?? null;
+        $address = $addressColumn === null ? null : $resource?->getAttribute($addressColumn);
+
+        return [
+            EmailTable::text((string) ($resource?->code ?? '-'), 20),
+            EmailTable::text(self::TYPE_LABELS[$morphKey] ?? $morphKey),
+            EmailTable::text((string) ($resource?->name ?? '(deleted resource)'), 40),
+            EmailTable::text(filled($address) ? (string) $address : '-', 48),
+            EmailTable::text($heldAs, 24),
+        ];
     }
 
     /**

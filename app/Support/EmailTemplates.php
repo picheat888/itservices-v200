@@ -18,7 +18,7 @@ class EmailTemplates
     /**
      * Every standard template in display order.
      *
-     * @return list<array{key:string,name:string,subject:string,body_html:string,enabled:bool,cadence:string}>
+     * @return list<array{key:string,name:string,subject:string,body_html:string,enabled:bool,cadence:string,width?:int}>
      */
     public static function all(): array
     {
@@ -86,21 +86,37 @@ You can track progress in {{app.name}}.</p>
             ],
             [
                 'key' => 'ticket.resolved',
-                'name' => 'Ticket resolved',
-                'subject' => 'Ticket {{ticket.id}} has been resolved',
+                'name' => 'Ticket has been completed (Ticket ถูกแก้ไขเรียบร้อยแล้ว)',
+                'subject' => 'The ticket {{ticket.id}} has been completed',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team. You can track progress in {{app.name}}.</p>
-<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
+<p>The ticket {{ticket.id}} has been completed ✅</p>
+<p>You can track progress in {{app.name}}.</p>
+<br>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>
+<p>---</p>
+<p><strong>Resolution:</strong> {{ticket.resolution}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
-                'key' => 'ticket.sla_breach',
-                'name' => 'Ticket SLA breached',
-                'subject' => 'Ticket {{ticket.id}} has breached its SLA',
+                // Sits where ticket.sla_breach used to. The SLA sweep is bell-only now, and a
+                // case closed WITHOUT being fixed is the outcome the requester most needs told.
+                'key' => 'ticket.cancelled',
+                'name' => 'Ticket has been Cancelled (Ticket ถูกยกเลิก)',
+                'subject' => 'The ticket {{ticket.id}} has been Cancelled',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} has passed its SLA target and needs attention.</p>
-<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
+<p>The ticket {{ticket.id}} has been Cancelled ❌</p>
+<p>You can track progress in {{app.name}}.</p>
+<br>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>
+<p>---</p>
+<p><strong>Resolution:</strong> {{ticket.resolution}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -288,34 +304,111 @@ You can track progress in {{app.name}}.</p>
 <p style="color:#64748b">If you think an error has occurred, please contact IT.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
-            ],            [
+            ],
+            [
                 'key' => 'employee.account_needed',
-                'name' => 'New employee - set credentials',
-                'subject' => 'New employee {{employee.code}} needs a login account',
+                'name' => 'New employee (พนักงานใหม่)',
+                'subject' => 'Employee Management: New employee',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A new employee <strong>{{employee.name}} ({{employee.code}})</strong> needs a login account. Please set their username and password from the Employee list.</p>',
+<p>You have a new employee on {{app.name}}.</p>
+<br>
+<p><strong>Information</strong></p>
+<p><strong style="color:#64748b">Employee ID:</strong> {{employee.code}}</p>
+<p><strong style="color:#64748b">Name:</strong> {{employee.name}}</p>
+<p><strong style="color:#64748b">Position:</strong> {{employee.position}}</p>
+<p><strong style="color:#64748b">Section:</strong> {{employee.section}}</p>
+<p><strong style="color:#64748b">Department:</strong> {{employee.department}}</p>
+<p><strong style="color:#64748b">Working Start:</strong> {{employee.working}}</p>
+<br>
+<p>Please setup username and password for the Employee.</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'employee.offboarding',
+                'name' => 'Employee resigned (แจ้งพนักงานลาออก)',
+                'subject' => 'Offboarding: {{employee.name}} has resigned',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>{{employee.name}} has resigned.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+<p><strong style="color:#64748b">Employee ID:</strong> <strong>{{employee.code}}</strong><br>
+<strong style="color:#64748b">Full name:</strong> {{employee.name}}<br>
+<strong style="color:#64748b">Last working day:</strong> {{employee.last_working}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'access.offboarding',
+                // A five-column table, two columns holding a long address. See widthFor().
+                'width' => 860,
+                'name' => 'Clear the access for a resigning employee (เคลียร์สิทธิ์พนักงานลาออก)',
+                'subject' => 'Offboarding: {{employee.name}} - {{access.count}} access item(s) to clear',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>{{employee.name}} has resigned.</p>
+<br>
+<p><u><strong>Information</strong></u></p>
+<p><strong style="color:#64748b">Employee ID:</strong> <strong>{{employee.code}}</strong><br>
+<strong style="color:#64748b">Full name:</strong> {{employee.name}}<br>
+<strong style="color:#64748b">Last working day:</strong> {{employee.last_working}}</p>
+<br>
+<p><strong>Access Directory</strong></p>
+{{access.table}}
+<p>Please disable and revoke all access rights.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'contract.expiry_alert',
-                'name' => 'Contract expiring soon',
-                'subject' => 'Contract {{contract.vendor}} expires in {{contract.days_remaining}} days',
+                'name' => 'Contract expiring soon (เตือนสัญญาก่อนหมดอายุตาม Schedule)',
+                'subject' => 'Contract Management: {{contract.vendor}} expires in {{contract.days_remaining}} days',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>The contract <strong>{{contract.name}}</strong> with {{contract.vendor}} expires in <strong>{{contract.days_remaining}}</strong> days (on {{contract.end_date}}). Please review and decide on renewal.</p>
-<p style="color:#64748b">Reference: <strong>{{contract.code}}</strong></p>',
+<p>The contract is expiring.<br>
+Please review and decide on renewal.</p>
+<br>
+<p><strong>Information</strong></p>
+<p><strong style="color:#64748b">Expires in:</strong> <strong>{{contract.days_remaining}} days</strong> ({{contract.end_date}})<br>
+<strong style="color:#64748b">Contract No.:</strong> {{contract.code}}<br>
+<strong style="color:#64748b">Vendor/Supplier:</strong> {{contract.vendor}}<br>
+<strong style="color:#64748b">Contract Name:</strong> {{contract.name}}<br>
+<strong style="color:#64748b">Contract Details:</strong> {{contract.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'daily',
             ],
             [
                 'key' => 'contract.expired_alert',
-                'name' => 'Contract overdue',
-                'subject' => 'Contract {{contract.vendor}} is overdue ({{contract.days_overdue}} days past end date)',
+                'name' => 'Contract overdue (เตือนสัญญาเกินกำหนดวันหมดอายุ)',
+                'subject' => 'Contract Management: {{contract.vendor}} is overdue by {{contract.days_overdue}} days',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>The contract <strong>{{contract.name}}</strong> with {{contract.vendor}} passed its end date <strong>{{contract.days_overdue}}</strong> days ago (on {{contract.end_date}}) and is still open. Please renew it or close it out (mark as expired).</p>
-<p style="color:#64748b">Reference: <strong>{{contract.code}}</strong></p>',
+<p>The contract has passed its end date and is still open.<br>
+Please renew it or close it out.</p>
+<br>
+<p><strong>Information</strong></p>
+<p><strong style="color:#64748b">Overdue by:</strong> <strong>{{contract.days_overdue}} days</strong> (ended {{contract.end_date}})<br>
+<strong style="color:#64748b">Contract No.:</strong> {{contract.code}}<br>
+<strong style="color:#64748b">Vendor / Supplier:</strong> {{contract.vendor}}<br>
+<strong style="color:#64748b">Contract Name:</strong> {{contract.name}}<br>
+<strong style="color:#64748b">Contract Details:</strong> {{contract.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'daily',
+            ],
+            [
+                'key' => 'contract.weekly_digest',
+                // Six columns, two of them a vendor and a contract name. See widthFor().
+                'width' => 980,
+                'name' => 'Contract Weekly summary (เตือนสรุปประจำสัปดาห์)',
+                'subject' => 'Contract Management: {{digest.expiring_count}} expiring, {{digest.overdue_count}} overdue',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>Contracts are expiring and overdue.<br>
+Please review the contracts.</p>
+<br>
+<p><strong>Expiring ({{digest.expiring_count}})</strong></p>
+{{digest.expiring_table}}
+<br>
+<p><strong>Overdue ({{digest.overdue_count}})</strong></p>
+{{digest.overdue_table}}',
+                'enabled' => true,
+                'cadence' => 'weekly',
             ],
             [
                 'key' => 'stock.low_alert',
@@ -432,6 +525,25 @@ You can track progress in {{app.name}}.</p>
     public static function has(string $key): bool
     {
         return self::find($key) !== null;
+    }
+
+    /** The layout width every template gets unless its own definition asks for more. */
+    public const DEFAULT_WIDTH = 720;
+
+    /**
+     * How wide the branded frame is rendered for a given template, in pixels.
+     *
+     * A layout decision belonging to the template's design, not to its wording — which is
+     * why it lives here and not on the email_templates row: an administrator rewording a
+     * digest, or resetting it, must not be able to make its table stop fitting.
+     *
+     * Most mail is a paragraph and a reference, and 720 already suits the five-column
+     * digests. The weekly contract summary carries six columns including a vendor and a
+     * contract name, and at 720 both wrap to three lines each.
+     */
+    public static function widthFor(?string $key): int
+    {
+        return (int) (self::find((string) $key)['width'] ?? self::DEFAULT_WIDTH);
     }
 
     /**

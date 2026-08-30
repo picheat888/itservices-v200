@@ -8,6 +8,7 @@ use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Services\Settings\MailConfigService;
+use App\Support\EmailTemplates;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -172,7 +173,7 @@ class EmailNotificationService
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile()));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile(), EmailTemplates::widthFor($templateKey)));
             $status = 'sent';
             $error = null;
         } catch (\Throwable $e) {

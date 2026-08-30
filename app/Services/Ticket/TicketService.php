@@ -192,12 +192,20 @@ class TicketService
             'resolved_at' => now(),
         ]);
 
-        // Tell the owner their case is finished — and on a successful close, email
-        // them too (cancellations stay bell-only; the reason shows in the drawer).
-        $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), $complete ? 'resolved' : 'cancelled'));
-        if ($complete) {
-            $this->email->sendTemplate('ticket.resolved', $this->ownerEmail($ticket), $this->ownerVars($ticket), null, null, $ticket->requester?->name);
-        }
+        // Tell the owner their case is finished, whichever way it ended. A cancellation used
+        // to be bell-only, on the grounds that the reason showed in the drawer — but a case
+        // closed without being fixed is the one outcome the requester most needs told, and
+        // the reason now travels with the mail rather than waiting for them to go looking.
+        $ticket = $ticket->fresh();
+        $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket, $complete ? 'resolved' : 'cancelled'));
+        $this->email->sendTemplate(
+            $complete ? 'ticket.resolved' : 'ticket.cancelled',
+            $this->ownerEmail($ticket),
+            $this->ownerVars($ticket),
+            null,
+            null,
+            $ticket->requester?->name,
+        );
 
         return $ticket->fresh();
     }
@@ -252,6 +260,10 @@ class TicketService
             // break the message, or worse — and its line breaks are turned into <br> so a
             // multi-line description does not arrive as one run-on paragraph.
             'ticket.details' => nl2br(e((string) $ticket->description)),
+            // What IT wrote when they closed it — the fix on a completed case, the reason on
+            // a cancelled one. Escaped and line-broken for the same reason as the details
+            // above: it is free text somebody typed, and it goes into an HTML email.
+            'ticket.resolution' => filled($ticket->resolution) ? nl2br(e((string) $ticket->resolution)) : '-',
             'reference.id' => (string) $ticket->ticket_no,
         ];
     }

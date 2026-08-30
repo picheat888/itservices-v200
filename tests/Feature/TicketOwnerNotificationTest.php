@@ -140,11 +140,15 @@ class TicketOwnerNotificationTest extends TestCase
         Queue::assertPushed(SendTemplatedEmail::class, fn ($job) => $job->toEmail === $owner->email && $job->templateKey === 'ticket.resolved');
     }
 
-    public function test_cancelling_a_case_bells_its_owner_without_the_resolved_email(): void
+    public function test_cancelling_a_case_bells_its_owner_and_mails_them_the_reason(): void
     {
         Notification::fake();
         Queue::fake();
-        $this->template('ticket.resolved');
+        // A cancellation used to be bell-only, and the resolved template was deliberately
+        // NOT sent — the reason showed in the drawer if the requester went looking. It has
+        // its own mail now: a case closed without being fixed is the outcome they most need
+        // told, and it carries the reason rather than pointing at the app.
+        $this->template('ticket.cancelled');
         [$owner, $ticket] = $this->ownerAndTicket();
         $staff = $this->userWithEmployee();
         $ticket->update(['status' => 'in_progress', 'assignee_id' => $staff->id, 'priority' => 'medium']);
@@ -154,7 +158,14 @@ class TicketOwnerNotificationTest extends TestCase
             ->assertOk();
 
         $this->assertOwnerBell($owner, 'cancelled');
-        Queue::assertNotPushed(SendTemplatedEmail::class);
+        // The stub template here carries no {{ticket.resolution}}; that the reason reaches
+        // the message is TicketClosureEmailTest's job, against the real wording.
+        Queue::assertPushed(
+            SendTemplatedEmail::class,
+            fn ($job) => $job->toEmail === $owner->email && $job->templateKey === 'ticket.cancelled'
+        );
+        // And never the completed one — the two outcomes must not read the same.
+        Queue::assertNotPushed(SendTemplatedEmail::class, fn ($job) => $job->templateKey === 'ticket.resolved');
     }
 
     public function test_creating_a_ticket_emails_the_requester_a_confirmation(): void

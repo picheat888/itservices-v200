@@ -9,6 +9,10 @@
     $preheader = $eyebrow ? "{$brandName} - {$eyebrow}" : $brandName;
     // In the in-app preview the CTA is illustrative only — render it inert.
     $isPreview = $preview ?? false;
+    // How wide the frame is drawn. Set per template by EmailTemplates::widthFor(); every
+    // caller resolves it there, so a mail, its preview and its entry in the delivery log
+    // are all the same width.
+    $frameWidth = (int) ($width ?? \App\Support\EmailTemplates::DEFAULT_WIDTH);
     // Strip default paragraph spacing (inline, so Outlook honours it too) — authors
     // control line breaks with <br> instead of relying on the <p> margin.
     $bodyHtml = preg_replace_callback('/<p(\s[^>]*)?>/i', function ($m) {
@@ -47,7 +51,7 @@
            inline styles + table attributes so it stays intact there too. */
         body { margin: 0; padding: 0; width: 100% !important; }
         a { text-decoration: none; }
-        @media only screen and (max-width: 740px) {
+        @media only screen and (max-width: {{ $frameWidth + 20 }}px) {
             .container { width: 100% !important; }
             .px { padding-left: 22px !important; padding-right: 22px !important; }
         }
@@ -63,11 +67,12 @@
 
                 {{-- 720 rather than the usual 600: the digest emails carry 5-column tables,
                      and at 600 the ticket number and the column headings broke across two
-                     lines. Wider than an Outlook reading pane, which scales the message down
-                     to fit rather than clipping it — the table gains more from the room than
-                     it loses to that. --}}
-                <!--[if mso]><table role="presentation" width="720" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
-                <table role="presentation" class="container" width="720" cellpadding="0" cellspacing="0" border="0" style="width:720px;max-width:720px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+                     lines. A template may ask for more (EmailTemplates::widthFor). Wider than
+                     an Outlook reading pane, which scales the message down to fit rather than
+                     clipping it — the table gains more from the room than it loses to that.
+                     Narrow screens drop to full width through the .container rule above. --}}
+                <!--[if mso]><table role="presentation" width="{{ $frameWidth }}" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+                <table role="presentation" class="container" width="{{ $frameWidth }}" cellpadding="0" cellspacing="0" border="0" style="width:{{ $frameWidth }}px;max-width:{{ $frameWidth }}px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
                     {{-- Brand header --}}
                     <tr>

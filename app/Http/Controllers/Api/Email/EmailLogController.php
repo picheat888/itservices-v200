@@ -7,6 +7,7 @@ use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
 use App\Services\Email\EmailNotificationService;
+use App\Support\EmailTemplates;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -73,6 +74,8 @@ class EmailLogController extends Controller
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
             'logoData' => $service->brandLogoDataUri(),
+            // Drawn at the width it was sent at, or the record would not be a record of it.
+            'width' => EmailTemplates::widthFor($log->template_key),
             // NOT preview mode. This is a record of a real send, and the preview flag swaps
             // the footnote for "Sample only - in a real email this opens the portal", which
             // is a sentence the recipient never saw. The screen shows it inside a sandboxed

@@ -110,7 +110,9 @@ export const emailTemplateApi = {
     },
 
     // Renders unsaved edit-drawer content through the real email layout (HTML string).
-    renderPreview: async (payload: { name?: string; subject?: string; body_html?: string }): Promise<string> => {
+    // `key` is not editable — it is sent so the preview is drawn at the width the saved
+    // template and the real mail use (some templates ask for a wider frame).
+    renderPreview: async (payload: { key?: string; name?: string; subject?: string; body_html?: string }): Promise<string> => {
         await ensureCsrf();
         const { data } = await http.post('/email-templates/render-preview', payload, { responseType: 'text' });
         return data as string;
