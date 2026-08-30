@@ -274,7 +274,7 @@ class EmployeeService
             $emailService->sendTemplate('employee.account_needed', $recipient->email, [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
                 ...$vars,
-            ], null, null, $recipient->name);
+            ], url("/employees?tab=directory&view={$employee->id}"), 'Open the employee', $recipient->name);
         }
     }
 
