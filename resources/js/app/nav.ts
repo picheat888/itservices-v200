@@ -54,7 +54,7 @@ export const navGroups: NavGroup[] = [
             { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: [SUPER_ROLE, 'admin', 'hr'] },
             { id: 'workflows', label: 'wf_title', to: '/workflows', icon: Workflow, permission: 'workflows.module' },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
-            { id: 'notifications', label: 'notifications', to: '/email-templates', icon: Mail, permission: 'system.configure_notifications' },
+            { id: 'notifications', label: 'notifications', to: '/email-notifications', icon: Mail, permission: 'system.configure_notifications' },
             { id: 'settings', label: 'settings', to: '/settings', icon: Settings, permission: 'settings.access' },
         ],
     },

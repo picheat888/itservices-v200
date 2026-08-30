@@ -23,13 +23,25 @@ import { SUPER_ROLE, type Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 // Placeholder ("coming soon") modules and how their routes are gated.
 // `reports` is role-gated (matching the sidebar nav).
 const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [
     { path: 'reports', titleKey: 'reports', roles: [SUPER_ROLE, 'admin', 'hr'] },
 ];
+
+/**
+ * Send an old path to its new one without losing what came after the `?`.
+ *
+ * <Navigate to="/x" /> drops the query string, which for a tabbed page means every
+ * bookmark quietly lands on the wrong tab.
+ */
+function RedirectPreservingQuery({ to }: { to: string }) {
+    const { search, hash } = useLocation();
+
+    return <Navigate to={`${to}${search}${hash}`} replace />;
+}
 
 function App() {
     useApplyTheme();
@@ -120,13 +132,18 @@ function App() {
                             }
                         />
                         <Route
-                            path="email-templates"
+                            path="email-notifications"
                             element={
                                 <RequirePermission anyOf={['system.configure_notifications']}>
                                     <EmailTemplatesPage />
                                 </RequirePermission>
                             }
                         />
+                        {/* The page was /email-templates until it grew a Notification tab and
+                            stopped being only about templates. Bookmarks and anything already
+                            sent round keep working, query string included — landing on the
+                            Email tab when you asked for ?tab=notification would be its own bug. */}
+                        <Route path="email-templates" element={<RedirectPreservingQuery to="/email-notifications" />} />
                         <Route
                             path="permissions"
                             element={

@@ -290,7 +290,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
 export function notificationTarget(n: AppNotification): string {
     // Every ticket notification opens the case's detail drawer directly.
     // Straight back to the tab it was sent from.
-    if (n.data.type === 'test') return '/email-templates?tab=notification';
+    if (n.data.type === 'test') return '/email-notifications?tab=notification';
     if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
     // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
     if (n.data.type === 'asset_assigned') return '/my-assets';
