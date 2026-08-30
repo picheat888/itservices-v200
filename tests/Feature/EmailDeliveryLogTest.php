@@ -94,17 +94,20 @@ class EmailDeliveryLogTest extends TestCase
     }
 
     /** A user whose role grants exactly the given permission. */
-    private function userWith(string $permission): User
+    /** @param  string|list<string>  $permission */
+    private function userWith(string|array $permission): User
     {
         $role = Role::firstOrCreate(['key' => 'log_reader'], ['name' => 'Log Reader']);
-        RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $permission], ['allowed' => true]);
+        foreach ((array) $permission as $key) {
+            RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $key], ['allowed' => true]);
+        }
 
         return User::factory()->create(['role' => 'log_reader']);
     }
 
     public function test_the_log_endpoint_lists_newest_first_with_whole_log_counts(): void
     {
-        $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
 
         EmailLog::create(['template_key' => 'a', 'to_email' => 'a@example.com', 'subject' => 'A', 'status' => 'sent']);
         EmailLog::create(['template_key' => 'b', 'to_email' => null, 'recipient_name' => 'Manee', 'subject' => 'B', 'status' => 'skipped']);
@@ -119,7 +122,7 @@ class EmailDeliveryLogTest extends TestCase
 
     public function test_the_log_endpoint_filters_by_status_and_searches_the_recipient(): void
     {
-        $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
 
         EmailLog::create(['template_key' => 'a', 'to_email' => 'a@example.com', 'subject' => 'A', 'status' => 'sent']);
         EmailLog::create(['template_key' => 'b', 'to_email' => null, 'recipient_name' => 'Manee Jaidee', 'subject' => 'B', 'status' => 'skipped']);
@@ -193,7 +196,7 @@ class EmailDeliveryLogTest extends TestCase
      */
     public function test_each_test_send_carries_a_distinguishing_stamp(): void
     {
-        $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
         $template = $this->template();
 
         $this->postJson("/api/email-templates/{$template->id}/test")->assertOk();
@@ -204,7 +207,7 @@ class EmailDeliveryLogTest extends TestCase
 
     public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
     {
-        $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
         $this->template();
 
         $log = EmailLog::create([
@@ -232,7 +235,7 @@ class EmailDeliveryLogTest extends TestCase
     /** Rows written before bodies were kept say so instead of rendering an empty frame. */
     public function test_the_detail_endpoint_returns_no_preview_for_older_rows(): void
     {
-        $this->actingAs($this->userWith('system.configure_notifications'));
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
 
         $log = EmailLog::create([
             'template_key' => 'test.template',
@@ -255,7 +258,7 @@ class EmailDeliveryLogTest extends TestCase
      */
     public function test_a_failed_test_send_is_not_reported_as_a_server_fault(): void
     {
-        $user = $this->userWith('system.configure_notifications');
+        $user = $this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']);
         // An address the mailer will refuse, which is what a broken account looks like.
         $user->forceFill(['email' => '[NULL]'])->save();
         $this->actingAs($user);

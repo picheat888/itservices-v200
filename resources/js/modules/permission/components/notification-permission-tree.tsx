@@ -5,25 +5,42 @@ import { Check, Lock } from 'lucide-react';
 import { actionDescription, actionLabel } from '../lib/permission-labels';
 import { PermissionCardHeader } from './permission-card-header';
 
-// The module's only real key. Everything the page does — both tabs and the delivery log —
-// is gated by this one permission, on the route, the sidebar entry and every endpoint.
-const MASTER = 'system.configure_notifications';
+// Mirrors App\Support\Permissions::notificationHierarchy() — keep in sync.
+const MASTER = 'notifications.module';
 
 /**
- * What the one switch actually opens.
+ * The page's three tabs, each with the rights that belong to it.
  *
- * These are NOT permissions and carry no toggle. The card used to list four —
- * email.edit / enable / create / test — as locked "coming soon" rows, which was wrong twice
- * over: those capabilities shipped long ago, and none of them was ever a key in
- * App\Support\Permissions, so the switches could not have been saved even if the feature had
- * been missing. Naming the surfaces instead answers the question an administrator actually
- * has in front of this card — "what am I handing over?" — without inventing rights to grant.
+ * The two editing tabs carry the same three rights because they are the same job done to two
+ * channels — and they are separate keys, not one shared set, so a role can be trusted with
+ * the in-app wording without also being handed the email that leaves the building.
+ *
+ * Edit and toggle are split for a reason worth stating: switching an alert off stops it
+ * reaching anybody, which is a decision about who hears what, while rewording it is a
+ * decision about how it reads. The controllers enforce the split by looking at which fields
+ * a save actually changed, so neither right can be used to do the other's work.
  */
-const OPENS: { en: string; th: string }[] = [
-    { en: 'Email templates — wording, on/off, test sends', th: 'เทมเพลตอีเมล — ข้อความ เปิด/ปิด ส่งทดสอบ' },
-    { en: 'In-app notifications — wording in both languages, on/off', th: 'การแจ้งเตือนในระบบ — ข้อความสองภาษา เปิด/ปิด' },
-    { en: 'Delivery log — every send, and why one was skipped', th: 'ประวัติการส่ง — ทุกฉบับ และเหตุที่ข้ามไป' },
+const GROUPS: { id: string; label: { en: string; th: string }; keys: string[] }[] = [
+    {
+        id: 'email',
+        label: { en: 'Email', th: 'อีเมล' },
+        keys: ['notifications.email_edit', 'notifications.email_toggle', 'notifications.email_test'],
+    },
+    {
+        id: 'inapp',
+        label: { en: 'Notification', th: 'การแจ้งเตือนในระบบ' },
+        keys: ['notifications.inapp_edit', 'notifications.inapp_toggle', 'notifications.inapp_test'],
+    },
 ];
+
+// The log stands on its own: reading who was written to, and what they were sent, is not a
+// smaller version of being allowed to change it.
+const LOGS = 'notifications.logs';
+
+const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => g.keys), LOGS];
+
+const label = (key: string, lang: Lang) => actionLabel('notifications', key.replace('notifications.', ''), lang);
+const info = (key: string, lang: Lang) => actionDescription('notifications', key.replace('notifications.', ''), lang);
 
 /** A single toggle, matching the matrix switch (h-5 w-9). */
 function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick: () => void }) {
@@ -49,15 +66,33 @@ function Switch({ on, locked, onClick }: { on: boolean; locked: boolean; onClick
     );
 }
 
+/** One indented row under a tab heading. */
+function ChildRow({ keyName, on, locked, lang, onToggle }: { keyName: string; on: boolean; locked: boolean; lang: Lang; onToggle: () => void }) {
+    const hint = info(keyName, lang);
+
+    return (
+        <div className="flex min-h-[30px] items-center gap-2">
+            <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
+                {label(keyName, lang)}
+                {hint && <InfoHint text={hint} />}
+            </span>
+            <span className="ml-auto">
+                <Switch on={on} locked={locked} onClick={onToggle} />
+            </span>
+        </div>
+    );
+}
+
 /**
- * The Email & Notification permission card: one master switch, and a plain statement of what
- * it covers.
+ * The Email & Notification permission card: master → tab → right.
  *
- * Every other module card is a tree because every other module has capabilities that can be
- * granted apart from each other. This one has exactly one key, so a tree would be a shape
- * with nothing in it. It keeps the same header, master band and layout as its neighbours —
- * the card should look like it belongs on the page, without pretending to offer choices the
- * system does not have.
+ * The module used to hang off one key, so anyone who could reword a template could also
+ * switch it off, send real mail and read every message the system had ever sent. The card
+ * showed that as five rows, four of which were locked placeholders for keys that had never
+ * existed. It is now the same tree every other module gets, over rights that are real.
+ *
+ * Tab headings carry no switch of their own: there is no "may use the Email tab" right to
+ * grant, only the three things you can do on it.
  */
 export function NotificationPermissionTree({
     draft,
@@ -70,18 +105,23 @@ export function NotificationPermissionTree({
     isSuper: boolean;
     lang: Lang;
 }) {
-    const on = isSuper || draft.has(MASTER);
-    const masterInfo = actionDescription('system', 'configure_notifications', lang);
+    const has = (key: string) => isSuper || draft.has(key);
+    const masterOn = has(MASTER);
 
-    const toggle = () => {
+    const toggle = (key: string) => {
         if (isSuper) {
             return;
         }
         setDraft((prev) => {
             const next = new Set(prev);
-            if (next.has(MASTER)) {
-                next.delete(MASTER);
+            if (next.has(key)) {
+                next.delete(key);
+                // Dropping the master drops everything under it — matching normalizeNotifications().
+                if (key === MASTER) {
+                    GATED_KEYS.forEach((k) => next.delete(k));
+                }
             } else {
+                next.add(key);
                 next.add(MASTER);
             }
 
@@ -89,45 +129,55 @@ export function NotificationPermissionTree({
         });
     };
 
+    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k)).length : 0;
+
     return (
         <div className="border-border rounded-lg border">
-            <PermissionCardHeader module="email_templates" on={on ? 1 : 0} total={1} lang={lang} />
+            <PermissionCardHeader module="notifications" on={activeCount} total={GATED_KEYS.length} lang={lang} />
 
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
-                    <div className="flex items-center gap-1 text-sm font-semibold">
-                        {actionLabel('system', 'configure_notifications', lang)}
-                        {masterInfo && <InfoHint text={masterInfo} />}
-                    </div>
+                    <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
                     <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมทั้งหน้าและไอคอนใน sidebar' : 'Master · gates the whole page and the sidebar icon'}
+                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
                     </div>
                 </div>
                 <div className="ml-auto">
-                    <Switch on={on} locked={isSuper} onClick={toggle} />
+                    <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
                 </div>
             </div>
 
-            <div className={cn('px-3.5 py-1 transition-opacity', !on && 'opacity-40')}>
+            <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
+                {GROUPS.map((group) => (
+                    <div key={group.id} className="py-0.5">
+                        {/* A heading, not a switch — see the component docblock. */}
+                        <div className="flex min-h-[34px] items-center gap-2">
+                            <span className="text-sm font-medium">{lang === 'th' ? group.label.th : group.label.en}</span>
+                        </div>
+                        <div className="border-border ml-2 space-y-0.5 border-l pl-3">
+                            {group.keys.map((key) => (
+                                <ChildRow
+                                    key={key}
+                                    keyName={key}
+                                    on={has(key) && masterOn}
+                                    locked={isSuper || !masterOn}
+                                    lang={lang}
+                                    onToggle={() => toggle(key)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+
                 <div className="py-0.5">
                     <div className="flex min-h-[34px] items-center gap-2">
                         <span className="flex items-center gap-1 text-sm font-medium">
-                            {lang === 'th' ? 'สิ่งที่เปิดให้' : 'What this opens'}
-                            <InfoHint
-                                text={
-                                    lang === 'th'
-                                        ? 'ทั้งหน้าอยู่หลังสวิตช์เดียว - ไม่มีสิทธิ์ย่อยให้แยกให้ทีละส่วน'
-                                        : 'The whole page sits behind this one switch - there are no finer rights to hand out separately.'
-                                }
-                            />
+                            {label(LOGS, lang)}
+                            {info(LOGS, lang) && <InfoHint text={info(LOGS, lang)!} />}
                         </span>
-                    </div>
-                    <div className="border-border ml-2 space-y-0.5 border-l pb-1.5 pl-3">
-                        {OPENS.map((item) => (
-                            <div key={item.en} className="text-muted-foreground min-h-[26px] text-[12.5px] leading-relaxed">
-                                {lang === 'th' ? item.th : item.en}
-                            </div>
-                        ))}
+                        <span className="ml-auto">
+                            <Switch on={has(LOGS) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(LOGS)} />
+                        </span>
                     </div>
                 </div>
             </div>

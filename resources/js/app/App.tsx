@@ -134,7 +134,7 @@ function App() {
                         <Route
                             path="email-notifications"
                             element={
-                                <RequirePermission anyOf={['system.configure_notifications']}>
+                                <RequirePermission anyOf={['notifications.module']}>
                                     <EmailTemplatesPage />
                                 </RequirePermission>
                             }

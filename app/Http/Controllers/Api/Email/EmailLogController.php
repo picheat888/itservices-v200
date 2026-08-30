@@ -23,7 +23,10 @@ class EmailLogController extends Controller
     /** Same gate as the templates themselves — this is the other half of that screen. */
     private function gate(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.configure_notifications'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('notifications.module'), 403);
+        // The log is its own tab and its own right: reading who was written to is not the
+        // same as being allowed to change what gets written.
+        abort_unless((bool) $request->user()?->hasPermission('notifications.logs'), 403);
     }
 
     /**

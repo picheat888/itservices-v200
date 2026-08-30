@@ -32,7 +32,7 @@ const MODULE_ICON: Record<string, LucideIcon> = {
     access: MonitorCog,
     workflows: Workflow,
     permissions: Shield,
-    email_templates: Mail,
+    notifications: Mail,
     reports: LineChart,
     settings: Settings,
 };

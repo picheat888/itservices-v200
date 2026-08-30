@@ -14,17 +14,25 @@ use Illuminate\Http\Request;
 /**
  * The Notification tab of Email & Notifications: what each in-app alert says, and whether it fires.
  *
- * Reads and writes are gated by system.configure_notifications — the same permission the
- * email templates use, because they are two halves of one decision about what the system
- * says to people. `messages()` is the exception: every signed-in user needs the wording to
- * render their own tray, so it is gated by nothing beyond being signed in and returns only
- * the strings.
+ * Reads need notifications.module, the same master the email templates use — they are two
+ * halves of one decision about what the system says to people. Writes need the finer right
+ * for the change being made. `messages()` is the exception: every signed-in user needs the
+ * wording to render their own tray, so it is gated by nothing beyond being signed in and
+ * returns only the strings.
  */
 class NotificationTemplateController extends Controller
 {
+    /** Opening the page at all. */
     private function gate(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.configure_notifications'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('notifications.module'), 403);
+    }
+
+    /** One of the module's finer rights, master included. */
+    private function allow(Request $request, string $key): void
+    {
+        $this->gate($request);
+        abort_unless((bool) $request->user()?->hasPermission($key), 403);
     }
 
     /**
@@ -131,6 +139,10 @@ class NotificationTemplateController extends Controller
         ]);
 
         $bell = NotificationTemplate::firstOrNew(['key' => $key]);
+        // Decided from what the save CHANGES, not from what was sent: the edit dialog posts
+        // every field every time, so trusting the payload would let anyone who may reword
+        // also flip the switch by resubmitting the row unchanged.
+        $this->requireRightsFor($request, $bell, $standard, $data);
         $before = $bell->exists ? $bell->getOriginal() : [];
         $bell->fill($data)->save();
         NotificationCatalogue::forgetSwitches();
@@ -138,6 +150,30 @@ class NotificationTemplateController extends Controller
         AuditLog::record('Updated bell', $standard['name'], AuditLog::changes($before, $bell));
 
         return response()->json(['message' => 'success']);
+    }
+
+    /**
+     * Demand a right per kind of change the save actually makes.
+     *
+     * `enabled` moving needs the toggle right; either message moving needs the edit right; a
+     * save that changes nothing needs neither. A notification with no row yet is compared
+     * against its catalogue standard, which is what the reader is seeing on screen.
+     *
+     * @param  array{name: string, message_en: string, message_th: string, enabled: bool}  $standard
+     * @param  array<string, mixed>  $data
+     */
+    private function requireRightsFor(Request $request, NotificationTemplate $bell, array $standard, array $data): void
+    {
+        $currentEnabled = $bell->exists ? (bool) $bell->enabled : (bool) $standard['enabled'];
+        $currentEn = $bell->exists ? $bell->message_en : $standard['message_en'];
+        $currentTh = $bell->exists ? $bell->message_th : $standard['message_th'];
+
+        if ((bool) $data['enabled'] !== $currentEnabled) {
+            abort_unless((bool) $request->user()?->hasPermission('notifications.inapp_toggle'), 403);
+        }
+        if ($data['message_en'] !== $currentEn || $data['message_th'] !== $currentTh) {
+            abort_unless((bool) $request->user()?->hasPermission('notifications.inapp_edit'), 403);
+        }
     }
 
     /**
@@ -149,7 +185,7 @@ class NotificationTemplateController extends Controller
      */
     public function test(Request $request, string $key): JsonResponse
     {
-        $this->gate($request);
+        $this->allow($request, 'notifications.inapp_test');
 
         $standard = NotificationCatalogue::find($key);
         abort_if($standard === null, 404, 'No such notification.');
@@ -162,7 +198,9 @@ class NotificationTemplateController extends Controller
     /** Put one notification back to its standard wording and its standard on/off state. */
     public function reset(Request $request, string $key): JsonResponse
     {
-        $this->gate($request);
+        // Reset rewrites the wording AND restores the standard on/off state, so it needs both.
+        $this->allow($request, 'notifications.inapp_edit');
+        abort_unless((bool) $request->user()?->hasPermission('notifications.inapp_toggle'), 403);
 
         $standard = NotificationCatalogue::find($key);
         abort_if($standard === null, 404, 'No such bell.');
