@@ -190,7 +190,7 @@ class NotificationTemplateTest extends TestCase
         $this->assertNull(NotificationTemplate::where('key', 'notif_asset_assigned')->first()->last_sent_at);
     }
 
-    public function test_only_the_bells_with_no_mail_behind_them_are_flagged(): void
+    public function test_every_bell_reports_whether_mail_covers_its_event(): void
     {
         $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
         $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key');
@@ -198,8 +198,10 @@ class NotificationTemplateTest extends TestCase
         // Assets, tickets, requests and the rest all send mail as well as ringing.
         $this->assertTrue($rows['notif_asset_assigned']['has_email']);
         $this->assertTrue($rows['notif_ticket_new']['has_email']);
-        // Access is announced by the notification alone — switching it off silences the event.
-        $this->assertFalse($rows['notif_access_offboarding']['has_email']);
+        // Access used to be announced by the notification alone; access.offboarding covers it
+        // now, which is what the flag has to notice. NotificationEmailPairingTest guards the
+        // map that decides this, because it is maintained by hand and went stale once here.
+        $this->assertTrue($rows['notif_access_offboarding']['has_email']);
     }
 
     /**

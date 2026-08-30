@@ -258,12 +258,17 @@ export function NotificationSettingsStats() {
     const t = useT();
     const { data } = useNotificationTemplates();
 
+    // No card for the bells no mail covers. Every module carries mail of its own now, so it
+    // only ever read 0; the warning that matters is still on the row itself, where it names
+    // the bell rather than counting it.
     return (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label={t('notification_stat_total')} value={data?.stats.total ?? 0} icon={Bell} />
             <StatCard label={t('notification_stat_enabled')} value={data?.stats.enabled ?? 0} icon={Bell} />
+            {/* Beside its opposite on purpose: the two are read together, and a switched-off
+                bell is the first thing to look at when an alert "never arrived". */}
+            <StatCard label={t('notification_stat_disabled')} value={data?.stats.disabled ?? 0} icon={BellOff} />
             <StatCard label={t('notification_stat_edited')} value={data?.stats.edited ?? 0} icon={PenLine} />
-            <StatCard label={t('notification_stat_only_channel')} value={data?.stats.only_channel ?? 0} icon={BellOff} tone="amber" />
         </div>
     );
 }
