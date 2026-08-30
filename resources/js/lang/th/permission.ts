@@ -82,7 +82,7 @@ export const permission: Dict = {
     perm_mod_system: 'ระบบ',
     // ผังสิทธิ์ — กลุ่มย่อยของ Administration
     perm_mod_permissions: 'สิทธิ์การใช้งาน',
-    perm_mod_email_templates: 'เทมเพลตอีเมล',
+    perm_mod_email_templates: 'Email & Notification',
     perm_mod_settings: 'ตั้งค่า',
     perm_mod_reports: 'รายงาน',
     'perm_act_tickets.module': 'การเข้าถึง Ticket',
@@ -227,10 +227,6 @@ export const permission: Dict = {
     'perm_act_reports.schedule': 'ตั้งกำหนดการอัตโนมัติ',
     'perm_act_reports.custom': 'สร้างรายงานแบบกำหนดเอง',
     // ผังสิทธิ์ — Email Templates
-    'perm_act_email.edit': 'แก้ไขเนื้อหาเทมเพลต',
-    'perm_act_email.enable': 'เปิด / ปิดเทมเพลต',
-    'perm_act_email.create': 'สร้างเทมเพลตใหม่',
-    'perm_act_email.test': 'ส่งอีเมลทดสอบ',
     // ผังสิทธิ์ — Settings
     'perm_act_settings.access': 'เข้าถึงการตั้งค่า',
     'perm_act_settings.company': 'ข้อมูลบริษัท',
