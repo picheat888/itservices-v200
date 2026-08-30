@@ -70,12 +70,12 @@ export const notification: Dict = {
     notification_col_last_sent: 'Last sent',
     notification_col_on: 'On',
     notification_all_modules: 'All',
-    notification_stat_total: 'Bells',
+    notification_stat_total: 'Notifications',
     notification_stat_enabled: 'Switched on',
     notification_stat_edited: 'Reworded',
     notification_stat_only_channel: 'Only channel',
-    notification_on: 'This bell is on',
-    notification_off: 'This bell is off - nobody will be alerted',
+    notification_on: 'This notification is on',
+    notification_off: 'This notification is off - nobody will be alerted',
     notification_audience: 'Receives',
     notification_only_channel_title: 'No email covers this event',
     notification_only_channel_body: 'Switching this off leaves the event with no alert at all - nobody will be told it happened.',
@@ -85,9 +85,9 @@ export const notification: Dict = {
     notification_preview: 'How it will look',
     notification_reset: 'Reset to standard',
     notification_already_standard: 'Already the standard wording',
-    notification_saved: 'Bell updated',
-    notification_reset_done: 'Bell reset to standard',
-    notification_save_failed: 'Could not save the bell',
+    notification_saved: 'Notification updated',
+    notification_reset_done: 'Notification reset to standard',
+    notification_save_failed: 'Could not save the notification',
 
     // notification-settings-pane.tsx — one name / trigger / audience per notification.
     // Composed from the catalogue key (notification_name_<key without notif_>), and checked against

@@ -169,7 +169,7 @@ export const requests: Dict = {
     req_decide_note_required: 'A remark is required when rejecting',
     req_decide_note_ph_approve: 'e.g. Approved - please have it ready before their first day',
     req_decide_note_ph_reject: 'e.g. The department has plenty of machines - use an existing one for now',
-    req_decide_notify_reject: 'Notifies the requester via Bell + Email, then closes the request.',
+    req_decide_notify_reject: 'Notifies the requester via Notification + Email, then closes the request.',
     req_decide_notify_next: 'Next: {name}',
     req_fulfill_title: 'Mark as fulfilled',
     req_fulfill_hint: 'Confirms the work is done and notifies the requester.',
