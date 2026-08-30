@@ -75,7 +75,14 @@ class TicketService
 
         // Email the requester a confirmation carrying the case number for reference. A
         // requester with no address anywhere is logged as skipped, not dropped in silence.
-        $this->email->sendTemplate('ticket.created', $this->ownerEmail($ticket), $this->ownerVars($ticket), null, null, $ticket->requester?->name);
+        $this->email->sendTemplate(
+            'ticket.created',
+            $this->ownerEmail($ticket),
+            $this->ownerVars($ticket),
+            $this->ownerUrl($ticket),
+            'Open the ticket',
+            $ticket->requester?->name,
+        );
 
         return $ticket;
     }
@@ -118,8 +125,11 @@ class TicketService
             'sla_resolve_alert_level' => null,
         ]);
 
-        // Tell the owner their case is now in someone's hands.
+        // Tell the owner their case is now in someone's hands — by bell and by mail. The
+        // requester used to hear nothing between filing and closing: the two mails they got
+        // were "we have it" and "it is done", with the whole middle silent.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'taken', $staff->name));
+        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => (string) $staff->name]);
 
         return $ticket->fresh();
     }
@@ -127,8 +137,11 @@ class TicketService
     /**
      * A super admin assigns an open case to a specific IT staff with a priority.
      * Moves to InProgress.
+     *
+     * $assignedBy is carried into the mail: being handed a case is not the same as picking
+     * one up, and the receiver's first question is who handed it to them.
      */
-    public function assign(Ticket $ticket, User $staff, TicketPriority $priority): Ticket
+    public function assign(Ticket $ticket, User $staff, TicketPriority $priority, ?User $assignedBy = null): Ticket
     {
         $ticket->update([
             'assignee_id' => $staff->id,
@@ -145,12 +158,14 @@ class TicketService
         // The assigned staff also gets the templated email (bell alone is easy to miss).
         $this->email->sendTemplate('ticket.assigned', $staff->email, [
             'user.first_name' => strtok((string) $staff->name, ' '),
-            'ticket.id' => $ticket->ticket_no,
-            'ticket.subject' => $ticket->subject,
-            'reference.id' => $ticket->ticket_no,
-        ], null, null, $staff->name);
-        // Tell the owner their case is now in someone's hands.
+            'actor.name' => (string) ($assignedBy?->name ?? '-'),
+            'reference.id' => (string) $ticket->ticket_no,
+            ...$this->staffVars($ticket),
+        ], $this->staffUrl($ticket), 'Open the case', $staff->name);
+        // Tell the owner their case is now in someone's hands. Same news as take() from
+        // where they sit — who picked it up is IT's business, that somebody has is theirs.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'taken', $staff->name));
+        $this->emailOwner($ticket, 'ticket.owner_taken', ['ticket.assignee' => (string) $staff->name]);
 
         return $ticket->fresh();
     }
@@ -173,9 +188,15 @@ class TicketService
             'ticket.subject' => $ticket->subject,
             'from.name' => $fromName ?? '—',
             'reference.id' => $ticket->ticket_no,
-        ], null, null, $staff->name);
-        // Tell the owner who is responsible for their case now.
+        ], $this->staffUrl($ticket), 'Open the case', $staff->name);
+        // Tell the owner who is responsible for their case now. Its own template rather than
+        // reusing the "somebody has it" one: the requester may have been talking to the
+        // previous technician, and the mail has to name both ends of the handover.
         $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket->fresh(), 'forwarded', $staff->name));
+        $this->emailOwner($ticket, 'ticket.owner_forwarded', [
+            'ticket.assignee' => (string) $staff->name,
+            'from.name' => $fromName ?: '-',
+        ]);
 
         return $ticket->fresh();
     }
@@ -202,12 +223,52 @@ class TicketService
             $complete ? 'ticket.resolved' : 'ticket.cancelled',
             $this->ownerEmail($ticket),
             $this->ownerVars($ticket),
-            null,
-            null,
+            $this->ownerUrl($ticket),
+            'Open the ticket',
             $ticket->requester?->name,
         );
 
         return $ticket->fresh();
+    }
+
+    /**
+     * Mails the case's requester, whatever the news is.
+     *
+     * Every requester-facing mail carries the same picture of the case (ownerVars) so they
+     * read as one conversation about one ticket, plus whatever this particular step adds.
+     *
+     * @param  array<string, string>  $extraVars
+     */
+    private function emailOwner(Ticket $ticket, string $templateKey, array $extraVars = []): void
+    {
+        $ticket = $ticket->fresh();
+
+        $this->email->sendTemplate(
+            $templateKey,
+            $this->ownerEmail($ticket),
+            $extraVars + $this->ownerVars($ticket),
+            $this->ownerUrl($ticket),
+            'Open the ticket',
+            $ticket->requester?->name,
+        );
+    }
+
+    /**
+     * Where a requester's mail sends them: their own list, with the case open.
+     *
+     * Not the All tab the staff mails use — a requester has no All tab, and landing on a
+     * tab that is not theirs drops them on whatever the page shows first instead of the
+     * case they were reading about.
+     */
+    private function ownerUrl(Ticket $ticket): string
+    {
+        return url("/tickets?tab=my&view={$ticket->id}");
+    }
+
+    /** Where a staff mail sends them: the All tab with the case open, as ticket.new_case does. */
+    private function staffUrl(Ticket $ticket): string
+    {
+        return url("/tickets?tab=all&view={$ticket->id}");
     }
 
     /** The login account of the case's requester — null when they have no account. */

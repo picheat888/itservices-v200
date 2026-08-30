@@ -487,7 +487,7 @@ class TicketController extends Controller
             'A case cannot be assigned to the person who filed it.'
         );
         $this->assertCanReceive($staff, $ticket);
-        $ticket = $this->service->assign($ticket, $staff, TicketPriority::from($data['priority']));
+        $ticket = $this->service->assign($ticket, $staff, TicketPriority::from($data['priority']), $request->user());
         AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}");
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))

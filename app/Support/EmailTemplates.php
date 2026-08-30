@@ -25,7 +25,7 @@ class EmailTemplates
         return [
             [
                 'key' => 'ticket.created',
-                'name' => 'Ticket created',
+                'name' => 'Your ticket has been created (สร้าง Ticket เรียบร้อย)',
                 'subject' => 'Your ticket {{ticket.id}} has been created',
                 // Ticket templates say {{ticket.id}} throughout. reference.id carries the same
                 // ticket number, and offering an editor two names for one value invited them
@@ -35,8 +35,8 @@ class EmailTemplates
                 // the requester's own words — so they can check it arrived as they meant it
                 // without signing in.
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team.<br>
-You can track progress in {{app.name}}.</p>
+<p>We\'ve received your ticket.<br>
+You can tracking progress in {{app.name}}.</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
 <strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
@@ -51,10 +51,10 @@ You can track progress in {{app.name}}.</p>
                 // for. The bell fires at the same moment; this reaches whoever is not looking
                 // at the portal, which is exactly when a case sits unclaimed.
                 'key' => 'ticket.new_case',
-                'name' => 'New case waiting to be taken',
-                'subject' => 'New ticket {{ticket.id}} is waiting to be taken',
+                'name' => 'New ticket (Ticket ใหม่)',
+                'subject' => 'New ticket {{ticket.id}} is waiting.',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A new case has been created and is waiting for support</p>
+<p>A new ticket has been created and is waiting for support</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
 <strong style="color:#64748b">Requester:</strong> {{ticket.requester}}<br>
@@ -66,21 +66,35 @@ You can track progress in {{app.name}}.</p>
             ],
             [
                 'key' => 'ticket.assigned',
-                'name' => 'Ticket assigned',
-                'subject' => 'Ticket {{ticket.id}} has been assigned',
+                'name' => 'Ticket assigned to you (Ticket ที่ถูกมอบหมาย)',
+                'subject' => 'The ticket {{ticket.id}} has been assigned to you',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We\'ve received your ticket and assigned it to our team. You can track progress in {{app.name}}.</p>
-<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
+<p>The ticket {{ticket.id}} has been assigned to you.</p>
+<p>Please check your ticket.</p>
+<br>
+<p><strong style="color:#64748b">Assigned by:</strong> <strong>{{actor.name}}</strong></p>
+<p>---</p>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'ticket.forwarded',
-                'name' => 'Ticket forwarded',
+                'name' => 'Forwarded ticket (Ticket ส่งต่อ)',
                 'subject' => 'Ticket {{ticket.id}} was forwarded to you',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Ticket <strong>{{ticket.id}}</strong> - {{ticket.subject}} was forwarded to you by {{from.name}}. Its SLA clock keeps running, so please pick it up in {{app.name}}.</p>
-<p style="color:#64748b">Reference: <strong>{{ticket.id}}</strong></p>',
+<p>You have the ticket {{ticket.id}} was forwarded to you</p>
+<p>Please check your ticket because SLA clock keeps running.</p>
+<br>
+<p><strong style="color:#64748b">Forward by:</strong> <strong>{{from.name}}</strong></p>
+<p>----</p>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -90,7 +104,7 @@ You can track progress in {{app.name}}.</p>
                 'subject' => 'The ticket {{ticket.id}} has been completed',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>The ticket {{ticket.id}} has been completed ✅</p>
-<p>You can track progress in {{app.name}}.</p>
+<p>You can tracking progress in {{app.name}}.</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
 <strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
@@ -102,6 +116,40 @@ You can track progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
+                'key' => 'ticket.owner_taken',
+                'name' => 'Your ticket is being handled (Ticket มี IT รับผิดชอบแล้ว)',
+                'subject' => 'The ticket {{ticket.id}} is now being handled',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>The ticket {{ticket.id}} is now being handled.</p>
+<p>You can tracking progress in {{app.name}}.</p>
+<br>
+<p><strong style="color:#64748b">Responsible by:</strong> {{ticket.assignee}}</p>
+<p>---</p>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
+                'key' => 'ticket.owner_forwarded',
+                'name' => 'Your ticket changed hands (Ticket ถูกเปลี่ยน IT ผู้รับผิดชอบ)',
+                'subject' => 'The ticket {{ticket.id}} has been transferred',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>The ticket {{ticket.id}} has been transferred to another technician.</p>
+<p>There is nothing you need to do.</p>
+<br>
+<p><strong style="color:#64748b">Responsible by:</strong> <strong>{{ticket.assignee}}</strong><br>
+<strong style="color:#64748b">Previously:</strong> {{from.name}}</p>
+<p>---</p>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],            [
                 // Sits where ticket.sla_breach used to. The SLA sweep is bell-only now, and a
                 // case closed WITHOUT being fixed is the outcome the requester most needs told.
                 'key' => 'ticket.cancelled',
@@ -109,7 +157,7 @@ You can track progress in {{app.name}}.</p>
                 'subject' => 'The ticket {{ticket.id}} has been Cancelled',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>The ticket {{ticket.id}} has been Cancelled ❌</p>
-<p>You can track progress in {{app.name}}.</p>
+<p>You can tracking progress in {{app.name}}.</p>
 <br>
 <p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
 <strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
@@ -126,15 +174,15 @@ You can track progress in {{app.name}}.</p>
                 // different questions — what nobody has picked up, and what the team is
                 // holding — so they are separate variables rather than one merged table.
                 'key' => 'ticket.weekly_digest',
-                'name' => 'Weekly summary of open cases',
+                'name' => 'Ticket Weekly summary (สรุป Ticket ค้างประจำสัปดาห์)',
                 'subject' => '{{digest.open_count}} case(s) waiting to be taken',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Here is where the team\'s cases stand this morning.</p>
-<p><strong>Waiting to be taken ({{digest.open_count}})</strong></p>
+<p>We have some outstanding tickets from last week.</p>
+<p><strong>Waiting({{digest.open_count}})</strong></p>
 {{digest.open_table}}
-<p><strong>Taken but not closed ({{digest.working_count}})</strong></p>
+<p><strong>Not closed ({{digest.working_count}})</strong></p>
 {{digest.working_table}}
-<p style="color:#64748b">Open a case in {{app.name}} to take it or finish it.</p>',
+<p style="color:#64748b">Please resolve the tickets from last week.</p>',
                 'enabled' => true,
                 'cadence' => 'weekly',
             ],
