@@ -40,7 +40,9 @@ class NotificationTemplateController extends Controller
      *
      * `has_email` marks the notifications whose event ALSO sends a mail. The ones without it are the
      * only channel their event has: switching one of those off means nobody hears about that
-     * event at all, which the page says out loud rather than leaving to be discovered.
+     * event at all, which the row says out loud rather than leaving to be discovered. It is not
+     * totalled into the stats — a count of them was only ever going to read 0 once every module
+     * had mail, and the useful form of this is the warning beside the bell it applies to.
      */
     public function index(Request $request): JsonResponse
     {
@@ -77,8 +79,10 @@ class NotificationTemplateController extends Controller
             'stats' => [
                 'total' => $rows->count(),
                 'enabled' => $rows->where('enabled', true)->count(),
+                // The counterpart, and the first thing to check when somebody reports that an
+                // alert never arrived: a switched-off bell looks exactly like a broken one.
+                'disabled' => $rows->where('enabled', false)->count(),
                 'edited' => $rows->where('is_standard', false)->count(),
-                'only_channel' => $rows->where('has_email', false)->count(),
             ],
         ]);
     }
@@ -88,8 +92,12 @@ class NotificationTemplateController extends Controller
      *
      * Spelled out rather than derived from the module name. The first attempt trimmed a
      * trailing "s" and turned `access` into `acce`, which happened to give the right answer
-     * — there is no access mail — for entirely the wrong reason, and would have gone on
-     * being wrong the moment one was added.
+     * — there was no access mail then — for entirely the wrong reason.
+     *
+     * A hand-written map goes stale the moment a module gains its first template, and this
+     * one did: `access` stayed null after access.offboarding shipped, so the one bell that
+     * had just STOPPED being its event's only channel was the only one still flagged as it.
+     * NotificationEmailPairingTest fails if an email prefix appears that nothing here claims.
      */
     private function emailPrefixFor(string $module): ?string
     {
@@ -100,8 +108,7 @@ class NotificationTemplateController extends Controller
             'assets' => 'asset',
             'tickets' => 'ticket',
             'stock' => 'stock',
-            // Access has no mail of its own: a leaver's access is announced by the notification alone.
-            'access' => null,
+            'access' => 'access',
         ][$module] ?? null;
     }
 

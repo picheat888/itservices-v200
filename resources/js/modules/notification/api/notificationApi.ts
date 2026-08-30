@@ -139,8 +139,8 @@ export interface NotificationTemplate {
 export interface NotificationTemplateStats {
     total: number;
     enabled: number;
+    disabled: number;
     edited: number;
-    only_channel: number;
 }
 
 export interface NotificationTemplatesResponse {
