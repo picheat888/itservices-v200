@@ -18,6 +18,14 @@ use Tests\TestCase;
  * event happened, said whatever was compiled into the front-end bundle, and offered no way
  * to turn one off. This covers the switch and the wording.
  */
+/** Everything the module can do — what the old single key used to imply. */
+const NOTIFICATION_ADMIN = [
+    'notifications.module',
+    'notifications.email_edit', 'notifications.email_toggle', 'notifications.email_test',
+    'notifications.inapp_edit', 'notifications.inapp_toggle', 'notifications.inapp_test',
+    'notifications.logs',
+];
+
 class NotificationTemplateTest extends TestCase
 {
     use RefreshDatabase;
@@ -118,7 +126,7 @@ class NotificationTemplateTest extends TestCase
             'message_en' => 'x', 'message_th' => 'x', 'enabled' => true,
         ])->assertForbidden();
 
-        $this->actingAs($this->userWith(['system.configure_notifications']));
+        $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
         $this->getJson('/api/notification-templates')->assertOk()->assertJsonPath('stats.total', count(NotificationCatalogue::all()));
     }
 
@@ -143,7 +151,7 @@ class NotificationTemplateTest extends TestCase
             'key' => 'notif_asset_assigned', 'message_en' => 'edited', 'message_th' => 'แก้แล้ว', 'enabled' => false,
         ]);
 
-        $this->actingAs($this->userWith(['system.configure_notifications']));
+        $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
         $this->postJson('/api/notification-templates/notif_asset_assigned/reset')->assertOk();
 
         $row = NotificationTemplate::where('key', 'notif_asset_assigned')->first();
@@ -184,7 +192,7 @@ class NotificationTemplateTest extends TestCase
 
     public function test_only_the_bells_with_no_mail_behind_them_are_flagged(): void
     {
-        $this->actingAs($this->userWith(['system.configure_notifications']));
+        $this->actingAs($this->userWith(NOTIFICATION_ADMIN));
         $rows = collect($this->getJson('/api/notification-templates')->assertOk()->json('data'))->keyBy('key');
 
         // Assets, tickets, requests and the rest all send mail as well as ringing.
@@ -234,7 +242,7 @@ class NotificationTemplateTest extends TestCase
 
     public function test_pressing_test_puts_a_sample_in_your_own_tray(): void
     {
-        $admin = $this->userWith(['system.configure_notifications']);
+        $admin = $this->userWith(NOTIFICATION_ADMIN);
 
         $this->actingAs($admin)->postJson('/api/notification-templates/notif_asset_assigned/test')->assertOk();
 
@@ -253,7 +261,7 @@ class NotificationTemplateTest extends TestCase
             'key' => 'notif_asset_assigned', 'message_en' => 'x', 'message_th' => 'x', 'enabled' => false,
         ]);
         NotificationCatalogue::forgetSwitches();
-        $admin = $this->userWith(['system.configure_notifications']);
+        $admin = $this->userWith(NOTIFICATION_ADMIN);
 
         // Switched off is exactly when you want to see what you are about to turn back on, so
         // the test notification is the one that ignores the switch.

@@ -6,9 +6,9 @@ import { NotificationSettingsPane, NotificationSettingsStats } from '@/modules/n
 import { settingsApi, useSettings } from '@/modules/settings';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { SettingToggle } from '@/shared/components/setting-toggle';
 import { Field } from '@/shared/components/field';
 import { SectionLabel } from '@/shared/components/section-label';
+import { SettingToggle } from '@/shared/components/setting-toggle';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useRecordView } from '@/shared/hooks/use-record-view';
 import { formatDateTime, relativeTime } from '@/shared/lib/datetime';

@@ -127,8 +127,15 @@ const LIVE = new Set<string>([
     'system.manage_roles',
     'system.manage_groups',
     'system.view_audit',
-    // EmailTemplateController refuses every route without it, so it has to be grantable.
-    'system.configure_notifications',
+    // Email & Notification: the master plus one right per action, all live.
+    'notifications.module',
+    'notifications.email_edit',
+    'notifications.email_toggle',
+    'notifications.email_test',
+    'notifications.inapp_edit',
+    'notifications.inapp_toggle',
+    'notifications.inapp_test',
+    'notifications.logs',
     'settings.access',
     'settings.company',
     'settings.system',

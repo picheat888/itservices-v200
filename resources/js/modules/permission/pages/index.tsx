@@ -146,9 +146,19 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
-    // One real key. The four email.* rows that used to sit beside it were never in
-    // App\Support\Permissions, and the capabilities they named shipped long ago.
-    { module: 'email_templates', keys: ['system.configure_notifications'] },
+    {
+        module: 'notifications',
+        keys: [
+            'notifications.module',
+            'notifications.email_edit',
+            'notifications.email_toggle',
+            'notifications.email_test',
+            'notifications.inapp_edit',
+            'notifications.inapp_toggle',
+            'notifications.inapp_test',
+            'notifications.logs',
+        ],
+    },
     {
         module: 'settings',
         keys: [
@@ -468,7 +478,7 @@ function RolesTab() {
                                                     />
                                                 );
                                             }
-                                            if (group.module === 'email_templates') {
+                                            if (group.module === 'notifications') {
                                                 return (
                                                     <NotificationPermissionTree
                                                         key={group.module}

@@ -20,10 +20,23 @@ class EmailTemplateController extends Controller
 {
     public function __construct(private readonly EmailNotificationService $service) {}
 
-    /** Gates every action to the notification-config permission. */
+    /** Opening the page at all. Every read below needs this and nothing more. */
     private function gate(Request $request): void
     {
-        abort_unless((bool) $request->user()?->hasPermission('system.configure_notifications'), 403);
+        abort_unless((bool) $request->user()?->hasPermission('notifications.module'), 403);
+    }
+
+    /**
+     * One of the module's finer rights, master included.
+     *
+     * Rewording a template and switching it off are separate permissions: turning one off
+     * stops it reaching anybody, which is a decision about who hears what, while rewording
+     * is a decision about how it reads.
+     */
+    private function allow(Request $request, string $key): void
+    {
+        $this->gate($request);
+        abort_unless((bool) $request->user()?->hasPermission($key), 403);
     }
 
     /** Returns all templates plus the four header stats. */
@@ -69,6 +82,11 @@ class EmailTemplateController extends Controller
             'enabled' => ['sometimes', 'boolean'],
         ]);
 
+        // Decided from what the save CHANGES, not from what the form sent: the edit drawer
+        // posts every field every time, so trusting the payload's shape would let anyone who
+        // may reword also flip the switch by resubmitting the row unchanged.
+        $this->requireRightsFor($request, $emailTemplate, $data);
+
         $before = $emailTemplate->getOriginal();
         $emailTemplate->update($data);
         AuditLog::record('Updated email template', $emailTemplate->name, AuditLog::changes($before, $emailTemplate));
@@ -76,10 +94,36 @@ class EmailTemplateController extends Controller
         return (new EmailTemplateResource($emailTemplate))->additional(['message' => 'success'])->response();
     }
 
+    /**
+     * Demand a right per kind of change the save actually makes.
+     *
+     * `enabled` moving needs the toggle right; any wording field moving needs the edit right;
+     * a save that changes nothing needs neither. Compared against what is stored, so the same
+     * endpoint serves the inline switch and the full editor without either being able to do
+     * the other's job by sending extra fields.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function requireRightsFor(Request $request, EmailTemplate $template, array $data): void
+    {
+        $togglesIt = array_key_exists('enabled', $data) && (bool) $data['enabled'] !== (bool) $template->enabled;
+        $rewordsIt = collect(['name', 'subject', 'body_html'])
+            ->contains(fn (string $field) => array_key_exists($field, $data) && $data[$field] !== $template->{$field});
+
+        if ($togglesIt) {
+            abort_unless((bool) $request->user()?->hasPermission('notifications.email_toggle'), 403);
+        }
+        if ($rewordsIt) {
+            abort_unless((bool) $request->user()?->hasPermission('notifications.email_edit'), 403);
+        }
+    }
+
     /** Restores one template to its standard definition. 422 if it has no standard. */
     public function reset(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
-        $this->gate($request);
+        // Reset rewrites the wording, so it is an edit — the fact that the new text comes
+        // from the catalogue rather than a form does not make it a lesser change.
+        $this->allow($request, 'notifications.email_edit');
 
         $standard = EmailTemplates::find($emailTemplate->key);
         if ($standard === null) {
@@ -102,7 +146,7 @@ class EmailTemplateController extends Controller
     /** Restores every standard template to its standard definition in one pass. */
     public function resetAll(Request $request): JsonResponse
     {
-        $this->gate($request);
+        $this->allow($request, 'notifications.email_edit');
 
         $count = 0;
         foreach (EmailTemplates::all() as $standard) {
@@ -128,7 +172,8 @@ class EmailTemplateController extends Controller
     /** Sends a test render of one template to the current user (synchronous). */
     public function test(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
-        $this->gate($request);
+        // Sending real mail, even to yourself, is its own right.
+        $this->allow($request, 'notifications.email_test');
 
         $to = $request->user()->email;
         if (! $to) {

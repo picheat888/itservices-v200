@@ -82,7 +82,7 @@ export const permission: Dict = {
     perm_mod_system: 'System',
     // permission tree — Administration sub-groups
     perm_mod_permissions: 'Permission',
-    perm_mod_email_templates: 'Email & Notification',
+    perm_mod_notifications: 'Email & Notification',
     perm_mod_settings: 'Setting',
     perm_mod_reports: 'Reports',
     'perm_act_tickets.module': 'Tickets access',
@@ -220,7 +220,23 @@ export const permission: Dict = {
     'perm_act_system.manage_permissions': 'Manage permissions',
     'perm_act_system.manage_roles': 'Manage roles',
     'perm_act_system.manage_groups': 'Manage groups',
-    'perm_act_system.configure_notifications': 'Configure notifications',
+    'perm_act_notifications.module': 'Access Email & Notification',
+    'perm_act_notifications.email_edit': 'Edit / Reset',
+    'perm_act_notifications.email_toggle': 'Enable / disable',
+    'perm_act_notifications.email_test': 'Send test',
+    'perm_act_notifications.inapp_edit': 'Edit / Reset',
+    'perm_act_notifications.inapp_toggle': 'Enable / disable',
+    'perm_act_notifications.inapp_test': 'Send test',
+    'perm_act_notifications.logs': 'Read the delivery log',
+    'perm_desc_notifications.email_edit': 'Reword an email template, or put it back to the standard wording. Does not include switching it off.',
+    'perm_desc_notifications.email_toggle':
+        'Switch an email template on or off. A template that is off reaches nobody, which is why it is separate from rewording one.',
+    'perm_desc_notifications.email_test': 'Send a real test email to your own address.',
+    'perm_desc_notifications.inapp_edit': 'Reword an in-app notification in either language, or put it back to the standard wording.',
+    'perm_desc_notifications.inapp_toggle':
+        'Switch an in-app notification on or off. Some events have no email behind them, so switching one off can leave nobody told at all.',
+    'perm_desc_notifications.inapp_test': 'Send a sample notification to your own tray.',
+    'perm_desc_notifications.logs': 'Read every send and the reason one was skipped, including the recipient and the message body.',
     'perm_act_system.view_audit': 'View audit log',
     // permission tree — Reports
     'perm_act_reports.view': 'View reports',

@@ -74,7 +74,16 @@ class Permissions
                 'social_view', 'social_add', 'social_edit', 'social_delete',
                 'software_view', 'software_add', 'software_edit', 'software_delete',
             ],
-            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'configure_notifications', 'view_audit'],
+            'system' => ['manage_permissions', 'manage_roles', 'manage_groups', 'view_audit'],
+            // Email & Notification. Was the single key system.configure_notifications until the
+            // page grew a second tab and a delivery log worth handing out apart from the
+            // wording — see notificationHierarchy().
+            'notifications' => [
+                'module',
+                'email_edit', 'email_toggle', 'email_test',
+                'inapp_edit', 'inapp_toggle', 'inapp_test',
+                'logs',
+            ],
             'settings' => ['access', 'company', 'system', 'masterdata', 'email', 'sla', 'requestdata', 'assets', 'security'],
         ];
     }
@@ -596,6 +605,54 @@ class Permissions
         }
 
         return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'workflows.')));
+    }
+
+    /**
+     * Email & Notification tree: the master gates the page and its sidebar entry, and the
+     * three groups under it are the page's three tabs.
+     *
+     * Editing the wording and switching a template on are separate rights on purpose. Turning
+     * an alert off stops it reaching anybody, which is a decision about who hears what;
+     * rewording one is a decision about how it reads. The same hands do not always do both,
+     * and the controllers enforce the split by looking at which fields a save actually
+     * changed rather than trusting the form that sent it.
+     *
+     * @return array{master: string, groups: array<string, list<string>>}
+     */
+    public static function notificationHierarchy(): array
+    {
+        return [
+            'master' => 'notifications.module',
+            'groups' => [
+                // The Email tab
+                'notifications.email_edit' => [],
+                'notifications.email_toggle' => [],
+                'notifications.email_test' => [],
+                // The Notification tab
+                'notifications.inapp_edit' => [],
+                'notifications.inapp_toggle' => [],
+                'notifications.inapp_test' => [],
+                // The Logs tab — reading what was sent, which is not the same as changing it.
+                'notifications.logs' => [],
+            ],
+        ];
+    }
+
+    /**
+     * Enforce the Email & Notification gate: without the master, every notifications key is
+     * dropped. Nothing cascades between the groups — each tab's rights stand alone.
+     * Other keys pass through untouched. Returns the normalized list.
+     *
+     * @param  list<string>  $granted
+     * @return list<string>
+     */
+    public static function normalizeNotifications(array $granted): array
+    {
+        if (in_array(self::notificationHierarchy()['master'], $granted, true)) {
+            return $granted;
+        }
+
+        return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'notifications.')));
     }
 
     /**

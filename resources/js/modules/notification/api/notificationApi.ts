@@ -165,7 +165,7 @@ async function mutate<T>(method: 'put' | 'post', url: string, payload?: unknown)
 }
 
 export const notificationTemplateApi = {
-    // Admin config; gated by system.configure_notifications.
+    // Admin config; gated by notifications.module plus the finer right per action.
     list: () => http.get<NotificationTemplatesResponse>('/notification-templates').then((r) => r.data),
     update: (key: string, payload: NotificationTemplatePayload) => mutate<{ message: string }>('put', `/notification-templates/${key}`, payload),
     reset: (key: string) => mutate<{ message: string }>('post', `/notification-templates/${key}/reset`),
