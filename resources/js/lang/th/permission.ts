@@ -124,10 +124,10 @@ export const permission: Dict = {
     'perm_act_requests.notify_stalled': 'รับแจ้งเตือนสรุปงานค้างรายสัปดาห์',
     'perm_desc_requests.notify_stalled':
         'รับอีเมลทุกเช้าวันจันทร์ สรุปคำขอที่รอการตัดสินของคนนี้เกินหนึ่งสัปดาห์ · ไม่มีสิทธิ์นี้ก็ยังได้กระดิ่งเตือนรายวันในระบบตามปกติ',
-    perm_mod_workflows: 'Workflow',
+    perm_mod_workflows: 'Workflows',
     'perm_act_workflows.module': 'การเข้าถึง Workflow',
     'perm_desc_workflows.module': 'เปิดหน้า Workflow และดูสายอนุมัติของคำขอแต่ละประเภทได้ · การแก้ไขต้องเปิดสวิตช์ด้านล่างเพิ่ม',
-    'perm_act_workflows.manage': 'แก้ไข Workflow',
+    'perm_act_workflows.manage': 'แก้ไข',
     'perm_desc_workflows.manage': 'เปลี่ยนขั้นการอนุมัติของคำขอแต่ละประเภท · คำขอที่ส่งไปแล้วยังใช้สายเดิมที่ถูกตรึงไว้ตอนส่ง',
     'perm_act_assets.module': 'การเข้าถึงทรัพย์สิน',
     'perm_desc_assets.module':
@@ -225,7 +225,7 @@ export const permission: Dict = {
     'perm_act_notifications.inapp_edit': 'แก้ไข / คืนค่ามาตรฐาน',
     'perm_act_notifications.inapp_toggle': 'เปิด / ปิด',
     'perm_act_notifications.inapp_test': 'ส่งทดสอบ',
-    'perm_act_notifications.logs': 'ดูประวัติการส่ง',
+    'perm_act_notifications.logs': 'Logs',
     'perm_desc_notifications.email_edit': 'แก้ข้อความเทมเพลตอีเมล หรือคืนค่ามาตรฐาน · ไม่รวมการปิดเทมเพลต',
     'perm_desc_notifications.email_toggle': 'เปิด/ปิดเทมเพลตอีเมล · ใบที่ปิดจะไม่ถึงใครเลย จึงแยกจากการแก้ข้อความ',
     'perm_desc_notifications.email_test': 'ส่งอีเมลทดสอบจริงเข้าที่อยู่ของตัวเอง',
