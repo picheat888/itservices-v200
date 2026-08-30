@@ -252,14 +252,46 @@ class EmployeeService
         Notification::send($recipients, new NewEmployeeNotification($employee));
 
         // Email — queued, via the employee.account_needed template (if enabled).
+        //
+        // Enough of the new starter to set an account up without opening the record: who
+        // they are, where they sit, and when they need it by. Loaded once rather than per
+        // recipient — the same three relations for everybody on the list.
+        $employee->loadMissing(['position', 'section', 'department']);
+
+        $vars = [
+            'employee.name' => (string) $employee->name,
+            'employee.code' => (string) $employee->code,
+            'employee.position' => $employee->position?->title ?: '-',
+            // Master data is mixed-language and the English name is the one that is always
+            // filled; the Thai name stands in where it is not.
+            'employee.section' => $this->masterName($employee->section),
+            'employee.department' => $this->masterName($employee->department),
+            'employee.working' => $employee->joined_at?->format('d-m-Y') ?? '-',
+        ];
+
         $emailService = app(EmailNotificationService::class);
         foreach ($recipients as $recipient) {
             $emailService->sendTemplate('employee.account_needed', $recipient->email, [
                 'user.first_name' => explode(' ', (string) $recipient->name)[0] ?? 'there',
-                'employee.name' => $employee->name,
-                'employee.code' => $employee->code,
+                ...$vars,
             ], null, null, $recipient->name);
         }
+    }
+
+    /**
+     * A master-data record's name for an English email: its own name, or the Thai one when
+     * that is all it has.
+     *
+     * Departments carry both, sections usually only the English — a blank cell in a list an
+     * IT admin works from is worse than the wrong language.
+     */
+    private function masterName(?object $record): string
+    {
+        if ($record === null) {
+            return '-';
+        }
+
+        return (string) ($record->name ?: ($record->name_th ?: '-'));
     }
 
     /**
@@ -280,7 +312,8 @@ class EmployeeService
      */
     private function notifyAccessOffboarding(Employee $employee): void
     {
-        $outstanding = app(AccessService::class)->outstandingFor($employee);
+        $access = app(AccessService::class);
+        $outstanding = $access->outstandingFor($employee);
 
         if ($outstanding['total'] === 0) {
             return;
@@ -297,6 +330,23 @@ class EmployeeService
         }
 
         Notification::send($recipients, new AccessOffboardingNotification($employee, $outstanding));
+
+        // The mail carries what the bell only counts: a bell says there is work, the list
+        // says what it is — and it is read away from the screen, by whoever is clearing the
+        // account rather than sitting in the Access Directory.
+        $table = $access->outstandingTableFor($employee);
+        $emailService = app(EmailNotificationService::class);
+
+        foreach ($recipients as $recipient) {
+            $emailService->sendTemplate('access.offboarding', $recipient->email, [
+                'user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there',
+                'employee.name' => (string) $employee->name,
+                'employee.code' => (string) $employee->code,
+                'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+                'access.count' => (string) $outstanding['total'],
+                'access.table' => $table,
+            ], url('/access'), 'Open the Access Directory', $recipient->name);
+        }
     }
 
     /**
@@ -325,10 +375,47 @@ class EmployeeService
         $watchers = $this->recipientsWithPermission('employees.view', null)
             ->reject(fn (User $u) => $offboarderIds->contains($u->id));
 
-        if ($watchers->isEmpty()) {
+        if ($watchers->isNotEmpty()) {
+            Notification::send($watchers, new EmployeeResignedNotification($employee, 'departure'));
+        }
+
+        $this->emailDeparture($employee, $offboarders->concat($watchers));
+    }
+
+    /**
+     * Mails the same departure notice the bell carries.
+     *
+     * Sent to everyone who may look at staff records — offboarders included, unlike the two
+     * bells above. The bells split because somebody holding both permissions would otherwise
+     * be told twice about one event in one tray; on email there is nothing to be told twice
+     * BY, because the offboarding task itself has no mail of its own. Leaving them out would
+     * mean the person most involved in a departure is the one person it is not announced to.
+     *
+     * The leaver is skipped when they have a login of their own: telling somebody their own
+     * resignation has been recorded is not news to them.
+     *
+     * @param  Collection<int, User>  $recipients
+     */
+    private function emailDeparture(Employee $employee, Collection $recipients): void
+    {
+        $audience = $recipients->reject(fn (User $u) => $u->employee_id === $employee->id);
+
+        if ($audience->isEmpty()) {
             return;
         }
 
-        Notification::send($watchers, new EmployeeResignedNotification($employee, 'departure'));
+        $emailService = app(EmailNotificationService::class);
+        $vars = [
+            'employee.name' => (string) $employee->name,
+            'employee.code' => (string) $employee->code,
+            'employee.last_working' => $employee->last_day?->format('d-m-Y') ?? '-',
+        ];
+
+        foreach ($audience as $recipient) {
+            $emailService->sendTemplate('employee.offboarding', $recipient->email, [
+                'user.first_name' => strtok((string) $recipient->name, ' ') ?: 'there',
+                ...$vars,
+            ], url('/employees'), 'Open the employee list', $recipient->name);
+        }
     }
 }

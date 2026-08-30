@@ -8,6 +8,8 @@ use App\Models\AuditLog;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
+use App\Services\Access\AccessService;
+use App\Services\Contract\ContractDigestService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Ticket\TicketDigestService;
 use App\Support\EmailTable;
@@ -229,6 +231,7 @@ class EmailTemplateController extends Controller
             'subjectLine' => $subject,
             'bodyHtml' => $body,
             'eyebrow' => $emailTemplate->name,
+            'width' => EmailTemplates::widthFor($emailTemplate->key),
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
@@ -249,6 +252,9 @@ class EmailTemplateController extends Controller
         $this->gate($request);
 
         $data = $request->validate([
+            // The key is not edited here — it is sent so the live preview is drawn at the
+            // same width the saved template and the real mail are.
+            'key' => ['nullable', 'string', 'max:100'],
             'name' => ['nullable', 'string', 'max:150'],
             'subject' => ['nullable', 'string', 'max:255'],
             'body_html' => ['nullable', 'string'],
@@ -260,6 +266,7 @@ class EmailTemplateController extends Controller
             'subjectLine' => $this->service->render($data['subject'] ?? '', $vars),
             'bodyHtml' => $this->service->render($data['body_html'] ?? '', $vars),
             'eyebrow' => $data['name'] ?? null,
+            'width' => EmailTemplates::widthFor($data['key'] ?? null),
             'actionUrl' => rtrim((string) config('app.url'), '/').'/',
             'actionLabel' => 'Open in portal',
             'brand' => AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk'),
@@ -315,10 +322,24 @@ class EmailTemplateController extends Controller
                 [],
                 ['38%', '20%', '24%', '18%'],
             ),
+            'access.count' => 4,
+            'access.table' => EmailTable::render(
+                AccessService::ACCESS_HEADERS,
+                [
+                    ['MG-0007', 'Email group', 'Sales TH', 'sales-th@inaba-foods.co.th', 'Member'],
+                    ['FS-0012', 'File share', 'Sales reports', '\\server\sales\reports', 'Read/Write'],
+                    ['SM-0003', 'Social platform', 'Company LINE OA', 'https://line.me/R/ti/p/@inaba', 'Member'],
+                    ['SW-0021', 'Software', 'Microsoft 365 E3', '-', 'Member'],
+                ],
+                [],
+                AccessService::ACCESS_WIDTHS,
+                AccessService::ACCESS_WRAP,
+            ),
             'ticket.id' => 'TKT-2856',
             'ticket.subject' => 'Printer not responding',
             'ticket.category' => 'Hardware',
             'ticket.details' => 'The printer on the 3rd floor shows a paper jam error,<br>but there is no paper stuck inside.',
+            'ticket.resolution' => 'Replaced the fuser roller and cleared the jam sensor.',
             'ticket.requester' => 'Somchai Suksawat',
             'from.name' => 'Anong Wattana',
             'contract.vendor' => 'Acme Co.',
@@ -326,7 +347,8 @@ class EmailTemplateController extends Controller
             'contract.code' => 'CT-2026-014',
             'contract.days_remaining' => 30,
             'contract.days_overdue' => 5,
-            'contract.end_date' => '31 Dec 2026',
+            'contract.end_date' => '31-12-2026',
+            'contract.details' => 'Microsoft 365 E3 License Agreement, 320 seats',
             'reference.id' => 'REF-0001',
             'request.title' => 'Request: Mail group',
             'requester.name' => 'Manee Jaidee',
@@ -335,6 +357,10 @@ class EmailTemplateController extends Controller
             'remark' => 'The licence is not available on the current agreement.',
             'employee.name' => 'Somchai Suksawat',
             'employee.code' => 'EMP-1042',
+            'employee.position' => 'Asst. Manager',
+            'employee.section' => 'System analyst',
+            'employee.department' => 'Information Technology',
+            'employee.working' => '01-09-2026',
             'digest.count' => 2,
             'digest.open_count' => 2,
             'digest.working_count' => 1,
@@ -351,7 +377,25 @@ class EmailTemplateController extends Controller
                 [3],
                 ['18%', '40%', '26%', '16%'],
             ),
-            'digest.open_table' => EmailTable::render(
+            'digest.expiring_count' => 2,
+            'digest.overdue_count' => 1,
+            'digest.expiring_table' => EmailTable::render(
+                ContractDigestService::HEADERS,
+                [
+                    [EmailTable::link('#', 'CT-2026-014'), 'Acme Co.', 'Annual support', '฿120,000.00', '29-09-2026', '90, 30, 7 days'],
+                    [EmailTable::link('#', 'CT-2026-021'), 'Lenovo (Thailand)', 'Notebook rental', '฿1,450,000.00', '31-10-2026', '150, 60, 30 days'],
+                ],
+                ContractDigestService::NUMERIC,
+                ContractDigestService::WIDTHS,
+            ),
+            'digest.overdue_table' => EmailTable::render(
+                ContractDigestService::HEADERS,
+                [
+                    [EmailTable::link('#', 'CT-2025-008'), 'Microsoft', 'Microsoft 365 E3', '฿980,000.00', '25-08-2026', '30, 7 days'],
+                ],
+                ContractDigestService::NUMERIC,
+                ContractDigestService::WIDTHS,
+            ),            'digest.open_table' => EmailTable::render(
                 TicketDigestService::HEADERS_OPEN,
                 [
                     [EmailTable::link('#', 'TKT-2856'), 'Printer not responding', 'Hardware', 'Somchai Suksawat', '4'],

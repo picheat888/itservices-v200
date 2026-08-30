@@ -6,7 +6,6 @@ use App\Enums\Ticket\TicketStatus;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Notifications\TicketSlaAlertNotification;
-use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
@@ -15,7 +14,13 @@ use Illuminate\Support\Facades\Notification;
  * Scheduled sweep over active tickets that fires SLA alerts:
  *
  * - at 80% of the target (at_risk) → a bell nudge
- * - past the target (breached)     → a bell alert + templated email (ticket.sla_breach)
+ * - past the target (breached)     → a bell alert
+ *
+ * Bell only, on both stages. The breach used to mail everyone it belled as well; that was
+ * withdrawn along with the ticket.sla_breach template. This sweep runs every ten minutes
+ * across every open case, so it is the one notifier in the system that can produce a lot of
+ * messages without anybody doing anything — and the people it reaches are IT staff who are
+ * already in the portal, where the tray is.
  *
  * Recipients follow the workflow: while a ticket waits for a take (response
  * clock) everyone who can take it (tickets.resolve) is warned; once it's in
@@ -28,8 +33,6 @@ use Illuminate\Support\Facades\Notification;
  */
 class TicketSlaAlertService
 {
-    public function __construct(private readonly EmailNotificationService $email) {}
-
     /**
      * @return array{at_risk: int, breached: int}
      */
@@ -66,7 +69,7 @@ class TicketSlaAlertService
         return $sent;
     }
 
-    /** Bell for every recipient; a breach also sends the templated email. */
+    /** Bell for every recipient. Deliberately no email — see the class docblock. */
     private function notify(Ticket $ticket, string $clock, string $state): void
     {
         $recipients = $this->recipientsFor($ticket, $clock, $state);
@@ -75,17 +78,6 @@ class TicketSlaAlertService
         }
 
         Notification::send($recipients, new TicketSlaAlertNotification($ticket, "{$clock}_{$state}"));
-
-        if ($state === 'breached') {
-            foreach ($recipients as $user) {
-                $this->email->sendTemplate('ticket.sla_breach', $user->email, [
-                    'user.first_name' => strtok((string) $user->name, ' '),
-                    'ticket.id' => $ticket->ticket_no,
-                    'ticket.subject' => $ticket->subject,
-                    'reference.id' => $ticket->ticket_no,
-                ], url("/tickets?tab=all&view={$ticket->id}"), 'Open ticket', $user->name);
-            }
-        }
     }
 
     /**

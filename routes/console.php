@@ -13,6 +13,11 @@ Artisan::command('inspire', function () {
 
 Schedule::command('contracts:send-expiry-alerts')->dailyAt('08:00');
 
+// The daily sweep above says what crossed a threshold today. This says what is on the
+// plate: everything expiring or already overdue, in one list once a week — weekly for the
+// same reason the approvals and cases digests are, a daily copy stops being read.
+Schedule::command('contracts:send-weekly-digest')->weeklyOn(1, '08:20');
+
 Schedule::command('stock:send-notifications')->dailyAt('08:05');
 
 // Approvals nobody has acted on. The bell goes out every morning behind the other
