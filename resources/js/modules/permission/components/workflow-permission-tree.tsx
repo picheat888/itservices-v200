@@ -8,8 +8,15 @@ import { PermissionCardHeader } from './permission-card-header';
 // Mirrors App\Support\Permissions::workflowHierarchy() — keep in sync.
 const MASTER = 'workflows.module';
 // One group, no children: opening the screen and rewriting a chain is the whole of it.
-const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [{ view: 'workflows.manage', children: [], chip: false }];
-const GATED_KEYS = [MASTER, ...GROUPS.flatMap((g) => [g.view, ...g.children])];
+/**
+ * The one thing the module lets you do, under a heading naming the thing it is done to.
+ *
+ * The heading carries no switch: there is no "may use the Workflows page" right beyond the
+ * master above it. It is here so the card reads the same way as its neighbours — a master,
+ * then a subject, then what you may do to it — rather than as a master with one loose row.
+ */
+const GROUP = { label: { en: 'Workflows', th: 'Workflow' }, keys: ['workflows.manage'] };
+const GATED_KEYS = [MASTER, ...GROUP.keys];
 
 const label = (key: string, lang: Lang) => actionLabel('workflows', key.replace('workflows.', ''), lang);
 const info = (key: string, lang: Lang) => actionDescription('workflows', key.replace('workflows.', ''), lang);
@@ -96,23 +103,27 @@ export function WorkflowPermissionTree({
             </div>
 
             <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
-                {GROUPS.map((group) => {
-                    const viewOn = has(group.view) && masterOn;
-                    const viewInfo = info(group.view, lang);
-                    return (
-                        <div key={group.view} className="py-0.5">
-                            <div className="flex min-h-[34px] items-center gap-2">
-                                <span className="flex items-center gap-1 text-sm font-medium">
-                                    {label(group.view, lang)}
-                                    {viewInfo && <InfoHint text={viewInfo} />}
-                                </span>
-                                <span className="ml-auto flex items-center gap-2">
-                                    <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
-                                </span>
-                            </div>
-                        </div>
-                    );
-                })}
+                <div className="py-0.5">
+                    <div className="flex min-h-[34px] items-center gap-2">
+                        <span className="text-sm font-medium">{lang === 'th' ? GROUP.label.th : GROUP.label.en}</span>
+                    </div>
+                    <div className="border-border ml-2 space-y-0.5 border-l pl-3">
+                        {GROUP.keys.map((key) => {
+                            const hint = info(key, lang);
+                            return (
+                                <div key={key} className="flex min-h-[30px] items-center gap-2">
+                                    <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
+                                        {label(key, lang)}
+                                        {hint && <InfoHint text={hint} />}
+                                    </span>
+                                    <span className="ml-auto">
+                                        <Switch on={has(key) && masterOn} locked={isSuper || !masterOn} onClick={() => toggle(key)} />
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
         </div>
     );

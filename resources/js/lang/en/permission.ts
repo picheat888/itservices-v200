@@ -125,10 +125,10 @@ export const permission: Dict = {
     'perm_act_requests.notify_stalled': 'Weekly summary of waiting approvals',
     'perm_desc_requests.notify_stalled':
         "Receive a Monday email listing the requests that have waited more than a week for this person's decision. Without it they still get the daily notification in the app.",
-    perm_mod_workflows: 'Approval workflows',
+    perm_mod_workflows: 'Workflows',
     'perm_act_workflows.module': 'Workflows access',
     'perm_desc_workflows.module': 'Open the Workflows screen and read the approval chain of each request type. Changing one needs the switch below.',
-    'perm_act_workflows.manage': 'Edit approval workflows',
+    'perm_act_workflows.manage': 'Edit',
     'perm_desc_workflows.manage': 'Change the approval steps of each request type. Requests already submitted keep the chain they were frozen with.',
     'perm_act_assets.module': 'Assets access',
     'perm_desc_assets.module':
@@ -227,7 +227,7 @@ export const permission: Dict = {
     'perm_act_notifications.inapp_edit': 'Edit / Reset',
     'perm_act_notifications.inapp_toggle': 'Enable / disable',
     'perm_act_notifications.inapp_test': 'Send test',
-    'perm_act_notifications.logs': 'Read the delivery log',
+    'perm_act_notifications.logs': 'Logs',
     'perm_desc_notifications.email_edit': 'Reword an email template, or put it back to the standard wording. Does not include switching it off.',
     'perm_desc_notifications.email_toggle':
         'Switch an email template on or off. A template that is off reaches nobody, which is why it is separate from rewording one.',
