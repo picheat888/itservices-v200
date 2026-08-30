@@ -82,7 +82,7 @@ export const permission: Dict = {
     perm_mod_system: 'System',
     // permission tree — Administration sub-groups
     perm_mod_permissions: 'Permission',
-    perm_mod_email_templates: 'Email Templates',
+    perm_mod_email_templates: 'Email & Notification',
     perm_mod_settings: 'Setting',
     perm_mod_reports: 'Reports',
     'perm_act_tickets.module': 'Tickets access',
@@ -229,10 +229,6 @@ export const permission: Dict = {
     'perm_act_reports.schedule': 'Schedule automated runs',
     'perm_act_reports.custom': 'Create custom report',
     // permission tree — Email Templates
-    'perm_act_email.edit': 'Edit template content',
-    'perm_act_email.enable': 'Enable / disable templates',
-    'perm_act_email.create': 'Create new template',
-    'perm_act_email.test': 'Send test email',
     // permission tree — Settings
     'perm_act_settings.access': 'Settings access',
     'perm_act_settings.company': 'Company information',

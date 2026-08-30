@@ -40,6 +40,7 @@ import { ContractPermissionTree } from '../components/contract-permission-tree';
 import { EmployeePermissionTree } from '../components/employee-permission-tree';
 import { GroupRoleModal } from '../components/group-role-modal';
 import { ModulePermissionCard, type ModuleMaster } from '../components/module-permission-card';
+import { NotificationPermissionTree } from '../components/notification-permission-tree';
 import { PermissionCardHeader } from '../components/permission-card-header';
 import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleModal } from '../components/role-modal';
@@ -145,7 +146,9 @@ const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: st
 const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
     { module: 'workflows', keys: ['workflows.module', 'workflows.manage'] },
     { module: 'permissions', keys: ['system.manage_permissions', 'system.manage_roles', 'system.manage_groups', 'system.view_audit'] },
-    { module: 'email_templates', keys: ['system.configure_notifications', 'email.edit', 'email.enable', 'email.create', 'email.test'] },
+    // One real key. The four email.* rows that used to sit beside it were never in
+    // App\Support\Permissions, and the capabilities they named shipped long ago.
+    { module: 'email_templates', keys: ['system.configure_notifications'] },
     {
         module: 'settings',
         keys: [
@@ -457,6 +460,17 @@ function RolesTab() {
                                             if (group.module === 'requests') {
                                                 return (
                                                     <RequestPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            if (group.module === 'email_templates') {
+                                                return (
+                                                    <NotificationPermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}
