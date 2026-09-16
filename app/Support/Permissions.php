@@ -60,7 +60,7 @@ class Permissions
             'employees' => [
                 'module',
                 'view_dashboard', 'view', 'view_section', 'view_department', 'view_position', 'view_org',
-                'add', 'import', 'edit', 'reset_password', 'resign', 'cancel_resign', 'set_credentials',
+                'add', 'import', 'edit', 'reset_password', 'resign', 'cancel_resign', 'set_credentials', 'delete',
                 'section_add', 'section_edit', 'section_delete',
                 'department_add', 'department_edit', 'department_delete',
                 'position_add', 'position_edit', 'position_delete', 'position_special',

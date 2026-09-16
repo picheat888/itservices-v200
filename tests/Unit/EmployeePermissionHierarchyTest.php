@@ -7,12 +7,12 @@ use Tests\TestCase;
 
 class EmployeePermissionHierarchyTest extends TestCase
 {
-    public function test_catalog_exposes_the_25_employee_keys(): void
+    public function test_catalog_exposes_the_26_employee_keys(): void
     {
         $expected = [
             'employees.module', 'employees.view_dashboard', 'employees.view',
             'employees.add', 'employees.import', 'employees.edit', 'employees.reset_password',
-            'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
+            'employees.resign', 'employees.cancel_resign', 'employees.set_credentials', 'employees.delete',
             'employees.view_section', 'employees.section_add', 'employees.section_edit', 'employees.section_delete',
             'employees.view_department', 'employees.department_add', 'employees.department_edit', 'employees.department_delete',
             'employees.view_position', 'employees.position_add', 'employees.position_edit', 'employees.position_delete', 'employees.position_special',
@@ -22,7 +22,7 @@ class EmployeePermissionHierarchyTest extends TestCase
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
         $empKeys = array_filter(Permissions::all(), fn ($k) => str_starts_with($k, 'employees.'));
-        $this->assertCount(25, $empKeys);
+        $this->assertCount(26, $empKeys);
     }
 
     public function test_normalize_drops_child_when_its_view_is_off(): void
