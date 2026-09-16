@@ -5,6 +5,7 @@ namespace App\Services\Ticket;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketUpdate;
@@ -257,6 +258,49 @@ class TicketService
         ]);
 
         return $update;
+    }
+
+    /**
+     * จัดประเภทลักษณะงานของเคสที่กำลังทำอยู่ และคำนวณเดดไลน์ใหม่ตามนั้น
+     *
+     * นี่คือจุดที่คนถือเคสขยับเดดไลน์ของตัวเองได้ ซึ่งเป็นสิ่งที่ Pending เคยทำแล้วถูกถอนออก
+     * ความต่างคือ Pending ให้หยุดนาฬิกาได้เท่าไหร่ก็ได้โดยคนถือเคสเป็นคนกำหนด ส่วนอันนี้
+     * ให้เลือกป้ายจากลิสต์ตายตัวที่ super admin เป็นเจ้าของตัวเลขทุกตัวและอนุมัติไว้ล่วงหน้า
+     * ทุกครั้งที่เปลี่ยนจึงต้องมีเหตุผล และเหตุผลนั้นไปอยู่บนไทม์ไลน์ที่ผู้แจ้งเห็น
+     *
+     * เดดไลน์คิดจาก created_at เสมอ ไม่ใช่จากเวลาที่จัดประเภท — เคสที่ถูกจัดประเภทวันที่ 5
+     * ได้ 30 วันนับจากวันแจ้ง ซึ่งตรงกับที่ KPI ขององค์กรวัด
+     *
+     * การเปลี่ยน work_class เองคือการแก้ไขจริง (updated_at ขยับตามปกติ) แต่การเขียน
+     * เดดไลน์ที่ตามมาเป็นแค่ผลคำนวณ ไม่ใช่การแก้ไขอีกครั้ง — จุดเดียวกับที่ SettingsController
+     * ปฏิบัติกับการ recompute เดดไลน์เคสจำนวนมากตอนแก้ค่า SLA ระบบ (timestamps = false)
+     */
+    public function setWorkClass(Ticket $ticket, User $staff, TicketWorkClass $class, string $reason): Ticket
+    {
+        $before = $ticket->work_class;
+        $ticket->update(['work_class' => $class]);
+        $ticket = $ticket->fresh();
+
+        // คำนวณก่อนปิด timestamps เสมอ — usesTimestamps()=false ทำให้ cast ของ
+        // created_at เป็น Carbon หายไปด้วย ซึ่งเลขคณิตเวลาทำการต้องใช้มัน
+        $dues = [
+            'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
+            // เดดไลน์ขยับแล้ว สถานะการเตือนที่ค้างอยู่ต้องประเมินใหม่
+            'sla_resolve_alert_level' => null,
+        ];
+        // เดดไลน์ใหม่เป็นผลคำนวณจากการจัดประเภทที่เพิ่งบันทึกไป ไม่ใช่การแก้ไขเพิ่มอีกครั้ง
+        $ticket->timestamps = false;
+        $ticket->forceFill($dues)->saveQuietly();
+
+        // เขียนผ่าน addUpdate() ตัวเดิม เพื่อให้ผู้แจ้งได้ทั้งกระดิ่งและอีเมลเหมือนบันทึกอื่น ๆ
+        $this->addUpdate($ticket, $staff, trim(sprintf(
+            "%s → %s\n%s",
+            $before?->label() ?? TicketWorkClass::Standard->label(),
+            $class->label(),
+            $reason,
+        )));
+
+        return $ticket->fresh();
     }
 
     /**
