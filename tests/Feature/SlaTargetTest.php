@@ -189,6 +189,29 @@ class SlaTargetTest extends TestCase
         $this->assertDatabaseHas('sla_targets', ['scope' => 'priority', 'match_value' => 'critical', 'resolve_hours' => 4]);
     }
 
+    public function test_a_saved_priority_clock_round_trips_through_settings_get(): void
+    {
+        // Defect A: the Priority form seeds its draft from GET and PUTs it back — if `clock`
+        // ever dropped out of the GET payload, a calendar priority row would silently reset to
+        // business on the next save even though nobody touched it.
+        $this->actingAs($this->admin())
+            ->putJson('/api/settings/sla', [
+                'ticket_sla' => [
+                    'critical' => ['resolve' => 4, 'clock' => 'calendar'],
+                    'high' => ['resolve' => 8],
+                    'medium' => ['resolve' => 24],
+                    'low' => ['resolve' => 72],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.ticket_sla.critical.clock', 'calendar');
+
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('data.ticket_sla.critical.clock', 'calendar')
+            ->assertJsonPath('data.ticket_sla.high.clock', 'business');
+    }
+
     public function test_a_request_target_left_out_of_the_save_is_deleted(): void
     {
         $this->rule(SlaScope::RequestType, 'computer', 72);

@@ -202,6 +202,12 @@ class TicketWorkClassTest extends TestCase
         $this->assertTrue(
             $ticket->sla_resolve_due_at->equalTo(TicketSla::addBusinessMinutes($ticket->created_at, 360 * 60)),
         );
+        // The guard rail the spec calls for: classifying is an audited action, not a silent
+        // field flip — see TicketController::updateWorkClass().
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'Classified ticket work',
+            'target' => "{$ticket->ticket_no} - standard → repair_vendor",
+        ]);
     }
 
     public function test_classifying_the_work_writes_a_note_on_the_timeline(): void
@@ -434,6 +440,42 @@ class TicketWorkClassTest extends TestCase
 
         $this->assertArrayHasKey('work_class_forecast', $body);
         $this->assertNull($body['work_class_forecast']);
+    }
+
+    /**
+     * The KPI card's visibility depends on `repair_backlog > 0` — a repair case classified
+     * before an admin configured any target is real, open work, and it must not go invisible
+     * from both figures (excluded from sla_met_pct AND missing from a card gated on
+     * has_repair_rules alone). If the filter at TicketController::summary() regressed — say it
+     * lost the live() check and started counting closed repairs too — nothing here would go red
+     * without this test.
+     */
+    public function test_the_summary_counts_only_open_repair_cases_in_the_backlog(): void
+    {
+        $staff = $this->itStaff();
+
+        // Open repair work — counted.
+        Ticket::factory()->create([
+            'status' => TicketStatus::Open,
+            'work_class' => TicketWorkClass::RepairInternal,
+        ]);
+        // In-progress repair work — also counted.
+        Ticket::factory()->create([
+            'status' => TicketStatus::InProgress,
+            'work_class' => TicketWorkClass::RepairVendor,
+        ]);
+        // Closed repair work — already resolved, must NOT count as backlog.
+        Ticket::factory()->create([
+            'status' => TicketStatus::Completed,
+            'work_class' => TicketWorkClass::RepairInternal,
+            'resolved_at' => now(),
+        ]);
+        // Open, but not repair — must not count either.
+        Ticket::factory()->create(['status' => TicketStatus::Open]);
+
+        $body = $this->actingAs($staff)->getJson('/api/tickets/summary')->assertOk()->json();
+
+        $this->assertSame(2, $body['repair_backlog']);
     }
 
     public function test_the_summary_says_whether_repair_rules_exist_at_all(): void
