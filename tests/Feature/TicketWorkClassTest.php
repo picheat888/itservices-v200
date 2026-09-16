@@ -240,12 +240,29 @@ class TicketWorkClassTest extends TestCase
         ])->assertStatus(403);
     }
 
-    public function test_a_case_nobody_has_taken_cannot_be_classified(): void
+    /** เคสที่ยังไม่มีใครรับ ไม่มี assignee ให้เทียบเลย — คนที่ไม่ใช่เจ้าของถูกปฏิเสธที่ประตูนี้ก่อน */
+    public function test_a_case_that_is_not_yours_cannot_be_classified(): void
     {
         $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
         $ticket = Ticket::factory()->create(); // ยัง Open ไม่มีคนรับ
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Free', 'status' => 'active']);
         $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+        ])->assertStatus(403);
+    }
+
+    /**
+     * ประตูสถานะพิสูจน์แยกจากประตูเจ้าของเคส: คนที่ทดสอบต้องเป็น assignee และมีสิทธิ์ครบ
+     * เพื่อให้ 422 ที่ได้มาจากสถานะเท่านั้น ไม่ใช่จากประตูอื่นที่ปฏิเสธไปก่อนแล้ว
+     */
+    public function test_a_closed_case_cannot_be_classified(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $staff = $this->assigneeOf($ticket);
+        $ticket->update(['status' => TicketStatus::Completed]);
 
         $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
             'work_class' => 'repair_internal',
