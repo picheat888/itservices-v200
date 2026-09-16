@@ -56,7 +56,11 @@ class TicketSla
      * Per-priority resolution targets: the saved rows merged over the defaults, so any priority
      * without a row of its own still resolves to a target.
      *
-     * @return array<string, array{resolve: int}>
+     * Clock rides along here (not just in `rules()`) because this is what Settings -> show()
+     * returns for the Priority form — a form that can save a clock per row but never sees it
+     * back is a form that cannot round-trip what it just saved.
+     *
+     * @return array<string, array{resolve: int, clock: string}>
      */
     public static function targets(): array
     {
@@ -68,7 +72,11 @@ class TicketSla
 
         $targets = self::defaults();
         foreach ($targets as $priority => $default) {
-            $targets[$priority] = ['resolve' => (int) ($stored[$priority]['hours'] ?? $default['resolve'])];
+            $row = $stored[$priority] ?? null;
+            $targets[$priority] = [
+                'resolve' => (int) ($row['hours'] ?? $default['resolve']),
+                'clock' => ($row['clock'] ?? TicketSlaClock::Business)->value,
+            ];
         }
 
         return self::$memo = $targets;

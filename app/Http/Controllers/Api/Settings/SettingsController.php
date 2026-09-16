@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Enums\Request\RequestType;
 use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
@@ -18,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class SettingsController extends Controller
@@ -118,12 +121,23 @@ class SettingsController extends Controller
             // (priority doesn't exist yet while a case waits to be taken).
             'ticket_sla' => ['required', 'array'],
             'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            'ticket_sla.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
             // Targets keyed on what was requested rather than how urgent it is. Absent key =
             // leave the saved rules alone, so the Priority form can save without them.
             'ticket_sla_request' => ['sometimes', 'array'],
             'ticket_sla_request.*.type' => ['required', 'distinct', new Enum(RequestType::class)],
             'ticket_sla_request.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            'ticket_sla_request.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
             'ticket_sla_request.*.enabled' => ['sometimes', 'boolean'],
+            // Targets keyed on how long a repair runs, judged by whoever has seen the job.
+            // Absent key = leave the saved rules alone (same as ticket_sla_request). No
+            // 'standard' — ordinary work has no target of its own, priority already answers it,
+            // and a row that could be created but never fire is a row that misleads the screen.
+            'ticket_sla_work_class' => ['sometimes', 'array'],
+            'ticket_sla_work_class.*.work_class' => ['required', 'distinct', Rule::in(TicketWorkClass::repairValues())],
+            'ticket_sla_work_class.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            'ticket_sla_work_class.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
+            'ticket_sla_work_class.*.enabled' => ['sometimes', 'boolean'],
             'ticket_sla_response' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
             // Working window the SLA clocks count against (days: ISO weekday 1–7).
             'ticket_sla_hours' => ['sometimes', 'required', 'array'],
@@ -159,7 +173,11 @@ class SettingsController extends Controller
         foreach ($data['ticket_sla'] as $priority => $row) {
             SlaTarget::updateOrCreate(
                 ['scope' => SlaScope::Priority->value, 'match_value' => (string) $priority],
-                ['resolve_hours' => (int) $row['resolve'], 'enabled' => true],
+                [
+                    'resolve_hours' => (int) $row['resolve'],
+                    'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
+                    'enabled' => true,
+                ],
             );
         }
 
@@ -172,10 +190,32 @@ class SettingsController extends Controller
                 $keep[] = $row['type'];
                 SlaTarget::updateOrCreate(
                     ['scope' => SlaScope::RequestType->value, 'match_value' => $row['type']],
-                    ['resolve_hours' => (int) $row['resolve'], 'enabled' => (bool) ($row['enabled'] ?? true)],
+                    [
+                        'resolve_hours' => (int) $row['resolve'],
+                        'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
+                        'enabled' => (bool) ($row['enabled'] ?? true),
+                    ],
                 );
             }
             SlaTarget::where('scope', SlaScope::RequestType->value)->whereNotIn('match_value', $keep)->delete();
+        }
+
+        // เป้าหมายตามลักษณะงานมาเป็นทั้งลิสต์เหมือนกฎประเภทคำขอ แถวที่ผู้ดูแลลบบนหน้าจอ
+        // คือแถวที่หายไปตรงนี้ ไม่ส่งคีย์นี้มาเลย = ไม่แตะกฎเดิม
+        if (array_key_exists('ticket_sla_work_class', $data)) {
+            $keep = [];
+            foreach ($data['ticket_sla_work_class'] as $row) {
+                $keep[] = $row['work_class'];
+                SlaTarget::updateOrCreate(
+                    ['scope' => SlaScope::WorkClass->value, 'match_value' => $row['work_class']],
+                    [
+                        'resolve_hours' => (int) $row['resolve'],
+                        'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
+                        'enabled' => (bool) ($row['enabled'] ?? true),
+                    ],
+                );
+            }
+            SlaTarget::where('scope', SlaScope::WorkClass->value)->whereNotIn('match_value', $keep)->delete();
         }
 
         if (isset($data['ticket_sla_response'])) {
@@ -409,6 +449,18 @@ class SettingsController extends Controller
             ->map(fn (SlaTarget $target) => [
                 'type' => $target->match_value,
                 'resolve' => $target->resolve_hours,
+                'clock' => $target->clock->value,
+                'enabled' => $target->enabled,
+            ])->all();
+        // Work-class targets are the same shape of list, keyed on the repair label instead of
+        // the request type.
+        $values['ticket_sla_work_class'] = SlaTarget::where('scope', SlaScope::WorkClass->value)
+            ->orderBy('match_value')
+            ->get()
+            ->map(fn (SlaTarget $target) => [
+                'work_class' => $target->match_value,
+                'resolve' => $target->resolve_hours,
+                'clock' => $target->clock->value,
                 'enabled' => $target->enabled,
             ])->all();
 

@@ -222,10 +222,17 @@ class TicketService
             return [];
         }
 
-        $hours = TicketSla::resolveHours($priority->value);
+        // targetFor()/resolveDueAt() read priority off the model, and $ticket still carries
+        // whatever priority it had before this call (often none). The caller's update() call
+        // is about to write $priority onto this same row anyway — setting it here in memory
+        // first (not saved on its own) lets resolveDueAt() see the priority as it is ABOUT TO
+        // BE, so the deadline it computes — clock included — is exactly the one a fresh
+        // resolveDueAt($ticket) would read back afterwards, not a second calculation that
+        // could drift from it (e.g. by assuming the business clock regardless of the row).
+        $ticket->priority = $priority;
 
         return [
-            'sla_resolve_due_at' => TicketSla::addBusinessMinutes($ticket->created_at, $hours * 60),
+            'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),
             'sla_resolve_alert_level' => null,
         ];
     }
