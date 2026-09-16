@@ -48,6 +48,8 @@ class TicketResource extends JsonResource
             'resolution' => $this->resolution,
             // Both SLA clocks + the state of whichever clock currently matters (null for canceled).
             'sla' => $this->when(self::showsDeskInternals($request), fn () => TicketSla::forTicket($this->resource)),
+            // ลักษณะงาน: งานปกติ หรืองานซ่อมที่วัดด้วย KPI ของตัวเอง เห็นได้เท่าที่เห็น SLA
+            'work_class' => $this->when(self::showsDeskInternals($request), fn () => $this->work_class?->value),
             // Where this case's resolution target came from, so a three-day deadline on an
             // urgent case can be read rather than argued about. scope null = the built-in
             // default, which is the one case where nobody chose the number.
@@ -95,7 +97,7 @@ class TicketResource extends JsonResource
     }
 
     /**
-     * @return array{hours: int, scope: ?string, value: ?string}
+     * @return array{hours: int, scope: ?string, value: ?string, clock: string}
      */
     private function slaTarget(): array
     {
@@ -105,6 +107,8 @@ class TicketResource extends JsonResource
             'hours' => $target['hours'],
             'scope' => $target['scope']?->value,
             'value' => $target['value'],
+            // นาฬิกาที่เป้าหมายนี้นับด้วย — "240 ชั่วโมง" อ่านได้คนละแบบระหว่างเวลาทำการกับปฏิทิน
+            'clock' => $target['clock']->value,
         ];
     }
 }

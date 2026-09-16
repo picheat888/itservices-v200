@@ -365,6 +365,7 @@ export interface AssetSummary {
 export type TicketStatus = 'open' | 'in_progress' | 'completed' | 'canceled';
 export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
 export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
+export type TicketWorkClass = 'standard' | 'repair_internal' | 'repair_vendor';
 
 export interface TicketAttachment {
     id: number;
@@ -394,6 +395,8 @@ export interface Ticket {
     category: TicketCategory;
     /** Absent for viewers without the Take Case gate — the API leaves it out, see TicketResource. */
     priority?: TicketPriority | null;
+    /** Absent for viewers without the Take Case gate — the API leaves it out, see TicketResource. */
+    work_class?: TicketWorkClass;
     status: TicketStatus;
     requester_id: number;
     requester_code?: string | null;
@@ -413,7 +416,12 @@ export interface Ticket {
     resolution: string | null;
     sla?: TicketSlaSnapshot | null;
     /** Where this case's resolution target came from — scope null means the built-in default. */
-    sla_target?: { hours: number; scope: 'priority' | 'request_type' | null; value: string | null };
+    sla_target?: {
+        hours: number;
+        scope: 'work_class' | 'priority' | 'request_type' | null;
+        value: string | null;
+        clock: 'business' | 'calendar';
+    };
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];
