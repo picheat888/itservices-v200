@@ -41,8 +41,14 @@ class TicketDeskInternalsVisibilityTest extends TestCase
         $ticket = Ticket::factory()->create(['requester_id' => $me->employee_id, 'priority' => 'critical']);
         $this->actingAs($me);
 
-        $this->getJson("/api/tickets/{$ticket->id}")->assertOk()->assertJsonMissingPath('data.priority');
-        $this->getJson('/api/tickets')->assertOk()->assertJsonMissingPath('data.0.priority');
+        $this->getJson("/api/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.priority')
+            ->assertJsonMissingPath('data.work_class');
+        $this->getJson('/api/tickets')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.priority')
+            ->assertJsonMissingPath('data.0.work_class');
     }
 
     public function test_a_requester_is_not_sent_the_sla_clocks_either(): void
@@ -68,7 +74,9 @@ class TicketDeskInternalsVisibilityTest extends TestCase
         $this->getJson('/api/tickets')
             ->assertOk()
             ->assertJsonPath('data.0.priority', 'critical')
-            ->assertJsonPath('data.0.sla.state', fn ($state) => is_string($state));
+            ->assertJsonPath('data.0.work_class', fn ($val) => is_string($val))
+            ->assertJsonPath('data.0.sla.state', fn ($state) => is_string($state))
+            ->assertJsonPath('data.0.sla_target.clock', fn ($clock) => in_array($clock, ['business', 'calendar']));
     }
 
     public function test_the_priority_filter_is_ignored_for_a_requester(): void
