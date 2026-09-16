@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketSlaClock;
+use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
 use App\Models\Request\ServiceRequest;
@@ -171,5 +172,105 @@ class TicketWorkClassTest extends TestCase
 
         $expected = TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours('critical') * 60);
         $this->assertTrue($ticket->fresh()->sla_resolve_due_at->equalTo($expected));
+    }
+
+    /** ช่างที่ถือเคสอยู่ พร้อมสิทธิ์จัดประเภท */
+    private function assigneeOf(Ticket $ticket): User
+    {
+        $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Owner', 'status' => 'active']);
+        $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+        $ticket->update(['assignee_id' => $staff->id, 'status' => TicketStatus::InProgress]);
+
+        return $staff;
+    }
+
+    public function test_the_assignee_classifies_the_work_and_the_deadline_follows(): void
+    {
+        $this->rule(SlaScope::WorkClass, 'repair_vendor', 360);
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::High]);
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)
+            ->patchJson("/api/tickets/{$ticket->id}/work-class", [
+                'work_class' => 'repair_vendor',
+                'reason' => 'สายเมนหลักขาด ต้องให้ผู้รับเหมาเดินใหม่ทั้งชั้น',
+            ])
+            ->assertOk();
+
+        $ticket->refresh();
+        $this->assertSame(TicketWorkClass::RepairVendor, $ticket->work_class);
+        $this->assertTrue(
+            $ticket->sla_resolve_due_at->equalTo(TicketSla::addBusinessMinutes($ticket->created_at, 360 * 60)),
+        );
+    }
+
+    public function test_classifying_the_work_writes_a_note_on_the_timeline(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+            'reason' => 'ต้องรื้อฝ้าเพื่อเดินสายใหม่ ช่างเราทำเองได้',
+        ])->assertOk();
+
+        $this->assertSame(1, $ticket->updates()->count());
+        $this->assertStringContainsString('ต้องรื้อฝ้า', (string) $ticket->updates()->first()->body);
+    }
+
+    public function test_a_reason_is_required(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+        ])->assertStatus(422);
+    }
+
+    public function test_somebody_without_the_permission_is_refused(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $staff = $this->assigneeOf($ticket);
+        $staff->update(['role' => 'user']); // ไม่ใช่ super — ไม่มีคีย์นี้โดยค่าเริ่มต้น
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+        ])->assertStatus(403);
+    }
+
+    public function test_a_case_nobody_has_taken_cannot_be_classified(): void
+    {
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+        $ticket = Ticket::factory()->create(); // ยัง Open ไม่มีคนรับ
+        $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Free', 'status' => 'active']);
+        $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+        ])->assertStatus(422);
+    }
+
+    public function test_setting_the_class_back_to_standard_restores_the_priority_deadline(): void
+    {
+        // กดพลาดครั้งเดียวต้องไม่ติดถาวร
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+        $ticket = Ticket::factory()->create([
+            'priority' => TicketPriority::High,
+            'work_class' => TicketWorkClass::RepairInternal,
+        ]);
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'standard',
+            'reason' => 'จัดประเภทผิด เป็นแค่การตั้งค่า switch',
+        ])->assertOk();
+
+        $ticket->refresh();
+        $this->assertSame(TicketWorkClass::Standard, $ticket->work_class);
+        $expected = TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours('high') * 60);
+        $this->assertTrue($ticket->sla_resolve_due_at->equalTo($expected));
     }
 }

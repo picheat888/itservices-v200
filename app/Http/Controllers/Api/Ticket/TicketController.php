@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Ticket;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ticket\StoreTicketRequest;
 use App\Http\Requests\Ticket\UpdateTicketRequest;
@@ -629,6 +630,43 @@ class TicketController extends Controller
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
+    }
+
+    /**
+     * จัดประเภทลักษณะงานของเคส (tickets.set_work_class)
+     *
+     * ประตูเดียวกับการเขียนบันทึก: เฉพาะคนที่ถือเคสอยู่ และเฉพาะเคสที่ยังทำอยู่ —
+     * การจัดประเภทคือการพูดว่างานนี้คืออะไร ซึ่งเป็นสิทธิ์ของคนที่กำลังทำมัน
+     */
+    public function updateWorkClass(Request $request, Ticket $ticket): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('tickets.set_work_class'), 403);
+        // สถานะก่อน assignee: เคสที่ยังไม่มีใครรับไม่มี assignee ให้เทียบเลย — "ยังไม่เข้า
+        // In progress" คือเหตุผลที่แท้จริงที่มันถูกปฏิเสธ ไม่ใช่ "ไม่ใช่เจ้าของ"
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be classified.');
+        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can classify this ticket.');
+
+        $data = $request->validate([
+            'work_class' => ['required', new Enum(TicketWorkClass::class)],
+            // เหตุผลยาวเท่ากับบันทึกความคืบหน้า เพราะมันกลายเป็นบันทึกความคืบหน้าจริง ๆ
+            'reason' => ['required', 'string', 'min:5', 'max:5000'],
+        ]);
+
+        $before = $ticket->work_class;
+        $ticket = $this->service->setWorkClass(
+            $ticket,
+            $request->user(),
+            TicketWorkClass::from($data['work_class']),
+            $data['reason'],
+        );
+
+        AuditLog::record(
+            'Classified ticket work',
+            sprintf('%s - %s → %s', $ticket->ticket_no, $before?->value ?? 'standard', $ticket->work_class->value),
+        );
+
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
+            ->additional(['message' => 'success'])->response();
     }
 
     /**
