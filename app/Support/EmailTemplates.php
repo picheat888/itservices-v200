@@ -150,6 +150,27 @@ You can tracking progress in {{app.name}}.</p>
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],            [
+                // The middle of a case, which used to be silent: the requester heard "we have
+                // it" and then nothing until "it is done". Carries the note itself, so "we are
+                // waiting on a part" arrives as news rather than as something to go and look up.
+                'key' => 'ticket.updated',
+                'name' => 'Progress on your ticket (ความคืบหน้า Ticket)',
+                'subject' => 'There is an update on the ticket {{ticket.id}}',
+                'body_html' => '<p>Hi {{user.first_name}},</p>
+<p>There is an update on the ticket {{ticket.id}}.</p>
+<p>You can tracking progress in {{app.name}}.</p>
+<br>
+<p><strong style="color:#64748b">Update:</strong> {{ticket.update}}</p>
+<p><strong style="color:#64748b">Responsible by:</strong> {{ticket.assignee}}</p>
+<p>---</p>
+<p><strong style="color:#64748b">Ticket No.:</strong> <strong>{{ticket.id}}</strong><br>
+<strong style="color:#64748b">Subject:</strong> {{ticket.subject}}<br>
+<strong style="color:#64748b">Issue type:</strong> {{ticket.category}}<br>
+<strong style="color:#64748b">Details:</strong> {{ticket.details}}</p>',
+                'enabled' => true,
+                'cadence' => 'realtime',
+            ],
+            [
                 // Sits where ticket.sla_breach used to. The SLA sweep is bell-only now, and a
                 // case closed WITHOUT being fixed is the outcome the requester most needs told.
                 'key' => 'ticket.cancelled',
@@ -188,75 +209,169 @@ You can tracking progress in {{app.name}}.</p>
             ],
             [
                 'key' => 'request.approval_needed',
-                'name' => 'Request awaiting your approval',
-                'subject' => 'A request is awaiting your approval',
+                // Carries the approval-history table. See widthFor().
+                'width' => 860,
+                'name' => 'Request awaiting your approval (คำขอรออนุมัติ)',
+                'subject' => 'Request {{reference.id}} is awaiting approval from {{requester.name}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your service request requires your attention. Please review and take action in {{app.name}}.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>A new IT Service Request is waiting for your approval.</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request by: </strong>{{requester.name}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Reason: </strong>{{request.reason}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p><strong>Already approved</strong></p>
+{{request.approval_history}}
+<br>
+<p>Please review the request and approve or reject in {{app.name}}.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'request.approved',
-                'name' => 'Request approved',
-                'subject' => 'Your request has been approved',
+                'name' => 'Request approved (คำขอผ่านอนุมัติครบทุกขั้น)',
+                'subject' => 'Your request {{reference.id}} has been fully approved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your request <strong>{{request.title}}</strong> passed every approval step. The IT team will take it from here.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>✅ Your request has been fully approved.</p>
+<p><strong style="color:#64748b">Approved Date: </strong>{{request.approved_date}}</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Reason: </strong>{{request.reason}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p>All required approvals have been completed.</p>
+<p>You can check the request status in {{app.name}} at any time.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'request.rejected',
-                'name' => 'Request rejected',
-                'subject' => 'Your request has been rejected',
+                // Carries the approval-history table. See widthFor().
+                'width' => 860,
+                'name' => 'Request rejected (คำขอไม่ได้รับอนุมัติ)',
+                'subject' => 'Your request {{reference.id}} has been rejected',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your request <strong>{{request.title}}</strong> was rejected by {{actor.name}}.</p>
-<p>Remark: {{remark}}</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>❌ Your request has been rejected.</p>
+<p><strong style="color:#64748b">Rejected Date: </strong>{{request.rejected_date}}<br>
+<strong style="color:#64748b">Rejected By: </strong>{{actor.name}}<br>
+<strong style="color:#64748b">Reason: </strong>{{remark}}</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p><strong>Already approved</strong></p>
+{{request.approval_history}}
+<br>
+<p>Please review the reason above and submit a new request if needed.</p>
+<p>You can check the request status in {{app.name}} at any time.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'request.submitted',
-                'name' => 'Request submitted',
+                'name' => 'Request submitted (ส่งคำขอเรียบร้อย)',
                 'subject' => 'Your request {{reference.id}} has been submitted',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>We received your request <strong>{{request.title}}</strong>. It is now waiting for {{step.label}} to approve.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>✅ Your IT Service Request has been successfully submitted.</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Reason: </strong>{{request.reason}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<p>----</p>
+<p><strong>Next Approver</strong></p>
+<p><strong style="color:#64748b">Step: </strong>{{step.label}}<br>
+<strong style="color:#64748b">Full Name: </strong>{{approver.name}}<br>
+<strong style="color:#64748b">Position: </strong>{{approver.position}}<br>
+<strong style="color:#64748b">Department: </strong>{{approver.department}}</p>
+<br>
+<p>You can check the request status in {{app.name}} at any time.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'request.ready_to_fulfill',
-                'name' => 'Request ready to fulfill',
+                // Carries the approval-history table. See widthFor().
+                'width' => 860,
+                'name' => 'Request ready for IT (คำขอพร้อมให้ IT ดำเนินการ)',
                 'subject' => 'Request {{reference.id}} is approved and ready for IT',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p><strong>{{request.title}}</strong> (by {{requester.name}}) cleared every approval step and is waiting for IT fulfillment.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>✅ A request has been fully approved and is ready for IT.</p>
+<p>Please check the ticket and the request.</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request by: </strong>{{requester.name}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Ticket No.: </strong>{{request.ticket_no}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Reason: </strong>{{request.reason}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p><strong>Already approved</strong></p>
+{{request.approval_history}}',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'request.fulfilled',
-                'name' => 'Request fulfilled',
-                'subject' => 'Your request {{reference.id}} is done',
+                'name' => 'Request fulfilled (คำขอดำเนินการเสร็จแล้ว)',
+                'subject' => 'Your request {{reference.id}} has been completed',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your request <strong>{{request.title}}</strong> has been fulfilled by the IT team.</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>✅ Your request has been completed successfully.</p>
+<p><strong style="color:#64748b">Completed Date: </strong>{{request.fulfilled_date}}<br>
+<strong style="color:#64748b">Completed By: </strong>{{request.fulfilled_by}}</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Reason: </strong>{{request.reason}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p>If you have any questions or need further assistance, please contact the IT team.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
-                // Approved, then IT could not deliver it — a different message from
-                // request.rejected, which is an approver saying no during the chain.
+                // Approved, then IT cancelled it — a different message from request.rejected,
+                // which is an approver saying no during the chain. The approval table stays:
+                // this one cleared every step, and the reader should be able to see that.
                 'key' => 'request.not_delivered',
-                'name' => 'Request could not be delivered',
-                'subject' => 'Your request {{reference.id}} was closed without delivery',
+                // Carries the approval-history table. See widthFor().
+                'width' => 860,
+                'name' => 'Request was cancelled by IT (คำขอผ่านอนุมัติ แต่ยกเลิกโดย IT)',
+                'subject' => 'Your request {{reference.id}} has been cancelled by IT.',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your request <strong>{{request.title}}</strong> was approved, but the IT team could not deliver it.</p>
-<p><strong>Reason:</strong> {{remark}}</p>
-<p style="color:#64748b">Reference: <strong>{{reference.id}}</strong></p>',
+<p>⚠️ Your request was fully approved, but the IT team has cancelled it.</p>
+<p><strong style="color:#64748b">Cancelled Date: </strong>{{request.cancelled_date}}<br>
+<strong style="color:#64748b">Cancelled By: </strong>{{actor.name}}<br>
+<strong style="color:#64748b">Reason: </strong>{{remark}}</p>
+<br>
+<p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
+<strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
+<strong style="color:#64748b">Ticket No.: </strong>{{request.ticket_no}}<br>
+<strong style="color:#64748b">Date: </strong>{{request.date}}<br>
+<strong style="color:#64748b">Type: </strong>{{request.type}}<br>
+<strong style="color:#64748b">Request details: </strong>{{request.details}}</p>
+<br>
+<p><strong>Already approved</strong></p>
+{{request.approval_history}}
+<br>
+<p>If you still need this, please submit a new request or contact the IT team.</p>
+<p>You can check the request status in {{app.name}} at any time.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
@@ -265,8 +380,8 @@ You can tracking progress in {{app.name}}.</p>
                 // arrives as ready-made HTML rows — an administrator rewords the message
                 // around it, but nobody should have to hand-write table markup here.
                 'key' => 'request.stalled_digest',
-                'name' => 'Weekly summary of requests waiting on you',
-                'subject' => '{{digest.count}} request(s) still waiting for your approval',
+                'name' => 'Weekly summary of requests waiting on you (รอคุณอนุมัติ)',
+                'subject' => '{{digest.count}} Request(s) still waiting for your approval',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>These requests have been waiting for your approval for more than a week.</p>
 {{digest.table}}
@@ -447,7 +562,7 @@ Please renew it or close it out.</p>
                 'key' => 'contract.weekly_digest',
                 // Six columns, two of them a vendor and a contract name. See widthFor().
                 'width' => 980,
-                'name' => 'Contract Weekly summary (เตือนสรุปประจำสัปดาห์)',
+                'name' => 'Weekly contracts alert summary (เตือนสรุปประจำสัปดาห์)',
                 'subject' => 'Contract Management: {{digest.expiring_count}} expiring, {{digest.overdue_count}} overdue',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>Contracts are expiring and overdue.<br>
@@ -463,93 +578,159 @@ Please review the contracts.</p>
             ],
             [
                 'key' => 'stock.low_alert',
-                'name' => 'Stock - Low alert',
-                'subject' => 'Stock low: {{stock.sku}} ({{stock.qty}} left)',
+                'name' => 'Low Stock Alert (เตือนสินค้าต่ำกว่า Min)',
+                'subject' => 'Low Stock Alert: {{stock.sku}} ({{stock.qty}} left)',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A stock item has dropped to or below its minimum level and may need reordering.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>Some SKUs are below the minimum stock level and need to be reordered.</p>
+<br>
+<strong>Information</strong>
+<p style="color:#64748b"><strong>SKU No.: </strong>{{stock.sku}} </p>
+<p style="color:#64748b"><strong>Item Name: </strong>{{stock.name}} </p>
+<p style="color:#64748b"><strong>Q\'ty (Current): </strong>{{stock.qty}} </p>
+<p style="color:#64748b"><strong>Min Alert: </strong>{{stock.min}} </p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.out_of_stock',
-                'name' => 'Stock - Out of stock alert',
-                'subject' => 'Out of stock: {{stock.sku}}',
+                'name' => 'Out of stock alert (เตือนสินค้าหมด Stock)',
+                'subject' => 'Out of stock alert: {{stock.sku}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A stock item is now out of stock. Please reorder as soon as possible.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>Some SKUs are currently out of stock.</p>
+<p>Please review the stock and arrange a reorder as needed.</p>
+<br>
+<strong>Information</strong>
+<p style="color:#64748b"><strong>SKU No.: </strong>{{stock.sku}} </p>
+<p style="color:#64748b"><strong>Item Name: </strong>{{stock.name}} </p>
+<p style="color:#64748b"><strong>Q\'ty (Current): </strong>{{stock.qty}} </p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.request_approval_needed',
-                'name' => 'Stock - waiting approve & fulfill',
-                'subject' => 'Stock requests awaiting action - {{count}}',
+                // Two tables, the second of five columns. See widthFor().
+                'width' => 980,
+                'name' => 'Weekly open requests summary(สรุปคำขอเบิกค้างประจำสัปดาห์)',
+                'subject' => 'Weekly stock requests - {{count}} still open',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>{{count}} stock request(s) awaiting approval or fulfilment:</p>
-{{items}}',
+<p>Please find below the Weekly Stock Requests Alert Summary.<br>
+This report summarizes all stock requests that are still open and have not yet been completed.</p>
+<br>
+<p><strong>Request Summary</strong></p>
+{{stock.request_summary_table}}
+<br>
+<p><strong>Request Details</strong></p>
+{{stock.requests_table}}
+<p>Please review the open requests and take the necessary action to complete them.</p>
+<p style="color:#64748b"><strong><u>Note</u></strong>: Requests with the status Fulfilled, Rejected, or Cancelled are not included in this report.</p>',
                 'enabled' => true,
-                'cadence' => 'daily',
+                'cadence' => 'weekly',
             ],
             [
                 'key' => 'stock.request_approved',
-                'name' => 'Stock - Respond to the request (Approved)',
+                'name' => 'Stock - Request approved (คำขอเบิกได้รับอนุมัติ)',
                 'subject' => 'Your stock request has been approved',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your stock request has been approved and is ready to be fulfilled.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>✅ Your stock request has been approved. </p>
+<br>
+<p><strong style="color:#64748b">Request No.: </strong>{{stock.request_no}}<br>
+<strong style="color:#64748b">Request Date: </strong>{{stock.request_date}}<br>
+<strong style="color:#64748b">Approved By: </strong>{{stock.approver}}<br>
+<strong style="color:#64748b">Item: </strong>{{stock.name}} ×{{stock.qty}}</p>
+<br>
+<p>The request has been approved and will be processed accordingly.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.request_rejected',
-                'name' => 'Stock - Respond to the request (Rejected)',
+                'name' => 'Stock - Request rejected (คำขอเบิกไม่ได้รับอนุมัติ)',
                 'subject' => 'Your stock request has been rejected',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your stock request has been rejected. Please contact IT if you have questions.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>❌ Your stock request has been rejected.</p>
+<br>
+<p><strong style="color:#64748b">Request No.: </strong>{{stock.request_no}}<br>
+<strong style="color:#64748b">Request Date: </strong>{{stock.request_date}}<br>
+<strong style="color:#64748b">Rejected By: </strong>{{stock.approver}}<br>
+<strong style="color:#64748b">Item: </strong>{{stock.name}} ×{{stock.qty}}</p>
+<br>
+<p>Please contact {{stock.approver}} if you need to know why, and submit a new request if needed.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.request_fulfilled',
-                'name' => 'Stock - Respond to the request (fulfilled)',
+                'name' => 'Stock - Request fulfilled (จ่ายของตามคำขอแล้ว)',
                 'subject' => 'Your stock request has been fulfilled',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>Your stock request has been fulfilled and the items have been issued.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>🎁 Your stock request has been fulfilled.</p>
+<br>
+<p><strong style="color:#64748b">Request No.: </strong>{{stock.request_no}}<br>
+<strong style="color:#64748b">Request Date: </strong>{{stock.request_date}}<br>
+<strong style="color:#64748b">Fulfilled By: </strong>{{stock.fulfilled_by}}<br>
+<strong style="color:#64748b">Fulfilled Date: </strong>{{stock.fulfilled_date}}<br>
+<strong style="color:#64748b">Item: </strong>{{stock.name}} ×{{stock.qty}}</p>
+<br>
+<p>The requested items have been issued as requested.</p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.overstock_alert',
-                'name' => 'Stock - Overstock alert',
+                'name' => 'Overstock alert (เตือนสินค้าเกิน Max)',
                 'subject' => 'Overstock: {{stock.sku}} ({{stock.qty}} on hand)',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A stock item has risen above its maximum level (overstock).</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>Some SKUs have stock levels above the maximum level.</p>
+<p>Please review the stock.</p>
+<br>
+<strong>Information</strong>
+<p style="color:#64748b"><strong>SKU No.: </strong>{{stock.sku}} </p>
+<p style="color:#64748b"><strong>Item Name: </strong>{{stock.name}} </p>
+<p style="color:#64748b"><strong>Q\'ty (Current): </strong>{{stock.qty}} </p>
+<p style="color:#64748b"><strong>Max Alert: </strong>{{stock.max}} </p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.request_created',
-                'name' => 'Stock - New Request',
-                'subject' => 'New stock request submitted: {{stock.sku}}',
+                'name' => 'New Request (คำขอเบิกสินค้าใหม่)',
+                'subject' => 'New stock request submitted: {{stock.request_by}}',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>A new stock request has been submitted and is awaiting processing.</p>
-<p style="color:#64748b">Item: <strong>{{stock.sku}}</strong> - {{stock.name}}</p>',
+<p>A new stock request has been submitted.</p>
+<p>Please review and approve the request.</p>
+<br>
+<strong>Stock request</strong>
+<p>----</p>
+<p style="color:#64748b"><strong>Request No.: </strong>{{stock.request_no}} </p>
+<p style="color:#64748b"><strong>Requester by: </strong>{{stock.request_by}} </p>
+<p style="color:#64748b"><strong>Reason: </strong>{{stock.request_reason}} </p>
+<p style="color:#64748b"><strong>SKU No.: </strong>{{stock.sku}} </p>
+<p style="color:#64748b"><strong>Item Name: </strong>{{stock.name}} </p>
+<p style="color:#64748b"><strong>Request Q\'ty: </strong>{{stock.qty}} </p>',
                 'enabled' => true,
                 'cadence' => 'realtime',
             ],
             [
                 'key' => 'stock.alert_digest',
-                'name' => 'Stock - Daily alert digest',
-                'subject' => 'Daily stock alert - {{count}} item(s) need attention',
+                // Two tables, the second of six columns. See widthFor().
+                'width' => 980,
+                'name' => 'Weekly stock alert summary (สรุปแจ้งเตือนสต็อกประจำสัปดาห์)',
+                'subject' => 'Weekly stock alert - {{count}} item need attention',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
-<p>{{count}} stock item(s) need attention:</p>
-{{items}}',
+<p>Please find below the Weekly Stock Alert Summary.<br>
+This report summarizes all items that currently require attention:</p>
+<p style="color:#64748b"><strong>Out of Stock</strong> - Items with no available stock<br>
+<strong>Low Stock</strong> - Items below the minimum stock level<br>
+<strong>Overstock</strong> - Items above the maximum stock level</p>
+<br>
+<p><strong>Stock Summary</strong></p>
+{{stock.summary_table}}
+<br>
+<p><strong>Item Details</strong></p>
+{{stock.items_table}}
+<p>Please review the stock levels and take the necessary action where required.</p>',
                 'enabled' => true,
-                'cadence' => 'daily',
+                'cadence' => 'weekly',
             ],
         ];
     }

@@ -131,9 +131,9 @@ export const requests: Dict = {
     req_block_title: 'Cannot submit yet',
     req_block_no_manager: 'Your reporting line has no manager set. Ask HR to update it before submitting.',
     req_block_approver_resigned: 'An approver in your reporting line has left the company. Ask HR to update it before submitting.',
-    req_skip_no_manager: 'Skipped - the requester has no manager configured',
-    req_skip_no_matching_position: 'Skipped - this level is equal to or below the requester, or missing from their reporting line',
-    req_skip_no_resource_owner: 'Skipped - this resource has no owner who can approve',
+    req_skip_no_manager: 'Skipped - the requester has no manager',
+    req_skip_no_matching_position: 'Skipped - nobody above the requester holds this position',
+    req_skip_no_resource_owner: 'Skipped - this resource has no owner',
     req_skip_requester_is_owner: 'Skipped - the requester owns this resource',
 
     // request-trail.tsx — approval trail

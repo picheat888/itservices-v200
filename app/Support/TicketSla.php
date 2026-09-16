@@ -2,9 +2,12 @@
 
 namespace App\Support;
 
+use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
+use BackedEnum;
 use Carbon\Carbon;
 
 /**
@@ -49,8 +52,8 @@ class TicketSla
     private static ?int $responseMemo = null;
 
     /**
-     * Saved resolution targets merged over the defaults, so any priority without
-     * an explicit override still resolves to a target.
+     * Per-priority resolution targets: the saved rows merged over the defaults, so any priority
+     * without a row of its own still resolves to a target.
      *
      * @return array<string, array{resolve: int}>
      */
@@ -60,14 +63,11 @@ class TicketSla
             return self::$memo;
         }
 
-        $stored = json_decode((string) AppSetting::get(self::KEY, '{}'), true);
-        $stored = is_array($stored) ? $stored : [];
+        $stored = self::rules()[SlaScope::Priority->value] ?? [];
 
         $targets = self::defaults();
         foreach ($targets as $priority => $default) {
-            $targets[$priority] = [
-                'resolve' => (int) ($stored[$priority]['resolve'] ?? $default['resolve']),
-            ];
+            $targets[$priority] = ['resolve' => (int) ($stored[$priority] ?? $default['resolve'])];
         }
 
         return self::$memo = $targets;
@@ -145,6 +145,7 @@ class TicketSla
         self::$memo = null;
         self::$responseMemo = null;
         self::$hoursMemo = null;
+        self::$rulesMemo = null;
     }
 
     /** Resolution target (hours) for a priority, falling back to the medium default. */
@@ -153,6 +154,68 @@ class TicketSla
         $targets = self::targets();
 
         return $targets[$priority]['resolve'] ?? $targets['medium']['resolve'];
+    }
+
+    /**
+     * The resolution target for one ticket, in hours — the answer to "why this deadline".
+     *
+     * Request type beats priority beats the built-in default. A case opened from a request is
+     * always given a priority when somebody takes it, so the other order would leave a
+     * request-type target that could never once apply (see SlaScope::precedence).
+     *
+     * @return array{hours: int, scope: ?SlaScope, value: ?string}
+     */
+    public static function targetFor(Ticket $ticket): array
+    {
+        $rules = self::rules();
+        // Builder::value() applies the model's casts, so both paths can hand back the enum —
+        // narrowed to its string here because that is what a rule's match_value holds.
+        $requestType = $ticket->relationLoaded('serviceRequest')
+            ? $ticket->serviceRequest?->type
+            : $ticket->serviceRequest()->value('type');
+        $requestType = $requestType instanceof BackedEnum ? (string) $requestType->value : $requestType;
+
+        $candidates = [
+            SlaScope::RequestType->value => $requestType,
+            SlaScope::Priority->value => $ticket->priority?->value,
+        ];
+
+        foreach (SlaScope::precedence() as $scope) {
+            $value = $candidates[$scope->value] ?? null;
+            $hours = $value === null ? null : ($rules[$scope->value][$value] ?? null);
+            if ($hours !== null) {
+                return ['hours' => $hours, 'scope' => $scope, 'value' => $value];
+            }
+        }
+
+        // Nothing configured for this case: the built-in target for its priority, and the
+        // medium one when it has none yet. Reported as scope null — nobody chose it.
+        return ['hours' => self::resolveHours($ticket->priority?->value), 'scope' => null, 'value' => null];
+    }
+
+    /** Per-request memo of the enabled targets, as [scope][match_value] => hours. */
+    private static ?array $rulesMemo = null;
+
+    /**
+     * Every enabled target, read once per request.
+     *
+     * A ticket list resolves SLA per row, and the table is small enough that one query beats
+     * one-per-row by any measure worth having.
+     *
+     * @return array<string, array<string, int>>
+     */
+    public static function rules(): array
+    {
+        if (self::$rulesMemo !== null) {
+            return self::$rulesMemo;
+        }
+
+        $rules = [];
+        foreach (SlaTarget::where('enabled', true)->get() as $target) {
+            $rules[$target->scope->value][$target->match_value] = $target->resolve_hours;
+        }
+
+        return self::$rulesMemo = $rules;
     }
 
     /** The system-wide first-response target in minutes — the same for every case. */
@@ -277,7 +340,7 @@ class TicketSla
     /** Business-time resolution deadline for a ticket — shared with the dashboard SLA %. */
     public static function resolveDueAt(Ticket $ticket): Carbon
     {
-        return self::addBusinessMinutes($ticket->created_at, self::resolveHours($ticket->priority?->value) * 60);
+        return self::addBusinessMinutes($ticket->created_at, self::targetFor($ticket)['hours'] * 60);
     }
 
     /** Business-time first-response deadline for a ticket — shared with the dashboard SLA %. */
@@ -312,7 +375,7 @@ class TicketSla
         }
 
         $responseTarget = self::responseMinutes();
-        $resolveTarget = self::resolveHours($ticket->priority?->value) * 60;
+        $resolveTarget = self::targetFor($ticket)['hours'] * 60;
         $responseDue = self::addBusinessMinutes($ticket->created_at, $responseTarget);
         $resolveDue = self::addBusinessMinutes($ticket->created_at, $resolveTarget);
 

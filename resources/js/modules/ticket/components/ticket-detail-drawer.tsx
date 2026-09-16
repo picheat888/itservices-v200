@@ -4,8 +4,9 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { SectionLabel } from '@/shared/components/section-label';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
+import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
+import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -17,6 +18,7 @@ import {
     FileArchive,
     FileSpreadsheet,
     FileText,
+    MessageSquarePlus,
     Pencil,
     Presentation,
     RefreshCcw,
@@ -67,12 +69,17 @@ const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; sho
 /** One solid muted tone for every file icon/badge — minimal, monochrome (not translucent); the kind reads from the keyword. */
 const FILE_TONE = 'text-muted-foreground';
 
-/** One-line label/value row for the rail's compact sections (SLA, dates). */
-function RailRow({ label, value, mono = true }: { label: string; value: React.ReactNode; mono?: boolean }) {
+/**
+ * One-line label/value row for the rail's compact sections (SLA, dates).
+ *
+ * `wrap` is for the one value that is a sentence rather than a timestamp — truncating the name
+ * of the rule that set a deadline defeats the point of printing it.
+ */
+function RailRow({ label, value, mono = true, wrap = false }: { label: string; value: React.ReactNode; mono?: boolean; wrap?: boolean }) {
     return (
         <div className="flex items-baseline justify-between gap-3 text-xs">
             <span className="text-muted-foreground shrink-0">{label}</span>
-            <span className={cn('min-w-0 truncate text-right', mono && 'font-mono text-[11.5px]')}>{value || '—'}</span>
+            <span className={cn('min-w-0 text-right', wrap ? 'text-balance' : 'truncate', mono && 'font-mono text-[11.5px]')}>{value || '—'}</span>
         </div>
     );
 }
@@ -160,6 +167,97 @@ function SpineStep({
     );
 }
 
+/**
+ * "24h · from priority High" — the sentence that stops a long deadline on an urgent case
+ * reading as a bug.
+ *
+ * A case whose target came from neither kind of rule is the one place nobody chose the number:
+ * it is named as the default rather than dressed up as a decision.
+ */
+function slaTargetLabel(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
+    const hours = `${target.hours}${t('ticket_sla_unit_h')}`;
+
+    if (target.scope === 'request_type' && target.value) {
+        const meta = REQUEST_TYPE_META[target.value as ServiceRequestType];
+        return `${hours} · ${t('ticket_sla_target_request')}${meta ? ` (${t(meta.labelKey)})` : ''}`;
+    }
+    if (target.scope === 'priority' && target.value) {
+        return `${hours} · ${t('ticket_sla_target_priority')}`;
+    }
+
+    return `${hours} · ${t('ticket_sla_target_default')}`;
+}
+
+/** One row of the progress timeline. The two ends of the case sit in the same list as the notes. */
+type ProgressKind = 'taken' | 'note' | 'completed' | 'canceled';
+
+interface ProgressEntry {
+    key: string;
+    kind: ProgressKind;
+    /** Who wrote it, or what happened — whichever the row is about. */
+    title: string;
+    when: string | null;
+    body?: string | null;
+}
+
+/**
+ * The whole path of a case in one list: taken → what happened along the way → closed.
+ *
+ * The two ends are NOT ticket_updates rows. They are the ticket's own responded_at/take_note and
+ * resolved_at/resolution, which existed long before the middle did — read from there rather than
+ * backfilled as rows, so one fact stays in one place and every case closed before progress notes
+ * shipped still reads as a complete story instead of starting halfway through.
+ */
+function progressEntries(ticket: Ticket, t: (key: string) => string): ProgressEntry[] {
+    const entries: ProgressEntry[] = [];
+
+    // A case canceled before anybody took it never reached this step.
+    if (ticket.responded_at != null || ticket.assignee_name != null) {
+        entries.push({
+            key: 'taken',
+            kind: 'taken',
+            title: `${t('ticket_taken_by')} ${ticket.assignee_name ?? ''}`.trim(),
+            when: ticket.responded_at,
+            body: ticket.take_note,
+        });
+    }
+
+    for (const u of ticket.updates ?? []) {
+        entries.push({ key: `update-${u.id}`, kind: 'note', title: u.author_name, when: u.created_at, body: u.body });
+    }
+
+    if (ticket.resolved_at != null) {
+        const canceled = ticket.status === 'canceled';
+        entries.push({
+            key: 'closed',
+            kind: canceled ? 'canceled' : 'completed',
+            title: t(canceled ? 'ticket_canceled_event' : 'ticket_completed_event'),
+            when: ticket.resolved_at,
+            body: ticket.resolution,
+        });
+    }
+
+    return entries;
+}
+
+/**
+ * Icon + dot tone per timeline row, and the body tint where the row deserves one.
+ *
+ * The closing rows wear the colours their status badge and the Details pane already use, so the
+ * same outcome does not change colour depending on which tab you read it in.
+ */
+const PROGRESS_META: Record<ProgressKind, { Icon: typeof Check; dot: string; body?: string }> = {
+    taken: { Icon: Zap, dot: 'bg-brand/10 text-brand' },
+    note: { Icon: MessageSquarePlus, dot: 'bg-muted text-muted-foreground' },
+    completed: {
+        Icon: Check,
+        dot: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        body: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    },
+    // Canceled is a neutral outcome, not an error — grey, the way its status badge is.
+    canceled: { Icon: X, dot: 'bg-muted-foreground/15 text-muted-foreground', body: 'bg-muted text-muted-foreground' },
+};
+
 /** Read-only ticket view — centered focus dialog with a tabbed body (details / files) and a case-status rail. */
 export function TicketDetailDrawer({
     ticket,
@@ -175,6 +273,7 @@ export function TicketDetailDrawer({
     onAssign,
     onForward,
     onResolve,
+    onUpdate,
 }: {
     ticket: Ticket | null;
     onClose: () => void;
@@ -193,6 +292,8 @@ export function TicketDetailDrawer({
     onAssign: (t: Ticket) => void;
     onForward: (t: Ticket) => void;
     onResolve: (t: Ticket, mode: ResolveMode) => void;
+    /** Opens the progress-note dialog — offered to the assignee while the case is in flight. */
+    onUpdate: (t: Ticket) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -206,7 +307,7 @@ export function TicketDetailDrawer({
     }, [ticket]);
     const view = ticket ?? shown;
 
-    const [tab, setTab] = useState<'details' | 'files'>('details');
+    const [tab, setTab] = useState<'details' | 'progress' | 'files'>('details');
     // In-app preview (lightbox) for image and PDF attachments instead of opening a new tab.
     const [preview, setPreview] = useState<TicketAttachment | null>(null);
     // Same retention trick for the lightbox — render from the last shown file so it
@@ -226,10 +327,30 @@ export function TicketDetailDrawer({
     if (!view) return null;
 
     const isMine = view.assignee_id != null && view.assignee_id === meId;
+    const isWorking = view.status === 'in_progress';
+    const updates = view.updates ?? [];
+    const progress = progressEntries(view, t);
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
     // Anti case-pumping: the person who filed a case can never take it (backend enforces too).
     const isMyOwnRequest = meEmployeeId != null && view.requester_id === meEmployeeId;
     const showTake = isOpenUnassigned && canTake && !isMyOwnRequest;
+    /**
+     * Routing a case — handing an open one to somebody (Assign), or moving one already in
+     * progress (Forward). Both are the dispatcher's job, and neither is offered on a case
+     * you filed yourself, even holding tickets.assign.
+     *
+     * Reading your own ticket you are the person waiting on IT, not IT: you cannot take it
+     * (anti case-pumping) and you are the one person it cannot be routed to, so deciding who
+     * works it is not yours to do from here. Somebody else's case is unaffected — that is
+     * the dispatcher wearing the right hat.
+     *
+     * These two buttons are the ONLY way into either dialog (the list has no row action), so
+     * hiding them really does close the door: your own case goes to whoever takes it, or to
+     * another dispatcher. The backend gates are untouched.
+     */
+    const canRouteThis = !isMyOwnRequest;
+    const showAssign = isOpenUnassigned && canAssign && canRouteThis;
+    const showForward = canForward && (isMine || (canAssign && canRouteThis));
     const files = view.attachments ?? [];
     const [s1, s2, s3] = spineTones(view.status);
     // Preview mode: images zoom/pan, PDFs embed via <iframe>, everything else shows a file card.
@@ -247,15 +368,16 @@ export function TicketDetailDrawer({
                 <DialogContent
                     // Height follows the content (a finished case with no footer no longer
                     // leaves a large empty band) but is still capped at the shared focus-dialog
-                    // size; min-h keeps tab switches from collapsing the box too far.
-                    className={cn(focusDialogContentClass, 'h-auto max-h-[min(860px,calc(100vh-72px))] min-h-[480px]')}
+                    // size; the floor only stops a tab switch collapsing the box, and sits low
+                    // enough that a requester's short case is not mostly empty space.
+                    className={cn(focusDialogContentClass, 'h-auto max-h-[min(860px,calc(100vh-72px))] min-h-[380px]')}
                 >
                     {/* ---- header: shared focus-dialog header (icon tile + eyebrow + title + code chip) ---- */}
                     <FocusDialogHeader
                         icon={ticketCategoryIcon(view.category)}
                         eyebrow={
                             <span className="flex flex-wrap items-center gap-2">
-                                Ticket no.
+                                {t('ticket_col_no')}
                                 <span className="text-foreground text-[13.5px] font-extrabold tracking-tight">{view.ticket_no}</span>
                                 <span className="bg-accent text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-normal normal-case">
                                     {t(`ticket_cat_${view.category}`)}
@@ -285,7 +407,10 @@ export function TicketDetailDrawer({
                     {view.status === 'in_progress' && isMine && (
                         <div className="border-border/60 flex items-center gap-2.5 border-b bg-violet-500/10 px-6 py-2 text-[12.5px] text-violet-600 dark:text-violet-400">
                             <RefreshCcw className="h-3.5 w-3.5 shrink-0" />
-                            <span>{t('ticket_working_hint')}</span>
+                            <span className="flex-1">{t('ticket_working_hint')}</span>
+                            <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={() => onUpdate(view)}>
+                                {t('ticket_update_action')}
+                            </Button>
                         </div>
                     )}
 
@@ -298,19 +423,20 @@ export function TicketDetailDrawer({
                                 onChange={setTab}
                                 tabs={[
                                     { id: 'details', label: t('ticket_tab_details') },
+                                    { id: 'progress', label: t('ticket_tab_progress'), count: progress.length },
                                     { id: 'files', label: t('ticket_attach'), count: files.length },
                                 ]}
                             />
 
                             {/* Only the pane content scrolls — the tab bar above stays put. */}
                             <div className="min-h-0 flex-1 px-6 py-4 sm:overflow-y-auto">
+                                {/* Details answers "what was reported"; Progress answers "what happened
+                                    since". The take note and the resolution belong to the second
+                                    question and live in that timeline — printing them here as well
+                                    made two tabs tell one story, and the subject was already the
+                                    dialog's own title two lines above. */}
                                 {tab === 'details' && (
                                     <div className="space-y-5">
-                                        <section>
-                                            <SectionLabel>{t('ticket_subject')}</SectionLabel>
-                                            <p className="text-[15px] leading-snug font-bold tracking-tight">{view.subject}</p>
-                                        </section>
-
                                         <section>
                                             <SectionLabel>{t('ticket_description')}</SectionLabel>
                                             {/* whitespace-pre-wrap: an auto-opened case writes one fact per
@@ -321,29 +447,6 @@ export function TicketDetailDrawer({
                                                 {view.description}
                                             </p>
                                         </section>
-
-                                        {view.take_note && (
-                                            <section>
-                                                <SectionLabel>{t('ticket_take_note')}</SectionLabel>
-                                                <p className="bg-muted/50 rounded-md px-3 py-2 text-sm leading-relaxed">{view.take_note}</p>
-                                            </section>
-                                        )}
-
-                                        {view.resolution && (
-                                            <section>
-                                                <SectionLabel>{t('ticket_resolution')}</SectionLabel>
-                                                <p
-                                                    className={
-                                                        view.status === 'completed'
-                                                            ? 'rounded-md bg-emerald-500/10 px-3 py-2 text-sm leading-relaxed text-emerald-700 dark:text-emerald-400'
-                                                            : // Canceled is a neutral outcome, not an error — gray like its status badge.
-                                                              'bg-muted text-muted-foreground rounded-md px-3 py-2 text-sm leading-relaxed'
-                                                    }
-                                                >
-                                                    {view.resolution}
-                                                </p>
-                                            </section>
-                                        )}
 
                                         {view.related_asset_tag && (
                                             <section>
@@ -370,6 +473,58 @@ export function TicketDetailDrawer({
                                                     </div>
                                                 </div>
                                             </section>
+                                        )}
+                                    </div>
+                                )}
+
+                                {tab === 'progress' && (
+                                    <div>
+                                        {progress.length === 0 ? (
+                                            <p className="text-muted-foreground py-8 text-center text-sm">{t('ticket_no_updates')}</p>
+                                        ) : (
+                                            <ol className="space-y-0">
+                                                {progress.map((entry, i) => {
+                                                    const meta = PROGRESS_META[entry.kind];
+                                                    const last = i === progress.length - 1;
+                                                    return (
+                                                        <li key={entry.key} className="flex gap-3">
+                                                            {/* Dot + connector: the same spine the rail uses, so the two
+                                                                timelines in this dialog read as one language. */}
+                                                            <div className="flex flex-col items-center">
+                                                                <span
+                                                                    className={cn(
+                                                                        'mt-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full',
+                                                                        meta.dot,
+                                                                    )}
+                                                                >
+                                                                    <meta.Icon className="h-3.5 w-3.5" />
+                                                                </span>
+                                                                {!last && <div className="bg-border my-1 w-0.5 flex-1 rounded-full" />}
+                                                            </div>
+                                                            <div className={cn('min-w-0 flex-1', !last && 'pb-4')}>
+                                                                <div className="flex flex-wrap items-baseline gap-x-2">
+                                                                    <span className="text-sm leading-tight font-semibold">{entry.title}</span>
+                                                                    <span className="text-muted-foreground font-mono text-[11px]">
+                                                                        {fmtWhen(entry.when)}
+                                                                    </span>
+                                                                </div>
+                                                                {/* Taking a case without leaving a note is allowed, so the
+                                                                    row stands on its own headline when there is no body. */}
+                                                                {entry.body && (
+                                                                    <p
+                                                                        className={cn(
+                                                                            'mt-1.5 rounded-md px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap',
+                                                                            meta.body ?? 'bg-muted/50',
+                                                                        )}
+                                                                    >
+                                                                        {entry.body}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ol>
                                         )}
                                     </div>
                                 )}
@@ -472,6 +627,9 @@ export function TicketDetailDrawer({
                                             ? `${t('ticket_taken_by')} ${view.assignee_name ?? ''}`
                                             : t('ticket_waiting')
                                     }
+                                    // The number of notes is the honest measure of how much has
+                                    // happened on a case since it was picked up.
+                                    meta={updates.length > 0 ? t('ticket_updates_count').replace('{n}', String(updates.length)) : undefined}
                                     when={fmtWhen(view.responded_at)}
                                 />
                                 <SpineStep
@@ -527,25 +685,24 @@ export function TicketDetailDrawer({
                                     <div className="space-y-1.5 pl-1">
                                         <RailRow label={t('ticket_sla_response_due')} value={fmtWhen(view.sla.response_due_at)} />
                                         <RailRow label={t('ticket_sla_resolve_due')} value={fmtWhen(view.sla.resolve_due_at)} />
+                                        {/* Where the resolution target came from. Without this, a three-day
+                                            deadline on a case marked critical reads as a bug. */}
+                                        {view.sla_target && (
+                                            <RailRow label={t('ticket_sla_target_from')} value={slaTargetLabel(view.sla_target, t)} mono={false} wrap />
+                                        )}
                                     </div>
                                 </>
                             )}
 
-                            <div className="bg-border/60 my-3 h-px" />
-                            <SectionLabel>{t('ticket_section_other')}</SectionLabel>
-                            <div className="space-y-1.5 pl-1">
-                                <RailRow label={t('ticket_created')} value={fmtWhen(view.created_at)} />
-                                <RailRow label={t('ticket_updated')} value={fmtWhen(view.updated_at)} />
-                            </div>
+                            {/* No "Other" block: it held the creation time, which the first step of
+                                the spine above already gives, and updated_at, which moves whenever
+                                anything at all is touched and tells a reader nothing they can act on. */}
                         </aside>
                     </div>
 
                     {/* ---- footer: role-/status-aware actions (hidden when there are none —
                          closing is covered by the ✕ / Esc / backdrop) ---- */}
-                    {(canEdit ||
-                        showTake ||
-                        (canAssign && isOpenUnassigned) ||
-                        (view.status === 'in_progress' && (isMine || (canForward && canAssign)))) && (
+                    {(canEdit || showTake || showAssign || (isWorking && (isMine || showForward))) && (
                         <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
                             {canEdit && (
                                 <Button variant="outline" onClick={() => onEdit(view)}>
@@ -554,7 +711,7 @@ export function TicketDetailDrawer({
                                 </Button>
                             )}
                             <span className="flex-1" />
-                            {isOpenUnassigned && canAssign && (
+                            {showAssign && (
                                 <Button variant="outline" onClick={() => onAssign(view)}>
                                     <Users className="h-4 w-4" />
                                     {t('ticket_assign_to_staff')}
@@ -566,14 +723,19 @@ export function TicketDetailDrawer({
                                     {t('ticket_take_case')}
                                 </Button>
                             )}
-                            {view.status === 'in_progress' && canForward && (isMine || canAssign) && (
+                            {isWorking && showForward && (
                                 <Button variant="outline" onClick={() => onForward(view)}>
                                     <ArrowRightLeft className="h-4 w-4" />
                                     {t('ticket_forward')}
                                 </Button>
                             )}
-                            {view.status === 'in_progress' && isMine && (
+                            {isWorking && isMine && (
                                 <>
+                                    {/* Between taking and closing: the third thing an assignee can do. */}
+                                    <Button variant="outline" onClick={() => onUpdate(view)}>
+                                        <MessageSquarePlus className="h-4 w-4" />
+                                        {t('ticket_update_action')}
+                                    </Button>
                                     <Button variant="destructive" onClick={() => onResolve(view, 'cancel')}>
                                         <X className="h-4 w-4" />
                                         {t('ticket_mark_canceled')}

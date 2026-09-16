@@ -121,7 +121,7 @@ class RequestNotificationService
             ));
             $this->emailEach($followers, 'request.rejected', $request, [
                 'actor.name' => $row->acted_by_name ?? $row->label,
-                'remark' => $row->note ?? '—',
+                'remark' => $this->remark($row->note),
             ]);
         }
     }
@@ -152,7 +152,12 @@ class RequestNotificationService
         }
 
         Notification::send($followers, new RequestWorkflowNotification($request, 'cancelled', null, null, $reason));
-        $this->emailEach($followers, 'request.not_delivered', $request, ['remark' => $reason ?? '—']);
+        // actor.name is "who decided this" in every request mail — the rejecting approver in
+        // request.rejected, and here the IT staff who closed the case out.
+        $this->emailEach($followers, 'request.not_delivered', $request, [
+            'actor.name' => $this->fulfilledBy($request),
+            'remark' => $this->remark($reason),
+        ]);
     }
 
     /** Replace the waiting approver's action bell with a cancellation notice. */
@@ -303,6 +308,147 @@ class RequestNotificationService
     }
 
     /** @param array<string, mixed> $extraVars */
+    /**
+     * What the requester actually asked for — the fields the wizard collected for this
+     * service, already resolved to display labels and values when the request was saved.
+     *
+     * Without it the mail names a type and a reason but not the thing itself: "Computer for
+     * Somchai", with no way to tell a desktop from a laptop until somebody opens the portal.
+     */
+    private function detailLines(ServiceRequest $request): string
+    {
+        $display = (array) data_get($request->fields, '_display', []);
+
+        $lines = collect($display)
+            ->map(fn (array $field) => e((string) ($field['label_en'] ?? $field['key'] ?? '')).': '
+                .e((string) ($field['value'] ?? '-')))
+            ->filter()
+            ->implode('<br>');
+
+        return $lines !== '' ? $lines : '-';
+    }
+
+    /**
+     * A remark somebody typed, made safe for the message it goes into.
+     *
+     * Rejecting requires a reason and not delivering asks for one, so this is the free text
+     * most likely to reach a recipient — and it was going in raw. A note containing a stray
+     * angle bracket broke the message; one containing a tag was rendered as that tag. The
+     * line breaks are kept, because a reason written over three lines is written that way
+     * on purpose.
+     */
+    private function remark(?string $note): string
+    {
+        return filled($note) ? nl2br(e(trim($note))) : '-';
+    }
+
+    /**
+     * The IT staff who closed the request out.
+     *
+     * Kept on the fulfilment row rather than the request: service_requests records WHEN it
+     * was fulfilled but never who did it, and that row is the only place the name lands.
+     */
+    private function fulfilledBy(ServiceRequest $request): string
+    {
+        $row = $request->approvals()
+            ->where('kind', WorkflowStepKind::Fulfillment->value)
+            ->orderByDesc('position')
+            ->first();
+
+        return (string) ($row?->acted_by_name ?: '-');
+    }
+
+    /** The shape of the approval-history table — shared so the preview matches the mail. */
+    public const HISTORY_HEADERS = ['Step', 'Decision', 'By', 'Date'];
+
+    public const HISTORY_WIDTHS = ['30%', '26%', '26%', '18%'];
+
+    /**
+     * Why a step was skipped, in the same words the Requests screen uses (req_skip_*).
+     *
+     * Kept here rather than read from the SPA dictionary: this runs with no reader and no
+     * language to render in, and the codes are a snapshot fact while the wording is
+     * presentation. Two copies of a sentence is the cost of a mail that can explain itself.
+     */
+    public const SKIP_REASONS = [
+        'no_manager' => 'Skipped - the requester has no manager',
+        'no_matching_position' => 'Skipped - nobody above the requester holds this position',
+        'no_resource_owner' => 'Skipped - this resource has no owner',
+        'requester_is_owner' => 'Skipped - the requester owns this resource',
+    ];
+
+    /**
+     * What has already happened on this request, as a table.
+     *
+     * An approver three steps down opens the mail knowing only that it is their turn. Whether
+     * two people already said yes, or every step before them was skipped and they are in fact
+     * the first human to look at it, changes how much weight their own signature carries —
+     * and it was not written anywhere they could see without opening the portal.
+     *
+     * Only the rows BEFORE the one being waited on, and only approval steps: the fulfilment
+     * row is IT's work queue, not a decision anybody made.
+     */
+    private function approvalHistory(ServiceRequest $request): string
+    {
+        $current = $request->currentApproval();
+
+        $decided = $request->approvals()
+            ->orderBy('position')
+            ->get()
+            ->filter(fn (RequestApproval $row) => $row->kind === WorkflowStepKind::Approval)
+            ->filter(fn (RequestApproval $row) => $current === null || $row->position < $current->position)
+            ->filter(fn (RequestApproval $row) => in_array($row->status, [ApprovalStatus::Approved, ApprovalStatus::Skipped], true));
+
+        if ($decided->isEmpty()) {
+            return '<p style="color:#64748b;font-size:14px;margin:12px 0;">You are the first approver on this request.</p>';
+        }
+
+        $rows = $decided->map(function (RequestApproval $row) {
+            $skipped = $row->status === ApprovalStatus::Skipped;
+
+            return [
+                EmailTable::text((string) $row->label, 34),
+                // The mark is added here, not stored in SKIP_REASONS: that constant is the
+                // wording the Requests screen also uses, and the screen has its own status
+                // colours. Decoration belongs to whichever surface is drawing.
+                ($skipped ? '⏭️ ' : '✅ ').EmailTable::text($skipped
+                    ? (self::SKIP_REASONS[$row->skip_reason?->value] ?? 'Skipped')
+                    : 'Approved', 60),
+                EmailTable::text($skipped ? '-' : (string) ($row->acted_by_name ?: $row->approver_name ?: '-'), 30),
+                $row->acted_at?->format('d-m-Y') ?? '-',
+            ];
+        })->values()->all();
+
+        return EmailTable::render(self::HISTORY_HEADERS, $rows, [], self::HISTORY_WIDTHS, [1]);
+    }
+
+    /**
+     * Who the request is sitting with right now, and where they sit in the company.
+     *
+     * Deliberately approver.* and not user.*: throughout these templates user.* means the
+     * PERSON READING the mail, and naming the approver's position user.position would put
+     * two different people behind one prefix.
+     *
+     * Empty on a request that has cleared every step or has none — a finished request has no
+     * next approver, and a label with nothing after it reads better as a dash than as a lie.
+     *
+     * @return array<string, string>
+     */
+    private function approverVars(ServiceRequest $request): array
+    {
+        $row = $request->currentApproval();
+        $employee = $row?->approver_employee_id !== null
+            ? Employee::with(['position', 'department'])->find($row->approver_employee_id)
+            : null;
+
+        return [
+            'approver.name' => (string) ($row?->approver_name ?: '-'),
+            'approver.position' => (string) ($employee?->position?->title ?: '-'),
+            // Master data is mixed-language; the English name is the one always filled.
+            'approver.department' => (string) ($employee?->department?->name ?: $employee?->department?->name_th ?: '-'),
+        ];
+    }
+
     private function emailUser(User $recipient, string $templateKey, ServiceRequest $request, array $extraVars = []): void
     {
         $this->email->sendTemplate($templateKey, $recipient->email, $extraVars + [
@@ -315,6 +461,23 @@ class RequestNotificationService
             'request.type' => $request->type?->label(),
             'requester.name' => $request->requester_name,
             'reference.id' => $request->reference,
+            'request.date' => $request->created_at?->format('d-m-Y') ?? '-',
+            // Stamped when the LAST approval step passes, so it is empty until then.
+            'request.approved_date' => $request->approved_at?->format('d-m-Y') ?? '-',
+            'request.rejected_date' => $request->rejected_at?->format('d-m-Y') ?? '-',
+            // Withdrawn by the requester, or approved and then cancelled by IT — the second
+            // is the one that sends mail (request.not_delivered).
+            'request.cancelled_date' => $request->cancelled_at?->format('d-m-Y') ?? '-',
+            // Set by finalize() before this mail is composed, and only for workflows with
+            // auto_ticket on — the others have nothing to open.
+            'request.ticket_no' => (string) ($request->ticket?->ticket_no ?: '-'),
+            'request.fulfilled_date' => $request->fulfilled_at?->format('d-m-Y') ?? '-',
+            'request.fulfilled_by' => $this->fulfilledBy($request),
+            // Free text somebody typed, landing in an HTML email.
+            'request.reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',
+            'request.details' => $this->detailLines($request),
+            'request.approval_history' => $this->approvalHistory($request),
+            ...$this->approverVars($request),
         ], $this->requestUrl($request), 'View request', $recipient->name);
     }
 

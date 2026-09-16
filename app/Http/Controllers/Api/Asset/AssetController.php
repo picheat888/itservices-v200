@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Asset;
 
 use App\Enums\Asset\AssetStatus;
+use App\Enums\Asset\AssetTransferKind;
 use App\Enums\Contract\ContractType;
 use App\Enums\Employee\EmployeeStatus;
 use App\Http\Controllers\Controller;
@@ -14,13 +15,33 @@ use App\Models\Asset\AssetTransfer;
 use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
+use App\Models\Settings\Location;
 use App\Models\User;
 use App\Services\Asset\AssetService;
+use App\Support\SystemTime;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class AssetController extends Controller
 {
+    /** How far back the cross-asset transfer log reaches. Surfaced to the page, which says so. */
+    private const TRANSFER_LOG_LIMIT = 100;
+
+    /**
+     * The statuses the dashboard counts as "in use" — the asset has left the pool and sits
+     * with a holder. The two pending states belong here too: a hand-over awaiting acceptance
+     * and a return awaiting receipt are both still out of the pool, so counting them as Ready
+     * would overstate what IT can actually deploy today.
+     *
+     * @var list<AssetStatus>
+     */
+    private const IN_USE_STATUSES = [
+        AssetStatus::Deployed,
+        AssetStatus::Common,
+        AssetStatus::PendingAcceptance,
+        AssetStatus::PendingReturn,
+    ];
+
     public function __construct(private readonly AssetService $service) {}
 
     /** Gate read access to the assets.view permission (super bypasses). */
@@ -149,10 +170,16 @@ class AssetController extends Controller
         // rented assets' annualised value and supplier (both read live from the contract).
         $assets = Asset::with(['location', 'category', 'vendor', 'contract.vendor'])->get();
 
+        // Each type carries its own Ready / In use / Write-off split so the dashboard can draw
+        // one stacked bar per type. The three buckets add up to `count` — every status lands in
+        // exactly one of them (see IN_USE_STATUSES).
         $byType = $assets->groupBy(fn (Asset $a) => $a->category?->name)
             ->map(fn ($group, $type) => [
                 'type' => $type,
                 'count' => $group->count(),
+                'ready' => $group->where('status', AssetStatus::Ready)->count(),
+                'used' => $group->whereIn('status', self::IN_USE_STATUSES)->count(),
+                'writeoff' => $group->where('status', AssetStatus::Writeoff)->count(),
             ])->sortByDesc('count')->values();
 
         $topValue = $assets->sortByDesc(fn (Asset $a) => $a->annualValue())->take(5)->values();
@@ -204,6 +231,9 @@ class AssetController extends Controller
         foreach ($rows as $row) {
             $key = $row->created_at?->format('Y-m');
             if ($key === null || ! isset($months[$key])) {
+                continue;
+            }
+            if ($row->kind && ! $row->kind->changesCustody()) {
                 continue;
             }
             $bucket = $row->kind?->isInbound() ? 'returned' : 'handover';
@@ -278,18 +308,34 @@ class AssetController extends Controller
     {
         $this->gateView($request);
 
-        $log = AssetTransfer::latest()->limit(100)->get()->map(fn (AssetTransfer $tr) => [
+        // Ownership only — a location correction keeps the same holder, so it belongs on the
+        // asset's own History tab, not in a list of who handed what to whom.
+        $rows = AssetTransfer::whereNot('kind', AssetTransferKind::Relocate)
+            ->latest()->limit(self::TRANSFER_LOG_LIMIT)->get();
+        $names = AssetTransfer::employeeNamesFor($rows);
+
+        $log = $rows->map(fn (AssetTransfer $tr) => [
             'id' => $tr->id,
-            'date' => $tr->created_at?->toDateString(),
+            // To the minute: several moves of the same asset can share a day, and the log is
+            // read to reconstruct what happened in what order.
+            'date' => SystemTime::dateTime($tr->created_at),
+            // The asset as it was named then, plus the id so a row can open the record now.
+            'asset_id' => $tr->asset_id,
             'asset_tag' => $tr->asset_tag,
             'asset_model' => $tr->asset_model,
+            'kind' => $tr->kind?->value,
             'from_owner' => $tr->from_owner,
             'to_owner' => $tr->to_owner,
+            // Set only when that end was an employee; a warehouse or shared label has none.
+            'from_name' => $names[$tr->from_owner] ?? null,
+            'to_name' => $names[$tr->to_owner] ?? null,
             'reason' => $tr->reason,
             'performed_by' => $tr->performed_by,
         ]);
 
-        return response()->json(['data' => $log]);
+        // The cap is part of the answer: without it the page says "1-20 of 100" and looks
+        // complete while older moves sit unseen behind it.
+        return response()->json(['data' => $log, 'meta' => ['limit' => self::TRANSFER_LOG_LIMIT]]);
     }
 
     public function store(StoreAssetRequest $request): JsonResponse
@@ -502,6 +548,51 @@ class AssetController extends Controller
         AuditLog::record('Bulk asset '.$data['op'], "{$count} assets");
 
         return response()->json(['message' => 'success', 'updated' => $count]);
+    }
+
+    /**
+     * Update where one or many in-use assets physically sit. One endpoint serves both the
+     * single-asset button in the detail drawer and the Inventory multi-select bar.
+     *
+     * Gated by assets.edit, not assets.transfer: this corrects an attribute of the record,
+     * it does not move custody — the holder keeps the asset either way. For the same reason
+     * only assets already in use qualify: a pooled asset lives in a warehouse (no location),
+     * one awaiting acceptance has not arrived anywhere yet, and one on its way back or
+     * written off is not sitting anywhere worth correcting.
+     */
+    public function bulkLocation(Request $request): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('assets.edit'), 403);
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:assets,id'],
+            'location_id' => ['required', 'integer', 'exists:locations,id'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $assets = Asset::whereIn('id', $data['ids'])->get();
+        $relocatable = [AssetStatus::Deployed, AssetStatus::Common];
+        abort_if(
+            $assets->contains(fn (Asset $a) => ! in_array($a->status, $relocatable, true)),
+            422,
+            'Only assets in use can have their location updated.',
+        );
+
+        $location = Location::findOrFail($data['location_id']);
+        foreach ($assets as $asset) {
+            $this->service->relocate($asset, $location, $request->user()?->name, $data['note'] ?? null);
+        }
+        AuditLog::record(
+            'Updated asset location',
+            $assets->count() === 1
+                ? "{$assets->first()->asset_code} → {$location->name}"
+                : "{$assets->count()} assets → {$location->name}",
+            // Which ones, by code. A line reading "5 assets → HQ" is not an answer on its own,
+            // and the per-asset trail is only reachable if you already know where to look.
+            ['items' => $assets->pluck('asset_code')->all()],
+        );
+
+        return response()->json(['message' => 'success', 'updated' => $assets->count()]);
     }
 
     /** Bulk-transfer many Ready assets to one employee (requires assets.transfer). */

@@ -160,6 +160,39 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('total_value', 12000);
     }
 
+    /**
+     * The dashboard's "By type" card draws one stacked bar per type, so every type row carries
+     * its own Ready / in-use / write-off split. The two pending states count as in use — the
+     * asset has left the pool — and the three buckets must add up to the row's total.
+     */
+    public function test_summary_splits_each_type_by_ready_in_use_and_writeoff(): void
+    {
+        $this->actingAs($this->super());
+
+        $laptop = $this->categoryId('Laptop');
+        $printer = $this->categoryId('Printer');
+
+        Asset::factory()->count(2)->create(['category_id' => $laptop, 'status' => 'ready']);
+        Asset::factory()->create(['category_id' => $laptop, 'status' => 'deployed']);
+        Asset::factory()->create(['category_id' => $laptop, 'status' => 'common']);
+        Asset::factory()->create(['category_id' => $laptop, 'status' => 'pending_acceptance']);
+        Asset::factory()->create(['category_id' => $laptop, 'status' => 'pending_return']);
+        Asset::factory()->create(['category_id' => $laptop, 'status' => 'writeoff']);
+        Asset::factory()->create(['category_id' => $printer, 'status' => 'ready']);
+
+        $rows = collect($this->getJson('/api/assets/summary')->assertOk()->json('by_type'))
+            ->keyBy('type');
+
+        $this->assertSame(
+            ['type' => 'Laptop', 'count' => 7, 'ready' => 2, 'used' => 4, 'writeoff' => 1],
+            $rows['Laptop']
+        );
+        $this->assertSame(
+            ['type' => 'Printer', 'count' => 1, 'ready' => 1, 'used' => 0, 'writeoff' => 0],
+            $rows['Printer']
+        );
+    }
+
     public function test_rented_asset_requires_a_contract(): void
     {
         $this->actingAs($this->super());
@@ -722,7 +755,15 @@ class AssetApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.to_owner', 'EMP-2000')
             ->assertJsonPath('data.0.from_owner', 'Central IT')
-            ->assertJsonPath('data.0.reason', 'New hire');
+            ->assertJsonPath('data.0.reason', 'New hire')
+            // What the move was, said outright — the log no longer leaves it to the reason text.
+            ->assertJsonPath('data.0.kind', 'handover')
+            // The code is unreadable on screen, so the name travels with it; the warehouse
+            // origin is not a person and gets none.
+            ->assertJsonPath('data.0.to_name', 'Trans Fer')
+            ->assertJsonPath('data.0.from_name', null)
+            // The row can open the asset it belongs to.
+            ->assertJsonPath('data.0.asset_id', $asset->id);
     }
 
     public function test_show_includes_transfer_history_and_related_tickets(): void

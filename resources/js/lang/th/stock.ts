@@ -98,7 +98,7 @@ export const stock: Dict = {
     stock_unit: 'หน่วย',
     stock_brand: 'ยี่ห้อ',
     stock_model: 'รุ่น',
-    stock_current: 'ปัจจุบัน',
+    stock_current: 'จำนวน (ปัจจุบัน)',
     stock_cost: 'ต้นทุน',
     stock_avg_cost: 'ต้นทุนเฉลี่ย',
     stock_unit_cost: 'ต้นทุน/หน่วย (ล็อตนี้)',

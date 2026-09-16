@@ -82,6 +82,10 @@ export function useTicketMutations() {
             mutationFn: (v: { id: number; assignee_id: number }) => ticketApi.forward(v.id, { assignee_id: v.assignee_id }),
             onSuccess: invalidate,
         }),
+        addUpdate: useMutation({
+            mutationFn: (v: { id: number; body: string }) => ticketApi.addUpdate(v.id, { body: v.body }),
+            onSuccess: invalidate,
+        }),
         resolve: useMutation({
             mutationFn: (v: { id: number; mode: 'complete' | 'cancel'; resolution: string }) =>
                 ticketApi.resolve(v.id, { mode: v.mode, resolution: v.resolution }),

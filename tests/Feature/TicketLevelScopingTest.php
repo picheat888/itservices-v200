@@ -89,6 +89,60 @@ class TicketLevelScopingTest extends TestCase
         $this->getJson('/api/tickets/staff?category=hardware')->assertOk()->assertJsonCount(0, 'data');
     }
 
+    /**
+     * The staff list says which employee each account belongs to.
+     *
+     * Assign and Forward both refuse the person who filed the case, and the pickers had no
+     * way to know which of the names that was — the requester is an employee id and the
+     * list carried only user ids. Their own name sat in the dropdown and answered 422.
+     */
+    public function test_the_staff_list_names_the_employee_behind_each_account(): void
+    {
+        $staff = $this->staffWith([...self::BASE, 'tickets.level_network']);
+
+        $this->actingAs($staff);
+        $this->getJson('/api/tickets/staff?category=network')->assertOk()
+            ->assertJsonPath('data.0.id', $staff->id)
+            ->assertJsonPath('data.0.employee_id', $staff->employee_id);
+    }
+
+    /**
+     * A dispatcher does not route the case they filed themselves.
+     *
+     * The other half of anti case-pumping: the rule already said a case can never land WITH
+     * its requester, and this says the requester does not pick who it lands with either.
+     * Both buttons are hidden for them, and the gate is here so hiding is not the only stop.
+     */
+    public function test_a_dispatcher_cannot_route_the_case_they_filed_themselves(): void
+    {
+        $dispatcher = $this->staffWith([...self::BASE, 'tickets.assign', 'tickets.forward', 'tickets.level_hardware']);
+        $other = $this->staffWith([...self::BASE, 'tickets.level_hardware']);
+        $mine = Ticket::factory()->create(['category' => 'hardware', 'requester_id' => $dispatcher->employee_id]);
+
+        $this->actingAs($dispatcher);
+        $this->postJson("/api/tickets/{$mine->id}/assign", ['assignee_id' => $other->id, 'priority' => 'medium'])
+            ->assertForbidden();
+
+        // Somebody else takes it, and the same person still may not move it on.
+        $this->actingAs($other)->postJson("/api/tickets/{$mine->id}/take", ['priority' => 'medium'])->assertOk();
+        $third = $this->staffWith([...self::BASE, 'tickets.level_hardware']);
+        $this->actingAs($dispatcher)
+            ->postJson("/api/tickets/{$mine->id}/forward", ['assignee_id' => $third->id])
+            ->assertForbidden();
+    }
+
+    /** Somebody else's case is untouched — the dispatcher is still a dispatcher. */
+    public function test_a_dispatcher_still_routes_everybody_elses_cases(): void
+    {
+        $dispatcher = $this->staffWith([...self::BASE, 'tickets.assign', 'tickets.level_hardware']);
+        $other = $this->staffWith([...self::BASE, 'tickets.level_hardware']);
+        $theirs = Ticket::factory()->create(['category' => 'hardware']);
+
+        $this->actingAs($dispatcher)
+            ->postJson("/api/tickets/{$theirs->id}/assign", ['assignee_id' => $other->id, 'priority' => 'medium'])
+            ->assertOk();
+    }
+
     public function test_a_case_cannot_land_with_staff_whose_level_does_not_cover_it(): void
     {
         $dispatcher = $this->staffWith([...self::BASE, 'tickets.assign', 'tickets.level_hardware']);

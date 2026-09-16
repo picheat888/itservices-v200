@@ -27,7 +27,7 @@ export interface NotificationData {
     ticket_id?: number;
     ticket_no?: string;
     subject?: string;
-    // Ticket owner notifications (ticket_owner) — event: taken | forwarded | resolved | cancelled
+    // Ticket owner notifications (ticket_owner) — event: taken | forwarded | updated | resolved | cancelled
     event?: string;
     by?: string | null;
     // Asset bells (asset_assigned, asset_return_requested, asset_recalled — the last one's

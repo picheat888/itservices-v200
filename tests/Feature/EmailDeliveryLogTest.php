@@ -205,6 +205,44 @@ class EmailDeliveryLogTest extends TestCase
         $this->assertMatchesRegularExpression('/\(test \d{2}:\d{2}\)$/', $subject);
     }
 
+    /**
+     * Send test has to send what the editor is showing.
+     *
+     * It sent the stored row while the preview beside the button rendered the unsaved
+     * wording, so the mail that arrived and the screen that asked for it disagreed, with
+     * nothing on either side saying why.
+     */
+    public function test_a_test_send_carries_the_editors_unsaved_wording(): void
+    {
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
+        $template = $this->template();
+
+        $this->postJson("/api/email-templates/{$template->id}/test", [
+            'name' => 'Draft name',
+            'subject' => 'Draft subject for {{user.first_name}}',
+            'body_html' => '<p>Draft body</p>',
+        ])->assertOk();
+
+        $log = EmailLog::latest('id')->first();
+        $this->assertStringContainsString('Draft subject for', $log->subject);
+        $this->assertStringContainsString('Draft body', $log->body_html);
+
+        // …and the draft is not saved by testing it. Pressing Send test is not pressing Save.
+        $this->assertSame('Hello {{user.first_name}}', $template->refresh()->subject);
+        $this->assertSame('<p>Body</p>', $template->body_html);
+    }
+
+    /** With nothing posted it still sends the stored template — the row list's own test button. */
+    public function test_a_test_send_without_a_draft_falls_back_to_the_saved_template(): void
+    {
+        $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));
+        $template = $this->template();
+
+        $this->postJson("/api/email-templates/{$template->id}/test")->assertOk();
+
+        $this->assertStringContainsString('<p>Body</p>', EmailLog::latest('id')->first()->body_html);
+    }
+
     public function test_the_detail_endpoint_rebuilds_the_email_around_the_stored_message(): void
     {
         $this->actingAs($this->userWith(['notifications.module', 'notifications.logs', 'notifications.email_test']));

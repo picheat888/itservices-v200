@@ -21,6 +21,7 @@ const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
             'employees.resign',
             'employees.cancel_resign',
             'employees.set_credentials',
+            'employees.delete',
         ],
     },
     { view: 'employees.view_section', children: ['employees.section_add', 'employees.section_edit', 'employees.section_delete'] },

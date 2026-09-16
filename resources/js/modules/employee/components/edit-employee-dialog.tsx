@@ -257,7 +257,6 @@ export function EditEmployeeDialog({ open, onClose, employee }: { open: boolean;
             position_id: form.positionId ? Number(form.positionId) : null,
             manager_id: form.managerId ? Number(form.managerId) : null,
             email: form.email || null,
-            username: null,
             phone: form.phone || null,
             joined_at: form.joinedAt || null,
             photo: photo ?? null,

@@ -8,9 +8,12 @@ use App\Models\AuditLog;
 use App\Models\Email\EmailLog;
 use App\Models\Email\EmailTemplate;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\MailSetting;
 use App\Services\Access\AccessService;
 use App\Services\Contract\ContractDigestService;
 use App\Services\Email\EmailNotificationService;
+use App\Services\Request\RequestNotificationService;
+use App\Services\Stock\StockNotificationService;
 use App\Services\Ticket\TicketDigestService;
 use App\Support\EmailTable;
 use App\Support\EmailTemplates;
@@ -60,7 +63,29 @@ class EmailTemplateController extends Controller
                 'sent_today' => EmailLog::where('status', 'sent')->whereDate('created_at', today())->count(),
                 'delivery_rate' => $attempts > 0 ? round($sentTotal / $attempts * 100, 1) : null,
             ],
+            'mail' => $this->fromIdentity(),
         ]);
+    }
+
+    /**
+     * The address recipients will actually see this mail come from.
+     *
+     * The preview drew its own `no-reply@brandname` instead, which is a plausible address
+     * and not the configured one — the one line of a preview that promises accuracy was
+     * the one line making something up. Resolved exactly as MailConfigService does at send
+     * time, so an unconfigured install shows the .env fallback rather than a guess.
+     *
+     * @return array{from_address: ?string, from_name: ?string}
+     */
+    private function fromIdentity(): array
+    {
+        $settings = MailSetting::current();
+        $configured = $settings->isConfigured();
+
+        return [
+            'from_address' => $configured ? $settings->from_address : (string) config('mail.from.address'),
+            'from_name' => ($configured ? $settings->from_name : null) ?: (string) config('mail.from.name'),
+        ];
     }
 
     /** Creates a new template. */
@@ -171,11 +196,24 @@ class EmailTemplateController extends Controller
         return response()->json(['message' => 'success', 'reset' => $count]);
     }
 
-    /** Sends a test render of one template to the current user (synchronous). */
+    /**
+     * Sends a test render of one template to the current user (synchronous).
+     *
+     * Takes the editor's UNSAVED wording when it is posted, and falls back to the stored
+     * row otherwise. Sending the saved copy while the editor showed the new one made the
+     * button answer a question nobody asked: the reader compared the mail in their inbox
+     * against the words on screen and found them different, with nothing saying why.
+     */
     public function test(Request $request, EmailTemplate $emailTemplate): JsonResponse
     {
         // Sending real mail, even to yourself, is its own right.
         $this->allow($request, 'notifications.email_test');
+
+        $draft = $request->validate([
+            'name' => ['sometimes', 'string', 'max:150'],
+            'subject' => ['sometimes', 'string', 'max:255'],
+            'body_html' => ['sometimes', 'string'],
+        ]);
 
         $to = $request->user()->email;
         if (! $to) {
@@ -183,8 +221,8 @@ class EmailTemplateController extends Controller
         }
 
         $vars = $this->sampleVars($request);
-        $subject = $this->service->render($emailTemplate->subject, $vars);
-        $html = $this->service->render($emailTemplate->body_html, $vars);
+        $subject = $this->service->render($draft['subject'] ?? $emailTemplate->subject, $vars);
+        $html = $this->service->render($draft['body_html'] ?? $emailTemplate->body_html, $vars);
 
         // Every test send carries the time it was sent. Two test sends of one template are
         // otherwise identical down to the character, and a mailbox that groups by subject
@@ -201,7 +239,7 @@ class EmailTemplateController extends Controller
             $emailTemplate->key,
             rtrim((string) config('app.url'), '/').'/',
             'Open in portal',
-            $emailTemplate->name,
+            $draft['name'] ?? $emailTemplate->name,
         );
 
         // 200 either way. A rejected address or an unreachable SMTP host is an answer to
@@ -294,14 +332,51 @@ class EmailTemplateController extends Controller
             'user.first_name' => explode(' ', $name)[0] ?: 'there',
             'user.email' => $request->user()->email ?? 'user@example.com',
             'count' => 3,
-            'items' => '<ul>'
-                .'<li><strong>SKU-1042</strong> - USB-C Docking Station · Below minimum (on hand: 2)</li>'
-                .'<li><strong>SKU-0387</strong> - 24-inch Monitor · Out of stock (on hand: 0)</li>'
-                .'<li><strong>REQ-2026-0042</strong> - Wireless Mouse ×5 · pending (by Somchai)</li>'
-                .'</ul>',
             'stock.sku' => 'SKU-1042',
             'stock.name' => 'USB-C Docking Station',
             'stock.qty' => 2,
+            'stock.min' => 5,
+            'stock.max' => 40,
+            'stock.request_no' => 'REQ-2026-0001',
+            'stock.request_by' => 'Piches Srisuk',
+            'stock.request_reason' => 'Replacing the dock on the 3rd floor meeting room.',
+            'stock.request_date' => '18-08-2026',
+            'stock.approver' => 'Anong Wattana',
+            'stock.fulfilled_by' => 'Kankanok P',
+            'stock.fulfilled_date' => '20-08-2026',
+            'stock.request_summary_table' => EmailTable::render(
+                StockNotificationService::REQUEST_SUMMARY_HEADERS,
+                [['Pending Approval', '2'], ['Awaiting Fulfilment', '1']],
+                [1],
+                StockNotificationService::REQUEST_SUMMARY_WIDTHS,
+            ),
+            'stock.requests_table' => EmailTable::render(
+                StockNotificationService::REQUEST_HEADERS,
+                [
+                    ['REQ-2026-0001', 'Piches Srisuk', '18-08-2026', 'USB-C Docking Station ×2', 'Pending Approval'],
+                    ['REQ-2026-0004', 'Manee Jaidee', '24-08-2026', 'Wireless mouse ×1', 'Awaiting Fulfilment'],
+                ],
+                [],
+                StockNotificationService::REQUEST_WIDTHS,
+                [3],
+            ),
+            'stock.summary_table' => EmailTable::render(
+                StockNotificationService::SUMMARY_HEADERS,
+                [['Out of Stock', '1'], ['Low Stock', '2'], ['Overstock', '0']],
+                [1],
+                StockNotificationService::SUMMARY_WIDTHS,
+            ),
+            'stock.items_table' => EmailTable::render(
+                StockNotificationService::ITEM_HEADERS,
+                [
+                    ['SKU-1088', 'HDMI cable 2 m', '0', '10', '80', 'Out of Stock'],
+                    ['SKU-1042', 'USB-C Docking Station', '2', '5', '40', 'Low Stock'],
+                    ['SKU-1103', 'Wireless mouse', '4', '6', '60', 'Low Stock'],
+                ],
+                StockNotificationService::ITEM_NUMERIC,
+                StockNotificationService::ITEM_WIDTHS,
+                [1],
+            ),
             'asset.code' => 'INK-IT-26-0042',
             'asset.model' => 'ThinkCentre Neo 55a 24 G6',
             'asset.tag' => 'PC042',
@@ -340,6 +415,7 @@ class EmailTemplateController extends Controller
             'ticket.category' => 'Hardware',
             'ticket.details' => 'The printer on the 3rd floor shows a paper jam error,<br>but there is no paper stuck inside.',
             'ticket.resolution' => 'Replaced the fuser roller and cleared the jam sensor.',
+            'ticket.update' => 'The replacement fuser roller is on order,<br>expected within three working days.',
             'ticket.requester' => 'Somchai Suksawat',
             'ticket.assignee' => 'Piches Srisuk',
             'from.name' => 'Anong Wattana',
@@ -352,6 +428,30 @@ class EmailTemplateController extends Controller
             'contract.details' => 'Microsoft 365 E3 License Agreement, 320 seats',
             'reference.id' => 'REF-0001',
             'request.title' => 'Request: Mail group',
+            'request.type' => 'Email group',
+            'request.date' => '18-08-2026',
+            'request.approved_date' => '20-08-2026',
+            'request.rejected_date' => '20-08-2026',
+            'request.cancelled_date' => '22-08-2026',
+            'request.ticket_no' => 'TKT-2856',
+            'request.fulfilled_date' => '22-08-2026',
+            'request.fulfilled_by' => 'Kankanok P',
+            'request.reason' => 'Onboarding request with the new employee,<br />
+first day 01-09-2026.',
+            'request.details' => 'Device type: Desktop PC<br>Mailbox address: somchai@inaba-foods.co.th',
+            'request.approval_history' => EmailTable::render(
+                RequestNotificationService::HISTORY_HEADERS,
+                [
+                    ['Supervisor', '⏭️ Skipped - the requester has no manager', '-', '-'],
+                    ['Department Manager', '✅ Approved', 'Anong Wattana', '19-08-2026'],
+                ],
+                [],
+                RequestNotificationService::HISTORY_WIDTHS,
+                [1],
+            ),
+            'approver.name' => 'Anong Wattana',
+            'approver.position' => 'Manager',
+            'approver.department' => 'Information Technology',
             'requester.name' => 'Manee Jaidee',
             'actor.name' => 'Anong Wattana',
             'step.label' => 'Department manager',

@@ -4,6 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accessApi } from '../api/accessApi';
 
 /** Aggregate figures for the Access Directory overview tab. */
+/**
+ * The signed-in person's own access — the lower half of My assets & access.
+ *
+ * Separate from useAccessSummary and the registry lists: those need the directory master,
+ * this one needs only the right to look at yourself.
+ */
+export const useMyAccess = (enabled = true) => useQuery({ queryKey: ['access-mine'], queryFn: accessApi.mine, enabled });
+
 export const useAccessSummary = (enabled = true) => useQuery({ queryKey: ['access-summary'], queryFn: accessApi.summary, enabled });
 
 // The Access sidebar badge (governance anomalies) now comes from the combined

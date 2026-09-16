@@ -1,5 +1,5 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { AccessKind, AccessMember, AccessSummary, ApiEnvelope, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
+import type { EmployeeAccess, AccessKind, AccessMember, AccessSummary, ApiEnvelope, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 
 async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
@@ -28,6 +28,9 @@ function toFormData(payload: Record<string, unknown>): FormData {
 
 export const accessApi = {
     summary: () => http.get<ApiEnvelope<AccessSummary>>('/access/dashboard').then((r) => r.data.data),
+    // What the signed-in person may reach — the self-service half of My assets & access.
+    // Its own key (access.my), not the directory master. See MyAccessController.
+    mine: () => http.get<ApiEnvelope<EmployeeAccess>>('/access/mine').then((r) => r.data.data),
     emailGroups: () => http.get<ApiEnvelope<EmailGroup[]>>('/email-groups').then((r) => r.data.data),
     fileShares: () => http.get<ApiEnvelope<FileShare[]>>('/file-shares').then((r) => r.data.data),
     socialPlatforms: () => http.get<ApiEnvelope<SocialPlatform[]>>('/social-platforms').then((r) => r.data.data),

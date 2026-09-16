@@ -7,12 +7,14 @@ use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
+use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Database\Factories\TicketFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Ticket extends Model
 {
@@ -107,6 +109,30 @@ class Ticket extends Model
     public function attachments(): HasMany
     {
         return $this->hasMany(TicketAttachment::class);
+    }
+
+    /**
+     * Progress notes, oldest first — the case read as it happened.
+     *
+     * @return HasMany<TicketUpdate, $this>
+     */
+    public function updates(): HasMany
+    {
+        return $this->hasMany(TicketUpdate::class)->orderBy('id');
+    }
+
+    /**
+     * The service request that opened this case, when one did.
+     *
+     * The link is stored on the request (service_requests.ticket_id), so this is the way back.
+     * The SLA needs it: what was asked for decides how long the work takes, and that is known
+     * the moment the case is opened — unlike a priority, which nobody has chosen yet.
+     *
+     * @return HasOne<ServiceRequest, $this>
+     */
+    public function serviceRequest(): HasOne
+    {
+        return $this->hasOne(ServiceRequest::class);
     }
 
     /** True when the ticket is still waiting for an IT staff to pick it up. */

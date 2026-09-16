@@ -37,6 +37,7 @@ export function SearchableSelect({
     clearable = false,
     active = false,
     preferDown = false,
+    id,
 }: {
     value: string;
     onChange: (v: string) => void;
@@ -49,6 +50,8 @@ export function SearchableSelect({
     /** Measure drop direction against the viewport instead of the enclosing dialog, so a field
      *  near a small dialog's footer opens DOWN (overflowing the dialog) rather than flipping up. */
     preferDown?: boolean;
+    /** Set by <Field> so its label can point here — clicking the label opens the menu. */
+    id?: string;
 }) {
     const t = useT();
     const [open, setOpen] = useState(false);
@@ -209,6 +212,7 @@ export function SearchableSelect({
     return (
         <div ref={ref} className="relative min-w-0">
             <button
+                id={id}
                 type="button"
                 onClick={toggle}
                 className={cn(

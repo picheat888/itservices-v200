@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketStatus;
+use App\Jobs\SendTemplatedEmail;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
@@ -15,10 +16,13 @@ use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\RequestService;
 use App\Services\Ticket\TicketService;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmailTemplateSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use ReflectionObject;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -38,7 +42,7 @@ class RequestAutoTicketTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
@@ -234,6 +238,52 @@ class RequestAutoTicketTest extends TestCase
         $notice = $this->requester->notifications()->get()
             ->last(fn ($n) => ($n->data['subtype'] ?? null) === 'cancelled');
         $this->assertStringContainsString('Model discontinued', (string) $notice?->data['remark']);
+    }
+
+    /**
+     * The mail that goes with that bell has to say more than "it is cancelled": who
+     * cancelled it, when, why, and what the request was — the same shape as the reject
+     * and fulfil mails, since the reader has no other copy of any of it.
+     */
+    public function test_the_cancellation_mail_carries_the_reason_the_case_and_the_approvals(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        [$request, $tech] = $this->approveAndAssignTicket();
+        Bus::fake();
+
+        $this->actingAs($tech)->postJson("/api/tickets/{$request->ticket_id}/resolve", [
+            'mode' => 'cancel',
+            'resolution' => 'Model discontinued; the requester will pick another one.',
+        ])->assertOk();
+
+        $job = collect(Bus::dispatched(SendTemplatedEmail::class))
+            ->first(fn (SendTemplatedEmail $queued) => $this->jobProp($queued, 'templateKey') === 'request.not_delivered');
+        $this->assertNotNull($job, 'The requester was told nothing by mail.');
+
+        $html = $this->jobProp($job, 'html');
+        $this->assertStringContainsString('Model discontinued', $html);
+        $this->assertStringContainsString($tech->name, $html, 'the mail does not say who cancelled it');
+        $this->assertStringContainsString(now()->format('d-m-Y'), $html, 'the mail does not say when');
+        $this->assertStringContainsString($request->reference, $html);
+        $this->assertStringContainsString((string) $request->ticket->ticket_no, $html);
+        // It cleared every step before IT stopped it, and the table is what shows that.
+        $this->assertStringContainsString('Already approved', $html);
+        // Every variable in the body has to be one emailUser() actually sends.
+        $this->assertStringNotContainsString('{{', $html);
+        $this->assertSame(
+            preg_match_all('/<p(\s[^>]*)?>/i', $html),
+            substr_count(strtolower($html), '</p>'),
+            'the message ends with a paragraph still open',
+        );
+    }
+
+    /** Read a queued mail job's private field, the way the other mail tests do. */
+    private function jobProp(object $job, string $name): string
+    {
+        $property = (new ReflectionObject($job))->getProperty($name);
+        $property->setAccessible(true);
+
+        return (string) $property->getValue($job);
     }
 
     public function test_a_ticket_that_belongs_to_no_request_settles_nothing(): void

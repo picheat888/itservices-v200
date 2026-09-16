@@ -7,9 +7,8 @@ import { PermissionCardHeader } from './permission-card-header';
 
 // Mirrors App\Support\Permissions::assetHierarchy() — keep in sync.
 const MASTER = 'assets.module';
-// The self-service "My Assets" pair is master-independent (like employees.edit_own):
-// `my` opens the page; `return` is its child and requires `my`.
-const STANDALONE = { view: 'assets.my', children: ['assets.return'] };
+// The self-service pair (assets.my + assets.return) is NOT here: it is master-independent
+// and now lives in its own card — see self-service-permission-tree.tsx.
 // `chip: false` hides the "View" tag — used for single-switch groups (Dashboard) and
 // the management/special groups, which gate a whole area rather than a view/manage split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
@@ -97,9 +96,6 @@ export function AssetPermissionTree({
                     group.children.forEach((c) => next.delete(c));
                 }
                 // Turning off "My Assets" clears its child.
-                if (key === STANDALONE.view) {
-                    STANDALONE.children.forEach((c) => next.delete(c));
-                }
             } else {
                 next.add(key);
                 const parent = GROUPS.find((g) => g.children.includes(key));
@@ -110,20 +106,13 @@ export function AssetPermissionTree({
                 if (GROUPS.some((g) => g.view === key)) {
                     next.add(MASTER);
                 }
-                // A standalone child implies its self-service view (not the master).
-                if (STANDALONE.children.includes(key)) {
-                    next.add(STANDALONE.view);
-                }
             }
             return next;
         });
     };
 
-    const myOn = has(STANDALONE.view);
-    const standaloneActive = (myOn ? 1 : 0) + STANDALONE.children.filter((c) => has(c) && myOn).length;
-    const gatedActive = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
-    const activeCount = gatedActive + standaloneActive;
-    const totalCount = GATED_KEYS.length + 1 + STANDALONE.children.length; // + my + its children
+    const activeCount = masterOn ? GATED_KEYS.filter((k) => has(k) && hasAncestors(k, has)).length : 0;
+    const totalCount = GATED_KEYS.length;
 
     return (
         <div className="border-border rounded-lg border">
@@ -184,36 +173,6 @@ export function AssetPermissionTree({
                 })}
             </div>
 
-            {/* Standalone self-service group ("My Assets") — never locked by the master. */}
-            <div className="border-border border-t px-3.5 py-1.5">
-                <div className="flex min-h-[34px] items-center gap-2">
-                    <div className="min-w-0">
-                        <div className="text-sm font-medium">{label(STANDALONE.view, lang)}</div>
-                        <div className="text-muted-foreground text-[10.5px]">
-                            {lang === 'th' ? 'บริการตนเอง · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of the master'}
-                        </div>
-                    </div>
-                    <span className="ml-auto">
-                        <Switch on={myOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />
-                    </span>
-                </div>
-                <div className="border-border ml-2 space-y-0.5 border-l pl-3">
-                    {STANDALONE.children.map((child) => {
-                        const childInfo = info(child, lang);
-                        return (
-                            <div key={child} className="flex min-h-[30px] items-center gap-2">
-                                <span className="text-muted-foreground flex items-center gap-1 text-[12.5px]">
-                                    {label(child, lang)}
-                                    {childInfo && <InfoHint text={childInfo} />}
-                                </span>
-                                <span className="ml-auto">
-                                    <Switch on={has(child) && myOn} locked={isSuper || !myOn} onClick={() => toggle(child)} />
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
         </div>
     );
 }

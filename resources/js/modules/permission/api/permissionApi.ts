@@ -29,6 +29,10 @@ export interface AuditDetails {
     to?: string;
     /** Field-level before/after diff: { field: { from, to } } (from AuditLog::changes) */
     changes?: Record<string, { from: unknown; to: unknown }>;
+    /** The records one bulk action touched, by their code — so "5 assets" can name the five. */
+    items?: string[];
+    /** Anything else worth recording about the action, as raw key → value. */
+    facts?: Record<string, string>;
 }
 
 export interface AuditEntry {

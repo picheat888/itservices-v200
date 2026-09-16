@@ -1,12 +1,13 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
+import { type Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { cn, toRecordId } from '@/shared/lib/utils';
-import type { Asset, AssetStatus, AssetType } from '@/shared/types';
+import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -15,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useUiStore } from '@/stores/ui';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    ArrowRight,
     Box,
     Check,
     CheckCircle2,
@@ -28,6 +28,7 @@ import {
     FlaskConicalOff,
     Layers,
     Lock,
+    MapPin,
     PackageCheck,
     Plus,
     RefreshCcw,
@@ -45,7 +46,10 @@ import { useSearchParams } from 'react-router-dom';
 import { assetApi } from '../api/assetApi';
 import { AssetActivityCard } from '../components/asset-activity-card';
 import { AssetDetailDrawer } from '../components/asset-detail-drawer';
+import { AssetEventBadge } from '../components/asset-event-badge';
 import { AssetFormDrawer } from '../components/asset-form-drawer';
+import { Party } from '../components/asset-history-tab';
+import { AssetLocationDialog } from '../components/asset-location-dialog';
 import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } from '../components/asset-meta';
 import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetTagBadge } from '../components/asset-tag-badge';
@@ -81,6 +85,23 @@ function StatCard({ label, value, hint, icon: Icon }: { label: string; value: st
 
 const ALL = '__all__';
 
+/**
+ * The three lifecycle buckets the "By type" bars are split into, in stack order.
+ *
+ * `status` is the bucket's representative status, and it is what colors the bar segment: the
+ * card reads the same palette the status badges do (Settings -> Assets, so an admin who
+ * recolors "Ready" recolors this chart too) instead of picking colors of its own. Anything
+ * else would have the bar disagree with the badges sitting right below it on the same page.
+ *
+ * One list drives the legend, the bar segments and the per-row counts, so the three can
+ * never fall out of step.
+ */
+const TYPE_BUCKETS = [
+    { key: 'ready', labelKey: 'asset_bucket_ready', status: 'ready' },
+    { key: 'used', labelKey: 'asset_bucket_used', status: 'deployed' },
+    { key: 'writeoff', labelKey: 'asset_writeoff', status: 'writeoff' },
+] as const;
+
 /** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
 function AssetDashboardSkeleton() {
     return (
@@ -101,12 +122,16 @@ function AssetDashboardSkeleton() {
                     <div className="border-border border-b px-5 py-3.5">
                         <div className="bg-muted h-4 w-40 animate-pulse rounded" />
                     </div>
-                    <div className="space-y-3.5 p-5">
+                    {/* By type: two lines per row — name + counts, then the split bar. */}
+                    <div className="space-y-4 p-5">
                         {Array.from({ length: 7 }).map((_, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className="bg-muted h-4 w-36 shrink-0 animate-pulse rounded" />
-                                <div className="bg-muted h-2 flex-1 animate-pulse rounded-full" />
-                                <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
+                            <div key={i} className="space-y-1.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-muted h-4 flex-1 animate-pulse rounded" />
+                                    <div className="bg-muted h-3 w-16 shrink-0 animate-pulse rounded" />
+                                    <div className="bg-muted h-4 w-6 shrink-0 animate-pulse rounded" />
+                                </div>
+                                <div className="bg-muted h-2 animate-pulse rounded-full" />
                             </div>
                         ))}
                     </div>
@@ -200,12 +225,8 @@ export default function AssetsPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
-    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive'>(null);
+    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location'>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
-
-    // Transfers tab paginates client-side over the loaded list (backend returns the latest 100).
-    const [transfersPage, setTransfersPage] = useState(1);
-    const [transfersPerPage, setTransfersPerPage] = useState(20);
 
     const { data: warehouses = [] } = useWarehouses();
     const { data: categories = [] } = useCategories();
@@ -222,6 +243,16 @@ export default function AssetsPage() {
         queryFn: () => assetApi.get(openId as number),
         enabled: openId != null,
     });
+    /** Open the drawer for an id alone — the transfer log knows the id, not the record. */
+    const openAssetId = (id: number) =>
+        setSearchParams(
+            (sp) => {
+                const p = new URLSearchParams(sp);
+                p.set('view', String(id));
+                return p;
+            },
+            { replace: true },
+        );
     const openAsset = (a: Asset) => {
         qc.setQueryData(['asset', 'view', a.id], a);
         setSearchParams(
@@ -259,8 +290,40 @@ export default function AssetsPage() {
         warehouse: warehouseFilter || undefined,
     });
     const { accept, bulk } = useAssetMutations();
-    const { data: transfers = [], isLoading: transfersLoading } = useAssetTransfers();
+    const { data: transferLog, isLoading: transfersLoading } = useAssetTransfers();
+    const transfers = transferLog?.data ?? [];
+    // How far back the endpoint reaches. Only worth saying once the log is actually that long.
+    const transfersCapped = !!transferLog?.meta?.limit && transfers.length >= transferLog.meta.limit;
     const { data: pendingReturns = [] } = usePendingReturns();
+
+    // Transfer log — the same columns the asset's own History tab uses, plus the asset itself,
+    // since this list spans every asset in the system.
+    const transferLogColumns: Column<AssetTransferLog>[] = [
+        {
+            key: 'date',
+            header: t('asset_hist_date'),
+            render: (tr) => <span className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">{tr.date ?? '—'}</span>,
+        },
+        {
+            key: 'asset',
+            header: t('asset_no'),
+            render: (tr) => (
+                <div className="leading-tight">
+                    <span className="font-mono text-[11px] font-medium">{tr.asset_tag}</span>
+                    <span className="text-muted-foreground block text-[11px]">{tr.asset_model || '—'}</span>
+                </div>
+            ),
+        },
+        { key: 'event', header: t('asset_hist_event'), render: (tr) => <AssetEventBadge kind={tr.kind} /> },
+        { key: 'from', header: t('asset_hist_from'), render: (tr) => <Party label={tr.from_owner} name={tr.from_name} muted /> },
+        { key: 'to', header: t('asset_hist_to'), render: (tr) => <Party label={tr.to_owner} name={tr.to_name} /> },
+        { key: 'reason', header: t('asset_hist_reason'), render: (tr) => <span className="text-[13px]">{tr.reason ?? '—'}</span> },
+        {
+            key: 'by',
+            header: t('asset_hist_by'),
+            render: (tr) => <span className="text-muted-foreground text-[13px]">{tr.performed_by ?? '—'}</span>,
+        },
+    ];
 
     const rows = listData?.data ?? [];
     const meta = listData?.meta;
@@ -272,13 +335,6 @@ export default function AssetsPage() {
     const perPageDisplay = meta?.per_page ?? perPage;
     const currentPage = meta?.current_page ?? page;
     const lastPage = meta?.last_page ?? 1;
-
-    // Client-side slice for the Transfers tab (the endpoint returns a flat list, not pages).
-    const transfersTotal = transfers.length;
-    const transfersPageCount = Math.max(1, Math.ceil(transfersTotal / transfersPerPage));
-    const transfersSafePage = Math.min(transfersPage, transfersPageCount);
-    const transfersStart = (transfersSafePage - 1) * transfersPerPage;
-    const transfersRows = transfers.slice(transfersStart, transfersStart + transfersPerPage);
 
     // The create form is URL-driven (?add=1) so a reload / shared link reopens it; edit stays local.
     const adding = searchParams.get('add') != null;
@@ -311,23 +367,25 @@ export default function AssetsPage() {
 
     // Bulk actions are locked to one status group; this maps a status to its action (null = not bulk-actionable).
     const bulkActionFor = useCallback(
-        (status: AssetStatus | null): 'transfer' | 'recall' | 'force_recall' | 'receive' | null => {
+        (status: AssetStatus | null): 'transfer' | 'recall' | 'force_recall' | 'receive' | 'relocate' | null => {
             switch (status) {
                 case 'ready':
                     return canTransfer ? 'transfer' : null;
                 case 'pending_acceptance':
                     return canTransfer || canForceRecall ? 'recall' : null;
+                // An asset in use can always have its location corrected (assets.edit) — that is
+                // the fallback when the viewer cannot recall it, so the rows stay tickable.
                 case 'common':
-                    return canTransfer || canForceRecall ? 'recall' : null;
+                    return canTransfer || canForceRecall ? 'recall' : canEdit ? 'relocate' : null;
                 case 'deployed':
-                    return canForceRecall ? 'force_recall' : null;
+                    return canForceRecall ? 'force_recall' : canEdit ? 'relocate' : null;
                 case 'pending_return':
                     return canReceive ? 'receive' : null;
                 default:
                     return null;
             }
         },
-        [canTransfer, canReceive, canForceRecall],
+        [canTransfer, canReceive, canForceRecall, canEdit],
     );
 
     const clearSelection = () => {
@@ -398,11 +456,17 @@ export default function AssetsPage() {
 
     const typeBars = summary?.by_type ?? [];
     const maxTypeCount = Math.max(1, ...typeBars.map((b) => b.count));
+    // Same status palette the badges use, so the chart and the table below it agree.
+    const statusColors = useUiStore((s) => s.assetStatusColors);
     // Localize the asset-type name from Master Data (categories carry both name + name_th).
     const catLabel = (type: string) => {
         const c = categories.find((x) => x.name === type);
         return c ? (lang === 'th' ? (c.name_th ?? c.name) : c.name) : type;
     };
+    // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
+    // written-out split is what a screen reader and a hover both get.
+    const typeBarTitle = (b: AssetSummary['by_type'][number]) =>
+        `${catLabel(b.type)}: ${TYPE_BUCKETS.map((s) => `${b[s.key]} ${t(s.labelKey)}`).join(', ')}`;
 
     return (
         <div className="space-y-6">
@@ -518,24 +582,71 @@ export default function AssetsPage() {
                             of stretching the shorter one to fake a matching height. */}
                         <div className="grid items-start gap-4 lg:grid-cols-2">
                             <Card className="overflow-hidden">
-                                <div className="border-border flex items-center gap-2 border-b px-5 py-3.5">
-                                    <Layers className="text-muted-foreground h-4 w-4" />
-                                    <span className="text-sm font-semibold">{t('asset_by_type')}</span>
+                                <div className="border-border flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3.5">
+                                    <div className="flex items-center gap-2">
+                                        <Layers className="text-muted-foreground h-4 w-4" />
+                                        <span className="text-sm font-semibold">{t('asset_by_type')}</span>
+                                    </div>
+                                    {/* Legend — the one place the three colors are named. The rows below
+                                        mark their counts with the same dots and lean on this. */}
+                                    <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+                                        {TYPE_BUCKETS.map((s) => (
+                                            <span key={s.key} className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: statusColors[s.status] }} />
+                                                {t(s.labelKey)}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="space-y-3.5 p-5">
+                                <div className="space-y-4 p-5">
                                     {typeBars.map((b) => (
-                                        <div key={b.type} className="flex items-center gap-3">
-                                            <div className="flex w-36 shrink-0 items-center gap-2 overflow-hidden text-sm" title={catLabel(b.type)}>
-                                                <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
-                                                <span className="truncate">{catLabel(b.type)}</span>
+                                        // Two lines per type: name + counts + total, then the bar on its own
+                                        // full-width line. Sharing one line left the bar too narrow for a
+                                        // three-way split — a single unit of write-off came out a few pixels wide.
+                                        <div key={b.type} className="space-y-1.5">
+                                            <div className="flex items-baseline gap-3">
+                                                <div className="flex min-w-0 flex-1 items-center gap-2 text-sm" title={catLabel(b.type)}>
+                                                    <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                    <span className="truncate">{catLabel(b.type)}</span>
+                                                </div>
+                                                {/* Each count carries its bucket's dot, so it reads without
+                                                    counting columns against the legend. An empty bucket fades
+                                                    out — its dot promises a segment that isn't in the bar. */}
+                                                <div className="flex shrink-0 items-center gap-2.5 font-mono text-xs">
+                                                    {TYPE_BUCKETS.map((s) => (
+                                                        <span
+                                                            key={s.key}
+                                                            title={t(s.labelKey)}
+                                                            className={cn('flex items-center gap-1', b[s.key] === 0 && 'opacity-40')}
+                                                        >
+                                                            <span
+                                                                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                                                style={{ backgroundColor: statusColors[s.status] }}
+                                                            />
+                                                            {b[s.key]}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                                <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
                                             </div>
-                                            <div className="bg-secondary h-2 flex-1 overflow-hidden rounded-full">
-                                                <div
-                                                    className="bg-brand h-full rounded-full"
-                                                    style={{ width: `${(b.count / maxTypeCount) * 100}%` }}
-                                                />
+                                            {/* Segment widths stay relative to the biggest type, not to this type's
+                                                own total, so bar lengths still compare across rows. */}
+                                            <div
+                                                role="img"
+                                                aria-label={typeBarTitle(b)}
+                                                title={typeBarTitle(b)}
+                                                className="bg-secondary flex h-2 overflow-hidden rounded-full"
+                                            >
+                                                {TYPE_BUCKETS.map((s) => (
+                                                    <div
+                                                        key={s.key}
+                                                        style={{
+                                                            width: `${(b[s.key] / maxTypeCount) * 100}%`,
+                                                            backgroundColor: statusColors[s.status],
+                                                        }}
+                                                    />
+                                                ))}
                                             </div>
-                                            <span className="w-8 shrink-0 text-right font-mono text-sm font-semibold">{b.count}</span>
                                         </div>
                                     ))}
                                     {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
@@ -783,6 +894,14 @@ export default function AssetsPage() {
                                         {t('asset_mark_received')}
                                     </Button>
                                 )}
+                                {/* A desk move: the holder keeps the asset, only the place changes. Offered
+                                    for both in-use groups and gated by assets.edit, not assets.transfer. */}
+                                {(selectionStatus === 'deployed' || selectionStatus === 'common') && canEdit && (
+                                    <Button size="sm" variant="outline" onClick={() => setBulkDialog('location')}>
+                                        <MapPin className="h-4 w-4" />
+                                        {t('asset_location_update')}
+                                    </Button>
+                                )}
                                 {/* Write-off only once back in the pool (Ready) — anything still out must be
                                     recalled / returned to Ready first. */}
                                 {canRetire && selectionStatus === 'ready' && (
@@ -1022,107 +1141,25 @@ export default function AssetsPage() {
                 )}
 
                 {tab === 'transfers' && (
-                    <div className="space-y-3 p-5">
-                        <div className="border-border overflow-hidden rounded-xl border">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-border bg-muted/40 text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                            <th className="px-4 py-2.5">{t('asset_registered')}</th>
-                                            <th className="px-4 py-2.5">{t('asset_tag')}</th>
-                                            <th className="px-4 py-2.5">{lang === 'th' ? 'จาก' : 'From'}</th>
-                                            <th className="px-4 py-2.5" />
-                                            <th className="px-4 py-2.5">{lang === 'th' ? 'ถึง' : 'To'}</th>
-                                            <th className="px-4 py-2.5">{t('asset_reason')}</th>
-                                            <th className="px-4 py-2.5">{lang === 'th' ? 'โดย' : 'By'}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {transfersLoading ? (
-                                            Array.from({ length: 8 }).map((_, r) => (
-                                                <tr key={`skeleton-${r}`} className="border-border/60 border-b last:border-0">
-                                                    {Array.from({ length: 7 }).map((_, c) => (
-                                                        <td key={c} className="px-4 py-2.5">
-                                                            <div className="bg-muted h-4 w-3/4 max-w-[160px] animate-pulse rounded" />
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))
-                                        ) : transfers.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={7} className="text-muted-foreground px-4 py-16 text-center text-sm">
-                                                    {t('asset_none')}
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            transfersRows.map((tr) => (
-                                                <tr key={tr.id} className="border-border/60 border-b last:border-0">
-                                                    <td className="px-4 py-2.5 font-mono text-xs">{tr.date}</td>
-                                                    <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tr.asset_tag}</td>
-                                                    <td className="px-4 py-2.5">{tr.from_owner ?? '—'}</td>
-                                                    <td className="text-muted-foreground px-4 py-2.5">
-                                                        <ArrowRight className="h-4 w-4" />
-                                                    </td>
-                                                    <td className="px-4 py-2.5 font-medium">{tr.to_owner}</td>
-                                                    <td className="text-muted-foreground px-4 py-2.5">{tr.reason ?? '—'}</td>
-                                                    <td className="px-4 py-2.5">{tr.performed_by ?? '—'}</td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
-                            <div className="flex items-center gap-2">
-                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
-                                <Select
-                                    value={String(transfersPerPage)}
-                                    onValueChange={(v) => {
-                                        setTransfersPerPage(Number(v));
-                                        setTransfersPage(1);
-                                    }}
-                                >
-                                    <SelectTrigger className="h-8 w-[72px]">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {[20, 50, 100].map((n) => (
-                                            <SelectItem key={n} value={String(n)}>
-                                                {n}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <span>
-                                    {transfersTotal === 0 ? 0 : transfersStart + 1}–{Math.min(transfersStart + transfersPerPage, transfersTotal)}{' '}
-                                    {t('asset_of')} {transfersTotal}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => setTransfersPage((p) => Math.max(1, p - 1))}
-                                        disabled={transfersSafePage <= 1}
-                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                    </button>
-                                    <span className="text-foreground px-1 font-medium">
-                                        {transfersSafePage} / {transfersPageCount}
-                                    </span>
-                                    <button
-                                        onClick={() => setTransfersPage((p) => Math.min(transfersPageCount, p + 1))}
-                                        disabled={transfersSafePage >= transfersPageCount}
-                                        className="border-border hover:bg-accent flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-40"
-                                    >
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="space-y-3 p-5 [--row-py:0.3125rem]">
+                        <DataTable
+                            columns={transferLogColumns}
+                            rows={transfers}
+                            rowKey={(tr) => tr.id}
+                            rowHeight={32}
+                            loading={transfersLoading}
+                            // One box answers "what happened to INK-IT-014" and "what did Somchai
+                            // hand back" — the questions this log is opened with.
+                            searchable={(tr) =>
+                                `${tr.asset_tag} ${tr.asset_model ?? ''} ${tr.from_name ?? ''} ${tr.from_owner ?? ''} ${tr.to_name ?? ''} ${tr.to_owner} ${tr.performed_by ?? ''}`
+                            }
+                            onRowClick={(tr) => tr.asset_id && openAssetId(tr.asset_id)}
+                        />
+                        {/* The endpoint stops at a fixed number of rows. Saying so beats a footer
+                            that reads "1-20 of 100" as though 100 were everything there ever was. */}
+                        {transfersCapped && (
+                            <p className="text-muted-foreground text-xs">{t('asset_log_capped').replace('{n}', String(transfers.length))}</p>
+                        )}
                     </div>
                 )}
             </Card>
@@ -1146,6 +1183,7 @@ export default function AssetsPage() {
                     setRecallAsset(a);
                 }}
                 onEdit={canEdit ? openEdit : undefined}
+                canUpdateLocation={canEdit}
                 canTransfer={canTransfer}
                 canReceive={canReceive}
                 canForceRecall={canForceRecall}
@@ -1172,6 +1210,15 @@ export default function AssetsPage() {
                 ids={selectedIds}
                 mode="recall"
                 open={bulkDialog === 'recall'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetLocationDialog
+                ids={selectedIds}
+                open={bulkDialog === 'location'}
                 onClose={() => setBulkDialog(null)}
                 onDone={() => {
                     setBulkDialog(null);

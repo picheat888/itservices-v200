@@ -8,6 +8,7 @@ import {
     type LucideIcon,
     Mail,
     MonitorCog,
+    PackageCheck,
     Settings,
     Shield,
     Users,
@@ -35,6 +36,8 @@ const MODULE_ICON: Record<string, LucideIcon> = {
     notifications: Mail,
     reports: LineChart,
     settings: Settings,
+    // Not a module — the self-service card. Same icon the sidebar gives the page it governs.
+    self_service: PackageCheck,
 };
 
 /**

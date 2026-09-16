@@ -41,7 +41,7 @@ class TicketSlaAlertService
         $sent = ['at_risk' => 0, 'breached' => 0];
 
         Ticket::query()
-            ->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress])
+            ->whereIn('status', TicketStatus::live())
             ->chunkById(200, function ($tickets) use (&$sent) {
                 foreach ($tickets as $ticket) {
                     $sla = TicketSla::forTicket($ticket);

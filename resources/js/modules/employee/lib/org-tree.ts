@@ -3,8 +3,8 @@ import * as dagre from '@dagrejs/dagre';
 import type { Node } from '@xyflow/react';
 
 /** Fixed node box used for both rendering and dagre layout. */
-export const NODE_W = 244;
-export const NODE_H = 104;
+export const NODE_W = 292;
+export const NODE_H = 106;
 
 /** Chart orientation: top-to-bottom or left-to-right. */
 export type OrgDir = 'TB' | 'LR';

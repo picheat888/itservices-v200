@@ -181,7 +181,8 @@ export interface EmployeePayload {
     section_id?: number | null;
     manager_id?: number | null;
     email?: string | null;
-    username?: string | null;
+    // No username: it belongs to the login account, and is set through the credentials
+    // endpoints alone. The server does not accept it here.
     phone?: string | null;
     joined_at?: string | null;
     photo?: File | null;
@@ -272,6 +273,8 @@ export const employeeApi = {
     resign: (id: number, reason: string, lastDay: string | null) =>
         mutate<Employee>('post', `/employees/${id}/resign`, { reason, last_day: lastDay }),
     cancelResign: (id: number) => mutate<Employee>('post', `/employees/${id}/cancel-resign`),
+    /** Erase a mis-entered employee (and its unused login). Refused 422 once anything refers to them. */
+    remove: (id: number) => mutate<void>('delete', `/employees/${id}`),
     /** Manage an existing account: change username and/or reset the password (returns new_password when reset). */
     updateCredentials: async (id: number, payload: UpdateCredentialsPayload) => {
         // NOTE: this endpoint returns { message, new_password } at the top level

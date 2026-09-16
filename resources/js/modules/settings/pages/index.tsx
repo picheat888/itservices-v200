@@ -11,8 +11,9 @@ import { toastDeleteError } from '@/shared/lib/api-errors';
 import { resolveBrand } from '@/shared/lib/brand-color';
 import { countryOptions, currencyOptions } from '@/shared/lib/locale-data';
 import { getLucideIcon } from '@/shared/lib/lucide-icons';
+import { REQUEST_TYPES, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn, isEmail } from '@/shared/lib/utils';
-import type { AssetModel, Brand, Category, LocationItem, TicketPriority, Vendor, Warehouse } from '@/shared/types';
+import type { AssetModel, Brand, Category, LocationItem, ServiceRequestType, TicketPriority, Vendor, Warehouse } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -51,6 +52,7 @@ import {
     type MailSettingsPayload,
     type SecuritySettings,
     type TicketSlaHours,
+    type TicketSlaRequestTarget,
 } from '../api/settingsApi';
 import { BrandModal } from '../components/brand-modal';
 import { CategoryModal } from '../components/category-modal';
@@ -1335,6 +1337,27 @@ function AssetsTab() {
 
 const SLA_PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
 
+/**
+ * "≈ 3 working days" beside a target in hours.
+ *
+ * Nobody thinks in 72 hours; they think in three days. The conversion uses the working window
+ * set further down this same page — the clocks only count those hours, so dividing by 24 would
+ * print a number the system does not agree with. Below one day there is nothing to add.
+ */
+function workingDaysHint(resolveHours: number, hours: TicketSlaHours, t: (key: string) => string): string {
+    const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+    const breakLength = hours.break_start && hours.break_end ? minutes(hours.break_end) - minutes(hours.break_start) : 0;
+    const perDay = minutes(hours.end) - minutes(hours.start) - breakLength;
+    if (!Number.isFinite(resolveHours) || resolveHours < 1 || perDay <= 0) return '';
+
+    // Only once the target is a full working day or more. Rounding 5 hours up to "≈ 1 day"
+    // both overstates it and makes 5 and 9 hours read as the same thing.
+    const target = resolveHours * 60;
+    if (target < perDay) return '';
+
+    return t('set_sla_approx_days').replace('{n}', String(Math.round(target / perDay)));
+}
+
 // ISO weekdays for the SLA working-window picker (1 = Monday … 7 = Sunday).
 const SLA_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
@@ -1344,9 +1367,14 @@ function TicketsTab() {
     const { data } = useSettings();
     const update = useUpdateTicketSla();
     const stored = data?.ticket_sla;
+    const storedRequest = data?.ticket_sla_request;
     const storedResponse = data?.ticket_sla_response;
     const storedHours = data?.ticket_sla_hours;
     const [draft, setDraft] = useState<Record<string, { resolve: number }>>({});
+    // Targets keyed on what was requested. A list rather than a fixed table: the administrator
+    // adds a row only for the kinds of request whose length differs from their urgency.
+    const [reqTargets, setReqTargets] = useState<TicketSlaRequestTarget[]>([]);
+    const [reqErrors, setReqErrors] = useState<Record<string, string>>({});
     // First response is one system-wide target — priority doesn't exist while a case waits.
     const [respTarget, setRespTarget] = useState(120);
     const [respError, setRespError] = useState('');
@@ -1365,6 +1393,9 @@ function TicketsTab() {
         if (stored) setDraft(stored);
     }, [stored]);
     useEffect(() => {
+        if (storedRequest) setReqTargets(storedRequest);
+    }, [storedRequest]);
+    useEffect(() => {
         if (storedResponse != null) setRespTarget(storedResponse);
     }, [storedResponse]);
     useEffect(() => {
@@ -1378,10 +1409,37 @@ function TicketsTab() {
             hours.break_start !== storedHours.break_start ||
             hours.break_end !== storedHours.break_end ||
             hours.days.join() !== storedHours.days.join());
+    // Compared as a whole: a row added, removed, switched or retimed all count the same.
+    const reqSignature = (rows: TicketSlaRequestTarget[]) => rows.map((r) => `${r.type}:${r.resolve}:${r.enabled ? 1 : 0}`).join('|');
+    const reqDirty = !!storedRequest && reqSignature(reqTargets) !== reqSignature(storedRequest);
     const dirty =
         hoursDirty ||
+        reqDirty ||
         (storedResponse != null && respTarget !== storedResponse) ||
         (!!stored && SLA_PRIORITIES.some((p) => draft[p] && draft[p].resolve !== stored[p]?.resolve));
+
+    /** The request kinds without a target yet — the only ones the picker can offer. */
+    const availableRequestTypes = REQUEST_TYPES.filter((type) => !reqTargets.some((r) => r.type === type));
+
+    /**
+     * A new exception starts on the first unused type and the medium target — the number the
+     * case would have had anyway, so the row is never wrong before it is edited.
+     */
+    const addRequestTarget = () => {
+        const type = availableRequestTypes[0];
+        if (!type) return;
+        setReqTargets((rows) => [...rows, { type, resolve: draft.medium?.resolve ?? 24, enabled: true }]);
+        setSaved(false);
+    };
+    const setRequestTarget = (type: string, patch: Partial<TicketSlaRequestTarget>) => {
+        setReqTargets((rows) => rows.map((r) => (r.type === type ? { ...r, ...patch } : r)));
+        setSaved(false);
+        setReqErrors((e) => ({ ...e, [type]: '' }));
+    };
+    const removeRequestTarget = (type: string) => {
+        setReqTargets((rows) => rows.filter((r) => r.type !== type));
+        setSaved(false);
+    };
 
     /** Toggle one working day, keeping the list in Mon→Sun order. */
     const toggleDay = (d: number) => {
@@ -1447,11 +1505,25 @@ function TicketsTab() {
             windowErr = t('set_sla_err_break_range');
         }
 
+        // Request-type targets follow the same two rules as the priority rows.
+        const reqNext: Record<string, string> = {};
+        for (const row of reqTargets) {
+            if (!Number.isInteger(row.resolve) || row.resolve < 1 || row.resolve > 8760) {
+                reqNext[row.type] = t('set_sla_err_resolve');
+            } else if (!respErr && row.resolve * 60 < respTarget) {
+                reqNext[row.type] = t('set_sla_err_order');
+            }
+        }
+
         setRespError(respErr);
         setErrors(next);
+        setReqErrors(reqNext);
         setHoursError(windowErr);
-        if (respErr || Object.keys(next).length > 0 || windowErr) return;
-        update.mutate({ ticket_sla: draft, ticket_sla_response: respTarget, ticket_sla_hours: hours }, { onSuccess: () => setSaved(true) });
+        if (respErr || Object.keys(next).length > 0 || Object.keys(reqNext).length > 0 || windowErr) return;
+        update.mutate(
+            { ticket_sla: draft, ticket_sla_request: reqTargets, ticket_sla_response: respTarget, ticket_sla_hours: hours },
+            { onSuccess: () => setSaved(true) },
+        );
     };
 
     return (
@@ -1526,6 +1598,7 @@ function TicketsTab() {
                                             )}
                                         />
                                         <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
+                                        <span className="text-muted-foreground text-xs">{workingDaysHint(draft[p]?.resolve, hours, t)}</span>
                                     </div>
                                     {errors[p]?.resolve && (
                                         <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
@@ -1542,6 +1615,72 @@ function TicketsTab() {
             <div className="mt-3 flex items-center gap-2 rounded-md bg-blue-500/10 px-3 py-2 text-xs text-blue-600 dark:text-blue-400">
                 <Info className="h-4 w-4 shrink-0" />
                 <span>{t('set_sla_resolution_note')}</span>
+            </div>
+
+            {/* Exceptions to the table above, for cases opened from a request — where the length
+                of the work is decided by what was asked for, not by how urgent it is.
+
+                Indented under a left rule rather than presented as a sibling section: the heading
+                says "except", and the layout has to agree with it. Written as one sentence in a
+                blue note, the precedence was a rule people would read once and forget. */}
+            <div className="border-border/70 mt-5 ml-1 border-l-2 pl-4">
+                <h3 className="text-sm font-semibold">{t('set_sla_request_title')}</h3>
+                <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_request_desc')}</p>
+
+                {reqTargets.length === 0 ? (
+                    // Says what the system does right now, rather than leaving an empty control.
+                    <p className="text-muted-foreground mb-3 text-xs">{t('set_sla_request_empty')}</p>
+                ) : (
+                    <ul className="mb-3 space-y-2">
+                        {reqTargets.map((row, i) => {
+                            const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
+                            return (
+                                <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                    <span className="w-56 shrink-0">
+                                        <SearchSelect
+                                            value={row.type}
+                                            onChange={(v) => setRequestTarget(row.type, { type: v })}
+                                            // Its own type stays in the list; the others' do not,
+                                            // so two rows can never name the same thing.
+                                            options={[row.type, ...availableRequestTypes].map((type) => ({
+                                                value: type,
+                                                label: t(REQUEST_TYPE_META[type as ServiceRequestType]?.labelKey ?? type),
+                                            }))}
+                                        />
+                                    </span>
+                                    {meta && <meta.icon className="hidden h-4 w-4 shrink-0 sm:block" style={{ color: meta.color }} />}
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={8760}
+                                        value={row.resolve}
+                                        onChange={(e) => setRequestTarget(row.type, { resolve: Number(e.target.value) })}
+                                        className={cn('h-9 w-24', reqErrors[row.type] && 'border-destructive')}
+                                    />
+                                    <span className="text-muted-foreground text-sm">{t('set_sla_hours')}</span>
+                                    <span className="text-muted-foreground min-w-[86px] text-xs">{workingDaysHint(row.resolve, hours, t)}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeRequestTarget(row.type)}
+                                        aria-label={t('delete')}
+                                        title={t('delete')}
+                                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid h-8 w-8 place-items-center rounded-md"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                    {reqErrors[row.type] && <p className="text-destructive w-full text-xs">{reqErrors[row.type]}</p>}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+
+                {/* An action is a button. The type is chosen in the row it belongs to. */}
+                <Button type="button" variant="outline" size="sm" onClick={addRequestTarget} disabled={availableRequestTypes.length === 0}>
+                    <Plus className="h-4 w-4" />
+                    {t('set_sla_request_add')}
+                </Button>
+                {availableRequestTypes.length === 0 && <p className="text-muted-foreground mt-2 text-xs">{t('set_sla_request_all_used')}</p>}
             </div>
 
             {/* Working window the SLA clocks count against — outside it the clock pauses. */}

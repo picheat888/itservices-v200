@@ -52,6 +52,7 @@ import { ForwardTicketModal } from '../components/forward-ticket-modal';
 import { ResolveTicketModal, type ResolveMode } from '../components/resolve-ticket-modal';
 import { TakeCaseModal } from '../components/take-case-modal';
 import { TicketDetailDrawer } from '../components/ticket-detail-drawer';
+import { TicketUpdateModal } from '../components/ticket-update-modal';
 import {
     slaDuration,
     TICKET_CATEGORIES,
@@ -455,6 +456,7 @@ export default function TicketsPage() {
     const [assignTicket, setAssignTicket] = useState<Ticket | null>(null);
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
+    const [updateTicket, setUpdateTicket] = useState<Ticket | null>(null);
 
     // The record the drawer is currently showing, which outlives `detail` on the way out:
     // closing drops ?view=, the query switches off, and `detail` is undefined on the very
@@ -579,9 +581,14 @@ export default function TicketsPage() {
                 </span>
             ),
         },
-        { key: 'priority', header: t('ticket_priority'), render: (tk) => <TicketPriorityBadge priority={tk.priority} t={t} /> },
+        // Priority and the SLA clocks are the desk's own view of a case: one orders the queue,
+        // the other measures the team against its targets. A requester chose neither and can act
+        // on neither, and the API leaves both out for them too (TicketResource).
+        ...(canTake
+            ? [{ key: 'priority', header: t('ticket_priority'), render: (tk: Ticket) => <TicketPriorityBadge priority={tk.priority ?? null} t={t} /> }]
+            : []),
         { key: 'status', header: t('status'), render: (tk) => <TicketStatusBadge status={tk.status} t={t} /> },
-        { key: 'sla', header: t('ticket_sla'), render: (tk) => <TicketSlaBadge ticket={tk} t={t} /> },
+        ...(canTake ? [{ key: 'sla', header: t('ticket_sla'), render: (tk: Ticket) => <TicketSlaBadge ticket={tk} t={t} /> }] : []),
         {
             key: 'assignee',
             header: t('ticket_responsible_by'),
@@ -873,7 +880,7 @@ export default function TicketsPage() {
                                             <ChevronRight className="h-3.5 w-3.5" />
                                         </button>
                                     </div>
-                                    <TicketTable rows={latestRows} t={t} onRow={openDetail} compact />
+                                    <TicketTable rows={latestRows} t={t} onRow={openDetail} compact showPriority={canTake} />
                                 </Card>
                             </div>
                         )}
@@ -944,52 +951,56 @@ export default function TicketsPage() {
                                                 ]}
                                             />
                                         </div>
-                                        <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <Flag className="h-3.5 w-3.5" />
-                                                {t('ticket_priority')}
+                                        {canTake && (
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Flag className="h-3.5 w-3.5" />
+                                                    {t('ticket_priority')}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={priFilter !== ''}
+                                                    value={priFilter || ALL}
+                                                    onChange={(v) => {
+                                                        setPriFilter(v === ALL ? '' : (v as TicketPriority));
+                                                        setPage(1);
+                                                    }}
+                                                    options={[
+                                                        { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
+                                                        ...(Object.keys(TICKET_PRIORITY_META) as TicketPriority[]).map((p) => ({
+                                                            value: p,
+                                                            label: t(TICKET_PRIORITY_META[p].key),
+                                                            search: t(TICKET_PRIORITY_META[p].key),
+                                                            icon: <ToneDot tone={TICKET_PRIORITY_META[p].tone} />,
+                                                        })),
+                                                    ]}
+                                                />
                                             </div>
-                                            <SearchableSelect
-                                                active={priFilter !== ''}
-                                                value={priFilter || ALL}
-                                                onChange={(v) => {
-                                                    setPriFilter(v === ALL ? '' : (v as TicketPriority));
-                                                    setPage(1);
-                                                }}
-                                                options={[
-                                                    { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
-                                                    ...(Object.keys(TICKET_PRIORITY_META) as TicketPriority[]).map((p) => ({
-                                                        value: p,
-                                                        label: t(TICKET_PRIORITY_META[p].key),
-                                                        search: t(TICKET_PRIORITY_META[p].key),
-                                                        icon: <ToneDot tone={TICKET_PRIORITY_META[p].tone} />,
-                                                    })),
-                                                ]}
-                                            />
-                                        </div>
-                                        <div>
-                                            <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
-                                                <Gauge className="h-3.5 w-3.5" />
-                                                {t('ticket_sla')}
+                                        )}
+                                        {canTake && (
+                                            <div>
+                                                <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
+                                                    <Gauge className="h-3.5 w-3.5" />
+                                                    {t('ticket_sla')}
+                                                </div>
+                                                <SearchableSelect
+                                                    active={slaFilter !== ''}
+                                                    value={slaFilter || ALL}
+                                                    onChange={(v) => {
+                                                        setSlaFilter(v === ALL ? '' : 'breached');
+                                                        setPage(1);
+                                                    }}
+                                                    options={[
+                                                        { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
+                                                        {
+                                                            value: 'breached',
+                                                            label: t('ticket_sla_filter_overdue'),
+                                                            search: t('ticket_sla_filter_overdue'),
+                                                            icon: <ToneDot tone="red" />,
+                                                        },
+                                                    ]}
+                                                />
                                             </div>
-                                            <SearchableSelect
-                                                active={slaFilter !== ''}
-                                                value={slaFilter || ALL}
-                                                onChange={(v) => {
-                                                    setSlaFilter(v === ALL ? '' : 'breached');
-                                                    setPage(1);
-                                                }}
-                                                options={[
-                                                    { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
-                                                    {
-                                                        value: 'breached',
-                                                        label: t('ticket_sla_filter_overdue'),
-                                                        search: t('ticket_sla_filter_overdue'),
-                                                        icon: <ToneDot tone="red" />,
-                                                    },
-                                                ]}
-                                            />
-                                        </div>
+                                        )}
                                         <div>
                                             <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
                                                 <ArrowUpDown className="h-3.5 w-3.5" />
@@ -1002,7 +1013,8 @@ export default function TicketsPage() {
                                                     setSort(v);
                                                     setPage(1);
                                                 }}
-                                                options={SORT_OPTIONS.map((s) => ({
+                                                // No sorting by a column this reader is not shown.
+                                                options={SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due')).map((s) => ({
                                                     value: s,
                                                     label: t(SORT_LABEL[s]),
                                                     search: t(SORT_LABEL[s]),
@@ -1064,18 +1076,33 @@ export default function TicketsPage() {
                 onAssign={(tk) => setAssignTicket(tk)}
                 onForward={(tk) => setForwardTicket(tk)}
                 onResolve={startResolve}
+                onUpdate={(tk) => setUpdateTicket(tk)}
             />
             <EditTicketDrawer ticket={editTicket} onClose={() => setEditTicket(null)} />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />
             <AssignTicketModal ticket={assignTicket} onClose={() => setAssignTicket(null)} />
             <ForwardTicketModal ticket={forwardTicket} onClose={() => setForwardTicket(null)} />
+            <TicketUpdateModal ticket={updateTicket} onClose={() => setUpdateTicket(null)} />
             <ResolveTicketModal ticket={resolveState?.ticket ?? null} mode={resolveState?.mode ?? null} onClose={() => setResolveState(null)} />
         </div>
     );
 }
 
 /** Shared ticket table used by both the dashboard preview and the list tabs. */
-function TicketTable({ rows, t, onRow, compact }: { rows: Ticket[]; t: (k: string) => string; onRow: (tk: Ticket) => void; compact?: boolean }) {
+function TicketTable({
+    rows,
+    t,
+    onRow,
+    compact,
+    showPriority,
+}: {
+    rows: Ticket[];
+    t: (k: string) => string;
+    onRow: (tk: Ticket) => void;
+    compact?: boolean;
+    /** Mirrors the Take Case gate — see the priority column on the main list. */
+    showPriority: boolean;
+}) {
     if (rows.length === 0) {
         return <div className="text-muted-foreground py-10 text-center text-sm">{t('ticket_none')}</div>;
     }
@@ -1087,7 +1114,7 @@ function TicketTable({ rows, t, onRow, compact }: { rows: Ticket[]; t: (k: strin
                         <th className="px-4 py-2.5">ID</th>
                         <th className="px-4 py-2.5">{t('ticket_subject')}</th>
                         <th className="px-4 py-2.5">{t('ticket_category')}</th>
-                        <th className="px-4 py-2.5">{t('ticket_priority')}</th>
+                        {showPriority && <th className="px-4 py-2.5">{t('ticket_priority')}</th>}
                         <th className="px-4 py-2.5">{t('status')}</th>
                         {!compact && <th className="px-4 py-2.5">{t('ticket_requester')}</th>}
                         <th className="px-4 py-2.5">{t('ticket_assignee')}</th>
@@ -1109,9 +1136,11 @@ function TicketTable({ rows, t, onRow, compact }: { rows: Ticket[]; t: (k: strin
                                     {t(`ticket_cat_${tk.category}`)}
                                 </span>
                             </td>
-                            <td className="px-4 py-2.5">
-                                <TicketPriorityBadge priority={tk.priority} t={t} />
-                            </td>
+                            {showPriority && (
+                                <td className="px-4 py-2.5">
+                                    <TicketPriorityBadge priority={tk.priority ?? null} t={t} />
+                                </td>
+                            )}
                             <td className="px-4 py-2.5">
                                 <TicketStatusBadge status={tk.status} t={t} />
                             </td>

@@ -3,12 +3,14 @@
 use App\Http\Controllers\Api\Access\AccessController;
 use App\Http\Controllers\Api\Access\EmailGroupController;
 use App\Http\Controllers\Api\Access\FileShareController;
+use App\Http\Controllers\Api\Access\MyAccessController;
 use App\Http\Controllers\Api\Access\SocialPlatformController;
 use App\Http\Controllers\Api\Access\SoftwareController;
 use App\Http\Controllers\Api\Asset\AssetController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Contract\ContractAttachmentController;
 use App\Http\Controllers\Api\Contract\ContractController;
+use App\Http\Controllers\Api\Dashboard\DashboardController;
 use App\Http\Controllers\Api\Email\EmailLogController;
 use App\Http\Controllers\Api\Email\EmailTemplateController;
 use App\Http\Controllers\Api\Employee\DepartmentController;
@@ -70,6 +72,8 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::put('preferences', [AuthController::class, 'updatePreferences'])->name('api.preferences');
     // Every sidebar badge count in one request (per-count permission handled in the service).
     Route::get('sidebar-badges', [SidebarBadgeController::class, 'index'])->name('api.sidebar-badges');
+    // The front page in one request — same arrangement: the service gates block by block.
+    Route::get('dashboard/summary', [DashboardController::class, 'summary'])->name('api.dashboard.summary');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');
@@ -136,10 +140,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('employees/{employee}/tickets', [EmployeeController::class, 'tickets'])->name('api.employees.tickets');
     Route::get('employees/{employee}/requests', [EmployeeController::class, 'requests'])->name('api.employees.requests');
     Route::get('employees/org-chart', [EmployeeController::class, 'orgChart'])->name('api.employees.org-chart');
-    // No destroy: an employee who leaves is resigned, never deleted — the record keeps
-    // their name so every ticket, request and asset they touched still reads correctly.
-    // Deleting one would also cascade their whole ticket history away at the DB level.
-    Route::apiResource('employees', EmployeeController::class)->except(['destroy']);
+    // destroy is for a mis-entry only — a duplicate or test row nothing refers to yet. An
+    // employee who leaves is resigned, never deleted: the record keeps their name so every
+    // ticket, request and asset they touched still reads correctly, and deleting one would
+    // cascade their ticket history away at the DB level. The controller refuses anything
+    // that has activity.
+    Route::apiResource('employees', EmployeeController::class);
     Route::get('positions/{position}/members', [PositionController::class, 'members'])->name('api.positions.members');
     Route::apiResource('positions', PositionController::class)->except(['show']);
     Route::get('departments/{department}/members', [DepartmentController::class, 'members'])->name('api.departments.members');
@@ -192,6 +198,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('tickets/{ticket}/take', [TicketController::class, 'take'])->name('api.tickets.take');
     Route::post('tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('api.tickets.assign');
     Route::post('tickets/{ticket}/forward', [TicketController::class, 'forward'])->name('api.tickets.forward');
+    Route::post('tickets/{ticket}/updates', [TicketController::class, 'storeUpdate'])->name('api.tickets.updates.store');
     Route::post('tickets/{ticket}/resolve', [TicketController::class, 'resolve'])->name('api.tickets.resolve');
     Route::post('tickets/{ticket}/attachments', [TicketAttachmentController::class, 'store'])->name('api.tickets.attachments.store');
     Route::delete('tickets/{ticket}/attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('api.tickets.attachments.destroy');
@@ -204,9 +211,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('assets/contract-options', [AssetController::class, 'contractOptions'])->name('api.assets.contract-options');
     Route::get('assets/transfers', [AssetController::class, 'transfers'])->name('api.assets.transfers');
     Route::get('assets/mine', [AssetController::class, 'mine'])->name('api.assets.mine');
+    // The other half of the self-service page. Outside the Access Directory group on purpose:
+    // its own key (access.my), not the registry master. See MyAccessController.
+    Route::get('access/mine', [MyAccessController::class, 'index'])->name('api.access.mine');
     Route::get('assets/recipient-readiness', [AssetController::class, 'recipientReadiness'])->name('api.assets.recipient-readiness');
     Route::post('assets/bulk', [AssetController::class, 'bulk'])->name('api.assets.bulk');
     Route::post('assets/bulk-transfer', [AssetController::class, 'bulkTransfer'])->name('api.assets.bulk-transfer');
+    Route::post('assets/bulk-location', [AssetController::class, 'bulkLocation'])->name('api.assets.bulk-location');
     Route::post('assets/bulk-recall', [AssetController::class, 'bulkRecall'])->name('api.assets.bulk-recall');
     Route::post('assets/bulk-receive', [AssetController::class, 'bulkReceive'])->name('api.assets.bulk-receive');
     Route::post('assets/{asset}/transfer', [AssetController::class, 'transfer'])->name('api.assets.transfer');

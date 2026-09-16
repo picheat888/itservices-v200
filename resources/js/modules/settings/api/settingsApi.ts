@@ -17,6 +17,7 @@ export interface SettingsData {
     theme_radius: number;
     asset_status_colors: AssetStatusColors;
     ticket_sla: TicketSlaTargets;
+    ticket_sla_request: TicketSlaRequestTarget[];
     ticket_sla_response: number;
     ticket_sla_hours: TicketSlaHours;
     /**
@@ -35,6 +36,17 @@ export type AssetStatusColors = Record<string, string>;
 // when a case is taken, so it can't drive the response clock.
 export type TicketSlaTargets = Record<string, { resolve: number }>;
 
+/**
+ * A resolution target keyed on the KIND OF REQUEST a case was opened from, rather than on how
+ * urgent somebody judged it. A monitor has to be procured whether or not the case is marked
+ * critical, and that length is known the moment the request is filed.
+ */
+export interface TicketSlaRequestTarget {
+    type: string;
+    resolve: number;
+    enabled: boolean;
+}
+
 // Working window the SLA clocks count against (days: ISO weekday 1–7 = Mon–Sun).
 // break_* is an optional pause (e.g. lunch) the clocks skip — null on both = no break.
 export interface TicketSlaHours {
@@ -47,6 +59,8 @@ export interface TicketSlaHours {
 
 export interface TicketSlaPayload {
     ticket_sla: TicketSlaTargets;
+    /** The WHOLE list — a target left out here is a target the server deletes. */
+    ticket_sla_request?: TicketSlaRequestTarget[];
     ticket_sla_response?: number;
     ticket_sla_hours?: TicketSlaHours;
 }

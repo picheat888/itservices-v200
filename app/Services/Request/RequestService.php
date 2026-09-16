@@ -284,7 +284,7 @@ class RequestService
             // closed before settleFromTicket existed still sits here as Approved, and those
             // rows have nothing left to close.
             abort_if(
-                in_array($fresh->ticket?->status, [TicketStatus::Open, TicketStatus::InProgress], true),
+                in_array($fresh->ticket?->status, TicketStatus::live(), true),
                 422,
                 "Ticket {$fresh->ticket?->ticket_no} is still open - closing that case fulfils this request.",
             );

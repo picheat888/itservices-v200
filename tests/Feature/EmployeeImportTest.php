@@ -10,9 +10,9 @@ use App\Models\Employee\Section;
 use App\Models\Permission\Role;
 use App\Models\User;
 use App\Services\Employee\EmployeeImportService;
-use Database\Seeders\DepartmentSeeder;
-use Database\Seeders\PositionSeeder;
-use Database\Seeders\SectionSeeder;
+use Database\Seeders\EmployeeDepartmentSeeder;
+use Database\Seeders\EmployeePositionSeeder;
+use Database\Seeders\EmployeeSectionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -46,7 +46,12 @@ class EmployeeImportTest extends TestCase
 
         $this->service = app(EmployeeImportService::class);
 
-        $this->it = Department::create(['code' => 'DEP-0003', 'tag' => 'It', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ']);
+        // Tag spelled as EmployeeDepartmentSeeder writes it: the seeded-org-chart test below
+        // runs that seeder over this row, and firstOrCreate matches on code — so a fixture
+        // with a different tag would keep its own and leave the section seeder looking for
+        // a department tagged IT that no longer exists. The rows still import 'It', which is
+        // what proves the matching is case-insensitive.
+        $this->it = Department::create(['code' => 'DEP-0003', 'tag' => 'IT', 'name' => 'Information Technology', 'name_th' => 'ฝ่ายเทคโนโลยีสารสนเทศ']);
         $this->qc = Department::create(['code' => 'DEP-0010', 'tag' => 'QC', 'name' => 'Quality Control', 'name_th' => 'ฝ่ายควบคุมคุณภาพ']);
 
         $this->support = Section::create(['code' => 'SEC-0002', 'department_id' => $this->it->id, 'name' => 'Support']);
@@ -260,9 +265,9 @@ class EmployeeImportTest extends TestCase
      */
     public function test_the_seeded_org_chart_resolves_the_spellings_people_actually_use(): void
     {
-        $this->seed(DepartmentSeeder::class);
-        $this->seed(SectionSeeder::class);
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeeDepartmentSeeder::class);
+        $this->seed(EmployeeSectionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
 
         $result = $this->service->importRows([
             // Department by English name, with a section that shares that exact name.

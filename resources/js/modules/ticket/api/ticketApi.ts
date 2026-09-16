@@ -63,7 +63,9 @@ export const ticketApi = {
     summary: (range?: SummaryRange) =>
         http.get<TicketSummary>('/tickets/summary', { params: typeof range === 'object' ? range : { days: range } }).then((r) => r.data),
     staff: (category?: string) =>
-        http.get<{ data: { id: number; name: string }[] }>('/tickets/staff', { params: { category } }).then((r) => r.data.data),
+        http
+            .get<{ data: { id: number; name: string; employee_id: number | null }[] }>('/tickets/staff', { params: { category } })
+            .then((r) => r.data.data),
     badge: () => http.get<{ count: number }>('/tickets/badge').then((r) => r.data.count),
     requesterAssets: (id: number) =>
         http.get<{ data: { id: number; asset_code: string; model: string | null }[] }>(`/tickets/${id}/requester-assets`).then((r) => r.data.data),
@@ -74,6 +76,8 @@ export const ticketApi = {
         mutate<Ticket>('post', `/tickets/${id}/take`, body),
     assign: (id: number, body: { assignee_id: number; priority: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
     forward: (id: number, body: { assignee_id: number }) => mutate<Ticket>('post', `/tickets/${id}/forward`, body),
+    /** Write a progress note on a case in flight. */
+    addUpdate: (id: number, body: { body: string }) => mutate<Ticket>('post', `/tickets/${id}/updates`, body),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
     /**
      * Uploads attachments ONE AT A TIME so each file reports its own progress

@@ -4,6 +4,7 @@ namespace App\Http\Resources\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
 use App\Models\Employee\Employee;
+use App\Services\Employee\EmployeeService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -51,6 +52,15 @@ class EmployeeResource extends JsonResource
             'last_day' => $this->last_day?->toDateString(),
             'has_account' => (bool) $linkedUser,
             'is_super_admin' => (bool) $linkedUser?->isSuper(),
+            // Why this record cannot be deleted — empty means it is a clean mis-entry. Costs a
+            // handful of existence checks, so it rides along only on the single-employee
+            // endpoint, which is what the detail drawer (and its Delete button) reads.
+            'delete_blockers' => $this->when(
+                // apiResource names this one `employees.show` — the hand-written employee
+                // routes carry the `api.` prefix, the resource ones do not.
+                $request->routeIs('employees.show'),
+                fn () => app(EmployeeService::class)->deletionBlockers($this->resource),
+            ),
         ];
     }
 }

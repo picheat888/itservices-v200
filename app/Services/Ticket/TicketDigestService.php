@@ -45,7 +45,7 @@ class TicketDigestService
     {
         $live = Ticket::query()
             ->with(['requester', 'assignee'])
-            ->whereIn('status', [TicketStatus::Open->value, TicketStatus::InProgress->value])
+            ->whereIn('status', TicketStatus::liveValues())
             ->orderBy('created_at')
             ->get();
 
@@ -66,7 +66,7 @@ class TicketDigestService
             }
 
             $open = $mine->filter(fn (Ticket $t) => $t->status === TicketStatus::Open);
-            $working = $mine->filter(fn (Ticket $t) => $t->status === TicketStatus::InProgress);
+            $working = $mine->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::working(), true));
 
             $this->email->sendTemplate('ticket.weekly_digest', $user->email, [
                 'user.first_name' => strtok((string) $user->name, ' '),

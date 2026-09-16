@@ -8,6 +8,7 @@ use App\Enums\Asset\AssetTransferKind;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Employee\Employee;
+use App\Models\Settings\Location;
 use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Notifications\AssetAssignedNotification;
@@ -279,6 +280,22 @@ class AssetService
     }
 
     /**
+     * Correct where a deployed asset physically sits — the holder moved desk, the asset
+     * went with them. Deliberately not a transfer: it writes `location_id` and nothing
+     * else (no owner, no status, no warehouse) and sends no bell or mail, because nobody
+     * has to accept anything. The move is still recorded on the custody trail as a
+     * `Relocate` row so the History tab can show "old place → new place".
+     */
+    public function relocate(Asset $asset, Location $location, ?string $performedBy = null, ?string $note = null): Asset
+    {
+        $from = $asset->location?->name;
+        $asset->update(['location_id' => $location->id]);
+        $this->logTransfer($asset, AssetTransferKind::Relocate, $from, $location->name, $note, $performedBy);
+
+        return $asset->fresh(['location']);
+    }
+
+    /**
      * Bell alert to the recipient when an asset is handed over — resolved through the
      * owner_employee_id FK. Only fires if the employee has a login account that can use
      * My Assets (permission gates the bell).
@@ -297,7 +314,7 @@ class AssetService
             // most likely to miss the bell are the ones who rarely open the portal.
             $this->emailEach([$user], 'asset.assigned', $this->assetVars($asset) + [
                 'asset.from' => (string) ($fromLabel ?: $from ?: '-'),
-            ], '/my-assets', 'Accept the hand-over');
+            ], '/my-assets-access', 'Accept the hand-over');
         }
     }
 
@@ -319,7 +336,7 @@ class AssetService
         if ($user && $user->hasPermission('assets.my')) {
             $user->notify(new AssetRecalledNotification($asset, $subtype));
             // One template for both subtypes — see asset.recalled in EmailTemplates.
-            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/my-assets', 'View my assets');
+            $this->emailEach([$user], 'asset.recalled', $this->assetVars($asset), '/my-assets-access', 'View my assets');
         }
     }
 

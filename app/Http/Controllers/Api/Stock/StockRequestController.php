@@ -226,7 +226,12 @@ class StockRequestController extends Controller
             $item->save();
             $this->lotService->consume($item, $stockRequest->qty);
 
-            $stockRequest->update(['status' => 'fulfilled', 'fulfilled_at' => now()]);
+            $stockRequest->update([
+                'status' => 'fulfilled',
+                'fulfilled_at' => now(),
+                // Who released the stock, which is not necessarily who approved it.
+                'fulfilled_by' => $user->name,
+            ]);
         });
 
         // Fire a real-time stock-level alert now that on-hand has been decremented.

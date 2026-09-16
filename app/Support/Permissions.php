@@ -69,6 +69,8 @@ class Permissions
             'access' => [
                 'module',
                 'overview',
+                // Self-service: what THIS person may reach. Master-independent, like assets.my.
+                'my',
                 'email_view', 'email_add', 'email_edit', 'email_delete',
                 'file_view', 'file_add', 'file_edit', 'file_delete',
                 'social_view', 'social_add', 'social_edit', 'social_delete',
@@ -139,7 +141,7 @@ class Permissions
                 'workflows.module', 'workflows.manage',
                 'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
                 'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
-                'assets.my', 'assets.return',
+                'assets.my', 'assets.return', 'access.my',
                 // Asset hard delete + Special access (force recall / cancel write-off) stay super-only by default.
                 // Contract Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
                 'contracts.module', 'contracts.view_dashboard', 'contracts.view',
@@ -150,6 +152,8 @@ class Permissions
                 'employees.view_section', 'employees.view_department', 'employees.view_position',
                 'employees.add', 'employees.import', 'employees.edit',
                 'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
+                // Employee hard delete (mis-entries only) stays super-only by default, like the
+                // other hard deletes above.
                 'access.module', 'access.overview',
                 'access.email_view', 'access.email_add', 'access.email_edit', 'access.email_delete',
                 'access.file_view', 'access.file_add', 'access.file_edit', 'access.file_delete',
@@ -165,14 +169,14 @@ class Permissions
                 'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
                 'access.module', 'access.overview',
                 'access.email_view', 'access.file_view', 'access.social_view', 'access.software_view',
-                'assets.my', 'assets.return',
+                'assets.my', 'assets.return', 'access.my',
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
             // Employee — own tickets/requests + own profile only
             'user' => [
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return',
+                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return', 'access.my',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request',
             ],
@@ -241,7 +245,7 @@ class Permissions
                 'employees.view_dashboard' => [],
                 'employees.view' => [
                     'employees.add', 'employees.import', 'employees.edit', 'employees.reset_password',
-                    'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
+                    'employees.resign', 'employees.cancel_resign', 'employees.set_credentials', 'employees.delete',
                 ],
                 'employees.view_section' => ['employees.section_add', 'employees.section_edit', 'employees.section_delete'],
                 'employees.view_department' => ['employees.department_add', 'employees.department_edit', 'employees.department_delete'],
@@ -296,6 +300,7 @@ class Permissions
     {
         return [
             'master' => 'access.module',
+            'standalone' => ['access.my'],
             'groups' => [
                 'access.overview' => [],
                 'access.email_view' => ['access.email_add', 'access.email_edit', 'access.email_delete'],
@@ -319,8 +324,15 @@ class Permissions
         $set = array_flip($granted);
         $hierarchy = self::accessHierarchy();
 
+        // Without the master, drop every access key except the self-service one: seeing what
+        // you yourself may reach is not a registry right.
         if (! isset($set[$hierarchy['master']])) {
-            return array_values(array_filter($granted, fn ($key) => ! str_starts_with($key, 'access.')));
+            $keep = array_flip($hierarchy['standalone']);
+
+            return array_values(array_filter(
+                $granted,
+                fn ($key) => ! str_starts_with($key, 'access.') || isset($keep[$key]),
+            ));
         }
 
         foreach ($hierarchy['groups'] as $viewKey => $children) {

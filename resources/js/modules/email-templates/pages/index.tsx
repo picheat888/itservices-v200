@@ -16,11 +16,11 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Bold, Check, CornerDownLeft, Eye, Italic, Link2, List, Loader2, Mail, PenLine, Pilcrow, RotateCcw, Save, Search, Send } from 'lucide-react';
+import { Bold, Check, CornerDownLeft, Italic, Link2, List, Loader2, Mail, PenLine, Pilcrow, RotateCcw, Save, Search, Send } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -36,6 +36,15 @@ const SAMPLE_VARS: Record<string, string> = {
     'stock.sku': 'SKU-1042',
     'stock.name': 'USB-C Docking Station',
     'stock.qty': '2',
+    'stock.min': '5',
+    'stock.max': '40',
+    'stock.request_no': 'REQ-2026-0001',
+    'stock.request_by': 'Piches Srisuk',
+    'stock.request_reason': 'Replacing the dock on the 3rd floor meeting room.',
+    'stock.request_date': '18-08-2026',
+    'stock.approver': 'Anong Wattana',
+    'stock.fulfilled_by': 'Kankanok P',
+    'stock.fulfilled_date': '20-08-2026',
     'asset.code': 'INK-IT-26-0042',
     'asset.model': 'ThinkCentre Neo 55a 24 G6',
     'asset.tag': 'PC042',
@@ -49,6 +58,7 @@ const SAMPLE_VARS: Record<string, string> = {
     'ticket.category': 'Hardware',
     'ticket.details': 'The printer on the 3rd floor shows a paper jam error.',
     'ticket.resolution': 'Replaced the fuser roller and cleared the jam sensor.',
+    'ticket.update': 'The replacement fuser roller is on order, expected within three working days.',
     'ticket.requester': 'Somchai Suksawat',
     'ticket.assignee': 'Piches Srisuk',
     'from.name': 'Anong Wattana',
@@ -61,6 +71,19 @@ const SAMPLE_VARS: Record<string, string> = {
     'contract.details': 'Microsoft 365 E3 License Agreement, 320 seats',
     'reference.id': 'REF-0001',
     'request.title': 'Request: Mail group',
+    'request.type': 'Email group',
+    'request.date': '18-08-2026',
+    'request.approved_date': '20-08-2026',
+    'request.rejected_date': '20-08-2026',
+    'request.cancelled_date': '22-08-2026',
+    'request.ticket_no': 'TKT-2856',
+    'request.fulfilled_date': '22-08-2026',
+    'request.fulfilled_by': 'Kankanok P',
+    'request.reason': 'Onboarding request with the new employee, first day 01-09-2026.',
+    'request.details': 'Device type: Desktop PC',
+    'approver.name': 'Anong Wattana',
+    'approver.position': 'Manager',
+    'approver.department': 'Information Technology',
     'requester.name': 'Manee Jaidee',
     'actor.name': 'Anong Wattana',
     'step.label': 'Department manager',
@@ -82,7 +105,6 @@ const SAMPLE_VARS: Record<string, string> = {
     // Placeholders only. The body preview is rendered by the API (EmailTemplateController's
     // own sample vars), which holds the real example lists and tables; this map drives the
     // variable chips and the subject line above the preview frame.
-    items: '',
     'asset.table': '',
     'digest.table': '',
     'digest.open_table': '',
@@ -90,6 +112,11 @@ const SAMPLE_VARS: Record<string, string> = {
     'digest.expiring_table': '',
     'digest.overdue_table': '',
     'access.table': '',
+    'stock.request_summary_table': '',
+    'stock.requests_table': '',
+    'request.approval_history': '',
+    'stock.summary_table': '',
+    'stock.items_table': '',
 };
 
 // Every variable an author can insert, A-Z. SAMPLE_VARS is grouped by module for whoever
@@ -99,7 +126,6 @@ const VARIABLE_NAMES = Object.keys(SAMPLE_VARS).sort((a, b) => a.localeCompare(b
 // Short notes for the "magic" placeholders that aren't a simple field — shown
 // beside the variable chips in the Edit drawer so a short body doesn't look broken.
 const VAR_NOTE: Record<string, { en: string; th: string }> = {
-    items: { en: 'auto-generated list', th: 'ลิสต์อัตโนมัติ' },
     count: { en: 'number', th: 'จำนวน' },
     'asset.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
@@ -108,6 +134,11 @@ const VAR_NOTE: Record<string, { en: string; th: string }> = {
     'digest.expiring_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'digest.overdue_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
     'access.table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'stock.request_summary_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'stock.requests_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'request.approval_history': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'stock.summary_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
+    'stock.items_table': { en: 'auto-generated table', th: 'ตารางอัตโนมัติ' },
 };
 
 // Badge per cadence, one colour each. Blue = sent the moment the event happens; amber and
@@ -188,7 +219,8 @@ function ToolBtn({ title, onClick, children }: { title: string; onClick: () => v
             type="button"
             title={title}
             onClick={onClick}
-            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-7 w-7 items-center justify-center rounded transition-colors"
+            aria-label={title}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-brand/40 flex h-7 w-7 items-center justify-center rounded transition-colors focus-visible:ring-2 focus-visible:outline-hidden"
         >
             {children}
         </button>
@@ -548,10 +580,11 @@ export default function EmailTemplatesPage() {
 
             <EditorDialog
                 template={editing}
+                fromAddress={data?.mail?.from_address || SAMPLE_VARS['user.email']}
                 onClose={() => setEditing(null)}
                 onSave={(payload) => (editing ? update.mutateAsync({ id: editing.id, payload }) : Promise.resolve())}
                 saving={update.isPending}
-                onTest={(id) => test.mutateAsync(id)}
+                onTest={(id, draft) => test.mutateAsync({ id, draft })}
                 testing={test.isPending}
                 onReset={(id) => reset.mutateAsync(id)}
                 resetting={reset.isPending}
@@ -658,10 +691,17 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
     );
 
     return (
-        <>
-            <div className="border-input bg-background focus-within:border-brand overflow-hidden rounded-md border">
+        // A flex column so the editor takes the height its column has to give: it used to be
+        // twelve rows tall in a pane three times that, and editing a long email meant
+        // scrolling a textarea inside a scrolling column inside the dialog.
+        //
+        // h-full, not flex-1: Field's `grow` wrapper is a plain block, so a flex-1 here had
+        // nothing to stretch against and the box sat at its minimum with 180px of empty
+        // column under it.
+        <div className="flex h-full min-h-0 flex-col">
+            <div className="border-input bg-background focus-within:border-brand flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border">
                 {/* Quick tools — insert HTML at the caret / around the selection */}
-                <div className="border-border bg-muted/40 flex flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
+                <div className="border-border bg-muted/40 flex shrink-0 flex-wrap items-center gap-0.5 border-b px-1.5 py-1">
                     <ToolBtn title="Bold" onClick={() => wrap('<strong>', '</strong>')}>
                         <Bold className="h-3.5 w-3.5" />
                     </ToolBtn>
@@ -697,8 +737,10 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                         ))}
                     </select>
                 </div>
-                {/* Syntax highlight: a coloured layer under a transparent, scroll-synced textarea. */}
-                <div className="relative">
+                {/* Syntax highlight: a coloured layer under a transparent, scroll-synced textarea.
+                    Both layers are absolute now, so the box's height comes from the column
+                    rather than from a row count. */}
+                <div className="relative min-h-[10rem] flex-1">
                     <div
                         ref={hlRef}
                         aria-hidden="true"
@@ -717,16 +759,15 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                             }
                         }}
                         spellCheck={false}
-                        rows={12}
-                        className="caret-foreground relative block w-full resize-y bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
+                        className="caret-foreground absolute inset-0 block h-full w-full resize-none overflow-auto bg-transparent px-3 py-2 font-mono text-xs break-words whitespace-pre-wrap text-transparent outline-none"
                     />
                 </div>
             </div>
 
             {tokens.length > 0 && (
-                <div className="mt-3">
+                <div className="mt-3 shrink-0">
                     <div className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{t('email_variables')}</div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex max-h-[5.5rem] flex-wrap gap-1.5 overflow-y-auto">
                         {tokens.map((tk) => (
                             <button
                                 key={tk}
@@ -743,7 +784,7 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
                     <p className="text-muted-foreground mt-1.5 text-[11px]">{t('email_var_hint')}</p>
                 </div>
             )}
-        </>
+        </div>
     );
 }
 
@@ -767,7 +808,7 @@ function BodyEditor({ value, onChange, extraText = '' }: { value: string; onChan
  * a fully sandboxed frame reports no document at all, so the height could never be read and
  * the email stayed clipped. Scripts, forms, popups and top-level navigation stay blocked.
  */
-function SentEmailFrame({ html, title }: { html: string; title: string }) {
+function SentEmailFrame({ html, title, className }: { html: string; title: string; className?: string }) {
     const ref = useRef<HTMLIFrameElement>(null);
     const [height, setHeight] = useState(420);
 
@@ -785,7 +826,7 @@ function SentEmailFrame({ html, title }: { html: string; title: string }) {
             sandbox="allow-same-origin"
             onLoad={fit}
             style={{ height }}
-            className="border-border block w-full rounded-xl border bg-white"
+            className={cn('border-border block w-full rounded-xl border bg-white', className)}
         />
     );
 }
@@ -985,66 +1026,62 @@ function DeliveryLogPane() {
     );
 }
 
-function PreviewPane({ brand, subject, previewHtml }: { brand: string; subject: string; previewHtml: string }) {
+function PreviewPane({
+    brand,
+    from,
+    subject,
+    previewHtml,
+    rendering,
+}: {
+    brand: string;
+    from: string;
+    subject: string;
+    previewHtml: string;
+    rendering: boolean;
+}) {
+    const t = useT();
     const lang = useUiStore((s) => s.lang);
     // The signed-in account, because that is where "Send test" delivers and whose first name
     // the body below already greets. The line used to print the literal {{user.email}} while
     // every other field on the row was filled in, which read as data that failed to arrive.
     const { user } = useAuth();
     return (
-        <div className="bg-muted/30 border-border flex min-h-0 flex-col border-r">
-            <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                <div className="border-border mx-auto flex h-full max-w-[640px] flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
-                    <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
-                        <div>
-                            <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
-                            <span className="font-mono">no-reply@{(brand || 'abcd').toLowerCase().replace(/\s+/g, '')}</span>
-                        </div>
-                        <div>
-                            <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
-                            <span className="font-mono">{user?.email || SAMPLE_VARS['user.email']}</span>
-                        </div>
-                        <div className="text-foreground w-full truncate font-semibold">
-                            {/* app.name resolves to the real brand, the way the send path fills it. */}[{brand}]{' '}
-                            {render(subject, { ...SAMPLE_VARS, 'app.name': brand })}
-                        </div>
-                    </div>
-                    {previewHtml ? (
-                        <iframe title="email-preview" srcDoc={previewHtml} className="block w-full flex-1 border-0 bg-white" />
-                    ) : (
-                        <div className="space-y-3 p-6">
-                            <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
-                            <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
-                            <div className="bg-muted h-28 w-full animate-pulse rounded" />
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// Preview | Edit column-header strip shared by both dialogs.
-function PaneHeaders({ rendering }: { rendering: boolean }) {
-    const t = useT();
-    const lang = useUiStore((s) => s.lang);
-    return (
-        <div className="border-border text-muted-foreground grid grid-cols-2 border-b text-[11px] font-semibold tracking-wide uppercase">
-            <div className="border-border flex items-center justify-between border-r px-5 py-2.5">
-                <span className="flex items-center gap-1.5">
-                    <Eye className="h-3.5 w-3.5" />
-                    {t('email_preview')}
+        <div className="bg-muted/30 border-border relative min-h-0 border-t p-5 lg:overflow-y-auto lg:border-t-0 lg:border-r">
+            {/* On the card, not in a header strip a pane away: the reader is watching the
+                message change, and that is where the news that it is changing belongs. */}
+            {rendering && (
+                <span className="bg-background/90 text-muted-foreground absolute top-6 right-6 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] shadow-sm backdrop-blur-sm">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {lang === 'th' ? 'กำลังอัปเดต' : 'Updating'}
                 </span>
-                {rendering && (
-                    <span className="flex items-center gap-1 text-[10px] normal-case">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        {lang === 'th' ? 'กำลังอัปเดต' : 'updating'}
-                    </span>
+            )}
+            <div className="border-border mx-auto max-w-[640px] overflow-hidden rounded-xl border bg-white shadow-sm">
+                <div className="border-border bg-muted/40 flex flex-wrap gap-x-6 gap-y-1 border-b px-4 py-2.5 text-[11px]">
+                    <div>
+                        <span className="text-muted-foreground">{lang === 'th' ? 'จาก ' : 'From '}</span>
+                        <span className="font-mono">{from}</span>
+                    </div>
+                    <div>
+                        <span className="text-muted-foreground">{lang === 'th' ? 'ถึง ' : 'To '}</span>
+                        <span className="font-mono">{user?.email || SAMPLE_VARS['user.email']}</span>
+                    </div>
+                    <div className="text-foreground w-full truncate font-semibold">
+                        {/* app.name resolves to the real brand, the way the send path fills it. */}[{brand}]{' '}
+                        {render(subject, { ...SAMPLE_VARS, 'app.name': brand })}
+                    </div>
+                </div>
+                {previewHtml ? (
+                    // The same self-measuring frame the delivery log uses: a fixed-height one
+                    // put a second scrollbar inside a pane that already scrolls, so a long
+                    // email read as a clipped one.
+                    <SentEmailFrame html={previewHtml} title={t('email_preview')} className="rounded-none border-0" />
+                ) : (
+                    <div className="space-y-3 p-6">
+                        <div className="bg-muted h-4 w-1/3 animate-pulse rounded" />
+                        <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
+                        <div className="bg-muted h-28 w-full animate-pulse rounded" />
+                    </div>
                 )}
-            </div>
-            <div className="flex items-center gap-1.5 px-5 py-2.5">
-                <PenLine className="h-3.5 w-3.5" />
-                {t('edit')}
             </div>
         </div>
     );
@@ -1059,6 +1096,7 @@ function PaneHeaders({ rendering }: { rendering: boolean }) {
  */
 function EditorDialog({
     template,
+    fromAddress,
     onClose,
     onSave,
     saving,
@@ -1068,11 +1106,13 @@ function EditorDialog({
     resetting,
 }: {
     template: EmailTemplate | null;
+    /** The address the system really sends from, for the preview's From line. */
+    fromAddress: string;
     onClose: () => void;
     onSave: (p: { name: string; subject: string; body_html: string; enabled: boolean }) => Promise<unknown>;
     saving: boolean;
     /** Resolves with whether the mail actually left — a rejected address is not a thrown error. */
-    onTest: (id: number) => Promise<{ sent: boolean }>;
+    onTest: (id: number, draft: { name: string; subject: string; body_html: string }) => Promise<{ sent: boolean }>;
     testing: boolean;
     onReset: (id: number) => Promise<unknown>;
     resetting: boolean;
@@ -1129,9 +1169,12 @@ function EditorDialog({
     const handleTest = async () => {
         if (!template || testing) return;
         try {
+            // What is on screen, saved or not — the preview beside this button already shows
+            // the unsaved wording, and a test of the stored copy would contradict it.
+            //
             // The request succeeds even when the mail does not: the address may be
             // malformed or the SMTP host unreachable, and the answer is in `sent`.
-            const { sent } = await onTest(template.id);
+            const { sent } = await onTest(template.id, { name, subject, body_html: body });
             if (!sent) {
                 useToastStore.getState().push(t('email_test_failed'), 'error', t('email_test_failed_title'));
 
@@ -1204,7 +1247,6 @@ function EditorDialog({
     return (
         <Dialog open={!!template} onOpenChange={(o) => !o && requestClose()}>
             <DialogContent
-                aria-describedby={undefined}
                 onEscapeKeyDown={(e) => {
                     e.preventDefault();
                     requestClose();
@@ -1213,56 +1255,68 @@ function EditorDialog({
                     e.preventDefault();
                     requestClose();
                 }}
-                className="flex h-[85vh] w-[75vw] max-w-[75vw] flex-col gap-0 overflow-hidden rounded-2xl p-0"
+                className="flex h-[min(900px,90vh)] w-[min(1500px,92vw)] max-w-[min(1500px,92vw)] flex-col gap-0 overflow-hidden rounded-2xl p-0"
             >
                 {template && (
                     <>
-                        {/* Row 1 — title (the close X is rendered by DialogContent) */}
-                        <DialogHeader className="border-border space-y-0 border-b px-6 py-3.5 pr-14 text-left">
-                            <DialogTitle className="text-base">{t('email_edit_preview')}</DialogTitle>
-                        </DialogHeader>
-
-                        {/* Row 2 — template name + cadence (key on its own line) + enable toggle */}
-                        <div className="border-border flex items-center justify-between gap-3 border-b px-6 py-3">
-                            <div className="min-w-0">
-                                <div className="flex items-center gap-2.5">
-                                    <span className="truncate font-semibold">{name || template.name}</span>
+                        {/* One header, not three. The old first row said "Edit & preview" and the
+                            strip under it said PREVIEW and EDIT again, over two panes that are an
+                            email and a form — nobody was confusing them. */}
+                        <FocusDialogHeader
+                            icon={Mail}
+                            eyebrow={
+                                <span className="flex items-center gap-2">
+                                    {template.code}
                                     <span
                                         className={cn(
-                                            'shrink-0 rounded-md px-2 py-0.5 text-[10.5px] font-semibold',
+                                            'rounded-md px-1.5 py-0.5 text-[10px] font-semibold tracking-normal normal-case',
                                             CADENCE_META[template.cadence].badge,
                                         )}
                                     >
                                         {t(CADENCE_META[template.cadence].labelKey)}
                                     </span>
-                                </div>
-                                <div className="text-muted-foreground truncate font-mono text-xs">{template.key}</div>
-                            </div>
-                            <label className="flex shrink-0 items-center gap-2 text-sm">
-                                <span className="text-muted-foreground">{t('email_enabled')}</span>
-                                <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
-                            </label>
-                        </div>
+                                </span>
+                            }
+                            title={name || template.name}
+                            srDescription={t('email_edit_preview')}
+                            subtitle={<span className="text-muted-foreground font-mono text-xs">{template.key}</span>}
+                            titleSuffix={
+                                dirty ? (
+                                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-normal">
+                                        <span className="bg-brand h-1.5 w-1.5 rounded-full" />
+                                        {t('email_unsaved')}
+                                    </span>
+                                ) : undefined
+                            }
+                            headerRight={
+                                <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm">
+                                    <span className="text-muted-foreground">{t('email_enabled')}</span>
+                                    <SettingToggle on={enabled} onClick={() => setEnabled((v) => !v)} />
+                                </label>
+                            }
+                        />
 
-                        <PaneHeaders rendering={rendering} />
+                        {/* Body — the email is capped at 640px whatever the pane gives it, so the
+                            leftover width is worth more to the HTML the author is actually typing.
+                            Under lg the two panes stack and the body scrolls as one: side by side
+                            on a laptop each pane was ~440px, and the HTML is the half that suffers.
+                            Reversed, so the editor leads and the preview follows what you type. */}
+                        <div className="border-border flex min-h-0 flex-1 flex-col-reverse overflow-y-auto border-t lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:overflow-hidden">
+                            <PreviewPane brand={brand} from={fromAddress} subject={subject} previewHtml={previewHtml} rendering={rendering} />
 
-                        {/* Body — two columns */}
-                        <div className="grid min-h-0 flex-1 grid-cols-2">
-                            <PreviewPane brand={brand} subject={subject} previewHtml={previewHtml} />
-
-                            {/* Right — edit form */}
-                            <div className="flex min-h-0 flex-col">
-                                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
-                                    <Field label={t('email_template')}>
-                                        <Input value={name} onChange={(e) => setName(e.target.value)} />
-                                    </Field>
-                                    <Field label={t('email_subject')}>
-                                        <SubjectField value={subject} onChange={setSubject} />
-                                    </Field>
-                                    <Field label={t('email_body')}>
-                                        <BodyEditor value={body} onChange={setBody} extraText={subject} />
-                                    </Field>
-                                </div>
+                            {/* Right — edit form. A flex column rather than a scrolling box, so the
+                                body editor grows into the dialog instead of staying twelve rows tall
+                                inside a pane three times its height. */}
+                            <div className="flex min-h-0 flex-col gap-4 p-5 lg:overflow-y-auto">
+                                <Field label={t('email_template')}>
+                                    <Input value={name} onChange={(e) => setName(e.target.value)} />
+                                </Field>
+                                <Field label={t('email_subject')}>
+                                    <SubjectField value={subject} onChange={setSubject} />
+                                </Field>
+                                <Field label={t('email_body')} grow>
+                                    <BodyEditor value={body} onChange={setBody} extraText={subject} />
+                                </Field>
                             </div>
                         </div>
 
@@ -1273,15 +1327,17 @@ function EditorDialog({
                                     {testing ? <Loader2 className="animate-spin" /> : sentOk ? <Check /> : <Send />}
                                     {sentOk ? t('email_sent') : t('email_test')}
                                 </Button>
-                                {/* Disabled until the template actually differs from its standard
-                                    content: resetting an untouched one restores what it already
-                                    says, which looks like an action and is none. */}
+                                {/* Quieter than its neighbour on purpose: this one discards wording
+                                    somebody wrote, and it sits next to the button people press all
+                                    day. Disabled until the template actually differs from its
+                                    standard content — and then it says so, because a dead button
+                                    whose tooltip describes what it would do explains nothing. */}
                                 {template.is_standard && (
                                     <Button
-                                        variant="outline"
+                                        variant="ghost"
                                         onClick={handleReset}
                                         disabled={resetting || !template.is_modified}
-                                        title={t('email_reset_hint')}
+                                        title={template.is_modified ? t('email_reset_hint') : t('email_reset_unchanged')}
                                     >
                                         {resetting ? <Loader2 className="animate-spin" /> : resetOk ? <Check /> : <RotateCcw />}
                                         {resetOk ? t('email_reset_done') : t('email_reset')}
@@ -1292,7 +1348,7 @@ function EditorDialog({
                                 <Button variant="outline" onClick={requestClose}>
                                     {t('cancel')}
                                 </Button>
-                                <Button onClick={handleSave} disabled={!dirty || saving}>
+                                <Button onClick={handleSave} disabled={!dirty || saving} title={t('email_save_hint')}>
                                     {saving ? <Loader2 className="animate-spin" /> : savedOk ? <Check /> : <Save />}
                                     {savedOk ? t('email_saved') : t('email_save')}
                                 </Button>

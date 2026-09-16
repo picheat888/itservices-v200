@@ -3,7 +3,9 @@
 namespace App\Http\Resources\Asset;
 
 use App\Enums\Asset\AssetSource;
+use App\Http\Resources\Ticket\TicketResource;
 use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
 use App\Models\Settings\AppSetting;
 use App\Support\SystemTime;
 use Illuminate\Http\Request;
@@ -80,20 +82,33 @@ class AssetResource extends JsonResource
             'updated_at' => SystemTime::date($this->updated_at),
 
             // Included only on the single-asset endpoint (whenLoaded) so the list stays lean.
-            'transfers' => $this->whenLoaded('transfers', fn () => $this->transfers->map(fn ($tr) => [
-                'id' => $tr->id,
-                'date' => SystemTime::date($tr->created_at),
-                'from_owner' => $tr->from_owner,
-                'to_owner' => $tr->to_owner,
-                'reason' => $tr->reason,
-                'performed_by' => $tr->performed_by,
-            ])),
+            'transfers' => $this->whenLoaded('transfers', function () {
+                $names = AssetTransfer::employeeNamesFor($this->transfers);
+
+                return $this->transfers->map(fn ($tr) => [
+                    'id' => $tr->id,
+                    // Down to the minute: a recall and the hand-over it undid can land seconds
+                    // apart, and a date alone leaves the two rows looking identical.
+                    'date' => SystemTime::dateTime($tr->created_at),
+                    // A `relocate` row carries location names in from/to, not people — the
+                    // History tab reads this to label the row and pick the right icon.
+                    'kind' => $tr->kind?->value,
+                    'from_owner' => $tr->from_owner,
+                    'to_owner' => $tr->to_owner,
+                    // Set only when that end was an employee; a warehouse or shared label has none.
+                    'from_name' => $names[$tr->from_owner] ?? null,
+                    'to_name' => $names[$tr->to_owner] ?? null,
+                    'reason' => $tr->reason,
+                    'performed_by' => $tr->performed_by,
+                ]);
+            }),
             'tickets' => $this->whenLoaded('tickets', fn () => $this->tickets->map(fn ($tk) => [
                 'id' => $tk->id,
                 'ticket_no' => $tk->ticket_no,
                 'subject' => $tk->subject,
                 'category' => $tk->category?->value,
-                'priority' => $tk->priority?->value,
+                // Same rule as the Tickets module: priority is for whoever can take the case.
+                'priority' => TicketResource::showsDeskInternals($request) ? $tk->priority?->value : null,
                 'status' => $tk->status?->value,
                 'assignee_name' => $tk->assignee?->name,
                 'created_at' => SystemTime::date($tk->created_at),

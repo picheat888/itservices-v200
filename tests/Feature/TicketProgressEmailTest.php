@@ -145,6 +145,28 @@ class TicketProgressEmailTest extends TestCase
         $this->assertStringContainsString('Previously: -', $text);
     }
 
+    public function test_a_progress_note_reaches_the_requester_with_the_note_itself(): void
+    {
+        Bus::fake();
+        $ticket = $this->ticket();
+        $staff = User::factory()->create(['name' => 'Piches Srisuk', 'email' => 'piches@inaba.co.th']);
+        app(TicketService::class)->take($ticket, $staff, TicketPriority::Medium, null, null);
+        Bus::fake();  // forget the take mail; this test is about what an update sends
+
+        app(TicketService::class)->addUpdate($ticket->fresh(), $staff, "Part ordered.\nThree working days.");
+
+        $mail = $this->mail('ticket.updated');
+        $this->assertNotNull($mail, 'The middle of the case was silent again.');
+        $this->assertSame('somchai@inaba.co.th', $mail['to']);
+        $this->assertStringContainsString('Hi Somchai', $mail['html']);
+        $this->assertStringContainsString('Part ordered.', $mail['html']);
+        // Typed over two lines, and it arrives over two lines rather than as one run-on.
+        $this->assertStringContainsString("<br />\nThree working days.", $mail['html']);
+        $this->assertStringContainsString('Piches Srisuk', $mail['html']);
+        $this->assertStringNotContainsString('{{', $mail['html']);
+        $this->assertSame(url("/tickets?tab=my&view={$ticket->id}"), $mail['url']);
+    }
+
     public function test_a_requester_with_no_address_is_recorded_rather_than_dropped(): void
     {
         Bus::fake();
