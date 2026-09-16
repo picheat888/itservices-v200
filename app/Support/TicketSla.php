@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\SlaTarget;
@@ -67,7 +68,7 @@ class TicketSla
 
         $targets = self::defaults();
         foreach ($targets as $priority => $default) {
-            $targets[$priority] = ['resolve' => (int) ($stored[$priority] ?? $default['resolve'])];
+            $targets[$priority] = ['resolve' => (int) ($stored[$priority]['hours'] ?? $default['resolve'])];
         }
 
         return self::$memo = $targets;
@@ -157,52 +158,60 @@ class TicketSla
     }
 
     /**
-     * The resolution target for one ticket, in hours — the answer to "why this deadline".
+     * เป้าหมายปิดเคสของ ticket หนึ่งใบ เป็นชั่วโมง — คำตอบของ "ทำไมเดดไลน์เป็นวันนี้"
      *
-     * Request type beats priority beats the built-in default. A case opened from a request is
-     * always given a priority when somebody takes it, so the other order would leave a
-     * request-type target that could never once apply (see SlaScope::precedence).
+     * ลักษณะงาน ชนะ ประเภทคำขอ ชนะ priority ชนะ ค่าเริ่มต้นในโค้ด (ดู SlaScope::precedence)
      *
-     * @return array{hours: int, scope: ?SlaScope, value: ?string}
+     * @return array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}
      */
     public static function targetFor(Ticket $ticket): array
     {
         $rules = self::rules();
-        // Builder::value() applies the model's casts, so both paths can hand back the enum —
-        // narrowed to its string here because that is what a rule's match_value holds.
+        // Builder::value() ใช้ cast ของโมเดล ทั้งสองทางจึงคืน enum ได้ — บีบเป็นสตริงตรงนี้
+        // เพราะนั่นคือสิ่งที่ match_value เก็บ
         $requestType = $ticket->relationLoaded('serviceRequest')
             ? $ticket->serviceRequest?->type
             : $ticket->serviceRequest()->value('type');
         $requestType = $requestType instanceof BackedEnum ? (string) $requestType->value : $requestType;
 
+        // งานปกติไม่เข้ากฎไหน แม้จะมีแถว 'standard' อยู่ในตาราง — นั่นคือสิ่งที่ทำให้
+        // scope นี้ชนะลำดับบนสุดได้โดยไม่มีทางแอบทับเงียบ ๆ
+        $workClass = $ticket->work_class?->isRepair() ? $ticket->work_class->value : null;
+
         $candidates = [
+            SlaScope::WorkClass->value => $workClass,
             SlaScope::RequestType->value => $requestType,
             SlaScope::Priority->value => $ticket->priority?->value,
         ];
 
         foreach (SlaScope::precedence() as $scope) {
             $value = $candidates[$scope->value] ?? null;
-            $hours = $value === null ? null : ($rules[$scope->value][$value] ?? null);
-            if ($hours !== null) {
-                return ['hours' => $hours, 'scope' => $scope, 'value' => $value];
+            $rule = $value === null ? null : ($rules[$scope->value][$value] ?? null);
+            if ($rule !== null) {
+                return ['hours' => $rule['hours'], 'scope' => $scope, 'value' => $value, 'clock' => $rule['clock']];
             }
         }
 
-        // Nothing configured for this case: the built-in target for its priority, and the
-        // medium one when it has none yet. Reported as scope null — nobody chose it.
-        return ['hours' => self::resolveHours($ticket->priority?->value), 'scope' => null, 'value' => null];
+        // ไม่มีอะไรตั้งไว้สำหรับเคสนี้: ค่าเริ่มต้นตาม priority และ medium เมื่อยังไม่มี priority
+        // รายงานเป็น scope null เพราะไม่มีใครเลือกมัน — และนับด้วยเวลาทำการ ซึ่งคือพฤติกรรมเดิม
+        return [
+            'hours' => self::resolveHours($ticket->priority?->value),
+            'scope' => null,
+            'value' => null,
+            'clock' => TicketSlaClock::Business,
+        ];
     }
 
-    /** Per-request memo of the enabled targets, as [scope][match_value] => hours. */
+    /** memo ของกฎที่เปิดอยู่ต่อ request, เป็น [scope][match_value] => ['hours', 'clock'] */
     private static ?array $rulesMemo = null;
 
     /**
-     * Every enabled target, read once per request.
+     * เป้าหมายทุกแถวที่เปิดอยู่ อ่านครั้งเดียวต่อ request
      *
-     * A ticket list resolves SLA per row, and the table is small enough that one query beats
-     * one-per-row by any measure worth having.
+     * หน้ารายการ ticket resolve SLA ทีละแถว และตารางนี้เล็กพอที่ query เดียวจะชนะ
+     * การ query ต่อแถวในทุกแง่ที่ควรวัด
      *
-     * @return array<string, array<string, int>>
+     * @return array<string, array<string, array{hours: int, clock: TicketSlaClock}>>
      */
     public static function rules(): array
     {
@@ -212,7 +221,10 @@ class TicketSla
 
         $rules = [];
         foreach (SlaTarget::where('enabled', true)->get() as $target) {
-            $rules[$target->scope->value][$target->match_value] = $target->resolve_hours;
+            $rules[$target->scope->value][$target->match_value] = [
+                'hours' => $target->resolve_hours,
+                'clock' => $target->clock,
+            ];
         }
 
         return self::$rulesMemo = $rules;
