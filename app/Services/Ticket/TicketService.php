@@ -202,18 +202,22 @@ class TicketService
     }
 
     /**
-     * The deadline columns to write when a case is taken or assigned and gets its priority.
+     * คอลัมน์เดดไลน์ที่ต้องเขียนเมื่อเคสถูกรับหรือถูกมอบหมายและได้ priority
      *
-     * A case whose target comes from what was REQUESTED keeps that deadline: "a new monitor
-     * takes three days to procure" does not stop being true because the technician picking it
-     * up marked it urgent. Priority still decides everything else it decides — it just no
-     * longer shortens a deadline that was set by the nature of the work.
+     * เคสที่เป้าหมายมาจากอย่างอื่นที่ไม่ใช่ priority จะเก็บเดดไลน์นั้นไว้: "จอต้องใช้เวลา
+     * จัดหา 3 วัน" และ "เดินสายใช้เวลา 30 วัน" ไม่ได้เลิกเป็นความจริงเพราะช่างที่กดรับ
+     * ติ๊กว่าด่วน priority ยังตัดสินทุกอย่างที่มันเคยตัดสิน แค่ไม่หดเดดไลน์ที่ถูกกำหนด
+     * โดยเนื้องาน
+     *
+     * เขียนเป็นกฎเดียว ("scope ที่ชนะไม่ใช่ priority") แทนการไล่เช็คทีละ scope — รายการ
+     * ที่เขียนด้วยมือคือรายการที่วันหนึ่งจะมีคนเพิ่ม scope ใหม่แล้วลืมมาแก้ตรงนี้
      *
      * @return array<string, mixed>
      */
     private function deadlineAfterPriority(Ticket $ticket, TicketPriority $priority): array
     {
-        if (TicketSla::targetFor($ticket)['scope'] === SlaScope::RequestType) {
+        $scope = TicketSla::targetFor($ticket)['scope'];
+        if ($scope !== null && $scope !== SlaScope::Priority) {
             return [];
         }
 

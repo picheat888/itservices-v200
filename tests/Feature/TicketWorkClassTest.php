@@ -11,6 +11,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Ticket\TicketService;
 use App\Support\TicketSla;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -141,5 +142,34 @@ class TicketWorkClassTest extends TestCase
 
         // ยังไม่มีใครตั้งเป็น calendar — default ของแถวคือ business
         $this->assertSame(TicketSlaClock::Business, TicketSla::targetFor($ticket)['clock']);
+    }
+
+    public function test_taking_a_case_does_not_shorten_a_work_class_deadline(): void
+    {
+        // "เดินสายใช้เวลา 30 วัน" ไม่ได้เลิกเป็นความจริงเพราะช่างที่กดรับติ๊กว่าด่วน
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+        $ticket = Ticket::factory()->create(['work_class' => TicketWorkClass::RepairInternal]);
+        // ตั้งเดดไลน์เสมือนว่าบันทึกมันตั้งแต่สร้าง (สำหรับเทสต์: factory ไม่ทำเช่นนั้น service::create() ทำ)
+        $ticket->update(['sla_resolve_due_at' => TicketSla::resolveDueAt($ticket)]);
+        $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Test', 'status' => 'active']);
+        $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        app(TicketService::class)->take($ticket, $staff, TicketPriority::Critical, 'ดูให้', null);
+
+        $this->assertTrue(
+            $ticket->fresh()->sla_resolve_due_at->equalTo(TicketSla::addBusinessMinutes($ticket->created_at, 240 * 60)),
+        );
+    }
+
+    public function test_taking_an_ordinary_case_still_sets_the_deadline_from_priority(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Two', 'status' => 'active']);
+        $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        app(TicketService::class)->take($ticket, $staff, TicketPriority::Critical, 'ดูให้', null);
+
+        $expected = TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours('critical') * 60);
+        $this->assertTrue($ticket->fresh()->sla_resolve_due_at->equalTo($expected));
     }
 }
