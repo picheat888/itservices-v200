@@ -349,10 +349,35 @@ class TicketSla
         return $minutes;
     }
 
-    /** Business-time resolution deadline for a ticket — shared with the dashboard SLA %. */
+    /**
+     * เวลาที่ถึงหลังใช้เวลาไป $minutes นับด้วยนาฬิกาที่กฎกำหนด
+     *
+     * โหมด calendar นับเวลาจริงตรง ๆ เพราะ KPI อย่าง "ซ่อมเสร็จใน 30 วัน" ที่องค์กร
+     * ประกาศไว้ ไม่ได้หยุดเดินตอนคนกลับบ้าน
+     */
+    public static function addMinutesOn(Carbon $from, int $minutes, TicketSlaClock $clock): Carbon
+    {
+        return $clock === TicketSlaClock::Calendar
+            ? $from->copy()->addMinutes(max(0, $minutes))
+            : self::addBusinessMinutes($from, $minutes);
+    }
+
+    /** เวลาที่ผ่านไประหว่างสองจุด นับด้วยนาฬิกาเรือนเดียวกับที่ตั้งเดดไลน์ */
+    public static function minutesBetweenOn(Carbon $from, Carbon $to, TicketSlaClock $clock): int
+    {
+        if ($clock === TicketSlaClock::Calendar) {
+            return $to->lessThanOrEqualTo($from) ? 0 : (int) $from->diffInMinutes($to);
+        }
+
+        return self::businessMinutesBetween($from, $to);
+    }
+
+    /** เดดไลน์ปิดเคส นับด้วยนาฬิกาที่เป้าหมายของเคสนี้กำหนด — ใช้ร่วมกับ SLA % บน dashboard */
     public static function resolveDueAt(Ticket $ticket): Carbon
     {
-        return self::addBusinessMinutes($ticket->created_at, self::targetFor($ticket)['hours'] * 60);
+        $target = self::targetFor($ticket);
+
+        return self::addMinutesOn($ticket->created_at, $target['hours'] * 60, $target['clock']);
     }
 
     /** Business-time first-response deadline for a ticket — shared with the dashboard SLA %. */
@@ -378,7 +403,7 @@ class TicketSla
      *   the ticket is open, the resolution clock once it's in progress, and the final
      *   met/missed verdict once completed.
      *
-     * @return array{response_due_at: string, resolve_due_at: string, state: string, pct_elapsed: int}|null
+     * @return array{response_due_at: string, resolve_due_at: string, state: string, pct_elapsed: int, clock: string}|null
      */
     public static function forTicket(Ticket $ticket): ?array
     {
@@ -386,39 +411,48 @@ class TicketSla
             return null;
         }
 
+        $target = self::targetFor($ticket);
+        $clock = $target['clock'];
         $responseTarget = self::responseMinutes();
-        $resolveTarget = self::targetFor($ticket)['hours'] * 60;
+        $resolveTarget = $target['hours'] * 60;
+        // นาฬิกาตอบรับเป็น business เสมอ: เป้าหมายตอบรับเป็นค่าเดียวทั้งระบบ ไม่ได้มาจากแถวกฎ
         $responseDue = self::addBusinessMinutes($ticket->created_at, $responseTarget);
-        $resolveDue = self::addBusinessMinutes($ticket->created_at, $resolveTarget);
+        $resolveDue = self::addMinutesOn($ticket->created_at, $resolveTarget, $clock);
 
         if ($ticket->status === TicketStatus::Completed && $ticket->resolved_at !== null) {
             $state = $ticket->resolved_at->lessThanOrEqualTo($resolveDue) ? 'met' : 'missed';
 
-            return self::payload($responseDue, $resolveDue, $state, 100);
+            return self::payload($responseDue, $resolveDue, $state, 100, $clock);
         }
 
-        // Active clock: response while open (no first response yet), resolution after.
+        // นาฬิกาที่กำลังเดิน: ตอบรับระหว่างที่ยังเปิด ปิดเคสหลังจากนั้น
         $responseActive = $ticket->responded_at === null && $ticket->status === TicketStatus::Open;
         $due = $responseActive ? $responseDue : $resolveDue;
         $total = max(1, $responseActive ? $responseTarget : $resolveTarget);
-        $elapsed = self::businessMinutesBetween($ticket->created_at, now());
+        // เวลาที่ผ่านไปต้องนับด้วยนาฬิกาเรือนเดียวกับที่ตั้งเดดไลน์ ไม่งั้นแถบความคืบหน้าจะโกหก
+        $elapsed = self::minutesBetweenOn(
+            $ticket->created_at,
+            now(),
+            $responseActive ? TicketSlaClock::Business : $clock,
+        );
         $pct = (int) min(100, round(($elapsed / $total) * 100));
 
         $state = now()->greaterThan($due) ? 'breached' : ($pct >= self::AT_RISK_PCT ? 'at_risk' : 'on_track');
 
-        return self::payload($responseDue, $resolveDue, $state, $pct);
+        return self::payload($responseDue, $resolveDue, $state, $pct, $clock);
     }
 
     /**
-     * @return array{response_due_at: string, resolve_due_at: string, state: string, pct_elapsed: int}
+     * @return array{response_due_at: string, resolve_due_at: string, state: string, pct_elapsed: int, clock: string}
      */
-    private static function payload(Carbon $responseDue, Carbon $resolveDue, string $state, int $pct): array
+    private static function payload(Carbon $responseDue, Carbon $resolveDue, string $state, int $pct, TicketSlaClock $clock): array
     {
         return [
             'response_due_at' => $responseDue->toIso8601String(),
             'resolve_due_at' => $resolveDue->toIso8601String(),
             'state' => $state,
             'pct_elapsed' => $pct,
+            'clock' => $clock->value,
         ];
     }
 }
