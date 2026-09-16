@@ -33,6 +33,12 @@ class TicketSlaClockTest extends TestCase
         TicketSla::flush();
     }
 
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     private function calendarRule(string $value, int $hours): void
     {
         SlaTarget::create([
@@ -112,5 +118,37 @@ class TicketSlaClockTest extends TestCase
             TicketSla::responseDueAt($ticket)
                 ->equalTo(TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::responseMinutes())),
         );
+    }
+
+    /**
+     * responseDueAt() is hardcoded to addBusinessMinutes() — it could never read the wrong
+     * clock, so the test above can never go red from a clock-selection bug. The branch that CAN
+     * break is forTicket()'s elapsed-minutes selector (TicketSla.php ~441-445):
+     * `$responseActive ? TicketSlaClock::Business : $clock`. If that ever collapsed to plain
+     * `$clock`, an open, untaken case under a calendar work_class rule would have its response
+     * progress bar measured in calendar minutes instead of business minutes — a case that just
+     * missed a long weekend would read as almost breached when barely any business time passed.
+     */
+    public function test_response_progress_is_measured_in_business_minutes_even_under_a_calendar_rule(): void
+    {
+        $this->calendarRule('repair_internal', 720); // 30 วันปฏิทิน — $clock ของเคสนี้คือ calendar
+        // ศุกร์ 16:00 → เหลือเวลาทำการอีก 60 นาทีก่อนเลิกงาน
+        $ticket = Ticket::factory()->create([
+            'work_class' => TicketWorkClass::RepairInternal,
+            'status' => TicketStatus::Open,
+            'responded_at' => null, // ยังไม่มีใครรับ — นาฬิกาที่กำลังเดินคือนาฬิกาตอบรับ
+            'created_at' => Carbon::parse('2026-10-02 16:00:00'),
+        ]);
+        // จันทร์ 08:30 — เวลาทำการที่ผ่านไปจริง: 60 นาที (ศุกร์ 16:00-17:00) + 30 นาที (จันทร์ 08:00-08:30) = 90
+        // ส่วนเวลาปฏิทินที่ผ่านไปคือ 2 วันครึ่งกว่า (3,870 นาที) — มากกว่าเป้าหมายตอบรับ (120 นาที) จนล้น 100%
+        Carbon::setTestNow(Carbon::parse('2026-10-05 08:30:00'));
+
+        $sla = TicketSla::forTicket($ticket);
+
+        $this->assertNotNull($sla);
+        // 90 จาก 120 นาทีเป้าหมายตอบรับ = 75% พอดี ถ้านับด้วยนาฬิกาปฏิทินแทน จะได้ 100% (ล้น) และ state
+        // จะกลายเป็น at_risk ทั้งที่ยังไม่ถึงเดดไลน์ตอบรับด้วยซ้ำ (จันทร์ 09:00)
+        $this->assertSame(75, $sla['pct_elapsed']);
+        $this->assertSame('on_track', $sla['state']);
     }
 }
