@@ -15,7 +15,7 @@ const STANDALONE_SOLO = 'tickets.my';
 const LEVELS = ['tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other'];
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'tickets.view_dashboard', children: [], chip: false },
-    { view: 'tickets.view_all', children: ['tickets.resolve', 'tickets.forward', 'tickets.assign'] },
+    { view: 'tickets.view_all', children: ['tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class'] },
     { view: 'tickets.jobs', children: [], chip: false },
 ];
 // Every key that lives under the master (excludes the standalone keys).

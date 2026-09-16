@@ -20,7 +20,7 @@ class Permissions
             'tickets' => [
                 'module',
                 'view_dashboard', 'view_all',
-                'resolve', 'forward', 'assign',
+                'resolve', 'forward', 'assign', 'set_work_class',
                 'level_hardware', 'level_software', 'level_network', 'level_other',
                 'create', 'edit_own',
                 'my', 'jobs',
@@ -133,7 +133,7 @@ class Permissions
             // IT Technician — broad operational access, configurable
             'admin' => [
                 'tickets.module', 'tickets.view_dashboard', 'tickets.view_all',
-                'tickets.resolve', 'tickets.forward', 'tickets.assign',
+                'tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class',
                 'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
                 'requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill',
@@ -489,7 +489,7 @@ class Permissions
             'standalone_solo' => ['tickets.my'],
             'groups' => [
                 'tickets.view_dashboard' => [],
-                'tickets.view_all' => ['tickets.resolve', 'tickets.forward', 'tickets.assign'],
+                'tickets.view_all' => ['tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class'],
                 'tickets.level_hardware' => [],
                 'tickets.level_software' => [],
                 'tickets.level_network' => [],

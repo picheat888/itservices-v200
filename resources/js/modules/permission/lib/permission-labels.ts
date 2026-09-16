@@ -32,6 +32,7 @@ const LIVE = new Set<string>([
     'tickets.create',
     'tickets.assign',
     'tickets.resolve',
+    'tickets.set_work_class',
     'assets.module',
     'assets.view_dashboard',
     'assets.view',
