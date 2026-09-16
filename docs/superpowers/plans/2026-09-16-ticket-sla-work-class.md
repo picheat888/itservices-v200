@@ -654,7 +654,7 @@ use Tests\TestCase;
  *
  * นาฬิกาจึงเป็นค่าต่อแถวกฎ ไม่ใช่ค่าที่ฝังในโค้ด ผู้ดูแลระบบเป็นคนตอบว่า 30 วันของ
  * องค์กรตัวเองนับยังไง เทสต์ชุดนี้ตรึงว่าเดดไลน์กับ % ความคืบหน้าใช้นาฬิกาเรือนเดียวกัน
- * ซึ่งถ้าหลุดจะได้แถบความคืบหน้าที่เต็ม 100% ตั้งแต่ยังไม่ถึงครึ่งทาง
+ * ซึ่งถ้าหลุดจะได้แถบความคืบหน้าที่ต่ำกว่าความจริงมาก เคสจะดูสุขภาพดีทั้งที่ใกล้หมดเวลา
  */
 class TicketSlaClockTest extends TestCase
 {
@@ -724,7 +724,7 @@ class TicketSlaClockTest extends TestCase
 
         $sla = TicketSla::forTicket($ticket);
 
-        // 15 วันจาก 30 วันปฏิทิน = ราวครึ่งทาง ถ้าเผลอนับด้วยเวลาทำการจะพุ่งไป 100
+        // 15 วันจาก 30 วันปฏิทิน = ราวครึ่งทาง ถ้าเผลอนับด้วยเวลาทำการจะได้ราว 12 ไม่ใช่ 50
         $this->assertNotNull($sla);
         $this->assertGreaterThanOrEqual(45, $sla['pct_elapsed']);
         $this->assertLessThanOrEqual(55, $sla['pct_elapsed']);
@@ -872,7 +872,7 @@ Expected: PASS ทั้งคู่
 php artisan test --compact --filter=test_progress_percent_is_measured_on_the_same_clock_as_the_deadline
 ```
 
-Expected: FAIL (pct พุ่งไป 100) แล้ว**ใส่กลับ**
+Expected: FAIL (pct ตกไปราว 12 แทนที่จะอยู่ในช่วง 45–55) แล้ว**ใส่กลับ**
 
 - [ ] **Step 8: รันทั้ง suite**
 
