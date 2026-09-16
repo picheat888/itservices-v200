@@ -1,5 +1,5 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary } from '@/shared/types';
+import type { ApiEnvelope, Ticket, TicketCategory, TicketPriority, TicketSummary, TicketWorkClass } from '@/shared/types';
 
 export interface TicketPageMeta {
     total: number;
@@ -49,7 +49,7 @@ export interface TicketListParams {
     requested?: boolean;
 }
 
-async function mutate<T>(method: 'post' | 'put' | 'delete', url: string, body?: unknown): Promise<T> {
+async function mutate<T>(method: 'post' | 'put' | 'patch' | 'delete', url: string, body?: unknown): Promise<T> {
     await ensureCsrf();
     const { data } = await http.request<ApiEnvelope<T>>({ method, url, data: body });
     return (data as ApiEnvelope<T>)?.data;
@@ -78,6 +78,9 @@ export const ticketApi = {
     forward: (id: number, body: { assignee_id: number }) => mutate<Ticket>('post', `/tickets/${id}/forward`, body),
     /** Write a progress note on a case in flight. */
     addUpdate: (id: number, body: { body: string }) => mutate<Ticket>('post', `/tickets/${id}/updates`, body),
+    /** Classify a case's kind of work — the deadline follows (see TicketSla::targetFor). */
+    setWorkClass: (id: number, payload: { work_class: TicketWorkClass; reason: string }) =>
+        mutate<Ticket>('patch', `/tickets/${id}/work-class`, payload),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
     /**
      * Uploads attachments ONE AT A TIME so each file reports its own progress

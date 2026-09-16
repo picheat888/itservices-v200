@@ -53,6 +53,7 @@ import { ResolveTicketModal, type ResolveMode } from '../components/resolve-tick
 import { TakeCaseModal } from '../components/take-case-modal';
 import { TicketDetailDrawer } from '../components/ticket-detail-drawer';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
+import { TicketWorkClassModal } from '../components/ticket-work-class-modal';
 import {
     slaDuration,
     TICKET_CATEGORIES,
@@ -62,6 +63,7 @@ import {
     TicketPriorityBadge,
     TicketSlaBadge,
     TicketStatusBadge,
+    TicketWorkClassBadge,
 } from '../components/ticket-meta';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
@@ -385,6 +387,8 @@ export default function TicketsPage() {
     // Assign / Forward mirror their backend gates.
     const canAssign = has('tickets.assign');
     const canForward = has('tickets.forward');
+    // Classify (kind of work) mirrors its backend gate — the drawer adds the assignee + in-progress checks.
+    const canSetWorkClass = has('tickets.set_work_class');
 
     // Tabs the current user can see, in display order — each behind its own gate.
     const visibleTabs: Tab[] = [
@@ -457,6 +461,7 @@ export default function TicketsPage() {
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
     const [updateTicket, setUpdateTicket] = useState<Ticket | null>(null);
+    const [classifyTicket, setClassifyTicket] = useState<Ticket | null>(null);
 
     // The record the drawer is currently showing, which outlives `detail` on the way out:
     // closing drops ?view=, the query switches off, and `detail` is undefined on the very
@@ -588,7 +593,23 @@ export default function TicketsPage() {
             ? [{ key: 'priority', header: t('ticket_priority'), render: (tk: Ticket) => <TicketPriorityBadge priority={tk.priority ?? null} t={t} /> }]
             : []),
         { key: 'status', header: t('status'), render: (tk) => <TicketStatusBadge status={tk.status} t={t} /> },
-        ...(canTake ? [{ key: 'sla', header: t('ticket_sla'), render: (tk: Ticket) => <TicketSlaBadge ticket={tk} t={t} /> }] : []),
+        ...(canTake
+            ? [
+                  {
+                      key: 'sla',
+                      header: t('ticket_sla'),
+                      // A repair case running under its own KPI gets the Repair badge alongside its
+                      // SLA chip — without it, a case 20 days in (with weeks left on a 30-day repair
+                      // target) reads as one about to breach.
+                      render: (tk: Ticket) => (
+                          <span className="flex flex-wrap items-center gap-1.5">
+                              <TicketSlaBadge ticket={tk} t={t} />
+                              {tk.work_class && <TicketWorkClassBadge workClass={tk.work_class} t={t} />}
+                          </span>
+                      ),
+                  },
+              ]
+            : []),
         {
             key: 'assignee',
             header: t('ticket_responsible_by'),
@@ -1068,6 +1089,7 @@ export default function TicketsPage() {
                 canTake={canTake && (shownTicket ? hasLevel(shownTicket.category) : false)}
                 canAssign={canAssign}
                 canForward={canForward}
+                canSetWorkClass={canSetWorkClass}
                 meId={user?.id}
                 meEmployeeId={user?.employee_id}
                 canEdit={canEditDetail}
@@ -1077,12 +1099,14 @@ export default function TicketsPage() {
                 onForward={(tk) => setForwardTicket(tk)}
                 onResolve={startResolve}
                 onUpdate={(tk) => setUpdateTicket(tk)}
+                onSetWorkClass={(tk) => setClassifyTicket(tk)}
             />
             <EditTicketDrawer ticket={editTicket} onClose={() => setEditTicket(null)} />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />
             <AssignTicketModal ticket={assignTicket} onClose={() => setAssignTicket(null)} />
             <ForwardTicketModal ticket={forwardTicket} onClose={() => setForwardTicket(null)} />
             <TicketUpdateModal ticket={updateTicket} onClose={() => setUpdateTicket(null)} />
+            <TicketWorkClassModal ticket={classifyTicket} onClose={() => setClassifyTicket(null)} />
             <ResolveTicketModal ticket={resolveState?.ticket ?? null} mode={resolveState?.mode ?? null} onClose={() => setResolveState(null)} />
         </div>
     );

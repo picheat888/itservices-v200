@@ -170,4 +170,20 @@ export const ticket: Dict = {
     ticket_sort_oldest: 'เก่าสุดก่อน',
     ticket_sort_updated: 'อัปเดตล่าสุด',
     ticket_sort_priority: 'ความสำคัญ (สูง → ต่ำ)',
+    // ticket-work-class-modal.tsx — จัดประเภทลักษณะงาน
+    ticket_work_class: 'ลักษณะงาน',
+    ticket_work_class_change: 'เปลี่ยนลักษณะงาน',
+    ticket_work_class_standard: 'งานปกติ',
+    ticket_work_class_repair_internal: 'ซ่อมโดยช่างในองค์กร',
+    ticket_work_class_repair_vendor: 'ซ่อมโดย vendor',
+    ticket_work_class_reason: 'ทำไมถึงเป็นงานซ่อม',
+    ticket_work_class_reason_hint: 'ข้อความนี้ขึ้นบนไทม์ไลน์ของเคส ผู้แจ้งจะได้อ่าน',
+    ticket_work_class_deadline_from: 'เดดไลน์ตอนนี้',
+    ticket_work_class_deadline_to: 'เดดไลน์หลังเปลี่ยน',
+    ticket_work_class_no_rule: 'ยังไม่มีเป้าหมายสำหรับลักษณะงานนี้ เดดไลน์จึงไม่ขยับ',
+    // pages/index.tsx — การ์ด KPI และป้ายในตาราง
+    ticket_repair_badge: 'งานซ่อม',
+    ticket_repair_kpi: 'ปิดงานซ่อมทัน KPI',
+    ticket_repair_backlog: 'ยังไม่ปิด {n} เคส',
+    ticket_sla_met_standard: 'ปิดงานปกติทัน SLA',
 };

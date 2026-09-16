@@ -342,6 +342,63 @@ class TicketWorkClassTest extends TestCase
         $this->assertNull($body['repair_kpi_met_pct']);
     }
 
+    /**
+     * The guard rail Task 11 builds: the dialog shows a predicted deadline before the technician
+     * confirms, and that prediction must equal what classifying the case actually produces —
+     * otherwise the dialog is showing a guess dressed up as a fact.
+     */
+    public function test_the_forecast_deadline_for_a_class_matches_what_classifying_it_actually_produces(): void
+    {
+        $this->rule(SlaScope::WorkClass, 'repair_vendor', 360);
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::High]);
+        $staff = $this->assigneeOf($ticket);
+
+        $before = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data');
+        $forecast = collect($before['work_class_forecast'])->firstWhere('work_class', 'repair_vendor');
+        $this->assertNotNull($forecast);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_vendor',
+            'reason' => 'ส่ง vendor เดินสายใหม่ทั้งชั้น',
+        ])->assertOk();
+
+        $ticket->refresh();
+        $this->assertSame($ticket->sla_resolve_due_at->toIso8601String(), $forecast['due_at']);
+    }
+
+    /**
+     * A repair class with no configured rule must fall through to priority honestly — the dialog
+     * must be able to say the deadline will NOT move, not imply a change that will not happen.
+     */
+    public function test_the_forecast_reports_honestly_when_a_repair_class_has_no_rule(): void
+    {
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::Medium]);
+        $staff = $this->assigneeOf($ticket);
+
+        $body = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data');
+        $forecast = collect($body['work_class_forecast'])->firstWhere('work_class', 'repair_internal');
+
+        // ไม่มีแถวกฎ priority ให้ match เลย (แค่ตั้ง priority ไว้เฉย ๆ) — scope จึงเป็น null
+        // ตามค่าเริ่มต้นในโค้ด เหมือนที่ TicketSla::targetFor() รายงานเมื่อไม่มีใครตั้งกฎไว้เลย
+        $this->assertNull($forecast['scope']);
+        $this->assertSame(TicketSla::resolveHours('medium'), $forecast['hours']);
+    }
+
+    /** Reverting to standard is a supported action, so it must always be one of the options. */
+    public function test_the_forecast_always_includes_standard_as_an_option(): void
+    {
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::Low, 'work_class' => TicketWorkClass::RepairInternal]);
+        $staff = $this->assigneeOf($ticket);
+
+        $body = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data');
+        $classes = collect($body['work_class_forecast'])->pluck('work_class');
+        $this->assertTrue($classes->contains('standard'));
+
+        $standard = collect($body['work_class_forecast'])->firstWhere('work_class', 'standard');
+        $this->assertSame(TicketSla::resolveHours('low'), $standard['hours']);
+    }
+
     public function test_the_summary_says_whether_repair_rules_exist_at_all(): void
     {
         // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม — องค์กรที่ไม่ได้ใช้ฟีเจอร์นี้
