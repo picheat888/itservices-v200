@@ -350,7 +350,10 @@ class TicketWorkClassTest extends TestCase
     public function test_the_forecast_deadline_for_a_class_matches_what_classifying_it_actually_produces(): void
     {
         $this->rule(SlaScope::WorkClass, 'repair_vendor', 360);
-        $ticket = Ticket::factory()->create(['priority' => TicketPriority::High]);
+        // created_at a few days back, not "now": a forecast bug that started the clock at now()
+        // instead of created_at would land within a second of correct and this equality could
+        // pass by accident. Days back forces the comparison to walk real business-hour windows.
+        $ticket = Ticket::factory()->create(['priority' => TicketPriority::High, 'created_at' => now()->subDays(5)]);
         $staff = $this->assigneeOf($ticket);
 
         $before = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data');
@@ -397,6 +400,40 @@ class TicketWorkClassTest extends TestCase
 
         $standard = collect($body['work_class_forecast'])->firstWhere('work_class', 'standard');
         $this->assertSame(TicketSla::resolveHours('low'), $standard['hours']);
+    }
+
+    /**
+     * The forecast walks the business clock 3 times over (targetFor() + resolveDueAt() per class,
+     * a real addMinutesOn() window walk — not a cheap array lookup like sla_target). The list has
+     * nowhere to show it, so it must never be computed for a row there — only the single-ticket
+     * read (relationLoaded('updates'), same signal the 'updates' field already uses) pays for it.
+     */
+    public function test_the_forecast_is_left_out_of_the_list_response(): void
+    {
+        $ticket = Ticket::factory()->create();
+        $staff = $this->itStaff();
+
+        $body = $this->actingAs($staff)->getJson('/api/tickets')->assertOk()->json();
+        $row = collect($body['data'])->firstWhere('id', $ticket->id);
+
+        $this->assertNotNull($row);
+        $this->assertArrayNotHasKey('work_class_forecast', $row);
+    }
+
+    /**
+     * SLA does not apply to a canceled case at all (TicketSla::forTicket() already returns null
+     * for it) — the forecast must say the same rather than asserting a deadline for a case that
+     * has none, or crashing resolveDueAt() on undefined behaviour.
+     */
+    public function test_the_forecast_is_null_for_a_canceled_case(): void
+    {
+        $ticket = Ticket::factory()->create(['status' => TicketStatus::Canceled]);
+        $staff = $this->itStaff();
+
+        $body = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data');
+
+        $this->assertArrayHasKey('work_class_forecast', $body);
+        $this->assertNull($body['work_class_forecast']);
     }
 
     public function test_the_summary_says_whether_repair_rules_exist_at_all(): void

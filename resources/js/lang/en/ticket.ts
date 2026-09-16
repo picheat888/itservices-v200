@@ -181,6 +181,8 @@ export const ticket: Dict = {
     ticket_work_class_deadline_from: 'Deadline now',
     ticket_work_class_deadline_to: 'Deadline after this change',
     ticket_work_class_no_rule: 'No target is set for this kind of work yet, so the deadline will not move.',
+    ticket_work_class_forecast_unavailable: "The deadline preview isn't available for this case, so classifying is turned off here.",
+    ticket_work_class_err_failed: 'Could not change the kind of work. Please try again.',
     // pages/index.tsx — KPI cards and the list's repair badge
     ticket_repair_badge: 'Repair',
     ticket_repair_kpi: 'Repair KPI met',

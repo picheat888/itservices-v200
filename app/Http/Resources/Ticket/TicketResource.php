@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Ticket;
 
+use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Ticket\Ticket;
 use App\Support\TicketSla;
@@ -17,9 +18,12 @@ class TicketResource extends JsonResource
     public function toArray(Request $request): array
     {
         if (self::showsDeskInternals($request)) {
-            // 'sla', 'sla_target' และ work_class_forecast ด้านล่างเรียก TicketSla::targetFor()
-            // หลายครั้งในคำขอเดียว ซึ่งอ่าน serviceRequest ทุกครั้งที่ยังไม่เจอ relation แคชไว้ —
-            // โหลดล่วงหน้าที่นี่ที่เดียวกันคิวรีซ้ำ ไม่ได้แตะตรรกะการคำนวณเดดไลน์เลย
+            // เฉพาะ single-ticket read (show / storeUpdate / updateWorkClass ฯลฯ) เท่านั้นที่ยังไม่ได้
+            // eager-load serviceRequest มาก่อน — TicketController::index() โหลดไว้แล้วในคิวรีหลัก
+            // (->with([..., 'serviceRequest'])) ดังนั้นบรรทัดนี้ "no-op" กับหน้ารายการ ไม่มีผลอะไรที่นั่น
+            // ที่มันช่วยจริง ๆ คือ 1 คิวรีที่ 'sla' (TicketSla::forTicket) ด้านล่างเรียก targetFor()
+            // ซึ่งอ่าน serviceRequest ผ่าน ->value() ที่ไม่แคช relation ไว้เอง — โหลดล่วงหน้าที่นี่
+            // ที่เดียวกันคิวรีนั้นซ้ำ ไม่ได้แตะตรรกะการคำนวณเดดไลน์เลย
             $this->resource->loadMissing('serviceRequest');
         }
 
@@ -64,7 +68,16 @@ class TicketResource extends JsonResource
             'sla_target' => $this->when(self::showsDeskInternals($request), fn () => $this->slaTarget()),
             // เดดไลน์ที่แต่ละลักษณะงาน (รวม standard) จะสร้างขึ้น ถ้าเคสนี้ถูกจัดประเภทเป็นแบบนั้น —
             // สิ่งที่ไดอะล็อกจัดประเภทโชว์ก่อนช่างยืนยัน ต้องเป็นตัวเลขจริง ไม่ใช่การเดา
-            'work_class_forecast' => $this->when(self::showsDeskInternals($request), fn () => $this->workClassForecast()),
+            //
+            // คำนวณเฉพาะ single-ticket read เท่านั้น (relationLoaded('updates') คือสัญญาณเดียวกับที่
+            // ฟิลด์ 'updates' ด้านล่างใช้อยู่แล้ว) เพราะแต่ละตัวเลือกเรียก targetFor() + resolveDueAt()
+            // เต็มรูปแบบ (เดินนาฬิกาทำการทีละหน้าต่าง ไม่ใช่แค่ lookup อาเรย์เหมือน sla_target) — คิด
+            // เป็นหลักพัน Carbon step ต่อหนึ่งตัวเลือกสำหรับเป้าหมายงานซ่อมหลักสิบวัน หน้ารายการไม่มีที่
+            // แสดงมันเลยสักบรรทัด จึงไม่ต้องจ่ายราคานั้นให้ทุกแถว
+            'work_class_forecast' => $this->when(
+                self::showsDeskInternals($request) && $this->resource->relationLoaded('updates'),
+                fn () => $this->workClassForecast(),
+            ),
             'responded_at' => $this->responded_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 
@@ -133,12 +146,20 @@ class TicketResource extends JsonResource
      * ฟรอนต์เอนด์อ่านค่านี้ในไดอะล็อกจัดประเภท: ช่างไม่มีสิทธิ์ settings.sla จึงไม่มีทางคำนวณเองได้
      * ถูกต้อง และ sla_target ด้านบนรายงานได้แค่เป้าหมายที่ "ชนะ" อยู่ตอนนี้ ไม่ใช่ของทุกตัวเลือก
      *
-     * @return list<array{work_class: string, hours: int, scope: ?string, value: ?string, clock: string, due_at: string}>
+     * null เมื่อ SLA ไม่ใช้กับเคสนี้เลย (เคสที่ยกเลิก หรือยังไม่มี created_at) — เงื่อนไขเดียวกับที่
+     * TicketSla::forTicket() ใช้คืน null สำหรับฟิลด์ 'sla' ด้านบน เพราะ resolveDueAt() รับ Carbon
+     * ที่ไม่ nullable และจะ error ถ้าไม่กันไว้ก่อน ไม่ใช่แค่ "ไม่มีกฎ" แต่ "ไม่มีเดดไลน์ให้พยากรณ์เลย"
+     *
+     * @return list<array{work_class: string, hours: int, scope: ?string, value: ?string, clock: string, due_at: string}>|null
      */
-    private function workClassForecast(): array
+    private function workClassForecast(): ?array
     {
         /** @var Ticket $ticket */
         $ticket = $this->resource;
+
+        if ($ticket->status === TicketStatus::Canceled || $ticket->created_at === null) {
+            return null;
+        }
 
         return array_map(function (TicketWorkClass $class) use ($ticket): array {
             $clone = clone $ticket;
