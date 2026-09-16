@@ -342,4 +342,37 @@ class SlaTargetTest extends TestCase
         $businessDeadline = TicketSla::addBusinessMinutes($ticket->created_at, 720 * 60);
         $this->assertNotEquals($businessDeadline, $ticket->sla_resolve_due_at);
     }
+
+    /**
+     * The first-response floor ("resolution can't be due before the case is even guaranteed a
+     * response") used to only be checked against ticket_sla — a work-class or request-type row
+     * could name a resolve target shorter than the response target and be accepted anyway.
+     */
+    public function test_a_work_class_target_shorter_than_the_first_response_target_is_rejected(): void
+    {
+        $admin = $this->staff();
+
+        // response = 600 min (10h); work-class resolve = 1 hour (60 min) < 600 → invalid.
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+            'ticket_sla_response' => 600,
+            'ticket_sla_work_class' => [['work_class' => 'repair_internal', 'resolve' => 1, 'enabled' => true]],
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['ticket_sla_work_class.0.resolve']);
+    }
+
+    public function test_a_request_type_target_shorter_than_the_first_response_target_is_rejected(): void
+    {
+        $admin = $this->staff();
+
+        // response = 600 min (10h); request-type resolve = 1 hour (60 min) < 600 → invalid.
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+            'ticket_sla_response' => 600,
+            'ticket_sla_request' => [['type' => 'computer', 'resolve' => 1, 'enabled' => true]],
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['ticket_sla_request.0.resolve']);
+    }
 }

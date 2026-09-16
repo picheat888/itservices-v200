@@ -156,13 +156,23 @@ class SettingsController extends Controller
             ],
         ]);
 
-        // Every resolution target (hours) must be at least the first-response target (minutes).
+        // Every resolution target (hours), on every list, must be at least the first-response
+        // target (minutes) — a case cannot be due for resolution before it is even guaranteed
+        // a response. Applies to ticket_sla (keyed by priority name) the same as the two
+        // row-list scopes (keyed by index) — the row identity in the error key is whatever the
+        // request actually used, so the screen can still attach the message to the right field.
         $validator->after(function ($v) use ($request) {
             $response = (int) $request->input('ticket_sla_response', TicketSla::responseMinutes());
-            foreach ((array) $request->input('ticket_sla', []) as $priority => $row) {
-                $resolve = (int) (is_array($row) ? ($row['resolve'] ?? 0) : 0);
-                if ($response > 0 && $resolve > 0 && $resolve * 60 < $response) {
-                    $v->errors()->add("ticket_sla.{$priority}.resolve", 'Resolution must be at least the first-response target.');
+            if ($response <= 0) {
+                return;
+            }
+
+            foreach (['ticket_sla', 'ticket_sla_request', 'ticket_sla_work_class'] as $listKey) {
+                foreach ((array) $request->input($listKey, []) as $key => $row) {
+                    $resolve = (int) (is_array($row) ? ($row['resolve'] ?? 0) : 0);
+                    if ($resolve > 0 && $resolve * 60 < $response) {
+                        $v->errors()->add("{$listKey}.{$key}.resolve", 'Resolution must be at least the first-response target.');
+                    }
                 }
             }
         });
@@ -181,41 +191,14 @@ class SettingsController extends Controller
             );
         }
 
-        // Request-type targets arrive as the WHOLE list, so a row the administrator deleted on
-        // the screen is a row that disappears here. Saving the Priority form alone sends no
-        // such key and leaves them untouched.
+        // Request-type and work-class targets both arrive as the WHOLE list, so a row the
+        // administrator deleted on the screen is a row that disappears here. Saving the
+        // Priority form alone sends neither key and leaves both untouched.
         if (array_key_exists('ticket_sla_request', $data)) {
-            $keep = [];
-            foreach ($data['ticket_sla_request'] as $row) {
-                $keep[] = $row['type'];
-                SlaTarget::updateOrCreate(
-                    ['scope' => SlaScope::RequestType->value, 'match_value' => $row['type']],
-                    [
-                        'resolve_hours' => (int) $row['resolve'],
-                        'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
-                        'enabled' => (bool) ($row['enabled'] ?? true),
-                    ],
-                );
-            }
-            SlaTarget::where('scope', SlaScope::RequestType->value)->whereNotIn('match_value', $keep)->delete();
+            $this->saveScopeRows(SlaScope::RequestType, 'type', $data['ticket_sla_request']);
         }
-
-        // เป้าหมายตามลักษณะงานมาเป็นทั้งลิสต์เหมือนกฎประเภทคำขอ แถวที่ผู้ดูแลลบบนหน้าจอ
-        // คือแถวที่หายไปตรงนี้ ไม่ส่งคีย์นี้มาเลย = ไม่แตะกฎเดิม
         if (array_key_exists('ticket_sla_work_class', $data)) {
-            $keep = [];
-            foreach ($data['ticket_sla_work_class'] as $row) {
-                $keep[] = $row['work_class'];
-                SlaTarget::updateOrCreate(
-                    ['scope' => SlaScope::WorkClass->value, 'match_value' => $row['work_class']],
-                    [
-                        'resolve_hours' => (int) $row['resolve'],
-                        'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
-                        'enabled' => (bool) ($row['enabled'] ?? true),
-                    ],
-                );
-            }
-            SlaTarget::where('scope', SlaScope::WorkClass->value)->whereNotIn('match_value', $keep)->delete();
+            $this->saveScopeRows(SlaScope::WorkClass, 'work_class', $data['ticket_sla_work_class']);
         }
 
         if (isset($data['ticket_sla_response'])) {
@@ -249,6 +232,32 @@ class SettingsController extends Controller
         AuditLog::record('Updated SLA settings', 'ticket_sla');
 
         return $this->show();
+    }
+
+    /**
+     * Whole-list save for an SLA scope keyed on something other than priority: upsert every row
+     * in $rows, then delete whatever existing row of this scope was NOT in the list — the
+     * administrator's screen always sends its list in full, so a row missing from it is a row
+     * that was deleted on screen. Shared by the request-type and work-class blocks in
+     * updateSla(), which differ only in the scope and which field of a row names the rule.
+     *
+     * @param  list<array{resolve: int, clock?: string, enabled?: bool}>  $rows
+     */
+    private function saveScopeRows(SlaScope $scope, string $keyField, array $rows): void
+    {
+        $keep = [];
+        foreach ($rows as $row) {
+            $keep[] = $row[$keyField];
+            SlaTarget::updateOrCreate(
+                ['scope' => $scope->value, 'match_value' => $row[$keyField]],
+                [
+                    'resolve_hours' => (int) $row['resolve'],
+                    'clock' => $row['clock'] ?? TicketSlaClock::Business->value,
+                    'enabled' => (bool) ($row['enabled'] ?? true),
+                ],
+            );
+        }
+        SlaTarget::where('scope', $scope->value)->whereNotIn('match_value', $keep)->delete();
     }
 
     /** System-wide display theme (Settings -> Display). Gated by permission:settings.display. */
