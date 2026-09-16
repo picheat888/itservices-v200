@@ -487,6 +487,14 @@ export interface TicketSummary {
     // Window SLA % and its change in percentage points vs the previous window.
     sla_met_pct: number | null;
     sla_delta_pts: number | null;
+    // Repair-class cases measured against their own work-class KPI target, split out
+    // from sla_met_pct above. Null until a repair case has actually closed in the window.
+    repair_kpi_met_pct: number | null;
+    repair_kpi_delta_pts: number | null;
+    // Repair cases still open right now (not window-scoped, mirrors sla_breached_now).
+    repair_backlog: number;
+    // Whether any enabled work-class target exists — gates whether the KPI card renders.
+    has_repair_rules: boolean;
     // Same pair for the first-response clock (tickets responded within the window).
     response_sla_met_pct: number | null;
     response_sla_delta_pts: number | null;
