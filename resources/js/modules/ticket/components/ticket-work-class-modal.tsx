@@ -73,12 +73,13 @@ export function TicketWorkClassModal({ ticket, onClose }: { ticket: Ticket | nul
     // silently allowed through.
     const forecastAvailable = view?.work_class_forecast != null;
     const forecast = forecastAvailable ? (view!.work_class_forecast!.find((f) => f.work_class === workClass) ?? null) : null;
-    // A dedicated target only exists when the chosen class itself won the precedence race
-    // (scope === 'work_class'). Anything else means this classification falls through to
-    // priority/request type/the built-in default — picking it will NOT move the deadline, and
-    // that has to be said outright rather than implied by quietly repeating today's number.
-    // Standard is the one class that is honestly never "no rule": reverting to it IS the point.
-    const hasDedicatedTarget = workClass === 'standard' || forecast?.scope === 'work_class';
+    // The "after" figure is always forecast.due_at — the actual number TicketSla computed for
+    // this class, whatever scope won it. Scope alone (e.g. this class has no dedicated
+    // work_class rule) is NOT proof the deadline stays put: priority or request_type can still
+    // move it, and the case's current governing class can carry a different real number. So the
+    // "won't move" note only appears when the two dates actually agree.
+    const currentDueAt = view?.sla?.resolve_due_at ?? null;
+    const dueUnchanged = forecast !== null && currentDueAt !== null && new Date(forecast.due_at).getTime() === new Date(currentDueAt).getTime();
 
     const submit = async () => {
         if (reason.trim().length < 5) {
@@ -148,10 +149,9 @@ export function TicketWorkClassModal({ ticket, onClose }: { ticket: Ticket | nul
                                 <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
                                 <div className="min-w-0 text-right">
                                     <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_to')}</div>
-                                    {hasDedicatedTarget && forecast ? (
-                                        <div className="truncate font-mono text-[13px] font-semibold">{fmtTz(forecast.due_at)}</div>
-                                    ) : (
-                                        <div className="text-muted-foreground text-xs leading-snug">{t('ticket_work_class_no_rule')}</div>
+                                    <div className="truncate font-mono text-[13px] font-semibold">{forecast ? fmtTz(forecast.due_at) : '—'}</div>
+                                    {dueUnchanged && (
+                                        <div className="text-muted-foreground text-[11px] leading-snug">{t('ticket_work_class_no_rule')}</div>
                                     )}
                                 </div>
                             </div>

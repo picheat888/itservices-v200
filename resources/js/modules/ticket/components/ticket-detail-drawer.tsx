@@ -176,7 +176,11 @@ function SpineStep({
  * it is named as the default rather than dressed up as a decision.
  */
 function slaTargetLabel(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
-    const hours = `${target.hours}${t('ticket_sla_unit_h')}`;
+    // The settings page bothers to convert hours into "≈ 30 days" vs "≈ 90 working days" —
+    // the drawer is where a technician actually reads this number, so it names the clock too
+    // rather than leaving a bare "720h" to read as 720 working hours (30 real days is not that).
+    const clockLabel = t(target.clock === 'calendar' ? 'set_sla_clock_calendar' : 'set_sla_clock_business');
+    const hours = `${target.hours}${t('ticket_sla_unit_h')} (${clockLabel})`;
 
     // A repair KPI winning the target is its own reason, not the "nobody chose this" default —
     // without this branch a case classified as repair read as if nothing had been decided.

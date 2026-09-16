@@ -180,7 +180,7 @@ export const ticket: Dict = {
     ticket_work_class_reason_hint: 'Goes on the case timeline, where the person who reported it will read it.',
     ticket_work_class_deadline_from: 'Deadline now',
     ticket_work_class_deadline_to: 'Deadline after this change',
-    ticket_work_class_no_rule: 'No target is set for this kind of work yet, so the deadline will not move.',
+    ticket_work_class_no_rule: 'This will not change the deadline shown above.',
     ticket_work_class_forecast_unavailable: "The deadline preview isn't available for this case, so classifying is turned off here.",
     ticket_work_class_err_failed: 'Could not change the kind of work. Please try again.',
     // pages/index.tsx — KPI cards and the list's repair badge

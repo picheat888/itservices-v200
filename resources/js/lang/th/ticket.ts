@@ -180,7 +180,7 @@ export const ticket: Dict = {
     ticket_work_class_reason_hint: 'ข้อความนี้ขึ้นบนไทม์ไลน์ของเคส ผู้แจ้งจะได้อ่าน',
     ticket_work_class_deadline_from: 'เดดไลน์ตอนนี้',
     ticket_work_class_deadline_to: 'เดดไลน์หลังเปลี่ยน',
-    ticket_work_class_no_rule: 'ยังไม่มีเป้าหมายสำหรับลักษณะงานนี้ เดดไลน์จึงไม่ขยับ',
+    ticket_work_class_no_rule: 'เดดไลน์ด้านบนจะไม่เปลี่ยนแปลง',
     ticket_work_class_forecast_unavailable: 'ดูตัวอย่างเดดไลน์สำหรับเคสนี้ไม่ได้ จึงปิดการจัดประเภทไว้ก่อน',
     ticket_work_class_err_failed: 'เปลี่ยนลักษณะงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     // pages/index.tsx — การ์ด KPI และป้ายในตาราง
