@@ -1,5 +1,5 @@
 import { SIDEBAR_BADGES_KEY } from '@/shared/hooks/use-sidebar-badges';
-import type { TicketPriority } from '@/shared/types';
+import type { TicketPriority, TicketWorkClass } from '@/shared/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketApi, type CreateTicketPayload, type SummaryRange, type TicketListParams, type UpdateTicketPayload } from '../api/ticketApi';
 
@@ -84,6 +84,12 @@ export function useTicketMutations() {
         }),
         addUpdate: useMutation({
             mutationFn: (v: { id: number; body: string }) => ticketApi.addUpdate(v.id, { body: v.body }),
+            onSuccess: invalidate,
+        }),
+        /** Classify a case's kind of work — the deadline moves, so this invalidates the same as every other mutation here. */
+        setWorkClass: useMutation({
+            mutationFn: (v: { id: number; work_class: TicketWorkClass; reason: string }) =>
+                ticketApi.setWorkClass(v.id, { work_class: v.work_class, reason: v.reason }),
             onSuccess: invalidate,
         }),
         resolve: useMutation({

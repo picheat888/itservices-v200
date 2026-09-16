@@ -387,6 +387,19 @@ export interface TicketSlaSnapshot {
     pct_elapsed: number;
 }
 
+/** One option's predicted outcome in the classify dialog — see Ticket['work_class_forecast']. */
+export interface TicketWorkClassForecast {
+    work_class: TicketWorkClass;
+    hours: number;
+    /** 'work_class' only when a dedicated rule for THIS class won — anything else means picking
+     *  it will not move the deadline away from what already governs the case. */
+    scope: 'work_class' | 'priority' | 'request_type' | null;
+    value: string | null;
+    clock: 'business' | 'calendar';
+    /** ISO instant, local wall time — display via formatDateTime. */
+    due_at: string;
+}
+
 export interface Ticket {
     id: number;
     ticket_no: string;
@@ -422,6 +435,13 @@ export interface Ticket {
         value: string | null;
         clock: 'business' | 'calendar';
     };
+    /**
+     * The deadline each selectable work class (standard included) would produce for THIS ticket,
+     * computed server-side (see TicketResource::workClassForecast) — a technician cannot see the
+     * SLA rules (settings.sla) or reproduce the clock math themselves, so the classify dialog
+     * reads a fact here instead of guessing one.
+     */
+    work_class_forecast?: TicketWorkClassForecast[];
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];

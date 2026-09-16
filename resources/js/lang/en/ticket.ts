@@ -170,4 +170,20 @@ export const ticket: Dict = {
     ticket_sort_oldest: 'Oldest first',
     ticket_sort_updated: 'Recently updated',
     ticket_sort_priority: 'Priority (high → low)',
+    // ticket-work-class-modal.tsx — classify the kind of work
+    ticket_work_class: 'Kind of work',
+    ticket_work_class_change: 'Change kind of work',
+    ticket_work_class_standard: 'Standard work',
+    ticket_work_class_repair_internal: 'Repair (in-house)',
+    ticket_work_class_repair_vendor: 'Repair (vendor)',
+    ticket_work_class_reason: 'Why this is repair work',
+    ticket_work_class_reason_hint: 'Goes on the case timeline, where the person who reported it will read it.',
+    ticket_work_class_deadline_from: 'Deadline now',
+    ticket_work_class_deadline_to: 'Deadline after this change',
+    ticket_work_class_no_rule: 'No target is set for this kind of work yet, so the deadline will not move.',
+    // pages/index.tsx — KPI cards and the list's repair badge
+    ticket_repair_badge: 'Repair',
+    ticket_repair_kpi: 'Repair KPI met',
+    ticket_repair_backlog: '{n} still open',
+    ticket_sla_met_standard: 'Standard cases closed in SLA',
 };

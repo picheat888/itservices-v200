@@ -6,7 +6,7 @@ import { SectionLabel } from '@/shared/components/section-label';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus } from '@/shared/types';
+import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
@@ -24,6 +24,7 @@ import {
     RefreshCcw,
     RotateCcw,
     Users,
+    Wrench,
     X,
     Zap,
     ZoomIn,
@@ -32,7 +33,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { ResolveMode } from './resolve-ticket-modal';
-import { TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
+import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
 
 /** Human-readable file size (KB/MB) for the attachment list. */
 function formatSize(bytes: number): string {
@@ -177,6 +178,12 @@ function SpineStep({
 function slaTargetLabel(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
     const hours = `${target.hours}${t('ticket_sla_unit_h')}`;
 
+    // A repair KPI winning the target is its own reason, not the "nobody chose this" default —
+    // without this branch a case classified as repair read as if nothing had been decided.
+    if (target.scope === 'work_class' && target.value) {
+        const meta = TICKET_WORK_CLASS_META[target.value as TicketWorkClass];
+        return `${hours} · ${meta ? t(meta.key) : target.value}`;
+    }
     if (target.scope === 'request_type' && target.value) {
         const meta = REQUEST_TYPE_META[target.value as ServiceRequestType];
         return `${hours} · ${t('ticket_sla_target_request')}${meta ? ` (${t(meta.labelKey)})` : ''}`;
@@ -265,6 +272,7 @@ export function TicketDetailDrawer({
     canTake,
     canAssign,
     canForward,
+    canSetWorkClass,
     meId,
     meEmployeeId,
     canEdit,
@@ -274,6 +282,7 @@ export function TicketDetailDrawer({
     onForward,
     onResolve,
     onUpdate,
+    onSetWorkClass,
 }: {
     ticket: Ticket | null;
     onClose: () => void;
@@ -283,6 +292,11 @@ export function TicketDetailDrawer({
     canAssign: boolean;
     /** May forward an in-progress case — mirrors the backend gate (tickets.forward). */
     canForward: boolean;
+    /** May classify this case's kind of work — mirrors the backend gate (tickets.set_work_class).
+     *  Combined below with "is the assignee" and "is in progress" — the same three gates the
+     *  server checks, in the same order, because a button that would get a 403 back is a button
+     *  that should never have been drawn. */
+    canSetWorkClass: boolean;
     meId: number | undefined;
     /** The viewer's employee id — a case they filed themselves can never be taken by them. */
     meEmployeeId: number | null | undefined;
@@ -294,6 +308,8 @@ export function TicketDetailDrawer({
     onResolve: (t: Ticket, mode: ResolveMode) => void;
     /** Opens the progress-note dialog — offered to the assignee while the case is in flight. */
     onUpdate: (t: Ticket) => void;
+    /** Opens the classify-work dialog — offered under the same three gates as canSetWorkClass. */
+    onSetWorkClass: (t: Ticket) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -328,6 +344,9 @@ export function TicketDetailDrawer({
 
     const isMine = view.assignee_id != null && view.assignee_id === meId;
     const isWorking = view.status === 'in_progress';
+    // Mirrors the server's three gates exactly (permission -> assignee -> status, in that
+    // order) — a button that would come back 403 is a button that should not have been drawn.
+    const showClassify = canSetWorkClass && isMine && isWorking;
     const updates = view.updates ?? [];
     const progress = progressEntries(view, t);
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
@@ -731,6 +750,20 @@ export function TicketDetailDrawer({
                             )}
                             {isWorking && isMine && (
                                 <>
+                                    {/* The case's kind of work, when it has been classified away from
+                                        standard — read next to the button that changes it. */}
+                                    {view.work_class && view.work_class !== 'standard' && (
+                                        <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                                            <Wrench className="h-3.5 w-3.5" />
+                                            {t(TICKET_WORK_CLASS_META[view.work_class].key)}
+                                        </span>
+                                    )}
+                                    {showClassify && (
+                                        <Button variant="outline" onClick={() => onSetWorkClass(view)}>
+                                            <Wrench className="h-4 w-4" />
+                                            {t('ticket_work_class_change')}
+                                        </Button>
+                                    )}
                                     {/* Between taking and closing: the third thing an assignee can do. */}
                                     <Button variant="outline" onClick={() => onUpdate(view)}>
                                         <MessageSquarePlus className="h-4 w-4" />

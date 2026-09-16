@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/shared/components/status-badge';
-import type { Ticket, TicketCategory, TicketPriority, TicketSlaState, TicketStatus } from '@/shared/types';
-import { Code, Laptop, MoreHorizontal, Wifi } from 'lucide-react';
+import type { Ticket, TicketCategory, TicketPriority, TicketSlaState, TicketStatus, TicketWorkClass } from '@/shared/types';
+import { Code, Laptop, MoreHorizontal, Wifi, Wrench } from 'lucide-react';
 
 type T = (key: string) => string;
 
@@ -20,6 +20,13 @@ export const TICKET_PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber
 };
 
 export const TICKET_CATEGORIES: TicketCategory[] = ['hardware', 'software', 'network', 'other'];
+
+/** i18n label per work class — the classify dialog's select and the detail drawer's current-value line share these. */
+export const TICKET_WORK_CLASS_META: Record<TicketWorkClass, { key: string }> = {
+    standard: { key: 'ticket_work_class_standard' },
+    repair_internal: { key: 'ticket_work_class_repair_internal' },
+    repair_vendor: { key: 'ticket_work_class_repair_vendor' },
+};
 
 const CATEGORY_ICON: Record<TicketCategory, typeof Laptop> = {
     hardware: Laptop,
@@ -100,6 +107,21 @@ export function TicketSlaBadge({ ticket, t, className }: { ticket: Ticket; t: T;
     return (
         <StatusBadge tone={SLA_TONE[sla.state]} className={className}>
             {label}
+        </StatusBadge>
+    );
+}
+
+/**
+ * Marks a case running under its own repair KPI rather than the standard SLA — without it a
+ * repair case that has run 20 days (with 10 left on its own 30-day target) reads as an SLA
+ * about to breach, because the badge sitting next to it has no way to say otherwise.
+ */
+export function TicketWorkClassBadge({ workClass, t, className }: { workClass: TicketWorkClass; t: T; className?: string }) {
+    if (workClass === 'standard') return null;
+    return (
+        <StatusBadge tone="violet" dot={false} className={className}>
+            <Wrench className="h-3 w-3" />
+            {t('ticket_repair_badge')}
         </StatusBadge>
     );
 }

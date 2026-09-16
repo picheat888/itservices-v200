@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Ticket;
 
+use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Ticket\Ticket;
 use App\Support\TicketSla;
 use Illuminate\Http\Request;
@@ -15,6 +16,13 @@ class TicketResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        if (self::showsDeskInternals($request)) {
+            // 'sla', 'sla_target' และ work_class_forecast ด้านล่างเรียก TicketSla::targetFor()
+            // หลายครั้งในคำขอเดียว ซึ่งอ่าน serviceRequest ทุกครั้งที่ยังไม่เจอ relation แคชไว้ —
+            // โหลดล่วงหน้าที่นี่ที่เดียวกันคิวรีซ้ำ ไม่ได้แตะตรรกะการคำนวณเดดไลน์เลย
+            $this->resource->loadMissing('serviceRequest');
+        }
+
         return [
             'id' => $this->id,
             'ticket_no' => $this->ticket_no,
@@ -54,6 +62,9 @@ class TicketResource extends JsonResource
             // urgent case can be read rather than argued about. scope null = the built-in
             // default, which is the one case where nobody chose the number.
             'sla_target' => $this->when(self::showsDeskInternals($request), fn () => $this->slaTarget()),
+            // เดดไลน์ที่แต่ละลักษณะงาน (รวม standard) จะสร้างขึ้น ถ้าเคสนี้ถูกจัดประเภทเป็นแบบนั้น —
+            // สิ่งที่ไดอะล็อกจัดประเภทโชว์ก่อนช่างยืนยัน ต้องเป็นตัวเลขจริง ไม่ใช่การเดา
+            'work_class_forecast' => $this->when(self::showsDeskInternals($request), fn () => $this->workClassForecast()),
             'responded_at' => $this->responded_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 
@@ -110,5 +121,38 @@ class TicketResource extends JsonResource
             // นาฬิกาที่เป้าหมายนี้นับด้วย — "240 ชั่วโมง" อ่านได้คนละแบบระหว่างเวลาทำการกับปฏิทิน
             'clock' => $target['clock']->value,
         ];
+    }
+
+    /**
+     * เดดไลน์ที่จะเกิดขึ้นจริงสำหรับ**แต่ละ**ลักษณะงานที่เลือกได้ (รวม standard) ถ้าเคสนี้ถูกจัดประเภท
+     * เป็นแบบนั้น ณ ตอนนี้ — คำนวณบนสำเนาชั่วคราวของ ticket ที่ไม่ถูกบันทึกลงฐานข้อมูล โดยตั้งค่า
+     * work_class ในหน่วยความจำแล้วถาม TicketSla::targetFor()/resolveDueAt() ตัวเดียวกับที่ตัดสิน
+     * เดดไลน์จริงตอนบันทึก — จงใจไม่คำนวณลำดับความสำคัญ (precedence) หรือเลขคณิตของนาฬิกาซ้ำที่นี่
+     * เพราะนั่นคือจุดบกพร่องที่ Task 8 ต้องแก้ไปแล้วครั้งหนึ่ง
+     *
+     * ฟรอนต์เอนด์อ่านค่านี้ในไดอะล็อกจัดประเภท: ช่างไม่มีสิทธิ์ settings.sla จึงไม่มีทางคำนวณเองได้
+     * ถูกต้อง และ sla_target ด้านบนรายงานได้แค่เป้าหมายที่ "ชนะ" อยู่ตอนนี้ ไม่ใช่ของทุกตัวเลือก
+     *
+     * @return list<array{work_class: string, hours: int, scope: ?string, value: ?string, clock: string, due_at: string}>
+     */
+    private function workClassForecast(): array
+    {
+        /** @var Ticket $ticket */
+        $ticket = $this->resource;
+
+        return array_map(function (TicketWorkClass $class) use ($ticket): array {
+            $clone = clone $ticket;
+            $clone->work_class = $class;
+            $target = TicketSla::targetFor($clone);
+
+            return [
+                'work_class' => $class->value,
+                'hours' => $target['hours'],
+                'scope' => $target['scope']?->value,
+                'value' => $target['value'],
+                'clock' => $target['clock']->value,
+                'due_at' => TicketSla::resolveDueAt($clone)->toIso8601String(),
+            ];
+        }, TicketWorkClass::cases());
     }
 }
