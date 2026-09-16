@@ -101,6 +101,9 @@ export const permission: Dict = {
     'perm_desc_tickets.forward': 'ส่งต่อเคสที่กำลังทำ เมื่อเจ้าหน้าที่ปัจจุบันไม่สามารถแก้ไขปัญหาได้',
     'perm_act_tickets.assign': 'Assign to',
     'perm_desc_tickets.assign': 'มอบเคสที่ยังไม่มีผู้รับให้เจ้าหน้าที่',
+    'perm_act_tickets.set_work_class': 'จัดประเภทงานซ่อมยาว',
+    'perm_desc_tickets.set_work_class':
+        'ตั้งเคสเป็นงานซ่อมโดยช่างในองค์กรหรือ vendor เพื่อให้วัดด้วย KPI งานซ่อมแทน SLA ของงานปกติ ทุกครั้งที่เปลี่ยนต้องกรอกเหตุผล และถูกบันทึกลงไทม์ไลน์ของเคส',
     'perm_act_tickets.level_hardware': 'Hardware',
     'perm_act_tickets.level_software': 'Software',
     'perm_act_tickets.level_network': 'Network',

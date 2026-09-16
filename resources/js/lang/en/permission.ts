@@ -101,6 +101,9 @@ export const permission: Dict = {
     'perm_desc_tickets.forward': 'Hand an in-progress case to another staff when the current assignee cannot fix it.',
     'perm_act_tickets.assign': 'Assign to',
     'perm_desc_tickets.assign': 'Assign an open case to a staff member.',
+    'perm_act_tickets.set_work_class': 'Classify long repair work',
+    'perm_desc_tickets.set_work_class':
+        'Mark a case as in-house or vendor repair so it is judged against the repair KPI instead of the standard SLA. Every change asks for a reason and is written to the case timeline.',
     'perm_act_tickets.level_hardware': 'Hardware',
     'perm_act_tickets.level_software': 'Software',
     'perm_act_tickets.level_network': 'Network',
