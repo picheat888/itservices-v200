@@ -1181,12 +1181,28 @@ git commit -m "feat(permissions): a switch for classifying long repair work"
         ])->assertStatus(403);
     }
 
-    public function test_a_case_nobody_has_taken_cannot_be_classified(): void
+    public function test_a_case_that_is_not_yours_cannot_be_classified(): void
     {
+        // gate ที่สอง: มีสิทธิ์ครบ แต่ไม่ได้ถือเคสนี้ — ลำดับเดียวกับ storeUpdate() คือ
+        // เจ้าของเคสถูกเช็คก่อนสถานะ เคสที่ยังไม่มีใครรับจึงตอบ 403 ไม่ใช่ 422
         $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
         $ticket = Ticket::factory()->create(); // ยัง Open ไม่มีคนรับ
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Free', 'status' => 'active']);
         $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+
+        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            'work_class' => 'repair_internal',
+            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+        ])->assertStatus(403);
+    }
+
+    public function test_a_closed_case_cannot_be_classified(): void
+    {
+        // gate ที่สาม: ถือเคสอยู่และมีสิทธิ์ครบ เหลือ status เป็นเงื่อนไขเดียวที่ปฏิเสธได้
+        // ถ้า gate อื่นปฏิเสธได้ด้วย เทสต์นี้จะไม่ได้พิสูจน์อะไรเลย
+        $ticket = Ticket::factory()->create();
+        $staff = $this->assigneeOf($ticket);
+        $ticket->update(['status' => TicketStatus::Completed]);
 
         $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
             'work_class' => 'repair_internal',
