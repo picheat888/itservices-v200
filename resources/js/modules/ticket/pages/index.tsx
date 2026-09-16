@@ -39,6 +39,7 @@ import {
     Search,
     Tag,
     Timer,
+    Wrench,
     X,
     Zap,
 } from 'lucide-react';
@@ -739,11 +740,23 @@ export default function TicketsPage() {
                                         trend={{ delta: summary?.response_sla_delta_pts ?? null, goodUp: true }}
                                     />
                                     <StatCard
-                                        label={t('ticket_sla_met')}
+                                        label={summary?.has_repair_rules ? t('ticket_sla_met_standard') : t('ticket_sla_met')}
                                         value={summary?.sla_met_pct == null ? '—' : `${summary.sla_met_pct}%`}
                                         icon={Gauge}
                                         trend={{ delta: summary?.sla_delta_pts ?? null, goodUp: true }}
                                     />
+                                    {/* Repair work is measured against its own work-class KPI target — the card
+                                        only appears once a rule exists, otherwise an org that never configured
+                                        one would see a permanent "—". */}
+                                    {summary?.has_repair_rules && (
+                                        <StatCard
+                                            label={t('ticket_repair_kpi')}
+                                            value={summary.repair_kpi_met_pct == null ? '—' : `${summary.repair_kpi_met_pct}%`}
+                                            icon={Wrench}
+                                            trend={{ delta: summary.repair_kpi_delta_pts ?? null, goodUp: true }}
+                                            hint={t('ticket_repair_backlog').replace('{n}', String(summary.repair_backlog))}
+                                        />
+                                    )}
                                     <StatCard
                                         label={t('ticket_kpi_avg_response')}
                                         value={summary?.avg_response_minutes == null ? '—' : slaDuration(summary.avg_response_minutes, t)}
