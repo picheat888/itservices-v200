@@ -641,10 +641,11 @@ class TicketController extends Controller
     public function updateWorkClass(Request $request, Ticket $ticket): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.set_work_class'), 403);
-        // สถานะก่อน assignee: เคสที่ยังไม่มีใครรับไม่มี assignee ให้เทียบเลย — "ยังไม่เข้า
-        // In progress" คือเหตุผลที่แท้จริงที่มันถูกปฏิเสธ ไม่ใช่ "ไม่ใช่เจ้าของ"
-        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be classified.');
+        // ลำดับเดียวกับ storeUpdate(): เจ้าของเคสก่อน สถานะทีหลัง — สองประตูนี้กับ
+        // ปลายทางเดียวกันต้องตอบรหัสเดียวกันในสถานการณ์เดียวกัน ไม่งั้นจะเป็นความต่าง
+        // ที่ไม่มีใครตั้งใจให้ต่าง
         abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can classify this ticket.');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be classified.');
 
         $data = $request->validate([
             'work_class' => ['required', new Enum(TicketWorkClass::class)],
