@@ -499,6 +499,15 @@ export default function TicketsPage() {
     );
 
     const { data: summary, isLoading: summaryLoading } = useTicketSummary(canDashboard, range);
+    // Not just `has_repair_rules`: a case can be classified repair before an administrator
+    // configures a work-class target (a valid order of operations — TicketService::setWorkClass
+    // never requires one to exist). When that happens TicketController already excludes it from
+    // sla_met_pct regardless of has_repair_rules, so gating the card on rules alone would let
+    // that work disappear from both the standard SLA figure AND the only card that shows the
+    // repair figure. Show the card whenever there is anything repair-shaped to show — a
+    // configured rule, an open repair case, or one that has already closed under the KPI — and
+    // only omit it when all three are empty, i.e. the feature is genuinely unused.
+    const showsRepairKpi = !!(summary?.has_repair_rules || (summary?.repair_backlog ?? 0) > 0 || summary?.repair_kpi_met_pct != null);
     const {
         data: listData,
         isLoading,
@@ -740,21 +749,21 @@ export default function TicketsPage() {
                                         trend={{ delta: summary?.response_sla_delta_pts ?? null, goodUp: true }}
                                     />
                                     <StatCard
-                                        label={summary?.has_repair_rules ? t('ticket_sla_met_standard') : t('ticket_sla_met')}
+                                        label={showsRepairKpi ? t('ticket_sla_met_standard') : t('ticket_sla_met')}
                                         value={summary?.sla_met_pct == null ? '—' : `${summary.sla_met_pct}%`}
                                         icon={Gauge}
                                         trend={{ delta: summary?.sla_delta_pts ?? null, goodUp: true }}
                                     />
-                                    {/* Repair work is measured against its own work-class KPI target — the card
-                                        only appears once a rule exists, otherwise an org that never configured
-                                        one would see a permanent "—". */}
-                                    {summary?.has_repair_rules && (
+                                    {/* Repair work is measured against its own work-class KPI target. The card
+                                        (and this card's label narrowing above) both key off showsRepairKpi, not
+                                        has_repair_rules alone — see its definition for why. */}
+                                    {showsRepairKpi && (
                                         <StatCard
                                             label={t('ticket_repair_kpi')}
-                                            value={summary.repair_kpi_met_pct == null ? '—' : `${summary.repair_kpi_met_pct}%`}
+                                            value={summary?.repair_kpi_met_pct == null ? '—' : `${summary.repair_kpi_met_pct}%`}
                                             icon={Wrench}
-                                            trend={{ delta: summary.repair_kpi_delta_pts ?? null, goodUp: true }}
-                                            hint={t('ticket_repair_backlog').replace('{n}', String(summary.repair_backlog))}
+                                            trend={{ delta: summary?.repair_kpi_delta_pts ?? null, goodUp: true }}
+                                            hint={t('ticket_repair_backlog').replace('{n}', String(summary?.repair_backlog ?? 0))}
                                         />
                                     )}
                                     <StatCard
