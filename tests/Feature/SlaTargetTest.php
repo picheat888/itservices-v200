@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketPriority;
+use App\Enums\Ticket\TicketSlaClock;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
@@ -255,5 +256,90 @@ class SlaTargetTest extends TestCase
             ->assertJsonPath('data.sla_target.scope', 'request_type')
             ->assertJsonPath('data.sla_target.value', 'computer')
             ->assertJsonPath('data.sla_target.hours', 72);
+    }
+
+    public function test_work_class_targets_save_as_rows(): void
+    {
+        $admin = $this->staff();
+
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+            'ticket_sla_work_class' => [
+                ['work_class' => 'repair_internal', 'resolve' => 720, 'clock' => 'calendar', 'enabled' => true],
+                ['work_class' => 'repair_vendor', 'resolve' => 1080, 'clock' => 'calendar', 'enabled' => true],
+            ],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('sla_targets', [
+            'scope' => 'work_class', 'match_value' => 'repair_internal', 'resolve_hours' => 720, 'clock' => 'calendar',
+        ]);
+        $this->assertDatabaseHas('sla_targets', [
+            'scope' => 'work_class', 'match_value' => 'repair_vendor', 'resolve_hours' => 1080, 'clock' => 'calendar',
+        ]);
+    }
+
+    public function test_a_work_class_row_left_out_of_the_list_is_deleted(): void
+    {
+        $admin = $this->staff();
+        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'repair_vendor', 'resolve_hours' => 1080, 'enabled' => true]);
+
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+            'ticket_sla_work_class' => [],
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('sla_targets', ['scope' => 'work_class', 'match_value' => 'repair_vendor']);
+    }
+
+    public function test_saving_the_priority_form_alone_leaves_work_class_rules_untouched(): void
+    {
+        $admin = $this->staff();
+        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'repair_internal', 'resolve_hours' => 720, 'enabled' => true]);
+
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+        ])->assertOk();
+
+        $this->assertDatabaseHas('sla_targets', ['scope' => 'work_class', 'match_value' => 'repair_internal']);
+    }
+
+    public function test_standard_is_rejected_as_a_work_class_rule(): void
+    {
+        // งานปกติไม่มีเป้าหมายของตัวเอง มันคือกรณีที่ priority ตอบอยู่แล้ว
+        // แถวที่สร้างได้แต่ไม่มีวันทำงานคือแถวที่จะทำให้คนเข้าใจผิด
+        $admin = $this->staff();
+
+        $this->actingAs($admin)->putJson('/api/settings/sla', [
+            'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
+            'ticket_sla_work_class' => [['work_class' => 'standard', 'resolve' => 100, 'clock' => 'business', 'enabled' => true]],
+        ])->assertStatus(422);
+    }
+
+    /**
+     * Pins the agreement between the two places that write/derive a resolve deadline off a
+     * priority: TicketService::take() (which persists sla_resolve_due_at at the moment a case
+     * is picked up) and TicketSla::resolveDueAt() (which SLA badges and dashboards recompute
+     * on the fly). A priority row set to `calendar` is exactly the case that used to make them
+     * disagree — take() hard-coded the business clock, so the same ticket carried a different
+     * deadline depending on which code path last wrote the column.
+     */
+    public function test_take_persists_the_same_deadline_resolve_due_at_would_compute(): void
+    {
+        SlaTarget::create([
+            'scope' => SlaScope::Priority->value, 'match_value' => 'critical',
+            'resolve_hours' => 720, 'clock' => TicketSlaClock::Calendar->value, 'enabled' => true,
+        ]);
+        $ticket = Ticket::factory()->create(['status' => 'open', 'priority' => null]);
+
+        app(TicketService::class)->take($ticket, $this->staff(), TicketPriority::Critical, null, null);
+
+        $ticket = $ticket->fresh();
+        // TicketSla::resolveDueAt() reads the priority now sitting on the fresh ticket — if
+        // take() had used a different clock (or the hardcoded business one), this would fail.
+        $this->assertEquals(TicketSla::resolveDueAt($ticket), $ticket->sla_resolve_due_at);
+        // And it must actually be the calendar clock doing the work, not a coincidence where
+        // both sides happen to agree on the business clock.
+        $businessDeadline = TicketSla::addBusinessMinutes($ticket->created_at, 720 * 60);
+        $this->assertNotEquals($businessDeadline, $ticket->sla_resolve_due_at);
     }
 }
