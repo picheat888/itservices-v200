@@ -42,9 +42,9 @@ enum TicketWorkClass: string
      */
     public static function repairValues(): array
     {
-        return array_map(
+        return array_values(array_map(
             fn (self $class) => $class->value,
             array_filter(self::cases(), fn (self $class) => $class->isRepair()),
-        );
+        ));
     }
 }
