@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Ticket;
 
+use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
@@ -246,6 +247,13 @@ class TicketController extends Controller
         $resolvedCur = $resolvedInWindow($curStart, $curEnd)->count();
         $resolvedPrev = $resolvedInWindow($prevStart, $curStart)->count();
 
+        // 30/45 วันเป็น KPI คนละตัวกับ SLA อยู่แล้วในความเป็นจริงขององค์กร การเอาเป้าหมาย
+        // 4 ชั่วโมงกับ 360 ชั่วโมงมาเฉลี่ยเป็นเปอร์เซ็นต์เดียวทำให้ตัวเลขอ่านยากขึ้น ไม่ใช่ง่ายขึ้น
+        // เคสตกกลุ่มไหนตัดสินจากค่า work_class ปัจจุบัน — AuditLog เก็บประวัติไว้ให้แล้วถ้าต้องสาว
+        $isRepair = fn (Ticket $t) => $t->work_class?->isRepair() ?? false;
+        $standardIn = fn ($start, $end) => $resolvedInWindow($start, $end)->reject($isRepair);
+        $repairIn = fn ($start, $end) => $resolvedInWindow($start, $end)->filter($isRepair);
+
         // Backlog is a point-in-time snapshot of everything still unresolved.
         $open = $tickets->where('status', TicketStatus::Open)->count();
         $inProgress = $tickets->where('status', TicketStatus::InProgress)->count();
@@ -264,8 +272,12 @@ class TicketController extends Controller
             ->count();
 
         // SLA % over the tickets resolved within each window, so the trend is comparable.
-        $slaCur = $this->slaMetPct($resolvedInWindow($curStart, $curEnd));
-        $slaPrev = $this->slaMetPct($resolvedInWindow($prevStart, $curStart));
+        $slaCur = $this->slaMetPct($standardIn($curStart, $curEnd));
+        $slaPrev = $this->slaMetPct($standardIn($prevStart, $curStart));
+
+        // Repair KPI — same math, over the repair-classed cases the SLA figure above excludes.
+        $repairCur = $this->slaMetPct($repairIn($curStart, $curEnd));
+        $repairPrev = $this->slaMetPct($repairIn($prevStart, $curStart));
 
         // Response SLA % over the tickets first-responded within each window. Open
         // tickets that are already past due are NOT counted here — they live in the
@@ -304,6 +316,16 @@ class TicketController extends Controller
 
             'sla_met_pct' => $slaCur,
             'sla_delta_pts' => ($slaCur === null || $slaPrev === null) ? null : $slaCur - $slaPrev,
+
+            'repair_kpi_met_pct' => $repairCur,
+            'repair_kpi_delta_pts' => ($repairCur === null || $repairPrev === null) ? null : $repairCur - $repairPrev,
+            // งานซ่อมที่ยังไม่ปิด — ทำให้อ่านออกว่า null แปลว่า "ไม่มีงาน" หรือ "ยังไม่มีอันไหนปิด"
+            'repair_backlog' => $tickets
+                ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
+                ->filter($isRepair)
+                ->count(),
+            // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม
+            'has_repair_rules' => ! empty(TicketSla::rules()[SlaScope::WorkClass->value] ?? []),
 
             'response_sla_met_pct' => $respSlaCur,
             'response_sla_delta_pts' => ($respSlaCur === null || $respSlaPrev === null) ? null : $respSlaCur - $respSlaPrev,

@@ -290,4 +290,70 @@ class TicketWorkClassTest extends TestCase
         $expected = TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours('high') * 60);
         $this->assertTrue($ticket->sla_resolve_due_at->equalTo($expected));
     }
+
+    /**
+     * บัญชี IT staff ล้วน ๆ สำหรับเรียก endpoint — ไม่ผูกกับ ticket ไหนเลย ต่างจาก
+     * assigneeOf() ซึ่งตั้งเคสที่ส่งเข้ามาเป็น in-progress (จึงห้ามใช้กับเคสที่แค่ยืมมาเป็นผู้ใช้)
+     */
+    private function itStaff(): User
+    {
+        $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Viewer', 'status' => 'active']);
+
+        return User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
+    }
+
+    public function test_the_standard_sla_figure_leaves_repair_cases_out(): void
+    {
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+        $staff = $this->itStaff();
+
+        // งานปกติที่ปิดทันเวลา — slaMetPct() ตัดสินจากเดดไลน์ที่คำนวณสดผ่าน
+        // TicketSla::resolveDueAt() (นาฬิกาเวลาทำการ) ไม่ได้อ่านคอลัมน์ sla_resolve_due_at
+        // ที่บันทึกไว้ ฉะนั้นฟิกซ์เจอร์ต้องตั้ง created_at/resolved_at เทียบกับเดดไลน์จริง
+        $standard = Ticket::factory()->create([
+            'status' => TicketStatus::Completed,
+            'priority' => TicketPriority::Low,
+            'created_at' => now()->subDays(20),
+        ]);
+        $standardDue = TicketSla::resolveDueAt($standard);
+        $standard->update(['resolved_at' => $standardDue->copy()->subHour()]);
+
+        // งานซ่อมที่ปิดช้ากว่าเดดไลน์ 240 ชั่วโมงของมันเอง — ต้องไม่ไปฉุด SLA ของงานปกติ
+        $repair = Ticket::factory()->create([
+            'status' => TicketStatus::Completed,
+            'work_class' => TicketWorkClass::RepairInternal,
+            'created_at' => now()->subDays(50),
+        ]);
+        $repairDue = TicketSla::resolveDueAt($repair);
+        $repair->update(['resolved_at' => $repairDue->copy()->addHour()]);
+
+        $body = $this->actingAs($staff)->getJson('/api/tickets/summary')->assertOk()->json();
+
+        $this->assertSame(100, $body['sla_met_pct']);
+        $this->assertSame(0, $body['repair_kpi_met_pct']);
+    }
+
+    public function test_the_repair_figure_is_null_when_no_repair_case_has_closed(): void
+    {
+        $staff = $this->itStaff();
+
+        $body = $this->actingAs($staff)->getJson('/api/tickets/summary')->assertOk()->json();
+
+        $this->assertNull($body['repair_kpi_met_pct']);
+    }
+
+    public function test_the_summary_says_whether_repair_rules_exist_at_all(): void
+    {
+        // หน้าจอใช้ค่านี้ตัดสินว่าจะโชว์การ์ด KPI ไหม — องค์กรที่ไม่ได้ใช้ฟีเจอร์นี้
+        // ไม่ควรเห็นการ์ดที่ขึ้น "—" ตลอดกาล
+        $staff = $this->itStaff();
+
+        $before = $this->actingAs($staff)->getJson('/api/tickets/summary')->json();
+        $this->assertFalse($before['has_repair_rules']);
+
+        $this->rule(SlaScope::WorkClass, 'repair_internal', 240);
+
+        $after = $this->actingAs($staff)->getJson('/api/tickets/summary')->json();
+        $this->assertTrue($after['has_repair_rules']);
+    }
 }
