@@ -159,6 +159,7 @@ export const settings: Dict = {
     set_sla_hours: 'hours',
     set_sla_resolution_note: 'Feeds the "Resolution SLA" card and the SLA badge on in-progress / closed tickets.',
     set_sla_approx_days: '≈ {n} working days',
+    set_sla_approx_calendar_days: '≈ {n} days',
     set_sla_request_title: 'Exceptions',
     set_sla_request_desc: 'Exceptions can be added for process durations that differ from the SLA priority.',
     set_sla_request_add: 'Exception',
@@ -186,4 +187,17 @@ export const settings: Dict = {
     set_sla_day_5: 'Fr',
     set_sla_day_6: 'Sa',
     set_sla_day_7: 'Su',
+
+    // tickets-sla-tab.tsx — เป้าหมายตามลักษณะงาน
+    set_sla_work_title: 'Targets by kind of work',
+    set_sla_work_desc:
+        'Repair work is measured against its own KPI, not the table above. A row here wins over every other rule, and only applies once somebody classifies a case.',
+    set_sla_work_empty: 'No repair targets yet — every case is judged on the table above.',
+    set_sla_work_add: 'Add a repair target',
+    set_sla_work_all_used: 'Both kinds of repair already have a target.',
+    set_sla_work_repair_internal: 'Repair (in-house)',
+    set_sla_work_repair_vendor: 'Repair (vendor)',
+    set_sla_clock: 'Counted on',
+    set_sla_clock_business: 'Working hours',
+    set_sla_clock_calendar: 'Calendar time',
 };
