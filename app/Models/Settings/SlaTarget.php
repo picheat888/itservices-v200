@@ -3,6 +3,7 @@
 namespace App\Models\Settings;
 
 use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketSlaClock;
 use App\Support\TicketSla;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,13 +16,14 @@ use Illuminate\Database\Eloquent\Model;
  */
 class SlaTarget extends Model
 {
-    protected $fillable = ['scope', 'match_value', 'resolve_hours', 'enabled'];
+    protected $fillable = ['scope', 'match_value', 'resolve_hours', 'clock', 'enabled'];
 
     protected function casts(): array
     {
         return [
             'scope' => SlaScope::class,
             'resolve_hours' => 'integer',
+            'clock' => TicketSlaClock::class,
             'enabled' => 'boolean',
         ];
     }
