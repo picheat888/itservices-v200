@@ -107,7 +107,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         setSelectedId((prev) => (prev === id ? null : id));
     }, []);
 
-    // Search dims non-matching cards (matches name / Thai name / title / dept / code).
+    // Search dims non-matching cards (matches name / Thai name / title / section / dept / code).
     const q = query.trim().toLowerCase();
     const matchSet = useMemo(() => {
         if (!q) {
@@ -115,7 +115,8 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
         }
         const s = new Set<number>();
         for (const n of data) {
-            const hay = `${n.name} ${n.name_th ?? ''} ${n.title ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase();
+            const hay =
+                `${n.name} ${n.name_th ?? ''} ${n.title ?? ''} ${n.section ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase();
             if (hay.includes(q)) {
                 s.add(n.id);
             }
@@ -253,7 +254,7 @@ function OrgChartInner({ data }: { data: OrgChartNode[] }) {
                 code: n.code,
                 color: deptColor(n.department_code),
                 // Always searchable across both languages + code/title/dept, regardless of UI language.
-                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
+                search: `${n.name} ${n.name_th ?? ''} ${n.code} ${n.title ?? ''} ${n.section ?? ''} ${n.department ?? ''} ${n.department_code ?? ''}`.toLowerCase(),
             })),
         [data],
     );

@@ -106,6 +106,10 @@ export function useEmployeeMutations() {
             mutationFn: (v: { id: number; reason: string; lastDay: string | null }) => employeeApi.resign(v.id, v.reason, v.lastDay),
             onSuccess: invalidate,
         }),
+        remove: useMutation({
+            mutationFn: (id: number) => employeeApi.remove(id),
+            onSuccess: invalidate,
+        }),
         cancelResign: useMutation({
             mutationFn: (id: number) => employeeApi.cancelResign(id),
             onSuccess: invalidate,

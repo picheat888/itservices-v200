@@ -71,7 +71,12 @@ class StoreEmployeeRequest extends FormRequest
                     }
                 },
             ],
-            'username' => ['nullable', 'string', 'max:255'],
+            // No `username` rule on purpose. The employee's username column is a mirror of the
+            // login account's, written only when an account is provisioned or its username is
+            // changed (both under employees.set_credentials). Accepting it here let the edit
+            // form — which sends username: null on every save — blank the mirror while the real
+            // login kept working, taking the list's username column and the group-role
+            // fallback match with it.
             // Same shape as a ticket's callback phone: free-form (so "ext. 1305" works) but it
             // has to carry at least three digits, which rules out text that isn't a number.
             'phone' => ['nullable', 'string', 'max:50', 'regex:/(\D*\d){3,}/'],

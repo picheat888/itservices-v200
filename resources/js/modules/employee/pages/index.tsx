@@ -88,6 +88,7 @@ export default function EmployeesPage() {
     const canResetPassword = can('employees.reset_password');
     const canResign = can('employees.resign');
     const canCancelResign = can('employees.cancel_resign');
+    const canDelete = can('employees.delete');
     const canSetCredentials = can('employees.set_credentials');
 
     const canViewDashboard = can('employees.view_dashboard');
@@ -128,6 +129,25 @@ export default function EmployeesPage() {
     const positionMut = usePositionMutations();
     const departmentMut = useDepartmentMutations();
     const employeeMut = useEmployeeMutations();
+
+    /**
+     * Erase a record that was typed in by mistake. The server refuses anything with history,
+     * so the confirm can be short — but it names the login account, because that is the part
+     * an admin would not expect and cannot undo.
+     */
+    const askDeleteEmployee = async (e: Employee) => {
+        await confirm({
+            variant: 'danger',
+            title: t('emp_delete_title'),
+            entity: { name: e.name, sub: e.code },
+            description: t(e.has_account ? 'emp_delete_confirm_account' : 'emp_delete_confirm'),
+            confirmText: t('delete'),
+            action: async () => {
+                await employeeMut.remove.mutateAsync(e.id);
+                closeEmp();
+            },
+        });
+    };
 
     // The view drawer is URL-driven (?view=<id>): a reload / shared link reopens it and closing
     // drops the param. Row clicks seed the cache for an instant open; "view profile" jumps by id.
@@ -581,6 +601,7 @@ export default function EmployeesPage() {
                 canResign={canResign}
                 canCancelResign={canCancelResign}
                 canSetCredentials={canSetCredentials}
+                canDelete={canDelete}
                 onResign={(e) => setResignEmp(e)}
                 onCancelResign={async (e) => {
                     await confirm({
@@ -592,6 +613,7 @@ export default function EmployeesPage() {
                         },
                     });
                 }}
+                onDelete={askDeleteEmployee}
                 onResetPassword={(e) => setResetPwEmp(e)}
                 // Keep the view dialog open so the credentials modal stacks on top of it.
                 onSetCredentials={(e) => setCredEmp(e)}

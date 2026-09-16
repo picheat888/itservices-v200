@@ -89,6 +89,21 @@ class TicketOwnerNotificationTest extends TestCase
         $this->assertOwnerBell($owner, 'taken', $staff->name);
     }
 
+    public function test_a_progress_note_bells_the_owner_too(): void
+    {
+        Notification::fake();
+        [$owner, $ticket] = $this->ownerAndTicket();
+        $staff = $this->userWithEmployee();
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'high'])->assertOk();
+
+        $this->actingAs($staff)
+            ->postJson("/api/tickets/{$ticket->id}/updates", ['body' => 'Ordered the part.'])
+            ->assertCreated();
+
+        // Every move of their case rings, and the middle of it is a move like any other.
+        $this->assertOwnerBell($owner, 'updated', $staff->name);
+    }
+
     public function test_assigning_a_case_bells_its_owner_and_emails_the_staff(): void
     {
         Notification::fake();

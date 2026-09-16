@@ -81,7 +81,7 @@ class TicketController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset', 'attachments']);
+        $query = Ticket::query()->with(['requester', 'assignee', 'relatedAsset', 'attachments', 'serviceRequest']);
 
         if ($request->boolean('requested')) {
             // My Tickets: only what the user filed themselves, behind its own gate
@@ -105,7 +105,17 @@ class TicketController extends Controller
         // Whitelisted sort orders (?sort=): newest (default), oldest, recently
         // updated, priority high→low, or most-urgent SLA first (CASE keeps them
         // portable across MySQL/SQLite).
-        match ($request->query('sort')) {
+        // Priority and the SLA clocks are only shown to whoever can take a case
+        // (TicketResource::showsDeskInternals), so they are not something to sort or filter by
+        // either — a hand-typed ?sort=priority_desc would otherwise order the list by a column
+        // the reader is not being shown.
+        $canSeeInternals = TicketResource::showsDeskInternals($request);
+        $sort = (string) $request->query('sort');
+        if (! $canSeeInternals && in_array($sort, ['priority_desc', 'sla_due'], true)) {
+            $sort = '';
+        }
+
+        match ($sort) {
             'created_asc' => $query->oldest('id'),
             'updated_desc' => $query->orderByDesc('updated_at')->latest('id'),
             'priority_desc' => $query
@@ -120,8 +130,8 @@ class TicketController extends Controller
         };
 
         // SLA filter (?sla=breached): active tickets whose current deadline has passed.
-        if ($request->query('sla') === 'breached') {
-            $query->whereIn('status', ['open', 'in_progress'])
+        if ($canSeeInternals && $request->query('sla') === 'breached') {
+            $query->whereIn('status', TicketStatus::liveValues())
                 ->whereRaw("{$activeDue} < ?", [now()->toDateTimeString()]);
         }
 
@@ -145,7 +155,7 @@ class TicketController extends Controller
         if ($request->filled('category')) {
             $query->where('category', $request->query('category'));
         }
-        if ($request->filled('priority')) {
+        if ($canSeeInternals && $request->filled('priority')) {
             $query->where('priority', $request->query('priority'));
         }
 
@@ -165,12 +175,12 @@ class TicketController extends Controller
             ->count();
         $myJobsCount = Ticket::query()
             ->where('assignee_id', $request->user()?->id)
-            ->where('status', TicketStatus::InProgress)
+            ->whereIn('status', TicketStatus::working())
             ->count();
         // The viewer's own still-unresolved requests (My Tickets tab).
         $myTicketsCount = Ticket::query()
             ->where('requester_id', $request->user()?->employee_id)
-            ->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress])
+            ->whereIn('status', TicketStatus::live())
             ->count();
 
         return response()->json([
@@ -242,7 +252,7 @@ class TicketController extends Controller
         // Cases currently past their active SLA deadline (response clock while open
         // and untaken, resolution clock afterwards) — the dashboard's red status row.
         $breachedNow = $tickets
-            ->filter(fn (Ticket $t) => in_array($t->status, [TicketStatus::Open, TicketStatus::InProgress], true))
+            ->filter(fn (Ticket $t) => in_array($t->status, TicketStatus::live(), true))
             ->filter(function (Ticket $t) {
                 $due = ($t->status === TicketStatus::Open && $t->responded_at === null)
                     ? $t->sla_response_due_at
@@ -343,7 +353,10 @@ class TicketController extends Controller
             ))
             ->sortBy('name')
             ->values()
-            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name]);
+            // employee_id so the pickers can drop the case's own requester: assign() and
+            // forward() reject that person (anti case-pumping), and a name in the list that
+            // always answers 422 is a choice the screen should never have offered.
+            ->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name, 'employee_id' => $u->employee_id]);
 
         return response()->json(['data' => $staff]);
     }
@@ -425,7 +438,7 @@ class TicketController extends Controller
             403,
         );
 
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))->response();
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))->response();
     }
 
     /** An IT staff takes an open, unassigned case for themselves (tickets.resolve). */
@@ -469,6 +482,7 @@ class TicketController extends Controller
     public function assign(Request $request, Ticket $ticket): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.assign'), 403);
+        $this->assertNotTheRequester($request, $ticket);
         abort_unless($ticket->status === TicketStatus::Open, 422, 'Only open tickets can be assigned.');
 
         $data = $request->validate([
@@ -506,7 +520,10 @@ class TicketController extends Controller
         // or a dispatcher (tickets.assign) — a bystander with the gate can't move it.
         abort_unless((bool) $user?->hasPermission('tickets.forward'), 403);
         abort_unless($ticket->assignee_id === $user?->id || (bool) $user?->hasPermission('tickets.assign'), 403);
-        abort_unless($ticket->status === TicketStatus::InProgress, 422, 'Only in-progress tickets can be forwarded.');
+        // A dispatcher who filed this one is out too — see assertNotTheRequester. The
+        // assignee branch above cannot reach here: a case never lands with its requester.
+        $this->assertNotTheRequester($request, $ticket);
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be forwarded.');
 
         $data = $request->validate([
             'assignee_id' => ['required', Rule::exists('users', 'id'), Rule::notIn([$ticket->assignee_id])],
@@ -526,6 +543,25 @@ class TicketController extends Controller
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * Whoever filed a case does not decide who works it, tickets.assign or not.
+     *
+     * The anti case-pumping rule already says a case can never land with its requester;
+     * this is the other half of it. Reading their own ticket that person is the one waiting
+     * on IT, and routing it is a decision for somebody who is not also the customer. Their
+     * case still moves: any IT staff can take it, and any other dispatcher can route it.
+     */
+    private function assertNotTheRequester(Request $request, Ticket $ticket): void
+    {
+        $employeeId = $request->user()?->employee_id;
+
+        abort_if(
+            $employeeId !== null && $employeeId === $ticket->requester_id,
+            403,
+            'You filed this case - somebody else decides who works it.'
+        );
     }
 
     /**
@@ -555,7 +591,7 @@ class TicketController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
         abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can resolve this ticket.');
-        abort_unless($ticket->status === TicketStatus::InProgress, 422, 'Only in-progress tickets can be resolved.');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be resolved.');
 
         $data = $request->validate([
             'mode' => ['required', 'in:complete,cancel'],
@@ -570,6 +606,29 @@ class TicketController extends Controller
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
             ->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * The assignee writes a progress note on a case in flight (tickets.resolve). Same gate as
+     * closing the case, and the same rule: only the person holding it can say what is
+     * happening to it.
+     */
+    public function storeUpdate(Request $request, Ticket $ticket): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
+        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can update this ticket.');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be updated.');
+
+        $data = $request->validate([
+            'body' => ['required', 'string', 'min:5', 'max:5000'],
+        ]);
+
+        $this->service->addUpdate($ticket, $request->user(), $data['body']);
+        $ticket = $ticket->fresh();
+        AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}");
+
+        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
+            ->additional(['message' => 'success'])->response()->setStatusCode(201);
     }
 
     /**

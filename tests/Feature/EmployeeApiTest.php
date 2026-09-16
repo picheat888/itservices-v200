@@ -8,6 +8,7 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\RolePermission;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -195,18 +196,47 @@ class EmployeeApiTest extends TestCase
     }
 
     /**
-     * An employee who leaves is resigned, never deleted — the record has to keep
-     * their name for every ticket, request and asset that points at it, and a real
-     * delete would cascade their whole ticket history away at the DB level.
+     * The employee's `username` column mirrors their login account's, and only the credentials
+     * endpoints write it. The edit form posts `username: null` on every save, so while the form
+     * request still accepted the field, saving an unrelated change (a phone number, a
+     * department) silently blanked the mirror — the real login kept working, but the list's
+     * username column emptied and the group-role fallback that matches by username went dead.
      */
-    public function test_employees_cannot_be_deleted_over_the_api(): void
+    public function test_editing_an_employee_cannot_blank_their_username(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-U1', 'first_name' => 'Has', 'last_name' => 'Login', 'username' => 'has_login']);
+
+        $this->putJson("/api/employees/{$employee->id}", [
+            'first_name' => 'Has', 'last_name' => 'Login', 'code' => 'EMP-U1',
+            'username' => null, 'phone' => '02-123-4567',
+        ])->assertOk();
+
+        $this->assertSame('has_login', $employee->fresh()->username);
+    }
+
+    /**
+     * An employee who leaves is resigned, never deleted — the record has to keep their name
+     * for every ticket, request and asset that points at it, and a real delete would cascade
+     * their whole ticket history away at the DB level.
+     *
+     * The route exists now, but only for a mis-entry nothing refers to yet; anyone with any
+     * history is refused. The full set of blockers lives in EmployeeDeleteTest — this one
+     * guards the case that started the rule: a person whose tickets would go with them.
+     */
+    public function test_an_employee_with_history_cannot_be_deleted_over_the_api(): void
     {
         $this->actingAs($this->super());
         $emp = Employee::create(['first_name' => 'Stays', 'last_name' => 'Put']);
+        Ticket::create([
+            'subject' => 'Laptop is slow', 'description' => 'Takes minutes to boot',
+            'category' => 'hardware', 'requester_id' => $emp->id,
+        ]);
 
-        $this->deleteJson("/api/employees/{$emp->id}")->assertMethodNotAllowed();
+        $this->deleteJson("/api/employees/{$emp->id}")->assertStatus(422);
 
         $this->assertDatabaseHas('employees', ['id' => $emp->id]);
+        $this->assertDatabaseCount('tickets', 1);
     }
 
     /**

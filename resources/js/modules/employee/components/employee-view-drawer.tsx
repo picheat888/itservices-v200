@@ -36,6 +36,7 @@ import {
     SquarePen,
     Tag,
     Ticket,
+    Trash2,
     TriangleAlert,
     UserCheck,
     UserMinus,
@@ -76,10 +77,12 @@ export function EmployeeViewDrawer({
     canResign,
     canCancelResign,
     canSetCredentials,
+    canDelete,
     onResign,
     onCancelResign,
     onResetPassword,
     onSetCredentials,
+    onDelete,
     onEdit,
     onViewProfile,
 }: {
@@ -91,10 +94,13 @@ export function EmployeeViewDrawer({
     canResign: boolean;
     canCancelResign: boolean;
     canSetCredentials: boolean;
+    /** Offer Delete in the footer — true only for viewers who hold employees.delete. */
+    canDelete: boolean;
     onResign: (e: Employee) => void;
     onCancelResign: (e: Employee) => void;
     onResetPassword: (e: Employee) => void;
     onSetCredentials: (e: Employee) => void;
+    onDelete: (e: Employee) => void;
     onEdit: (e: Employee) => void;
     /** Open another person's profile (from the org explorer's "View profile"). */
     onViewProfile?: (employeeId: number) => void;
@@ -140,6 +146,11 @@ export function EmployeeViewDrawer({
     const name = lang === 'th' ? (emp.name_th ?? emp.name) : emp.name;
     const altName = lang === 'th' ? emp.name : emp.name_th;
     const resigned = emp.status === 'resigned';
+    // The blockers ride along on the single-employee fetch; until it lands, treat the record
+    // as un-deletable rather than briefly offering a button that would be refused.
+    const blockers = emp.delete_blockers;
+    const deletable = !!blockers && blockers.length === 0;
+    const deleteBlockedReason = deletable ? undefined : blockers?.map((b) => t(`emp_del_block_${b}`)).join(' · ');
     const tenure = tenureOf(emp.joined_at);
     // The person this employee reports to (their manager), resolved from the org list.
     const managerNode = emp.manager_id ? nodeById.get(emp.manager_id) : null;
@@ -625,12 +636,28 @@ export function EmployeeViewDrawer({
 
                 {/* ── FOOTER ── */}
                 <div className="border-border bg-card flex shrink-0 items-center justify-between gap-2.5 border-t px-5 py-3">
-                    {/* Cancel sits on the left. */}
-                    <Button variant="outline" onClick={onClose}>
-                        {t('cancel')}
-                    </Button>
-                    {/* Account actions (moved out of the rail) sit beside Edit on the right. */}
-                    <div className="flex flex-wrap items-center justify-end gap-2">
+                    {/* Erasing a mis-entry sits alone on the left, as far from Edit as the
+                        footer allows — it took the slot Cancel used to hold, which only ever
+                        repeated what the ✕ in the header already does.
+
+                        Kept visible but disabled once the person has any history, with the
+                        reasons in the tooltip: an admin hunting for the button needs to be
+                        told why it won't work, not shown nothing. */}
+                    {canDelete && (
+                        <Button
+                            variant="outline"
+                            className="text-destructive"
+                            disabled={!deletable}
+                            title={deleteBlockedReason}
+                            onClick={() => onDelete(emp)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {t('delete')}
+                        </Button>
+                    )}
+                    {/* Account actions (moved out of the rail) sit beside Edit on the right.
+                        ml-auto holds them there even when the left slot is empty. */}
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                         {(canResetPassword || canSetCredentials) && emp.has_account && (
                             <Button variant="outline" onClick={() => onResetPassword(emp)}>
                                 <ShieldCheck className="h-4 w-4" />
@@ -1017,6 +1044,7 @@ function OrgPane({
         name: rootFocus.name,
         name_th: rootFocus.nameTh ?? null,
         title: rootFocus.title ?? null,
+        section: null,
         department: null,
         department_code: rootFocus.deptCode ?? null,
         photo_url: null,

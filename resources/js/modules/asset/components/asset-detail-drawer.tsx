@@ -7,10 +7,11 @@ import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
-import { Check, Eye, RotateCcw, Share2, SquarePen, Tag, Trash2 } from 'lucide-react';
+import { Check, Eye, MapPin, RotateCcw, Share2, SquarePen, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAsset, useAssetMutations } from '../hooks/use-assets';
 import { AssetHistoryTab } from './asset-history-tab';
+import { AssetLocationDialog } from './asset-location-dialog';
 import { AssetStatusBadge, AssetTypeIcon } from './asset-meta';
 import { AssetTicketsTab } from './asset-tickets-tab';
 import { ContractPeekDialog } from './contract-peek-dialog';
@@ -49,6 +50,7 @@ export function AssetDetailDrawer({
     onReceive,
     onRecall,
     onEdit,
+    canUpdateLocation = false,
     canTransfer,
     canReceive,
     canForceRecall = false,
@@ -61,6 +63,8 @@ export function AssetDetailDrawer({
     onReceive: (a: Asset) => void;
     onRecall?: (a: Asset) => void;
     onEdit?: (a: Asset) => void;
+    /** Offer "Update location" in the footer — true only for viewers who hold assets.edit. */
+    canUpdateLocation?: boolean;
     canTransfer: boolean;
     canReceive: boolean;
     canForceRecall?: boolean;
@@ -137,6 +141,11 @@ export function AssetDetailDrawer({
     // Linked-contract peek — fetched via GET /assets/{id}/contract, which is gated by assets.view.
     // Anyone who can open this asset can peek its linked contract; no contracts.view needed.
     const [peekAssetId, setPeekAssetId] = useState<number | null>(null);
+
+    // The location dialog opens ON TOP of this drawer rather than replacing it (same as the
+    // contract peek): a desk move is a small correction, and closing the whole record to make
+    // it lost the reader their place — they were looking at this asset for a reason.
+    const [relocating, setRelocating] = useState(false);
 
     const a = asset ?? shown;
     if (!a) return null;
@@ -321,6 +330,7 @@ export function AssetDetailDrawer({
 
                     {/* Footer — context action (left) / Edit (right); the ✕ handles closing. */}
                     {(onEdit ||
+                        canUpdateLocation ||
                         canTransfer ||
                         canReceive ||
                         isRecipient ||
@@ -372,6 +382,14 @@ export function AssetDetailDrawer({
                                     {t('asset_recall_action')}
                                 </Button>
                             )}
+                            {/* The holder moved desk and took the asset along — correct the place without
+                                touching custody. Only for an asset already in use somewhere. */}
+                            {canUpdateLocation && (a.status === 'deployed' || a.status === 'common') && (
+                                <Button variant="outline" onClick={() => setRelocating(true)}>
+                                    <MapPin className="h-4 w-4" />
+                                    {t('asset_location_update')}
+                                </Button>
+                            )}
                             {/* Undo a wrong write-off (permission-gated) — the only action on a retired asset. */}
                             {canCancelWriteoff && a.status === 'writeoff' && (
                                 <Button variant="outline" onClick={() => askCancelWriteoff(a)} disabled={cancelWriteoff.isPending}>
@@ -404,6 +422,7 @@ export function AssetDetailDrawer({
                 </DialogContent>
             </Dialog>
             <ContractPeekDialog assetId={peekAssetId} onClose={() => setPeekAssetId(null)} />
+            <AssetLocationDialog asset={relocating ? a : null} onClose={() => setRelocating(false)} />
         </>
     );
 }

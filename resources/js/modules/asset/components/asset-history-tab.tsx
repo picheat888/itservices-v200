@@ -1,23 +1,25 @@
 import { useT } from '@/lang';
 import { type Column, DataTable } from '@/shared/components/data-table';
-import { cn } from '@/shared/lib/utils';
 import type { AssetTransferEntry } from '@/shared/types';
 import { History } from 'lucide-react';
+import { AssetEventBadge } from './asset-event-badge';
 
-const POOL = 'Pool - IT';
-
-/** Renders one custody endpoint, highlighting the IT pool. */
-function Party({ name, muted }: { name: string | null; muted?: boolean }) {
-    if (!name) {
+/**
+ * One end of a move. The trail stores an employee code, a warehouse name or a shared label in
+ * the same field; a code the API resolved shows as the person's name instead — the code is
+ * the system's way of naming them, not the reader's.
+ */
+export function Party({ label, name, muted }: { label: string | null; name: string | null; muted?: boolean }) {
+    const text = name ?? label;
+    if (!text) {
         return <span className="text-muted-foreground">—</span>;
     }
-    const isPool = name === POOL;
-    return <span className={cn(isPool ? 'text-brand font-medium' : muted ? 'text-muted-foreground' : 'font-medium')}>{name}</span>;
+    return <span className={muted ? 'text-muted-foreground text-[13px]' : 'text-[13px] font-medium'}>{text}</span>;
 }
 
 /**
- * History tab: an asset's custody trail (ownership transfers + returns-to-pool),
- * rendered as a fill-height table that paginates with Prev/Next.
+ * History tab: everything that happened to one asset — hand-overs, returns to the pool and
+ * location corrections — as a table that paginates with Prev/Next.
  */
 export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransferEntry[]; loading?: boolean }) {
     const t = useT();
@@ -26,25 +28,19 @@ export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransf
         {
             key: 'date',
             header: t('asset_hist_date'),
-            render: (r) => <span className="text-muted-foreground font-mono text-xs">{r.date ?? '—'}</span>,
+            render: (r) => <span className="text-muted-foreground font-mono text-[11px] whitespace-nowrap">{r.date ?? '—'}</span>,
         },
-        {
-            key: 'flow',
-            header: t('asset_hist_flow'),
-            render: (r) => (
-                <span className="inline-flex items-center gap-2 text-sm">
-                    <Party name={r.from_owner} muted />
-                    <span className="text-muted-foreground/60">→</span>
-                    <Party name={r.to_owner} />
-                </span>
-            ),
-        },
-        { key: 'reason', header: t('asset_hist_reason'), render: (r) => <span className="text-sm">{r.reason ?? '—'}</span> },
-        { key: 'by', header: t('asset_hist_by'), render: (r) => <span className="text-sm">{r.performed_by ?? '—'}</span> },
+        { key: 'event', header: t('asset_hist_event'), render: (r) => <AssetEventBadge kind={r.kind} /> },
+        // From and To stand in their own columns so the whole trail lines up vertically —
+        // reading down one column answers "who had it before" without re-parsing each row.
+        { key: 'from', header: t('asset_hist_from'), render: (r) => <Party label={r.from_owner} name={r.from_name} muted /> },
+        { key: 'to', header: t('asset_hist_to'), render: (r) => <Party label={r.to_owner} name={r.to_name} /> },
+        { key: 'reason', header: t('asset_hist_reason'), render: (r) => <span className="text-[13px]">{r.reason ?? '—'}</span> },
+        { key: 'by', header: t('asset_hist_by'), render: (r) => <span className="text-muted-foreground text-[13px]">{r.performed_by ?? '—'}</span> },
     ];
 
     return (
-        <div className="space-y-3">
+        <div className="flex h-full flex-col gap-3">
             {/* Table title + what this history means */}
             <div>
                 <div className="text-foreground text-sm font-semibold">{t('asset_history_title')}</div>
@@ -54,14 +50,20 @@ export function AssetHistoryTab({ transfers, loading }: { transfers: AssetTransf
             {/* "No history" is a claim about the asset, so it waits until this asset's
                 trail has actually arrived — until then the table shows loading rows. */}
             {transfers.length === 0 && !loading ? (
-                <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-16 text-center text-sm">
+                <div className="text-muted-foreground flex flex-1 flex-col items-center justify-center gap-2 text-center text-sm">
                     <History className="text-muted-foreground/50 h-8 w-8" />
                     <div>{t('asset_history_empty')}</div>
                     <div className="text-xs">{t('asset_history_empty_hint')}</div>
                 </div>
             ) : (
-                // Fixed 12 rows per page, paged with Prev/Next.
-                <DataTable pageSize={12} columns={columns} rows={transfers} rowKey={(r) => r.id} loading={loading} />
+                // fillHeight, like the repair-tickets tab: rows-per-page is derived from the
+                // space the tab actually has, so a two-row trail leaves no field of blank filler
+                // rows and a long one fills the panel. rowHeight tells it how tall these rows
+                // are — denser than the shell's density setting, the way the employee drawer's
+                // tables do it, because a trail is scanned rather than read.
+                <div className="min-h-0 flex-1 [--row-py:0.3125rem]">
+                    <DataTable fillHeight rowHeight={32} columns={columns} rows={transfers} rowKey={(r) => r.id} loading={loading} />
+                </div>
             )}
         </div>
     );

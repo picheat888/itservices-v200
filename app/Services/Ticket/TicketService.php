@@ -2,10 +2,12 @@
 
 namespace App\Services\Ticket;
 
+use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Employee\Employee;
 use App\Models\Ticket\Ticket;
+use App\Models\Ticket\TicketUpdate;
 use App\Models\User;
 use App\Notifications\TicketAssignedNotification;
 use App\Notifications\TicketCreatedNotification;
@@ -121,8 +123,7 @@ class TicketService
             'responded_at' => $ticket->responded_at ?? now(),
             // The chosen priority fixes the real resolution deadline — any alert
             // sent against the old (medium-fallback) deadline no longer applies.
-            'sla_resolve_due_at' => TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours($priority->value) * 60),
-            'sla_resolve_alert_level' => null,
+            ...$this->deadlineAfterPriority($ticket, $priority),
         ]);
 
         // Tell the owner their case is now in someone's hands — by bell and by mail. The
@@ -150,8 +151,7 @@ class TicketService
             'responded_at' => $ticket->responded_at ?? now(),
             // The chosen priority fixes the real resolution deadline — any alert
             // sent against the old (medium-fallback) deadline no longer applies.
-            'sla_resolve_due_at' => TicketSla::addBusinessMinutes($ticket->created_at, TicketSla::resolveHours($priority->value) * 60),
-            'sla_resolve_alert_level' => null,
+            ...$this->deadlineAfterPriority($ticket, $priority),
         ]);
 
         $staff->notify(new TicketAssignedNotification($ticket->fresh()));
@@ -199,6 +199,60 @@ class TicketService
         ]);
 
         return $ticket->fresh();
+    }
+
+    /**
+     * The deadline columns to write when a case is taken or assigned and gets its priority.
+     *
+     * A case whose target comes from what was REQUESTED keeps that deadline: "a new monitor
+     * takes three days to procure" does not stop being true because the technician picking it
+     * up marked it urgent. Priority still decides everything else it decides — it just no
+     * longer shortens a deadline that was set by the nature of the work.
+     *
+     * @return array<string, mixed>
+     */
+    private function deadlineAfterPriority(Ticket $ticket, TicketPriority $priority): array
+    {
+        if (TicketSla::targetFor($ticket)['scope'] === SlaScope::RequestType) {
+            return [];
+        }
+
+        $hours = TicketSla::resolveHours($priority->value);
+
+        return [
+            'sla_resolve_due_at' => TicketSla::addBusinessMinutes($ticket->created_at, $hours * 60),
+            'sla_resolve_alert_level' => null,
+        ];
+    }
+
+    /**
+     * Record what has happened on a case in flight.
+     *
+     * The desk had two places to write — a note when taking the case, a resolution when closing
+     * it — so a case that ran for a week said nothing in between and the requester heard
+     * nothing until it ended. Each note is its own row, oldest first, and the requester is told
+     * every time: the middle of a case is now as visible as its two ends.
+     *
+     * A note never moves the case: it stays In progress, and the SLA clock keeps running.
+     */
+    public function addUpdate(Ticket $ticket, User $staff, string $body): TicketUpdate
+    {
+        $update = $ticket->updates()->create([
+            'user_id' => $staff->id,
+            'author_name' => (string) $staff->name,
+            'body' => $body,
+        ]);
+
+        $ticket = $ticket->fresh();
+        $this->ownerUser($ticket)?->notify(new TicketOwnerNotification($ticket, 'updated', $staff->name));
+        $this->emailOwner($ticket, 'ticket.updated', [
+            'ticket.assignee' => (string) $staff->name,
+            // Free text somebody typed, into an HTML email — escaped and line-broken for the
+            // same reason ticket.details and ticket.resolution are.
+            'ticket.update' => nl2br(e($body)),
+        ]);
+
+        return $update;
     }
 
     /**

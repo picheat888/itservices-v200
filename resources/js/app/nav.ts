@@ -23,7 +23,7 @@ export const navGroups: NavGroup[] = [
         items: [
             { id: 'overall', label: 'overall', to: '/', icon: LayoutDashboard },
             // Employee self-service — gated by the My Assets permission.
-            { id: 'my-assets', label: 'my_assets', to: '/my-assets', icon: PackageCheck, permission: 'assets.my' },
+            { id: 'my-assets', label: 'mya_nav', to: '/my-assets-access', icon: PackageCheck, anyOf: ['assets.my', 'access.my'] },
         ],
     },
     {

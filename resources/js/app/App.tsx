@@ -4,7 +4,7 @@ import { AppShell } from '@/app/layout/app-shell';
 import { Toaster } from '@/app/layout/toaster';
 import PlaceholderPage from '@/app/placeholder';
 import { AccessControlPage } from '@/modules/access';
-import { AssetsPage, MyAssetsPage } from '@/modules/asset';
+import { AssetsPage, MyAssetsAccessPage } from '@/modules/asset';
 import { LoginPage, ProtectedRoute, RequirePermission } from '@/modules/auth';
 import { ContractsPage } from '@/modules/contract';
 import { DashboardPage } from '@/modules/dashboard';
@@ -58,15 +58,19 @@ function App() {
                         SidebarRouteGateTest holds the two lists together. */}
                     <Route element={<AppShell />}>
                         <Route index element={<DashboardPage />} />
-                        {/* Employee self-service — gated by the My Assets permission (not assets.view). */}
+                        {/* Employee self-service: the kit somebody holds and the systems they can
+                            reach. Either right alone opens the page — the halves gate themselves. */}
                         <Route
-                            path="my-assets"
+                            path="my-assets-access"
                             element={
-                                <RequirePermission anyOf={['assets.my']}>
-                                    <MyAssetsPage />
+                                <RequirePermission anyOf={['assets.my', 'access.my']}>
+                                    <MyAssetsAccessPage />
                                 </RequirePermission>
                             }
                         />
+                        {/* The page moved and grew a second half. Bells and hand-over emails sent
+                            before today still point at the old path. */}
+                        <Route path="my-assets" element={<RedirectPreservingQuery to="/my-assets-access" />} />
                         <Route
                             path="employees"
                             element={

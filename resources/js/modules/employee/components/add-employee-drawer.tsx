@@ -317,9 +317,8 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
             section_id: form.sectionId ? Number(form.sectionId) : null,
             position_id: form.positionId ? Number(form.positionId) : null,
             manager_id: form.managerId ? Number(form.managerId) : null,
-            // No email or username: a new hire has neither yet. Both stay null until the
-            // mailbox is created and the account is provisioned.
-            username: null,
+            // No email: a new hire has none yet — it stays null until the mailbox is created.
+            // The username is not sent at all: it is written when the account is provisioned.
             phone: form.phone || null,
             joined_at: form.joinedAt || null,
             photo: photo ?? null,

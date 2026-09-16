@@ -10,7 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -45,7 +45,7 @@ class RequestCanonicalTitleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 

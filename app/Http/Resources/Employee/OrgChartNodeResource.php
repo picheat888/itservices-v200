@@ -10,8 +10,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class OrgChartNodeResource extends JsonResource
 {
     /**
-     * One node in the org chart: identity, position/department labels, photo,
-     * the manager link, and a count of active direct reports.
+     * One node in the org chart: identity, position/section/department
+     * labels, photo, the manager link, and a count of active direct reports.
      *
      * @return array<string, mixed>
      */
@@ -23,6 +23,7 @@ class OrgChartNodeResource extends JsonResource
             'name' => $this->name,
             'name_th' => $this->name_th,
             'title' => $this->position?->title,
+            'section' => $this->section?->name,
             'department' => $this->department?->name,
             'department_code' => $this->department?->tag,
             'photo_url' => $this->photo_url,

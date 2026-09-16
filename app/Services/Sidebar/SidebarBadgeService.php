@@ -138,9 +138,9 @@ class SidebarBadgeService
 
         return Ticket::query()
             ->where(function ($q) use ($user, $canTake, $levels) {
-                $q->where(fn ($w) => $w->where('assignee_id', $user?->id)->where('status', TicketStatus::InProgress))
+                $q->where(fn ($w) => $w->where('assignee_id', $user?->id)->whereIn('status', TicketStatus::working()))
                     ->orWhere(fn ($w) => $w->where('requester_id', $user?->employee_id)
-                        ->whereIn('status', [TicketStatus::Open, TicketStatus::InProgress]));
+                        ->whereIn('status', TicketStatus::live()));
                 if ($canTake) {
                     // Only cases the taker's Ticket Level actually lets them pick up.
                     $q->orWhere(fn ($w) => $w->where('status', TicketStatus::Open)->whereNull('assignee_id')

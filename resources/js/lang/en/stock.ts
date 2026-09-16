@@ -98,7 +98,7 @@ export const stock: Dict = {
     stock_unit: 'Unit',
     stock_brand: 'Brand',
     stock_model: 'Model',
-    stock_current: 'Current',
+    stock_current: "Q'ty (Current)",
     stock_cost: 'Cost',
     stock_avg_cost: 'Avg cost',
     stock_unit_cost: 'Unit cost (this lot)',

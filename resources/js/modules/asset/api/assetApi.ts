@@ -72,7 +72,9 @@ export const assetApi = {
         http
             .get<ApiEnvelope<ContractLinkableAsset[]>>('/assets/linkable', { params: contractId ? { contract_id: contractId } : {} })
             .then((r) => r.data.data),
-    transfers: () => http.get<{ data: AssetTransferLog[] }>('/assets/transfers').then((r) => r.data.data),
+    // The envelope carries `meta.limit` — how far back the log reaches — so the page can say so
+    // instead of presenting a capped slice as the whole history.
+    transfers: () => http.get<{ data: AssetTransferLog[]; meta?: { limit: number } }>('/assets/transfers').then((r) => r.data),
     get: (id: number) => http.get<ApiEnvelope<Asset>>(`/assets/${id}`).then((r) => r.data.data),
     // The contract linked to an asset (read-only "peek"); gated by assets.view, not contracts.view.
     getContract: (id: number) => http.get<ApiEnvelope<Contract>>(`/assets/${id}/contract`).then((r) => r.data.data),
@@ -108,6 +110,9 @@ export const assetApi = {
         location_id: number;
         reason?: string;
     }) => mutate<void>('post', '/assets/bulk-transfer', payload),
+    // Correct where in-use assets physically sit (one or many). Not a transfer: the holder
+    // keeps the asset, only the place changes. Gated by assets.edit.
+    updateLocation: (payload: { ids: number[]; location_id: number; note?: string }) => mutate<void>('post', '/assets/bulk-location', payload),
     // Bulk recall (Common → pool, or force-recall any out asset) into a warehouse.
     bulkRecall: (ids: number[], warehouse: string, reason?: string) => mutate<void>('post', '/assets/bulk-recall', { ids, warehouse, reason }),
     // Bulk receive many pending-return assets back into a warehouse.

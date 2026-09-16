@@ -22,9 +22,16 @@ export interface EmailTemplateStats {
     delivery_rate: number | null;
 }
 
+/** The address the system sends from — shown on the preview's From line. */
+export interface MailIdentity {
+    from_address: string | null;
+    from_name: string | null;
+}
+
 export interface EmailTemplateListResponse {
     data: EmailTemplate[];
     stats: EmailTemplateStats;
+    mail: MailIdentity;
 }
 
 export interface EmailTemplatePayload {
@@ -89,9 +96,11 @@ export const emailTemplateApi = {
         return data;
     },
 
-    test: async (id: number): Promise<{ sent: boolean }> => {
+    // Sends the template to the signed-in user. The editor posts what is on screen, saved
+    // or not — a test of the saved copy would not be a test of what the author is writing.
+    test: async (id: number, draft?: EmailTemplatePayload): Promise<{ sent: boolean }> => {
         await ensureCsrf();
-        const { data } = await http.post<{ sent: boolean }>(`/email-templates/${id}/test`);
+        const { data } = await http.post<{ sent: boolean }>(`/email-templates/${id}/test`, draft ?? {});
         return data;
     },
 

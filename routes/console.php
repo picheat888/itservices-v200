@@ -20,6 +20,11 @@ Schedule::command('contracts:send-weekly-digest')->weeklyOn(1, '08:20');
 
 Schedule::command('stock:send-notifications')->dailyAt('08:05');
 
+// The daily sweep above rings the bells; the mail is weekly. Anything that drops below
+// its minimum already sent its own alert the moment it happened, so a daily list of the
+// same items is the same news twice — and one that arrives every morning gets filtered.
+Schedule::command('stock:send-weekly-digest')->weeklyOn(1, '08:25');
+
 // Approvals nobody has acted on. The bell goes out every morning behind the other
 // two sweeps; the mail is weekly on purpose — a list on Monday is a piece of work,
 // the same list every day is something people learn to filter.

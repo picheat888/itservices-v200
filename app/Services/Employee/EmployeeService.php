@@ -3,10 +3,19 @@
 namespace App\Services\Employee;
 
 use App\Enums\Employee\EmployeeStatus;
+use App\Models\Access\AccessMembership;
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
+use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
+use App\Models\AuditLog;
 use App\Models\Employee\Employee;
 use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
+use App\Models\Request\RequestApproval;
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\AppSetting;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Notifications\AccessOffboardingNotification;
 use App\Notifications\EmployeeResignedNotification;
@@ -16,8 +25,10 @@ use App\Services\Asset\AssetService;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Request\RequestNotificationService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class EmployeeService
@@ -144,6 +155,99 @@ class EmployeeService
         $this->notifyResignation($employee);
 
         return $employee->load(['department', 'position']);
+    }
+
+    /**
+     * Everything that makes an employee record un-deletable, as short keys the UI translates.
+     * Empty means the record is a clean mis-entry: nothing in the system refers to it.
+     *
+     * Deleting is only ever for "this person was typed in by mistake", never for a leaver —
+     * a leaver is resigned, because their name has to keep reading correctly on every ticket,
+     * asset and request they touched. That is also why this list is long and cautious:
+     * `tickets.requester_id` and the access tables cascade, so a delete that slipped past a
+     * missing check would take real history with it and say nothing.
+     *
+     * @return list<string>
+     */
+    public function deletionBlockers(Employee $employee): array
+    {
+        $blockers = [];
+
+        if ($employee->status === EmployeeStatus::Resigned) {
+            $blockers[] = 'resigned';
+        }
+        if (Ticket::where('requester_id', $employee->id)->exists()) {
+            $blockers[] = 'tickets';
+        }
+        if (Asset::where('owner_employee_id', $employee->id)->exists()) {
+            $blockers[] = 'assets';
+        }
+        // The custody trail keeps codes as plain text, not a foreign key — an employee who
+        // once held a device leaves no FK behind, only their code on those rows.
+        if (AssetTransfer::where('from_owner', $employee->code)->orWhere('to_owner', $employee->code)->exists()) {
+            $blockers[] = 'asset_history';
+        }
+        if (AccessMembership::where('employee_id', $employee->id)->exists()) {
+            $blockers[] = 'access';
+        }
+        if (EmailGroup::where('owner_employee_id', $employee->id)->exists() || FileShare::where('owner_employee_id', $employee->id)->exists()) {
+            $blockers[] = 'access_owner';
+        }
+        // Role-group membership is deliberately NOT a blocker. `create()` puts every new
+        // employee in the default group straight away, so counting it would block the delete
+        // for precisely the record it exists for — one added by mistake a minute ago. It is a
+        // setting the system assigned, not something the person did; the pivot row carries no
+        // history and cascades away with them.
+        if (ServiceRequest::where('employee_id', $employee->id)->exists()) {
+            $blockers[] = 'requests';
+        }
+        if (RequestApproval::where('approver_employee_id', $employee->id)->exists()) {
+            $blockers[] = 'approvals';
+        }
+        if ($employee->subordinates()->exists()) {
+            $blockers[] = 'subordinates';
+        }
+        if ($this->accountHasBeenUsed($employee->user)) {
+            $blockers[] = 'account_used';
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * Has this login ever done anything? A brand-new account is part of the same mis-entry and
+     * goes with it; one that has acted is history of its own and stops the delete.
+     */
+    private function accountHasBeenUsed(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        return AuditLog::where('user_id', $user->id)->exists()
+            || Ticket::where('assignee_id', $user->id)->exists()
+            || ServiceRequest::where('user_id', $user->id)->exists()
+            || RequestApproval::where('acted_by_user_id', $user->id)->exists()
+            || AccessMembership::where('granted_by', $user->id)->exists()
+            || DB::table('notifications')->where('notifiable_id', $user->id)->exists();
+    }
+
+    /**
+     * Remove a mis-entered employee for good. Call only after `deletionBlockers()` comes back
+     * empty — this does no checking of its own.
+     *
+     * The login goes with them: `users.employee_id` is nullOnDelete, so a kept account would
+     * become a sign-in that still works but no longer appears anywhere in the Employee module,
+     * and nothing else in the system can delete an account.
+     */
+    public function delete(Employee $employee): void
+    {
+        if ($employee->photo_path) {
+            Storage::disk('local')->delete($employee->photo_path);
+        }
+
+        $employee->user?->delete();
+        $employee->delete();
     }
 
     /**

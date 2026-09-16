@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -42,8 +44,31 @@ class OrgChartTest extends TestCase
 
         $this->assertSame('Lone Worker', $row['name']);
         $this->assertNull($row['title']);
+        $this->assertNull($row['section']);
         $this->assertNull($row['department']);
         $this->assertSame(0, $row['reports_count']);
+    }
+
+    public function test_node_carries_position_section_and_department_names(): void
+    {
+        $this->actingAs($this->super());
+        $dept = Department::create(['name' => 'Information Technology', 'tag' => 'IT']);
+        $section = Section::create(['name' => 'Infrastructure', 'department_id' => $dept->id]);
+        $pos = Position::create(['title' => 'System Engineer']);
+        Employee::create([
+            'first_name' => 'Nara',
+            'last_name' => 'S',
+            'position_id' => $pos->id,
+            'section_id' => $section->id,
+            'department_id' => $dept->id,
+        ]);
+
+        $row = $this->getJson('/api/employees/org-chart')->assertOk()->json('data.0');
+
+        $this->assertSame('System Engineer', $row['title']);
+        $this->assertSame('Infrastructure', $row['section']);
+        $this->assertSame('Information Technology', $row['department']);
+        $this->assertSame('IT', $row['department_code']);
     }
 
     public function test_excludes_resigned_employees(): void

@@ -67,15 +67,23 @@ export function AssetTransferDialog({
     const [reason, setReason] = useState('');
     const [err, setErr] = useState<{ employee?: string; shared?: string; location?: string }>({});
 
-    // Reset the form whenever the dialog (re)opens for a new asset / batch.
+    // Retain the last asset so the header keeps its text while the dialog animates closed.
+    const [shownAsset, setShownAsset] = useState<Asset | null>(asset ?? null);
     useEffect(() => {
+        if (asset) setShownAsset(asset);
+    }, [asset]);
+
+    // Reset the form whenever the dialog (re)opens for a new asset / batch. Skipped while
+    // closed so a dialog on its way out does not blank the form mid-animation.
+    useEffect(() => {
+        if (!isOpen) return;
         setMode('employee');
         setEmployeeId('');
         setSharedLabel('');
         setLocation('');
         setReason('');
         setErr({});
-    }, [asset, open]);
+    }, [asset, open, isOpen]);
 
     // Why the picked employee cannot press Accept, or undefined when they can. IT may still
     // hand the asset over — most staff have no login and receive their kit in person — so
@@ -110,8 +118,8 @@ export function AssetTransferDialog({
 
     const description = isBulk
         ? t('asset_bulk_count').replace('{count}', String(ids?.length ?? 0))
-        : asset
-          ? `${asset.asset_code} - ${asset.model ?? ''}`
+        : shownAsset
+          ? `${shownAsset.asset_code} - ${shownAsset.model ?? ''}`
           : '';
 
     return (

@@ -100,6 +100,7 @@ export interface OrgChartNode {
     name: string;
     name_th: string | null;
     title: string | null;
+    section: string | null;
     department: string | null;
     department_code: string | null;
     photo_url: string | null;
@@ -141,6 +142,11 @@ export interface Employee {
     last_day: string | null;
     has_account: boolean;
     is_super_admin: boolean;
+    /**
+     * Why this record cannot be deleted; empty means nothing in the system refers to it yet.
+     * Present only on the single-employee endpoint, so it is undefined on list rows.
+     */
+    delete_blockers?: string[];
 }
 
 export type ContractType = 'software' | 'hardware' | 'service' | 'connectivity' | 'other';
@@ -286,12 +292,17 @@ export interface Asset {
     tickets?: AssetTicket[];
 }
 
-/** One custody event (transfer / return-to-pool) in an asset's history. */
+/** One event (transfer / return-to-pool / location change) in an asset's history. */
 export interface AssetTransferEntry {
     id: number;
     date: string | null;
+    /** `relocate` rows carry location names in from/to, every other kind carries people. */
+    kind: 'handover' | 'return' | 'recall' | 'relocate' | null;
     from_owner: string | null;
     to_owner: string;
+    /** Full name behind the code, when that end of the move was an employee. */
+    from_name: string | null;
+    to_name: string | null;
     reason: string | null;
     performed_by: string | null;
 }
@@ -312,10 +323,17 @@ export interface AssetTicket {
 export interface AssetTransferLog {
     id: number;
     date: string | null;
+    /** Null for a row whose asset was deleted — the trail outlives the record. */
+    asset_id: number | null;
     asset_tag: string;
     asset_model: string;
+    /** Never `relocate` here: the log is ownership moves only. */
+    kind: 'handover' | 'return' | 'recall' | 'relocate' | null;
     from_owner: string | null;
     to_owner: string;
+    /** Full name behind the code, when that end of the move was an employee. */
+    from_name: string | null;
+    to_name: string | null;
     reason: string | null;
     performed_by: string | null;
 }
@@ -328,7 +346,12 @@ export interface AssetSummary {
     pending_return: number;
     writeoff: number;
     total_value: number;
-    by_type: { type: AssetType; count: number }[];
+    /**
+     * One row per asset type, biggest first. `ready` + `used` + `writeoff` add up to `count`:
+     * `used` folds the two pending states in with deployed/common, since a hand-over awaiting
+     * acceptance and a return awaiting receipt are both still out of the pool.
+     */
+    by_type: { type: AssetType; count: number; ready: number; used: number; writeoff: number }[];
     top_value: Asset[];
     /**
      * Custody activity per month for the rolling 12-month window, oldest first. Every month
@@ -369,7 +392,8 @@ export interface Ticket {
     subject: string;
     description: string;
     category: TicketCategory;
-    priority: TicketPriority | null;
+    /** Absent for viewers without the Take Case gate — the API leaves it out, see TicketResource. */
+    priority?: TicketPriority | null;
     status: TicketStatus;
     requester_id: number;
     requester_code?: string | null;
@@ -388,11 +412,23 @@ export interface Ticket {
     take_note: string | null;
     resolution: string | null;
     sla?: TicketSlaSnapshot | null;
+    /** Where this case's resolution target came from — scope null means the built-in default. */
+    sla_target?: { hours: number; scope: 'priority' | 'request_type' | null; value: string | null };
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];
+    /** Progress notes, oldest first — only present on the single-ticket read. */
+    updates?: TicketUpdate[];
     created_at: string | null;
     updated_at: string | null;
+}
+
+/** One progress note written between taking a case and closing it. */
+export interface TicketUpdate {
+    id: number;
+    author_name: string;
+    body: string;
+    created_at: string | null;
 }
 
 export interface TicketSummary {

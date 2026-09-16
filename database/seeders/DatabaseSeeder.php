@@ -25,10 +25,10 @@ use Illuminate\Database\Seeder;
  * Four seeders remain outside this one, run by hand on a fresh install because they
  * carry the ORGANISATION's own reference data rather than invented content:
  *
- *   php artisan db:seed --class=DepartmentSeeder   # 11 departments, DEP-#### codes
- *   php artisan db:seed --class=PositionSeeder     # 14 job titles, PST-#### codes
- *   php artisan db:seed --class=SectionSeeder      # 26 sections (needs departments first)
- *   php artisan db:seed --class=MasterDataSeeder   # brands, models, categories, vendors, warehouses
+ *   php artisan db:seed --class=EmployeeDepartmentSeeder   # 11 departments, DEP-#### codes
+ *   php artisan db:seed --class=EmployeePositionSeeder     # 14 job titles, PST-#### codes
+ *   php artisan db:seed --class=EmployeeSectionSeeder      # 26 sections (needs departments first)
+ *   php artisan db:seed --class=MasterDataSeeder           # brands, models, categories, vendors, warehouses
  *
  * They are deliberately not called from here: an install that is not this company
  * should start with an empty org chart rather than somebody else's.

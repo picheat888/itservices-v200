@@ -118,6 +118,24 @@ class NotificationTemplateTest extends TestCase
         }
     }
 
+    /**
+     * The Thai half of the same contract, which nothing was holding.
+     *
+     * Only English was checked, so a reworded bell could be pulled into the catalogue with
+     * its Thai left behind — and the tray falls back to the bundled dictionary whenever the
+     * override has not loaded, which is exactly when the two disagreeing shows.
+     */
+    public function test_the_catalogue_thai_wording_matches_what_the_spa_ships(): void
+    {
+        $source = file_get_contents(base_path('resources/js/lang/th/notification.ts'));
+
+        foreach (NotificationCatalogue::all() as $bell) {
+            preg_match("/^\s{4}".preg_quote($bell['key'], '/').": '(.*)',\s*$/m", $source, $m);
+            $this->assertNotEmpty($m, "{$bell['key']} is not in the Thai notification dictionary.");
+            $this->assertSame(str_replace("\'", "'", $m[1]), $bell['message_th'], "{$bell['key']} Thai wording has drifted from the SPA.");
+        }
+    }
+
     public function test_only_a_notification_administrator_may_read_or_change_bells(): void
     {
         $this->actingAs($this->userWith(['employees.view']));

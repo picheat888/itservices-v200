@@ -12,7 +12,7 @@ use App\Models\Employee\Position;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Request\WorkflowResolverService;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
@@ -32,7 +32,7 @@ class RequestResolutionTest extends TestCase
         parent::setUp();
         // Positions first: WorkflowSeeder attaches them to the chain rungs, which is
         // what the routing depends on.
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
     }
 
@@ -61,7 +61,7 @@ class RequestResolutionTest extends TestCase
      */
     private function ladder(): array
     {
-        // The real titles, from PositionSeeder — the same rows the workflow rungs name.
+        // The real titles, from EmployeePositionSeeder — the same rows the workflow rungs name.
         $titles = [
             'vp' => 'Vice President', 'director' => 'Director', 'srMgr' => 'Senior Manager',
             'mgr' => 'Manager', 'asstMgr' => 'Asst. Manager', 'srSup' => 'Senior Supervisor',

@@ -14,7 +14,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
 use Database\Seeders\EmailTemplateSeeder;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,7 +38,7 @@ class RequestStalledReminderTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
         $this->seed(EmailTemplateSeeder::class);
@@ -182,7 +182,9 @@ class RequestStalledReminderTest extends TestCase
         $html = (string) $job->html;
 
         $this->assertSame('sup@example.com', $job->toEmail);
-        $this->assertStringContainsString('2 request', $job->subject);
+        // The count, not the casing: an administrator rewording the subject is not a bug.
+        $this->assertStringContainsString('2', $job->subject);
+        $this->assertStringContainsStringIgnoringCase('request(s) still waiting', $job->subject);
         $this->assertStringContainsString($first->reference, $html);
         $this->assertStringContainsString($second->reference, $html);
         // Longest wait first: the older request opens the table.

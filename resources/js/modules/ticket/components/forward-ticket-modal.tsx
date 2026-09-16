@@ -26,9 +26,14 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     const { data: staff = [] } = useTicketStaff(!!view, view?.category);
     const [assigneeId, setAssigneeId] = useState('');
 
-    // The current assignee can't receive their own case again (the API rejects it too).
+    // Neither the current assignee (they already have it) nor the person who filed the case
+    // (anti case-pumping) can receive it — the API rejects both, so neither is offered.
     const staffOptions = useMemo(
-        () => staff.filter((s) => s.id !== view?.assignee_id).map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
+        () =>
+            staff
+                .filter((s) => s.id !== view?.assignee_id)
+                .filter((s) => s.employee_id == null || s.employee_id !== view?.requester_id)
+                .map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
         [staff, view],
     );
 

@@ -31,10 +31,15 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
     const [priority, setPriority] = useState<TicketPriority>('medium');
 
     // Assign hands a case to someone ELSE — the dispatcher takes via Take Case instead
-    // (the API rejects self-assign too).
+    // (the API rejects self-assign too) — and never to the person who filed it, which the
+    // API rejects as well. Offering either is offering a choice that answers 422.
     const staffOptions = useMemo(
-        () => staff.filter((s) => s.id !== me?.id).map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
-        [staff, me],
+        () =>
+            staff
+                .filter((s) => s.id !== me?.id)
+                .filter((s) => s.employee_id == null || s.employee_id !== view?.requester_id)
+                .map((s) => ({ value: String(s.id), label: s.name, search: s.name })),
+        [staff, me, view],
     );
 
     useEffect(() => {

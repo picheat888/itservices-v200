@@ -51,27 +51,17 @@ class RequestSchemas
                 // `managed` like Hardware below: the two choices started as fixed
                 // slugs, which meant a new kind of machine needed a deploy. They are
                 // rows now, so IT adds one in Settings → Request data.
-                ['key' => 'device_id', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'managed' => true, 'options' => [
-                    ['label_en' => 'Laptop', 'label_th' => 'โน้ตบุ๊ก'],
-                    ['label_en' => 'Desktop PC', 'label_th' => 'คอมพิวเตอร์ตั้งโต๊ะ'],
-                ]],
+                ['key' => 'device_id', 'label_en' => 'Device type', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'managed' => true],
             ],
             RequestType::Hardware->value => [
                 // `managed`: the choices live in request_options and are edited in
-                // Settings → Master data → Request data. The list below is only the
-                // seed for a fresh install.
-                ['key' => 'device_id', 'label_en' => 'Hardware', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'managed' => true, 'options' => [
-                    ['label_en' => 'Monitor', 'label_th' => 'จอภาพ'],
-                    ['label_en' => 'Printer', 'label_th' => 'เครื่องพิมพ์'],
-                    ['label_en' => 'Accessory', 'label_th' => 'อุปกรณ์เสริม'],
-                ]],
+                // Settings → Master data → Request data. What a fresh install starts
+                // with is in RequestOptionSeeder — a managed field carries no list here,
+                // because a second copy of the choices would be one nobody is reading.
+                ['key' => 'device_id', 'label_en' => 'Hardware', 'label_th' => 'อุปกรณ์ที่ต้องการ', 'input' => 'select', 'required' => true, 'managed' => true],
             ],
             RequestType::Mobile->value => [
-                ['key' => 'device_id', 'label_en' => 'Device', 'label_th' => 'ประเภทอุปกรณ์', 'input' => 'select', 'required' => true, 'managed' => true, 'options' => [
-                    ['label_en' => 'Smartphone', 'label_th' => 'สมาร์ตโฟน'],
-                    ['label_en' => 'Tablet', 'label_th' => 'แท็บเล็ต'],
-                    ['label_en' => 'Pocket Wi-Fi', 'label_th' => 'พ็อกเก็ตไวไฟ'],
-                ]],
+                ['key' => 'device_id', 'label_en' => 'Device', 'label_th' => 'ประเภทอุปกรณ์', 'input' => 'select', 'required' => true, 'managed' => true],
                 // Required: left blank, IT has to go and ask, which is the one thing the
                 // field exists to prevent. Two options, so answering costs a single click.
                 ['key' => 'sim', 'label_en' => 'SIM & data plan', 'label_th' => 'ต้องการซิม / แพ็กเกจดาต้า', 'input' => 'select', 'required' => true, 'options' => [
@@ -104,10 +94,7 @@ class RequestSchemas
             ],
             RequestType::Recovery->value => [],
             RequestType::Telephone->value => [
-                ['key' => 'device_type_id', 'label_en' => 'Device', 'label_th' => 'ประเภทเครื่อง', 'input' => 'select', 'required' => true, 'managed' => true, 'options' => [
-                    ['label_en' => 'Analog phone', 'label_th' => 'โทรศัพท์อนาล็อก'],
-                    ['label_en' => 'IP phone', 'label_th' => 'โทรศัพท์ IP'],
-                ]],
+                ['key' => 'device_type_id', 'label_en' => 'Device', 'label_th' => 'ประเภทเครื่อง', 'input' => 'select', 'required' => true, 'managed' => true],
                 ['key' => 'location_id', 'label_en' => 'Install location', 'label_th' => 'สถานที่ติดตั้ง', 'input' => 'source', 'source' => 'locations', 'required' => true],
             ],
             RequestType::Other->value => [],

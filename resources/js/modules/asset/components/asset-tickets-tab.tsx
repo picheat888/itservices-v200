@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useAuth } from '@/modules/auth';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import type { AssetTicket, TicketPriority, TicketStatus } from '@/shared/types';
@@ -29,6 +30,8 @@ const PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber' | 'blue' | '
 export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; loading?: boolean }) {
     const t = useT();
     const navigate = useNavigate();
+    const { can } = useAuth();
+    const canSeePriority = can('tickets.resolve');
 
     // Empty is a fact about the asset; while its tickets are still loading the
     // table's own loading rows say "not yet" instead.
@@ -54,16 +57,22 @@ export function AssetTicketsTab({ tickets, loading }: { tickets: AssetTicket[]; 
             ),
         },
         { key: 'category', header: t('asset_tk_category'), render: (tk) => <span className="text-sm">{t(`ticket_cat_${tk.category}`)}</span> },
-        {
-            key: 'priority',
-            header: t('asset_tk_priority'),
-            render: (tk) =>
-                tk.priority ? (
-                    <StatusBadge tone={PRIORITY_META[tk.priority].tone}>{t(PRIORITY_META[tk.priority].key)}</StatusBadge>
-                ) : (
-                    <span className="text-muted-foreground text-sm">—</span>
-                ),
-        },
+        // Priority belongs to whoever can take a case (tickets.resolve) — the same rule the
+        // Tickets module applies, and the API leaves the value out for everyone else.
+        ...(canSeePriority
+            ? [
+                  {
+                      key: 'priority',
+                      header: t('asset_tk_priority'),
+                      render: (tk: AssetTicket) =>
+                          tk.priority ? (
+                              <StatusBadge tone={PRIORITY_META[tk.priority].tone}>{t(PRIORITY_META[tk.priority].key)}</StatusBadge>
+                          ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                          ),
+                  },
+              ]
+            : []),
         {
             key: 'status',
             header: t('asset_tk_status'),

@@ -12,7 +12,7 @@ use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use Database\Seeders\EmailTemplateSeeder;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +41,7 @@ class RequestNotificationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 

@@ -170,7 +170,7 @@ class ServiceRequestResource extends JsonResource
             return true;
         }
 
-        return in_array($this->ticket?->status, [TicketStatus::Open, TicketStatus::InProgress], true);
+        return in_array($this->ticket?->status, TicketStatus::live(), true);
     }
 
     /**

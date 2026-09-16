@@ -180,6 +180,10 @@ export function useAssetMutations() {
             }) => assetApi.bulkTransfer(v),
             onSuccess: invalidate,
         }),
+        updateLocation: useMutation({
+            mutationFn: (v: { ids: number[]; location_id: number; note?: string }) => assetApi.updateLocation(v),
+            onSuccess: invalidate,
+        }),
         bulkRecall: useMutation({
             mutationFn: (v: { ids: number[]; warehouse: string; reason?: string }) => assetApi.bulkRecall(v.ids, v.warehouse, v.reason),
             onSuccess: invalidate,

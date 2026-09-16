@@ -12,6 +12,7 @@ import {
     Gauge,
     Inbox,
     KeyRound,
+    MessageSquare,
     PackageCheck,
     PackageMinus,
     PackagePlus,
@@ -84,6 +85,9 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if (n.data.event === 'resolved') return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
         if (n.data.event === 'cancelled') return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         if (n.data.event === 'forwarded') return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
+        // A progress note is news about the work, not about who holds it — amber, the tone
+        // the rest of the app uses for "still running".
+        if (n.data.event === 'updated') return { Icon: MessageSquare, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         return { Icon: UserCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
     if (n.data.type === 'stock_alert') {
@@ -293,10 +297,10 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'test') return '/email-notifications?tab=notification';
     if (n.data.type?.startsWith('ticket_')) return `/tickets?view=${n.data.ticket_id}`;
     // Asset hand-overs go to the employee-facing My Assets page; return requests go to the IT module.
-    if (n.data.type === 'asset_assigned') return '/my-assets';
+    if (n.data.type === 'asset_assigned') return '/my-assets-access';
     if (n.data.type === 'asset_return_requested') return '/assets';
     // Nothing to act on, but the reader's own list is what changed — open it there.
-    if (n.data.type === 'asset_recalled') return '/my-assets';
+    if (n.data.type === 'asset_recalled') return '/my-assets-access';
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
     const mod = moduleOf(n.data.type, n.data.module);

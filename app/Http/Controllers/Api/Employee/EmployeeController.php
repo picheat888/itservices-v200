@@ -739,7 +739,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::query()
             ->where('status', EmployeeStatus::Active)
-            ->with(['position', 'department'])
+            ->with(['position', 'section', 'department'])
             ->withCount(['subordinates as reports_count' => fn ($q) => $q->where('status', EmployeeStatus::Active)])
             ->orderBy('first_name')
             ->orderBy('last_name')
@@ -870,6 +870,36 @@ class EmployeeController extends Controller
         AuditLog::record('Recorded resignation', "{$employee->name} ({$employee->code})");
 
         return (new EmployeeResource($employee))->additional(['message' => 'success'])->response();
+    }
+
+    /**
+     * Delete an employee typed in by mistake — a duplicate, a test row, the wrong person
+     * entered twice. Never the way to record a departure: that is `resign`, which keeps the
+     * record so their name still reads correctly everywhere they appear.
+     *
+     * Allowed only while nothing in the system refers to them (see
+     * EmployeeService::deletionBlockers) — tickets and access grants cascade at the database
+     * level, so a delete past that point would take real history with it silently.
+     */
+    public function destroy(Request $request, Employee $employee): JsonResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.delete'), 403);
+
+        $blockers = $this->service->deletionBlockers($employee);
+        if ($blockers) {
+            return response()->json(['message' => 'has_activity', 'blockers' => $blockers], 422);
+        }
+
+        // Read before the row is gone — the audit entry is all that survives it.
+        $label = "{$employee->name} ({$employee->code})";
+        $deletedAccount = $employee->user?->username;
+
+        $this->service->delete($employee);
+        // Name the login that went with them: it is the part nobody expects, and after the
+        // delete there is nothing else left to read it from.
+        AuditLog::record('Deleted employee', $label, $deletedAccount ? ['facts' => ['login_account' => $deletedAccount]] : null);
+
+        return response()->json(['message' => 'success']);
     }
 
     /**

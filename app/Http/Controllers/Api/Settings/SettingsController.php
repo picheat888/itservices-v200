@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers\Api\Settings;
 
+use App\Enums\Request\RequestType;
+use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\MailSetting;
+use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
@@ -14,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Enum;
 
 class SettingsController extends Controller
 {
@@ -113,6 +118,12 @@ class SettingsController extends Controller
             // (priority doesn't exist yet while a case waits to be taken).
             'ticket_sla' => ['required', 'array'],
             'ticket_sla.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            // Targets keyed on what was requested rather than how urgent it is. Absent key =
+            // leave the saved rules alone, so the Priority form can save without them.
+            'ticket_sla_request' => ['sometimes', 'array'],
+            'ticket_sla_request.*.type' => ['required', 'distinct', new Enum(RequestType::class)],
+            'ticket_sla_request.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
+            'ticket_sla_request.*.enabled' => ['sometimes', 'boolean'],
             'ticket_sla_response' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
             // Working window the SLA clocks count against (days: ISO weekday 1–7).
             'ticket_sla_hours' => ['sometimes', 'required', 'array'],
@@ -144,7 +155,29 @@ class SettingsController extends Controller
 
         $data = $validator->validate();
 
-        AppSetting::put('ticket_sla', json_encode($data['ticket_sla']));
+        // Priority targets: one row each, written straight over whatever was there.
+        foreach ($data['ticket_sla'] as $priority => $row) {
+            SlaTarget::updateOrCreate(
+                ['scope' => SlaScope::Priority->value, 'match_value' => (string) $priority],
+                ['resolve_hours' => (int) $row['resolve'], 'enabled' => true],
+            );
+        }
+
+        // Request-type targets arrive as the WHOLE list, so a row the administrator deleted on
+        // the screen is a row that disappears here. Saving the Priority form alone sends no
+        // such key and leaves them untouched.
+        if (array_key_exists('ticket_sla_request', $data)) {
+            $keep = [];
+            foreach ($data['ticket_sla_request'] as $row) {
+                $keep[] = $row['type'];
+                SlaTarget::updateOrCreate(
+                    ['scope' => SlaScope::RequestType->value, 'match_value' => $row['type']],
+                    ['resolve_hours' => (int) $row['resolve'], 'enabled' => (bool) ($row['enabled'] ?? true)],
+                );
+            }
+            SlaTarget::where('scope', SlaScope::RequestType->value)->whereNotIn('match_value', $keep)->delete();
+        }
+
         if (isset($data['ticket_sla_response'])) {
             AppSetting::put(TicketSla::RESPONSE_KEY, (string) $data['ticket_sla_response']);
         }
@@ -155,7 +188,9 @@ class SettingsController extends Controller
 
         // Deadlines are persisted per ticket for SQL ordering — refresh every ticket
         // still in motion under the new targets/window (closed history stays frozen).
-        Ticket::query()->whereIn('status', ['open', 'in_progress'])->chunkById(200, function ($tickets) {
+        // with(serviceRequest): the target of a request-born case is decided by what was
+        // requested, and asking per row here would be one query per open ticket.
+        Ticket::query()->with('serviceRequest')->whereIn('status', TicketStatus::liveValues())->chunkById(200, function ($tickets) {
             foreach ($tickets as $ticket) {
                 // Compute BEFORE disabling timestamps — usesTimestamps()=false also
                 // drops the created_at Carbon cast the business-time math needs.
@@ -366,6 +401,16 @@ class SettingsController extends Controller
         $values['ticket_sla'] = TicketSla::targets();
         $values['ticket_sla_response'] = TicketSla::responseMinutes();
         $values['ticket_sla_hours'] = TicketSla::hours();
+        // Request-type targets are a list the administrator adds to, so they come back as
+        // rows (including the switched-off ones) rather than merged over anything.
+        $values['ticket_sla_request'] = SlaTarget::where('scope', SlaScope::RequestType->value)
+            ->orderBy('match_value')
+            ->get()
+            ->map(fn (SlaTarget $target) => [
+                'type' => $target->match_value,
+                'resolve' => $target->resolve_hours,
+                'enabled' => $target->enabled,
+            ])->all();
 
         return $values;
     }

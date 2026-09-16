@@ -66,8 +66,10 @@ class NotificationCatalogue
                 'name' => 'Leaver still holds access',
                 'trigger' => 'A resignation leaves grants open or a resource without an owner',
                 'audience' => 'Whoever can edit an access registry',
-                'message_en' => 'Left with {total} still to clear - {grants} to revoke, {owned} needing an owner',
-                'message_th' => 'ลาออกแล้วยังถือสิทธิ์ {total} รายการ - สิทธิ์ค้าง {grants} · ต้องหาผู้ดูแล {owned}',
+                // {grants} and {owned} are still passed by the sender; this wording chose not
+                // to spend the tray's one line on the breakdown, which the screen behind it has.
+                'message_en' => 'Offboarding - please clear {total} access item(s)',
+                'message_th' => 'ลาออก แต่ยังถือสิทธิ์ทั้งหมด {total} รายการ',
                 'enabled' => true,
             ],
             [
@@ -87,7 +89,7 @@ class NotificationCatalogue
                 'trigger' => 'A contract passes its end date',
                 'audience' => 'Whoever has contract alerts switched on',
                 'message_en' => 'Overdue by {days} days - review, renew or close',
-                'message_th' => 'เกินกำหนดมาแล้ว {days} วัน - โปรดตรวจสอบ ต่ออายุ หรือปิดสัญญา',
+                'message_th' => 'เกินกำหนดมาแล้ว {days} วัน',
                 'enabled' => true,
             ],
             [
@@ -287,7 +289,7 @@ class NotificationCatalogue
                 'trigger' => 'A request cannot move because its approver has no account',
                 'audience' => 'Whoever can set credentials',
                 'message_en' => 'Waiting on {actor}, who has no login account yet - create one so this can move',
-                'message_th' => 'รออนุมัติจาก {actor} ที่ยังไม่มีบัญชีเข้าใช้งาน - ตั้งบัญชีให้เพื่อให้คำขอเดินต่อ',
+                'message_th' => 'รออนุมัติจาก {actor} ที่ยังไม่มีบัญชีเข้าใช้งาน',
                 'enabled' => true,
             ],
             [
@@ -296,8 +298,8 @@ class NotificationCatalogue
                 'name' => 'Asset handed over to you',
                 'trigger' => 'IT transfers an asset to an employee',
                 'audience' => 'The recipient',
-                'message_en' => 'Assigned to you - tap to accept',
-                'message_th' => 'มอบหมายให้คุณ - แตะเพื่อกดรับ',
+                'message_en' => 'The asset has been transferred to you - tap to check',
+                'message_th' => 'โอนทรัพย์สินให้คุณแล้ว - กดเพื่อตรวจสอบ',
                 'enabled' => true,
             ],
             [
@@ -306,8 +308,8 @@ class NotificationCatalogue
                 'name' => 'Asset being returned',
                 'trigger' => 'A holder asks to send an asset back',
                 'audience' => 'Whoever can receive assets',
-                'message_en' => 'Return requested - awaiting your receipt',
-                'message_th' => 'มีการขอส่งคืน - รอคุณยืนยันรับ',
+                'message_en' => 'Return asset, wait for your check.',
+                'message_th' => 'มีทรัพย์สินส่งคืน - รอตรวจสอบ',
                 'enabled' => true,
             ],
             [
@@ -316,8 +318,8 @@ class NotificationCatalogue
                 'name' => 'Hand-over cancelled',
                 'trigger' => 'A hand-over is recalled before it was accepted',
                 'audience' => 'The intended recipient',
-                'message_en' => 'Hand-over cancelled - nothing left to accept',
-                'message_th' => 'ยกเลิกการมอบหมายแล้ว - ไม่ต้องกดรับ',
+                'message_en' => 'The asset transfer canceled',
+                'message_th' => 'ยกเลิกการโอนทรัพย์สินแล้ว',
                 'enabled' => true,
             ],
             [
@@ -326,8 +328,8 @@ class NotificationCatalogue
                 'name' => 'Asset taken back',
                 'trigger' => 'An asset is force-recalled from its holder',
                 'audience' => 'The former holder',
-                'message_en' => 'Recalled to the warehouse - no longer yours',
-                'message_th' => 'ถูกเรียกคืนเข้าคลัง - ไม่ได้อยู่กับคุณแล้ว',
+                'message_en' => 'Recalled the asset to IT',
+                'message_th' => 'ถูกเรียกคืนกลับแผนกไอที',
                 'enabled' => true,
             ],
             [
@@ -336,8 +338,8 @@ class NotificationCatalogue
                 'name' => 'Leaver has assets to collect',
                 'trigger' => 'A resignation flags every device the leaver held',
                 'audience' => 'Whoever can receive assets',
-                'message_en' => 'Resigned - {count} assets waiting to be collected',
-                'message_th' => 'พนักงานลาออก - มีทรัพย์สิน {count} รายการรอรับคืน',
+                'message_en' => 'Offboarding - {count} assets waiting to be collected',
+                'message_th' => 'ลาออก, มีทรัพย์สิน {count} รายการรอรับคืน',
                 'enabled' => true,
             ],
             [
@@ -428,6 +430,16 @@ class NotificationCatalogue
                 'audience' => 'The requester',
                 'message_en' => 'Your ticket was passed on to {name}',
                 'message_th' => 'Ticket ของคุณเปลี่ยนผู้รับผิดชอบเป็น {name}',
+                'enabled' => true,
+            ],
+            [
+                'key' => 'notif_ticket_owner_updated',
+                'module' => 'tickets',
+                'name' => 'Progress on your case',
+                'trigger' => 'The technician writes a progress note on your case',
+                'audience' => 'The requester',
+                'message_en' => 'There is an update on your ticket from {name}',
+                'message_th' => 'Ticket ของคุณมีความคืบหน้าใหม่จาก {name}',
                 'enabled' => true,
             ],
             [

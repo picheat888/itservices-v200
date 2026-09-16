@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
  * admin-edited data.
  *
  * Chain steps get their positions attached here, so a fresh install routes by
- * position from the first request. Run PositionSeeder first: a title this install
+ * position from the first request. Run EmployeePositionSeeder first: a title this install
  * does not have simply is not attached, and the Workflows page can fix it.
  *
  * The one thing re-seeding does touch on an existing workflow is a chain rung with

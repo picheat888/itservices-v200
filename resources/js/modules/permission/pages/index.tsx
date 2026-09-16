@@ -44,6 +44,7 @@ import { NotificationPermissionTree } from '../components/notification-permissio
 import { PermissionCardHeader } from '../components/permission-card-header';
 import { RequestPermissionTree } from '../components/request-permission-tree';
 import { RoleModal } from '../components/role-modal';
+import { SelfServicePermissionTree } from '../components/self-service-permission-tree';
 import { StockPermissionTree } from '../components/stock-permission-tree';
 import { TicketPermissionTree } from '../components/ticket-permission-tree';
 import { WorkflowPermissionTree } from '../components/workflow-permission-tree';
@@ -133,6 +134,9 @@ export default function PermissionsPage() {
 // Groups the permission modules under the same sections as the sidebar nav
 // (Workspace / Administration) so the matrix mirrors the app's mental model.
 // Dashboard (Overview) carries no permissions, so it isn't represented here.
+/** The rights an employee holds over their own kit and accounts — one card, no master. */
+const SELF_SERVICE_KEYS = ['assets.my', 'assets.return', 'access.my'];
+
 const PERM_SECTIONS: { label: string; icon: React.ComponentType<{ className?: string }>; modules: string[] }[] = [
     { label: 'nav_workspace', icon: Briefcase, modules: ['tickets', 'requests', 'assets', 'contracts', 'stock', 'employees', 'access'] },
     // `workflows` is listed under ADMIN_GROUPS, not here — the sidebar puts the screen
@@ -376,8 +380,16 @@ function RolesTab() {
                             const groups =
                                 section.label === 'nav_admin'
                                     ? ADMIN_GROUPS
-                                    : section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) }));
-                            const sectionActions = groups.flatMap((g) => g.keys);
+                                    : [
+                                          ...section.modules.map((m) => ({ module: m, keys: data.catalog[m].map((a) => `${m}.${a}`) })),
+                                          // Self-service is a card, not a module: its keys belong to
+                                          // assets and access but answer to no master, so they are
+                                          // lifted out of both cards and shown together.
+                                          { module: 'self_service', keys: SELF_SERVICE_KEYS },
+                                      ];
+                            // Deduped: the self-service keys are counted by their own card, and are
+                            // already part of the assets/access catalogues the section lists.
+                            const sectionActions = [...new Set(groups.flatMap((g) => g.keys))];
                             const sectionOn = sectionActions.filter(isOn).length;
                             return (
                                 <div key={section.label}>
@@ -437,6 +449,20 @@ function RolesTab() {
                                             if (group.module === 'assets') {
                                                 return (
                                                     <AssetPermissionTree
+                                                        key={group.module}
+                                                        draft={draft}
+                                                        setDraft={setDraft}
+                                                        isSuper={role.is_super}
+                                                        lang={lang}
+                                                    />
+                                                );
+                                            }
+                                            // Not a module — the self-service rights every
+                                            // employee holds over their own things, rendered
+                                            // beside the modules they used to hide inside.
+                                            if (group.module === 'self_service') {
+                                                return (
+                                                    <SelfServicePermissionTree
                                                         key={group.module}
                                                         draft={draft}
                                                         setDraft={setDraft}
@@ -762,6 +788,7 @@ function GroupRolesTab() {
 
 /** Renders the diff detail panel for a single audit entry. */
 function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: string; lookups: AuditLookups }) {
+    const t = useT();
     const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
     const changeEntries = Object.entries(details.changes ?? {});
@@ -773,20 +800,43 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
         <div className="space-y-3 px-5 py-3">
             {changeEntries.length > 0 && (
                 <div className="space-y-1.5">
-                    {changeEntries.map(([field, { from, to }]) => (
-                        <div key={field} className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">
-                                {auditFieldLabel(field, lang as 'en' | 'th')}
-                            </span>
-                            <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 line-through">
-                                {diffValue(resolveAuditValue(field, from, lookups))}
-                            </span>
-                            <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                            <span className="bg-brand/10 text-brand rounded px-2 py-0.5 font-medium">
-                                {diffValue(resolveAuditValue(field, to, lookups))}
-                            </span>
-                        </div>
-                    ))}
+                    {changeEntries.map(([field, { from, to }]) => {
+                        const before = resolveAuditValue(field, from, lookups);
+                        const after = resolveAuditValue(field, to, lookups);
+                        // An email body is an audited value like any other, and it does not fit on
+                        // a line. Long values stack and wrap in their own scroll box; short ones
+                        // keep the compact old → new row, which is most of this log.
+                        const long = String(before ?? '').length > 80 || String(after ?? '').length > 80;
+
+                        return (
+                            <div key={field} className={cn('gap-2 text-sm', long ? 'space-y-1' : 'flex items-center')}>
+                                <span className="text-muted-foreground block w-32 shrink-0 truncate text-xs font-medium">
+                                    {auditFieldLabel(field, lang as 'en' | 'th')}
+                                </span>
+                                {long && <span className="text-muted-foreground block text-[11px]">{t('audit_before')}</span>}
+                                <span
+                                    className={cn(
+                                        'bg-muted text-muted-foreground rounded px-2 py-0.5',
+                                        // Struck-through prose is fine for "Manager → Supervisor"; a struck-through
+                                        // email body is a page of unreadable text. Long values say "before" instead.
+                                        long ? 'block max-h-32 overflow-auto font-mono text-xs break-all whitespace-pre-wrap' : 'line-through',
+                                    )}
+                                >
+                                    {diffValue(before)}
+                                </span>
+                                {!long && <ChevronRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />}
+                                {long && <span className="text-brand block text-[11px]">{t('audit_after')}</span>}
+                                <span
+                                    className={cn(
+                                        'bg-brand/10 text-brand rounded px-2 py-0.5 font-medium',
+                                        long && 'block max-h-32 overflow-auto font-mono text-xs break-all whitespace-pre-wrap',
+                                    )}
+                                >
+                                    {diffValue(after)}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             )}
             {hasRoleChange && (
@@ -842,6 +892,26 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     )}
                 </div>
             )}
+            {/* The records a bulk action touched. The row above says "5 assets"; this is which
+                five, so the log answers the question without opening five other screens. */}
+            {(details.items ?? []).length > 0 && (
+                <div>
+                    <div className="text-muted-foreground mb-1 text-[11px] font-semibold tracking-wide uppercase">{t('audit_records')}</div>
+                    <div className="flex flex-wrap gap-1">
+                        {(details.items ?? []).map((item) => (
+                            <span key={item} className="bg-muted text-muted-foreground rounded px-2 py-0.5 font-mono text-xs">
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {Object.entries(details.facts ?? {}).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground w-32 shrink-0 truncate text-xs font-medium">{key}</span>
+                    <span className="bg-muted rounded px-2 py-0.5 font-mono text-xs">{value}</span>
+                </div>
+            ))}
         </div>
     );
 }
@@ -876,25 +946,35 @@ function auditInitials(name: string | null): string {
 }
 
 /**
- * Compact "time ago" label; the full timestamp lives in the title attribute.
- * Beyond a week it falls back to an absolute date — passed in (system timezone)
- * rather than derived from the browser's zone.
+ * How long ago an entry happened, but only while that is the more useful fact. Past a day it
+ * gives the timestamp instead — and the switch is the point.
+ *
+ * "1d" for everything older than yesterday made whole pages of this log read identically: 16 of
+ * the 20 rows on page one said "1d", in no discernible order, and the only way to tell two of
+ * them apart was to hover each one. A log is read to reconstruct what happened in what order,
+ * so past the recent window the exact time is the answer, not an approximation of it.
+ *
+ * The absolute form is passed in (system timezone) rather than derived from the browser's zone.
  */
-function auditAgo(iso: string, lang: string, absoluteDate: string): string {
+function auditAgo(iso: string, lang: string, absolute: string): string {
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
     if (m < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
     if (m < 60) return lang === 'th' ? `${m} น.` : `${m}m`;
     const h = Math.floor(m / 60);
     if (h < 24) return lang === 'th' ? `${h} ชม.` : `${h}h`;
-    const d = Math.floor(h / 24);
-    if (d < 7) return lang === 'th' ? `${d} วัน` : `${d}d`;
-    return absoluteDate;
+    return absolute;
 }
 
 /** One-line diff summary shown under the action in the table. */
 function auditDiffSummary(d: AuditDetails | null): string | null {
     if (!d) return null;
-    const val = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : String(v));
+    // Clipped hard, because an audited value can be an entire email body. The row is a
+    // summary; the whole value is one click away in the panel below it.
+    const val = (v: unknown) => {
+        if (v === null || v === undefined || v === '') return '—';
+        const s = String(v).replace(/\s+/g, ' ').trim();
+        return s.length > 60 ? `${s.slice(0, 60)}…` : s;
+    };
     const changes = Object.entries(d.changes ?? {});
     if (changes.length > 0) {
         const [field, { from, to }] = changes[0];
@@ -905,6 +985,12 @@ function auditDiffSummary(d: AuditDetails | null): string | null {
     const removed = d.removed?.length ?? 0;
     if (added || removed) return [added ? `+${added}` : null, removed ? `−${removed}` : null].filter(Boolean).join(' / ');
     if (d.from !== undefined || d.to !== undefined) return `${val(d.from)} → ${val(d.to)}`;
+    // Name the first record and count the rest, so a bulk action says something before it is
+    // expanded — "5 assets" in the target line never said which.
+    const items = d.items ?? [];
+    if (items.length > 0) return items.length > 1 ? `${items[0]}  +${items.length - 1}` : items[0];
+    const facts = Object.entries(d.facts ?? {});
+    if (facts.length > 0) return facts.map(([key, value]) => `${key}: ${value}`).join('  ');
     return null;
 }
 
@@ -963,6 +1049,9 @@ function AuditTab() {
         ...users.map((u) => ({ value: u, label: u, search: u })),
     ];
 
+    // Every shape the detail panel can draw. A shape missing from this list is worse than
+    // unsupported: the row renders with no expand affordance at all, so what was recorded is
+    // there in the database and unreachable on screen.
     const hasDetails = (d: AuditDetails | null): boolean => {
         if (!d) return false;
         return (
@@ -970,7 +1059,9 @@ function AuditTab() {
             (d.removed?.length ?? 0) > 0 ||
             d.from !== undefined ||
             d.to !== undefined ||
-            Object.keys(d.changes ?? {}).length > 0
+            Object.keys(d.changes ?? {}).length > 0 ||
+            (d.items?.length ?? 0) > 0 ||
+            Object.keys(d.facts ?? {}).length > 0
         );
     };
 
@@ -1054,7 +1145,10 @@ function AuditTab() {
                                                     >
                                                         <AIcon className="h-4 w-4" />
                                                     </span>
-                                                    <div className="min-w-0">
+                                                    {/* Capped width, not just `truncate`: the table sizes its columns to the
+                                                        widest cell, so one entry carrying an email body stretched this column
+                                                        until User, Target and Time were pushed off the screen entirely. */}
+                                                    <div className="max-w-[36rem] min-w-0">
                                                         <div className="font-medium">{l.action}</div>
                                                         {summary && <div className="text-muted-foreground truncate font-mono text-xs">{summary}</div>}
                                                     </div>
@@ -1073,7 +1167,7 @@ function AuditTab() {
                                                 className="text-muted-foreground px-5 py-3 font-mono text-xs whitespace-nowrap"
                                                 title={fmtDateTime(l.created_at)}
                                             >
-                                                {auditAgo(l.created_at, lang, fmtDateTime(l.created_at, false))}
+                                                {auditAgo(l.created_at, lang, fmtDateTime(l.created_at))}
                                             </td>
                                             <td className="px-5 py-3">
                                                 {showDetails && (

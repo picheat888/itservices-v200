@@ -10,7 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
-use Database\Seeders\PositionSeeder;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -29,7 +29,7 @@ class WorkflowAdminTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         $role = Role::firstOrCreate(['key' => 'wfadmin', 'name' => 'WF Admin', 'color' => '#000', 'is_system' => false]);

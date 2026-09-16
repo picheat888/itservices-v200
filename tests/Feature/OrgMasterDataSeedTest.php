@@ -5,9 +5,9 @@ namespace Tests\Feature;
 use App\Models\Employee\Department;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
-use Database\Seeders\DepartmentSeeder;
-use Database\Seeders\PositionSeeder;
-use Database\Seeders\SectionSeeder;
+use Database\Seeders\EmployeeDepartmentSeeder;
+use Database\Seeders\EmployeePositionSeeder;
+use Database\Seeders\EmployeeSectionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
@@ -24,7 +24,7 @@ class OrgMasterDataSeedTest extends TestCase
 
     public function test_it_seeds_all_eleven_departments_with_their_codes(): void
     {
-        $this->seed(DepartmentSeeder::class);
+        $this->seed(EmployeeDepartmentSeeder::class);
 
         $this->assertSame(11, Department::count());
         $this->assertSame(
@@ -33,7 +33,7 @@ class OrgMasterDataSeedTest extends TestCase
             Department::orderBy('code')->pluck('code')->all(),
         );
 
-        $it = Department::where('tag', 'It')->firstOrFail();
+        $it = Department::where('tag', 'IT')->firstOrFail();
         $this->assertSame('Information Technology', $it->name);
         $this->assertSame('ฝ่ายเทคโนโลยีสารสนเทศ', $it->name_th);
 
@@ -43,7 +43,7 @@ class OrgMasterDataSeedTest extends TestCase
 
     public function test_it_seeds_all_fourteen_positions_and_only_the_vp_may_stand_alone(): void
     {
-        $this->seed(PositionSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
 
         $this->assertSame(14, Position::count());
         $this->assertSame('Vice President', Position::where('code', 'PST-0001')->value('title'));
@@ -57,22 +57,36 @@ class OrgMasterDataSeedTest extends TestCase
         );
     }
 
-    public function test_it_seeds_all_twenty_six_sections_under_the_right_departments(): void
+    public function test_it_seeds_all_twenty_five_sections_under_the_right_departments(): void
     {
-        $this->seed(DepartmentSeeder::class);
-        $this->seed(SectionSeeder::class);
+        $this->seed(EmployeeDepartmentSeeder::class);
+        $this->seed(EmployeeSectionSeeder::class);
 
-        $this->assertSame(26, Section::count());
+        $this->assertSame(25, Section::count());
         $this->assertSame(0, Section::whereNull('department_id')->count());
 
         $byTag = fn (string $tag) => Section::whereHas('department', fn ($q) => $q->where('tag', $tag))
             ->orderBy('code')->pluck('name')->all();
 
-        $this->assertSame(['Network & Security', 'Support', 'System analyst'], $byTag('It'));
+        $this->assertSame(['Network & Security', 'Support', 'System analyst'], $byTag('IT'));
         $this->assertSame(['Payroll', 'Recruitment', 'Training'], $byTag('HR'));
-        $this->assertSame(['Environment', 'Occupational Safety & Health'], $byTag('SE'));
+        $this->assertSame(['Environment', 'Safety'], $byTag('SE'));
         // Production carries the most, and is where a dropped row would hide best.
         $this->assertCount(9, $byTag('PD'));
+    }
+
+    /**
+     * Sections carry both languages, like departments do: a null name_th is what makes a
+     * unit fall back to its English label in the Thai UI, which is how a missed row shows.
+     */
+    public function test_every_section_carries_a_thai_name(): void
+    {
+        $this->seed(EmployeeDepartmentSeeder::class);
+        $this->seed(EmployeeSectionSeeder::class);
+
+        $this->assertSame(0, Section::whereNull('name_th')->count());
+        $this->assertSame('ส่วนงานเครือข่ายและความปลอดภัย', Section::where('code', 'SEC-0001')->value('name_th'));
+        $this->assertSame('ส่วนงานความปลอดภัย', Section::where('code', 'SEC-0025')->value('name_th'));
     }
 
     /** Sections resolve their department by tag, so a missing department must stop the run. */
@@ -80,28 +94,28 @@ class OrgMasterDataSeedTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
 
-        $this->seed(SectionSeeder::class);
+        $this->seed(EmployeeSectionSeeder::class);
     }
 
     public function test_running_all_three_twice_changes_nothing(): void
     {
-        foreach ([DepartmentSeeder::class, PositionSeeder::class, SectionSeeder::class] as $seeder) {
+        foreach ([EmployeeDepartmentSeeder::class, EmployeePositionSeeder::class, EmployeeSectionSeeder::class] as $seeder) {
             $this->seed($seeder);
             $this->seed($seeder);
         }
 
         $this->assertSame(11, Department::count());
         $this->assertSame(14, Position::count());
-        $this->assertSame(26, Section::count());
+        $this->assertSame(25, Section::count());
     }
 
     /** A rename by an administrator survives a re-seed — firstOrCreate, not updateOrCreate. */
     public function test_re_seeding_keeps_a_name_an_admin_changed(): void
     {
-        $this->seed(DepartmentSeeder::class);
+        $this->seed(EmployeeDepartmentSeeder::class);
         Department::where('code', 'DEP-0003')->update(['name' => 'IT & Digital']);
 
-        $this->seed(DepartmentSeeder::class);
+        $this->seed(EmployeeDepartmentSeeder::class);
 
         $this->assertSame('IT & Digital', Department::where('code', 'DEP-0003')->value('name'));
         $this->assertSame(11, Department::count());

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Ticket\SlaScope;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Support\TicketSla;
@@ -70,8 +72,9 @@ class TicketSlaTest extends TestCase
     {
         $this->actingAs($this->super());
 
-        // Tighten critical resolution to 1h, then a 2h close should now miss.
-        AppSetting::put('ticket_sla', json_encode(['critical' => ['response' => 15, 'resolve' => 1]]));
+        // Tighten critical resolution to 1h, then a 2h close should now miss. Targets are rows
+        // now (sla_targets), not a JSON blob in app_settings — see SlaTargetTest.
+        SlaTarget::create(['scope' => SlaScope::Priority->value, 'match_value' => 'critical', 'resolve_hours' => 1]);
         Ticket::factory()->create([
             'priority' => 'critical', 'status' => 'completed',
             'created_at' => '2026-01-14 08:00:00', 'resolved_at' => '2026-01-14 10:00:00',

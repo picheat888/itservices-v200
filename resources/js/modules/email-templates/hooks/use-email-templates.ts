@@ -34,7 +34,7 @@ export function useEmailTemplateMutations() {
             onSuccess: invalidate,
         }),
         test: useMutation({
-            mutationFn: (id: number) => emailTemplateApi.test(id),
+            mutationFn: (v: { id: number; draft?: EmailTemplatePayload }) => emailTemplateApi.test(v.id, v.draft),
             onSuccess: invalidate,
         }),
         reset: useMutation({

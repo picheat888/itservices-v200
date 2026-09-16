@@ -1,6 +1,7 @@
 import { cn } from '@/shared/lib/utils';
 import { Label } from '@/shared/ui/label';
 import { AlertCircle } from 'lucide-react';
+import { Children, cloneElement, isValidElement, useId } from 'react';
 
 export function Field({
     label,
@@ -25,8 +26,23 @@ export function Field({
     grow?: boolean;
     children: React.ReactNode;
 }) {
+    /**
+     * Tie the label to the control it names, without an `id` at all 182 call sites.
+     *
+     * A single element child gets a generated id (one it does not already carry) and the
+     * label points at it, so clicking the words focuses the field and a screen reader reads
+     * the pair as one thing. Input and Textarea spread props onto the DOM node, which is
+     * most of them; a child that ignores the prop, or a Field wrapping several controls,
+     * simply keeps today's behaviour — the label just does not point anywhere.
+     */
+    const autoId = useId();
+    const only = Children.count(children) === 1 ? children : null;
+    const control = isValidElement<{ id?: string }>(only) ? only : null;
+    const controlId = control?.props.id ?? autoId;
+    const body = control && !control.props.id ? cloneElement(control, { id: controlId }) : children;
+
     const labelNode = (
-        <Label>
+        <Label htmlFor={control ? controlId : undefined}>
             {label}
             {required && <span className="text-destructive ml-0.5">*</span>}
         </Label>
@@ -57,7 +73,7 @@ export function Field({
                         '[&_input]:border-destructive [&_textarea]:border-destructive [&_select]:border-destructive [&_button]:border-destructive [&_input]:hover:border-destructive [&_textarea]:hover:border-destructive [&_select]:hover:border-destructive [&_button]:hover:border-destructive [&_input]:focus:border-destructive [&_textarea]:focus:border-destructive [&_select]:focus:border-destructive [&_button]:focus:border-destructive [&_input]:focus-visible:ring-destructive/25 [&_textarea]:focus-visible:ring-destructive/25 [&_select]:focus:ring-destructive/25 [&_button]:focus:ring-destructive/25 [&_button]:ring-destructive/25 [&_button]:data-[state=open]:border-destructive [&_button]:data-[state=open]:ring-destructive/25',
                 )}
             >
-                {children}
+                {body}
             </div>
             {error ? (
                 <p className="text-destructive flex items-center gap-1.5 text-xs">

@@ -17,9 +17,9 @@ use Illuminate\Database\Seeder;
  * firstOrCreate on `code` (PST-####), so re-running adds only what is missing and a
  * title an administrator has since reworded keeps their wording.
  *
- *   php artisan db:seed --class=PositionSeeder
+ *   php artisan db:seed --class=EmployeePositionSeeder
  */
-class PositionSeeder extends Seeder
+class EmployeePositionSeeder extends Seeder
 {
     public function run(): void
     {
