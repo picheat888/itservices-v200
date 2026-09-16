@@ -440,8 +440,19 @@ export interface Ticket {
      * computed server-side (see TicketResource::workClassForecast) — a technician cannot see the
      * SLA rules (settings.sla) or reproduce the clock math themselves, so the classify dialog
      * reads a fact here instead of guessing one.
+     *
+     * Three distinct states, and the dialog must not collapse them:
+     * - `undefined` — omitted entirely: either the viewer lacks tickets.resolve (showsDeskInternals),
+     *   or this response isn't a single-ticket read (only those compute it; see TicketResource).
+     *   The classify button is gated on a DIFFERENT permission (tickets.set_work_class), so this
+     *   case is reachable even when the button is drawn — the dialog must treat it as "no data",
+     *   never silently as "no dedicated rule" (that would print a false "won't move" promise).
+     * - `null` — present but empty: SLA does not apply to this ticket at all (canceled, or no
+     *   created_at yet). Same "no data" treatment as undefined.
+     * - an array — always all 3 classes when present; a class entry with `scope !== 'work_class'`
+     *   means THAT class has no dedicated rule and picking it will not move the deadline.
      */
-    work_class_forecast?: TicketWorkClassForecast[];
+    work_class_forecast?: TicketWorkClassForecast[] | null;
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];

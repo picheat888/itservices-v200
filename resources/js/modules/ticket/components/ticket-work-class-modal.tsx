@@ -8,7 +8,7 @@ import type { Ticket, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
-import { ArrowRight, Loader2, Wrench } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Loader2, Wrench } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_WORK_CLASS_META } from './ticket-meta';
@@ -62,7 +62,17 @@ export function TicketWorkClassModal({ ticket, onClose }: { ticket: Ticket | nul
         return { value: c, label, search: label };
     });
 
-    const forecast = view?.work_class_forecast?.find((f) => f.work_class === workClass) ?? null;
+    // `work_class_forecast` is `undefined`/`null` when the server did not compute it at all — a
+    // viewer holding tickets.set_work_class without tickets.resolve draws this dialog's button
+    // (independent permissions) but gets no forecast data in the ticket payload at all, and a
+    // non-detail read never computes it either. That is a DIFFERENT state from "this class has
+    // no dedicated rule" (a real, present entry whose scope isn't 'work_class') — collapsing the
+    // two into one "no rule" message would let a case with genuinely UNKNOWN numbers read as one
+    // where nothing changes, when confirming could move the deadline by weeks. So when we cannot
+    // show what is about to happen, the dialog says so and the confirm button is disabled — never
+    // silently allowed through.
+    const forecastAvailable = view?.work_class_forecast != null;
+    const forecast = forecastAvailable ? (view!.work_class_forecast!.find((f) => f.work_class === workClass) ?? null) : null;
     // A dedicated target only exists when the chosen class itself won the precedence race
     // (scope === 'work_class'). Anything else means this classification falls through to
     // priority/request type/the built-in default — picking it will NOT move the deadline, and
@@ -75,14 +85,14 @@ export function TicketWorkClassModal({ ticket, onClose }: { ticket: Ticket | nul
             setReasonErr(t('ticket_update_too_short'));
             return;
         }
-        if (!ticket) return;
+        if (!ticket || !forecastAvailable) return;
         setFormError('');
         try {
             await setWorkClass.mutateAsync({ id: ticket.id, work_class: workClass, reason: reason.trim() });
             onClose();
         } catch (err: unknown) {
             const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
-            setFormError(data?.message ?? t('ticket_work_class_change'));
+            setFormError(data?.message ?? t('ticket_work_class_err_failed'));
         }
     };
 
@@ -123,33 +133,42 @@ export function TicketWorkClassModal({ ticket, onClose }: { ticket: Ticket | nul
                     </Field>
 
                     {/* The guard rail: what the technician is about to grant themselves, spelled
-                        out before they can confirm it. */}
-                    <div className="bg-muted/40 border-border/60 rounded-lg border px-3.5 py-3">
-                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                            <div className="min-w-0">
-                                <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_from')}</div>
-                                <div className="truncate font-mono text-[13px] font-medium">
-                                    {view?.sla ? fmtTz(view.sla.resolve_due_at) : '—'}
+                        out before they can confirm it. When the server gave us nothing to show,
+                        we say so plainly instead of printing a "no rule" message that would
+                        imply — falsely — that the deadline is known and unchanged. */}
+                    {forecastAvailable ? (
+                        <div className="bg-muted/40 border-border/60 rounded-lg border px-3.5 py-3">
+                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                                <div className="min-w-0">
+                                    <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_from')}</div>
+                                    <div className="truncate font-mono text-[13px] font-medium">
+                                        {view?.sla ? fmtTz(view.sla.resolve_due_at) : '—'}
+                                    </div>
+                                </div>
+                                <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
+                                <div className="min-w-0 text-right">
+                                    <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_to')}</div>
+                                    {hasDedicatedTarget && forecast ? (
+                                        <div className="truncate font-mono text-[13px] font-semibold">{fmtTz(forecast.due_at)}</div>
+                                    ) : (
+                                        <div className="text-muted-foreground text-xs leading-snug">{t('ticket_work_class_no_rule')}</div>
+                                    )}
                                 </div>
                             </div>
-                            <ArrowRight className="text-muted-foreground h-4 w-4 shrink-0" />
-                            <div className="min-w-0 text-right">
-                                <div className="text-muted-foreground text-xs">{t('ticket_work_class_deadline_to')}</div>
-                                {hasDedicatedTarget && forecast ? (
-                                    <div className="truncate font-mono text-[13px] font-semibold">{fmtTz(forecast.due_at)}</div>
-                                ) : (
-                                    <div className="text-muted-foreground text-xs leading-snug">{t('ticket_work_class_no_rule')}</div>
-                                )}
-                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/10 px-3.5 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{t('ticket_work_class_forecast_unavailable')}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="border-border bg-muted/20 flex items-center justify-end gap-2 border-t px-6 py-3.5">
                     <Button variant="outline" onClick={onClose} disabled={saving}>
                         {t('cancel')}
                     </Button>
-                    <Button onClick={submit} disabled={saving}>
+                    <Button onClick={submit} disabled={saving || !forecastAvailable}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wrench className="h-4 w-4" />}
                         {t('ticket_work_class_change')}
                     </Button>

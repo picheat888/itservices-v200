@@ -181,6 +181,8 @@ export const ticket: Dict = {
     ticket_work_class_deadline_from: 'เดดไลน์ตอนนี้',
     ticket_work_class_deadline_to: 'เดดไลน์หลังเปลี่ยน',
     ticket_work_class_no_rule: 'ยังไม่มีเป้าหมายสำหรับลักษณะงานนี้ เดดไลน์จึงไม่ขยับ',
+    ticket_work_class_forecast_unavailable: 'ดูตัวอย่างเดดไลน์สำหรับเคสนี้ไม่ได้ จึงปิดการจัดประเภทไว้ก่อน',
+    ticket_work_class_err_failed: 'เปลี่ยนลักษณะงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
     // pages/index.tsx — การ์ด KPI และป้ายในตาราง
     ticket_repair_badge: 'งานซ่อม',
     ticket_repair_kpi: 'ปิดงานซ่อมทัน KPI',
