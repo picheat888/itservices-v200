@@ -5,6 +5,7 @@ namespace App\Models\Ticket;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Asset\Asset;
 use App\Models\Employee\Employee;
 use App\Models\Request\ServiceRequest;
@@ -32,11 +33,20 @@ class Ticket extends Model
 
     protected $fillable = [
         'ticket_no', 'subject', 'description',
-        'category', 'priority', 'status',
+        'category', 'priority', 'work_class', 'status',
         'requester_id', 'assignee_id', 'callback_phone', 'related_asset_id',
         'take_note', 'resolution', 'resolved_at', 'responded_at',
         'sla_response_due_at', 'sla_resolve_due_at',
         'sla_response_alert_level', 'sla_resolve_alert_level',
+    ];
+
+    /**
+     * Mirrors the migration's DB-level default: a freshly created ticket (via
+     * Ticket::factory()->create() or TicketService) reports Standard immediately,
+     * without needing a fresh() round trip to read back the column default.
+     */
+    protected $attributes = [
+        'work_class' => 'standard',
     ];
 
     protected function casts(): array
@@ -44,6 +54,7 @@ class Ticket extends Model
         return [
             'category' => TicketCategory::class,
             'priority' => TicketPriority::class,
+            'work_class' => TicketWorkClass::class,
             'status' => TicketStatus::class,
             'resolved_at' => 'datetime',
             'responded_at' => 'datetime',
