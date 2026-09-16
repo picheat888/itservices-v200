@@ -16,8 +16,12 @@ use Carbon\Carbon;
  *
  * - First response is ONE system-wide target in minutes (`ticket_sla_response`) —
  *   priority is only assigned when a case is taken, so a per-priority response
- *   target could never guide the queue it is meant for.
- * - Resolution (close-the-case) is per priority in hours (`ticket_sla`).
+ *   target could never guide the queue it is meant for. It always runs on the
+ *   business-hours clock (see hours()); it never reads a rule row.
+ * - Resolution (close-the-case) target is chosen by precedence — work_class,
+ *   then request_type, then priority, then the built-in defaults (see
+ *   SlaScope::precedence(), targetFor()) — and each winning rule carries its
+ *   own clock: business hours or calendar time (see TicketSlaClock).
  */
 class TicketSla
 {
@@ -400,13 +404,17 @@ class TicketSla
      * (local wall time, fixed by APP_TIMEZONE) — durations and comparisons are
      * timezone-agnostic either way.
      *
-     * - Both clocks count WORKING TIME only (see hours()): a ticket filed outside
-     *   the window starts at the next opening, and targets consume only window
-     *   minutes — e.g. a 4h target filed Friday 16:00 is due Monday morning.
      * - Response clock: created_at → first response (take/assign), one system-wide
-     *   target in minutes — the clock starts at submission, before any priority exists.
-     * - Resolution clock: created_at → resolved_at, per-priority target in hours
-     *   (tickets without a priority run against the medium resolution target).
+     *   target in minutes, always on WORKING TIME (see hours()) — a ticket filed
+     *   outside the window starts at the next opening, and the target consumes only
+     *   window minutes. The clock starts at submission, before any priority exists,
+     *   and never reads a rule row.
+     * - Resolution clock: created_at → resolved_at, target chosen by precedence
+     *   (work_class → request_type → priority → built-in defaults; tickets without
+     *   a priority run against the medium default). The winning rule's own `clock`
+     *   decides how time is counted — business hours (window minutes only, like the
+     *   response clock) or calendar time (real elapsed minutes, for KPIs such as
+     *   "repaired within 30 days" that keep running after hours).
      * - `state` describes the clock that currently matters: the response clock while
      *   the ticket is open, the resolution clock once it's in progress, and the final
      *   met/missed verdict once completed.

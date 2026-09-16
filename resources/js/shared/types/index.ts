@@ -385,14 +385,17 @@ export interface TicketSlaSnapshot {
     resolve_due_at: string;
     state: TicketSlaState;
     pct_elapsed: number;
+    /** The clock that decided resolve_due_at — business hours or calendar time (see TicketSla::forTicket). */
+    clock: 'business' | 'calendar';
 }
 
 /** One option's predicted outcome in the classify dialog — see Ticket['work_class_forecast']. */
 export interface TicketWorkClassForecast {
     work_class: TicketWorkClass;
     hours: number;
-    /** 'work_class' only when a dedicated rule for THIS class won — anything else means picking
-     *  it will not move the deadline away from what already governs the case. */
+    /** 'work_class' only when a dedicated rule for THIS class won. Anything else means this
+     *  class fell through to priority/request_type/the built-in default — that alone does NOT
+     *  prove `due_at` matches the case's current deadline; compare `due_at` itself for that. */
     scope: 'work_class' | 'priority' | 'request_type' | null;
     value: string | null;
     clock: 'business' | 'calendar';
