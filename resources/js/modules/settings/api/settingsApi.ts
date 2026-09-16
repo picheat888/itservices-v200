@@ -18,6 +18,7 @@ export interface SettingsData {
     asset_status_colors: AssetStatusColors;
     ticket_sla: TicketSlaTargets;
     ticket_sla_request: TicketSlaRequestTarget[];
+    ticket_sla_work_class: TicketSlaWorkClassTarget[];
     ticket_sla_response: number;
     ticket_sla_hours: TicketSlaHours;
     /**
@@ -31,10 +32,14 @@ export interface SettingsData {
 // Map of asset status key -> hex color (e.g. { deployed: '#0284c7' }).
 export type AssetStatusColors = Record<string, string>;
 
-// Per-priority resolution (close) targets in hours. First response is a single
-// system-wide target in minutes (ticket_sla_response) — priority is only assigned
-// when a case is taken, so it can't drive the response clock.
-export type TicketSlaTargets = Record<string, { resolve: number }>;
+// Per-priority resolution (close) targets in hours, plus which clock counts them. First
+// response is a single system-wide target in minutes (ticket_sla_response) — priority is
+// only assigned when a case is taken, so it can't drive the response clock.
+export type TicketSlaTargets = Record<string, { resolve: number; clock: TicketSlaClock }>;
+
+// Which clock a target's hours count against: 'business' counts only the working window
+// below (days off, out-of-hours and the break are skipped); 'calendar' counts every hour.
+export type TicketSlaClock = 'business' | 'calendar';
 
 /**
  * A resolution target keyed on the KIND OF REQUEST a case was opened from, rather than on how
@@ -44,6 +49,20 @@ export type TicketSlaTargets = Record<string, { resolve: number }>;
 export interface TicketSlaRequestTarget {
     type: string;
     resolve: number;
+    clock: TicketSlaClock;
+    enabled: boolean;
+}
+
+/**
+ * A resolution target keyed on the KIND OF REPAIR WORK a case was classified as, rather than
+ * on priority or request type. Wins over both of those — it only applies once somebody
+ * classifies the case as repair, in-house or vendor. 'standard' (non-repair work) is never
+ * offered here; the backend rejects it.
+ */
+export interface TicketSlaWorkClassTarget {
+    work_class: 'repair_internal' | 'repair_vendor';
+    resolve: number;
+    clock: TicketSlaClock;
     enabled: boolean;
 }
 
@@ -61,6 +80,8 @@ export interface TicketSlaPayload {
     ticket_sla: TicketSlaTargets;
     /** The WHOLE list — a target left out here is a target the server deletes. */
     ticket_sla_request?: TicketSlaRequestTarget[];
+    /** The WHOLE list, same as ticket_sla_request — omit the key to leave these rules alone. */
+    ticket_sla_work_class?: TicketSlaWorkClassTarget[];
     ticket_sla_response?: number;
     ticket_sla_hours?: TicketSlaHours;
 }

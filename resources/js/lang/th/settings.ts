@@ -158,6 +158,7 @@ export const settings: Dict = {
     set_sla_hours: 'ชั่วโมง',
     set_sla_resolution_note: 'ใช้คำนวณการ์ด "ปิดเคสทัน SLA" และป้าย SLA ของเคสที่กำลังดำเนินการ/ปิดแล้ว',
     set_sla_approx_days: '≈ {n} วันทำการ',
+    set_sla_approx_calendar_days: '≈ {n} วัน',
     set_sla_request_title: 'ยกเว้น Ticket ที่เปิดจากคำขอเหล่านี้',
     set_sla_request_desc: 'สามารถกำหนดข้อยกเว้นสำหรับระยะเวลาของ Ticket ที่แตกต่างไปจากระดับความสำคัญตาม SLA ได้',
     set_sla_request_add: 'ข้อยกเว้น',
@@ -184,4 +185,16 @@ export const settings: Dict = {
     set_sla_day_5: 'ศ',
     set_sla_day_6: 'ส',
     set_sla_day_7: 'อา',
+
+    // tickets-sla-tab.tsx — เป้าหมายตามลักษณะงาน
+    set_sla_work_title: 'เป้าหมายตามลักษณะงาน',
+    set_sla_work_desc: 'งานซ่อมวัดด้วย KPI ของตัวเอง ไม่ใช่ตารางด้านบน แถวตรงนี้ชนะกฎอื่นทุกข้อ และมีผลเฉพาะเมื่อมีคนจัดประเภทเคสแล้วเท่านั้น',
+    set_sla_work_empty: 'ยังไม่มีเป้าหมายงานซ่อม — ทุกเคสตัดสินด้วยตารางด้านบน',
+    set_sla_work_add: 'เพิ่มเป้าหมายงานซ่อม',
+    set_sla_work_all_used: 'งานซ่อมทั้งสองแบบมีเป้าหมายครบแล้ว',
+    set_sla_work_repair_internal: 'ซ่อมโดยช่างในองค์กร',
+    set_sla_work_repair_vendor: 'ซ่อมโดย vendor',
+    set_sla_clock: 'นับด้วย',
+    set_sla_clock_business: 'เวลาทำการ',
+    set_sla_clock_calendar: 'เวลาปฏิทิน',
 };
