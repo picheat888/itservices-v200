@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/shared/components/status-badge';
 import type { Ticket, TicketCategory, TicketPriority, TicketSlaState, TicketStatus, TicketWorkClass } from '@/shared/types';
-import { Code, Laptop, MoreHorizontal, Wifi } from 'lucide-react';
+import { Code, Laptop, MoreHorizontal, Wifi, Wrench } from 'lucide-react';
 
 type T = (key: string) => string;
 
@@ -108,6 +108,33 @@ export function TicketSlaBadge({ ticket, t, className }: { ticket: Ticket; t: T;
         <StatusBadge tone={SLA_TONE[sla.state]} className={className}>
             {label}
         </StatusBadge>
+    );
+}
+
+/**
+ * A ticket's subject as a table cell, with a wrench for one that has gone out to a technician.
+ *
+ * The mark belongs on the case rather than on its clock: the SLA column counts against the repair
+ * target already, so a chip there explained a countdown that was not wrong. Here it answers a
+ * different question — which of these are away being repaired — read straight down the column,
+ * and names who has it on hover.
+ *
+ * The slot is rendered on every row, empty or not, so the subjects keep one left edge and the
+ * marks read as a column of their own instead of shunting the text they belong to.
+ */
+export function TicketSubject({ ticket, t }: { ticket: Ticket; t: T }) {
+    const repair = ticket.work_class && ticket.work_class !== 'standard' ? ticket.work_class : null;
+    return (
+        <span className="flex items-center gap-1.5">
+            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+                {repair && (
+                    <Wrench className="text-muted-foreground h-3.5 w-3.5" aria-label={t(TICKET_WORK_CLASS_META[repair].key)}>
+                        <title>{t(TICKET_WORK_CLASS_META[repair].key)}</title>
+                    </Wrench>
+                )}
+            </span>
+            <span className="max-w-[280px] truncate">{ticket.subject}</span>
+        </span>
     );
 }
 
