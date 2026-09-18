@@ -409,86 +409,6 @@ export function TicketsSlaTab() {
                 <span>{t('set_sla_resolution_note')}</span>
             </div>
 
-            {/* Cases opened from an approved request, where the length of the work was decided
-                by what was asked for rather than by how urgent anybody judged it.
-
-                A sibling section, not an indented one: this is not an exception to the priority
-                table above, it is the other half of the system. The two govern populations that
-                cannot overlap — a case somebody reported has no request, and a case a request
-                opened is never given a priority — so neither is a special case of the other.
-
-                Every request type gets a row whether or not it has been configured, and none of
-                them can be switched off: a request-born case has no priority to fall back to, so
-                a disabled rule would drop it onto the built-in default with nothing saying so. */}
-            <div className="mt-6">
-                <h3 className="text-sm font-semibold">{t('set_sla_request_title')}</h3>
-                <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_request_desc')}</p>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
-                                <th className="px-3 py-2">{t('set_sla_col_request_type')}</th>
-                                <th className="px-3 py-2">{t('set_sla_resolution')}</th>
-                                <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reqTargets.map((row) => {
-                                const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
-                                return (
-                                    <tr key={row.type} className="border-border/60 border-b last:border-0">
-                                        <td className="px-3 py-3">
-                                            <span className="flex items-center gap-2">
-                                                {meta && <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />}
-                                                <span>{t(meta?.labelKey ?? row.type)}</span>
-                                            </span>
-                                        </td>
-                                        {/* Always applies: a request-born case has no priority to fall back to. */}
-                                        <td className="px-3 py-3 align-top">
-                                            <div className="flex items-center gap-2">
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    max={8760}
-                                                    value={Number.isFinite(row.resolve) ? row.resolve : ''}
-                                                    onChange={(e) => setRequestTarget(row.type, { resolve: e.target.valueAsNumber })}
-                                                    aria-invalid={!!reqErrors[row.type]}
-                                                    className={cn(
-                                                        'h-9 w-24 font-mono',
-                                                        reqErrors[row.type] &&
-                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                                    )}
-                                                />
-                                                <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                                <span className="text-muted-foreground text-xs">
-                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
-                                                </span>
-                                            </div>
-                                            {reqErrors[row.type] && (
-                                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                                    {reqErrors[row.type]}
-                                                </p>
-                                            )}
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-40">
-                                                <SearchSelect
-                                                    value={row.clock}
-                                                    onChange={(v) => setRequestTarget(row.type, { clock: v as TicketSlaClock })}
-                                                    options={clockOptions}
-                                                />
-                                            </span>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             {/* Repair work is judged on its own KPI, and this table wins over the priority one
                 once a case is classified — which only a case somebody reported can be. That is
                 why this one keeps the left rule and the request table does not: this really is a
@@ -560,6 +480,88 @@ export function TicketsSlaTab() {
                                     </td>
                                 </tr>
                             ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Cases opened from an approved request, where the length of the work was decided
+                by what was asked for rather than by how urgent anybody judged it.
+
+                Last, and a sibling section rather than an indented one: this is not an exception
+                to anything above it, it is the other half of the system. The priority table and
+                the repair exception carved out of it both govern cases somebody reported; this
+                one governs cases a request opened. The two sets cannot overlap — a reported case
+                has no request, and a request-born case is never given a priority — so neither is
+                a special case of the other, and nothing here continues from what precedes it.
+
+                Every request type gets a row whether or not it has been configured, and none of
+                them can be switched off: a request-born case has no priority to fall back to, so
+                a disabled rule would drop it onto the built-in default with nothing saying so. */}
+            <div className="mt-6">
+                <h3 className="text-sm font-semibold">{t('set_sla_request_title')}</h3>
+                <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_request_desc')}</p>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                <th className="px-3 py-2">{t('set_sla_col_request_type')}</th>
+                                <th className="px-3 py-2">{t('set_sla_resolution')}</th>
+                                <th className="px-3 py-2">{t('set_sla_clock')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {reqTargets.map((row) => {
+                                const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
+                                return (
+                                    <tr key={row.type} className="border-border/60 border-b last:border-0">
+                                        <td className="px-3 py-3">
+                                            <span className="flex items-center gap-2">
+                                                {meta && <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />}
+                                                <span>{t(meta?.labelKey ?? row.type)}</span>
+                                            </span>
+                                        </td>
+                                        {/* Always applies: a request-born case has no priority to fall back to. */}
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={8760}
+                                                    value={Number.isFinite(row.resolve) ? row.resolve : ''}
+                                                    onChange={(e) => setRequestTarget(row.type, { resolve: e.target.valueAsNumber })}
+                                                    aria-invalid={!!reqErrors[row.type]}
+                                                    className={cn(
+                                                        'h-9 w-24 font-mono',
+                                                        reqErrors[row.type] &&
+                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                                                    )}
+                                                />
+                                                <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
+                                                <span className="text-muted-foreground text-xs">
+                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
+                                                </span>
+                                            </div>
+                                            {reqErrors[row.type] && (
+                                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                                    {reqErrors[row.type]}
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-3 align-top">
+                                            <span className="inline-block w-40">
+                                                <SearchSelect
+                                                    value={row.clock}
+                                                    onChange={(v) => setRequestTarget(row.type, { clock: v as TicketSlaClock })}
+                                                    options={clockOptions}
+                                                />
+                                            </span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
