@@ -39,11 +39,12 @@ class TicketSlaClockTest extends TestCase
         parent::tearDown();
     }
 
-    private function calendarRule(string $value, int $hours): void
+    /** A calendar-clock repair target for the (hardware, $workClass) pair these tests use. */
+    private function calendarRule(string $workClass, int $hours): void
     {
         SlaTarget::create([
             'scope' => SlaScope::WorkClass->value,
-            'match_value' => $value,
+            'match_value' => TicketSla::workClassKey('hardware', $workClass),
             'resolve_hours' => $hours,
             'clock' => TicketSlaClock::Calendar->value,
             'enabled' => true,
@@ -74,7 +75,7 @@ class TicketSlaClockTest extends TestCase
     public function test_a_calendar_rule_gives_the_ticket_a_calendar_deadline(): void
     {
         $this->calendarRule('repair_vendor', 1080); // 45 วันปฏิทิน
-        $ticket = Ticket::factory()->create([
+        $ticket = Ticket::factory()->create(['category' => 'hardware',
             'work_class' => TicketWorkClass::RepairVendor,
             'created_at' => Carbon::parse('2026-10-02 16:00:00'),
         ]);
@@ -87,7 +88,7 @@ class TicketSlaClockTest extends TestCase
     public function test_progress_percent_is_measured_on_the_same_clock_as_the_deadline(): void
     {
         $this->calendarRule('repair_internal', 720); // 30 วันปฏิทิน
-        $ticket = Ticket::factory()->create([
+        $ticket = Ticket::factory()->create(['category' => 'hardware',
             'work_class' => TicketWorkClass::RepairInternal,
             'priority' => TicketPriority::Medium,
             'status' => TicketStatus::InProgress,
@@ -109,7 +110,7 @@ class TicketSlaClockTest extends TestCase
     {
         // เป้าหมายตอบรับเป็นค่าเดียวทั้งระบบ ไม่ได้ผูกกับแถวกฎ จึงไม่มีเหตุให้เปลี่ยนนาฬิกา
         $this->calendarRule('repair_internal', 720);
-        $ticket = Ticket::factory()->create([
+        $ticket = Ticket::factory()->create(['category' => 'hardware',
             'work_class' => TicketWorkClass::RepairInternal,
             'created_at' => Carbon::parse('2026-10-02 16:00:00'),
         ]);
@@ -133,7 +134,7 @@ class TicketSlaClockTest extends TestCase
     {
         $this->calendarRule('repair_internal', 720); // 30 วันปฏิทิน — $clock ของเคสนี้คือ calendar
         // ศุกร์ 16:00 → เหลือเวลาทำการอีก 60 นาทีก่อนเลิกงาน
-        $ticket = Ticket::factory()->create([
+        $ticket = Ticket::factory()->create(['category' => 'hardware',
             'work_class' => TicketWorkClass::RepairInternal,
             'status' => TicketStatus::Open,
             'responded_at' => null, // ยังไม่มีใครรับ — นาฬิกาที่กำลังเดินคือนาฬิกาตอบรับ

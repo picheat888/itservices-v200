@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Ticket;
 
+use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Ticket\Ticket;
@@ -173,6 +174,22 @@ class TicketResource extends JsonResource
             return null;
         }
 
+        // Only what an administrator has actually priced for THIS kind of case, plus Standard.
+        //
+        // A repair target belongs to a pair — the ticket's category and who does the work — so
+        // "send it to an external technician" is a different length of job on a network case
+        // than on a hardware one. Offering a class with no rule for this category would let a
+        // technician pick an option that silently falls back to the priority target, which is
+        // the short deadline this whole feature exists to stop such cases from breaching.
+        // Standard is always offered: reverting a misclassification must never be impossible.
+        $rules = TicketSla::rules()[SlaScope::WorkClass->value] ?? [];
+        $offered = array_values(array_filter(
+            TicketWorkClass::cases(),
+            fn (TicketWorkClass $class) => ! $class->isRepair()
+                || ($ticket->category !== null
+                    && isset($rules[TicketSla::workClassKey($ticket->category->value, $class->value)])),
+        ));
+
         return array_map(function (TicketWorkClass $class) use ($ticket): array {
             $clone = clone $ticket;
             $clone->work_class = $class;
@@ -186,6 +203,6 @@ class TicketResource extends JsonResource
                 'clock' => $target['clock']->value,
                 'due_at' => TicketSla::resolveDueAt($clone)->toIso8601String(),
             ];
-        }, TicketWorkClass::cases());
+        }, $offered);
     }
 }

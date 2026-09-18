@@ -176,6 +176,18 @@ class TicketSla
      *
      * @return array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}
      */
+    /**
+     * How a repair target is keyed: the ticket's category and who does the work, together.
+     *
+     * One place rather than a format spelled out at each call site — the settings writer, the
+     * rule reader and the forecast all have to agree on it, and a string built by hand in three
+     * places is a string that eventually differs in one of them.
+     */
+    public static function workClassKey(string $category, string $workClass): string
+    {
+        return "{$category}:{$workClass}";
+    }
+
     public static function targetFor(Ticket $ticket): array
     {
         $rules = self::rules();
@@ -186,9 +198,13 @@ class TicketSla
             : $ticket->serviceRequest()->value('type');
         $requestType = $requestType instanceof BackedEnum ? (string) $requestType->value : $requestType;
 
-        // งานปกติไม่เข้ากฎไหน แม้จะมีแถว 'standard' อยู่ในตาราง — นั่นคือสิ่งที่ทำให้
-        // scope นี้ชนะลำดับบนสุดได้โดยไม่มีทางแอบทับเงียบ ๆ
-        $workClass = $ticket->work_class?->isRepair() ? $ticket->work_class->value : null;
+        // เป้าหมายงานซ่อมอยู่ที่ "คู่" ของประเภทเคสกับคนที่ทำ ไม่ใช่ที่คลาสลำพัง — เปลี่ยน
+        // mainboard ที่ส่งช่างนอกกับเดินสายเน็ตเวิร์กที่ส่งช่างนอก เป็นงานคนละความยาวกัน
+        //
+        // งานปกติไม่เข้ากฎไหนเลย ซึ่งคือสิ่งที่ทำให้ scope นี้ชนะลำดับบนสุดได้โดยไม่แอบทับเงียบ ๆ
+        $workClass = $ticket->work_class?->isRepair() && $ticket->category !== null
+            ? self::workClassKey($ticket->category->value, $ticket->work_class->value)
+            : null;
 
         $candidates = [
             SlaScope::WorkClass->value => $workClass,

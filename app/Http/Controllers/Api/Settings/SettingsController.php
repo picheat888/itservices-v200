@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Settings;
 
 use App\Enums\Request\RequestType;
 use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketSlaClock;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
@@ -133,7 +134,8 @@ class SettingsController extends Controller
             // 'standard' — ordinary work has no target of its own, priority already answers it,
             // and a row that could be created but never fire is a row that misleads the screen.
             'ticket_sla_work_class' => ['sometimes', 'array'],
-            'ticket_sla_work_class.*.work_class' => ['required', 'distinct', Rule::in(TicketWorkClass::repairValues())],
+            'ticket_sla_work_class.*.category' => ['required', new Enum(TicketCategory::class)],
+            'ticket_sla_work_class.*.work_class' => ['required', Rule::in(TicketWorkClass::repairValues())],
             'ticket_sla_work_class.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
             'ticket_sla_work_class.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
             'ticket_sla_work_class.*.enabled' => ['sometimes', 'boolean'],
@@ -154,6 +156,23 @@ class SettingsController extends Controller
                 'after:ticket_sla_hours.break_start', 'before_or_equal:ticket_sla_hours.end',
             ],
         ]);
+
+        // Two rows can never name the same pair. 'distinct' guards one column at a time, and what
+        // has to be unique here is the combination — Hardware+External listed twice would leave
+        // two different numbers both claiming the same case.
+        $validator->after(function ($v) use ($request) {
+            $seen = [];
+            foreach ((array) $request->input('ticket_sla_work_class', []) as $i => $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $pair = ($row['category'] ?? '').':'.($row['work_class'] ?? '');
+                if (isset($seen[$pair])) {
+                    $v->errors()->add("ticket_sla_work_class.{$i}.work_class", 'This kind of work already has a target for that ticket type.');
+                }
+                $seen[$pair] = true;
+            }
+        });
 
         // Every resolution target (hours), on every list, must be at least the first-response
         // target (minutes) — a case cannot be due for resolution before it is even guaranteed
@@ -204,7 +223,12 @@ class SettingsController extends Controller
             );
         }
         if (array_key_exists('ticket_sla_work_class', $data)) {
-            $this->saveScopeRows(SlaScope::WorkClass, 'work_class', $data['ticket_sla_work_class']);
+            // A repair target belongs to a pair — the kind of case and who does the work. Keyed
+            // through TicketSla so the writer and the reader cannot drift on the format.
+            $this->saveScopeRows(SlaScope::WorkClass, 'key', array_map(
+                fn (array $row) => $row + ['key' => TicketSla::workClassKey($row['category'], $row['work_class'])],
+                $data['ticket_sla_work_class'],
+            ));
         }
 
         if (isset($data['ticket_sla_response'])) {
@@ -467,13 +491,14 @@ class SettingsController extends Controller
                 'clock' => $target->clock->value,
                 'enabled' => $target->enabled,
             ])->all();
-        // Work-class targets are the same shape of list, keyed on the repair label instead of
-        // the request type.
+        // Repair targets are keyed on a pair, so they come back split into the two halves the
+        // screen edits rather than as the composite string the table stores.
         $values['ticket_sla_work_class'] = SlaTarget::where('scope', SlaScope::WorkClass->value)
             ->orderBy('match_value')
             ->get()
             ->map(fn (SlaTarget $target) => [
-                'work_class' => $target->match_value,
+                'category' => explode(':', $target->match_value, 2)[0] ?? '',
+                'work_class' => explode(':', $target->match_value, 2)[1] ?? '',
                 'resolve' => $target->resolve_hours,
                 'clock' => $target->clock->value,
                 'enabled' => $target->enabled,
