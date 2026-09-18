@@ -642,8 +642,14 @@ export default function TicketsPage() {
         {
             key: 'assignee',
             header: t('ticket_responsible_by'),
-            className: 'whitespace-nowrap',
-            render: (tk) => tk.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>,
+            // Capped, not free: one long name would otherwise widen the column for every row.
+            className: 'max-w-[170px] truncate',
+            render: (tk) =>
+                tk.assignee_name ? (
+                    <span title={tk.assignee_name}>{tk.assignee_name}</span>
+                ) : (
+                    <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
+                ),
         },
     ];
 
@@ -1224,8 +1230,12 @@ function TicketTable({
                             {!compact && (
                                 <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.requester_code ?? tk.requester_name}</td>
                             )}
-                            <td className="px-4 py-2.5">
-                                {tk.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
+                            <td className="max-w-[170px] truncate px-4 py-2.5">
+                                {tk.assignee_name ? (
+                                    <span title={tk.assignee_name}>{tk.assignee_name}</span>
+                                ) : (
+                                    <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>
+                                )}
                             </td>
                             {!compact && <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{fmtDateTime(tk.updated_at, false)}</td>}
                         </tr>
