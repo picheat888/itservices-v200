@@ -584,9 +584,14 @@ export default function TicketsPage() {
             render: (tk) => tk.ticket_no,
         },
         {
+            // The column that gives. `w-full max-w-0` hands it every pixel the fixed columns do
+            // not want and lets it shrink to nothing, so the table fits its card at any width and
+            // the subject truncates instead. Without it the table ran 11px past the card, and the
+            // overhang it lost was the last column's right padding — a row that looked flush
+            // against the edge while the first column sat properly inset.
             key: 'subject',
             header: t('ticket_subject'),
-            className: 'font-medium',
+            className: 'w-full max-w-0 font-medium',
             render: (tk) => <TicketSubject ticket={tk} t={t} />,
         },
         {
@@ -1199,7 +1204,7 @@ function TicketTable({
                             onClick={() => onRow(tk)}
                         >
                             <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.ticket_no}</td>
-                            <td className="px-4 py-2.5 font-medium">
+                            <td className="w-full max-w-0 px-4 py-2.5 font-medium">
                                 <TicketSubject ticket={tk} t={t} />
                             </td>
                             <td className="px-4 py-2.5">
