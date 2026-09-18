@@ -43,12 +43,34 @@ class TicketDeskInternalsVisibilityTest extends TestCase
 
         $this->getJson("/api/tickets/{$ticket->id}")
             ->assertOk()
-            ->assertJsonMissingPath('data.priority')
-            ->assertJsonMissingPath('data.work_class');
+            ->assertJsonMissingPath('data.priority');
         $this->getJson('/api/tickets')
             ->assertOk()
-            ->assertJsonMissingPath('data.0.priority')
-            ->assertJsonMissingPath('data.0.work_class');
+            ->assertJsonMissingPath('data.0.priority');
+    }
+
+    public function test_a_requester_is_told_their_case_has_gone_out_to_a_technician(): void
+    {
+        // Not behind the gate with priority and the clocks, though it once was. Those are how the
+        // desk runs its queue and scores itself; where the machine physically is explains why a
+        // case has taken weeks, and is the owner's own business. Withholding it leaves the silence
+        // looking like nobody is doing anything.
+        $me = $this->user(['tickets.my']);
+        $ticket = Ticket::factory()->create([
+            'requester_id' => $me->employee_id,
+            'work_class' => 'repair_vendor',
+            'priority' => 'critical',
+        ]);
+        $this->actingAs($me);
+
+        $this->getJson("/api/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonPath('data.work_class', 'repair_vendor')
+            // The rest of the block it used to travel in stays behind the gate.
+            ->assertJsonMissingPath('data.priority')
+            ->assertJsonMissingPath('data.sla')
+            ->assertJsonMissingPath('data.sla_target')
+            ->assertJsonMissingPath('data.work_class_forecast');
     }
 
     public function test_a_requester_is_not_sent_the_sla_clocks_either(): void
