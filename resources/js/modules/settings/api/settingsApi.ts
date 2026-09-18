@@ -1,5 +1,5 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope } from '@/shared/types';
+import type { TicketCategory, ApiEnvelope } from '@/shared/types';
 
 export interface SettingsData {
     brand_name: string;
@@ -60,6 +60,9 @@ export interface TicketSlaRequestTarget {
  * offered here; the backend rejects it.
  */
 export interface TicketSlaWorkClassTarget {
+    /** A repair target belongs to a PAIR — the kind of case and who does the work. Replacing a
+     *  mainboard at an external shop and rewiring a floor are not the same length of job. */
+    category: TicketCategory;
     work_class: 'repair_internal' | 'repair_vendor';
     resolve: number;
     clock: TicketSlaClock;

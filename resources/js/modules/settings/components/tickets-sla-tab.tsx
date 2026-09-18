@@ -5,16 +5,16 @@
  * (เป้าหมายตามลักษณะงาน) จะดันไฟล์รวมไปเกิน 2,200 บรรทัด
  */
 import { useT } from '@/lang';
-import { TicketPriorityBadge } from '@/modules/ticket';
+import { TICKET_CATEGORIES, TicketPriorityBadge } from '@/modules/ticket';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { REQUEST_TYPES, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { ServiceRequestType, TicketPriority } from '@/shared/types';
+import type { ServiceRequestType, TicketCategory, TicketPriority } from '@/shared/types';
+import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
-import { Switch } from '@/shared/ui/switch';
 import { TimeInput } from '@/shared/ui/time-input';
-import { AlertCircle, Info, Wrench } from 'lucide-react';
+import { AlertCircle, Info, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
     type TicketSlaClock,
@@ -70,12 +70,6 @@ function workingDaysHint(resolveHours: number, hours: TicketSlaHours, clock: Tic
 // ISO weekdays for the SLA working-window picker (1 = Monday … 7 = Sunday).
 const SLA_DAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
-/** The repair KPI the organisation actually runs: 30 days in-house, 45 with a vendor. */
-const WORK_CLASS_DEFAULT: Record<(typeof WORK_CLASSES)[number], { resolve: number; clock: TicketSlaClock }> = {
-    repair_internal: { resolve: 720, clock: 'calendar' },
-    repair_vendor: { resolve: 1080, clock: 'calendar' },
-};
-
 /**
  * Both exception tables list every option, always, and a switch decides whether the row
  * applies — so a row has to exist on screen for an option nobody has configured yet.
@@ -92,12 +86,6 @@ function expandRequestRows(stored: TicketSlaRequestTarget[], fallback: { resolve
     const byType = new Map(stored.map((r) => [r.type, r]));
 
     return REQUEST_TYPES.map((type) => byType.get(type) ?? { type, resolve: fallback.resolve, clock: fallback.clock, enabled: false });
-}
-
-function expandWorkRows(stored: TicketSlaWorkClassTarget[]): TicketSlaWorkClassTarget[] {
-    const byClass = new Map(stored.map((r) => [r.work_class, r]));
-
-    return WORK_CLASSES.map((c) => byClass.get(c) ?? { work_class: c, ...WORK_CLASS_DEFAULT[c], enabled: false });
 }
 
 /** Settings → Tickets: edit the per-priority SLA targets + the working window they count against. */
@@ -131,9 +119,10 @@ export function TicketsSlaTab() {
     // administrator has to remember to add to.
     const [reqTargets, setReqTargets] = useState<TicketSlaRequestTarget[]>([]);
     const [reqErrors, setReqErrors] = useState<Record<string, string>>({});
-    // Targets keyed on the kind of repair work a case was classified as — same fixed-table
-    // shape as the request types above, but this one wins over both priority and request type
-    // once a case is classified as repair.
+    // Repair targets, one row per (ticket type, who does the work) pair. A list the
+    // administrator adds to rather than a fixed table: most pairs never happen — software does
+    // not go to a technician — and a case can only be classified into a pair that has a row, so
+    // the list is also the set of options a technician will be offered.
     const [workTargets, setWorkTargets] = useState<TicketSlaWorkClassTarget[]>([]);
     const [workErrors, setWorkErrors] = useState<Record<string, string>>({});
     // First response is one system-wide target — priority doesn't exist while a case waits.
@@ -157,7 +146,7 @@ export function TicketsSlaTab() {
         if (storedRequest) setReqTargets(expandRequestRows(storedRequest, reqFallback));
     }, [storedRequest, reqFallback]);
     useEffect(() => {
-        if (storedWork) setWorkTargets(expandWorkRows(storedWork));
+        if (storedWork) setWorkTargets(storedWork);
     }, [storedWork]);
     useEffect(() => {
         if (storedResponse != null) setRespTarget(storedResponse);
@@ -180,8 +169,8 @@ export function TicketsSlaTab() {
     // straight to it would report every untouched form as dirty.
     const reqDirty = !!storedRequest && reqSignature(reqTargets) !== reqSignature(expandRequestRows(storedRequest, reqFallback));
     const workSignature = (rows: TicketSlaWorkClassTarget[]) =>
-        rows.map((r) => `${r.work_class}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`).join('|');
-    const workDirty = !!storedWork && workSignature(workTargets) !== workSignature(expandWorkRows(storedWork));
+        rows.map((r) => `${r.category}:${r.work_class}:${r.resolve}:${r.clock}:${r.enabled ? 1 : 0}`).join('|');
+    const workDirty = !!storedWork && workSignature(workTargets) !== workSignature(storedWork);
     const dirty =
         hoursDirty ||
         reqDirty ||
@@ -194,10 +183,27 @@ export function TicketsSlaTab() {
         setSaved(false);
         setReqErrors((e) => ({ ...e, [type]: '' }));
     };
+    /** A pair identifies a row; nothing else in the list is unique on its own. */
+    const workKey = (row: Pick<TicketSlaWorkClassTarget, 'category' | 'work_class'>) => `${row.category}:${row.work_class}`;
     const setWorkTarget = (key: string, patch: Partial<TicketSlaWorkClassTarget>) => {
-        setWorkTargets((rows) => rows.map((r) => (r.work_class === key ? { ...r, ...patch } : r)));
+        setWorkTargets((rows) => rows.map((r) => (workKey(r) === key ? { ...r, ...patch } : r)));
         setSaved(false);
         setWorkErrors((e) => ({ ...e, [key]: '' }));
+    };
+    const addWorkTarget = () => {
+        // Starts on the first pair that has no row yet, at the KPI the organisation runs —
+        // 30 calendar days — so the row is a real target before anybody edits it.
+        const taken = new Set(workTargets.map(workKey));
+        const next = TICKET_CATEGORIES.flatMap((c) => WORK_CLASSES.map((w) => ({ category: c, work_class: w }))).find(
+            (pair) => !taken.has(workKey(pair)),
+        );
+        if (!next) return;
+        setWorkTargets((rows) => [...rows, { ...next, resolve: 720, clock: 'calendar', enabled: true }]);
+        setSaved(false);
+    };
+    const removeWorkTarget = (key: string) => {
+        setWorkTargets((rows) => rows.filter((r) => workKey(r) !== key));
+        setSaved(false);
     };
 
     /** Toggle one working day, keeping the list in Mon→Sun order. */
@@ -425,64 +431,111 @@ export function TicketsSlaTab() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-border text-muted-foreground border-b text-left text-[11.5px] font-semibold tracking-wide uppercase">
+                                <th className="px-3 py-2">{t('set_sla_col_ticket_type')}</th>
                                 <th className="px-3 py-2">{t('set_sla_col_work_class')}</th>
                                 <th className="px-3 py-2">{t('set_sla_resolution')}</th>
                                 <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                                <th className="px-3 py-2">{t('set_sla_col_applies')}</th>
+                                <th className="px-3 py-2"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {workTargets.map((row) => (
-                                <tr key={row.work_class} className="border-border/60 border-b last:border-0">
-                                    <td className="px-3 py-3">
-                                        <span className={cn('flex items-center gap-2', !row.enabled && 'text-muted-foreground')}>
-                                            <Wrench className="h-4 w-4 shrink-0" />
-                                            <span className={cn(!row.enabled && 'line-through')}>{t(WORK_CLASS_LABEL_KEY[row.work_class])}</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-3 py-3 align-top">
-                                        <div className="flex items-center gap-2">
-                                            <Input
-                                                type="number"
-                                                min={1}
-                                                max={8760}
-                                                value={Number.isFinite(row.resolve) ? row.resolve : ''}
-                                                onChange={(e) => setWorkTarget(row.work_class, { resolve: e.target.valueAsNumber })}
-                                                aria-invalid={!!workErrors[row.work_class]}
-                                                className={cn(
-                                                    'h-9 w-24 font-mono',
-                                                    workErrors[row.work_class] &&
-                                                        'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                                    !row.enabled && 'text-muted-foreground line-through',
-                                                )}
-                                            />
-                                            <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                            <span className="text-muted-foreground text-xs">{workingDaysHint(row.resolve, hours, row.clock, t)}</span>
-                                        </div>
-                                        {workErrors[row.work_class] && (
-                                            <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
-                                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                                                {workErrors[row.work_class]}
-                                            </p>
-                                        )}
-                                    </td>
-                                    <td className="px-3 py-3 align-top">
-                                        <span className="inline-block w-40">
-                                            <SearchSelect
-                                                value={row.clock}
-                                                onChange={(v) => setWorkTarget(row.work_class, { clock: v as TicketSlaClock })}
-                                                options={clockOptions}
-                                            />
-                                        </span>
-                                    </td>
-                                    <td className="px-3 py-3 align-top">
-                                        <Switch checked={row.enabled} onChange={(v) => setWorkTarget(row.work_class, { enabled: v })} />
-                                    </td>
-                                </tr>
-                            ))}
+                            {workTargets.map((row) => {
+                                const key = workKey(row);
+                                const taken = new Set(workTargets.filter((r) => workKey(r) !== key).map(workKey));
+                                return (
+                                    <tr key={key} className="border-border/60 border-b last:border-0">
+                                        <td className="px-3 py-3 align-top">
+                                            <span className="inline-block w-32">
+                                                <SearchSelect
+                                                    value={row.category}
+                                                    onChange={(v) => setWorkTarget(key, { category: v as TicketCategory })}
+                                                    // A pair already on the list is not offered again, so two
+                                                    // rows can never both claim the same kind of case.
+                                                    options={TICKET_CATEGORIES.filter(
+                                                        (c) => c === row.category || !taken.has(`${c}:${row.work_class}`),
+                                                    ).map((c) => ({ value: c, label: t(`ticket_cat_${c}`) }))}
+                                                />
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3 align-top">
+                                            <span className="inline-block w-36">
+                                                <SearchSelect
+                                                    value={row.work_class}
+                                                    onChange={(v) => setWorkTarget(key, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
+                                                    options={WORK_CLASSES.filter(
+                                                        (w) => w === row.work_class || !taken.has(`${row.category}:${w}`),
+                                                    ).map((w) => ({ value: w, label: t(WORK_CLASS_LABEL_KEY[w]) }))}
+                                                />
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3 align-top">
+                                            <div className="flex items-center gap-2">
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={8760}
+                                                    value={Number.isFinite(row.resolve) ? row.resolve : ''}
+                                                    onChange={(e) => setWorkTarget(key, { resolve: e.target.valueAsNumber })}
+                                                    aria-invalid={!!workErrors[key]}
+                                                    className={cn(
+                                                        'h-9 w-24 font-mono',
+                                                        workErrors[key] &&
+                                                            'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                                                    )}
+                                                />
+                                                <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
+                                                <span className="text-muted-foreground text-xs">
+                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
+                                                </span>
+                                            </div>
+                                            {workErrors[key] && (
+                                                <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                                                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                                    {workErrors[key]}
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="px-3 py-3 align-top">
+                                            <span className="inline-block w-40">
+                                                <SearchSelect
+                                                    value={row.clock}
+                                                    onChange={(v) => setWorkTarget(key, { clock: v as TicketSlaClock })}
+                                                    options={clockOptions}
+                                                />
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3 align-top">
+                                            <button
+                                                type="button"
+                                                onClick={() => removeWorkTarget(key)}
+                                                aria-label={t('delete')}
+                                                title={t('delete')}
+                                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive grid h-8 w-8 place-items-center rounded-md"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
+
+                {workTargets.length === 0 && <p className="text-muted-foreground mt-1 mb-3 text-xs">{t('set_sla_work_empty')}</p>}
+
+                {/* An action is a button. The pair is chosen in the row it belongs to. */}
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={addWorkTarget}
+                    disabled={workTargets.length >= TICKET_CATEGORIES.length * WORK_CLASSES.length}
+                >
+                    <Plus className="h-4 w-4" />
+                    {t('set_sla_work_add')}
+                </Button>
             </div>
 
             {/* Cases opened from an approved request, where the length of the work was decided

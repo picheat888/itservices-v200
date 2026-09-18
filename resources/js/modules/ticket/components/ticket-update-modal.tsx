@@ -13,8 +13,6 @@ import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_WORK_CLASS_META } from './ticket-meta';
 
-const WORK_CLASSES: TicketWorkClass[] = ['standard', 'repair_internal', 'repair_vendor'];
-
 /**
  * The assignee writes a progress note on a case in flight — and, in the same breath, says who
  * the repair went to.
@@ -89,7 +87,19 @@ export function TicketUpdateModal({
     const currentDueAt = view?.sla?.resolve_due_at ?? null;
     const dueUnchanged = forecast !== null && currentDueAt !== null && new Date(forecast.due_at).getTime() === new Date(currentDueAt).getTime();
 
-    const options = WORK_CLASSES.map((c) => ({ value: c, label: t(TICKET_WORK_CLASS_META[c].key), search: t(TICKET_WORK_CLASS_META[c].key) }));
+    // The options ARE the forecast. A repair target belongs to a (ticket type, who does the
+    // work) pair, so what can be picked depends on the case in front of you — and the server
+    // only forecasts the pairs an administrator has priced, plus Standard. Listing anything
+    // else would offer a choice the endpoint refuses, and one that would otherwise fall back to
+    // the priority target: the short deadline these cases breach on.
+    const options = (view?.work_class_forecast ?? []).map((f) => ({
+        value: f.work_class,
+        label: t(TICKET_WORK_CLASS_META[f.work_class].key),
+        search: t(TICKET_WORK_CLASS_META[f.work_class].key),
+    }));
+    // Nothing to move the case to — only Standard came back, so the picker would be a control
+    // with one option that is already selected.
+    const noRepairPriced = offersWorkClass && options.length <= 1;
 
     const submit = async () => {
         if (!ticket) return;
@@ -152,7 +162,7 @@ export function TicketUpdateModal({
                         />
                     </Field>
 
-                    {offersWorkClass && (
+                    {offersWorkClass && !noRepairPriced && (
                         <Field label={t('ticket_work_class')} help={t('ticket_work_class_hint')}>
                             <SearchableSelect value={workClass} onChange={(v) => setWorkClass(v as TicketWorkClass)} options={options} />
                         </Field>

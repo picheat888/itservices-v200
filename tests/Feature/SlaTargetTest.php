@@ -291,42 +291,42 @@ class SlaTargetTest extends TestCase
         $this->actingAs($admin)->putJson('/api/settings/sla', [
             'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
             'ticket_sla_work_class' => [
-                ['work_class' => 'repair_internal', 'resolve' => 720, 'clock' => 'calendar', 'enabled' => true],
-                ['work_class' => 'repair_vendor', 'resolve' => 1080, 'clock' => 'calendar', 'enabled' => true],
+                ['category' => 'hardware', 'work_class' => 'repair_internal', 'resolve' => 720, 'clock' => 'calendar', 'enabled' => true],
+                ['category' => 'network', 'work_class' => 'repair_vendor', 'resolve' => 1080, 'clock' => 'calendar', 'enabled' => true],
             ],
         ])->assertOk();
 
         $this->assertDatabaseHas('sla_targets', [
-            'scope' => 'work_class', 'match_value' => 'repair_internal', 'resolve_hours' => 720, 'clock' => 'calendar',
+            'scope' => 'work_class', 'match_value' => 'hardware:repair_internal', 'resolve_hours' => 720, 'clock' => 'calendar',
         ]);
         $this->assertDatabaseHas('sla_targets', [
-            'scope' => 'work_class', 'match_value' => 'repair_vendor', 'resolve_hours' => 1080, 'clock' => 'calendar',
+            'scope' => 'work_class', 'match_value' => 'network:repair_vendor', 'resolve_hours' => 1080, 'clock' => 'calendar',
         ]);
     }
 
     public function test_a_work_class_row_left_out_of_the_list_is_deleted(): void
     {
         $admin = $this->staff();
-        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'repair_vendor', 'resolve_hours' => 1080, 'enabled' => true]);
+        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'network:repair_vendor', 'resolve_hours' => 1080, 'enabled' => true]);
 
         $this->actingAs($admin)->putJson('/api/settings/sla', [
             'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
             'ticket_sla_work_class' => [],
         ])->assertOk();
 
-        $this->assertDatabaseMissing('sla_targets', ['scope' => 'work_class', 'match_value' => 'repair_vendor']);
+        $this->assertDatabaseMissing('sla_targets', ['scope' => 'work_class', 'match_value' => 'network:repair_vendor']);
     }
 
     public function test_saving_the_priority_form_alone_leaves_work_class_rules_untouched(): void
     {
         $admin = $this->staff();
-        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'repair_internal', 'resolve_hours' => 720, 'enabled' => true]);
+        SlaTarget::create(['scope' => 'work_class', 'match_value' => 'hardware:repair_internal', 'resolve_hours' => 720, 'enabled' => true]);
 
         $this->actingAs($admin)->putJson('/api/settings/sla', [
             'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
         ])->assertOk();
 
-        $this->assertDatabaseHas('sla_targets', ['scope' => 'work_class', 'match_value' => 'repair_internal']);
+        $this->assertDatabaseHas('sla_targets', ['scope' => 'work_class', 'match_value' => 'hardware:repair_internal']);
     }
 
     public function test_standard_is_rejected_as_a_work_class_rule(): void
@@ -337,7 +337,7 @@ class SlaTargetTest extends TestCase
 
         $this->actingAs($admin)->putJson('/api/settings/sla', [
             'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
-            'ticket_sla_work_class' => [['work_class' => 'standard', 'resolve' => 100, 'clock' => 'business', 'enabled' => true]],
+            'ticket_sla_work_class' => [['category' => 'hardware', 'work_class' => 'standard', 'resolve' => 100, 'clock' => 'business', 'enabled' => true]],
         ])->assertStatus(422);
     }
 

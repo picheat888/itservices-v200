@@ -668,6 +668,18 @@ class TicketController extends Controller
         if ($reclassifying) {
             // Writing a note needs tickets.resolve; moving the deadline needs its own key.
             abort_unless((bool) $request->user()?->hasPermission('tickets.set_work_class'), 403);
+
+            // And only to something an administrator has priced for this kind of case. The
+            // dialog already offers nothing else, but a class with no rule for this category
+            // would fall back to the priority target — the short deadline these cases breach
+            // on, which is the problem the feature was built to solve. Refused, not defaulted.
+            abort_if(
+                $class->isRepair()
+                    && ($ticket->category === null
+                        || ! isset(TicketSla::rules()[SlaScope::WorkClass->value][TicketSla::workClassKey($ticket->category->value, $class->value)])),
+                422,
+                'No target is set for that kind of work on this type of ticket.',
+            );
             $ticket = $this->service->setWorkClass($ticket, $request->user(), $class, $data['body']);
             AuditLog::record(
                 'Classified ticket work',
