@@ -62,7 +62,6 @@ import {
     TicketPriorityBadge,
     TicketSlaBadge,
     TicketStatusBadge,
-    TicketWorkClassBadge,
 } from '../components/ticket-meta';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
@@ -612,15 +611,13 @@ export default function TicketsPage() {
                   {
                       key: 'sla',
                       header: t('ticket_sla'),
-                      // A repair case running under its own KPI gets the Repair badge alongside its
-                      // SLA chip — without it, a case 20 days in (with weeks left on a 30-day repair
-                      // target) reads as one about to breach.
-                      render: (tk: Ticket) => (
-                          <span className="flex flex-wrap items-center gap-1.5">
-                              <TicketSlaBadge ticket={tk} t={t} />
-                              {tk.work_class && <TicketWorkClassBadge workClass={tk.work_class} t={t} />}
-                          </span>
-                      ),
+                      // One chip: how much time is left. A repair case used to carry a second
+                      // "Repair" chip here, from back when the countdown itself could mislead —
+                      // it ran against the priority target and a case weeks inside its 30-day
+                      // repair KPI read as one about to breach. The countdown reads the winning
+                      // target now, so the chip was explaining a problem that no longer exists
+                      // while wrapping the column onto two lines.
+                      render: (tk: Ticket) => <TicketSlaBadge ticket={tk} t={t} />,
                   },
               ]
             : []),

@@ -126,7 +126,6 @@ export const ticket: Dict = {
     // ticket-update-modal.tsx — the progress note dialog, and its timeline in the detail drawer
     ticket_tab_progress: 'Progress',
     ticket_no_updates: 'Nothing has happened yet - this case is still waiting to be taken',
-    ticket_updates_count: '{n} progress notes',
     ticket_update_action: 'Update',
     ticket_update_title: 'Update progress',
     ticket_update_hint: 'Update on the progress after you take the case.',
@@ -189,7 +188,6 @@ export const ticket: Dict = {
     ticket_work_class_forecast_unavailable: "The deadline preview isn't available for this case, so the kind of work cannot be changed here.",
     ticket_update_err_failed: 'Could not save the update. Please try again.',
     // pages/index.tsx — KPI cards and the list's repair badge
-    ticket_repair_badge: 'Repair',
     ticket_repair_kpi: 'Repair KPI met',
     ticket_repair_backlog: '{n} still open',
     ticket_sla_met_standard: 'Standard cases closed in SLA',
