@@ -409,18 +409,18 @@ export function TicketsSlaTab() {
                 <span>{t('set_sla_resolution_note')}</span>
             </div>
 
-            {/* Exceptions to the table above, for cases opened from a request — where the length
-                of the work is decided by what was asked for, not by how urgent it is.
+            {/* Cases opened from an approved request, where the length of the work was decided
+                by what was asked for rather than by how urgent anybody judged it.
 
-                Every request type gets a row whether or not it has been configured, and the
-                switch is what decides whether the row applies. The earlier add-a-row shape made
-                "this type has no exception" and "this type has an exception I switched off" look
-                like the same thing — an absent row — so the only way to see the full set of
-                choices was to open the picker.
+                A sibling section, not an indented one: this is not an exception to the priority
+                table above, it is the other half of the system. The two govern populations that
+                cannot overlap — a case somebody reported has no request, and a case a request
+                opened is never given a priority — so neither is a special case of the other.
 
-                Indented under a left rule rather than presented as a sibling section: the heading
-                says "except", and the layout has to agree with it. */}
-            <div className="border-border/70 mt-5 ml-1 border-l-2 pl-4">
+                Every request type gets a row whether or not it has been configured, and none of
+                them can be switched off: a request-born case has no priority to fall back to, so
+                a disabled rule would drop it onto the built-in default with nothing saying so. */}
+            <div className="mt-6">
                 <h3 className="text-sm font-semibold">{t('set_sla_request_title')}</h3>
                 <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_request_desc')}</p>
 
@@ -489,11 +489,14 @@ export function TicketsSlaTab() {
                 </div>
             </div>
 
-            {/* Repair work is judged on its own KPI, not on priority or request type — this table
-                wins over both of the sections above, and only once a case is classified as
-                repair. Same fixed-rows-plus-switch treatment as the request types, for the same
-                reason: there are only two kinds of repair, and both should be visible whether or
-                not anybody has set a figure for them yet. */}
+            {/* Repair work is judged on its own KPI, and this table wins over the priority one
+                once a case is classified — which only a case somebody reported can be. That is
+                why this one keeps the left rule and the request table does not: this really is a
+                continuation of the priority path above it, an exception carved out of the same
+                population, while the request table governs a separate one.
+
+                Fixed rows for the same reason as the table above: there are only two kinds of
+                repair, and both should be visible whether or not anybody has set a figure yet. */}
             <div className="border-border/70 mt-5 ml-1 border-l-2 pl-4">
                 <h3 className="text-sm font-semibold">{t('set_sla_work_title')}</h3>
                 <p className="text-muted-foreground mt-0.5 mb-3 text-xs">{t('set_sla_work_desc')}</p>
