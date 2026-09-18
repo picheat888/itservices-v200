@@ -62,6 +62,7 @@ import {
     TicketPriorityBadge,
     TicketSlaBadge,
     TicketStatusBadge,
+    TicketSubject,
 } from '../components/ticket-meta';
 import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
@@ -576,7 +577,7 @@ export default function TicketsPage() {
             key: 'subject',
             header: t('ticket_subject'),
             className: 'font-medium',
-            render: (tk) => <span className="block max-w-[280px] truncate">{tk.subject}</span>,
+            render: (tk) => <TicketSubject ticket={tk} t={t} />,
         },
         {
             key: 'requester',
@@ -1185,7 +1186,9 @@ function TicketTable({
                             onClick={() => onRow(tk)}
                         >
                             <td className="text-muted-foreground px-4 py-2.5 font-mono text-xs">{tk.ticket_no}</td>
-                            <td className="max-w-[280px] truncate px-4 py-2.5 font-medium">{tk.subject}</td>
+                            <td className="px-4 py-2.5 font-medium">
+                                <TicketSubject ticket={tk} t={t} />
+                            </td>
                             <td className="px-4 py-2.5">
                                 <span className="flex items-center gap-2">
                                     <TicketCategoryIcon category={tk.category} className="text-muted-foreground h-4 w-4" />
