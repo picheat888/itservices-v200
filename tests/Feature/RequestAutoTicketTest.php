@@ -179,7 +179,9 @@ class RequestAutoTicketTest extends TestCase
         }
         $tech = User::factory()->create(['role' => 'admin', 'employee_id' => $itEmployee->id]);
 
-        $this->actingAs($tech)->postJson("/api/tickets/{$request->ticket_id}/take", ['priority' => 'medium'])->assertOk();
+        // No priority: a case opened from an approved request is judged on what was asked
+        // for, and the endpoint refuses one outright rather than quietly ignoring it.
+        $this->actingAs($tech)->postJson("/api/tickets/{$request->ticket_id}/take", [])->assertOk();
 
         return [$request, $tech];
     }

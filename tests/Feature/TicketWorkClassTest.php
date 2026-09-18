@@ -191,11 +191,11 @@ class TicketWorkClassTest extends TestCase
         $staff = $this->assigneeOf($ticket);
 
         $this->actingAs($staff)
-            ->patchJson("/api/tickets/{$ticket->id}/work-class", [
+            ->postJson("/api/tickets/{$ticket->id}/updates", [
                 'work_class' => 'repair_vendor',
-                'reason' => 'สายเมนหลักขาด ต้องให้ผู้รับเหมาเดินใหม่ทั้งชั้น',
+                'body' => 'สายเมนหลักขาด ต้องให้ผู้รับเหมาเดินใหม่ทั้งชั้น',
             ])
-            ->assertOk();
+            ->assertCreated();
 
         $ticket->refresh();
         $this->assertSame(TicketWorkClass::RepairVendor, $ticket->work_class);
@@ -215,10 +215,10 @@ class TicketWorkClassTest extends TestCase
         $ticket = Ticket::factory()->create();
         $staff = $this->assigneeOf($ticket);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_internal',
-            'reason' => 'ต้องรื้อฝ้าเพื่อเดินสายใหม่ ช่างเราทำเองได้',
-        ])->assertOk();
+            'body' => 'ต้องรื้อฝ้าเพื่อเดินสายใหม่ ช่างเราทำเองได้',
+        ])->assertCreated();
 
         $this->assertSame(1, $ticket->updates()->count());
         $this->assertStringContainsString('ต้องรื้อฝ้า', (string) $ticket->updates()->first()->body);
@@ -229,7 +229,7 @@ class TicketWorkClassTest extends TestCase
         $ticket = Ticket::factory()->create();
         $staff = $this->assigneeOf($ticket);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_internal',
         ])->assertStatus(422);
     }
@@ -240,9 +240,9 @@ class TicketWorkClassTest extends TestCase
         $staff = $this->assigneeOf($ticket);
         $staff->update(['role' => 'user']); // ไม่ใช่ super — ไม่มีคีย์นี้โดยค่าเริ่มต้น
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_internal',
-            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+            'body' => 'เหตุผลที่ยาวพอจะผ่าน validate',
         ])->assertStatus(403);
     }
 
@@ -254,9 +254,9 @@ class TicketWorkClassTest extends TestCase
         $employee = Employee::create(['first_name' => 'Tech', 'last_name' => 'Free', 'status' => 'active']);
         $staff = User::factory()->create(['role' => 'super', 'employee_id' => $employee->id]);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_internal',
-            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+            'body' => 'เหตุผลที่ยาวพอจะผ่าน validate',
         ])->assertStatus(403);
     }
 
@@ -270,9 +270,9 @@ class TicketWorkClassTest extends TestCase
         $staff = $this->assigneeOf($ticket);
         $ticket->update(['status' => TicketStatus::Completed]);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_internal',
-            'reason' => 'เหตุผลที่ยาวพอจะผ่าน validate',
+            'body' => 'เหตุผลที่ยาวพอจะผ่าน validate',
         ])->assertStatus(422);
     }
 
@@ -286,10 +286,10 @@ class TicketWorkClassTest extends TestCase
         ]);
         $staff = $this->assigneeOf($ticket);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'standard',
-            'reason' => 'จัดประเภทผิด เป็นแค่การตั้งค่า switch',
-        ])->assertOk();
+            'body' => 'จัดประเภทผิด เป็นแค่การตั้งค่า switch',
+        ])->assertCreated();
 
         $ticket->refresh();
         $this->assertSame(TicketWorkClass::Standard, $ticket->work_class);
@@ -366,10 +366,10 @@ class TicketWorkClassTest extends TestCase
         $forecast = collect($before['work_class_forecast'])->firstWhere('work_class', 'repair_vendor');
         $this->assertNotNull($forecast);
 
-        $this->actingAs($staff)->patchJson("/api/tickets/{$ticket->id}/work-class", [
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
             'work_class' => 'repair_vendor',
-            'reason' => 'ส่ง vendor เดินสายใหม่ทั้งชั้น',
-        ])->assertOk();
+            'body' => 'ส่ง vendor เดินสายใหม่ทั้งชั้น',
+        ])->assertCreated();
 
         $ticket->refresh();
         $this->assertSame($ticket->sla_resolve_due_at->toIso8601String(), $forecast['due_at']);

@@ -128,7 +128,6 @@ class SettingsController extends Controller
             'ticket_sla_request.*.type' => ['required', 'distinct', new Enum(RequestType::class)],
             'ticket_sla_request.*.resolve' => ['required', 'integer', 'min:1', 'max:8760'],
             'ticket_sla_request.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
-            'ticket_sla_request.*.enabled' => ['sometimes', 'boolean'],
             // Targets keyed on how long a repair runs, judged by whoever has seen the job.
             // Absent key = leave the saved rules alone (same as ticket_sla_request). No
             // 'standard' — ordinary work has no target of its own, priority already answers it,
@@ -195,7 +194,14 @@ class SettingsController extends Controller
         // administrator deleted on the screen is a row that disappears here. Saving the
         // Priority form alone sends neither key and leaves both untouched.
         if (array_key_exists('ticket_sla_request', $data)) {
-            $this->saveScopeRows(SlaScope::RequestType, 'type', $data['ticket_sla_request']);
+            // Forced on: a case opened from a request has no priority to fall back to, so a
+            // switched-off request rule would drop it silently onto the built-in medium default.
+            // The screen has no switch for these rows either — this is the same rule, enforced.
+            $this->saveScopeRows(
+                SlaScope::RequestType,
+                'type',
+                array_map(fn (array $row) => $row + ['enabled' => true], $data['ticket_sla_request']),
+            );
         }
         if (array_key_exists('ticket_sla_work_class', $data)) {
             $this->saveScopeRows(SlaScope::WorkClass, 'work_class', $data['ticket_sla_work_class']);

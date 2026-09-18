@@ -58,6 +58,7 @@ class DatabaseSeeder extends Seeder
         $this->call(NotificationTemplateSeeder::class);     // App\Support\NotificationCatalogue
         $this->call(WorkflowSeeder::class);         // App\Support\DefaultWorkflows
         $this->call(RequestOptionSeeder::class);    // the managed choice lists in RequestSchemas
+        $this->call(SlaTargetSeeder::class);        // one resolution target per request type
     }
 
     /**

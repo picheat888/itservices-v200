@@ -176,14 +176,17 @@ class SlaTargetTest extends TestCase
             ->putJson('/api/settings/sla', [
                 'ticket_sla' => ['critical' => ['resolve' => 4], 'high' => ['resolve' => 8], 'medium' => ['resolve' => 24], 'low' => ['resolve' => 72]],
                 'ticket_sla_request' => [
-                    ['type' => 'computer', 'resolve' => 72, 'enabled' => true],
+                    ['type' => 'computer', 'resolve' => 72],
+                    // Sent switched off, and stored switched ON regardless: a request-born case
+                    // has no priority to fall back to, so a disabled rule would drop it onto the
+                    // built-in medium default with nothing on screen saying so.
                     ['type' => 'mailgroup', 'resolve' => 2, 'enabled' => false],
                 ],
             ])
             ->assertOk()
             ->assertJsonPath('data.ticket_sla.critical.resolve', 4)
             ->assertJsonPath('data.ticket_sla_request.0.type', 'computer')
-            ->assertJsonPath('data.ticket_sla_request.1.enabled', false);
+            ->assertJsonPath('data.ticket_sla_request.1.enabled', true);
 
         $this->assertDatabaseHas('sla_targets', ['scope' => 'request_type', 'match_value' => 'computer', 'resolve_hours' => 72]);
         $this->assertDatabaseHas('sla_targets', ['scope' => 'priority', 'match_value' => 'critical', 'resolve_hours' => 4]);

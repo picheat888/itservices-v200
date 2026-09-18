@@ -482,8 +482,12 @@ class TicketController extends Controller
             'You cannot take a case you filed yourself.'
         );
 
+        // A case opened from an approved request carries its own target, decided by what was
+        // asked for. Priority is not merely optional there — it is refused, so the rule cannot
+        // be worked around by posting one directly.
+        $fromRequest = $ticket->serviceRequest()->exists();
         $data = $request->validate([
-            'priority' => ['required', new Enum(TicketPriority::class)],
+            'priority' => [$fromRequest ? 'prohibited' : 'required', new Enum(TicketPriority::class)],
             'note' => ['nullable', 'string', 'max:2000'],
             'related_asset_id' => ['nullable', Rule::exists('assets', 'id')],
         ]);
@@ -491,7 +495,7 @@ class TicketController extends Controller
         $ticket = $this->service->take(
             $ticket,
             $request->user(),
-            TicketPriority::from($data['priority']),
+            isset($data['priority']) ? TicketPriority::from($data['priority']) : null,
             $data['note'] ?? null,
             $data['related_asset_id'] ?? null,
         );
@@ -508,9 +512,11 @@ class TicketController extends Controller
         $this->assertNotTheRequester($request, $ticket);
         abort_unless($ticket->status === TicketStatus::Open, 422, 'Only open tickets can be assigned.');
 
+        // Same rule as take(): a request-born case is never given a priority.
+        $fromRequest = $ticket->serviceRequest()->exists();
         $data = $request->validate([
             'assignee_id' => ['required', Rule::exists('users', 'id')],
-            'priority' => ['required', new Enum(TicketPriority::class)],
+            'priority' => [$fromRequest ? 'prohibited' : 'required', new Enum(TicketPriority::class)],
         ]);
 
         $staff = User::findOrFail($data['assignee_id']);
@@ -524,7 +530,7 @@ class TicketController extends Controller
             'A case cannot be assigned to the person who filed it.'
         );
         $this->assertCanReceive($staff, $ticket);
-        $ticket = $this->service->assign($ticket, $staff, TicketPriority::from($data['priority']), $request->user());
+        $ticket = $this->service->assign($ticket, $staff, isset($data['priority']) ? TicketPriority::from($data['priority']) : null, $request->user());
         AuditLog::record('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}");
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))
@@ -644,52 +650,32 @@ class TicketController extends Controller
 
         $data = $request->validate([
             'body' => ['required', 'string', 'min:5', 'max:5000'],
+            'work_class' => ['sometimes', new Enum(TicketWorkClass::class)],
         ]);
 
-        $this->service->addUpdate($ticket, $request->user(), $data['body']);
-        $ticket = $ticket->fresh();
-        AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}");
+        // Handing the repair to an in-house or external technician is something that happens
+        // mid-case, in the same breath as saying so — so it rides on the progress note rather
+        // than on a second dialog and a second timeline entry. The note is the reason.
+        $class = isset($data['work_class']) ? TicketWorkClass::from($data['work_class']) : null;
+        $before = $ticket->work_class;
+        $reclassifying = $class !== null && $class !== $before;
+
+        if ($reclassifying) {
+            // Writing a note needs tickets.resolve; moving the deadline needs its own key.
+            abort_unless((bool) $request->user()?->hasPermission('tickets.set_work_class'), 403);
+            $ticket = $this->service->setWorkClass($ticket, $request->user(), $class, $data['body']);
+            AuditLog::record(
+                'Classified ticket work',
+                sprintf('%s - %s → %s', $ticket->ticket_no, $before?->value ?? 'standard', $ticket->work_class->value),
+            );
+        } else {
+            $this->service->addUpdate($ticket, $request->user(), $data['body']);
+            $ticket = $ticket->fresh();
+            AuditLog::record('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}");
+        }
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
             ->additional(['message' => 'success'])->response()->setStatusCode(201);
-    }
-
-    /**
-     * จัดประเภทลักษณะงานของเคส (tickets.set_work_class)
-     *
-     * ประตูเดียวกับการเขียนบันทึก: เฉพาะคนที่ถือเคสอยู่ และเฉพาะเคสที่ยังทำอยู่ —
-     * การจัดประเภทคือการพูดว่างานนี้คืออะไร ซึ่งเป็นสิทธิ์ของคนที่กำลังทำมัน
-     */
-    public function updateWorkClass(Request $request, Ticket $ticket): JsonResponse
-    {
-        abort_unless((bool) $request->user()?->hasPermission('tickets.set_work_class'), 403);
-        // ลำดับเดียวกับ storeUpdate(): เจ้าของเคสก่อน สถานะทีหลัง — สองประตูนี้กับ
-        // ปลายทางเดียวกันต้องตอบรหัสเดียวกันในสถานการณ์เดียวกัน ไม่งั้นจะเป็นความต่าง
-        // ที่ไม่มีใครตั้งใจให้ต่าง
-        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can classify this ticket.');
-        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be classified.');
-
-        $data = $request->validate([
-            'work_class' => ['required', new Enum(TicketWorkClass::class)],
-            // เหตุผลยาวเท่ากับบันทึกความคืบหน้า เพราะมันกลายเป็นบันทึกความคืบหน้าจริง ๆ
-            'reason' => ['required', 'string', 'min:5', 'max:5000'],
-        ]);
-
-        $before = $ticket->work_class;
-        $ticket = $this->service->setWorkClass(
-            $ticket,
-            $request->user(),
-            TicketWorkClass::from($data['work_class']),
-            $data['reason'],
-        );
-
-        AuditLog::record(
-            'Classified ticket work',
-            sprintf('%s - %s → %s', $ticket->ticket_no, $before?->value ?? 'standard', $ticket->work_class->value),
-        );
-
-        return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments', 'updates'])))
-            ->additional(['message' => 'success'])->response();
     }
 
     /**
