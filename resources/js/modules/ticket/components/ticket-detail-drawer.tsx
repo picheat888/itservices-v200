@@ -223,8 +223,10 @@ function slaTargetSource(target: NonNullable<Ticket['sla_target']>, t: (key: str
     // A repair KPI winning the target is its own reason, not the "nobody chose this" default —
     // without this branch a case classified as repair read as if nothing had been decided.
     if (target.scope === 'work_class' && target.value) {
+        // Named as the work it is, not just who does it: "External technician" on a row
+        // labelled "Rule" reads as the person the case was given to, which is a different fact.
         const meta = TICKET_WORK_CLASS_META[target.value as TicketWorkClass];
-        return meta ? t(meta.key) : target.value;
+        return meta ? t('ticket_sla_target_repair').replace('{c}', t(meta.key)) : target.value;
     }
     if (target.scope === 'request_type' && target.value) {
         const meta = REQUEST_TYPE_META[target.value as ServiceRequestType];
