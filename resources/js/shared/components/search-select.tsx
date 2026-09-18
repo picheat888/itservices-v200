@@ -14,11 +14,36 @@ interface SearchSelectProps {
 }
 
 interface DropdownRect {
-    top: number;
     left: number;
     width: number;
-    // Cap so the panel never spills past the bottom of the viewport.
+    /** Set when the panel drops below the trigger; `bottom` is set instead when it drops above. */
+    top?: number;
+    bottom?: number;
+    // Cap so the panel never spills past the edge of the viewport.
     maxHeight: number;
+}
+
+/** Tallest the panel gets, and the least room it will settle for before dropping upward instead. */
+const PANEL_MAX = 320;
+const PANEL_MIN = 160;
+
+/**
+ * The nearest ancestor of the trigger that actually scrolls.
+ *
+ * The panel is portaled to <body> so it cannot be clipped, which also cuts it out of the
+ * trigger's ancestry: a wheel over the panel walks up to <body>, finds nothing scrollable
+ * there (this app scrolls inside <main>), and the page sits still. The trigger has not moved,
+ * so its own ancestry is where the scroll belongs.
+ */
+function scrollableAncestor(from: HTMLElement | null): HTMLElement | null {
+    for (let el = from?.parentElement; el; el = el.parentElement) {
+        const { overflowY } = getComputedStyle(el);
+        if (/auto|scroll/.test(overflowY) && el.scrollHeight > el.clientHeight) {
+            return el;
+        }
+    }
+
+    return null;
 }
 
 /** Dropdown with an inline search box, rendered as a portal so it is never clipped by parent overflow. */
@@ -26,9 +51,10 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
     const t = useT();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const [rect, setRect] = useState<DropdownRect>({ top: 0, left: 0, width: 0, maxHeight: 320 });
+    const [rect, setRect] = useState<DropdownRect>({ left: 0, width: 0, top: 0, maxHeight: PANEL_MAX });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
 
     const selected = options.find((o) => o.value === value);
 
@@ -41,11 +67,20 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
         if (triggerRef.current) {
             const r = triggerRef.current.getBoundingClientRect();
             const margin = 8;
-            // Always drop below the trigger; cap the height to the room left
-            // beneath it so the list scrolls instead of spilling off-screen.
-            const spaceBelow = window.innerHeight - r.bottom - margin;
-            const maxHeight = Math.min(320, spaceBelow);
-            setRect({ top: r.bottom + 4, left: r.left, width: r.width, maxHeight });
+            const below = window.innerHeight - r.bottom - margin;
+            const above = r.top - margin;
+            // Drop below by default, and above only when below is too cramped to read and above
+            // is roomier. It used to always drop below, so a row near the foot of the page opened
+            // a panel a few pixels tall — a list with nowhere to put its own options.
+            const up = below < PANEL_MIN && above > below;
+            const room = up ? above : below;
+            setRect({
+                left: r.left,
+                width: r.width,
+                top: up ? undefined : r.bottom + 4,
+                bottom: up ? window.innerHeight - r.top + 4 : undefined,
+                maxHeight: Math.max(PANEL_MIN, Math.min(PANEL_MAX, room)),
+            });
         }
         setOpen((prev) => !prev);
     };
@@ -93,6 +128,26 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
         };
     }, [open]);
 
+    /**
+     * Hand the wheel to the page once the option list has nothing left to give.
+     *
+     * A browser chains an unspent wheel to the next scrollable ancestor; the portal breaks that
+     * chain, so without this the gesture reaches nothing at all — no scroll event, so not even
+     * the close-on-scroll below fires, and the control reads as frozen rather than as a menu
+     * that is staying put. Scrolling the page then closes the panel through that same handler,
+     * which is what scrolling anywhere else on the page already does.
+     */
+    const forwardWheel = (e: React.WheelEvent) => {
+        const list = listRef.current;
+        if (list) {
+            const left = e.deltaY > 0 ? list.scrollHeight - list.clientHeight - list.scrollTop : list.scrollTop;
+            if (left > 0) {
+                return;
+            }
+        }
+        scrollableAncestor(triggerRef.current)?.scrollBy({ top: e.deltaY });
+    };
+
     return (
         <>
             {/* Trigger — stays in normal document flow */}
@@ -118,9 +173,11 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                 createPortal(
                     <div
                         id="search-select-portal"
+                        onWheel={forwardWheel}
                         style={{
                             position: 'fixed',
                             top: rect.top,
+                            bottom: rect.bottom,
                             left: rect.left,
                             width: rect.width,
                             maxHeight: rect.maxHeight,
@@ -142,7 +199,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                         </div>
 
                         {/* Options list */}
-                        <div className="min-h-0 flex-1 overflow-y-auto py-1">
+                        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto py-1">
                             {filtered.length === 0 ? (
                                 <div className="text-muted-foreground px-3 py-2 text-sm">No results</div>
                             ) : (
