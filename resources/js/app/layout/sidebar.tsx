@@ -22,6 +22,10 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const role = (user?.role ?? 'user') as Role;
     const { data: settings } = useSettings();
     const iconsOnly = sidebar === 'icons';
+    // The account name follows the UI language when the employee record carries a Thai
+    // one; the avatar initials stay on the English name so the chip doesn't change shape
+    // with the language, exactly as the employee drawer does.
+    const displayName = lang === 'th' ? (user?.name_th ?? user?.name) : user?.name;
 
     const perms = user?.permissions ?? [];
     // All "needs attention" counts arrive together from one endpoint, which decides per
@@ -143,7 +147,7 @@ export function Sidebar({ onProfile }: { onProfile: () => void }) {
                     >
                         <UserAvatar name={user?.name ?? 'IN'} photoUrl={user?.photo_url} className="h-9 w-9 shrink-0" textClassName="text-xs" />
                         <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">{user?.name}</div>
+                            <div className="truncate text-sm font-medium">{displayName}</div>
                             <div className="text-muted-foreground truncate text-xs">{user?.group_name ?? user?.role_label}</div>
                         </div>
                     </button>
