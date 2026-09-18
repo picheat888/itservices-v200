@@ -6,6 +6,7 @@ import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
 import { AlertTriangle, ArrowRight, Loader2, MessageSquarePlus, Send } from 'lucide-react';
@@ -87,19 +88,25 @@ export function TicketUpdateModal({
     const currentDueAt = view?.sla?.resolve_due_at ?? null;
     const dueUnchanged = forecast !== null && currentDueAt !== null && new Date(forecast.due_at).getTime() === new Date(currentDueAt).getTime();
 
-    // The options ARE the forecast. A repair target belongs to a (ticket type, who does the
-    // work) pair, so what can be picked depends on the case in front of you — and the server
-    // only forecasts the pairs an administrator has priced, plus Standard. Listing anything
-    // else would offer a choice the endpoint refuses, and one that would otherwise fall back to
-    // the priority target: the short deadline these cases breach on.
-    const options = (view?.work_class_forecast ?? []).map((f) => ({
-        value: f.work_class,
-        label: t(TICKET_WORK_CLASS_META[f.work_class].key),
-        search: t(TICKET_WORK_CLASS_META[f.work_class].key),
-    }));
-    // Nothing to move the case to — only Standard came back, so the picker would be a control
-    // with one option that is already selected.
-    const noRepairPriced = offersWorkClass && options.length <= 1;
+    // The options ARE the forecast, minus Standard. A repair target belongs to a (ticket type,
+    // who does the work) pair, so what can be picked depends on the case in front of you, and
+    // the server only forecasts the pairs an administrator has priced. Listing anything else
+    // would offer a choice the endpoint refuses, and one that would otherwise fall back to the
+    // priority target: the short deadline these cases breach on.
+    //
+    // Standard is not one of them. It is the absence of a classification, not a kind of work —
+    // it belongs in the checkbox that turns the picker on, where "not ticked" says it plainly,
+    // rather than sitting in a list of technicians as a thing you could send a repair to.
+    const options = (view?.work_class_forecast ?? [])
+        .filter((f) => f.work_class !== 'standard')
+        .map((f) => ({
+            value: f.work_class,
+            label: t(TICKET_WORK_CLASS_META[f.work_class].key),
+            search: t(TICKET_WORK_CLASS_META[f.work_class].key),
+        }));
+    // Nobody has priced a technician for this kind of case, so there is nothing to send it to.
+    const noRepairPriced = offersWorkClass && options.length === 0;
+    const sendingToTechnician = workClass !== 'standard';
 
     const submit = async () => {
         if (!ticket) return;
@@ -164,7 +171,23 @@ export function TicketUpdateModal({
 
                     {offersWorkClass && !noRepairPriced && (
                         <Field label={t('ticket_work_class')} help={t('ticket_work_class_hint')}>
-                            <SearchableSelect value={workClass} onChange={(v) => setWorkClass(v as TicketWorkClass)} options={options} />
+                            <div className="space-y-2.5">
+                                {/* Ticking says the repair leaves this desk; the list then says who
+                                    it goes to. Unticking is how a misclassification is undone, and
+                                    it reads as what it is rather than as picking "Standard work"
+                                    out of a list of technicians. */}
+                                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                                    <Checkbox
+                                        checked={sendingToTechnician}
+                                        onCheckedChange={(on) => setWorkClass(on ? options[0].value : 'standard')}
+                                    />
+                                    <span>{t('ticket_work_class_send')}</span>
+                                </label>
+
+                                {sendingToTechnician && (
+                                    <SearchableSelect value={workClass} onChange={(v) => setWorkClass(v as TicketWorkClass)} options={options} />
+                                )}
+                            </div>
                         </Field>
                     )}
 
