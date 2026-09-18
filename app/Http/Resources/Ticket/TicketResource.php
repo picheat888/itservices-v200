@@ -84,6 +84,11 @@ class TicketResource extends JsonResource
                 self::showsDeskInternals($request) && $this->resource->relationLoaded('updates'),
                 fn () => $this->workClassForecast(),
             ),
+            // The one date from the SLA machinery the person waiting is entitled to: when the
+            // desk expects to be finished. NOT gated behind showsDeskInternals — "when will my
+            // case be done" is the requester's own question, and it is the only part of the
+            // block above that answers it rather than scoring the team.
+            'expected_at' => $this->expectedAt(),
             'responded_at' => $this->responded_at?->toIso8601String(),
             'resolved_at' => $this->resolved_at?->toIso8601String(),
 
@@ -132,6 +137,29 @@ class TicketResource extends JsonResource
     private function slaTarget(): array
     {
         return self::targetPayload(TicketSla::targetFor($this->resource));
+    }
+
+    /**
+     * เมื่อไรที่คาดว่าเคสนี้จะเสร็จ — null เมื่อยังตอบไม่ได้หรือไม่ต้องตอบแล้ว
+     *
+     * - เคสที่ปิดหรือยกเลิกไปแล้ว: เสร็จจริงไปแล้ว วันที่จริงอยู่บนไทม์ไลน์ การคาดการณ์ไม่มีความหมายอีก
+     * - เคสที่ยังไม่มีใครรับ: นาฬิกาปิดเคสยังไม่เริ่มเดิน (ดู TicketSla::resolveStart) วันที่ที่เก็บไว้
+     *   เป็นค่าชั่วคราวที่จะขยับทันทีที่มีคนกดรับ การบอกวันที่ที่กำลังจะผิดกับคนที่รออยู่ แย่กว่า
+     *   การบอกว่ายังไม่รู้
+     */
+    private function expectedAt(): ?string
+    {
+        /** @var Ticket $ticket */
+        $ticket = $this->resource;
+
+        if ($ticket->created_at === null || $ticket->responded_at === null) {
+            return null;
+        }
+        if (in_array($ticket->status, [TicketStatus::Completed, TicketStatus::Canceled], true)) {
+            return null;
+        }
+
+        return TicketSla::resolveDueAt($ticket)->toIso8601String();
     }
 
     /**

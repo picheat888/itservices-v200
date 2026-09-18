@@ -736,6 +736,24 @@ export function TicketDetailDrawer({
                                 {view.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>}
                             </div>
 
+                            {/* For the person waiting, not the desk: one date answering "when will
+                                this be done", with none of the target-vs-actual scoring below it.
+                                Hidden from anyone who gets the SLA block, which already carries the
+                                same instant under a name that means something to them. */}
+                            {!view.sla && view.status !== 'completed' && view.status !== 'canceled' && (
+                                <>
+                                    <div className="bg-border/60 my-3 h-px" />
+                                    <SectionLabel>{t('ticket_expected_at')}</SectionLabel>
+                                    <div className="pl-1 text-sm">
+                                        {view.expected_at ? (
+                                            <span className="font-mono">{fmtWhen(view.expected_at)}</span>
+                                        ) : (
+                                            <span className="text-muted-foreground italic">{t('ticket_expected_at_pending')}</span>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
                             {view.sla && (
                                 <>
                                     <div className="bg-border/60 my-3 h-px" />

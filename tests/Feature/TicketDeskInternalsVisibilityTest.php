@@ -65,6 +65,45 @@ class TicketDeskInternalsVisibilityTest extends TestCase
         $this->getJson('/api/tickets')->assertOk()->assertJsonMissingPath('data.0.sla');
     }
 
+    public function test_a_requester_is_told_when_their_case_is_expected_to_be_finished(): void
+    {
+        // The one date out of all this the person waiting is entitled to. It travels on its own
+        // field, outside the gated block, so answering "when will it be done" never means handing
+        // over the scoring that sits beside the answer.
+        $me = $this->user(['tickets.my']);
+        $ticket = Ticket::factory()->create([
+            'requester_id' => $me->employee_id,
+            'status' => 'in_progress',
+            'priority' => 'critical',
+            'created_at' => '2026-01-14 08:00:00',
+            'responded_at' => '2026-01-14 10:00:00',
+        ]);
+        $this->actingAs($me);
+
+        $this->getJson("/api/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.sla')
+            ->assertJsonPath('data.expected_at', fn (?string $at) => str_starts_with((string) $at, '2026-01-14T15:00:00'));
+    }
+
+    public function test_a_case_nobody_has_taken_yet_promises_the_requester_no_date(): void
+    {
+        // The resolution clock starts when the case is taken, so the stored deadline is a
+        // placeholder that moves the moment somebody picks it up. A date that is about to be
+        // wrong is worse to give the person waiting than no date at all.
+        $me = $this->user(['tickets.my']);
+        $ticket = Ticket::factory()->create([
+            'requester_id' => $me->employee_id,
+            'status' => 'open',
+            'responded_at' => null,
+        ]);
+        $this->actingAs($me);
+
+        $this->getJson("/api/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonPath('data.expected_at', null);
+    }
+
     public function test_whoever_can_take_a_case_is_sent_both(): void
     {
         $staff = $this->user(['tickets.resolve', 'tickets.view_all', 'tickets.level_hardware']);
