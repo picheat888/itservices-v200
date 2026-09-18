@@ -8,6 +8,8 @@ enum TicketCategory: string
     case Hardware = 'hardware';
     case Software = 'software';
     case Network = 'network';
+    case Cctv = 'cctv';
+    case Telephone = 'telephone';
     case Other = 'other';
 
     /** English label for places that render outside the SPA's translations, such as emails. */
@@ -17,6 +19,8 @@ enum TicketCategory: string
             self::Hardware => 'Hardware',
             self::Software => 'Software',
             self::Network => 'Network',
+            self::Cctv => 'CCTV',
+            self::Telephone => 'Telephone',
             self::Other => 'Other',
         };
     }
@@ -28,6 +32,8 @@ enum TicketCategory: string
             self::Software => 'SW',
             self::Hardware => 'HW',
             self::Network => 'NW',
+            self::Cctv => 'CCTV',
+            self::Telephone => 'TEL',
             self::Other => 'OTH',
         };
     }

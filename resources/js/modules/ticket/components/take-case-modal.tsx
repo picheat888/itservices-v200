@@ -4,7 +4,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { cn } from '@/shared/lib/utils';
-import type { Ticket, TicketPriority } from '@/shared/types';
+import type { Ticket, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Textarea } from '@/shared/ui/textarea';
@@ -23,6 +23,14 @@ const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
  * asked for, before anybody looked at it, and the endpoint refuses a priority on such a case;
  * offering the control would be offering a choice that cannot be saved.
  */
+/**
+ * Categories whose cases are about a physical thing on the asset register, so taking one offers
+ * the tag it is about. Not hardware alone: a camera and a desk phone are as much registered
+ * equipment as a laptop, and a repair logged against neither is a repair nobody can trace back
+ * to the device it was done on.
+ */
+const ASSET_BACKED: TicketCategory[] = ['hardware', 'cctv', 'telephone'];
+
 export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { take } = useTicketMutations();
@@ -39,11 +47,11 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     }, [ticket]);
     const view = ticket ?? shown;
 
-    const isHardware = view?.category === 'hardware';
+    const isAssetBacked = view != null && ASSET_BACKED.includes(view.category);
     const { data: assetData } = useAssets({ page: 1, per_page: 50, search: '' });
     // The requester's own devices — offered as one-click chips, and merged to the
     // top of the search select so a chip-picked asset always renders its label.
-    const { data: ownAssets } = useTicketRequesterAssets(isHardware ? view?.id : null);
+    const { data: ownAssets } = useTicketRequesterAssets(isAssetBacked ? view?.id : null);
     const assetOptions = useMemo(() => {
         const own = (ownAssets ?? []).map((a) => ({
             value: String(a.id),
@@ -119,7 +127,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                         </Field>
                     )}
 
-                    {isHardware && (
+                    {isAssetBacked && (
                         <Field label={t('ticket_related_asset')} help={t('ticket_related_asset_help')}>
                             <div className="space-y-2">
                                 {(ownAssets?.length ?? 0) > 0 && (

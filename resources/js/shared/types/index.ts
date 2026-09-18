@@ -363,7 +363,7 @@ export interface AssetSummary {
 
 // Ticket module types
 export type TicketStatus = 'open' | 'in_progress' | 'completed' | 'canceled';
-export type TicketCategory = 'hardware' | 'software' | 'network' | 'other';
+export type TicketCategory = 'hardware' | 'software' | 'network' | 'cctv' | 'telephone' | 'other';
 export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
 export type TicketWorkClass = 'standard' | 'repair_internal' | 'repair_vendor';
 
