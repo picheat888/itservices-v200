@@ -12,6 +12,14 @@ export interface Column<T> {
     render?: (row: T) => React.ReactNode;
     className?: string;
     align?: 'left' | 'right' | 'center';
+    /**
+     * A CSS width (e.g. '145px'). Any column declaring one switches the table to a fixed
+     * layout, where widths come from here instead of from whatever the rows happen to hold —
+     * so the grid does not shift when the same table is shown with different data. Columns
+     * that declare none share what is left; give exactly one of them no width and it takes
+     * the remainder, truncating rather than pushing the others around.
+     */
+    width?: string;
 }
 
 interface DataTableProps<T> {
@@ -165,7 +173,14 @@ export function DataTable<T>({
             >
                 {/* fillHeight: `h-full` makes the browser stretch the rows to fill the body exactly,
                     so the floored row count never leaves a gap under the last row. */}
-                <table className={cn('w-full text-sm', fillHeight && 'h-full')}>
+                <table className={cn('w-full text-sm', fillHeight && 'h-full', columns.some((c) => c.width) && 'table-fixed')}>
+                    {columns.some((c) => c.width) && (
+                        <colgroup>
+                            {columns.map((c) => (
+                                <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+                            ))}
+                        </colgroup>
+                    )}
                     <thead className={cn(maxBodyHeight && 'bg-card sticky top-0 z-10')}>
                         <tr className="border-border bg-muted/40 border-b">
                             {columns.map((c) => (
