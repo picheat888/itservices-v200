@@ -105,7 +105,7 @@ export const ticket: Dict = {
     ticket_waiting: 'Waiting for IT staff',
     ticket_completed_event: 'Resolved - completed',
     ticket_canceled_event: 'Closed - canceled',
-    ticket_tab_details: 'Details',
+    ticket_tab_details: 'Issue',
     ticket_open_by: 'Request by',
     ticket_request_at: 'Request at',
     ticket_col_no: 'Ticket no.',

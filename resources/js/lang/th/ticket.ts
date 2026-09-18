@@ -105,7 +105,7 @@ export const ticket: Dict = {
     ticket_waiting: 'รอเจ้าหน้าที่รับเคส',
     ticket_completed_event: 'แก้ไขเสร็จสิ้น',
     ticket_canceled_event: 'ปิดเคส - ยกเลิก',
-    ticket_tab_details: 'รายละเอียด',
+    ticket_tab_details: 'ปัญหา',
     ticket_open_by: 'ผู้แจ้ง',
     ticket_request_at: 'วันที่แจ้ง',
     ticket_col_no: 'Ticket no.',
