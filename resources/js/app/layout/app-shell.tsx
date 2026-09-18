@@ -41,7 +41,9 @@ export function AppShell() {
                     {notifOpen && <NotificationsDropdown onClose={() => setNotifOpen(false)} />}
                 </div>
 
-                <main className="bg-content flex-1 overflow-y-auto p-6">
+                {/* scrollbar-gutter keeps the bar's width reserved whether or not a page needs
+                    one, so moving between a long list and a short one does not shift the layout. */}
+                <main className="bg-content flex-1 overflow-y-auto p-6 [scrollbar-gutter:stable]">
                     <Outlet />
                 </main>
             </div>

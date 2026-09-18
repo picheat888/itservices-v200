@@ -575,12 +575,14 @@ export default function TicketsPage() {
             key: 'created',
             header: t('ticket_request_at'),
             className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
+            width: '145px',
             render: (tk) => fmtDateTime(tk.created_at),
         },
         {
             key: 'ticket_no',
             header: t('ticket_col_no'),
             className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
+            width: '168px',
             render: (tk) => tk.ticket_no,
         },
         {
@@ -591,19 +593,21 @@ export default function TicketsPage() {
             // against the edge while the first column sat properly inset.
             key: 'subject',
             header: t('ticket_subject'),
-            className: 'w-full max-w-0 font-medium',
+            className: 'truncate font-medium',
             render: (tk) => <TicketSubject ticket={tk} t={t} />,
         },
         {
             key: 'requester',
             header: t('ticket_open_by'),
-            className: 'whitespace-nowrap',
-            render: (tk) => tk.requester_name ?? tk.requester_code,
+            className: 'truncate',
+            width: '150px',
+            render: (tk) => <span title={tk.requester_name ?? undefined}>{tk.requester_name ?? tk.requester_code}</span>,
         },
         {
             key: 'category',
             header: t('ticket_category'),
             className: 'whitespace-nowrap',
+            width: '132px',
             render: (tk) => (
                 <span className="flex items-center gap-2">
                     <TicketCategoryIcon category={tk.category} className="text-muted-foreground h-4 w-4" />
@@ -619,16 +623,26 @@ export default function TicketsPage() {
                   {
                       key: 'priority',
                       header: t('ticket_priority'),
+                      className: 'whitespace-nowrap',
+                      width: '110px',
                       render: (tk: Ticket) => <TicketPriorityBadge priority={tk.priority ?? null} t={t} />,
                   },
               ]
             : []),
-        { key: 'status', header: t('status'), render: (tk) => <TicketStatusBadge status={tk.status} t={t} /> },
+        {
+            key: 'status',
+            header: t('status'),
+            className: 'whitespace-nowrap',
+            width: '136px',
+            render: (tk) => <TicketStatusBadge status={tk.status} t={t} />,
+        },
         ...(canTake
             ? [
                   {
                       key: 'sla',
                       header: t('ticket_sla'),
+                      className: 'whitespace-nowrap',
+                      width: '146px',
                       // One chip: how much time is left. A repair case used to carry a second
                       // "Repair" chip here, from back when the countdown itself could mislead —
                       // it ran against the priority target and a case weeks inside its 30-day
@@ -643,7 +657,8 @@ export default function TicketsPage() {
             key: 'assignee',
             header: t('ticket_responsible_by'),
             // Capped, not free: one long name would otherwise widen the column for every row.
-            className: 'max-w-[170px] truncate',
+            className: 'truncate',
+            width: '170px',
             render: (tk) =>
                 tk.assignee_name ? (
                     <span title={tk.assignee_name}>{tk.assignee_name}</span>
