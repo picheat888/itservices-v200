@@ -66,8 +66,13 @@ class TicketResource extends JsonResource
             'resolution' => $this->resolution,
             // Both SLA clocks + the state of whichever clock currently matters (null for canceled).
             'sla' => $this->when(self::showsDeskInternals($request), fn () => TicketSla::forTicket($this->resource)),
-            // ลักษณะงาน: งานปกติ หรืองานซ่อมที่วัดด้วย KPI ของตัวเอง เห็นได้เท่าที่เห็น SLA
-            'work_class' => $this->when(self::showsDeskInternals($request), fn () => $this->work_class?->value),
+            // ลักษณะงาน — ไม่ได้อยู่หลังประตู showsDeskInternals เหมือนฟิลด์รอบ ๆ
+            //
+            // priority กับนาฬิกา SLA เป็นเครื่องมือบริหารคิวและใบประเมินของทีม คนที่รอไม่ได้เลือก
+            // และทำอะไรกับมันไม่ได้ แต่ "เครื่องถูกส่งไปที่ช่างภายนอกแล้ว" เป็นที่อยู่ของงาน
+            // ไม่ใช่คะแนน มันคือคำอธิบายว่าทำไมเคสถึงใช้เวลาเป็นสัปดาห์ และเป็นเรื่องของเจ้าของเคส
+            // โดยตรง เก็บไว้ก็มีแต่ทำให้ความเงียบดูเหมือนไม่มีใครทำอะไร
+            'work_class' => $this->work_class?->value,
             // Where this case's resolution target came from, so a three-day deadline on an
             // urgent case can be read rather than argued about. scope null = the built-in
             // default, which is the one case where nobody chose the number.
