@@ -3,6 +3,7 @@ import { AssetTypeIcon } from '@/modules/asset';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
 import { SectionLabel } from '@/shared/components/section-label';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
@@ -449,9 +450,20 @@ export function TicketDetailDrawer({
                         title={view.subject}
                         srDescription={view.ticket_no}
                         headerRight={
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                                 <TicketStatusBadge status={view.status} t={t} />
                                 {view.priority && <TicketPriorityBadge priority={view.priority} t={t} />}
+                                {/* A case out with a technician is a state of the case, like the two
+                                    beside it — not an aside to the button that set it, which is where
+                                    it used to sit, wedged into a row of actions. Named for who has the
+                                    work rather than "Repair": the difference between an in-house bench
+                                    and a vendor is the difference between days and weeks. */}
+                                {view.work_class && view.work_class !== 'standard' && (
+                                    <StatusBadge tone="gray" dot={false}>
+                                        <Wrench className="h-3 w-3" />
+                                        {t(TICKET_WORK_CLASS_META[view.work_class].key)}
+                                    </StatusBadge>
+                                )}
                             </div>
                         }
                     />
@@ -882,14 +894,6 @@ export function TicketDetailDrawer({
                         )}
                         {isWorking && isMine && (
                             <>
-                                {/* The case's kind of work, when it has been classified away from
-                                        standard — read next to the button that changes it. */}
-                                {view.work_class && view.work_class !== 'standard' && (
-                                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                                        <Wrench className="h-3.5 w-3.5" />
-                                        {t(TICKET_WORK_CLASS_META[view.work_class].key)}
-                                    </span>
-                                )}
                                 {/* Between taking and closing: the third thing an assignee can do. */}
                                 <Button variant="outline" onClick={() => onUpdate(view)}>
                                     <MessageSquarePlus className="h-4 w-4" />
