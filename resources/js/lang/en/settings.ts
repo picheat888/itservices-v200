@@ -194,7 +194,7 @@ export const settings: Dict = {
     set_sla_col_request_type: 'Request type',
     set_sla_col_ticket_type: 'Case type',
     set_sla_work_add: 'Add a repair target',
-    set_sla_pair_taken: 'already set',
+    set_sla_pair_taken: 'already',
     set_sla_work_empty: 'No repair targets yet — a case can only be sent to a technician once one is set here.',
     set_sla_col_work_class: 'Repair by',
     set_sla_col_applies: 'Applies',
