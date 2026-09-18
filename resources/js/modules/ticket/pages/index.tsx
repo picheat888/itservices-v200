@@ -566,13 +566,23 @@ export default function TicketsPage() {
     // Columns for the shared DataTable (All / Assigned-to-me tabs):
     // Request at · Ticket no. · Subject · Request by · Category · Priority · Status · Responsible by
     const columns: Column<Ticket>[] = [
+        // A timestamp, a code, a person's name and a category name are single values: breaking one
+        // across two lines makes a row twice as tall and reads as two facts. They keep their line,
+        // and the subject beside them — the one column with a truncation already — gives up the
+        // width instead. Before this, one CCTV case (a longer prefix, a longer category name) was
+        // enough to wrap five columns of every row on the page.
         {
             key: 'created',
             header: t('ticket_request_at'),
-            className: 'text-muted-foreground font-mono text-xs',
+            className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
             render: (tk) => fmtDateTime(tk.created_at),
         },
-        { key: 'ticket_no', header: t('ticket_col_no'), className: 'text-muted-foreground font-mono text-xs', render: (tk) => tk.ticket_no },
+        {
+            key: 'ticket_no',
+            header: t('ticket_col_no'),
+            className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
+            render: (tk) => tk.ticket_no,
+        },
         {
             key: 'subject',
             header: t('ticket_subject'),
@@ -582,11 +592,13 @@ export default function TicketsPage() {
         {
             key: 'requester',
             header: t('ticket_open_by'),
+            className: 'whitespace-nowrap',
             render: (tk) => tk.requester_name ?? tk.requester_code,
         },
         {
             key: 'category',
             header: t('ticket_category'),
+            className: 'whitespace-nowrap',
             render: (tk) => (
                 <span className="flex items-center gap-2">
                     <TicketCategoryIcon category={tk.category} className="text-muted-foreground h-4 w-4" />
@@ -625,6 +637,7 @@ export default function TicketsPage() {
         {
             key: 'assignee',
             header: t('ticket_responsible_by'),
+            className: 'whitespace-nowrap',
             render: (tk) => tk.assignee_name ?? <span className="text-muted-foreground italic">{t('ticket_unassigned')}</span>,
         },
     ];
