@@ -742,6 +742,12 @@ export function TicketDetailDrawer({
                                             // A closed case has a verdict, not a countdown — the badge
                                             // already says met or missed, and a full bar adds nothing.
                                             const running = view.sla.state !== 'met' && view.sla.state !== 'missed';
+                                            // Nobody has taken it, so the resolution clock has not started
+                                            // (see TicketSla::resolveStart). The date the server carries is a
+                                            // placeholder that keeps the queue sortable, not a promise — and
+                                            // it moves the moment somebody picks the case up, so printing it
+                                            // as a deadline hands the reader a date that is about to be wrong.
+                                            const resolveNotStarted = !view.responded_at;
 
                                             return (
                                                 <>
@@ -756,7 +762,12 @@ export function TicketDetailDrawer({
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <RailRow label={t(pastLabel)} value={fmtWhen(pastDue)} quiet />
+                                                    <RailRow
+                                                        label={t(pastLabel)}
+                                                        value={resolveNotStarted ? t('ticket_sla_resolve_not_started') : fmtWhen(pastDue)}
+                                                        mono={!resolveNotStarted}
+                                                        quiet
+                                                    />
                                                 </>
                                             );
                                         })()}
