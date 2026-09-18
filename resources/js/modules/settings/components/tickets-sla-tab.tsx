@@ -449,11 +449,17 @@ export function TicketsSlaTab() {
                                                 <SearchSelect
                                                     value={row.category}
                                                     onChange={(v) => setWorkTarget(key, { category: v as TicketCategory })}
-                                                    // A pair already on the list is not offered again, so two
-                                                    // rows can never both claim the same kind of case.
-                                                    options={TICKET_CATEGORIES.filter(
-                                                        (c) => c === row.category || !taken.has(`${c}:${row.work_class}`),
-                                                    ).map((c) => ({ value: c, label: t(`ticket_cat_${c}`) }))}
+                                                    // Every ticket type is listed on every row, and one whose
+                                                    // pair another row already claims is greyed with the reason.
+                                                    // Dropping it instead gave three rows of the same column
+                                                    // three different lists and a search box that answered "no
+                                                    // results" for a type sitting in plain sight one row down.
+                                                    options={TICKET_CATEGORIES.map((c) => ({
+                                                        value: c,
+                                                        label: t(`ticket_cat_${c}`),
+                                                        disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
+                                                        note: c !== row.category && taken.has(`${c}:${row.work_class}`) ? t('set_sla_pair_taken') : undefined,
+                                                    }))}
                                                 />
                                             </span>
                                         </td>
@@ -462,9 +468,12 @@ export function TicketsSlaTab() {
                                                 <SearchSelect
                                                     value={row.work_class}
                                                     onChange={(v) => setWorkTarget(key, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
-                                                    options={WORK_CLASSES.filter(
-                                                        (w) => w === row.work_class || !taken.has(`${row.category}:${w}`),
-                                                    ).map((w) => ({ value: w, label: t(WORK_CLASS_LABEL_KEY[w]) }))}
+                                                    options={WORK_CLASSES.map((w) => ({
+                                                        value: w,
+                                                        label: t(WORK_CLASS_LABEL_KEY[w]),
+                                                        disabled: w !== row.work_class && taken.has(`${row.category}:${w}`),
+                                                        note: w !== row.work_class && taken.has(`${row.category}:${w}`) ? t('set_sla_pair_taken') : undefined,
+                                                    }))}
                                                 />
                                             </span>
                                         </td>

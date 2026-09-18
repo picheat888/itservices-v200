@@ -3,6 +3,10 @@ import { getData } from 'country-list';
 export interface SelectOption {
     value: string;
     label: string;
+    /** Offered but not choosable — say why in `note`, or the row reads as broken. */
+    disabled?: boolean;
+    /** Short right-aligned reason, shown beside a disabled option. */
+    note?: string;
 }
 
 // Country name as value so it matches existing DB values (e.g. "Thailand")

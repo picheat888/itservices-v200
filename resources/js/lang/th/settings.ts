@@ -191,6 +191,7 @@ export const settings: Dict = {
     set_sla_col_request_type: 'ประเภทคำขอ',
     set_sla_col_ticket_type: 'ประเภท Ticket',
     set_sla_work_add: 'เพิ่มเป้าหมายงานซ่อม',
+    set_sla_pair_taken: 'ตั้งไว้แล้ว',
     set_sla_work_empty: 'ยังไม่มีเป้าหมายงานซ่อม - ส่งเคสให้ช่างได้ก็ต่อเมื่อตั้งค่าตรงนี้แล้ว',
     set_sla_col_work_class: 'ลักษณะงาน',
     set_sla_col_applies: 'ใช้งาน',
