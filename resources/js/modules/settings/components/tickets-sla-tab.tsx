@@ -445,7 +445,7 @@ export function TicketsSlaTab() {
                                 return (
                                     <tr key={key} className="border-border/60 border-b last:border-0">
                                         <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-32">
+                                            <span className="inline-block w-56">
                                                 <SearchSelect
                                                     value={row.category}
                                                     onChange={(v) => setWorkTarget(key, { category: v as TicketCategory })}
