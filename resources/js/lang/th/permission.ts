@@ -96,14 +96,14 @@ export const permission: Dict = {
     'perm_desc_tickets.view_all': 'เห็นแท็บ Tickets ทั้งหมด โดยถูกจำกัดด้วย Tickets Level ด้านล่าง',
     'perm_act_tickets.resolve': 'Take Case',
     'perm_desc_tickets.resolve':
-        '- เปิดเพื่อรับเคส แก้ไข ปิดงาน และยกเลิก\n- เปิดเพื่อมีรายชื่อผู้รับมอบ/ส่งต่อ เคส\n- เปิดเพื่อรับการแจ้งเตือนเคสใหม่',
+        '- เปิดเพื่อรับเคส แก้ไข ปิดเคส และยกเลิก\n- เปิดเพื่อมีรายชื่อผู้รับมอบ/ส่งต่อ เคส\n- เปิดเพื่อรับการแจ้งเตือนเคสใหม่',
     'perm_act_tickets.forward': 'Forward Case',
     'perm_desc_tickets.forward': 'ส่งต่อเคสที่กำลังทำ เมื่อเจ้าหน้าที่ปัจจุบันไม่สามารถแก้ไขปัญหาได้',
     'perm_act_tickets.assign': 'Assign to',
     'perm_desc_tickets.assign': 'มอบเคสที่ยังไม่มีผู้รับให้เจ้าหน้าที่',
     'perm_act_tickets.set_work_class': 'จัดประเภทงานซ่อมยาว',
     'perm_desc_tickets.set_work_class':
-        'ตั้งเคสเป็นงานซ่อมโดยช่างในองค์กรหรือ vendor เพื่อให้วัดด้วย KPI งานซ่อมแทน SLA ของงานปกติ ทุกครั้งที่เปลี่ยนต้องกรอกเหตุผล และถูกบันทึกลงไทม์ไลน์ของเคส',
+        'ส่งเคสเป็นงานซ่อมให้ช่างภายในองค์กรหรือช่างภายนอก เพื่อให้วัดด้วย KPI งานซ่อมแทน SLA ของงานปกติ ทุกครั้งที่เปลี่ยนต้องกรอกเหตุผล และถูกบันทึกลงไทม์ไลน์ของเคส',
     'perm_act_tickets.level_hardware': 'Hardware',
     'perm_act_tickets.level_software': 'Software',
     'perm_act_tickets.level_network': 'Network',
