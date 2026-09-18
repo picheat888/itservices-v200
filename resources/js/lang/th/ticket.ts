@@ -14,6 +14,8 @@ export const ticket: Dict = {
     ticket_sla_missed_badge: 'เกิน SLA',
     ticket_sla_response_due: 'กำหนดตอบรับ',
     ticket_sla_resolve_due: 'กำหนดปิดเคส',
+    ticket_expected_at: 'คาดว่าจะเสร็จ',
+    ticket_expected_at_pending: 'ทราบเมื่อมีเจ้าหน้าที่รับเคส',
     ticket_sla_resolve_not_started: 'เริ่มนับเมื่อกดรับเคส',
     ticket_sla_target_from: 'เป้าหมาย',
     ticket_sla_target_hours: '{n} ชั่วโมงทำการ',

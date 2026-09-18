@@ -459,6 +459,8 @@ export interface Ticket {
      *   means THAT class has no dedicated rule and picking it will not move the deadline.
      */
     work_class_forecast?: TicketWorkClassForecast[] | null;
+    /** When the desk expects to finish — null until somebody takes it, and once it is closed. */
+    expected_at: string | null;
     responded_at: string | null;
     resolved_at: string | null;
     attachments?: TicketAttachment[];

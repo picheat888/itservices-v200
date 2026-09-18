@@ -14,6 +14,8 @@ export const ticket: Dict = {
     ticket_sla_missed_badge: 'Missed',
     ticket_sla_response_due: 'Response due',
     ticket_sla_resolve_due: 'Resolve due',
+    ticket_expected_at: 'Expected completion',
+    ticket_expected_at_pending: 'Set once someone takes the case',
     ticket_sla_resolve_not_started: 'Starts when the case is taken',
     ticket_sla_target_from: 'Target',
     ticket_sla_target_hours: '{n} working hours',
