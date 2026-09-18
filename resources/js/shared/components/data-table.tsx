@@ -172,7 +172,9 @@ export function DataTable<T>({
                                 <th
                                     key={c.key}
                                     className={cn(
-                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide uppercase',
+                                        // A header is one label; broken across lines it reads as
+                                        // several and makes the header row taller than every data row.
+                                        'text-muted-foreground px-[var(--row-px)] py-[var(--row-py)] text-[11.5px] font-semibold tracking-wide whitespace-nowrap uppercase',
                                         alignClass(c.align),
                                     )}
                                 >
