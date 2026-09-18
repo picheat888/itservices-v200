@@ -276,7 +276,6 @@ export function TicketDetailDrawer({
     canTake,
     canAssign,
     canForward,
-    canSetWorkClass,
     meId,
     meEmployeeId,
     canEdit,
@@ -286,7 +285,6 @@ export function TicketDetailDrawer({
     onForward,
     onResolve,
     onUpdate,
-    onSetWorkClass,
 }: {
     ticket: Ticket | null;
     onClose: () => void;
@@ -300,7 +298,6 @@ export function TicketDetailDrawer({
      *  Combined below with "is the assignee" and "is in progress" — the same three gates the
      *  server checks, in the same order, because a button that would get a 403 back is a button
      *  that should never have been drawn. */
-    canSetWorkClass: boolean;
     meId: number | undefined;
     /** The viewer's employee id — a case they filed themselves can never be taken by them. */
     meEmployeeId: number | null | undefined;
@@ -312,8 +309,6 @@ export function TicketDetailDrawer({
     onResolve: (t: Ticket, mode: ResolveMode) => void;
     /** Opens the progress-note dialog — offered to the assignee while the case is in flight. */
     onUpdate: (t: Ticket) => void;
-    /** Opens the classify-work dialog — offered under the same three gates as canSetWorkClass. */
-    onSetWorkClass: (t: Ticket) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -350,7 +345,6 @@ export function TicketDetailDrawer({
     const isWorking = view.status === 'in_progress';
     // Mirrors the server's three gates exactly (permission -> assignee -> status, in that
     // order) — a button that would come back 403 is a button that should not have been drawn.
-    const showClassify = canSetWorkClass && isMine && isWorking;
     const updates = view.updates ?? [];
     const progress = progressEntries(view, t);
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
@@ -711,7 +705,12 @@ export function TicketDetailDrawer({
                                         {/* Where the resolution target came from. Without this, a three-day
                                             deadline on a case marked critical reads as a bug. */}
                                         {view.sla_target && (
-                                            <RailRow label={t('ticket_sla_target_from')} value={slaTargetLabel(view.sla_target, t)} mono={false} wrap />
+                                            <RailRow
+                                                label={t('ticket_sla_target_from')}
+                                                value={slaTargetLabel(view.sla_target, t)}
+                                                mono={false}
+                                                wrap
+                                            />
                                         )}
                                     </div>
                                 </>
@@ -761,12 +760,6 @@ export function TicketDetailDrawer({
                                             <Wrench className="h-3.5 w-3.5" />
                                             {t(TICKET_WORK_CLASS_META[view.work_class].key)}
                                         </span>
-                                    )}
-                                    {showClassify && (
-                                        <Button variant="outline" onClick={() => onSetWorkClass(view)}>
-                                            <Wrench className="h-4 w-4" />
-                                            {t('ticket_work_class_change')}
-                                        </Button>
                                     )}
                                     {/* Between taking and closing: the third thing an assignee can do. */}
                                     <Button variant="outline" onClick={() => onUpdate(view)}>

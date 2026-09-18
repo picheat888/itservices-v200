@@ -411,6 +411,9 @@ export interface Ticket {
     category: TicketCategory;
     /** Absent for viewers without the Take Case gate — the API leaves it out, see TicketResource. */
     priority?: TicketPriority | null;
+    /** Reference of the request this case was opened from, or null when somebody reported it
+     *  directly. Decides whether the Take dialog asks for a priority at all. */
+    from_request?: string | null;
     /** Absent for viewers without the Take Case gate — the API leaves it out, see TicketResource. */
     work_class?: TicketWorkClass;
     status: TicketStatus;

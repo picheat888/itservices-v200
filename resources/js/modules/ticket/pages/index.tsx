@@ -53,8 +53,6 @@ import { ForwardTicketModal } from '../components/forward-ticket-modal';
 import { ResolveTicketModal, type ResolveMode } from '../components/resolve-ticket-modal';
 import { TakeCaseModal } from '../components/take-case-modal';
 import { TicketDetailDrawer } from '../components/ticket-detail-drawer';
-import { TicketUpdateModal } from '../components/ticket-update-modal';
-import { TicketWorkClassModal } from '../components/ticket-work-class-modal';
 import {
     slaDuration,
     TICKET_CATEGORIES,
@@ -66,6 +64,7 @@ import {
     TicketStatusBadge,
     TicketWorkClassBadge,
 } from '../components/ticket-meta';
+import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
@@ -462,7 +461,6 @@ export default function TicketsPage() {
     const [editTicket, setEditTicket] = useState<Ticket | null>(null);
     const [resolveState, setResolveState] = useState<{ ticket: Ticket; mode: ResolveMode } | null>(null);
     const [updateTicket, setUpdateTicket] = useState<Ticket | null>(null);
-    const [classifyTicket, setClassifyTicket] = useState<Ticket | null>(null);
 
     // The record the drawer is currently showing, which outlives `detail` on the way out:
     // closing drops ?view=, the query switches off, and `detail` is undefined on the very
@@ -600,7 +598,13 @@ export default function TicketsPage() {
         // the other measures the team against its targets. A requester chose neither and can act
         // on neither, and the API leaves both out for them too (TicketResource).
         ...(canTake
-            ? [{ key: 'priority', header: t('ticket_priority'), render: (tk: Ticket) => <TicketPriorityBadge priority={tk.priority ?? null} t={t} /> }]
+            ? [
+                  {
+                      key: 'priority',
+                      header: t('ticket_priority'),
+                      render: (tk: Ticket) => <TicketPriorityBadge priority={tk.priority ?? null} t={t} />,
+                  },
+              ]
             : []),
         { key: 'status', header: t('status'), render: (tk) => <TicketStatusBadge status={tk.status} t={t} /> },
         ...(canTake
@@ -1008,7 +1012,12 @@ export default function TicketsPage() {
                                                         setPage(1);
                                                     }}
                                                     options={[
-                                                        { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
+                                                        {
+                                                            value: ALL,
+                                                            label: t('ticket_all'),
+                                                            search: t('ticket_all'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
                                                         ...(Object.keys(TICKET_PRIORITY_META) as TicketPriority[]).map((p) => ({
                                                             value: p,
                                                             label: t(TICKET_PRIORITY_META[p].key),
@@ -1033,7 +1042,12 @@ export default function TicketsPage() {
                                                         setPage(1);
                                                     }}
                                                     options={[
-                                                        { value: ALL, label: t('ticket_all'), search: t('ticket_all'), icon: <ToneDot tone="gray" /> },
+                                                        {
+                                                            value: ALL,
+                                                            label: t('ticket_all'),
+                                                            search: t('ticket_all'),
+                                                            icon: <ToneDot tone="gray" />,
+                                                        },
                                                         {
                                                             value: 'breached',
                                                             label: t('ticket_sla_filter_overdue'),
@@ -1057,11 +1071,13 @@ export default function TicketsPage() {
                                                     setPage(1);
                                                 }}
                                                 // No sorting by a column this reader is not shown.
-                                                options={SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due')).map((s) => ({
-                                                    value: s,
-                                                    label: t(SORT_LABEL[s]),
-                                                    search: t(SORT_LABEL[s]),
-                                                }))}
+                                                options={SORT_OPTIONS.filter((s) => canTake || (s !== 'priority_desc' && s !== 'sla_due')).map(
+                                                    (s) => ({
+                                                        value: s,
+                                                        label: t(SORT_LABEL[s]),
+                                                        search: t(SORT_LABEL[s]),
+                                                    }),
+                                                )}
                                             />
                                         </div>
                                     </div>
@@ -1111,7 +1127,6 @@ export default function TicketsPage() {
                 canTake={canTake && (shownTicket ? hasLevel(shownTicket.category) : false)}
                 canAssign={canAssign}
                 canForward={canForward}
-                canSetWorkClass={canSetWorkClass}
                 meId={user?.id}
                 meEmployeeId={user?.employee_id}
                 canEdit={canEditDetail}
@@ -1121,14 +1136,12 @@ export default function TicketsPage() {
                 onForward={(tk) => setForwardTicket(tk)}
                 onResolve={startResolve}
                 onUpdate={(tk) => setUpdateTicket(tk)}
-                onSetWorkClass={(tk) => setClassifyTicket(tk)}
             />
             <EditTicketDrawer ticket={editTicket} onClose={() => setEditTicket(null)} />
             <TakeCaseModal ticket={takeTicket} onClose={() => setTakeTicket(null)} />
             <AssignTicketModal ticket={assignTicket} onClose={() => setAssignTicket(null)} />
             <ForwardTicketModal ticket={forwardTicket} onClose={() => setForwardTicket(null)} />
-            <TicketUpdateModal ticket={updateTicket} onClose={() => setUpdateTicket(null)} />
-            <TicketWorkClassModal ticket={classifyTicket} onClose={() => setClassifyTicket(null)} />
+            <TicketUpdateModal ticket={updateTicket} canSetWorkClass={canSetWorkClass} onClose={() => setUpdateTicket(null)} />
             <ResolveTicketModal ticket={resolveState?.ticket ?? null} mode={resolveState?.mode ?? null} onClose={() => setResolveState(null)} />
         </div>
     );

@@ -72,15 +72,13 @@ export const ticketApi = {
     get: (id: number) => http.get<ApiEnvelope<Ticket>>(`/tickets/${id}`).then((r) => r.data.data),
     create: (payload: CreateTicketPayload) => mutate<Ticket>('post', '/tickets', payload),
     update: (id: number, payload: UpdateTicketPayload) => mutate<Ticket>('put', `/tickets/${id}`, payload),
-    take: (id: number, body: { priority: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
+    take: (id: number, body: { priority?: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
         mutate<Ticket>('post', `/tickets/${id}/take`, body),
-    assign: (id: number, body: { assignee_id: number; priority: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
+    assign: (id: number, body: { assignee_id: number; priority?: TicketPriority }) => mutate<Ticket>('post', `/tickets/${id}/assign`, body),
     forward: (id: number, body: { assignee_id: number }) => mutate<Ticket>('post', `/tickets/${id}/forward`, body),
     /** Write a progress note on a case in flight. */
-    addUpdate: (id: number, body: { body: string }) => mutate<Ticket>('post', `/tickets/${id}/updates`, body),
+    addUpdate: (id: number, body: { body: string; work_class?: TicketWorkClass }) => mutate<Ticket>('post', `/tickets/${id}/updates`, body),
     /** Classify a case's kind of work — the deadline follows (see TicketSla::targetFor). */
-    setWorkClass: (id: number, payload: { work_class: TicketWorkClass; reason: string }) =>
-        mutate<Ticket>('patch', `/tickets/${id}/work-class`, payload),
     resolve: (id: number, body: { mode: 'complete' | 'cancel'; resolution: string }) => mutate<Ticket>('post', `/tickets/${id}/resolve`, body),
     /**
      * Uploads attachments ONE AT A TIME so each file reports its own progress

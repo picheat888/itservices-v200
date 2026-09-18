@@ -15,11 +15,20 @@ import { TICKET_PRIORITY_META } from './ticket-meta';
 
 const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
 
-/** An IT staff takes an open case: sets priority, optional note, and (for hardware) a related asset. */
+/**
+ * An IT staff takes an open case: optional note, (for hardware) a related asset, and — only
+ * for a case somebody reported directly — a priority.
+ *
+ * A case opened from an approved request is not given one. Its target was settled by what was
+ * asked for, before anybody looked at it, and the endpoint refuses a priority on such a case;
+ * offering the control would be offering a choice that cannot be saved.
+ */
 export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { take } = useTicketMutations();
     const [priority, setPriority] = useState<TicketPriority>('medium');
+    // null on a case nobody reported directly — see the note on Ticket['from_request'].
+    const fromRequest = !!ticket?.from_request;
     const [note, setNote] = useState('');
     const [assetId, setAssetId] = useState('');
 
@@ -63,7 +72,15 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
 
     const submit = async () => {
         if (!ticket) return;
-        await take.mutateAsync({ id: ticket.id, priority, note: note.trim() || null, related_asset_id: assetId ? Number(assetId) : null });
+        await take.mutateAsync({
+            id: ticket.id,
+            // Omitted entirely rather than sent as null: the endpoint rejects the key outright
+            // on a request-born case, which is what keeps the rule true for anything posting
+            // at the API and not only for this dialog.
+            ...(fromRequest ? {} : { priority }),
+            note: note.trim() || null,
+            related_asset_id: assetId ? Number(assetId) : null,
+        });
         onClose();
     };
 
@@ -82,23 +99,25 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
-                    <Field label={t('ticket_priority')} required>
-                        <div className="flex flex-wrap gap-2">
-                            {PRIORITIES.map((p) => (
-                                <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() => setPriority(p)}
-                                    className={cn(
-                                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                                        priority === p ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    {t(TICKET_PRIORITY_META[p].key)}
-                                </button>
-                            ))}
-                        </div>
-                    </Field>
+                    {!fromRequest && (
+                        <Field label={t('ticket_priority')} required>
+                            <div className="flex flex-wrap gap-2">
+                                {PRIORITIES.map((p) => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => setPriority(p)}
+                                        className={cn(
+                                            'rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                                            priority === p ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
+                                        )}
+                                    >
+                                        {t(TICKET_PRIORITY_META[p].key)}
+                                    </button>
+                                ))}
+                            </div>
+                        </Field>
+                    )}
 
                     {isHardware && (
                         <Field label={t('ticket_related_asset')} help={t('ticket_related_asset_help')}>
