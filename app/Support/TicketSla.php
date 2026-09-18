@@ -188,6 +188,20 @@ class TicketSla
         return "{$category}:{$workClass}";
     }
 
+    /**
+     * The "who does the work" half of a pair key, for callers that have a matched rule and want
+     * to name it. The category half is dropped because every such caller is already holding the
+     * ticket the rule matched, and the ticket carries its own category.
+     *
+     * Lives next to workClassKey() so both directions of the format sit in one place: a reader
+     * that splits the string somewhere else is the same drift the writer was centralised to stop,
+     * only harder to spot because it fails by printing the raw key rather than by throwing.
+     */
+    public static function workClassFromKey(string $key): string
+    {
+        return str_contains($key, ':') ? explode(':', $key, 2)[1] : $key;
+    }
+
     public static function targetFor(Ticket $ticket): array
     {
         $rules = self::rules();

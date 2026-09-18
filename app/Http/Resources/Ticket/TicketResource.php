@@ -131,12 +131,30 @@ class TicketResource extends JsonResource
      */
     private function slaTarget(): array
     {
-        $target = TicketSla::targetFor($this->resource);
+        return self::targetPayload(TicketSla::targetFor($this->resource));
+    }
+
+    /**
+     * รูปแบบเดียวที่ frontend อ่านเป้าหมายหนึ่งอัน — ใช้ทั้ง sla_target และทุกแถวของ forecast
+     *
+     * แถวของลักษณะงานถูกคีย์เป็นคู่ ("network:repair_vendor") ตรงนี้จึงคืนเฉพาะครึ่งที่บอกว่า
+     * ใครเป็นคนทำ ประเภท Ticket อีกครึ่งอยู่บนตัว ticket เองอยู่แล้ว ถ้าส่งคีย์ดิบออกไป ฝั่ง
+     * frontend จะต้องรู้จักรูปแบบคีย์ภายในเพื่อจะแปลชื่อ แล้ววันที่มันแปลไม่ออกมันก็จะพิมพ์
+     * คีย์ดิบลงหน้าจอแทนที่จะพัง — บั๊กที่เงียบกว่าการ error
+     *
+     * @param  array{hours: int, scope: ?SlaScope, value: ?string, clock: TicketSlaClock}  $target
+     * @return array{hours: int, scope: ?string, value: ?string, clock: string}
+     */
+    private static function targetPayload(array $target): array
+    {
+        $value = $target['value'];
 
         return [
             'hours' => $target['hours'],
             'scope' => $target['scope']?->value,
-            'value' => $target['value'],
+            'value' => $value !== null && $target['scope'] === SlaScope::WorkClass
+                ? TicketSla::workClassFromKey($value)
+                : $value,
             // นาฬิกาที่เป้าหมายนี้นับด้วย — "240 ชั่วโมง" อ่านได้คนละแบบระหว่างเวลาทำการกับปฏิทิน
             'clock' => $target['clock']->value,
         ];
@@ -193,14 +211,10 @@ class TicketResource extends JsonResource
         return array_map(function (TicketWorkClass $class) use ($ticket): array {
             $clone = clone $ticket;
             $clone->work_class = $class;
-            $target = TicketSla::targetFor($clone);
 
             return [
                 'work_class' => $class->value,
-                'hours' => $target['hours'],
-                'scope' => $target['scope']?->value,
-                'value' => $target['value'],
-                'clock' => $target['clock']->value,
+                ...self::targetPayload(TicketSla::targetFor($clone)),
                 'due_at' => TicketSla::resolveDueAt($clone)->toIso8601String(),
             ];
         }, $offered);

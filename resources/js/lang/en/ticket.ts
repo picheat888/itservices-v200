@@ -20,7 +20,7 @@ export const ticket: Dict = {
     ticket_sla_target_hours_calendar: '{n} hours, calendar time',
     ticket_sla_target_days: '{n} calendar days',
     ticket_sla_source: 'Rule',
-    ticket_sla_target_repair: 'Repair by {c}',
+    ticket_sla_target_repair: 'Repair: {c}',
     ticket_sla_target_request: 'Request type',
     ticket_sla_target_priority: 'Priority',
     ticket_sla_target_default: 'Default',

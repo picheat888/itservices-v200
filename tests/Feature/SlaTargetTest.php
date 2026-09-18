@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\Ticket\SlaScope;
+use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketSlaClock;
+use App\Enums\Ticket\TicketWorkClass;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
@@ -282,6 +284,26 @@ class SlaTargetTest extends TestCase
             ->assertJsonPath('data.sla_target.scope', 'request_type')
             ->assertJsonPath('data.sla_target.value', 'computer')
             ->assertJsonPath('data.sla_target.hours', 72);
+    }
+
+    public function test_a_repair_target_names_the_technician_not_its_storage_key(): void
+    {
+        // Repair rows are keyed by the pair, category included, so the raw match_value reads
+        // "network:repair_vendor". Handing that to the client makes the format an interface:
+        // the drawer looked the class up, missed, and printed the key on screen instead.
+        $this->rule(SlaScope::WorkClass, TicketSla::workClassKey('network', 'repair_vendor'), 1080);
+        $ticket = Ticket::factory()->create([
+            'category' => TicketCategory::Network,
+            'work_class' => TicketWorkClass::RepairVendor,
+            'priority' => TicketPriority::Critical,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->getJson("/api/tickets/{$ticket->id}")
+            ->assertOk()
+            ->assertJsonPath('data.sla_target.scope', 'work_class')
+            ->assertJsonPath('data.sla_target.value', 'repair_vendor')
+            ->assertJsonPath('data.sla_target.hours', 1080);
     }
 
     public function test_work_class_targets_save_as_rows(): void
