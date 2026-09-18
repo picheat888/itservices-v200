@@ -173,6 +173,7 @@ export const ticket: Dict = {
     // ticket-update-modal.tsx — progress note + kind of work
     ticket_work_class: 'Kind of work',
     ticket_work_class_hint: 'Set this when the repair is handed to a technician — the deadline follows it.',
+    ticket_work_class_send: 'Send this repair to a technician',
     ticket_work_class_standard: 'Standard work',
     ticket_work_class_repair_internal: 'In-house technician',
     ticket_work_class_repair_vendor: 'External technician',

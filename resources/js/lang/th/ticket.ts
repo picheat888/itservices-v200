@@ -173,6 +173,7 @@ export const ticket: Dict = {
     // ticket-update-modal.tsx — บันทึกความคืบหน้า + ลักษณะงาน
     ticket_work_class: 'ลักษณะงาน',
     ticket_work_class_hint: 'ตั้งเมื่อส่งงานซ่อมให้ช่าง — เดดไลน์จะเปลี่ยนตาม',
+    ticket_work_class_send: 'ส่งงานซ่อมนี้ให้ช่าง',
     ticket_work_class_standard: 'งานปกติ',
     ticket_work_class_repair_internal: 'ช่างในองค์กร',
     ticket_work_class_repair_vendor: 'ช่างภายนอก',
