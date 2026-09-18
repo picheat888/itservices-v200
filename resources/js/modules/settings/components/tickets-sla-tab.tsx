@@ -431,7 +431,6 @@ export function TicketsSlaTab() {
                                 <th className="px-3 py-2">{t('set_sla_col_request_type')}</th>
                                 <th className="px-3 py-2">{t('set_sla_resolution')}</th>
                                 <th className="px-3 py-2">{t('set_sla_clock')}</th>
-                                <th className="px-3 py-2">{t('set_sla_col_applies')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -440,12 +439,12 @@ export function TicketsSlaTab() {
                                 return (
                                     <tr key={row.type} className="border-border/60 border-b last:border-0">
                                         <td className="px-3 py-3">
-                                            <span className={cn('flex items-center gap-2', !row.enabled && 'text-muted-foreground')}>
+                                            <span className="flex items-center gap-2">
                                                 {meta && <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />}
-                                                <span className={cn(!row.enabled && 'line-through')}>{t(meta?.labelKey ?? row.type)}</span>
+                                                <span>{t(meta?.labelKey ?? row.type)}</span>
                                             </span>
                                         </td>
-                                        {/* The number stays readable when the row is off — it just no longer applies. */}
+                                        {/* Always applies: a request-born case has no priority to fall back to. */}
                                         <td className="px-3 py-3 align-top">
                                             <div className="flex items-center gap-2">
                                                 <Input
@@ -459,11 +458,12 @@ export function TicketsSlaTab() {
                                                         'h-9 w-24 font-mono',
                                                         reqErrors[row.type] &&
                                                             'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
-                                                        !row.enabled && 'text-muted-foreground line-through',
                                                     )}
                                                 />
                                                 <span className="text-muted-foreground text-xs">{t('set_sla_hours')}</span>
-                                                <span className="text-muted-foreground text-xs">{workingDaysHint(row.resolve, hours, row.clock, t)}</span>
+                                                <span className="text-muted-foreground text-xs">
+                                                    {workingDaysHint(row.resolve, hours, row.clock, t)}
+                                                </span>
                                             </div>
                                             {reqErrors[row.type] && (
                                                 <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
@@ -480,9 +480,6 @@ export function TicketsSlaTab() {
                                                     options={clockOptions}
                                                 />
                                             </span>
-                                        </td>
-                                        <td className="px-3 py-3 align-top">
-                                            <Switch checked={row.enabled} onChange={(v) => setRequestTarget(row.type, { enabled: v })} />
                                         </td>
                                     </tr>
                                 );

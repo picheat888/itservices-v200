@@ -69,13 +69,13 @@ export function useTicketMutations() {
             onSuccess: invalidate,
         }),
         take: useMutation({
-            mutationFn: (v: { id: number; priority: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
-                ticketApi.take(v.id, { priority: v.priority, note: v.note, related_asset_id: v.related_asset_id }),
+            mutationFn: (v: { id: number; priority?: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
+                ticketApi.take(v.id, { ...(v.priority ? { priority: v.priority } : {}), note: v.note, related_asset_id: v.related_asset_id }),
             onSuccess: invalidate,
         }),
         assign: useMutation({
-            mutationFn: (v: { id: number; assignee_id: number; priority: TicketPriority }) =>
-                ticketApi.assign(v.id, { assignee_id: v.assignee_id, priority: v.priority }),
+            mutationFn: (v: { id: number; assignee_id: number; priority?: TicketPriority }) =>
+                ticketApi.assign(v.id, { assignee_id: v.assignee_id, ...(v.priority ? { priority: v.priority } : {}) }),
             onSuccess: invalidate,
         }),
         forward: useMutation({
@@ -83,15 +83,11 @@ export function useTicketMutations() {
             onSuccess: invalidate,
         }),
         addUpdate: useMutation({
-            mutationFn: (v: { id: number; body: string }) => ticketApi.addUpdate(v.id, { body: v.body }),
+            mutationFn: (v: { id: number; body: string; work_class?: TicketWorkClass }) =>
+                ticketApi.addUpdate(v.id, { body: v.body, ...(v.work_class ? { work_class: v.work_class } : {}) }),
             onSuccess: invalidate,
         }),
         /** Classify a case's kind of work — the deadline moves, so this invalidates the same as every other mutation here. */
-        setWorkClass: useMutation({
-            mutationFn: (v: { id: number; work_class: TicketWorkClass; reason: string }) =>
-                ticketApi.setWorkClass(v.id, { work_class: v.work_class, reason: v.reason }),
-            onSuccess: invalidate,
-        }),
         resolve: useMutation({
             mutationFn: (v: { id: number; mode: 'complete' | 'cancel'; resolution: string }) =>
                 ticketApi.resolve(v.id, { mode: v.mode, resolution: v.resolution }),

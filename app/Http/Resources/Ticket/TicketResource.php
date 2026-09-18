@@ -17,15 +17,14 @@ class TicketResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        if (self::showsDeskInternals($request)) {
-            // เฉพาะ single-ticket read (show / storeUpdate / updateWorkClass ฯลฯ) เท่านั้นที่ยังไม่ได้
-            // eager-load serviceRequest มาก่อน — TicketController::index() โหลดไว้แล้วในคิวรีหลัก
-            // (->with([..., 'serviceRequest'])) ดังนั้นบรรทัดนี้ "no-op" กับหน้ารายการ ไม่มีผลอะไรที่นั่น
-            // ที่มันช่วยจริง ๆ คือ 1 คิวรีที่ 'sla' (TicketSla::forTicket) ด้านล่างเรียก targetFor()
-            // ซึ่งอ่าน serviceRequest ผ่าน ->value() ที่ไม่แคช relation ไว้เอง — โหลดล่วงหน้าที่นี่
-            // ที่เดียวกันคิวรีนั้นซ้ำ ไม่ได้แตะตรรกะการคำนวณเดดไลน์เลย
-            $this->resource->loadMissing('serviceRequest');
-        }
+        // เฉพาะ single-ticket read (show / storeUpdate ฯลฯ) เท่านั้นที่ยังไม่ได้ eager-load
+        // serviceRequest มาก่อน — TicketController::index() โหลดไว้แล้วในคิวรีหลัก
+        // (->with([..., 'serviceRequest'])) ดังนั้นบรรทัดนี้ "no-op" กับหน้ารายการ ไม่มีผลอะไรที่นั่น
+        //
+        // โหลดให้ทุกคนไม่ใช่เฉพาะฝั่งเดสก์ เพราะ 'from_request' ด้านล่างต้องตอบได้เสมอว่าเคสนี้
+        // มาจากคำขอไหม — whenLoaded() จะตัดคีย์ทิ้งถ้า relation ไม่ถูกโหลด ทำให้ "ไม่ได้มาจากคำขอ"
+        // กับ "ไม่ได้โหลดมา" หน้าตาเหมือนกัน ซึ่งเป็นความกำกวมแบบที่เคยทำให้ไดอะล็อกโกหกมาแล้ว
+        $this->resource->loadMissing('serviceRequest');
 
         return [
             'id' => $this->id,
@@ -37,6 +36,12 @@ class TicketResource extends JsonResource
             // either — see showsDeskInternals.
             'priority' => $this->when(self::showsDeskInternals($request), fn () => $this->priority?->value),
             'status' => $this->status?->value,
+
+            // The reference of the request this case was opened from, or null when somebody
+            // reported it directly. Not gated: which of the two a case is decides whether the
+            // Take dialog asks for a priority at all, and the requester reading their own case
+            // is being told where it came from, not shown the desk's own view of it.
+            'from_request' => $this->whenLoaded('serviceRequest', fn () => $this->serviceRequest?->reference),
 
             'requester_id' => $this->requester_id,
             'requester_code' => $this->whenLoaded('requester', fn () => $this->requester?->code),
