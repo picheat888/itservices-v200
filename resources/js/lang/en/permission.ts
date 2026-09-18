@@ -107,6 +107,8 @@ export const permission: Dict = {
     'perm_act_tickets.level_hardware': 'Hardware',
     'perm_act_tickets.level_software': 'Software',
     'perm_act_tickets.level_network': 'Network',
+    'perm_act_tickets.level_cctv': 'CCTV',
+    'perm_act_tickets.level_telephone': 'Telephone',
     'perm_act_tickets.level_other': 'Other',
     'perm_act_tickets.create': 'Open Ticket',
     'perm_desc_tickets.create': 'File a new case - self-service, independent of the module master.',

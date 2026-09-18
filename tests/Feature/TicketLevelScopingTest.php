@@ -70,6 +70,45 @@ class TicketLevelScopingTest extends TestCase
         $this->getJson('/api/tickets')->assertOk()->assertJsonCount(0, 'data');
     }
 
+    public function test_a_camera_case_is_scoped_by_a_level_of_its_own(): void
+    {
+        // Adding a category to the enum is not enough on its own: without its own level key in
+        // the catalog, `tickets.level_cctv` is a string nobody can be granted, hasPermission()
+        // answers false for everyone, and the category quietly becomes invisible to the whole
+        // desk rather than restricted to part of it.
+        Ticket::factory()->create(['category' => 'cctv', 'subject' => 'Lobby camera shows no image']);
+        Ticket::factory()->create(['category' => 'telephone', 'subject' => 'Extension 2210 has no dial tone']);
+
+        $this->actingAs($this->staffWith([...self::BASE, 'tickets.level_cctv']));
+
+        $this->getJson('/api/tickets')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.category', 'cctv');
+    }
+
+    public function test_a_phone_case_is_scoped_by_a_level_of_its_own(): void
+    {
+        Ticket::factory()->create(['category' => 'cctv', 'subject' => 'Lobby camera shows no image']);
+        Ticket::factory()->create(['category' => 'telephone', 'subject' => 'Extension 2210 has no dial tone']);
+
+        $this->actingAs($this->staffWith([...self::BASE, 'tickets.level_telephone']));
+
+        $this->getJson('/api/tickets')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.category', 'telephone');
+    }
+
+    public function test_a_camera_case_cannot_be_taken_on_the_hardware_level(): void
+    {
+        // The two categories were carved out of Hardware, so the level that used to cover a
+        // camera must stop covering it — otherwise the split changes the labels and nothing else.
+        $ticket = Ticket::factory()->create(['category' => 'cctv']);
+
+        $this->actingAs($this->staffWith([...self::BASE, 'tickets.level_hardware']));
+
+        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertForbidden();
+    }
+
     public function test_taking_a_case_outside_the_level_is_forbidden(): void
     {
         $ticket = Ticket::factory()->create(['category' => 'hardware']);

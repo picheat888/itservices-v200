@@ -12,7 +12,14 @@ const MASTER = 'tickets.module';
 const STANDALONE = { view: 'tickets.create', children: ['tickets.edit_own'] };
 const STANDALONE_SOLO = 'tickets.my';
 // Ticket Level keys — scope which categories a staff member sees / takes / gets alerts for.
-const LEVELS = ['tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other'];
+const LEVELS = [
+    'tickets.level_hardware',
+    'tickets.level_software',
+    'tickets.level_network',
+    'tickets.level_cctv',
+    'tickets.level_telephone',
+    'tickets.level_other',
+];
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'tickets.view_dashboard', children: [], chip: false },
     { view: 'tickets.view_all', children: ['tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class'] },

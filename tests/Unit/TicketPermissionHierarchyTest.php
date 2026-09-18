@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Enums\Ticket\TicketCategory;
 use App\Support\Permissions;
 use PHPUnit\Framework\TestCase;
 
@@ -44,11 +45,29 @@ class TicketPermissionHierarchyTest extends TestCase
         $full = [
             'tickets.module', 'tickets.view_dashboard', 'tickets.view_all',
             'tickets.resolve', 'tickets.forward', 'tickets.assign',
-            'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
+            'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network',
+            'tickets.level_cctv', 'tickets.level_telephone', 'tickets.level_other',
             'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
         ];
 
         $this->assertEqualsCanonicalizing($full, Permissions::normalizeTickets($full));
+    }
+
+    /**
+     * A category with no level key of its own is a category nobody can be granted, which reads
+     * as an empty queue rather than a missing permission. The catalog and the hierarchy have to
+     * grow with the enum, so this counts them against it.
+     */
+    public function test_every_ticket_category_has_a_level_key(): void
+    {
+        $levels = array_keys(Permissions::ticketHierarchy()['groups']);
+        $catalog = Permissions::catalog()['tickets'] ?? [];
+
+        foreach (TicketCategory::cases() as $category) {
+            $key = "tickets.level_{$category->value}";
+            $this->assertContains($key, $levels, "{$key} is missing from ticketHierarchy()");
+            $this->assertContains("level_{$category->value}", $catalog, "{$key} is missing from catalog()");
+        }
     }
 
     public function test_non_ticket_keys_pass_through(): void

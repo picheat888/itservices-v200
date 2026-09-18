@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/shared/components/status-badge';
 import type { Ticket, TicketCategory, TicketPriority, TicketSlaState, TicketStatus, TicketWorkClass } from '@/shared/types';
-import { Code, Laptop, MoreHorizontal, Wifi, Wrench } from 'lucide-react';
+import { Cctv, Code, Laptop, MoreHorizontal, Phone, Wifi, Wrench } from 'lucide-react';
 
 type T = (key: string) => string;
 
@@ -19,7 +19,7 @@ export const TICKET_PRIORITY_META: Record<TicketPriority, { tone: 'red' | 'amber
     low: { tone: 'gray', key: 'ticket_prio_low' },
 };
 
-export const TICKET_CATEGORIES: TicketCategory[] = ['hardware', 'software', 'network', 'other'];
+export const TICKET_CATEGORIES: TicketCategory[] = ['hardware', 'software', 'network', 'cctv', 'telephone', 'other'];
 
 /** i18n label per work class — the classify dialog's select and the detail drawer's current-value line share these. */
 export const TICKET_WORK_CLASS_META: Record<TicketWorkClass, { key: string }> = {
@@ -32,6 +32,8 @@ const CATEGORY_ICON: Record<TicketCategory, typeof Laptop> = {
     hardware: Laptop,
     software: Code,
     network: Wifi,
+    cctv: Cctv,
+    telephone: Phone,
     other: MoreHorizontal,
 };
 

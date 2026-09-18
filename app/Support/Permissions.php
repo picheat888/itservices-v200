@@ -21,7 +21,7 @@ class Permissions
                 'module',
                 'view_dashboard', 'view_all',
                 'resolve', 'forward', 'assign', 'set_work_class',
-                'level_hardware', 'level_software', 'level_network', 'level_other',
+                'level_hardware', 'level_software', 'level_network', 'level_cctv', 'level_telephone', 'level_other',
                 'create', 'edit_own',
                 'my', 'jobs',
             ],
@@ -134,7 +134,8 @@ class Permissions
             'admin' => [
                 'tickets.module', 'tickets.view_dashboard', 'tickets.view_all',
                 'tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class',
-                'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network', 'tickets.level_other',
+                'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network',
+                'tickets.level_cctv', 'tickets.level_telephone', 'tickets.level_other',
                 'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
                 'requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill',
                 'requests.notify_approved', 'requests.notify_stalled',
@@ -471,7 +472,7 @@ class Permissions
      * Master gates the module tabs for staff; the self-service pair
      * (`create` + its child `edit_own`) and the My Tickets tab (`my`) are
      * standalone — an ordinary employee files and tracks their own cases with
-     * no staff-side access at all. The four `level_*` keys scope which ticket
+     * no staff-side access at all. The `level_*` keys — one per TicketCategory — scope which ticket
      * categories a staff member may see / take / be alerted about (strict: no
      * level = no cases).
      *
@@ -493,6 +494,8 @@ class Permissions
                 'tickets.level_hardware' => [],
                 'tickets.level_software' => [],
                 'tickets.level_network' => [],
+                'tickets.level_cctv' => [],
+                'tickets.level_telephone' => [],
                 'tickets.level_other' => [],
                 'tickets.jobs' => [],
             ],

@@ -103,7 +103,11 @@ enum RequestType: string
     public function ticketCategory(): TicketCategory
     {
         return match ($this) {
-            self::Computer, self::Hardware, self::Mobile, self::Telephone => TicketCategory::Hardware,
+            self::Computer, self::Hardware, self::Mobile => TicketCategory::Hardware,
+            // A phone request opens a phone case, not a hardware one: the desk staffed for
+            // handsets and extensions is not the desk staffed for laptops, and the level
+            // permissions are what route it to them.
+            self::Telephone => TicketCategory::Telephone,
             self::Software, self::Email, self::Mailgroup, self::Recovery => TicketCategory::Software,
             self::Fileshare => TicketCategory::Network,
             self::Social, self::Other => TicketCategory::Other,
