@@ -2,7 +2,6 @@
 
 namespace App\Services\Ticket;
 
-use App\Enums\Ticket\SlaScope;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketStatus;
 use App\Enums\Ticket\TicketWorkClass;
@@ -16,6 +15,7 @@ use App\Notifications\TicketForwardedNotification;
 use App\Notifications\TicketOwnerNotification;
 use App\Services\Email\EmailNotificationService;
 use App\Support\TicketSla;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Notification;
 
 class TicketService
@@ -119,16 +119,18 @@ class TicketService
      */
     public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId): Ticket
     {
+        $respondedAt = $ticket->responded_at ?? now();
+
         $ticket->update([
             'assignee_id' => $staff->id,
             'priority' => $priority,
             'take_note' => $note,
             'related_asset_id' => $relatedAssetId,
             'status' => TicketStatus::InProgress,
-            'responded_at' => $ticket->responded_at ?? now(),
-            // The chosen priority fixes the real resolution deadline — any alert
-            // sent against the old (medium-fallback) deadline no longer applies.
-            ...$this->deadlineAfterPriority($ticket, $priority),
+            'responded_at' => $respondedAt,
+            // Taking the case starts the resolution clock and fixes its target — any
+            // alert sent against the provisional deadline no longer applies.
+            ...$this->deadlineOnResponse($ticket, $priority, $respondedAt),
         ]);
 
         // Tell the owner their case is now in someone's hands — by bell and by mail. The
@@ -150,14 +152,16 @@ class TicketService
      */
     public function assign(Ticket $ticket, User $staff, ?TicketPriority $priority, ?User $assignedBy = null): Ticket
     {
+        $respondedAt = $ticket->responded_at ?? now();
+
         $ticket->update([
             'assignee_id' => $staff->id,
             'priority' => $priority,
             'status' => TicketStatus::InProgress,
-            'responded_at' => $ticket->responded_at ?? now(),
-            // The chosen priority fixes the real resolution deadline — any alert
-            // sent against the old (medium-fallback) deadline no longer applies.
-            ...$this->deadlineAfterPriority($ticket, $priority),
+            'responded_at' => $respondedAt,
+            // Taking the case starts the resolution clock and fixes its target — any
+            // alert sent against the provisional deadline no longer applies.
+            ...$this->deadlineOnResponse($ticket, $priority, $respondedAt),
         ]);
 
         $staff->notify(new TicketAssignedNotification($ticket->fresh()));
@@ -208,42 +212,30 @@ class TicketService
     }
 
     /**
-     * คอลัมน์เดดไลน์ที่ต้องเขียนเมื่อเคสถูกรับหรือถูกมอบหมายและได้ priority
+     * คอลัมน์เดดไลน์ที่ต้องเขียนเมื่อเคสถูกรับหรือถูกมอบหมาย
      *
-     * เคสที่เป้าหมายมาจากอย่างอื่นที่ไม่ใช่ priority จะเก็บเดดไลน์นั้นไว้: "จอต้องใช้เวลา
-     * จัดหา 3 วัน" และ "เดินสายใช้เวลา 30 วัน" ไม่ได้เลิกเป็นความจริงเพราะช่างที่กดรับ
-     * ติ๊กว่าด่วน priority ยังตัดสินทุกอย่างที่มันเคยตัดสิน แค่ไม่หดเดดไลน์ที่ถูกกำหนด
-     * โดยเนื้องาน
+     * การกดรับคือจุดเริ่มของนาฬิกาปิดเคส (ดู TicketSla::resolveStart) เดดไลน์ที่เก็บไว้
+     * ตั้งแต่ตอนเปิดเคสจึงเป็นค่าชั่วคราวเสมอ ไม่ว่าเป้าหมายจะมาจาก priority, ประเภทคำขอ
+     * หรือลักษณะงาน — ทุกใบต้องคำนวณใหม่ตรงนี้ ไม่งั้นคอลัมน์ที่ลิสต์ใช้เรียงจะไม่ตรงกับ
+     * เดดไลน์ที่หน้ารายละเอียดคำนวณสด
      *
-     * เขียนเป็นกฎเดียว ("scope ที่ชนะไม่ใช่ priority") แทนการไล่เช็คทีละ scope — รายการ
-     * ที่เขียนด้วยมือคือรายการที่วันหนึ่งจะมีคนเพิ่ม scope ใหม่แล้วลืมมาแก้ตรงนี้
+     * ส่วน priority ยังไม่เคยหดเดดไลน์ที่ถูกกำหนดโดยเนื้องาน: ลำดับความสำคัญของ scope
+     * (ดู SlaScope::precedence) ตัดสินตรงนั้นให้อยู่แล้ว ถ้าลักษณะงานหรือประเภทคำขอชนะ
+     * การใส่ priority ลงไปก็ไม่ได้เปลี่ยนจำนวนชั่วโมงเลย
      *
      * @return array<string, mixed>
      */
-    private function deadlineAfterPriority(Ticket $ticket, ?TicketPriority $priority): array
+    private function deadlineOnResponse(Ticket $ticket, ?TicketPriority $priority, CarbonInterface $respondedAt): array
     {
-        // No priority to apply: a case opened from a request is judged on what was asked for,
-        // and taking it settles who is working on it, not how long the work should take. The
-        // scope check below would reach the same answer for such a case, but only because a
-        // request-type rule happens to match it — this says it outright rather than relying on
-        // the configuration being complete.
-        if ($priority === null) {
-            return [];
+        // targetFor()/resolveDueAt() อ่านค่าจากโมเดล และ $ticket ยังถือค่าเก่าอยู่ (priority
+        // มักยังว่าง, responded_at ยังเป็น null) การ update() ของผู้เรียกกำลังจะเขียนสองค่านี้
+        // ลงแถวเดียวกันอยู่แล้ว การเซ็ตไว้ในหน่วยความจำก่อน (ยังไม่บันทึกเอง) ทำให้
+        // resolveDueAt() เห็นเคสอย่างที่มันกำลังจะเป็น เดดไลน์ที่ได้จึงเป็นใบเดียวกับที่
+        // resolveDueAt($ticket) สด ๆ จะอ่านกลับมาทีหลัง ไม่ใช่การคำนวณรอบสองที่อาจเพี้ยนไป
+        if ($priority !== null) {
+            $ticket->priority = $priority;
         }
-
-        $scope = TicketSla::targetFor($ticket)['scope'];
-        if ($scope !== null && $scope !== SlaScope::Priority) {
-            return [];
-        }
-
-        // targetFor()/resolveDueAt() read priority off the model, and $ticket still carries
-        // whatever priority it had before this call (often none). The caller's update() call
-        // is about to write $priority onto this same row anyway — setting it here in memory
-        // first (not saved on its own) lets resolveDueAt() see the priority as it is ABOUT TO
-        // BE, so the deadline it computes — clock included — is exactly the one a fresh
-        // resolveDueAt($ticket) would read back afterwards, not a second calculation that
-        // could drift from it (e.g. by assuming the business clock regardless of the row).
-        $ticket->priority = $priority;
+        $ticket->responded_at = $respondedAt;
 
         return [
             'sla_resolve_due_at' => TicketSla::resolveDueAt($ticket),

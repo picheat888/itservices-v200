@@ -188,17 +188,18 @@ class TicketSlaTest extends TestCase
 
     public function test_in_progress_ticket_runs_against_the_resolution_clock(): void
     {
-        // Critical resolve target = 4h. 1h in (25%) → on track even though the
-        // 15m response target has long passed — response was already given.
-        $base = ['status' => 'in_progress', 'priority' => 'critical', 'responded_at' => now()->subMinutes(50)];
-        $sla = TicketSla::forTicket(Ticket::factory()->make([...$base, 'created_at' => now()->subHour()]));
+        // Critical resolve target = 4h counted from the moment the case was taken, so it is
+        // responded_at that moves the clock here, not the filing time. 1h in (25%) → on track
+        // even though the response target has long passed — response was already given.
+        $base = ['status' => 'in_progress', 'priority' => 'critical', 'created_at' => '2026-01-13 08:00:00'];
+        $sla = TicketSla::forTicket(Ticket::factory()->make([...$base, 'responded_at' => now()->subHour()]));
         $this->assertSame('on_track', $sla['state']);
 
-        $atRisk = TicketSla::forTicket(Ticket::factory()->make([...$base, 'created_at' => now()->subMinutes(200)]));
+        $atRisk = TicketSla::forTicket(Ticket::factory()->make([...$base, 'responded_at' => now()->subMinutes(200)]));
         $this->assertSame('at_risk', $atRisk['state']);
 
-        // Filed Tuesday 16:00: 1 working hour Tuesday + 3 Wednesday → due 11:00, now past it.
-        $breached = TicketSla::forTicket(Ticket::factory()->make([...$base, 'created_at' => '2026-01-13 16:00:00']));
+        // Taken Tuesday 16:00: 1 working hour Tuesday + 3 Wednesday → due 11:00, now past it.
+        $breached = TicketSla::forTicket(Ticket::factory()->make([...$base, 'responded_at' => '2026-01-13 16:00:00']));
         $this->assertSame('breached', $breached['state']);
     }
 
@@ -361,8 +362,46 @@ class TicketSlaTest extends TestCase
 
         $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'critical'])->assertOk();
 
-        // Critical = 4 working hours from 08:00 Wednesday → due 12:00 the same day.
-        $this->assertSame('2026-01-14 12:00:00', $ticket->fresh()->sla_resolve_due_at->toDateTimeString());
+        // Taken at the frozen "now" (Wednesday 12:00, the start of the lunch break): critical
+        // = 4 working hours from there → 13:00–17:00 the same day.
+        $this->assertSame('2026-01-14 17:00:00', $ticket->fresh()->sla_resolve_due_at->toDateTimeString());
+    }
+
+    public function test_the_resolution_clock_starts_when_the_case_is_taken_not_when_it_was_filed(): void
+    {
+        $staff = $this->super();
+        $this->actingAs($staff);
+
+        // The scenario the desk works to: filed 08:00, answered within the 120-minute
+        // response target, taken at 10:00 with a 4-hour resolution target. The four hours
+        // are IT's working time on the case, so they run 10:00–12:00 and 13:00–15:00 —
+        // the two hours the case spent waiting in the queue are the response clock's
+        // business, and charging them twice would eat half the repair window before
+        // anybody had opened the case.
+        $ticket = Ticket::factory()->create(['created_at' => '2026-01-14 08:00:00', 'status' => 'open']);
+        $this->assertSame('2026-01-14 10:00:00', TicketSla::responseDueAt($ticket)->toDateTimeString());
+
+        $this->travelTo('2026-01-14 10:00:00');
+        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'critical'])->assertOk();
+
+        $ticket = $ticket->fresh();
+        $this->assertSame('2026-01-14 10:00:00', $ticket->responded_at->toDateTimeString());
+        $this->assertSame('2026-01-14 15:00:00', $ticket->sla_resolve_due_at->toDateTimeString());
+        // The stored column and the live calculation are the same deadline, or the list
+        // would sort by one number while the detail page showed another.
+        $this->assertSame('2026-01-14 15:00:00', TicketSla::resolveDueAt($ticket)->toDateTimeString());
+    }
+
+    public function test_an_untaken_case_still_shows_a_provisional_deadline_from_its_filing_time(): void
+    {
+        // Nobody has taken it, so there is no start yet — the filing time stands in, which
+        // keeps the queue sortable by urgency instead of leaving the column empty.
+        $ticket = Ticket::factory()->create([
+            'created_at' => '2026-01-14 08:00:00', 'status' => 'open', 'priority' => 'critical',
+        ]);
+
+        $this->assertNull($ticket->responded_at);
+        $this->assertSame('2026-01-14 12:00:00', TicketSla::resolveDueAt($ticket)->toDateTimeString());
     }
 
     public function test_saving_sla_settings_recomputes_active_deadlines(): void

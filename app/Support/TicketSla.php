@@ -400,12 +400,28 @@ class TicketSla
         return self::businessMinutesBetween($from, $to);
     }
 
+    /**
+     * จุดเริ่มเดินของนาฬิกาปิดเคส — เวลาที่เคสถูกรับ ไม่ใช่เวลาที่เคสถูกเปิด
+     *
+     * เวลารอคิวกับเวลาทำงานเป็นคนละเรื่อง และระบบมีนาฬิกาให้ทั้งสองอยู่แล้ว: เป้าตอบสนอง
+     * วัดว่าผู้แจ้งรอนานแค่ไหนกว่าจะมีคนมอง ส่วนเป้าปิดเคสวัดว่างานใช้เวลาเท่าไรหลังมีเจ้าของ
+     * ถ้านับเป้าปิดเคสจากเวลาเปิด ตัวเลขเดียวจะแบกทั้งสองเรื่อง เคสที่ค้างคิวสามวันจึงถึงมือช่าง
+     * พร้อมเดดไลน์ที่หมดไปแล้ว
+     *
+     * เคสที่ยังไม่มีใครรับยังไม่มีเจ้าของและยังไม่มีจุดเริ่ม จึงใช้เวลาเปิดไปพลางเป็นค่าชั่วคราว
+     * ให้แถวในลิสต์ยังเรียงได้และยังมีอะไรให้แสดง แล้ว take() จะเขียนทับทันทีที่มีคนกดรับ
+     */
+    public static function resolveStart(Ticket $ticket): Carbon
+    {
+        return $ticket->responded_at ?? $ticket->created_at;
+    }
+
     /** เดดไลน์ปิดเคส นับด้วยนาฬิกาที่เป้าหมายของเคสนี้กำหนด — ใช้ร่วมกับ SLA % บน dashboard */
     public static function resolveDueAt(Ticket $ticket): Carbon
     {
         $target = self::targetFor($ticket);
 
-        return self::addMinutesOn($ticket->created_at, $target['hours'] * 60, $target['clock']);
+        return self::addMinutesOn(self::resolveStart($ticket), $target['hours'] * 60, $target['clock']);
     }
 
     /** Business-time first-response deadline for a ticket — shared with the dashboard SLA %. */
@@ -425,7 +441,7 @@ class TicketSla
      *   outside the window starts at the next opening, and the target consumes only
      *   window minutes. The clock starts at submission, before any priority exists,
      *   and never reads a rule row.
-     * - Resolution clock: created_at → resolved_at, target chosen by precedence
+     * - Resolution clock: resolveStart() (เวลารับเคส) → resolved_at, target chosen by precedence
      *   (work_class → request_type → priority → built-in defaults; tickets without
      *   a priority run against the medium default). The winning rule's own `clock`
      *   decides how time is counted — business hours (window minutes only, like the
@@ -449,7 +465,7 @@ class TicketSla
         $resolveTarget = $target['hours'] * 60;
         // นาฬิกาตอบรับเป็น business เสมอ: เป้าหมายตอบรับเป็นค่าเดียวทั้งระบบ ไม่ได้มาจากแถวกฎ
         $responseDue = self::addBusinessMinutes($ticket->created_at, $responseTarget);
-        $resolveDue = self::addMinutesOn($ticket->created_at, $resolveTarget, $clock);
+        $resolveDue = self::addMinutesOn(self::resolveStart($ticket), $resolveTarget, $clock);
 
         if ($ticket->status === TicketStatus::Completed && $ticket->resolved_at !== null) {
             $state = $ticket->resolved_at->lessThanOrEqualTo($resolveDue) ? 'met' : 'missed';
@@ -462,8 +478,10 @@ class TicketSla
         $due = $responseActive ? $responseDue : $resolveDue;
         $total = max(1, $responseActive ? $responseTarget : $resolveTarget);
         // เวลาที่ผ่านไปต้องนับด้วยนาฬิกาเรือนเดียวกับที่ตั้งเดดไลน์ ไม่งั้นแถบความคืบหน้าจะโกหก
+        // Measured from whichever instant the active clock counts from, or the bar reports a
+        // share of a window it is not actually running against.
         $elapsed = self::minutesBetweenOn(
-            $ticket->created_at,
+            $responseActive ? $ticket->created_at : self::resolveStart($ticket),
             now(),
             $responseActive ? TicketSlaClock::Business : $clock,
         );
