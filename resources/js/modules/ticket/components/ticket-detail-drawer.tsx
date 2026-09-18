@@ -195,34 +195,46 @@ function SpineStep({
 }
 
 /**
- * "24h · from priority High" — the sentence that stops a long deadline on an urgent case
+ * How much time the case gets, said in the unit it was set in.
+ *
+ * A repair KPI is written as "30 days" and stored as 720 hours; printing the stored number
+ * asks the reader to divide before they can check it against the agreement they signed.
+ * Working-hours targets stay in hours — a working day is eight of them, so a day count there
+ * would be an approximation standing where an exact figure belongs.
+ */
+function slaTargetAmount(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
+    if (target.clock === 'calendar') {
+        return target.hours % 24 === 0
+            ? t('ticket_sla_target_days').replace('{n}', String(target.hours / 24))
+            : t('ticket_sla_target_hours_calendar').replace('{n}', String(target.hours));
+    }
+
+    return t('ticket_sla_target_hours').replace('{n}', String(target.hours));
+}
+
+/**
+ * Which rule handed down that number — the line that stops a long deadline on an urgent case
  * reading as a bug.
  *
- * A case whose target came from neither kind of rule is the one place nobody chose the number:
+ * A case whose target came from no rule at all is the one place nobody chose the number:
  * it is named as the default rather than dressed up as a decision.
  */
-function slaTargetLabel(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
-    // The settings page bothers to convert hours into "≈ 30 days" vs "≈ 90 working days" —
-    // the drawer is where a technician actually reads this number, so it names the clock too
-    // rather than leaving a bare "720h" to read as 720 working hours (30 real days is not that).
-    const clockLabel = t(target.clock === 'calendar' ? 'set_sla_clock_calendar' : 'set_sla_clock_business');
-    const hours = `${target.hours}${t('ticket_sla_unit_h')} (${clockLabel})`;
-
+function slaTargetSource(target: NonNullable<Ticket['sla_target']>, t: (key: string) => string): string {
     // A repair KPI winning the target is its own reason, not the "nobody chose this" default —
     // without this branch a case classified as repair read as if nothing had been decided.
     if (target.scope === 'work_class' && target.value) {
         const meta = TICKET_WORK_CLASS_META[target.value as TicketWorkClass];
-        return `${hours} · ${meta ? t(meta.key) : target.value}`;
+        return meta ? t(meta.key) : target.value;
     }
     if (target.scope === 'request_type' && target.value) {
         const meta = REQUEST_TYPE_META[target.value as ServiceRequestType];
-        return `${hours} · ${t('ticket_sla_target_request')}${meta ? ` (${t(meta.labelKey)})` : ''}`;
+        return meta ? t(meta.labelKey) : t('ticket_sla_target_request');
     }
     if (target.scope === 'priority' && target.value) {
-        return `${hours} · ${t('ticket_sla_target_priority')}`;
+        return t('ticket_sla_target_priority');
     }
 
-    return `${hours} · ${t('ticket_sla_target_default')}`;
+    return t('ticket_sla_target_default');
 }
 
 /** One row of the progress timeline. The two ends of the case sit in the same list as the notes. */
@@ -779,12 +791,10 @@ export function TicketDetailDrawer({
                                             settled — the priority that picks it is chosen at the moment of
                                             taking. A figure shown next to nothing reads as a commitment. */}
                                         {view.responded_at && view.sla_target && (
-                                            <RailRow
-                                                label={t('ticket_sla_target_from')}
-                                                value={slaTargetLabel(view.sla_target, t)}
-                                                mono={false}
-                                                wrap
-                                            />
+                                            <>
+                                                <RailRow label={t('ticket_sla_target_from')} value={slaTargetAmount(view.sla_target, t)} mono={false} wrap />
+                                                <RailRow label={t('ticket_sla_source')} value={slaTargetSource(view.sla_target, t)} mono={false} wrap />
+                                            </>
                                         )}
                                     </div>
                                 </>
