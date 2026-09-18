@@ -124,18 +124,23 @@ export function TicketSlaBadge({ ticket, t, className }: { ticket: Ticket; t: T;
  * The slot is rendered on every row, empty or not, so the subjects keep one left edge and the
  * marks read as a column of their own instead of shunting the text they belong to.
  */
-export function TicketSubject({ ticket, t }: { ticket: Ticket; t: T }) {
+export function TicketSubject({ ticket, t, showNo }: { ticket: Ticket; t: T; showNo?: boolean }) {
     const repair = ticket.work_class && ticket.work_class !== 'standard' ? ticket.work_class : null;
     return (
-        <span className="flex items-center gap-1.5">
-            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+        <span className="flex items-start gap-1.5">
+            <span className="flex h-5 w-3.5 shrink-0 items-center justify-center">
                 {repair && (
                     <Wrench className="text-muted-foreground h-3.5 w-3.5" aria-label={t(TICKET_WORK_CLASS_META[repair].key)}>
                         <title>{t(TICKET_WORK_CLASS_META[repair].key)}</title>
                     </Wrench>
                 )}
             </span>
-            <span className="min-w-0 truncate">{ticket.subject}</span>
+            <span className="min-w-0 flex-1">
+                <span className="block truncate" title={ticket.subject}>
+                    {ticket.subject}
+                </span>
+                {showNo && <span className="text-muted-foreground block truncate font-mono text-[11px]">{ticket.ticket_no}</span>}
+            </span>
         </span>
     );
 }

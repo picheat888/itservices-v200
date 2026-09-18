@@ -579,13 +579,6 @@ export default function TicketsPage() {
             render: (tk) => fmtDateTime(tk.created_at),
         },
         {
-            key: 'ticket_no',
-            header: t('ticket_col_no'),
-            className: 'text-muted-foreground font-mono text-xs whitespace-nowrap',
-            width: '168px',
-            render: (tk) => tk.ticket_no,
-        },
-        {
             // The column that gives. `w-full max-w-0` hands it every pixel the fixed columns do
             // not want and lets it shrink to nothing, so the table fits its card at any width and
             // the subject truncates instead. Without it the table ran 11px past the card, and the
@@ -594,7 +587,7 @@ export default function TicketsPage() {
             key: 'subject',
             header: t('ticket_subject'),
             className: 'truncate font-medium',
-            render: (tk) => <TicketSubject ticket={tk} t={t} />,
+            render: (tk) => <TicketSubject ticket={tk} t={t} showNo />,
         },
         {
             key: 'requester',
