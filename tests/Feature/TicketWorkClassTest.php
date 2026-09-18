@@ -492,4 +492,44 @@ class TicketWorkClassTest extends TestCase
         $after = $this->actingAs($staff)->getJson('/api/tickets/summary')->json();
         $this->assertTrue($after['has_repair_rules']);
     }
+
+    public function test_a_request_born_case_cannot_be_classified(): void
+    {
+        // Its target was settled by what was asked for. Classifying it would stack a third rule
+        // on an answer the case already has — refused outright, not merely hidden on screen.
+        $this->rule(SlaScope::WorkClass, 'repair_vendor', 360);
+        $ticket = $this->ticketFromRequest('hardware');
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
+            'body' => 'ส่งให้ผู้รับเหมาเดินสายใหม่',
+            'work_class' => 'repair_vendor',
+        ])->assertStatus(422);
+
+        $this->assertSame(TicketWorkClass::Standard, $ticket->fresh()->work_class);
+    }
+
+    public function test_a_request_born_case_still_takes_an_ordinary_progress_note(): void
+    {
+        // Only the classification is refused; saying what is happening must still work.
+        $ticket = $this->ticketFromRequest('hardware');
+        $staff = $this->assigneeOf($ticket);
+
+        $this->actingAs($staff)->postJson("/api/tickets/{$ticket->id}/updates", [
+            'body' => 'ติดต่อผู้ขายแล้ว รออีเมลยืนยัน',
+        ])->assertCreated();
+
+        $this->assertSame(1, $ticket->updates()->count());
+    }
+
+    public function test_a_request_born_case_is_sent_no_work_class_forecast(): void
+    {
+        // Nothing on screen can use it, and computing it walks the SLA rules three times.
+        $ticket = $this->ticketFromRequest('hardware');
+        $staff = $this->assigneeOf($ticket);
+
+        $body = $this->actingAs($staff)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json();
+
+        $this->assertNull($body['data']['work_class_forecast']);
+    }
 }

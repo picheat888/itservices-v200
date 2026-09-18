@@ -648,9 +648,14 @@ class TicketController extends Controller
         abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can update this ticket.');
         abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be updated.');
 
+        // Kind of work is for a case somebody reported that then has to go to a technician.
+        // A case opened from an approved request already carries a target of its own, decided
+        // by what was asked for — classifying it would put a third rule on top of an answer it
+        // already has. Refused rather than merely hidden, for the same reason priority is.
+        $fromRequest = $ticket->serviceRequest()->exists();
         $data = $request->validate([
             'body' => ['required', 'string', 'min:5', 'max:5000'],
-            'work_class' => ['sometimes', new Enum(TicketWorkClass::class)],
+            'work_class' => [$fromRequest ? 'prohibited' : 'sometimes', new Enum(TicketWorkClass::class)],
         ]);
 
         // Handing the repair to an in-house or external technician is something that happens

@@ -70,7 +70,12 @@ export function TicketUpdateModal({
     }, [ticket]);
 
     const currentClass = view?.work_class ?? 'standard';
-    const reclassifying = canSetWorkClass && workClass !== currentClass;
+    // Kind of work is for a case somebody reported that then has to go to a technician. A case
+    // opened from a request already carries a target decided by what was asked for, and the
+    // endpoint refuses the field on one — so the picker is not offered there at all.
+    const fromRequest = !!view?.from_request;
+    const offersWorkClass = canSetWorkClass && !fromRequest;
+    const reclassifying = offersWorkClass && workClass !== currentClass;
 
     // "Field absent" and "this class has no dedicated rule" are different answers, and folding
     // the two into one message would let a case with genuinely UNKNOWN numbers read as one where
@@ -147,7 +152,7 @@ export function TicketUpdateModal({
                         />
                     </Field>
 
-                    {canSetWorkClass && (
+                    {offersWorkClass && (
                         <Field label={t('ticket_work_class')} help={t('ticket_work_class_hint')}>
                             <SearchableSelect value={workClass} onChange={(v) => setWorkClass(v as TicketWorkClass)} options={options} />
                         </Field>
