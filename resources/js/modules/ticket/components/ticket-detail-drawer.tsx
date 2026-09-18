@@ -772,8 +772,13 @@ export function TicketDetailDrawer({
                                             );
                                         })()}
                                         {/* Where the resolution target came from. Without this, a three-day
-                                            deadline on a case marked critical reads as a bug. */}
-                                        {view.sla_target && (
+                                            deadline on a case marked critical reads as a bug.
+
+                                            Held back until somebody takes the case: until then there is no
+                                            deadline on screen for it to explain, and the number itself is not
+                                            settled — the priority that picks it is chosen at the moment of
+                                            taking. A figure shown next to nothing reads as a commitment. */}
+                                        {view.responded_at && view.sla_target && (
                                             <RailRow
                                                 label={t('ticket_sla_target_from')}
                                                 value={slaTargetLabel(view.sla_target, t)}
