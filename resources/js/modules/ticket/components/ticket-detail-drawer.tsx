@@ -410,6 +410,9 @@ export function TicketDetailDrawer({
     const canRouteThis = !isMyOwnRequest;
     const showAssign = isOpenUnassigned && canAssign && canRouteThis;
     const showForward = canForward && (isMine || (canAssign && canRouteThis));
+    // Everything the desk does to a case, as opposed to what its owner can do to it. When a
+    // reader has none of it the footer is theirs, and Close is the only thing left to offer.
+    const hasDeskActions = showTake || showAssign || (isWorking && (isMine || showForward));
     const files = view.attachments ?? [];
     const [s1, s2, s3] = spineTones(view.status);
     // Preview mode: images zoom/pan, PDFs embed via <iframe>, everything else shows a file card.
@@ -796,8 +799,18 @@ export function TicketDetailDrawer({
                                             taking. A figure shown next to nothing reads as a commitment. */}
                                         {view.responded_at && view.sla_target && (
                                             <>
-                                                <RailRow label={t('ticket_sla_target_from')} value={slaTargetAmount(view.sla_target, t)} mono={false} wrap />
-                                                <RailRow label={t('ticket_sla_source')} value={slaTargetSource(view.sla_target, t)} mono={false} wrap />
+                                                <RailRow
+                                                    label={t('ticket_sla_target_from')}
+                                                    value={slaTargetAmount(view.sla_target, t)}
+                                                    mono={false}
+                                                    wrap
+                                                />
+                                                <RailRow
+                                                    label={t('ticket_sla_source')}
+                                                    value={slaTargetSource(view.sla_target, t)}
+                                                    mono={false}
+                                                    wrap
+                                                />
                                             </>
                                         )}
                                     </div>
@@ -810,62 +823,71 @@ export function TicketDetailDrawer({
                         </aside>
                     </div>
 
-                    {/* ---- footer: role-/status-aware actions (hidden when there are none —
-                         closing is covered by the ✕ / Esc / backdrop) ---- */}
-                    {(canEdit || showTake || showAssign || (isWorking && (isMine || showForward))) && (
-                        <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
-                            {canEdit && (
-                                <Button variant="outline" onClick={() => onEdit(view)}>
-                                    <Pencil className="h-4 w-4" />
-                                    {t('edit')}
-                                </Button>
-                            )}
-                            <span className="flex-1" />
-                            {showAssign && (
-                                <Button variant="outline" onClick={() => onAssign(view)}>
-                                    <Users className="h-4 w-4" />
-                                    {t('ticket_assign_to_staff')}
-                                </Button>
-                            )}
-                            {showTake && (
-                                <Button onClick={() => onTake(view)}>
-                                    <Zap className="h-4 w-4" />
-                                    {t('ticket_take_case')}
-                                </Button>
-                            )}
-                            {isWorking && showForward && (
-                                <Button variant="outline" onClick={() => onForward(view)}>
-                                    <ArrowRightLeft className="h-4 w-4" />
-                                    {t('ticket_forward')}
-                                </Button>
-                            )}
-                            {isWorking && isMine && (
-                                <>
-                                    {/* The case's kind of work, when it has been classified away from
+                    {/* ---- footer: role-/status-aware actions ----
+
+                         The bar is always there, so the dialog ends the same way for everybody.
+                         A requester gets only what is theirs to do — edit their own case while
+                         it is still open, and close the dialog — with none of the desk's work
+                         on it. Close only appears when the desk's buttons do not: putting it
+                         beside "Close the case" would be two buttons whose labels agree and
+                         whose consequences do not. */}
+                    <div className="border-border bg-muted/20 flex flex-row flex-wrap items-center gap-2 border-t px-6 py-3.5">
+                        {canEdit && (
+                            <Button variant="outline" onClick={() => onEdit(view)}>
+                                <Pencil className="h-4 w-4" />
+                                {t('edit')}
+                            </Button>
+                        )}
+                        <span className="flex-1" />
+                        {showAssign && (
+                            <Button variant="outline" onClick={() => onAssign(view)}>
+                                <Users className="h-4 w-4" />
+                                {t('ticket_assign_to_staff')}
+                            </Button>
+                        )}
+                        {showTake && (
+                            <Button onClick={() => onTake(view)}>
+                                <Zap className="h-4 w-4" />
+                                {t('ticket_take_case')}
+                            </Button>
+                        )}
+                        {isWorking && showForward && (
+                            <Button variant="outline" onClick={() => onForward(view)}>
+                                <ArrowRightLeft className="h-4 w-4" />
+                                {t('ticket_forward')}
+                            </Button>
+                        )}
+                        {!hasDeskActions && (
+                            <Button variant="outline" onClick={onClose}>
+                                {t('close')}
+                            </Button>
+                        )}
+                        {isWorking && isMine && (
+                            <>
+                                {/* The case's kind of work, when it has been classified away from
                                         standard — read next to the button that changes it. */}
-                                    {view.work_class && view.work_class !== 'standard' && (
-                                        <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-                                            <Wrench className="h-3.5 w-3.5" />
-                                            {t(TICKET_WORK_CLASS_META[view.work_class].key)}
-                                        </span>
-                                    )}
-                                    {/* Between taking and closing: the third thing an assignee can do. */}
-                                    <Button variant="outline" onClick={() => onUpdate(view)}>
-                                        <MessageSquarePlus className="h-4 w-4" />
-                                        {t('ticket_update_action')}
-                                    </Button>
-                                    <Button variant="destructive" onClick={() => onResolve(view, 'cancel')}>
-                                        <X className="h-4 w-4" />
-                                        {t('ticket_mark_canceled')}
-                                    </Button>
-                                    <Button onClick={() => onResolve(view, 'complete')}>
-                                        <Check className="h-4 w-4" />
-                                        {t('ticket_mark_complete')}
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                    )}
+                                {view.work_class && view.work_class !== 'standard' && (
+                                    <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                                        <Wrench className="h-3.5 w-3.5" />
+                                        {t(TICKET_WORK_CLASS_META[view.work_class].key)}
+                                    </span>
+                                )}
+                                {/* Between taking and closing: the third thing an assignee can do. */}
+                                <Button variant="outline" onClick={() => onUpdate(view)}>
+                                    <MessageSquarePlus className="h-4 w-4" />
+                                    {t('ticket_update_action')}
+                                </Button>
+                                <Button variant="destructive" onClick={() => onResolve(view, 'cancel')}>
+                                    <X className="h-4 w-4" />
+                                    {t('ticket_mark_canceled')}
+                                </Button>
+                                <Button onClick={() => onResolve(view, 'complete')}>
+                                    <Check className="h-4 w-4" />
+                                    {t('ticket_mark_complete')}
+                                </Button>
+                            </>
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
 
