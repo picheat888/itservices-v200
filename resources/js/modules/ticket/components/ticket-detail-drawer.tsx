@@ -76,9 +76,35 @@ const FILE_TONE = 'text-muted-foreground';
  * `wrap` is for the one value that is a sentence rather than a timestamp — truncating the name
  * of the rule that set a deadline defeats the point of printing it.
  */
-function RailRow({ label, value, mono = true, wrap = false }: { label: string; value: React.ReactNode; mono?: boolean; wrap?: boolean }) {
+/**
+ * Bar colour per SLA state, mirroring the badge's tones (see SLA_TONE in ticket-meta).
+ * Kept beside the bar rather than exported from there because the badge paints a chip and this
+ * paints a fill — same meaning, different property.
+ */
+const SLA_BAR_TONE: Record<NonNullable<Ticket['sla']>['state'], string> = {
+    on_track: 'bg-emerald-500',
+    at_risk: 'bg-amber-500',
+    breached: 'bg-destructive',
+    met: 'bg-emerald-500',
+    missed: 'bg-destructive',
+};
+
+function RailRow({
+    label,
+    value,
+    mono = true,
+    wrap = false,
+    quiet = false,
+}: {
+    label: string;
+    value: React.ReactNode;
+    mono?: boolean;
+    wrap?: boolean;
+    /** For a fact that has already settled — still worth having, no longer worth chasing. */
+    quiet?: boolean;
+}) {
     return (
-        <div className="flex items-baseline justify-between gap-3 text-xs">
+        <div className={cn('flex items-baseline justify-between gap-3 text-xs', quiet && 'opacity-60')}>
             <span className="text-muted-foreground shrink-0">{label}</span>
             <span className={cn('min-w-0 text-right', wrap ? 'text-balance' : 'truncate', mono && 'font-mono text-[11.5px]')}>{value || '—'}</span>
         </div>
@@ -699,9 +725,41 @@ export function TicketDetailDrawer({
                                         <SectionLabel>{t('ticket_sla')}</SectionLabel>
                                         <TicketSlaBadge ticket={view} t={t} />
                                     </div>
-                                    <div className="space-y-1.5 pl-1">
-                                        <RailRow label={t('ticket_sla_response_due')} value={fmtWhen(view.sla.response_due_at)} />
-                                        <RailRow label={t('ticket_sla_resolve_due')} value={fmtWhen(view.sla.resolve_due_at)} />
+                                    {/* One of these two clocks is running and the other has
+                                        already settled — response until somebody picks the case
+                                        up, resolution from then on. They used to sit as
+                                        identical rows, so a deadline that was history read as
+                                        something still to hit, and the badge above named a
+                                        number with no row to point at. The live one carries the
+                                        bar; the settled one steps back. */}
+                                    <div className="space-y-2 pl-1">
+                                        {(() => {
+                                            const liveIsResponse = view.status === 'open' && !view.responded_at;
+                                            const liveLabel = liveIsResponse ? 'ticket_sla_response_due' : 'ticket_sla_resolve_due';
+                                            const pastLabel = liveIsResponse ? 'ticket_sla_resolve_due' : 'ticket_sla_response_due';
+                                            const liveDue = liveIsResponse ? view.sla.response_due_at : view.sla.resolve_due_at;
+                                            const pastDue = liveIsResponse ? view.sla.resolve_due_at : view.sla.response_due_at;
+                                            // A closed case has a verdict, not a countdown — the badge
+                                            // already says met or missed, and a full bar adds nothing.
+                                            const running = view.sla.state !== 'met' && view.sla.state !== 'missed';
+
+                                            return (
+                                                <>
+                                                    <div className="space-y-1.5">
+                                                        <RailRow label={t(liveLabel)} value={fmtWhen(liveDue)} />
+                                                        {running && (
+                                                            <div className="bg-muted h-1 overflow-hidden rounded-full" role="presentation">
+                                                                <div
+                                                                    className={cn('h-full rounded-full transition-all', SLA_BAR_TONE[view.sla.state])}
+                                                                    style={{ width: `${Math.min(100, Math.max(0, view.sla.pct_elapsed))}%` }}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <RailRow label={t(pastLabel)} value={fmtWhen(pastDue)} quiet />
+                                                </>
+                                            );
+                                        })()}
                                         {/* Where the resolution target came from. Without this, a three-day
                                             deadline on a case marked critical reads as a bug. */}
                                         {view.sla_target && (
