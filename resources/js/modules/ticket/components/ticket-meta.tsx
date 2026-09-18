@@ -135,7 +135,7 @@ export function TicketSubject({ ticket, t }: { ticket: Ticket; t: T }) {
                     </Wrench>
                 )}
             </span>
-            <span className="max-w-[280px] truncate">{ticket.subject}</span>
+            <span className="min-w-0 truncate">{ticket.subject}</span>
         </span>
     );
 }
