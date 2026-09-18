@@ -313,7 +313,7 @@ export function TicketsSlaTab() {
     };
 
     return (
-        <div className="max-w-3xl">
+        <div className="max-w-5xl">
             <div className="mb-5">
                 <h2 className="text-lg font-semibold">{t('set_sla_title')}</h2>
                 <p className="text-muted-foreground text-sm">{t('set_sla_desc')}</p>
@@ -458,7 +458,7 @@ export function TicketsSlaTab() {
                                             </span>
                                         </td>
                                         <td className="px-3 py-3 align-top">
-                                            <span className="inline-block w-36">
+                                            <span className="inline-block w-52">
                                                 <SearchSelect
                                                     value={row.work_class}
                                                     onChange={(v) => setWorkTarget(key, { work_class: v as TicketSlaWorkClassTarget['work_class'] })}
@@ -469,7 +469,7 @@ export function TicketsSlaTab() {
                                             </span>
                                         </td>
                                         <td className="px-3 py-3 align-top">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 whitespace-nowrap">
                                                 <Input
                                                     type="number"
                                                     min={1}
