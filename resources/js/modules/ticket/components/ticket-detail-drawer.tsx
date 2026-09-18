@@ -381,11 +381,10 @@ export function TicketDetailDrawer({
 
     if (!view) return null;
 
-    const isMine = view.assignee_id != null && view.assignee_id === meId;
-    const isWorking = view.status === 'in_progress';
     // Mirrors the server's three gates exactly (permission -> assignee -> status, in that
     // order) — a button that would come back 403 is a button that should not have been drawn.
-    const updates = view.updates ?? [];
+    const isMine = view.assignee_id != null && view.assignee_id === meId;
+    const isWorking = view.status === 'in_progress';
     const progress = progressEntries(view, t);
     const isOpenUnassigned = view.status === 'open' && view.assignee_id == null;
     // Anti case-pumping: the person who filed a case can never take it (backend enforces too).
@@ -684,9 +683,6 @@ export function TicketDetailDrawer({
                                             ? `${t('ticket_taken_by')} ${view.assignee_name ?? ''}`
                                             : t('ticket_waiting')
                                     }
-                                    // The number of notes is the honest measure of how much has
-                                    // happened on a case since it was picked up.
-                                    meta={updates.length > 0 ? t('ticket_updates_count').replace('{n}', String(updates.length)) : undefined}
                                     when={fmtWhen(view.responded_at)}
                                 />
                                 <SpineStep

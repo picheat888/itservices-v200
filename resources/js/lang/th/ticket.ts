@@ -126,7 +126,6 @@ export const ticket: Dict = {
     // ticket-update-modal.tsx — ไดอะล็อกบันทึกความคืบหน้า และไทม์ไลน์ใน Drawer รายละเอียด
     ticket_tab_progress: 'ความคืบหน้า',
     ticket_no_updates: 'ยังไม่มีความเคลื่อนไหว - เคสนี้ยังรอเจ้าหน้าที่รับ',
-    ticket_updates_count: 'บันทึกความคืบหน้า {n} ครั้ง',
     ticket_update_action: 'อัปเดต',
     ticket_update_title: 'บันทึกความคืบหน้า',
     ticket_update_hint: 'แจ้งความคืบหน้าหลังจากที่คุณรับทำเคสนี้แล้ว',
@@ -189,7 +188,6 @@ export const ticket: Dict = {
     ticket_work_class_forecast_unavailable: 'เคสนี้ดูเดดไลน์ล่วงหน้าไม่ได้ จึงเปลี่ยนลักษณะงานที่นี่ไม่ได้',
     ticket_update_err_failed: 'บันทึกไม่สำเร็จ ลองอีกครั้ง',
     // pages/index.tsx — การ์ด KPI และป้ายในตาราง
-    ticket_repair_badge: 'งานซ่อม',
     ticket_repair_kpi: 'ปิดงานซ่อมทัน KPI',
     ticket_repair_backlog: 'ยังไม่ปิด {n} เคส',
     ticket_sla_met_standard: 'ปิดงานปกติทัน SLA',
