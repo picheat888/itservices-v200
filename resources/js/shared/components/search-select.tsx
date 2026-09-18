@@ -15,7 +15,9 @@ interface SearchSelectProps {
 
 interface DropdownRect {
     left: number;
+    /** The trigger's width — a floor for the panel, not its width (see the style below). */
     width: number;
+    maxWidth: number;
     /** Set when the panel drops below the trigger; `bottom` is set instead when it drops above. */
     top?: number;
     bottom?: number;
@@ -26,6 +28,8 @@ interface DropdownRect {
 /** Tallest the panel gets, and the least room it will settle for before dropping upward instead. */
 const PANEL_MAX = 320;
 const PANEL_MIN = 160;
+/** Widest the panel grows past its trigger. */
+const PANEL_MAX_W = 320;
 
 /**
  * The nearest ancestor of the trigger that actually scrolls.
@@ -51,7 +55,7 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
     const t = useT();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const [rect, setRect] = useState<DropdownRect>({ left: 0, width: 0, top: 0, maxHeight: PANEL_MAX });
+    const [rect, setRect] = useState<DropdownRect>({ left: 0, width: 0, maxWidth: PANEL_MAX_W, top: 0, maxHeight: PANEL_MAX });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const searchRef = useRef<HTMLInputElement>(null);
     const listRef = useRef<HTMLDivElement>(null);
@@ -77,6 +81,8 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
             setRect({
                 left: r.left,
                 width: r.width,
+                // Grow rightward to whatever the labels need, stopping short of the window edge.
+                maxWidth: Math.max(r.width, Math.min(PANEL_MAX_W, window.innerWidth - r.left - margin)),
                 top: up ? undefined : r.bottom + 4,
                 bottom: up ? window.innerHeight - r.top + 4 : undefined,
                 maxHeight: Math.max(PANEL_MIN, Math.min(PANEL_MAX, room)),
@@ -179,7 +185,13 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                             top: rect.top,
                             bottom: rect.bottom,
                             left: rect.left,
-                            width: rect.width,
+                            // The trigger's width is a floor, not the width: in a 128px column a
+                            // panel sized to its trigger cut "Network" down to "Net…", which is
+                            // not a list you can read. Panels are portaled, so a wider one
+                            // disturbs no layout.
+                            minWidth: rect.width,
+                            maxWidth: rect.maxWidth,
+                            width: 'max-content',
                             maxHeight: rect.maxHeight,
                             zIndex: 9999,
                         }}
@@ -207,14 +219,16 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                                     <button
                                         key={opt.value}
                                         type="button"
+                                        disabled={opt.disabled}
                                         onClick={() => handleSelect(opt.value)}
                                         className={cn(
-                                            'flex w-full items-center justify-between px-3 py-2 text-sm',
-                                            'hover:bg-accent hover:text-accent-foreground',
+                                            'flex w-full items-center justify-between gap-2 px-3 py-2 text-sm',
+                                            opt.disabled ? 'cursor-not-allowed opacity-45' : 'hover:bg-accent hover:text-accent-foreground',
                                             opt.value === value && 'font-medium',
                                         )}
                                     >
                                         <span className="truncate">{opt.label}</span>
+                                        {opt.note && <span className="text-muted-foreground shrink-0 text-[11px]">{opt.note}</span>}
                                         {opt.value === value && <Check className="text-brand ml-2 h-4 w-4 shrink-0" />}
                                     </button>
                                 ))
