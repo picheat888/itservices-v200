@@ -75,7 +75,12 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
 
     if (!user) return null;
 
-    const displayName = `${firstName} ${lastName}`.trim() || user.name;
+    // Built from the edit state, not from the user, so the header tracks what is being
+    // typed. In Thai the Thai pair wins when it has been filled in; an account with no
+    // Thai name keeps showing the English one rather than going blank.
+    const nameEn = `${firstName} ${lastName}`.trim() || user.name;
+    const nameTh = `${firstNameTh} ${lastNameTh}`.trim();
+    const displayName = lang === 'th' ? nameTh || nameEn : nameEn;
     const previewUrl = photo ? URL.createObjectURL(photo) : user.photo_url;
     const department = lang === 'th' ? (emp?.department_th ?? emp?.department) : emp?.department;
 
@@ -143,7 +148,7 @@ export function ProfileDrawer({ open, onClose }: { open: boolean; onClose: () =>
                 <div className="mt-6 flex-1 space-y-6 overflow-y-auto px-1 pb-4">
                     <div className="flex items-center gap-4">
                         <div className="relative">
-                            <UserAvatar name={displayName} photoUrl={previewUrl} className="h-16 w-16" textClassName="text-lg" />
+                            <UserAvatar name={nameEn} photoUrl={previewUrl} className="h-16 w-16" textClassName="text-lg" />
                             {canEdit && (
                                 <button
                                     onClick={() => inputRef.current?.click()}
