@@ -30,6 +30,7 @@ enum RequestType: string
     case Recovery = 'recovery';
     case Mailgroup = 'mailgroup';
     case Telephone = 'telephone';
+    case Network = 'network';
     case Other = 'other';
 
     public function label(): string
@@ -45,6 +46,7 @@ enum RequestType: string
             self::Software => 'Software install',
             self::Recovery => 'Data recovery',
             self::Telephone => 'Telephone',
+            self::Network => 'Network',
             self::Other => 'Other request',
         };
     }
@@ -71,6 +73,7 @@ enum RequestType: string
             self::Software => 'ติดตั้งซอฟต์แวร์',
             self::Recovery => 'กู้คืนข้อมูล',
             self::Telephone => 'โทรศัพท์',
+            self::Network => 'ระบบเครือข่าย',
             self::Other => 'คำขออื่น ๆ',
         };
     }
@@ -109,6 +112,7 @@ enum RequestType: string
             // permissions are what route it to them.
             self::Telephone => TicketCategory::Telephone,
             self::Software, self::Email, self::Mailgroup, self::Recovery => TicketCategory::Software,
+            self::Network => TicketCategory::Network,
             self::Fileshare => TicketCategory::Network,
             self::Social, self::Other => TicketCategory::Other,
         };

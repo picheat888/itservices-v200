@@ -15,6 +15,7 @@ export const requests: Dict = {
     req_software: 'ติดตั้งซอฟต์แวร์',
     req_recovery: 'กู้คืนข้อมูล',
     req_telephone: 'โทรศัพท์',
+    req_network: 'ระบบเครือข่าย',
     req_other: 'คำขออื่น ๆ',
 
     // pages/index.tsx — หัวหน้า + แท็บ

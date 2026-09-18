@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
 use App\Enums\Request\RequestStatus;
+use App\Enums\Request\RequestType;
+use App\Enums\Ticket\TicketCategory;
 use App\Models\Access\FileShare;
 use App\Models\Access\Software;
 use App\Models\Employee\Employee;
@@ -16,6 +18,7 @@ use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Services\Sidebar\SidebarBadgeService;
+use App\Support\DefaultWorkflows;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
@@ -106,6 +109,43 @@ class RequestWorkflowTest extends TestCase
         ])->assertCreated();
 
         return ServiceRequest::findOrFail($response->json('data.id'));
+    }
+
+    /**
+     * Network is signed from manager level up — no supervisor rung.
+     *
+     * The route exists because network work is not standard issue a supervisor waves
+     * through: it reaches the executive rung, and it starts where the other routes reach
+     * their second step.
+     */
+    public function test_a_network_request_is_signed_by_the_manager_then_the_executive(): void
+    {
+        $vp = Employee::create(['first_name' => 'Veep', 'position_id' => $this->positionId('Vice President')]);
+        $this->mgr->update(['manager_id' => $vp->id]);
+
+        $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
+            'type' => 'network',
+            'title' => 'Switch port for the new bench',
+            'reason' => 'The bench has no wired drop and the survey rig cannot use Wi-Fi.',
+            'fields' => [],
+        ])->assertCreated();
+
+        $request = ServiceRequest::findOrFail($response->json('data.id'));
+        $steps = $request->approvals()->orderBy('position')->get();
+
+        // The supervisor is skipped over entirely: their rung is not on this route.
+        $this->assertSame(
+            [$this->mgr->id, $vp->id, null],
+            $steps->pluck('approver_employee_id')->all(),
+        );
+        $this->assertSame('it_staff', (string) $steps->last()->actor_type->value);
+    }
+
+    /** A network request opens its ticket under the network category, not hardware. */
+    public function test_a_network_request_opens_a_network_ticket(): void
+    {
+        $this->assertSame(TicketCategory::Network, RequestType::Network->ticketCategory());
+        $this->assertTrue(DefaultWorkflows::all()[RequestType::Network->value]['auto_ticket']);
     }
 
     public function test_a_request_that_does_not_exist_answers_not_found(): void
@@ -472,7 +512,7 @@ class RequestWorkflowTest extends TestCase
         // Options endpoint: gated by requests.submit, lists all ten services.
         $this->actingAs($auditor)->getJson('/api/service-requests/options')->assertForbidden();
         $this->actingAs($this->requester)->getJson('/api/service-requests/options')
-            ->assertOk()->assertJsonCount(11, 'data.types');
+            ->assertOk()->assertJsonCount(count(RequestType::cases()), 'data.types');
     }
 
     /**

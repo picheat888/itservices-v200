@@ -1,5 +1,5 @@
 import type { ApprovalSkipReason, ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
-import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, type LucideIcon } from 'lucide-react';
+import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, Wifi, type LucideIcon } from 'lucide-react';
 
 /**
  * Presentation vocabulary for the service-request enums — lives beside the types
@@ -35,6 +35,7 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
     recovery: { icon: Archive, color: '#d97706', labelKey: 'req_recovery' },
     mailgroup: { icon: Users, color: '#7c3aed', labelKey: 'req_mailgroup' },
     telephone: { icon: Phone, color: '#475569', labelKey: 'req_telephone' },
+    network: { icon: Wifi, color: '#0891b2', labelKey: 'req_network' },
     other: { icon: MoreHorizontal, color: '#64748b', labelKey: 'req_other' },
 };
 
