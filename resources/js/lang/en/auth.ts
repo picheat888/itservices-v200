@@ -39,4 +39,13 @@ export const auth: Dict = {
     profile_edit_via: 'Edit via your profile',
     profile_details: 'Employee details',
     profile_account: 'Account & access',
+    profile_contact: 'Contact',
+    profile_tab_details: 'Details',
+    profile_tab_assets: 'My equipment',
+    profile_tab_tickets: 'My tickets',
+    profile_tab_access: 'My access',
+    profile_see_all: 'Open the full page',
+    profile_no_assets: 'Nothing is signed out to you.',
+    profile_no_tickets: 'You have not reported anything yet.',
+    profile_no_access: 'No systems are granted to you.',
 };

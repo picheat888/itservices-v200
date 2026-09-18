@@ -39,4 +39,13 @@ export const auth: Dict = {
     profile_edit_via: 'แก้ที่โปรไฟล์ของคุณ',
     profile_details: 'ข้อมูลพนักงาน',
     profile_account: 'บัญชีและสิทธิ์',
+    profile_contact: 'ข้อมูลติดต่อ',
+    profile_tab_details: 'ข้อมูลส่วนตัว',
+    profile_tab_assets: 'ทรัพย์สินของฉัน',
+    profile_tab_tickets: 'Ticket ของฉัน',
+    profile_tab_access: 'สิทธิ์เข้าถึงของฉัน',
+    profile_see_all: 'เปิดหน้าเต็ม',
+    profile_no_assets: 'ยังไม่มีอุปกรณ์ที่เบิกไว้',
+    profile_no_tickets: 'คุณยังไม่เคยแจ้งปัญหา',
+    profile_no_access: 'ยังไม่ได้รับสิทธิ์เข้าถึงระบบใด',
 };
