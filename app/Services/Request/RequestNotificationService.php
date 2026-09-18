@@ -178,6 +178,21 @@ class RequestNotificationService
     /** Bell + email one resolved approver that a step waits on them. */
     private function notifyApprover(ServiceRequest $request, RequestApproval $row): void
     {
+        // A department step open to a group has no single approver: everybody who could
+        // act is told, and whoever gets there first takes it. Belling one of them would
+        // leave the rest waiting on a request they are equally responsible for.
+        $group = $this->departmentApprovers($row);
+        if ($group->isNotEmpty()) {
+            $this->sendBell(
+                $group,
+                new RequestWorkflowNotification($request, 'waiting', $row->label, $request->requester_name),
+                ['service_request_id' => $request->id, 'subtype' => 'waiting'],
+            );
+            $this->emailEach($group, 'request.approval_needed', $request, ['step.label' => $row->label]);
+
+            return;
+        }
+
         $approver = $this->approverUser($row);
         if ($approver === null) {
             // it_staff queue rows carry no person and are notified at finalApproved.
@@ -250,6 +265,26 @@ class RequestNotificationService
             new RequestWorkflowNotification($request, 'blocked_no_account', $row->label, $row->approver_name, null, $employee),
             ['service_request_id' => $request->id, 'subtype' => 'blocked_no_account'],
         );
+    }
+
+    /**
+     * Every login that may act on a group step — the department's holders of one of the
+     * step's positions. Empty for every other kind of row, which keeps the single-approver
+     * path below exactly as it was.
+     *
+     * @return Collection<int, User>
+     */
+    private function departmentApprovers(?RequestApproval $row): Collection
+    {
+        if ($row === null || ! $row->isOpenToDepartment()) {
+            return collect();
+        }
+
+        $employeeIds = Employee::where('department_id', $row->approver_department_id)
+            ->whereIn('position_id', array_map('intval', $row->approver_position_ids))
+            ->pluck('id');
+
+        return User::whereIn('employee_id', $employeeIds)->get();
     }
 
     /** The login account behind an approval row, or null for queue/skipped rows. */
@@ -375,6 +410,7 @@ class RequestNotificationService
         'no_matching_position' => 'Skipped - nobody above the requester holds this position',
         'no_resource_owner' => 'Skipped - this resource has no owner',
         'requester_is_owner' => 'Skipped - the requester owns this resource',
+        'no_department_approver' => 'Skipped - that department has nobody in the positions this step accepts',
     ];
 
     /**
@@ -491,13 +527,14 @@ class RequestNotificationService
      */
     public function remindApprover(ServiceRequest $request, RequestApproval $row, int $days): void
     {
-        $approver = $this->approverUser($row);
-        if ($approver === null) {
+        $group = $this->departmentApprovers($row);
+        $recipients = $group->isNotEmpty() ? $group : collect(array_filter([$this->approverUser($row)]));
+        if ($recipients->isEmpty()) {
             return;
         }
 
         $this->sendBell(
-            collect([$approver]),
+            $recipients,
             new RequestWorkflowNotification($request, 'stalled', $row->label, $request->requester_name, null, null, $days),
             ['service_request_id' => $request->id, 'subtype' => 'stalled'],
         );

@@ -127,6 +127,8 @@ class WorkflowResolverService
             'label' => $s->label,
             'kind' => $s->kind->value,
             'position_ids' => $s->positions->pluck('id')->all(),
+            'department_id' => $s->department_id,
+            'approver_employee_id' => $s->approver_employee_id,
         ])->all();
     }
 
@@ -158,6 +160,8 @@ class WorkflowResolverService
                 'label' => (string) $step['label'],
                 'approver_employee_id' => null,
                 'approver_name' => null,
+                'approver_department_id' => null,
+                'approver_position_ids' => null,
                 'status' => ApprovalStatus::Waiting->value,
                 'note' => null,
                 'skip_reason' => null,
@@ -165,6 +169,12 @@ class WorkflowResolverService
 
             if ($actorType === StepActorType::ItStaff) {
                 $rows->push($base);
+
+                continue;
+            }
+
+            if ($actorType === StepActorType::Department) {
+                $rows->push($this->resolveDepartmentStep($base, $step, $requester));
 
                 continue;
             }
@@ -237,6 +247,65 @@ class WorkflowResolverService
         }
 
         return $this->mergeAndNumber($this->guaranteeAnApprover($rows, $chain));
+    }
+
+    /**
+     * A department step, frozen into one row.
+     *
+     * Two shapes: a step that names one person resolves to them, and behaves like any
+     * other single-approver row. A step that names positions instead is left open to the
+     * whole group — the criteria are copied onto the row so the request keeps the rule it
+     * was submitted under even if the workflow is edited later.
+     *
+     * The requester is excluded either way: a department step that lands on the person who
+     * asked would let them sign their own request, which is the one thing every route here
+     * is built to prevent.
+     *
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $step
+     * @return array<string, mixed>
+     */
+    private function resolveDepartmentStep(array $base, array $step, Employee $requester): array
+    {
+        $skipped = [...$base,
+            'status' => ApprovalStatus::Skipped->value,
+            'skip_reason' => ApprovalSkipReason::NoDepartmentApprover->value,
+        ];
+
+        $departmentId = $step['department_id'] ?? null;
+        if ($departmentId === null) {
+            return $skipped;
+        }
+
+        // Named person: one row, one approver, exactly like a chain rung that found a holder.
+        $namedId = $step['approver_employee_id'] ?? null;
+        if ($namedId !== null) {
+            $named = Employee::find($namedId);
+
+            return $named !== null && $named->id !== $requester->id && $this->canHoldAStep($named)
+                ? [...$base, 'approver_employee_id' => $named->id, 'approver_name' => $named->name]
+                : $skipped;
+        }
+
+        $positionIds = array_map('intval', array_values($step['position_ids'] ?? []));
+        if ($positionIds === []) {
+            return $skipped; // a group naming no position accepts nobody
+        }
+
+        $eligible = Employee::where('department_id', $departmentId)
+            ->whereIn('position_id', $positionIds)
+            ->where('id', '!=', $requester->id)
+            ->get()
+            ->filter(fn (Employee $e) => $this->canHoldAStep($e));
+
+        if ($eligible->isEmpty()) {
+            return $skipped;
+        }
+
+        return [...$base,
+            'approver_department_id' => (int) $departmentId,
+            'approver_position_ids' => $positionIds,
+        ];
     }
 
     /**

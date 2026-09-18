@@ -27,4 +27,11 @@ enum ApprovalSkipReason: string
 
     /** The owner step resolved to the requester themself — nobody approves their own. */
     case RequesterIsOwner = 'requester_is_owner';
+
+    /**
+     * A department step found nobody: the department holds no active employee in any of
+     * the positions it accepts, or the person it named has left. Recorded rather than
+     * passed to a stand-in — a department's signature is the department's to give.
+     */
+    case NoDepartmentApprover = 'no_department_approver';
 }

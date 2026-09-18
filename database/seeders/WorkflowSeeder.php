@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Request\StepActorType;
+use App\Models\Employee\Department;
 use App\Models\Employee\Position;
 use App\Models\Workflow\Workflow;
 use App\Support\DefaultWorkflows;
@@ -27,6 +28,10 @@ class WorkflowSeeder extends Seeder
     public function run(): void
     {
         $positionIdByTitle = Position::pluck('id', 'title');
+        // A department a route names but this install does not have is left off the step,
+        // which the resolver then skips with a reason — the same tolerance as a position
+        // title the install is missing.
+        $departmentIdByName = Department::pluck('id', 'name');
 
         foreach (DefaultWorkflows::all() as $type => $definition) {
             $existing = Workflow::with('steps.positions')->where('request_type', $type)->first();
@@ -49,6 +54,7 @@ class WorkflowSeeder extends Seeder
                     'actor_type' => $step['actor_type'],
                     'label' => $step['label'],
                     'kind' => $step['kind'],
+                    'department_id' => isset($step['department']) ? ($departmentIdByName[$step['department']] ?? null) : null,
                 ]);
 
                 $positionIds = collect($step['positions'] ?? [])

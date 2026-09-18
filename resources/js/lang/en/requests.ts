@@ -19,6 +19,7 @@ export const requests: Dict = {
     req_recovery: 'Data recovery',
     req_telephone: 'Telephone',
     req_network: 'Network',
+    req_cctv: 'CCTV',
     req_other: 'Other request',
 
     // pages/index.tsx — page header + tabs
@@ -134,6 +135,7 @@ export const requests: Dict = {
     req_block_approver_resigned: 'An approver in your reporting line has left the company. Ask HR to update it before submitting.',
     req_skip_no_manager: 'Skipped - the requester has no manager',
     req_skip_no_matching_position: 'Skipped - nobody above the requester holds this position',
+    req_skip_no_department_approver: 'Skipped - that department has nobody in the positions this step accepts',
     req_skip_no_resource_owner: 'Skipped - this resource has no owner',
     req_skip_requester_is_owner: 'Skipped - the requester owns this resource',
 

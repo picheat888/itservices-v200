@@ -29,6 +29,12 @@ interface TrailItem {
  * → every (frozen) approval step with its decision + remark → the Admin/IT
  * fulfillment hop, or the rejection notice back to the requester.
  */
+/** "QC Dept. · Asst. Manager / Manager" — who is holding a step that names no one person. */
+function departmentTitle(row: RequestApproval): string {
+    const positions = (row.approver_positions ?? []).join(' / ');
+    return positions ? `${row.approver_department} · ${positions}` : String(row.approver_department);
+}
+
 export function RequestTrail({ request }: { request: ServiceRequest }) {
     const t = useT();
     const approvals = request.approvals ?? [];
@@ -124,7 +130,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                 ) : (
                     <span className="font-mono text-[11px] font-bold">{row.position}</span>
                 ),
-            title: isFulfillment ? t('req_trail_fulfillment') : row.approver_name ? `${row.approver_name}` : row.label,
+            // A department step nobody has taken yet has no name to print. The department
+            // and the rungs it accepts are what the reader can act on — "waiting on a
+            // person we cannot name" is the one thing the line must not say.
+            title: isFulfillment
+                ? t('req_trail_fulfillment')
+                : (row.approver_name ?? (row.approver_department ? departmentTitle(row) : row.label)),
             // A skipped step with a reason says it all inside the amber note below, so the
             // status line stays quiet instead of printing "skipped" twice. Rows from before
             // reasons were stored still get the plain word.

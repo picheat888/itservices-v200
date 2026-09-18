@@ -16,6 +16,7 @@ export const requests: Dict = {
     req_recovery: 'กู้คืนข้อมูล',
     req_telephone: 'โทรศัพท์',
     req_network: 'ระบบเครือข่าย',
+    req_cctv: 'กล้องวงจรปิด',
     req_other: 'คำขออื่น ๆ',
 
     // pages/index.tsx — หัวหน้า + แท็บ
@@ -131,6 +132,7 @@ export const requests: Dict = {
     req_block_approver_resigned: 'ผู้อนุมัติในสายของคุณลาออกแล้ว กรุณาติดต่อ HR เพื่ออัปเดตสายอนุมัติก่อนยื่นคำขอ',
     req_skip_no_manager: 'ข้าม เนื่องจากผู้ขอไม่มีผู้บังคับบัญชา',
     req_skip_no_matching_position: 'ข้าม เนื่องจากไม่มีใครเหนือผู้ขอที่อยู่ตำแหน่งนี้',
+    req_skip_no_department_approver: 'ข้าม เนื่องจากฝ่ายนี้ไม่มีผู้ที่ตำแหน่งตรงตามที่กำหนด',
     req_skip_no_resource_owner: 'ข้าม เนื่องจากรายการนี้ไม่มีเจ้าของ',
     req_skip_requester_is_owner: 'ข้าม เนื่องจากผู้ขอเป็นเจ้าของรายการนี้เอง',
 

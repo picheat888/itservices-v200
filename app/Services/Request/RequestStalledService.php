@@ -48,6 +48,15 @@ class RequestStalledService
         foreach ($this->stalledRows(self::NUDGE_AFTER_DAYS) as $row) {
             $days = $this->daysWaiting($row);
 
+            // A department step open to a group names nobody either, but it is not the
+            // queue: everybody who could sign it is reminded.
+            if ($row->isOpenToDepartment()) {
+                $this->notifications->remindApprover($row->request, $row, $days);
+                $sent['approvers']++;
+
+                continue;
+            }
+
             // A rung naming nobody is the IT queue; there is no individual to poke, so the
             // people who asked to hear about fulfilment hear about this too.
             if ($row->approver_employee_id === null) {

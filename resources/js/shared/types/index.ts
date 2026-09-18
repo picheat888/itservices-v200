@@ -952,6 +952,7 @@ export type ServiceRequestType =
     | 'recovery'
     | 'telephone'
     | 'network'
+    | 'cctv'
     | 'other';
 
 export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled';
@@ -967,8 +968,13 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  * Stored as a code and written out through `req_skip_*`, so the trail reads in the
  * viewer's language instead of the language it was submitted in.
  */
-export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner';
-export type WorkflowActorType = 'chain' | 'owner' | 'it_staff';
+export type ApprovalSkipReason =
+    | 'no_manager'
+    | 'no_matching_position'
+    | 'no_resource_owner'
+    | 'requester_is_owner'
+    | 'no_department_approver';
+export type WorkflowActorType = 'chain' | 'owner' | 'it_staff' | 'department';
 export type WorkflowStepKind = 'approval' | 'fulfillment';
 
 /** One frozen step of a request's resolved approval chain. */
@@ -981,6 +987,9 @@ export interface RequestApproval {
     status: ApprovalRowStatus;
     approver_employee_id: number | null;
     approver_name: string | null;
+    /** Set only while a department step is still open to a group rather than to one person. */
+    approver_department?: string | null;
+    approver_positions?: string[];
     /** What a person wrote on the step — never a system explanation. */
     note: string | null;
     skip_reason: ApprovalSkipReason | null;

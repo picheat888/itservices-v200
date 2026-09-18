@@ -1,5 +1,5 @@
 import type { ApprovalSkipReason, ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
-import { Archive, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, Wifi, type LucideIcon } from 'lucide-react';
+import { Archive, Cctv, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, Wifi, type LucideIcon } from 'lucide-react';
 
 /**
  * Presentation vocabulary for the service-request enums — lives beside the types
@@ -36,6 +36,7 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
     mailgroup: { icon: Users, color: '#7c3aed', labelKey: 'req_mailgroup' },
     telephone: { icon: Phone, color: '#475569', labelKey: 'req_telephone' },
     network: { icon: Wifi, color: '#0891b2', labelKey: 'req_network' },
+    cctv: { icon: Cctv, color: '#9333ea', labelKey: 'req_cctv' },
     other: { icon: MoreHorizontal, color: '#64748b', labelKey: 'req_other' },
 };
 
@@ -47,6 +48,7 @@ export const REQUEST_TYPE_META: Record<ServiceRequestType, { icon: LucideIcon; c
 export const REQUEST_SKIP_REASON_LABEL: Record<ApprovalSkipReason, string> = {
     no_manager: 'req_skip_no_manager',
     no_matching_position: 'req_skip_no_matching_position',
+    no_department_approver: 'req_skip_no_department_approver',
     no_resource_owner: 'req_skip_no_resource_owner',
     requester_is_owner: 'req_skip_requester_is_owner',
 };
