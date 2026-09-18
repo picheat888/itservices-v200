@@ -14,6 +14,7 @@ export const ticket: Dict = {
     ticket_sla_missed_badge: 'Missed',
     ticket_sla_response_due: 'Response due',
     ticket_sla_resolve_due: 'Resolve due',
+    ticket_sla_resolve_not_started: 'Starts when the case is taken',
     ticket_sla_target_from: 'Target',
     ticket_sla_target_request: 'request type',
     ticket_sla_target_priority: 'priority',
@@ -171,8 +172,8 @@ export const ticket: Dict = {
     ticket_sort_updated: 'Recently updated',
     ticket_sort_priority: 'Priority (high → low)',
     // ticket-update-modal.tsx — progress note + kind of work
-    ticket_work_class: 'Kind of work',
-    ticket_work_class_hint: 'Set this when the repair is handed to a technician — the deadline follows it.',
+    ticket_work_class: 'Send to repair',
+    ticket_work_class_hint: 'Select this option when requesting repairs from a technician.',
     ticket_work_class_send: 'Send this repair to a technician',
     ticket_work_class_standard: 'Standard work',
     ticket_work_class_repair_internal: 'In-house technician',
