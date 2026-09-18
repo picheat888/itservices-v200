@@ -199,7 +199,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('tickets/{ticket}/assign', [TicketController::class, 'assign'])->name('api.tickets.assign');
     Route::post('tickets/{ticket}/forward', [TicketController::class, 'forward'])->name('api.tickets.forward');
     Route::post('tickets/{ticket}/updates', [TicketController::class, 'storeUpdate'])->name('api.tickets.updates.store');
-    Route::patch('tickets/{ticket}/work-class', [TicketController::class, 'updateWorkClass'])->name('api.tickets.work-class.update');
     Route::post('tickets/{ticket}/resolve', [TicketController::class, 'resolve'])->name('api.tickets.resolve');
     Route::post('tickets/{ticket}/attachments', [TicketAttachmentController::class, 'store'])->name('api.tickets.attachments.store');
     Route::delete('tickets/{ticket}/attachments/{attachment}', [TicketAttachmentController::class, 'destroy'])->name('api.tickets.attachments.destroy');

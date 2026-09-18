@@ -110,10 +110,14 @@ class TicketService
     }
 
     /**
-     * An IT staff takes an open case for themselves: assigns it, sets priority, and
-     * optionally records an initial note and the related asset. Moves to InProgress.
+     * An IT staff takes an open case for themselves: assigns it, optionally records an
+     * initial note and the related asset, and moves it to InProgress.
+     *
+     * A case opened automatically from an approved request gets NO priority — its target
+     * comes from what was asked for, which was settled before anybody looked at it. Passing
+     * one would be recording a judgement nobody made.
      */
-    public function take(Ticket $ticket, User $staff, TicketPriority $priority, ?string $note, ?int $relatedAssetId): Ticket
+    public function take(Ticket $ticket, User $staff, ?TicketPriority $priority, ?string $note, ?int $relatedAssetId): Ticket
     {
         $ticket->update([
             'assignee_id' => $staff->id,
@@ -137,13 +141,14 @@ class TicketService
     }
 
     /**
-     * A super admin assigns an open case to a specific IT staff with a priority.
-     * Moves to InProgress.
+     * A super admin assigns an open case to a specific IT staff. Moves to InProgress.
+     *
+     * Priority is null for a case opened from a request, for the same reason it is in take().
      *
      * $assignedBy is carried into the mail: being handed a case is not the same as picking
      * one up, and the receiver's first question is who handed it to them.
      */
-    public function assign(Ticket $ticket, User $staff, TicketPriority $priority, ?User $assignedBy = null): Ticket
+    public function assign(Ticket $ticket, User $staff, ?TicketPriority $priority, ?User $assignedBy = null): Ticket
     {
         $ticket->update([
             'assignee_id' => $staff->id,
@@ -215,8 +220,17 @@ class TicketService
      *
      * @return array<string, mixed>
      */
-    private function deadlineAfterPriority(Ticket $ticket, TicketPriority $priority): array
+    private function deadlineAfterPriority(Ticket $ticket, ?TicketPriority $priority): array
     {
+        // No priority to apply: a case opened from a request is judged on what was asked for,
+        // and taking it settles who is working on it, not how long the work should take. The
+        // scope check below would reach the same answer for such a case, but only because a
+        // request-type rule happens to match it — this says it outright rather than relying on
+        // the configuration being complete.
+        if ($priority === null) {
+            return [];
+        }
+
         $scope = TicketSla::targetFor($ticket)['scope'];
         if ($scope !== null && $scope !== SlaScope::Priority) {
             return [];
