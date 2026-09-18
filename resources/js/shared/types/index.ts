@@ -951,6 +951,7 @@ export type ServiceRequestType =
     | 'software'
     | 'recovery'
     | 'telephone'
+    | 'network'
     | 'other';
 
 export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled';

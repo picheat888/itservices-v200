@@ -97,6 +97,7 @@ class RequestSchemas
                 ['key' => 'device_type_id', 'label_en' => 'Device', 'label_th' => 'ประเภทเครื่อง', 'input' => 'select', 'required' => true, 'managed' => true],
                 ['key' => 'location_id', 'label_en' => 'Install location', 'label_th' => 'สถานที่ติดตั้ง', 'input' => 'source', 'source' => 'locations', 'required' => true],
             ],
+            RequestType::Network->value => [],
             RequestType::Other->value => [],
         ];
     }
@@ -121,6 +122,7 @@ class RequestSchemas
             RequestType::Software->value => 2,
             RequestType::Recovery->value => 1,
             RequestType::Telephone->value => 2,
+            RequestType::Network->value => 1,
             RequestType::Other->value => 1,
         ];
     }

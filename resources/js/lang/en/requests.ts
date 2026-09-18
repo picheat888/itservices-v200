@@ -18,6 +18,7 @@ export const requests: Dict = {
     req_software: 'Software install',
     req_recovery: 'Data recovery',
     req_telephone: 'Telephone',
+    req_network: 'Network',
     req_other: 'Other request',
 
     // pages/index.tsx — page header + tabs

@@ -103,6 +103,12 @@ class DefaultWorkflows
                 'name' => 'คำขอโทรศัพท์สำนักงาน', 'auto_ticket' => true,
                 'steps' => [...$chain3, $it],
             ],
+            // No supervisor rung: network work is signed at manager level and above, so the
+            // route starts where the others reach their second step.
+            RequestType::Network->value => [
+                'name' => 'คำขอใช้งานระบบเครือข่าย', 'auto_ticket' => true,
+                'steps' => [$chain3[1], $chain3[2], $it],
+            ],
             // The only route that does not open a ticket by itself: "other" covers work
             // nobody has typed yet, so what it becomes is decided after it is approved.
             RequestType::Other->value => [

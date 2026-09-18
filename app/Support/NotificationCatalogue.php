@@ -449,7 +449,7 @@ class NotificationCatalogue
                 'trigger' => 'Your case is resolved',
                 'audience' => 'The requester',
                 'message_en' => 'Your ticket has been closed - tap to see the resolution',
-                'message_th' => 'Ticket ของคุณปิดงานแล้ว - แตะเพื่อดูผลการแก้ไข',
+                'message_th' => 'เคสของคุณปิดแล้ว - แตะเพื่อดูผลการแก้ไข',
                 'enabled' => true,
             ],
             [

@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Support\DefaultWorkflows;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -48,7 +49,7 @@ class WorkflowAdminTest extends TestCase
         $this->actingAs($plain)->putJson("/api/workflows/{$workflow->id}", [])->assertForbidden();
 
         $this->actingAs($this->admin)->getJson('/api/workflows')
-            ->assertOk()->assertJsonCount(11, 'data');
+            ->assertOk()->assertJsonCount(count(DefaultWorkflows::all()), 'data');
     }
 
     /** The master opens the screen; rewriting a chain is a second decision on top of it. */
