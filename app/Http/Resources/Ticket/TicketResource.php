@@ -166,6 +166,13 @@ class TicketResource extends JsonResource
             return null;
         }
 
+        // A case opened from a request cannot be classified at all, so there is no control for
+        // this to feed — and working it out means three targetFor() walks and a resolveDueAt()
+        // per class on every detail read of a case that can never use them.
+        if ($ticket->serviceRequest !== null) {
+            return null;
+        }
+
         return array_map(function (TicketWorkClass $class) use ($ticket): array {
             $clone = clone $ticket;
             $clone->work_class = $class;
