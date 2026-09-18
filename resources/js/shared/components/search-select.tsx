@@ -61,6 +61,8 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
     const listRef = useRef<HTMLDivElement>(null);
 
     const selected = options.find((o) => o.value === value);
+    // One option with an icon gives every row the slot, so labels keep one left edge.
+    const hasIcons = options.some((o) => o.icon !== undefined);
 
     const filtered =
         query === ''
@@ -170,7 +172,10 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                     className,
                 )}
             >
-                <span className="truncate">{selected ? selected.label : (placeholder ?? t('select_placeholder'))}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                    {selected?.icon !== undefined && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{selected.icon}</span>}
+                    <span className="truncate">{selected ? selected.label : (placeholder ?? t('select_placeholder'))}</span>
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </button>
 
@@ -222,12 +227,13 @@ export function SearchSelect({ value, onChange, options, placeholder, className 
                                         disabled={opt.disabled}
                                         onClick={() => handleSelect(opt.value)}
                                         className={cn(
-                                            'flex w-full items-center justify-between gap-2 px-3 py-2 text-sm',
+                                            'flex w-full items-center gap-2 px-3 py-2 text-left text-sm',
                                             opt.disabled ? 'cursor-not-allowed opacity-45' : 'hover:bg-accent hover:text-accent-foreground',
                                             opt.value === value && 'font-medium',
                                         )}
                                     >
-                                        <span className="truncate">{opt.label}</span>
+                                        {hasIcons && <span className="flex h-4 w-4 shrink-0 items-center justify-center">{opt.icon}</span>}
+                                        <span className="flex-1 truncate">{opt.label}</span>
                                         {opt.note && <span className="text-muted-foreground shrink-0 text-[11px]">{opt.note}</span>}
                                         {opt.value === value && <Check className="text-brand ml-2 h-4 w-4 shrink-0" />}
                                     </button>

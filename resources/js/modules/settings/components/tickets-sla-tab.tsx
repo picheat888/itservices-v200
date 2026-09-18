@@ -5,7 +5,7 @@
  * (เป้าหมายตามลักษณะงาน) จะดันไฟล์รวมไปเกิน 2,200 บรรทัด
  */
 import { useT } from '@/lang';
-import { TICKET_CATEGORIES, TicketPriorityBadge } from '@/modules/ticket';
+import { TICKET_CATEGORIES, TicketCategoryIcon, TicketPriorityBadge } from '@/modules/ticket';
 import { SaveButton } from '@/shared/components/save-button';
 import { SearchSelect } from '@/shared/components/search-select';
 import { REQUEST_TYPES, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -457,6 +457,7 @@ export function TicketsSlaTab() {
                                                     options={TICKET_CATEGORIES.map((c) => ({
                                                         value: c,
                                                         label: t(`ticket_cat_${c}`),
+                                                        icon: <TicketCategoryIcon category={c} className="text-muted-foreground h-4 w-4" />,
                                                         disabled: c !== row.category && taken.has(`${c}:${row.work_class}`),
                                                         note: c !== row.category && taken.has(`${c}:${row.work_class}`) ? t('set_sla_pair_taken') : undefined,
                                                     }))}

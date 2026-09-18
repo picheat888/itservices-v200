@@ -7,6 +7,8 @@ export interface SelectOption {
     disabled?: boolean;
     /** Short right-aligned reason, shown beside a disabled option. */
     note?: string;
+    /** Leading visual. When any option has one, every row reserves the slot so labels line up. */
+    icon?: React.ReactNode;
 }
 
 // Country name as value so it matches existing DB values (e.g. "Thailand")
