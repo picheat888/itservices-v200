@@ -13,12 +13,15 @@ import { useUiStore } from '@/stores/ui';
 import {
     ArrowRightLeft,
     Check,
+    CircleAlert,
     Download,
     File,
     FileArchive,
     FileSpreadsheet,
     FileText,
+    History,
     MessageSquarePlus,
+    Paperclip,
     Pencil,
     Presentation,
     RefreshCcw,
@@ -478,9 +481,12 @@ export function TicketDetailDrawer({
                                 active={tab}
                                 onChange={setTab}
                                 tabs={[
-                                    { id: 'details', label: t('ticket_tab_details') },
-                                    { id: 'progress', label: t('ticket_tab_progress'), count: progress.length },
-                                    { id: 'files', label: t('ticket_attach'), count: files.length },
+                                    // Three different kinds of thing — what was reported, what has
+                                    // happened since, what came attached — so each gets a mark that
+                                    // can be recognised before the word is read.
+                                    { id: 'details', label: t('ticket_tab_details'), icon: CircleAlert },
+                                    { id: 'progress', label: t('ticket_tab_progress'), count: progress.length, icon: History },
+                                    { id: 'files', label: t('ticket_attach'), count: files.length, icon: Paperclip },
                                 ]}
                             />
 

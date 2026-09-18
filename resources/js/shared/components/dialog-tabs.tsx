@@ -1,10 +1,17 @@
 import { cn } from '@/shared/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 
 export interface DialogTab<T extends string> {
     id: T;
     label: string;
     /** Optional count pill after the label — hidden when null/0. */
     count?: number | null;
+    /**
+     * Optional leading icon. A bar whose tabs hold different kinds of thing reads faster with
+     * one; a bar whose tabs are all the same kind (three sets of fields, say) reads slower,
+     * because an icon that cannot distinguish anything is decoration. Opt in per bar.
+     */
+    icon?: LucideIcon;
 }
 
 /**
@@ -32,13 +39,14 @@ export function DialogTabs<T extends string>({
                     type="button"
                     onClick={() => onChange(tb.id)}
                     className={cn(
-                        'relative rounded-t-lg px-4 py-3 text-sm font-semibold transition-colors',
+                        'relative inline-flex items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold transition-colors',
                         active === tb.id ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                     )}
                 >
+                    {tb.icon && <tb.icon className="h-4 w-4 shrink-0" />}
                     {tb.label}
                     {tb.count != null && tb.count > 0 && (
-                        <span className="bg-accent ml-1.5 rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
+                        <span className="bg-accent rounded-full px-1.5 py-0.5 font-mono text-[11px]">{tb.count}</span>
                     )}
                     {active === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
                 </button>
