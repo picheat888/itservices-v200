@@ -156,7 +156,10 @@ export function DataTable<T>({
                 ref={bodyRef}
                 className={cn(
                     'border-border rounded-xl border',
-                    fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-y-auto' : 'overflow-hidden',
+                    // Scroll sideways rather than clip. A table wider than its card used to lose
+                    // the overhang with no way to reach it — eleven pixels of the last column on a
+                    // wide screen, a whole column on a laptop, and nothing on screen to say so.
+                    fillHeight ? 'min-h-0 flex-1 overflow-hidden' : maxBodyHeight ? 'overflow-auto' : 'overflow-x-auto',
                 )}
                 style={maxBodyHeight && !fillHeight ? { maxHeight: maxBodyHeight } : undefined}
             >
