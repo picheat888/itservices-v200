@@ -380,7 +380,7 @@ export function TicketsSlaTab() {
                                     )}
                                 </td>
                                 <td className="px-3 py-3 align-top">
-                                    <span className="inline-block w-36">
+                                    <span className="inline-block w-32">
                                         <SearchSelect
                                             value={draft[p]?.clock ?? 'business'}
                                             onChange={(v) => setPriorityClock(p, v as TicketSlaClock)}
@@ -416,7 +416,7 @@ export function TicketsSlaTab() {
                         {reqTargets.map((row, i) => {
                             const meta = REQUEST_TYPE_META[row.type as ServiceRequestType];
                             return (
-                                <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                <li key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
                                     <span className={cn('w-56 shrink-0', !row.enabled && 'opacity-60')}>
                                         <SearchSelect
                                             value={row.type}
@@ -452,7 +452,7 @@ export function TicketsSlaTab() {
                                     <span className={cn('text-muted-foreground min-w-[86px] text-xs', !row.enabled && 'line-through')}>
                                         {workingDaysHint(row.resolve, hours, row.clock, t)}
                                     </span>
-                                    <span className="w-36 shrink-0">
+                                    <span className="w-32 shrink-0">
                                         <SearchSelect
                                             value={row.clock}
                                             onChange={(v) => setRequestTarget(row.type, { clock: v as TicketSlaClock })}
@@ -496,7 +496,7 @@ export function TicketsSlaTab() {
                 ) : (
                     <ul className="mb-3 space-y-2">
                         {workTargets.map((row, i) => (
-                            <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <li key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
                                 <span className={cn('w-56 shrink-0', !row.enabled && 'opacity-60')}>
                                     <SearchSelect
                                         value={row.work_class}
@@ -526,7 +526,7 @@ export function TicketsSlaTab() {
                                 <span className={cn('text-muted-foreground min-w-[86px] text-xs', !row.enabled && 'line-through')}>
                                     {workingDaysHint(row.resolve, hours, row.clock, t)}
                                 </span>
-                                <span className="w-36 shrink-0">
+                                <span className="w-32 shrink-0">
                                     <SearchSelect
                                         value={row.clock}
                                         onChange={(v) => setWorkTarget(row.work_class, { clock: v as TicketSlaClock })}
