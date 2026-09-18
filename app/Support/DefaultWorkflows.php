@@ -38,7 +38,17 @@ class DefaultWorkflows
     ];
 
     /**
-     * @return array<string, array{name: string, auto_ticket: bool, steps: list<array{actor_type: string, label: string, kind: string, positions?: list<string>}>}>
+     * Departments a default route asks to sign, by name. Matched on `departments.name` at
+     * seed time and skipped when an install does not have it — the same tolerance the
+     * position rungs already have.
+     */
+    public const DEPARTMENTS = [
+        'qc' => 'Quality Control',
+        'se' => 'Safety',
+    ];
+
+    /**
+     * @return array<string, array{name: string, auto_ticket: bool, steps: list<array{actor_type: string, label: string, kind: string, positions?: list<string>, department?: string}>}>
      */
     public static function all(): array
     {
@@ -108,6 +118,31 @@ class DefaultWorkflows
             RequestType::Network->value => [
                 'name' => 'คำขอใช้งานระบบเครือข่าย', 'auto_ticket' => true,
                 'steps' => [$chain3[1], $chain3[2], $it],
+            ],
+            /*
+             * The only route that leaves the requester's own line.
+             *
+             * A camera is not the asker's department's business alone: QC signs because
+             * cameras watch the line they are answerable for, and Safety because of where
+             * the lenses may point. Neither sits above the person asking, so neither can be
+             * reached by climbing their manager chain — these two steps name a department
+             * and accept anybody in it at the rungs given.
+             */
+            RequestType::Cctv->value => [
+                'name' => 'คำขอใช้งานกล้องวงจรปิด', 'auto_ticket' => true,
+                'steps' => [
+                    $chain3[0],
+                    [
+                        'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
+                        'department' => self::DEPARTMENTS['qc'], 'positions' => ['Asst. Manager', 'Manager'],
+                    ],
+                    [
+                        'actor_type' => 'department', 'label' => 'SE Dept.', 'kind' => 'approval',
+                        'department' => self::DEPARTMENTS['se'], 'positions' => ['Supervisor', 'Manager'],
+                    ],
+                    $chain3[2],
+                    $it,
+                ],
             ],
             // The only route that does not open a ticket by itself: "other" covers work
             // nobody has typed yet, so what it becomes is decided after it is approved.

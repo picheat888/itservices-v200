@@ -200,6 +200,7 @@ class RequestService
             $this->assertStatus($fresh, RequestStatus::Pending);
             $row = $this->currentActionableRow($fresh);
             $this->assertActorIsApprover($actor, $row);
+            $this->claimForActor($actor, $row);
 
             $row->update([
                 'status' => ApprovalStatus::Approved->value,
@@ -237,6 +238,7 @@ class RequestService
             $this->assertStatus($fresh, RequestStatus::Pending);
             $row = $this->currentActionableRow($fresh);
             $this->assertActorIsApprover($actor, $row);
+            $this->claimForActor($actor, $row);
 
             $row->update([
                 'status' => ApprovalStatus::Rejected->value,
@@ -695,13 +697,40 @@ class RequestService
         return $row;
     }
 
-    /** Only the resolved approver of the current step may decide — no stand-ins. */
+    /**
+     * Only the approver of the current step may decide — no stand-ins.
+     *
+     * A department step configured by position has no single approver: anybody in that
+     * department holding one of its positions may act, and the first to do so takes the
+     * row (see claimForActor). Everything else still answers to one named id.
+     */
     private function assertActorIsApprover(User $actor, RequestApproval $row): void
     {
+        if ($actor->employee_id !== null && (int) $actor->employee_id === (int) $row->approver_employee_id) {
+            return;
+        }
+
         abort_unless(
-            $actor->employee_id !== null && (int) $actor->employee_id === (int) $row->approver_employee_id,
+            $row->acceptsEmployee($actor->employee),
             403,
             'It is not your turn to act on this request.',
         );
+    }
+
+    /**
+     * Write the actor into a group step, so a decided row reads like any other.
+     *
+     * Without this the row would keep saying "somebody in QC" after a named person had
+     * signed it, and every report that counts approvals per person would have to learn
+     * about group rows to answer correctly.
+     */
+    private function claimForActor(User $actor, RequestApproval $row): void
+    {
+        if ($row->approver_employee_id !== null || $actor->employee === null) {
+            return;
+        }
+
+        $row->approver_employee_id = $actor->employee->id;
+        $row->approver_name = $actor->employee->name;
     }
 }

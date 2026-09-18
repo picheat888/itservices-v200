@@ -105,10 +105,13 @@ class WorkflowController extends Controller
                     'actor_type' => $step['actor_type'],
                     'label' => $step['label'],
                     'kind' => $step['kind'],
+                    'department_id' => $step['actor_type'] === StepActorType::Department->value ? ($step['department_id'] ?? null) : null,
+                    'approver_employee_id' => $step['actor_type'] === StepActorType::Department->value ? ($step['approver_employee_id'] ?? null) : null,
                 ]);
 
-                // Only chain rungs carry positions; the pivot rows go with the step.
-                if ($step['actor_type'] === StepActorType::Chain->value) {
+                // Chain rungs and department groups both sign by position; the pivot rows go
+                // with the step. A department step naming one person carries no positions.
+                if (in_array($step['actor_type'], [StepActorType::Chain->value, StepActorType::Department->value], true)) {
                     $created->positions()->sync($step['position_ids'] ?? []);
                 }
             }

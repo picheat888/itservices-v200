@@ -3,6 +3,8 @@
 namespace App\Http\Resources\Request;
 
 use App\Enums\Request\ApprovalStatus;
+use App\Models\Employee\Department;
+use App\Models\Employee\Position;
 use App\Models\Request\RequestApproval;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -29,6 +31,17 @@ class RequestApprovalResource extends JsonResource
             'status' => $this->status?->value,
             'approver_employee_id' => $this->approver_employee_id,
             'approver_name' => $this->approver_name,
+            // A department step open to a group has no name to show: the reader is told
+            // which department is holding it, and at which positions, so "waiting on" says
+            // something rather than sitting blank.
+            'approver_department' => $this->when(
+                $this->isOpenToDepartment(),
+                fn () => Department::find($this->approver_department_id)?->name,
+            ),
+            'approver_positions' => $this->when(
+                $this->isOpenToDepartment(),
+                fn () => Position::whereIn('id', $this->approver_position_ids ?? [])->pluck('title')->values(),
+            ),
             'note' => $this->note,
             // Why the engine skipped this step, as a code the SPA writes out in the
             // reader's language (`req_skip_*`). Snapshotted: it stays true whatever

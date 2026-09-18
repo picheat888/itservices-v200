@@ -31,6 +31,7 @@ enum RequestType: string
     case Mailgroup = 'mailgroup';
     case Telephone = 'telephone';
     case Network = 'network';
+    case Cctv = 'cctv';
     case Other = 'other';
 
     public function label(): string
@@ -47,6 +48,7 @@ enum RequestType: string
             self::Recovery => 'Data recovery',
             self::Telephone => 'Telephone',
             self::Network => 'Network',
+            self::Cctv => 'CCTV',
             self::Other => 'Other request',
         };
     }
@@ -74,6 +76,7 @@ enum RequestType: string
             self::Recovery => 'กู้คืนข้อมูล',
             self::Telephone => 'โทรศัพท์',
             self::Network => 'ระบบเครือข่าย',
+            self::Cctv => 'กล้องวงจรปิด',
             self::Other => 'คำขออื่น ๆ',
         };
     }
@@ -113,6 +116,7 @@ enum RequestType: string
             self::Telephone => TicketCategory::Telephone,
             self::Software, self::Email, self::Mailgroup, self::Recovery => TicketCategory::Software,
             self::Network => TicketCategory::Network,
+            self::Cctv => TicketCategory::Cctv,
             self::Fileshare => TicketCategory::Network,
             self::Social, self::Other => TicketCategory::Other,
         };

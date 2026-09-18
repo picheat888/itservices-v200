@@ -98,6 +98,7 @@ class RequestSchemas
                 ['key' => 'location_id', 'label_en' => 'Install location', 'label_th' => 'สถานที่ติดตั้ง', 'input' => 'source', 'source' => 'locations', 'required' => true],
             ],
             RequestType::Network->value => [],
+            RequestType::Cctv->value => [],
             RequestType::Other->value => [],
         ];
     }
@@ -123,6 +124,7 @@ class RequestSchemas
             RequestType::Recovery->value => 1,
             RequestType::Telephone->value => 2,
             RequestType::Network->value => 1,
+            RequestType::Cctv->value => 1,
             RequestType::Other->value => 1,
         ];
     }
