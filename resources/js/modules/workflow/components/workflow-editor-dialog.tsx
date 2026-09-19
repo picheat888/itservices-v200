@@ -24,6 +24,11 @@ type EditableStep = {
     label: string;
     kind: WorkflowStep['kind'];
     position_ids: number[];
+    /**
+     * True once somebody has typed their own label. Until then the label follows the rule,
+     * so the two cannot drift into a step called "Manager" that a Supervisor signs.
+     */
+    label_touched?: boolean;
     /** Department steps only: which department signs. */
     department_id: number | null;
     /** Department steps only: the one person named, or null to accept the positions above. */
@@ -64,10 +69,12 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const [active, setActive] = useState(true);
     const [autoTicket, setAutoTicket] = useState(true);
     const [steps, setSteps] = useState<EditableStep[]>([]);
+    // Which step has its position palette open. The chosen titles show on every step; the
+    // full fourteen-title palette is what folds, or five steps would be seventy chips.
+    const [openRanks, setOpenRanks] = useState<number | null>(null);
     const [serverError, setServerError] = useState('');
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
     /** Index of the rung whose title list is open — one at a time keeps the list calm. */
-    const [openRanks, setOpenRanks] = useState<number | null>(null);
 
     // Hydrate from the opened workflow. Everything transient resets here, including
     // the open rank panel: it used to survive a close and reopen of the dialog.
@@ -79,6 +86,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setSteps(
             workflow.steps.map((s) => ({
                 actor_type: s.actor_type,
+                // A saved step's label is somebody's decision already; only new steps follow.
+                label_touched: true,
                 department_id: s.department_id ?? null,
                 approver_employee_id: s.approver_employee_id ?? null,
                 label: s.label,
@@ -90,13 +99,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setSaveState('idle');
         setPreviewEmployee('');
         setPreviewRows(null);
-        setOpenRanks(null);
     }, [workflow?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const updStep = (i: number, patch: Partial<EditableStep>) => setSteps((list) => list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+    const updStep = (i: number, patch: Partial<EditableStep>) =>
+        setSteps((list) => list.map((s, idx) => (idx === i ? withDerivedLabel({ ...s, ...patch }, positions, departments) : s)));
 
-    // The open rank panel is tracked by index, so anything that reorders or shortens
-    // the list closes it — otherwise it reopens on whichever step slid into that slot.
     const removeStep = (i: number) => {
         setOpenRanks(null);
         setSteps((list) => list.filter((_, idx) => idx !== i));
@@ -114,7 +121,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const addStep = () =>
         setSteps((list) => [
             ...list,
-            { actor_type: 'chain', label: 'Department Manager', kind: 'approval', position_ids: [], department_id: null, approver_employee_id: null },
+            { actor_type: 'chain', label: '', kind: 'approval', position_ids: [], department_id: null, approver_employee_id: null },
         ]);
 
     // The job titles a rung can name — Employee-module master data, read through the
@@ -126,6 +133,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         enabled: !!workflow,
     });
     const positions = positionData ?? [];
+    // Same query the department fields use — React Query serves both from one request.
+    const { data: departments = [] } = useDepartments();
 
     // ── "Test with employee" resolution preview ──────────────────────────────
     const { data: employees = [] } = useQuery({
@@ -166,6 +175,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     if (!wf) return null;
     const ownerAllowed = OWNER_TYPES.includes(wf.request_type);
     const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
+    // Counted the way the card outside counts it, so one route does not report two numbers.
+    const approvalCount = steps.filter((s) => s.kind === 'approval').length;
     // A department step has to say which department, and then who in it — one named person
     // or the positions it accepts. Either gap leaves a step that can never resolve.
     const hasIncompleteDepartment = steps.some(
@@ -223,7 +234,10 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                     <div>
                         <div className="mb-3 flex items-end justify-between gap-3">
                             <SectionLabel className="mb-0">
-                                {t('wf_steps')} <span className="text-muted-foreground font-mono text-xs">· {steps.length}</span>
+                                {t('wf_steps')}{' '}
+                                <span className="text-muted-foreground font-mono text-xs">
+                                    · {t('wf_steps_count').replace('{n}', String(approvalCount))}
+                                </span>
                             </SectionLabel>
                             <Button variant="outline" size="sm" onClick={addStep}>
                                 <Plus className="h-4 w-4" />
@@ -286,10 +300,12 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                         <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
                                                     </SelectContent>
                                                 </Select>
+                                                <span className="flex-1" />
+                                                <span className="text-muted-foreground shrink-0 text-[11px]">{t('wf_step_label')}</span>
                                                 <Input
-                                                    className="h-9 min-w-0 flex-1 text-sm"
+                                                    className="h-9 w-[190px] shrink-0 text-sm"
                                                     value={s.label}
-                                                    onChange={(e) => updStep(i, { label: e.target.value })}
+                                                    onChange={(e) => updStep(i, { label: e.target.value, label_touched: true })}
                                                     list={s.actor_type === 'chain' ? 'wf-chain-labels' : undefined}
                                                     aria-label={t('wf_step_label')}
                                                 />
@@ -328,13 +344,20 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                                 {p.title}
                                                             </span>
                                                         ))}
-                                                        {chosen.length === 0 && (
+                                                        {positions.length > 0 && chosen.length === 0 && (
                                                             <span className="text-destructive text-xs">{t('wf_step_positions_required')}</span>
                                                         )}
+                                                        {/* The one behaviour a first-time configurer would not guess, said where
+                                                            the rule it applies to is set rather than in a footnote after the list. */}
+                                                        <span className="text-muted-foreground ml-auto text-[11px]">
+                                                            {s.actor_type === 'chain'
+                                                                ? t('wf_step_skip_note_chain')
+                                                                : t('wf_step_skip_note_department')}
+                                                        </span>
                                                         <button
                                                             type="button"
                                                             onClick={() => setOpenRanks(openRanks === i ? null : i)}
-                                                            className="text-brand ml-auto text-xs font-semibold hover:underline"
+                                                            className="text-brand text-xs font-semibold hover:underline"
                                                         >
                                                             {openRanks === i ? t('wf_ranks_done') : t('wf_ranks_edit')}
                                                         </button>
@@ -573,6 +596,33 @@ function DepartmentStepFields({
             {step.department_id === null && <p className="text-destructive text-xs">{t('wf_step_department_required')}</p>}
         </div>
     );
+}
+
+/**
+ * What a step's label says when nobody has written one.
+ *
+ * The label decides nothing — the actor type and the positions do — so a step called
+ * "Manager" that a Supervisor actually signs is a lie the screen tells about itself. Until
+ * somebody types their own, it reads back the rule underneath it.
+ */
+function withDerivedLabel(step: EditableStep, positions: { id: number; title: string }[], departments: { id: number; name: string }[]): EditableStep {
+    if (step.label_touched) {
+        return step;
+    }
+
+    const titles = positions.filter((p) => step.position_ids.includes(p.id)).map((p) => p.title);
+    const department = departments.find((d) => d.id === step.department_id)?.name;
+
+    const label =
+        step.actor_type === 'it_staff'
+            ? 'IT Staff'
+            : step.actor_type === 'owner'
+              ? 'Resource Owner'
+              : step.actor_type === 'department'
+                ? [department, titles.join(' / ')].filter(Boolean).join(' · ')
+                : titles.join(' / ');
+
+    return { ...step, label };
 }
 
 function IconBtn({
