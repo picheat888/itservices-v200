@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Request\RequestStatus;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
@@ -109,6 +110,70 @@ class WorkflowAdminTest extends TestCase
             ->assertJsonPath('data.steps.2.kind', 'fulfillment');
 
         $this->assertSame([1, 2, 3], $workflow->fresh()->steps->pluck('position')->all());
+    }
+
+    public function test_a_department_step_saves_its_department_and_its_group(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control']);
+        $manager = Position::where('title', 'Manager')->firstOrFail();
+
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                [
+                    'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
+                    'department_id' => $qc->id, 'position_ids' => [$manager->id],
+                ],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+            ],
+        ])->assertOk();
+
+        $step = $workflow->fresh()->steps()->where('position', 1)->firstOrFail();
+        $this->assertSame($qc->id, $step->department_id);
+        $this->assertNull($step->approver_employee_id);
+        $this->assertSame([$manager->id], $step->positions->pluck('id')->all());
+    }
+
+    public function test_a_department_step_can_name_one_person_instead(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control']);
+        $person = Employee::create(['first_name' => 'QcBoss', 'department_id' => $qc->id]);
+
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                [
+                    'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
+                    'department_id' => $qc->id, 'approver_employee_id' => $person->id,
+                ],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+            ],
+        ])->assertOk();
+
+        $step = $workflow->fresh()->steps()->where('position', 1)->firstOrFail();
+        $this->assertSame($person->id, $step->approver_employee_id);
+        $this->assertSame([], $step->positions->pluck('id')->all());
+    }
+
+    /** A department step that says neither who nor where can never resolve, so it is refused. */
+    public function test_a_department_step_must_say_which_department_and_who_in_it(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control']);
+        $fulfilment = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'];
+
+        // No department at all.
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [['actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval'], $fulfilment],
+        ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.department_id');
+
+        // A department, but neither a person nor any position in it.
+        $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
+            'steps' => [
+                ['actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval', 'department_id' => $qc->id],
+                $fulfilment,
+            ],
+        ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.position_ids');
     }
 
     public function test_the_list_reports_how_long_each_route_actually_took(): void
