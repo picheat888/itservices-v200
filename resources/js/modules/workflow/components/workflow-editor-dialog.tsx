@@ -1,4 +1,5 @@
 import { useT } from '@/lang';
+import { useDepartmentMembers, useDepartments } from '@/modules/employee';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -23,6 +24,10 @@ type EditableStep = {
     label: string;
     kind: WorkflowStep['kind'];
     position_ids: number[];
+    /** Department steps only: which department signs. */
+    department_id: number | null;
+    /** Department steps only: the one person named, or null to accept the positions above. */
+    approver_employee_id: number | null;
 };
 
 /** Types whose Access resources carry an owner — the only ones an Owner step can serve. */
@@ -74,6 +79,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         setSteps(
             workflow.steps.map((s) => ({
                 actor_type: s.actor_type,
+                department_id: s.department_id ?? null,
+                approver_employee_id: s.approver_employee_id ?? null,
                 label: s.label,
                 kind: s.kind,
                 position_ids: s.positions.map((p) => p.id),
@@ -104,7 +111,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
             return next;
         });
     };
-    const addStep = () => setSteps((list) => [...list, { actor_type: 'chain', label: 'Department Manager', kind: 'approval', position_ids: [] }]);
+    const addStep = () =>
+        setSteps((list) => [
+            ...list,
+            { actor_type: 'chain', label: 'Department Manager', kind: 'approval', position_ids: [], department_id: null, approver_employee_id: null },
+        ]);
 
     // The job titles a rung can name — Employee-module master data, read through the
     // workflows.manage gate so editing a route needs no position permission.
@@ -155,6 +166,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     if (!wf) return null;
     const ownerAllowed = OWNER_TYPES.includes(wf.request_type);
     const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
+    // A department step has to say which department, and then who in it — one named person
+    // or the positions it accepts. Either gap leaves a step that can never resolve.
+    const hasIncompleteDepartment = steps.some(
+        (s) => s.actor_type === 'department' && (s.department_id === null || (s.approver_employee_id === null && s.position_ids.length === 0)),
+    );
 
     const submit = async () => {
         setServerError('');
@@ -251,10 +267,12 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                         const actor = v as WorkflowActorType;
                                                         updStep(i, {
                                                             actor_type: actor,
+                                                            department_id: actor === 'department' ? s.department_id : null,
+                                                            approver_employee_id: actor === 'department' ? s.approver_employee_id : null,
                                                             // Derived, never asked: IT staff fulfills, people approve.
                                                             kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
                                                             label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
-                                                            position_ids: actor === 'chain' ? s.position_ids : [],
+                                                            position_ids: actor === 'chain' || actor === 'department' ? s.position_ids : [],
                                                         });
                                                     }}
                                                 >
@@ -263,6 +281,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         <SelectItem value="chain">{t('wf_actor_chain')}</SelectItem>
+                                                        <SelectItem value="department">{t('wf_actor_department')}</SelectItem>
                                                         {ownerAllowed && <SelectItem value="owner">{t('wf_actor_owner')}</SelectItem>}
                                                         <SelectItem value="it_staff">{t('wf_actor_it')}</SelectItem>
                                                     </SelectContent>
@@ -293,7 +312,11 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
 
                                             {/* Who may sign this rung — the chosen titles read as a sentence;
                                                 the full list opens for one rung at a time. */}
-                                            {s.actor_type === 'chain' && (
+                                            {s.actor_type === 'department' && (
+                                                <DepartmentStepFields step={s} onChange={(patch) => updStep(i, patch)} t={t} />
+                                            )}
+
+                                            {(s.actor_type === 'chain' || (s.actor_type === 'department' && s.approver_employee_id === null)) && (
                                                 <div className="mt-2 border-t border-dashed pt-2">
                                                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                                                         <span className="text-muted-foreground text-xs">{t('wf_step_positions')}</span>
@@ -398,7 +421,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                         </Button>
                         {/* A rung naming no position is refused by the API; say so here
                             instead of spending a round trip to find out. */}
-                        <Button onClick={submit} disabled={update.isPending || saveState === 'done' || hasEmptyRung}>
+                        <Button onClick={submit} disabled={update.isPending || saveState === 'done' || hasEmptyRung || hasIncompleteDepartment}>
                             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                             {saveState === 'done' ? t('saved') : t('save')}
                         </Button>
@@ -470,6 +493,84 @@ function FlagCard({
                 {hint && <div className="text-muted-foreground truncate text-[11px]">{hint}</div>}
             </div>
             <Switch checked={on} onChange={onChange} />
+        </div>
+    );
+}
+
+/**
+ * The department half of a department step: which department, and then who in it.
+ *
+ * Two shapes rather than one, because they are different promises. Naming a person says
+ * "this one signs"; naming positions says "anybody in the department at this level does,
+ * and the first to act takes it". The position chips below are the same control a chain
+ * rung uses, so the second shape needs nothing of its own here.
+ */
+function DepartmentStepFields({
+    step,
+    onChange,
+    t,
+}: {
+    step: EditableStep;
+    onChange: (patch: Partial<EditableStep>) => void;
+    t: (key: string) => string;
+}) {
+    const { data: departments = [] } = useDepartments();
+    const { data: members = [] } = useDepartmentMembers(step.department_id);
+    const byPerson = step.approver_employee_id !== null;
+
+    return (
+        <div className="mt-2 space-y-2 border-t border-dashed pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground shrink-0 text-xs">{t('wf_step_department')}</span>
+                <span className="inline-block w-56">
+                    <SearchableSelect
+                        value={step.department_id === null ? '' : String(step.department_id)}
+                        // Changing department drops the person chosen from the previous one:
+                        // keeping them would be a step whose approver is not in the department
+                        // it names, which the server would refuse anyway.
+                        onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_id: null })}
+                        options={departments.map((d) => ({ value: String(d.id), label: d.name, search: `${d.name} ${d.name_th ?? ''}` }))}
+                        placeholder={t('wf_step_department_pick')}
+                    />
+                </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground shrink-0 text-xs">{t('wf_step_who')}</span>
+                <button
+                    type="button"
+                    onClick={() => onChange({ approver_employee_id: null })}
+                    className={cn(
+                        'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                        byPerson ? 'border-border text-muted-foreground hover:bg-accent/50' : 'border-brand bg-brand/10 text-brand',
+                    )}
+                >
+                    {t('wf_step_by_positions')}
+                </button>
+                <button
+                    type="button"
+                    disabled={step.department_id === null}
+                    onClick={() => onChange({ approver_employee_id: members[0]?.id ?? null, position_ids: [] })}
+                    className={cn(
+                        'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40',
+                        byPerson ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:bg-accent/50',
+                    )}
+                >
+                    {t('wf_step_by_person')}
+                </button>
+                {byPerson && (
+                    <span className="inline-block w-56">
+                        <SearchableSelect
+                            value={String(step.approver_employee_id)}
+                            onChange={(v) => onChange({ approver_employee_id: v ? Number(v) : null })}
+                            options={members.map((m) => ({ value: String(m.id), label: m.name, sub: m.position ?? undefined, search: m.name }))}
+                            placeholder={t('wf_step_person_pick')}
+                        />
+                    </span>
+                )}
+            </div>
+
+            {step.department_id === null && <p className="text-destructive text-xs">{t('wf_step_department_required')}</p>}
         </div>
     );
 }

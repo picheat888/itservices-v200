@@ -37,6 +37,7 @@ class WorkflowSeeder extends Seeder
             $existing = Workflow::with('steps.positions')->where('request_type', $type)->first();
             if ($existing !== null) {
                 $this->fillMissingPositions($existing, $definition['steps'], $positionIdByTitle);
+                $this->fillMissingDepartments($existing, $definition['steps'], $departmentIdByName);
 
                 continue;
             }
@@ -97,6 +98,36 @@ class WorkflowSeeder extends Seeder
             if ($ids !== []) {
                 $step->positions()->sync($ids);
                 $this->command?->info("  filled positions for \"{$step->label}\" on {$workflow->name}");
+            }
+        }
+    }
+
+    /**
+     * The same repair for a department step that has no department.
+     *
+     * An install seeded before its departments existed — or before this actor type did —
+     * ends up with a step naming a department it never got an id for, which then skips for
+     * want of anybody to ask. Only a step holding none is touched, so a department an
+     * administrator has pointed somewhere else stays where they put it.
+     *
+     * @param  list<array<string, mixed>>  $defaults
+     * @param  Collection<string, int>  $departmentIdByName
+     */
+    private function fillMissingDepartments(Workflow $workflow, array $defaults, $departmentIdByName): void
+    {
+        $nameByLabel = collect($defaults)
+            ->filter(fn (array $step) => ($step['department'] ?? null) !== null)
+            ->mapWithKeys(fn (array $step) => [$step['label'] => $step['department']]);
+
+        foreach ($workflow->steps as $step) {
+            if ($step->actor_type !== StepActorType::Department || $step->department_id !== null) {
+                continue;
+            }
+
+            $id = $departmentIdByName[$nameByLabel[$step->label] ?? ''] ?? null;
+            if ($id !== null) {
+                $step->update(['department_id' => $id]);
+                $this->command?->info("  filled department for \"{$step->label}\" on {$workflow->name}");
             }
         }
     }

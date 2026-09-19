@@ -1072,6 +1072,11 @@ export interface WorkflowStep {
      * owner / it_staff steps, which resolve by other means.
      */
     positions: { id: number; title: string }[];
+    /** Department steps only: which department signs, and the one person in it when named. */
+    department_id?: number | null;
+    department_name?: string | null;
+    approver_employee_id?: number | null;
+    approver_name?: string | null;
 }
 
 /**
