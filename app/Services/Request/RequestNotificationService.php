@@ -178,10 +178,10 @@ class RequestNotificationService
     /** Bell + email one resolved approver that a step waits on them. */
     private function notifyApprover(ServiceRequest $request, RequestApproval $row): void
     {
-        // A department step open to a group has no single approver: everybody who could
+        // A step open to a group has no single approver: everybody who could
         // act is told, and whoever gets there first takes it. Belling one of them would
         // leave the rest waiting on a request they are equally responsible for.
-        $group = $this->departmentApprovers($row);
+        $group = $this->groupApprovers($row);
         if ($group->isNotEmpty()) {
             $this->sendBell(
                 $group,
@@ -268,15 +268,23 @@ class RequestNotificationService
     }
 
     /**
-     * Every login that may act on a group step — the department's holders of one of the
-     * step's positions. Empty for every other kind of row, which keeps the single-approver
-     * path below exactly as it was.
+     * Every login that may act on a group step — the people it names, or the department's
+     * holders of one of its positions. Empty for every other kind of row, which keeps the
+     * single-approver path below exactly as it was.
      *
      * @return Collection<int, User>
      */
-    private function departmentApprovers(?RequestApproval $row): Collection
+    private function groupApprovers(?RequestApproval $row): Collection
     {
-        if ($row === null || ! $row->isOpenToDepartment()) {
+        if ($row === null) {
+            return collect();
+        }
+
+        if ($row->isOpenToNamedGroup()) {
+            return User::whereIn('employee_id', $row->namedApproverIds())->get();
+        }
+
+        if (! $row->isOpenToDepartment()) {
             return collect();
         }
 
@@ -527,7 +535,7 @@ class RequestNotificationService
      */
     public function remindApprover(ServiceRequest $request, RequestApproval $row, int $days): void
     {
-        $group = $this->departmentApprovers($row);
+        $group = $this->groupApprovers($row);
         $recipients = $group->isNotEmpty() ? $group : collect(array_filter([$this->approverUser($row)]));
         if ($recipients->isEmpty()) {
             return;

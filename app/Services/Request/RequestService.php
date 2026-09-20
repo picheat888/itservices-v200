@@ -700,9 +700,9 @@ class RequestService
     /**
      * Only the approver of the current step may decide — no stand-ins.
      *
-     * A department step configured by position has no single approver: anybody in that
-     * department holding one of its positions may act, and the first to do so takes the
-     * row (see claimForActor). Everything else still answers to one named id.
+     * A step open to a group has no single approver: anybody it accepts — the people it
+     * names, or the department's holders of one of its positions — may act, and the first
+     * to do so takes the row (see claimForActor). Everything else answers to one named id.
      */
     private function assertActorIsApprover(User $actor, RequestApproval $row): void
     {

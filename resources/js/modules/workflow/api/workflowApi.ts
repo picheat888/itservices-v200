@@ -1,13 +1,16 @@
 import { ensureCsrf, http } from '@/shared/lib/http';
-import type { ApiEnvelope, ServiceRequestType, Workflow, WorkflowStep } from '@/shared/types';
+import type { ApiEnvelope, ApprovalSkipReason, ServiceRequestType, Workflow, WorkflowStep } from '@/shared/types';
 
-/** A step as the editor sends it: positions travel as ids, not as nested objects. */
+/** A step as the editor sends it: positions and people travel as ids, not nested objects. */
 export interface WorkflowStepPayload {
     actor_type: WorkflowStep['actor_type'];
     label: string;
     kind: WorkflowStep['kind'];
     /** Required on chain steps — a rung naming no position can never resolve. */
     position_ids?: number[];
+    /** Department steps only: the department, and the people in it who may sign. */
+    department_id?: number | null;
+    approver_employee_ids?: number[];
 }
 
 export interface WorkflowUpdatePayload {
@@ -32,8 +35,12 @@ export interface ResolvedPreviewRow {
     approver_employee_id: number | null;
     approver_name: string | null;
     approver_position: string | null;
+    /** Names a step is open to when it names several people — empty on every other row. */
+    approver_candidates?: string[];
     status: 'waiting' | 'skipped';
     note: string | null;
+    /** Why a skipped row was skipped — a code the editor writes out through `req_skip_*`. */
+    skip_reason: ApprovalSkipReason | null;
 }
 
 export interface WorkflowPreviewResponse {

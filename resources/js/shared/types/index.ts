@@ -968,12 +968,7 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  * Stored as a code and written out through `req_skip_*`, so the trail reads in the
  * viewer's language instead of the language it was submitted in.
  */
-export type ApprovalSkipReason =
-    | 'no_manager'
-    | 'no_matching_position'
-    | 'no_resource_owner'
-    | 'requester_is_owner'
-    | 'no_department_approver';
+export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner' | 'no_department_approver';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff' | 'department';
 export type WorkflowStepKind = 'approval' | 'fulfillment';
 
@@ -990,6 +985,12 @@ export interface RequestApproval {
     /** Set only while a department step is still open to a group rather than to one person. */
     approver_department?: string | null;
     approver_positions?: string[];
+    /**
+     * The people a step names when it names more than one — alternates, so the first of
+     * them to sign settles the step. Set only while it is still open; acting writes the
+     * signer into `approver_name` and the row reads like any other.
+     */
+    approver_candidates?: string[];
     /** What a person wrote on the step — never a system explanation. */
     note: string | null;
     skip_reason: ApprovalSkipReason | null;
@@ -1072,11 +1073,14 @@ export interface WorkflowStep {
      * owner / it_staff steps, which resolve by other means.
      */
     positions: { id: number; title: string }[];
-    /** Department steps only: which department signs, and the one person in it when named. */
+    /**
+     * Department steps only: which department signs, and the people in it the step names.
+     * Naming several makes them alternates — the first to sign settles the step — not a
+     * list of signatures to collect. Empty means anybody at the positions above.
+     */
     department_id?: number | null;
     department_name?: string | null;
-    approver_employee_id?: number | null;
-    approver_name?: string | null;
+    approvers?: { id: number; name: string }[];
 }
 
 /**

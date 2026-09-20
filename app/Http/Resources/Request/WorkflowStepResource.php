@@ -29,12 +29,14 @@ class WorkflowStepResource extends JsonResource
             'positions' => $this->whenLoaded('positions', fn () => $this->positions
                 ->map(fn ($position) => ['id' => $position->id, 'title' => $position->title])
                 ->values(), []),
-            // Set only on a department step: which department signs, and the one person in
-            // it when the step names one rather than accepting a rung.
+            // Set only on a department step: which department signs, and the people in it
+            // the step names rather than accepting a rung. Several may be named — they are
+            // alternates, and whichever signs first settles the step.
             'department_id' => $this->department_id,
             'department_name' => $this->whenLoaded('department', fn () => $this->department?->name),
-            'approver_employee_id' => $this->approver_employee_id,
-            'approver_name' => $this->whenLoaded('approver', fn () => $this->approver?->name),
+            'approvers' => $this->whenLoaded('approvers', fn () => $this->approvers
+                ->map(fn ($employee) => ['id' => $employee->id, 'name' => $employee->name])
+                ->values(), []),
         ];
     }
 }

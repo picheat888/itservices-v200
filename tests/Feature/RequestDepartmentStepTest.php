@@ -146,6 +146,33 @@ class RequestDepartmentStepTest extends TestCase
         $this->assertFalse($row->isOpenToDepartment());
     }
 
+    /**
+     * The other half of "anybody in the department may sign": they have to be able to FIND
+     * the request. The group step was only ever matched by approver id, so it counted for
+     * nobody — the people who could decide it saw no badge, no "waiting on me" row and no
+     * Approve button, and could act only by knowing the URL.
+     */
+    public function test_the_department_group_sees_the_step_waiting_on_it(): void
+    {
+        $qcManager = $this->staffIn($this->qc, 'Manager', 'QcMgr');
+        // staffIn already gave them a login; the Request module needs one permission on it.
+        RolePermission::updateOrCreate(
+            ['role_id' => Role::where('key', 'r'.$qcManager->id)->firstOrFail()->id, 'permission' => 'requests.submit'],
+            ['allowed' => true],
+        );
+        $this->staffIn($this->safety, 'Supervisor', 'SeSup');
+        $request = $this->submitCctv();
+
+        $this->actingAs($this->userFor($this->sup))
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        $this->actingAs(User::where('employee_id', $qcManager->id)->firstOrFail());
+        $tab = $this->getJson('/api/service-requests?scope=approvals')->assertOk();
+        $this->assertSame([$request->id], collect($tab->json('data'))->pluck('id')->all());
+        $this->assertSame(1, $tab->json('meta.awaiting_me'));
+        $this->assertTrue($this->getJson("/api/service-requests/{$request->id}")->assertOk()->json('data.can_approve'));
+    }
+
     public function test_the_right_position_in_the_wrong_department_is_refused(): void
     {
         $this->staffIn($this->qc, 'Manager', 'QcMgr');

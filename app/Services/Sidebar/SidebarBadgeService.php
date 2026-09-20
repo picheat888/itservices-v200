@@ -80,8 +80,11 @@ class SidebarBadgeService
      */
     private function requestsNeedingAttention(?User $user): int
     {
+        // actionableBy, not a plain id match: a step open to a group is waiting on this
+        // person too, and a badge that ignored those left them with nothing to click
+        // through to a request only they could decide.
         $awaitingMe = $user?->employee_id === null ? 0 : RequestApproval::query()
-            ->where('approver_employee_id', $user->employee_id)
+            ->actionableBy($user->employee)
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();

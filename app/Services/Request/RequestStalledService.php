@@ -48,9 +48,9 @@ class RequestStalledService
         foreach ($this->stalledRows(self::NUDGE_AFTER_DAYS) as $row) {
             $days = $this->daysWaiting($row);
 
-            // A department step open to a group names nobody either, but it is not the
+            // A step open to a group carries no single approver either, but it is not the
             // queue: everybody who could sign it is reminded.
-            if ($row->isOpenToDepartment()) {
+            if ($row->isOpenToGroup()) {
                 $this->notifications->remindApprover($row->request, $row, $days);
                 $sent['approvers']++;
 

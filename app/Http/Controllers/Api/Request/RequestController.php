@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Request\StoreServiceRequestRequest;
 use App\Http\Resources\Request\ServiceRequestResource;
 use App\Models\AuditLog;
+use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Services\Request\RequestService;
@@ -54,13 +55,16 @@ class RequestController extends Controller
         $seesAll = $user->isSuper() || $user->hasPermission('requests.view_all');
         $canFulfill = (bool) $user->hasPermission('requests.fulfill');
         $employeeId = $user->employee_id;
+        // The employee record, not just the id: a step open to a group is matched on this
+        // person's department and position as well as on their name.
+        $employee = $user->employee;
 
-        $visible = function ($query) use ($seesAll, $canFulfill, $user, $employeeId) {
+        $visible = function ($query) use ($seesAll, $canFulfill, $user, $employeeId, $employee) {
             if ($seesAll) {
                 return $query;
             }
 
-            return $query->where(function ($q) use ($user, $employeeId, $canFulfill) {
+            return $query->where(function ($q) use ($user, $employeeId, $employee, $canFulfill) {
                 // Own requests, plus the ones filed on somebody else's behalf — an
                 // onboarding request has no owner account to match on.
                 $q->where('user_id', $user->id)
@@ -70,7 +74,7 @@ class RequestController extends Controller
                     // onboarding was filed before they had an account, so `user_id` is
                     // null on it and without this they cannot read their own history.
                     $q->orWhere('employee_id', $employeeId)
-                        ->orWhereHas('approvals', fn ($a) => $a->where('approver_employee_id', $employeeId));
+                        ->orWhereHas('approvals', fn ($a) => $a->actionableBy($employee));
                 }
                 if ($canFulfill) {
                     $q->orWhereIn('status', [RequestStatus::Approved->value, RequestStatus::Fulfilled->value]);
@@ -131,7 +135,7 @@ class RequestController extends Controller
             $employeeId === null
                 ? $query->whereIn('id', [])
                 : $query->whereHas('approvals', fn ($a) => $a
-                    ->where('approver_employee_id', $employeeId)
+                    ->actionableBy($employee)
                     ->where('status', ApprovalStatus::Current->value));
         } elseif ($request->query('scope') === 'queue' && $canFulfill) {
             $query->where('status', RequestStatus::Approved->value);
@@ -151,7 +155,7 @@ class RequestController extends Controller
 
         return response()->json([
             'data' => ServiceRequestResource::collection($paginator->items()),
-            'meta' => $this->meta($paginator, $visible, $canFulfill, $employeeId),
+            'meta' => $this->meta($paginator, $visible, $canFulfill, $employee),
         ]);
     }
 
@@ -176,7 +180,7 @@ class RequestController extends Controller
             // The person the request is about — their onboarding predates their account.
             || ($user->employee_id !== null && $user->employee_id === $serviceRequest->employee_id)
             || ($user->employee_id !== null && $serviceRequest->approvals()
-                ->where('approver_employee_id', $user->employee_id)->exists());
+                ->actionableBy($user->employee)->exists());
         abort_unless($isParticipant
             || $user->isSuper()
             || $user->hasPermission('requests.view_all')
@@ -234,14 +238,17 @@ class RequestController extends Controller
      * @param  callable(Builder): Builder  $visible
      * @return array<string, mixed>
      */
-    private function meta($paginator, callable $visible, bool $canFulfill, ?int $employeeId): array
+    private function meta($paginator, callable $visible, bool $canFulfill, ?Employee $employee): array
     {
         $counts = $visible(ServiceRequest::query())
             ->selectRaw('status, count(*) as n')
             ->groupBy('status')
             ->pluck('n', 'status');
 
-        $awaitingMe = $employeeId === null ? 0 : RequestApproval::where('approver_employee_id', $employeeId)
+        // Counted the way the "waiting on me" tab filters, group steps included — the card
+        // and the list it heads must not disagree about how many there are.
+        $awaitingMe = $employee === null ? 0 : RequestApproval::query()
+            ->actionableBy($employee)
             ->where('status', ApprovalStatus::Current->value)
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();

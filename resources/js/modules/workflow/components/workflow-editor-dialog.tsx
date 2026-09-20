@@ -4,7 +4,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
-import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
+import { REQUEST_SKIP_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Workflow, WorkflowActorType, WorkflowStep } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -13,9 +13,9 @@ import { Input } from '@/shared/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Switch } from '@/shared/ui/switch';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, Zap } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Flag, Loader2, Plus, Trash2, Users, Workflow as WorkflowIcon, X, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { workflowApi, type ResolvedPreviewRow } from '../api/workflowApi';
+import { workflowApi, type ResolvedPreviewRow, type WorkflowStepPayload } from '../api/workflowApi';
 import { useWorkflowMutations } from '../hooks/use-workflows';
 
 /** A step being edited — positions held as ids, which is what the API takes. */
@@ -31,9 +31,43 @@ type EditableStep = {
     label_touched?: boolean;
     /** Department steps only: which department signs. */
     department_id: number | null;
-    /** Department steps only: the one person named, or null to accept the positions above. */
-    approver_employee_id: number | null;
+    /**
+     * Department steps only: the people named, or empty to accept the positions above.
+     * Several are alternates — whoever signs first settles the step.
+     */
+    approver_employee_ids: number[];
+    /**
+     * Which of the two shapes a department step is being edited in. Held rather than
+     * derived from the list being non-empty, because the mode has to survive the moment
+     * BEFORE a name is chosen — a department with nobody in it yet would otherwise bounce
+     * straight back to positions, having cleared them on the way.
+     */
+    by_person?: boolean;
 };
+
+/**
+ * The steps as the API takes them.
+ *
+ * The shape a department step is in decides which of the two "who signs" fields travels,
+ * which is what lets the editor keep the other one. Clearing on the toggle instead meant a
+ * mis-click wiped a rung somebody had picked title by title, with nothing to undo it —
+ * and the server must still never be sent a step that names both a person and a rung,
+ * because then two different rules would claim the same step.
+ */
+function toPayload(steps: EditableStep[]): WorkflowStepPayload[] {
+    return steps.map((s) => {
+        const byPerson = s.actor_type === 'department' && !!s.by_person;
+
+        return {
+            actor_type: s.actor_type,
+            label: s.label,
+            kind: s.kind,
+            position_ids: byPerson ? [] : s.position_ids,
+            department_id: s.actor_type === 'department' ? s.department_id : null,
+            approver_employee_ids: byPerson ? s.approver_employee_ids : [],
+        };
+    });
+}
 
 /** Types whose Access resources carry an owner — the only ones an Owner step can serve. */
 const OWNER_TYPES: ServiceRequestType[] = ['mailgroup', 'fileshare', 'recovery'];
@@ -89,7 +123,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                 // A saved step's label is somebody's decision already; only new steps follow.
                 label_touched: true,
                 department_id: s.department_id ?? null,
-                approver_employee_id: s.approver_employee_id ?? null,
+                approver_employee_ids: (s.approvers ?? []).map((a) => a.id),
+                by_person: (s.approvers ?? []).length > 0,
                 label: s.label,
                 kind: s.kind,
                 position_ids: s.positions.map((p) => p.id),
@@ -121,7 +156,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const addStep = () =>
         setSteps((list) => [
             ...list,
-            { actor_type: 'chain', label: '', kind: 'approval', position_ids: [], department_id: null, approver_employee_id: null },
+            { actor_type: 'chain', label: '', kind: 'approval', position_ids: [], department_id: null, approver_employee_ids: [], by_person: false },
         ]);
 
     // The job titles a rung can name — Employee-module master data, read through the
@@ -165,7 +200,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
         }
         const timer = setTimeout(() => {
             preview
-                .mutateAsync({ request_type: wf.request_type, employee_id: Number(previewEmployee), steps })
+                .mutateAsync({ request_type: wf.request_type, employee_id: Number(previewEmployee), steps: toPayload(steps) })
                 .then((res) => setPreviewRows(res.rows))
                 .catch(() => setPreviewRows(null));
         }, 350);
@@ -177,16 +212,23 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
     const hasEmptyRung = steps.some((s) => s.actor_type === 'chain' && s.position_ids.length === 0);
     // Counted the way the card outside counts it, so one route does not report two numbers.
     const approvalCount = steps.filter((s) => s.kind === 'approval').length;
-    // A department step has to say which department, and then who in it — one named person
-    // or the positions it accepts. Either gap leaves a step that can never resolve.
+    // A department step has to say which department, and then who in it — the people who
+    // sign or the positions it accepts. Either gap leaves a step that can never resolve, and
+    // each shape is judged on its own terms: judging both at once let a half-filled step
+    // look complete.
     const hasIncompleteDepartment = steps.some(
-        (s) => s.actor_type === 'department' && (s.department_id === null || (s.approver_employee_id === null && s.position_ids.length === 0)),
+        (s) =>
+            s.actor_type === 'department' &&
+            (s.department_id === null || (s.by_person ? s.approver_employee_ids.length === 0 : s.position_ids.length === 0)),
     );
 
     const submit = async () => {
         setServerError('');
         try {
-            await update.mutateAsync({ id: wf.id, payload: { name: name.trim() || wf.name, active, auto_ticket: autoTicket, steps } });
+            await update.mutateAsync({
+                id: wf.id,
+                payload: { name: name.trim() || wf.name, active, auto_ticket: autoTicket, steps: toPayload(steps) },
+            });
             setSaveState('done');
             setTimeout(() => {
                 setSaveState('idle');
@@ -282,7 +324,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                         updStep(i, {
                                                             actor_type: actor,
                                                             department_id: actor === 'department' ? s.department_id : null,
-                                                            approver_employee_id: actor === 'department' ? s.approver_employee_id : null,
+                                                            approver_employee_ids: actor === 'department' ? s.approver_employee_ids : [],
+                                                            by_person: actor === 'department' ? s.by_person : false,
                                                             // Derived, never asked: IT staff fulfills, people approve.
                                                             kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
                                                             label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
@@ -332,7 +375,7 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                 <DepartmentStepFields step={s} onChange={(patch) => updStep(i, patch)} t={t} />
                                             )}
 
-                                            {(s.actor_type === 'chain' || (s.actor_type === 'department' && s.approver_employee_id === null)) && (
+                                            {(s.actor_type === 'chain' || (s.actor_type === 'department' && !s.by_person)) && (
                                                 <div className="mt-2 border-t border-dashed pt-2">
                                                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
                                                         <span className="text-muted-foreground text-xs">{t('wf_step_positions')}</span>
@@ -460,6 +503,9 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
     const skipped = row.status === 'skipped';
     const queue = row.actor_type === 'it_staff';
     const owner = row.actor_type === 'owner' && row.approver_employee_id === null && !skipped;
+    // A step open to several people resolves to no single name; the preview has to say who
+    // it reached, or the one shape that names more than one reads as though it found nobody.
+    const candidates = row.approver_candidates ?? [];
     return (
         <div className="flex items-start gap-3">
             <span
@@ -473,15 +519,26 @@ function ResolvedRow({ row, t }: { row: ResolvedPreviewRow; t: (k: string) => st
                 {row.position}
             </span>
             <div className="min-w-0">
-                <div className="text-sm font-semibold">{queue ? t('wf_actor_it') : (row.approver_name ?? row.label)}</div>
+                <div className="text-sm font-semibold">
+                    {queue ? t('wf_actor_it') : (row.approver_name ?? (candidates.length > 0 ? candidates.join(' · ') : row.label))}
+                </div>
                 <div className="text-muted-foreground text-xs">
                     {skipped
-                        ? `${t('wf_skipped')} - ${row.note ?? ''}`
+                        ? // The reason is a code, not free text: `note` is only ever what a person
+                          // wrote, so a skipped preview row read "ข้ามขั้นนี้ - " with nothing after
+                          // the dash — the one thing the reader needed was missing. Each reason
+                          // already opens with "skipped", so it stands alone rather than after a
+                          // prefix that says the word twice.
+                          row.skip_reason
+                            ? t(REQUEST_SKIP_REASON_LABEL[row.skip_reason])
+                            : t('wf_skipped')
                         : queue
                           ? t('wf_queue_preview')
                           : owner
                             ? t('wf_owner_preview')
-                            : row.approver_position || row.label}
+                            : candidates.length > 0
+                              ? t('wf_any_of_preview')
+                              : row.approver_position || row.label}
                 </div>
                 {!skipped && !queue && row.approver_name && row.label.includes(' · ') && (
                     <div className="mt-1 flex flex-wrap gap-1">
@@ -523,10 +580,11 @@ function FlagCard({
 /**
  * The department half of a department step: which department, and then who in it.
  *
- * Two shapes rather than one, because they are different promises. Naming a person says
- * "this one signs"; naming positions says "anybody in the department at this level does,
- * and the first to act takes it". The position chips below are the same control a chain
- * rung uses, so the second shape needs nothing of its own here.
+ * Two shapes rather than one, because they are different promises. Naming people says
+ * "one of these signs"; naming positions says "anybody in the department at this level
+ * does". Both end the same way — the first to act takes the step — so naming two people
+ * is how a route gets a deputy without opening itself to a whole rank. The position chips
+ * below are the same control a chain rung uses, so the second shape needs nothing here.
  */
 function DepartmentStepFields({
     step,
@@ -539,7 +597,12 @@ function DepartmentStepFields({
 }) {
     const { data: departments = [] } = useDepartments();
     const { data: members = [] } = useDepartmentMembers(step.department_id);
-    const byPerson = step.approver_employee_id !== null;
+    const byPerson = !!step.by_person;
+    const named = step.approver_employee_ids.map((id) => members.find((m) => m.id === id)).filter((m): m is (typeof members)[number] => !!m);
+    // Only people still here can be added: the resolver drops somebody who has left, so
+    // offering them would be offering a name that quietly does nothing. Already-named
+    // people are still drawn as chips whatever their status — the list shows what it holds.
+    const addable = members.filter((m) => m.status === 'active' && !step.approver_employee_ids.includes(m.id));
 
     return (
         <div className="mt-2 space-y-2 border-t border-dashed pt-2">
@@ -551,7 +614,7 @@ function DepartmentStepFields({
                         // Changing department drops the person chosen from the previous one:
                         // keeping them would be a step whose approver is not in the department
                         // it names, which the server would refuse anyway.
-                        onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_id: null })}
+                        onChange={(v) => onChange({ department_id: v ? Number(v) : null, approver_employee_ids: [] })}
                         options={departments.map((d) => ({ value: String(d.id), label: d.name, search: `${d.name} ${d.name_th ?? ''}` }))}
                         placeholder={t('wf_step_department_pick')}
                     />
@@ -562,7 +625,7 @@ function DepartmentStepFields({
                 <span className="text-muted-foreground shrink-0 text-xs">{t('wf_step_who')}</span>
                 <button
                     type="button"
-                    onClick={() => onChange({ approver_employee_id: null })}
+                    onClick={() => onChange({ by_person: false })}
                     className={cn(
                         'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
                         byPerson ? 'border-border text-muted-foreground hover:bg-accent/50' : 'border-brand bg-brand/10 text-brand',
@@ -573,7 +636,10 @@ function DepartmentStepFields({
                 <button
                     type="button"
                     disabled={step.department_id === null}
-                    onClick={() => onChange({ approver_employee_id: members[0]?.id ?? null, position_ids: [] })}
+                    // Switching says which shape this step is, and nothing more: no name is
+                    // chosen for the editor, because a name nobody picked is a route decision
+                    // made by a default.
+                    onClick={() => onChange({ by_person: true })}
                     className={cn(
                         'rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40',
                         byPerson ? 'border-brand bg-brand/10 text-brand' : 'border-border text-muted-foreground hover:bg-accent/50',
@@ -581,19 +647,62 @@ function DepartmentStepFields({
                 >
                     {t('wf_step_by_person')}
                 </button>
-                {byPerson && (
-                    <span className="inline-block w-56">
-                        <SearchableSelect
-                            value={String(step.approver_employee_id)}
-                            onChange={(v) => onChange({ approver_employee_id: v ? Number(v) : null })}
-                            options={members.map((m) => ({ value: String(m.id), label: m.name, sub: m.position ?? undefined, search: m.name }))}
-                            placeholder={t('wf_step_person_pick')}
-                        />
-                    </span>
-                )}
             </div>
 
+            {/* The people named, as removable chips. A list rather than one slot, because a
+                route that rests on one person stalls the week they are away — and naming a
+                deputy must not mean opening the step to their whole rank. */}
+            {byPerson && (
+                <div className="flex flex-wrap items-center gap-1.5 pl-1">
+                    {named.map((m) => (
+                        <span
+                            key={m.id}
+                            className="border-brand/30 bg-brand/5 text-brand flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                        >
+                            {m.name}
+                            <button
+                                type="button"
+                                aria-label={`${t('wf_step_person_remove')} ${m.name}`}
+                                onClick={() => onChange({ approver_employee_ids: step.approver_employee_ids.filter((id) => id !== m.id) })}
+                                className="hover:text-destructive"
+                            >
+                                <X className="h-3 w-3" />
+                            </button>
+                        </span>
+                    ))}
+                    {/* No picker at all when the department is empty: an open dropdown with
+                        nothing in it invites a click that cannot do anything, and the line
+                        below says what is actually wrong. */}
+                    {members.length > 0 && (
+                        <span className="inline-block w-56">
+                            <SearchableSelect
+                                value=""
+                                onChange={(v) => {
+                                    const id = Number(v);
+                                    if (!v || step.approver_employee_ids.includes(id)) return;
+                                    onChange({ approver_employee_ids: [...step.approver_employee_ids, id] });
+                                }}
+                                options={addable.map((m) => ({ value: String(m.id), label: m.name, sub: m.position ?? undefined, search: m.name }))}
+                                placeholder={t('wf_step_person_add')}
+                            />
+                        </span>
+                    )}
+                    {/* Said where the list is built, once there is a list: a second name is a
+                        stand-in, not a second signature — a route needing both asks twice. */}
+                    {named.length > 0 && <span className="text-muted-foreground text-[11px]">{t('wf_step_people_note')}</span>}
+                </div>
+            )}
+
             {step.department_id === null && <p className="text-destructive text-xs">{t('wf_step_department_required')}</p>}
+            {/* Two different gaps, said apart. A department with nobody in it cannot be asked
+                to name anybody — that is a staffing fact, and telling the editor to "choose a
+                person" from an empty list would be an instruction they cannot follow. */}
+            {byPerson && step.department_id !== null && members.length === 0 && (
+                <p className="text-destructive text-xs">{t('wf_step_department_empty')}</p>
+            )}
+            {byPerson && step.approver_employee_ids.length === 0 && members.length > 0 && (
+                <p className="text-destructive text-xs">{t('wf_step_person_required')}</p>
+            )}
         </div>
     );
 }
@@ -610,7 +719,10 @@ function withDerivedLabel(step: EditableStep, positions: { id: number; title: st
         return step;
     }
 
-    const titles = positions.filter((p) => step.position_ids.includes(p.id)).map((p) => p.title);
+    // A step naming people reads back as its department alone: the positions it still holds
+    // are the other shape's, kept in case the editor switches back, and do not describe what
+    // this step now does.
+    const titles = step.by_person ? [] : positions.filter((p) => step.position_ids.includes(p.id)).map((p) => p.title);
     const department = departments.find((d) => d.id === step.department_id)?.name;
 
     const label =
