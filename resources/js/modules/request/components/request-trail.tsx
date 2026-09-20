@@ -35,6 +35,17 @@ function departmentTitle(row: RequestApproval): string {
     return positions ? `${row.approver_department} · ${positions}` : String(row.approver_department);
 }
 
+/**
+ * Who is holding a step that names several people: all of them, until one signs.
+ *
+ * Joined with "·" like the department line above rather than listed, because the trail
+ * gives each step one line and the names are alternates — whichever of them acts, the step
+ * is done, so the line is one answer and not a checklist.
+ */
+function candidatesTitle(row: RequestApproval): string {
+    return (row.approver_candidates ?? []).join(' · ');
+}
+
 export function RequestTrail({ request }: { request: ServiceRequest }) {
     const t = useT();
     const approvals = request.approvals ?? [];
@@ -130,12 +141,13 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                 ) : (
                     <span className="font-mono text-[11px] font-bold">{row.position}</span>
                 ),
-            // A department step nobody has taken yet has no name to print. The department
-            // and the rungs it accepts are what the reader can act on — "waiting on a
-            // person we cannot name" is the one thing the line must not say.
+            // A group step nobody has taken yet has no single name to print. The people it
+            // names, or the department and the rungs it accepts, are what the reader can act
+            // on — "waiting on a person we cannot name" is the one thing the line must not say.
             title: isFulfillment
                 ? t('req_trail_fulfillment')
-                : (row.approver_name ?? (row.approver_department ? departmentTitle(row) : row.label)),
+                : (row.approver_name ??
+                  ((row.approver_candidates ?? []).length > 0 ? candidatesTitle(row) : row.approver_department ? departmentTitle(row) : row.label)),
             // A skipped step with a reason says it all inside the amber note below, so the
             // status line stays quiet instead of printing "skipped" twice. Rows from before
             // reasons were stored still get the plain word.

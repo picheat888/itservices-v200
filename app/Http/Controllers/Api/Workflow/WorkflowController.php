@@ -50,7 +50,7 @@ class WorkflowController extends Controller
         // of an internal key, which tells a reader nothing. Sorted in PHP because the list is
         // one row per request type, so there is nothing to gain from doing it in SQL.
         $order = array_flip(array_column(RequestType::cases(), 'value'));
-        $workflows = Workflow::with('steps.positions')->get()
+        $workflows = Workflow::with(['steps.positions', 'steps.approvers'])->get()
             ->sortBy(fn (Workflow $workflow) => $order[$workflow->request_type->value] ?? PHP_INT_MAX)
             ->values();
 
@@ -106,13 +106,18 @@ class WorkflowController extends Controller
                     'label' => $step['label'],
                     'kind' => $step['kind'],
                     'department_id' => $step['actor_type'] === StepActorType::Department->value ? ($step['department_id'] ?? null) : null,
-                    'approver_employee_id' => $step['actor_type'] === StepActorType::Department->value ? ($step['approver_employee_id'] ?? null) : null,
                 ]);
 
                 // Chain rungs and department groups both sign by position; the pivot rows go
-                // with the step. A department step naming one person carries no positions.
+                // with the step. A department step naming people carries no positions.
                 if (in_array($step['actor_type'], [StepActorType::Chain->value, StepActorType::Department->value], true)) {
                     $created->positions()->sync($step['position_ids'] ?? []);
+                }
+
+                // The people a department step names, in the order the editor listed them —
+                // the first is who the route means to ask, the rest are alternates.
+                if ($step['actor_type'] === StepActorType::Department->value) {
+                    $created->approvers()->sync(array_values($step['approver_employee_ids'] ?? []));
                 }
             }
         });
@@ -124,7 +129,7 @@ class WorkflowController extends Controller
             'steps' => count($data['steps']),
         ]);
 
-        return new WorkflowResource($workflow->refresh()->load('steps.positions'));
+        return new WorkflowResource($workflow->refresh()->load(['steps.positions', 'steps.approvers']));
     }
 
     /**
@@ -143,6 +148,12 @@ class WorkflowController extends Controller
             'steps.*.kind' => ['required', Rule::enum(WorkflowStepKind::class)],
             'steps.*.position_ids' => ['array'],
             'steps.*.position_ids.*' => ['integer', 'exists:positions,id'],
+            // A department step resolves by these two, so the preview has to be given them
+            // — without them every department step previewed as skipped, which is not what
+            // the route being edited actually does.
+            'steps.*.department_id' => ['nullable', 'integer', 'exists:departments,id'],
+            'steps.*.approver_employee_ids' => ['array'],
+            'steps.*.approver_employee_ids.*' => ['integer', 'exists:employees,id'],
         ]);
 
         $employee = Employee::with(['position', 'department'])->findOrFail($data['employee_id']);
@@ -153,6 +164,13 @@ class WorkflowController extends Controller
             ->whereIn('id', $rows->pluck('approver_employee_id')->filter()->unique())
             ->get()->keyBy('id');
 
+        // The people a group row is open to, so the preview says who may sign rather than
+        // leaving the line blank on the one shape that names nobody in particular.
+        // get()->pluck(), never pluck() on the query: `name` is composed from first_name and
+        // last_name by an accessor, so asking the database for a `name` column is an error.
+        $candidates = Employee::whereIn('id', $rows->pluck('approver_employee_ids')->filter()->flatten()->unique())
+            ->get()->pluck('name', 'id');
+
         return response()->json([
             'data' => [
                 'employee' => [
@@ -161,12 +179,17 @@ class WorkflowController extends Controller
                     'position' => $employee->position?->title,
                     'department' => $employee->department?->name,
                 ],
-                'rows' => $rows->map(function (array $row) use ($approvers) {
+                'rows' => $rows->map(function (array $row) use ($approvers, $candidates) {
                     $approver = $row['approver_employee_id'] !== null
                         ? $approvers->get($row['approver_employee_id'])
                         : null;
 
-                    return [...$row, 'approver_position' => $approver?->position?->title];
+                    return [...$row,
+                        'approver_position' => $approver?->position?->title,
+                        'approver_candidates' => collect($row['approver_employee_ids'] ?? [])
+                            ->map(fn (int $id) => $candidates->get($id))
+                            ->filter()->values(),
+                    ];
                 })->values(),
             ],
         ]);

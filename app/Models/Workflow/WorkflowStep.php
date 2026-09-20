@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
  */
 class WorkflowStep extends Model
 {
-    protected $fillable = ['workflow_id', 'position', 'actor_type', 'label', 'kind', 'department_id', 'approver_employee_id'];
+    protected $fillable = ['workflow_id', 'position', 'actor_type', 'label', 'kind', 'department_id'];
 
     protected function casts(): array
     {
@@ -45,14 +45,21 @@ class WorkflowStep extends Model
     }
 
     /**
-     * The one person a department step names, when it names one. Null means the step
-     * accepts anybody in the department holding one of its positions.
+     * The people a department step names, when it names any. Empty means the step accepts
+     * anybody in the department holding one of its positions.
      *
-     * @return BelongsTo<Employee, $this>
+     * Several may be named — a manager and their deputy, say — and then whoever signs
+     * first settles the step. It is a list of alternates, never a list of signatures to
+     * collect: one decision moves the request on.
+     *
+     * @return BelongsToMany<Employee, $this>
      */
-    public function approver(): BelongsTo
+    public function approvers(): BelongsToMany
     {
-        return $this->belongsTo(Employee::class, 'approver_employee_id');
+        // Ordered by the pivot's own key, which is the order the editor sent them in: the
+        // first name is who the route means to ask, and the editor shows them back that way.
+        return $this->belongsToMany(Employee::class, 'workflow_step_approvers')
+            ->orderBy('workflow_step_approvers.id');
     }
 
     /**

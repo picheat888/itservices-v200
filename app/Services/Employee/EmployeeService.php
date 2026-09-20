@@ -201,7 +201,11 @@ class EmployeeService
         if (ServiceRequest::where('employee_id', $employee->id)->exists()) {
             $blockers[] = 'requests';
         }
-        if (RequestApproval::where('approver_employee_id', $employee->id)->exists()) {
+        // Being one of the people a step is open to counts as much as holding it outright:
+        // both are this person's name frozen into a request's approval trail.
+        if (RequestApproval::where('approver_employee_id', $employee->id)
+            ->orWhereJsonContains('approver_employee_ids', (int) $employee->id)
+            ->exists()) {
             $blockers[] = 'approvals';
         }
         if ($employee->subordinates()->exists()) {

@@ -35,12 +35,16 @@ class ServiceRequestResource extends JsonResource
         $approvalRows = $loaded->filter(fn (RequestApproval $a) => $a->kind === WorkflowStepKind::Approval);
         $doneApprovals = $approvalRows->filter(fn (RequestApproval $a) => in_array($a->status, [ApprovalStatus::Approved, ApprovalStatus::Skipped], true));
 
+        // Either the step is this viewer's by name, or it is open to a group they belong
+        // to. A group step answers the same question one press later — the server lets
+        // them approve — so a page that hid the button was refusing what the API allowed.
         $canApprove = $viewer !== null
             && $this->status === RequestStatus::Pending
             && $current !== null
             && $current->kind === WorkflowStepKind::Approval
             && $viewer->employee_id !== null
-            && (int) $viewer->employee_id === (int) $current->approver_employee_id;
+            && ((int) $viewer->employee_id === (int) $current->approver_employee_id
+                || $current->acceptsEmployee($viewer->employee));
 
         return [
             'id' => $this->id,

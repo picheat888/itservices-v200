@@ -4,6 +4,7 @@ namespace App\Http\Requests\Request;
 
 use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
+use App\Models\Employee\Employee;
 use App\Models\Workflow\Workflow;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -39,10 +40,11 @@ class UpdateWorkflowRequest extends FormRequest
             // names nobody can never resolve) and meaningless on the other actor types.
             'steps.*.position_ids' => ['array'],
             'steps.*.position_ids.*' => ['integer', 'exists:positions,id'],
-            // A department step names the department, and then either one person in it or
-            // the positions above. Meaningless on the other actor types.
+            // A department step names the department, and then either the people in it who
+            // may sign or the positions above. Meaningless on the other actor types.
             'steps.*.department_id' => ['nullable', 'integer', 'exists:departments,id'],
-            'steps.*.approver_employee_id' => ['nullable', 'integer', 'exists:employees,id'],
+            'steps.*.approver_employee_ids' => ['array'],
+            'steps.*.approver_employee_ids.*' => ['integer', 'exists:employees,id'],
         ];
     }
 
@@ -85,11 +87,24 @@ class UpdateWorkflowRequest extends FormRequest
                     $v->errors()->add("steps.{$index}.department_id", 'Choose the department that approves this step.');
                 }
 
-                // And it has to say who in that department: one person, or the positions it
-                // accepts. Neither would leave the step unresolvable in exactly the way the
-                // chain rung above is guarded against.
-                if (empty($step['approver_employee_id']) && empty($step['position_ids'])) {
+                // And it has to say who in that department: the people who may sign, or the
+                // positions it accepts. Neither would leave the step unresolvable in exactly
+                // the way the chain rung above is guarded against.
+                $named = array_values(array_filter((array) ($step['approver_employee_ids'] ?? [])));
+                if ($named === [] && empty($step['position_ids'])) {
                     $v->errors()->add("steps.{$index}.position_ids", 'Name a person in that department, or the positions that may approve.');
+                }
+
+                // Naming somebody from another department would be a step whose approver is
+                // not in the department it asks — the editor picks from that department's
+                // members, so this catches a payload that did not come from it.
+                if ($named !== [] && ! empty($step['department_id'])) {
+                    $outsiders = Employee::whereIn('id', $named)
+                        ->where(fn ($q) => $q->whereNull('department_id')->orWhere('department_id', '!=', $step['department_id']))
+                        ->exists();
+                    if ($outsiders) {
+                        $v->errors()->add("steps.{$index}.approver_employee_ids", 'Everybody named must belong to the department this step asks.');
+                    }
                 }
             }
 

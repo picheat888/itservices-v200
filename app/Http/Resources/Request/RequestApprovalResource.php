@@ -4,6 +4,7 @@ namespace App\Http\Resources\Request;
 
 use App\Enums\Request\ApprovalStatus;
 use App\Models\Employee\Department;
+use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Request\RequestApproval;
 use App\Models\User;
@@ -42,6 +43,13 @@ class RequestApprovalResource extends JsonResource
                 $this->isOpenToDepartment(),
                 fn () => Position::whereIn('id', $this->approver_position_ids ?? [])->pluck('title')->values(),
             ),
+            // A step open to people named by hand has no department rule to state — it has
+            // the names. Listed in the order the workflow names them, so the person the
+            // route means to ask reads first and the deputies after.
+            'approver_candidates' => $this->when(
+                $this->isOpenToNamedGroup(),
+                fn () => $this->namedApproverNames(),
+            ),
             'note' => $this->note,
             // Why the engine skipped this step, as a code the SPA writes out in the
             // reader's language (`req_skip_*`). Snapshotted: it stays true whatever
@@ -55,6 +63,26 @@ class RequestApprovalResource extends JsonResource
             'became_current_at' => $this->became_current_at?->toDateTimeString(),
             'acted_at' => $this->acted_at?->toDateTimeString(),
         ];
+    }
+
+    /**
+     * The names a group step lists, in the workflow's own order.
+     *
+     * One query, then ordered in PHP: `whereIn` answers in whatever order the database
+     * likes, and the order here is information — the first name is who the route means to
+     * ask. A name that no longer exists drops out rather than printing blank.
+     *
+     * @return list<string>
+     */
+    private function namedApproverNames(): array
+    {
+        $names = Employee::whereIn('id', $this->namedApproverIds())->get()->keyBy('id');
+
+        return collect($this->namedApproverIds())
+            ->map(fn (int $id) => $names->get($id)?->name)
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**

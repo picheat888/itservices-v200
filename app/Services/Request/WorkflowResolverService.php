@@ -122,13 +122,13 @@ class WorkflowResolverService
      */
     private function stepsOf(Workflow $workflow): array
     {
-        return $workflow->steps()->with('positions')->get()->map(fn ($s) => [
+        return $workflow->steps()->with(['positions', 'approvers'])->get()->map(fn ($s) => [
             'actor_type' => $s->actor_type->value,
             'label' => $s->label,
             'kind' => $s->kind->value,
             'position_ids' => $s->positions->pluck('id')->all(),
             'department_id' => $s->department_id,
-            'approver_employee_id' => $s->approver_employee_id,
+            'approver_employee_ids' => $s->approvers->pluck('id')->all(),
         ])->all();
     }
 
@@ -162,6 +162,7 @@ class WorkflowResolverService
                 'approver_name' => null,
                 'approver_department_id' => null,
                 'approver_position_ids' => null,
+                'approver_employee_ids' => null,
                 'status' => ApprovalStatus::Waiting->value,
                 'note' => null,
                 'skip_reason' => null,
@@ -252,14 +253,18 @@ class WorkflowResolverService
     /**
      * A department step, frozen into one row.
      *
-     * Two shapes: a step that names one person resolves to them, and behaves like any
-     * other single-approver row. A step that names positions instead is left open to the
-     * whole group — the criteria are copied onto the row so the request keeps the rule it
-     * was submitted under even if the workflow is edited later.
+     * Two shapes: a step that names people resolves to them, and a step that names
+     * positions instead is left open to whoever in the department holds one. Either way the
+     * criteria are copied onto the row, so the request keeps the rule it was submitted
+     * under even if the workflow is edited later.
      *
-     * The requester is excluded either way: a department step that lands on the person who
-     * asked would let them sign their own request, which is the one thing every route here
-     * is built to prevent.
+     * Naming several people makes ONE row open to all of them, not one row each: they are
+     * alternates (a manager and their deputy), and the first to act settles the step. A
+     * route that needs two separate signatures says so with two steps.
+     *
+     * The requester is excluded from every shape: a department step that lands on the
+     * person who asked would let them sign their own request, which is the one thing every
+     * route here is built to prevent.
      *
      * @param  array<string, mixed>  $base
      * @param  array<string, mixed>  $step
@@ -277,14 +282,9 @@ class WorkflowResolverService
             return $skipped;
         }
 
-        // Named person: one row, one approver, exactly like a chain rung that found a holder.
-        $namedId = $step['approver_employee_id'] ?? null;
-        if ($namedId !== null) {
-            $named = Employee::find($namedId);
-
-            return $named !== null && $named->id !== $requester->id && $this->canHoldAStep($named)
-                ? [...$base, 'approver_employee_id' => $named->id, 'approver_name' => $named->name]
-                : $skipped;
+        $namedIds = array_map('intval', array_values($step['approver_employee_ids'] ?? []));
+        if ($namedIds !== []) {
+            return $this->resolveNamedApprovers($base, $skipped, $namedIds, $requester);
         }
 
         $positionIds = array_map('intval', array_values($step['position_ids'] ?? []));
@@ -306,6 +306,43 @@ class WorkflowResolverService
             'approver_department_id' => (int) $departmentId,
             'approver_position_ids' => $positionIds,
         ];
+    }
+
+    /**
+     * The people a step names, frozen into one row.
+     *
+     * Nobody usable left (all resigned, or the only name is the requester's) skips the
+     * step. Exactly one leaves a plain single-approver row — the same row this step
+     * produced before it could hold a list, so nothing downstream sees a new shape for the
+     * ordinary case. Two or more carry the list, and the first to act takes it.
+     *
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $skipped
+     * @param  list<int>  $namedIds
+     * @return array<string, mixed>
+     */
+    private function resolveNamedApprovers(array $base, array $skipped, array $namedIds, Employee $requester): array
+    {
+        // Ordered as the workflow lists them, not as the database returns them: the first
+        // name is who the route means to ask, and a single-approver row must be theirs.
+        $byId = Employee::whereIn('id', $namedIds)->get()->keyBy('id');
+        $usable = collect($namedIds)
+            ->map(fn (int $id) => $byId->get($id))
+            ->filter(fn (?Employee $e) => $e !== null && $e->id !== $requester->id && $this->canHoldAStep($e))
+            ->values();
+
+        if ($usable->isEmpty()) {
+            return $skipped;
+        }
+
+        if ($usable->count() === 1) {
+            return [...$base,
+                'approver_employee_id' => $usable[0]->id,
+                'approver_name' => $usable[0]->name,
+            ];
+        }
+
+        return [...$base, 'approver_employee_ids' => $usable->pluck('id')->map(fn ($id) => (int) $id)->all()];
     }
 
     /**
