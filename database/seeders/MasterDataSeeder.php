@@ -14,8 +14,11 @@ use Illuminate\Database\Seeder;
 class MasterDataSeeder extends Seeder
 {
     /**
-     * Seeds demo master data: Brands, Asset Models, Categories, Vendors, Warehouses.
-     * Idempotent via updateOrCreate on name (unique column).
+     * The lookup lists the Asset, Stock and Contract forms pick from — the sections
+     * below say which. Run by hand on a fresh install, never from DatabaseSeeder:
+     * this is one company's reference data, not everybody's.
+     *
+     * Safe to re-run. Every list matches on its unique `name` and updates in place.
      */
     public function run(): void
     {
@@ -40,40 +43,31 @@ class MasterDataSeeder extends Seeder
 
         // ── Asset Models ─────────────────────────────────────────────────────────
         $models = [
-            // Dell
             ['name' => 'Dell Latitude 5540',           'brand' => 'Dell',    'description' => 'แล็ปท็อปธุรกิจ 15.6" i5/i7 Gen13'],
             ['name' => 'Dell OptiPlex 7010',           'brand' => 'Dell',    'description' => 'เดสก์ท็อป SFF Intel i5 Gen13'],
             ['name' => 'Dell PowerEdge R750',          'brand' => 'Dell',    'description' => 'Rack Server 2U Xeon Scalable'],
             ['name' => 'Dell UltraSharp U2422H',       'brand' => 'Dell',    'description' => 'จอ 24" IPS USB-C'],
-            // HP
             ['name' => 'HP ProBook 450 G10',           'brand' => 'HP',      'description' => 'แล็ปท็อปธุรกิจ 15.6" i5 Gen13'],
             ['name' => 'HP EliteDesk 800 G9',          'brand' => 'HP',      'description' => 'เดสก์ท็อป SFF i7 Gen12'],
             ['name' => 'HP LaserJet Pro 4002dn',       'brand' => 'HP',      'description' => 'เครื่องพิมพ์เลเซอร์ขาวดำ A4'],
             ['name' => 'HP Color LaserJet Pro 4301fdw', 'brand' => 'HP',     'description' => 'เครื่องพิมพ์สีแบบ All-in-One A4'],
-            // Lenovo
             ['name' => 'Lenovo ThinkPad L14 Gen4',    'brand' => 'Lenovo',  'description' => 'แล็ปท็อปธุรกิจ 14" AMD Ryzen 5'],
             ['name' => 'Lenovo ThinkCentre M70q',     'brand' => 'Lenovo',  'description' => 'Mini PC i5 Gen12'],
-            // Apple
             ['name' => 'MacBook Air M2 13"',           'brand' => 'Apple',   'description' => 'แล็ปท็อป M2 8GB/256GB'],
             ['name' => 'MacBook Pro M3 14"',           'brand' => 'Apple',   'description' => 'แล็ปท็อป M3 Pro 18GB/512GB'],
-            // Cisco
             ['name' => 'Cisco Catalyst C9200L-24P',   'brand' => 'Cisco',   'description' => 'Layer 3 Switch 24-port PoE+'],
             ['name' => 'Cisco Meraki MR46',            'brand' => 'Cisco',   'description' => 'Wi-Fi 6 Access Point'],
             ['name' => 'Cisco ASA 5506-X',             'brand' => 'Cisco',   'description' => 'Firewall/VPN Appliance'],
-            // Samsung
             ['name' => 'Samsung ViewFinity S8 27"',   'brand' => 'Samsung', 'description' => 'จอ 4K IPS 27" USB-C'],
-            // APC
             ['name' => 'APC Smart-UPS 1500VA',         'brand' => 'APC',     'description' => 'UPS 1500VA/1000W Line-interactive'],
             ['name' => 'APC Smart-UPS 3000VA',         'brand' => 'APC',     'description' => 'UPS 3000VA Rack-mount'],
-            // Epson
             ['name' => 'Epson L6580',                  'brand' => 'Epson',   'description' => 'เครื่องพิมพ์อิงค์แจ็ต All-in-One A4 Wi-Fi'],
         ];
 
         foreach ($models as $m) {
             $brand = $brandMap[$m['brand']] ?? null;
-            // Store the bare model name — the brand is its own column (brand_id),
-            // so strip a leading brand prefix from the demo list ("Dell Latitude
-            // 5540" → "Latitude 5540") to avoid redundant "Dell Dell …" displays.
+            // The brand is its own column, so the name drops it: a list that stored
+            // "Dell Latitude 5540" renders as "Dell Dell Latitude 5540".
             $name = str_starts_with($m['name'], $m['brand'].' ')
                 ? substr($m['name'], strlen($m['brand']) + 1)
                 : $m['name'];
@@ -84,9 +78,8 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Categories ──────────────────────────────────────────────────────────
-        // `serial` is the default for the "keep all serial numbers" toggle when a
-        // new SKU is created under this category. High-value, individually tracked
-        // hardware defaults to serialized; consumables/parts are quantity-only.
+        // `serial` presets the "keep all serial numbers" toggle for new SKUs in the
+        // category: on for hardware tracked unit by unit, off for what is counted.
         $categories = [
             ['name' => 'แล็ปท็อป',           'description' => 'Notebook / Laptop ทุกยี่ห้อ',           'serial' => true],
             ['name' => 'เดสก์ท็อป',          'description' => 'Desktop PC / Mini PC',                   'serial' => true],
@@ -205,8 +198,8 @@ class MasterDataSeeder extends Seeder
 
         foreach ($vendors as $v) {
             // `name` held the Thai company name before it held the English one, so a
-            // row seeded under the old shape is matched on name_th and renamed. It is
-            // a unique column: a second insert would not duplicate, it would fail.
+            // row seeded under the old shape is matched on name_th and renamed —
+            // `name` is unique, and a second insert would fail rather than duplicate.
             $vendor = Vendor::where('name', $v['name'])->orWhere('name', $v['name_th'])->first();
             $attributes = [
                 'name' => $v['name'],
