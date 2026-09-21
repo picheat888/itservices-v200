@@ -118,13 +118,10 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Vendors ─────────────────────────────────────────────────────────────
-        // `name` holds the English vendor name, `name_th` the Thai one, so the UI
-        // can show either depending on the active language. `old` is the legacy
-        // Thai-only `name` from earlier seeds — used to update existing rows in
-        // place rather than creating duplicates when re-seeding a live database.
+        // `name` holds the English vendor name, `name_th` the Thai one, so the UI can
+        // show either depending on the active language.
         $vendors = [
             [
-                'old' => 'บริษัท แอดวานซ์ อินโฟ เซอร์วิส จำกัด (มหาชน)',
                 'name' => 'Advanced Info Service PCL (AIS)',
                 'name_th' => 'บริษัท แอดวานซ์ อินโฟ เซอร์วิส จำกัด (มหาชน)',
                 'contact' => 'ฝ่ายลูกค้าองค์กร',
@@ -133,7 +130,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '414 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400',
             ],
             [
-                'old' => 'บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด',
                 'name' => 'Microsoft (Thailand) Limited',
                 'name_th' => 'บริษัท ไมโครซอฟท์ (ประเทศไทย) จำกัด',
                 'contact' => 'Microsoft Enterprise Sales',
@@ -142,7 +138,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '388 อาคาร Exchange Tower ชั้น 30 ถนนสุขุมวิท กรุงเทพฯ 10110',
             ],
             [
-                'old' => 'บริษัท ซิสโก้ ซิสเต็มส์ (ประเทศไทย) จำกัด',
                 'name' => 'Cisco Systems (Thailand) Limited',
                 'name_th' => 'บริษัท ซิสโก้ ซิสเต็มส์ (ประเทศไทย) จำกัด',
                 'contact' => 'Cisco Thailand Partner',
@@ -151,7 +146,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '87/2 อาคาร CRC Tower ชั้น 32 ถนนวิทยุ กรุงเทพฯ 10330',
             ],
             [
-                'old' => 'บริษัท เดลล์ คอร์ปอเรชั่น (ประเทศไทย) จำกัด',
                 'name' => 'Dell Corporation (Thailand) Limited',
                 'name_th' => 'บริษัท เดลล์ คอร์ปอเรชั่น (ประเทศไทย) จำกัด',
                 'contact' => 'Dell Business Direct',
@@ -160,7 +154,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '689 อาคาร Bhiraj Tower ชั้น 21 ถนนสุขุมวิท กรุงเทพฯ 10110',
             ],
             [
-                'old' => 'บริษัท เอชพี ประเทศไทย จำกัด',
                 'name' => 'HP (Thailand) Co., Ltd.',
                 'name_th' => 'บริษัท เอชพี ประเทศไทย จำกัด',
                 'contact' => 'HP Enterprise Thailand',
@@ -169,7 +162,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '195 อาคาร Empire Tower ชั้น 43 ถนนสาทรใต้ กรุงเทพฯ 10120',
             ],
             [
-                'old' => 'บริษัท เลโนโว (ประเทศไทย) จำกัด',
                 'name' => 'Lenovo (Thailand) Limited',
                 'name_th' => 'บริษัท เลโนโว (ประเทศไทย) จำกัด',
                 'contact' => 'Lenovo Corporate Sales',
@@ -178,7 +170,6 @@ class MasterDataSeeder extends Seeder
                 'address' => 'อาคาร Glas Haus ชั้น 15 ถนนสุขุมวิท 25 กรุงเทพฯ 10110',
             ],
             [
-                'old' => 'บริษัท อีซี่บาย จำกัด (มหาชน) - ฝ่ายขายองค์กร',
                 'name' => 'EasyBuy PCL - Corporate Sales',
                 'name_th' => 'บริษัท อีซี่บาย จำกัด (มหาชน) - ฝ่ายขายองค์กร',
                 'contact' => 'Corporate Account',
@@ -187,7 +178,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '55 อาคาร Wave Place ชั้น 19 ถนนวิทยุ กรุงเทพฯ 10330',
             ],
             [
-                'old' => 'ห้างหุ้นส่วนจำกัด ไอที วัน สตอร์',
                 'name' => 'IT One Store Ltd., Part.',
                 'name_th' => 'ห้างหุ้นส่วนจำกัด ไอที วัน สตอร์',
                 'contact' => 'คุณสมชาย วงศ์พาณิชย์',
@@ -196,7 +186,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '99/12 นิคมอุตสาหกรรมอมตะนคร ชลบุรี 20000',
             ],
             [
-                'old' => 'บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)',
                 'name' => 'True Corporation PCL',
                 'name_th' => 'บริษัท ทรู คอร์ปอเรชั่น จำกัด (มหาชน)',
                 'contact' => 'True Business Center',
@@ -205,7 +194,6 @@ class MasterDataSeeder extends Seeder
                 'address' => '18 อาคาร True Tower ถนนรัชดาภิเษก กรุงเทพฯ 10310',
             ],
             [
-                'old' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) - ฝ่าย IT',
                 'name' => 'SE-Education PCL - IT Dept.',
                 'name_th' => 'บริษัท ซีเอ็ดยูเคชั่น จำกัด (มหาชน) - ฝ่าย IT',
                 'contact' => 'ฝ่ายจัดซื้อ IT',
@@ -216,9 +204,10 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($vendors as $v) {
-            // Match a legacy Thai-named row or an already-migrated English-named
-            // row so re-seeding updates in place instead of duplicating.
-            $vendor = Vendor::where('name', $v['old'])->orWhere('name', $v['name'])->first();
+            // `name` held the Thai company name before it held the English one, so a
+            // row seeded under the old shape is matched on name_th and renamed. It is
+            // a unique column: a second insert would not duplicate, it would fail.
+            $vendor = Vendor::where('name', $v['name'])->orWhere('name', $v['name_th'])->first();
             $attributes = [
                 'name' => $v['name'],
                 'name_th' => $v['name_th'],
@@ -237,11 +226,9 @@ class MasterDataSeeder extends Seeder
 
         // ── Warehouses ──────────────────────────────────────────────────────────
         $warehouses = [
-            ['name' => 'คลังกลาง IT',      'description' => 'ห้องคลังอุปกรณ์ IT หลัก อาคาร A ชั้น 1'],
-            ['name' => 'ห้อง Server Room',  'description' => 'ห้องควบคุม Server และอุปกรณ์ Network หลัก'],
             ['name' => 'คลังโรงงาน 1',      'description' => 'จุดเก็บอุปกรณ์ประจำโรงงานที่ 1'],
             ['name' => 'คลังโรงงาน 2',      'description' => 'จุดเก็บอุปกรณ์ประจำโรงงานที่ 2'],
-            ['name' => 'คลังอะไหล่สำรอง',   'description' => 'อะไหล่และวัสดุสำรองสำหรับซ่อมบำรุง'],
+            ['name' => 'คลังโรงงาน 4',      'description' => 'จุดเก็บอุปกรณ์ประจำโรงงานที่ 4'],
         ];
 
         foreach ($warehouses as $w) {
@@ -251,12 +238,16 @@ class MasterDataSeeder extends Seeder
         // ── Units (Stock module) ──────────────────────────────────────────────────
         $units = [
             ['name' => 'unit', 'description' => 'ชิ้น / เครื่อง'],
-            ['name' => 'piece', 'description' => 'ชิ้น'],
-            ['name' => 'module', 'description' => 'โมดูล (เช่น RAM)'],
-            ['name' => 'drive', 'description' => 'ไดรฟ์ (SSD/HDD)'],
+            ['name' => 'pc', 'description' => 'ชิ้น'],
+            ['name' => 'ea', 'description' => 'อัน'],
             ['name' => 'cartridge', 'description' => 'ตลับ (หมึก/Toner)'],
             ['name' => 'box', 'description' => 'กล่อง'],
             ['name' => 'set', 'description' => 'ชุด'],
+            ['name' => 'pack', 'description' => 'แพ็ก'],
+            ['name' => 'roll', 'description' => 'ม้วน'],
+            ['name' => 'meter', 'description' => 'เมตร'],
+            ['name' => 'kg', 'description' => 'กิโลกรัม'],
+            ['name' => 'g', 'description' => 'กรัม'],
         ];
         foreach ($units as $u) {
             Unit::updateOrCreate(['name' => $u['name']], ['description' => $u['description']]);
@@ -267,10 +258,9 @@ class MasterDataSeeder extends Seeder
             ['name' => 'No warranty', 'description' => 'ไม่มีการรับประกัน'],
             ['name' => '1-year', 'description' => 'รับประกัน 1 ปี'],
             ['name' => '2-year', 'description' => 'รับประกัน 2 ปี'],
-            ['name' => '3-year onsite', 'description' => 'รับประกัน 3 ปี บริการถึงที่'],
+            ['name' => '3-year', 'description' => 'รับประกัน 3 ปี'],
             ['name' => '5-year', 'description' => 'รับประกัน 5 ปี'],
             ['name' => 'Lifetime', 'description' => 'รับประกันตลอดอายุการใช้งาน'],
-            ['name' => 'Limited Lifetime', 'description' => 'รับประกันตลอดอายุแบบมีเงื่อนไข'],
         ];
         foreach ($warrantyTypes as $w) {
             WarrantyType::updateOrCreate(['name' => $w['name']], ['description' => $w['description']]);
