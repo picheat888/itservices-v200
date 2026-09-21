@@ -12,7 +12,7 @@ const MASTER = 'contracts.module';
 // view/management split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'contracts.view_dashboard', children: [], chip: false },
-    { view: 'contracts.view', children: ['contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.import'] },
+    { view: 'contracts.view', children: ['contracts.create', 'contracts.edit', 'contracts.delete'] },
     { view: 'contracts.view_lifecycle', children: ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'], chip: false },
     { view: 'contracts.alerts', children: [], chip: false },
 ];

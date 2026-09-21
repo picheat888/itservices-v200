@@ -56,7 +56,6 @@ const LIVE = new Set<string>([
     'contracts.create',
     'contracts.edit',
     'contracts.delete',
-    'contracts.import',
     'contracts.alerts',
     'contracts.cancel',
     'contracts.expire',

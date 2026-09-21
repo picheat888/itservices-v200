@@ -179,7 +179,6 @@ export const permission: Dict = {
     'perm_act_contracts.create': 'Create',
     'perm_act_contracts.edit': 'Edit',
     'perm_act_contracts.delete': 'Delete',
-    'perm_act_contracts.import': 'Import contracts (CSV)',
     'perm_act_contracts.cancel': 'Cancel Contract',
     'perm_act_contracts.expire': 'Mark as Expired',
     'perm_act_contracts.reactivate': 'Reactivate contracts',

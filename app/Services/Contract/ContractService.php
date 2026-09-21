@@ -6,7 +6,6 @@ use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
 use App\Models\Asset\Asset;
 use App\Models\Contract\Contract;
-use App\Models\Settings\Vendor;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -115,76 +114,6 @@ class ContractService
         }
 
         return $data;
-    }
-
-    /**
-     * Bulk-import contracts from parsed CSV rows. Validates all rows first;
-     * returns errors (all-or-nothing) or persists and returns the imported count.
-     *
-     * @param  array<int, array<string, string>>  $rows
-     * @return array{errors: list<array{row:int,message:string}>, imported: int}
-     */
-    public function importRows(array $rows): array
-    {
-        $valid = true;
-        $errors = [];
-        $types = ['software', 'hardware', 'service', 'connectivity', 'other'];
-        $cycles = ['monthly', 'quarterly', 'yearly'];
-        // Map lowercased vendor name → id so the CSV (still name-based) resolves to the FK.
-        $vendorIdByName = Vendor::pluck('id', 'name')->mapWithKeys(fn ($id, $name) => [strtolower($name) => $id])->all();
-        $validVendors = array_keys($vendorIdByName);
-
-        foreach ($rows as $i => $row) {
-            $n = $i + 2; // 1-based + header row
-            foreach (['vendor', 'name', 'type', 'start_date', 'end_date', 'value', 'billing_cycle'] as $col) {
-                if (blank($row[$col] ?? null)) {
-                    $errors[] = ['row' => $n, 'message' => "คอลัมน์ '{$col}' จำเป็นต้องกรอก"];
-                    $valid = false;
-                }
-            }
-            if (! blank($row['vendor'] ?? null) && ! in_array(strtolower(trim($row['vendor'])), $validVendors, true)) {
-                $errors[] = ['row' => $n, 'message' => "vendor '{$row['vendor']}' ไม่พบในระบบ Master Data กรุณาเพิ่มก่อนนำเข้า"];
-                $valid = false;
-            }
-            if (! blank($row['type'] ?? null) && ! in_array($row['type'], $types, true)) {
-                $errors[] = ['row' => $n, 'message' => 'type ต้องเป็น: '.implode(', ', $types)];
-                $valid = false;
-            }
-            if (! blank($row['billing_cycle'] ?? null) && ! in_array($row['billing_cycle'], $cycles, true)) {
-                $errors[] = ['row' => $n, 'message' => 'billing_cycle ต้องเป็น: '.implode(', ', $cycles)];
-                $valid = false;
-            }
-            if (! blank($row['value'] ?? null) && ! is_numeric($row['value'])) {
-                $errors[] = ['row' => $n, 'message' => 'value ต้องเป็นตัวเลข'];
-                $valid = false;
-            }
-        }
-
-        if (! $valid) {
-            return ['errors' => $errors, 'imported' => 0];
-        }
-
-        foreach ($rows as $row) {
-            $data = [
-                'vendor_id' => $vendorIdByName[strtolower(trim($row['vendor']))],
-                'name' => trim($row['name']),
-                'type' => $row['type'],
-                'start_date' => $row['start_date'],
-                'end_date' => $row['end_date'],
-                'value' => (float) $row['value'],
-                'billing_cycle' => $row['billing_cycle'],
-                'notes' => blank($row['notes'] ?? null) ? null : trim($row['notes']),
-                'notify_60' => true,
-                'notify_30' => true,
-                'notify_7' => true,
-            ];
-            if (! blank($row['code'] ?? null)) {
-                $data['code'] = trim($row['code']);
-            }
-            Contract::create($data);
-        }
-
-        return ['errors' => [], 'imported' => count($rows)];
     }
 
     /**
