@@ -68,3 +68,23 @@ export function toRecordId(param: string | null): number | null {
 
     return Number.isInteger(id) && id > 0 ? id : null;
 }
+
+/**
+ * Hands the browser a generated file to save.
+ *
+ * The anchor has to be IN the document for Firefox to honour the click, and the
+ * object URL has to outlive the click — revoking it on the same tick cancels the
+ * download in Chrome often enough to matter. Both were wrong in the two import
+ * dialogs that used to carry their own copy of this.
+ */
+export function downloadBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
