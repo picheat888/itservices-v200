@@ -10,6 +10,7 @@ use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
 use App\Models\Settings\AppSetting;
 use App\Models\User;
+use App\Support\CsvReader;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -47,6 +48,22 @@ class EmployeeImportService
         'email', 'phone', 'department', 'section', 'position', 'joined_at',
         'report_to_employee_code',
     ];
+
+    /**
+     * How many preview rows travel back to the dialog. The upload limit allows tens of
+     * thousands of rows; every one of them rendered into one scrolling table is a frozen
+     * browser, and nobody reads past the first screenful anyway. The COUNTS still cover
+     * the whole file — only the listing is a page.
+     */
+    public const PREVIEW_LIMIT = 500;
+
+    /**
+     * How alike a typed value and a real one must be (percent) before the error
+     * offers it as the spelling that was probably meant. Set high enough that a
+     * genuinely unknown unit gets no suggestion at all — being sent to correct a
+     * typo that is not there costs more than being told nothing.
+     */
+    private const SUGGEST_MIN_SIMILARITY = 65.0;
 
     /**
      * Validates CSV rows and — unless $dryRun — imports them.
@@ -115,7 +132,9 @@ class EmployeeImportService
         $seenEmails = [];
 
         foreach ($rows as $i => $row) {
-            $line = $i + 2; // +1 for the header, +1 because humans count from one
+            // The reader's own count when it kept one; otherwise the array position,
+            // which is only right for a file with no blank lines in it.
+            $line = CsvReader::lineOf($row, $i);
             $code = $this->value($row, 'employee_code', 'code');
             $firstName = $this->value($row, 'first_name');
             $lastName = $this->value($row, 'last_name');
@@ -165,7 +184,8 @@ class EmployeeImportService
             if ($departmentText !== '') {
                 $matches = $departmentIndex[$this->normalize($departmentText)] ?? [];
                 if (count($matches) === 0) {
-                    $rowErrors[] = "department '{$departmentText}' ไม่พบในระบบ";
+                    $closest = $this->didYouMean($departmentText, $departments->pluck('name')->all());
+                    $rowErrors[] = "department '{$departmentText}' ไม่พบในระบบ{$closest}";
                 } elseif (count($matches) > 1) {
                     $rowErrors[] = "department '{$departmentText}' ไม่ชัดเจน (ตรงกับหลายแผนก)";
                 } else {
@@ -181,7 +201,13 @@ class EmployeeImportService
                     $matches = $sectionIndex[$departmentId.'|'.$this->normalize($sectionText)] ?? [];
                     if (count($matches) === 0) {
                         $departmentName = $departmentNameById[$departmentId]->name;
-                        $rowErrors[] = "section '{$sectionText}' ไม่อยู่ในแผนก {$departmentName}";
+                        // Only the sections of THIS department are candidates — the same
+                        // rule the match itself follows.
+                        $closest = $this->didYouMean(
+                            $sectionText,
+                            $sections->where('department_id', $departmentId)->pluck('name')->all(),
+                        );
+                        $rowErrors[] = "section '{$sectionText}' ไม่อยู่ในแผนก {$departmentName}{$closest}";
                     } elseif (count($matches) > 1) {
                         $rowErrors[] = "section '{$sectionText}' ไม่ชัดเจน (ตรงกับหลายหน่วยงานในแผนกเดียวกัน)";
                     } else {
@@ -194,7 +220,8 @@ class EmployeeImportService
             if ($positionText !== '') {
                 $matches = $positionIndex[$this->normalize($positionText)] ?? [];
                 if (count($matches) === 0) {
-                    $rowErrors[] = "position '{$positionText}' ไม่พบในระบบ";
+                    $closest = $this->didYouMean($positionText, $positions->pluck('title')->all());
+                    $rowErrors[] = "position '{$positionText}' ไม่พบในระบบ{$closest}";
                 } elseif (count($matches) > 1) {
                     $rowErrors[] = "position '{$positionText}' ไม่ชัดเจน (ตรงกับหลายตำแหน่ง)";
                 } else {
@@ -317,16 +344,37 @@ class EmployeeImportService
         $defaultGroupId = (int) AppSetting::get('default_employee_group_id', 0);
         $group = $defaultGroupId ? GroupRole::find($defaultGroupId) : null;
 
-        DB::transaction(function () use ($prepared, $existingIdByCode, $group) {
+        // Codes for the blank rows are minted here rather than row by row by the model,
+        // because the generator counts from max(id) and cannot see the codes THIS file
+        // types in by hand: left to itself it hands a blank row a code another row of
+        // the same file already claims, and the import dies on the unique key with
+        // nothing to blame it on. Reserving the file's own codes first makes that
+        // impossible instead of merely unlikely.
+        $reserved = [];
+        foreach ($prepared as $entry) {
+            if ($entry['code'] !== '') {
+                $reserved[strtoupper($entry['code'])] = true;
+            }
+        }
+        $blankRows = count(array_filter($prepared, fn (array $entry) => $entry['code'] === ''));
+        $minted = Employee::nextFreeCodes($blankRows, $reserved);
+
+        DB::transaction(function () use ($prepared, $existingIdByCode, $group, $minted) {
             $idByCode = $existingIdByCode;
             $created = [];
 
             foreach ($prepared as $entry) {
-                $employee = Employee::create($entry['data']); // code auto-generated when null
+                $data = $entry['data'];
+                if ($data['code'] === null) {
+                    $data['code'] = array_shift($minted);
+                }
+                $employee = Employee::create($data);
                 $idByCode[strtoupper($employee->code)] = $employee->id;
                 $created[] = ['id' => $employee->id, 'report_to' => $entry['report_to']];
-                $group?->employees()->syncWithoutDetaching([$employee->id]);
             }
+
+            // One write for the whole batch — this used to be a sync per employee.
+            $group?->employees()->syncWithoutDetaching(array_column($created, 'id'));
 
             foreach ($created as $entry) {
                 if ($entry['report_to'] === '') {
@@ -368,12 +416,18 @@ class EmployeeImportService
             $visited = [];
             while (isset($parentByCode[$cursor])) {
                 $cursor = $parentByCode[$cursor];
-                if ($cursor === $start || isset($visited[$cursor])) {
+                // Only a chain that comes back to THIS row makes this row the problem.
+                // Reaching a cycle further up the line is somebody else's row to fix —
+                // flagging it here sent people to correct a line that was already right.
+                if ($cursor === $start) {
                     $loops[] = [
                         'row' => $entry['line'],
                         'message' => "report_to_employee_code '{$entry['report_to']}' ทำให้สายบังคับบัญชาวนกลับมาที่ตัวเอง",
                     ];
                     break;
+                }
+                if (isset($visited[$cursor])) {
+                    break; // a loop that does not contain this row — walk no further
                 }
                 $visited[$cursor] = true;
             }
@@ -423,5 +477,35 @@ class EmployeeImportService
     private function normalize(string $text): string
     {
         return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $text)));
+    }
+
+    /**
+     * " — ใกล้เคียงที่สุด: 'X'" for a value that almost matches something real, and an
+     * empty string for one that does not.
+     *
+     * Compared against the DISPLAY names only, never against every alias the index
+     * accepts: a two-letter department tag is a few edits away from half the org
+     * chart, so including those turned the suggestion into noise.
+     *
+     * @param  list<string>  $candidates
+     */
+    private function didYouMean(string $typed, array $candidates): string
+    {
+        $best = null;
+        $bestScore = 0.0;
+        $needle = $this->normalize($typed);
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+            similar_text($needle, $this->normalize($candidate), $percent);
+            if ($percent > $bestScore) {
+                $bestScore = $percent;
+                $best = $candidate;
+            }
+        }
+
+        return $bestScore >= self::SUGGEST_MIN_SIMILARITY ? " — ใกล้เคียงที่สุด: '{$best}'" : '';
     }
 }

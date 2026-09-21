@@ -98,6 +98,8 @@ export interface ImportPreview {
         total: number;
         valid: number;
         invalid: number;
+        /** How many of `total` the listing carries — the rest are counted, not sent. */
+        shown: number;
         /** Columns in the file the import has no field for — ignored, but worth saying so. */
         ignored_columns: string[];
     };
@@ -290,6 +292,8 @@ export const employeeApi = {
         return data;
     },
     downloadImportTemplate: () => http.get('/employees/import-template', { responseType: 'blob' }).then((r) => r.data as Blob),
+    /** The spellings the department / section / position columns accept, as their own CSV. */
+    downloadImportReference: () => http.get('/employees/import-reference', { responseType: 'blob' }).then((r) => r.data as Blob),
     /** Dry-run: validates and resolves the file with the real import rules, writing nothing. */
     previewImport: async (file: File) => {
         await ensureCsrf();

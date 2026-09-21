@@ -27,7 +27,9 @@ use App\Services\Employee\EmployeeImportService;
 use App\Services\Employee\EmployeeOnboardingService;
 use App\Services\Employee\EmployeeService;
 use App\Services\Request\WorkflowResolverService;
+use App\Support\CsvReader;
 use App\Support\RequestSchemas;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -306,6 +308,56 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Every spelling the import accepts for department / section / position, as its own
+     * small CSV.
+     *
+     * A separate download rather than a second sheet, because the file is filled in
+     * Excel long after the dialog was closed: the person typing needs this open BESIDE
+     * the template, and a .csv opens there without being unpacked first.
+     */
+    public function importReference(Request $request): StreamedResponse
+    {
+        abort_unless((bool) $request->user()?->hasPermission('employees.import'), 403);
+
+        $departments = Department::orderBy('name')->get();
+        $sections = Section::with('department')->orderBy('name')->get();
+        $positions = Position::orderBy('title')->get();
+
+        $rows = [];
+        foreach ($departments as $department) {
+            $rows[] = ['department', $department->name, '', $this->alsoAccepted([
+                $department->tag, $department->code, $department->name_th,
+            ])];
+        }
+        foreach ($sections as $section) {
+            // The department is part of the answer, not a note: the same section name
+            // may exist in several, and each row only resolves inside its own.
+            $rows[] = ['section', $section->name, $section->department?->name ?? '', $this->alsoAccepted([
+                $section->code, $section->name_th,
+            ])];
+        }
+        foreach ($positions as $position) {
+            $rows[] = ['position', $position->title, '', $this->alsoAccepted([$position->code])];
+        }
+
+        return response()->streamDownload(function () use ($rows) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM, so Excel reads the Thai names
+            fputcsv($out, ['column', 'value', 'in_department', 'also_accepted']);
+            foreach ($rows as $row) {
+                fputcsv($out, $row);
+            }
+            fclose($out);
+        }, 'employee-valid-values.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    /** The other spellings of one record, as one cell: "IT | DEP-0003 | ฝ่ายไอที". */
+    private function alsoAccepted(array $aliases): string
+    {
+        return implode(' | ', array_filter(array_map('trim', array_map('strval', $aliases))));
+    }
+
+    /**
      * Example row for the template: real master-data spellings when the tables are
      * populated, static placeholders on a bare install.
      *
@@ -352,15 +404,27 @@ class EmployeeController extends Controller
 
         $result = $this->importService->importRows($rows, dryRun: true);
         $valid = count(array_filter($result['rows'], fn (array $row) => $row['errors'] === []));
+        $total = count($result['rows']);
+
+        // The counts describe the whole file; the listing is the first page of it.
+        // Bad rows lead, because a listing that stops at 500 must not stop before the
+        // rows the person actually has to go and fix.
+        $listed = collect($result['rows'])
+            ->sortBy(fn (array $row) => $row['errors'] === [] ? 1 : 0)
+            ->take(EmployeeImportService::PREVIEW_LIMIT)
+            ->sortBy('row')
+            ->values()
+            ->all();
 
         return response()->json([
             'message' => 'success',
-            'data' => $result['rows'],
+            'data' => $listed,
             'errors' => $result['errors'],
             'meta' => [
-                'total' => count($result['rows']),
+                'total' => $total,
                 'valid' => $valid,
-                'invalid' => count($result['rows']) - $valid,
+                'invalid' => $total - $valid,
+                'shown' => count($listed),
                 'ignored_columns' => $this->unknownImportColumns($rows),
             ],
         ]);
@@ -379,7 +443,19 @@ class EmployeeController extends Controller
             return $rows;
         }
 
-        $result = $this->importService->importRows($rows);
+        try {
+            $result = $this->importService->importRows($rows);
+        } catch (UniqueConstraintViolationException) {
+            // The rules the preview ran are the rules this run ran, so the only way to
+            // land here is a collision created between the two — somebody else saving
+            // an employee, or a second import, while this file was being checked.
+            // Answered as a 422 the dialog can print: a 500 takes over the whole screen
+            // and loses the file the person had just chosen.
+            return response()->json([
+                'message' => 'มีข้อมูลพนักงานถูกเปลี่ยนแปลงระหว่างตรวจไฟล์ (รหัสหรืออีเมลซ้ำ) ยังไม่ได้นำเข้า กรุณาตรวจไฟล์อีกครั้งแล้วลองใหม่',
+                'errors' => [],
+            ], 422);
+        }
 
         if (count($result['errors']) > 0) {
             return response()->json([
@@ -401,13 +477,13 @@ class EmployeeController extends Controller
      */
     private function readImportFile(Request $request): array|JsonResponse
     {
-        $request->validate(['file' => ['required', 'file', 'max:5120']]);
-        $file = $request->file('file');
-        if (! in_array(strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
+        $request->validate(['file' => ['required', 'file', 'max:'.CsvReader::MAX_SIZE_KB]]);
+
+        if (! CsvReader::hasAcceptedExtension($request->file('file'))) {
             return response()->json(['message' => 'รองรับเฉพาะไฟล์ .csv'], 422);
         }
 
-        $rows = $this->readCsv($file->getRealPath());
+        $rows = CsvReader::read($request->file('file')->getRealPath());
         if ($rows === null || count($rows) === 0) {
             return response()->json(['message' => 'ไฟล์ว่างหรืออ่านไม่ได้'], 422);
         }
@@ -425,49 +501,8 @@ class EmployeeController extends Controller
      */
     private function unknownImportColumns(array $rows): array
     {
-        $known = array_merge(EmployeeImportService::COLUMNS, ['code']); // 'code' = the old template's name
-        $present = array_keys($rows[0] ?? []);
-
-        return array_values(array_filter($present, fn ($column) => $column !== '' && ! in_array($column, $known, true)));
-    }
-
-    /**
-     * Parses a CSV file into an array of associative rows keyed by the (lower-cased)
-     * header columns. Strips a UTF-8 BOM and skips fully-blank lines.
-     *
-     * @return array<int, array<string, string>>|null
-     */
-    private function readCsv(string $path): ?array
-    {
-        if (($h = fopen($path, 'r')) === false) {
-            return null;
-        }
-
-        $header = fgetcsv($h);
-        if ($header === false) {
-            fclose($h);
-
-            return null;
-        }
-        $header = array_map(fn ($c) => strtolower(trim((string) $c)), $header);
-        if (isset($header[0])) {
-            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // strip BOM
-        }
-
-        $rows = [];
-        while (($data = fgetcsv($h)) !== false) {
-            if (count(array_filter($data, fn ($v) => trim((string) $v) !== '')) === 0) {
-                continue; // skip blank line
-            }
-            $row = [];
-            foreach ($header as $idx => $col) {
-                $row[$col] = $data[$idx] ?? '';
-            }
-            $rows[] = $row;
-        }
-        fclose($h);
-
-        return $rows;
+        // 'code' = the old name of the employee_code column, still accepted.
+        return CsvReader::unknownColumns($rows, array_merge(EmployeeImportService::COLUMNS, ['code']));
     }
 
     /**

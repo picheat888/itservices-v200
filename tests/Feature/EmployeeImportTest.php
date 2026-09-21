@@ -244,6 +244,101 @@ class EmployeeImportTest extends TestCase
         $this->assertSame(0, Employee::whereIn('code', ['EMP-4001', 'EMP-4002'])->count());
     }
 
+    /**
+     * A row that merely reports INTO a loop is not itself in one — breaking the loop
+     * fixes it — so it must not be told that its own line is the problem.
+     */
+    public function test_only_the_rows_inside_a_reporting_loop_are_flagged(): void
+    {
+        $result = $this->service->importRows([
+            $this->row(['employee_code' => 'EMP-4010', 'first_name' => 'Outside', 'report_to_employee_code' => 'EMP-4011']),
+            $this->row(['employee_code' => 'EMP-4011', 'first_name' => 'InLoopA', 'report_to_employee_code' => 'EMP-4012']),
+            $this->row(['employee_code' => 'EMP-4012', 'first_name' => 'InLoopB', 'report_to_employee_code' => 'EMP-4011']),
+        ], dryRun: true);
+
+        $byName = collect($result['rows'])->keyBy('name');
+        $this->assertSame([], $byName['Outside Jaidee']['errors']);
+        $this->assertNotEmpty($byName['InLoopA Jaidee']['errors']);
+        $this->assertNotEmpty($byName['InLoopB Jaidee']['errors']);
+    }
+
+    /**
+     * The generator mints codes off `max(id)`, so a code typed into the file can be the
+     * very one it is about to hand a blank row. That used to reach the database and come
+     * back as a unique-constraint 500 AFTER the preview had passed the file as clean.
+     */
+    public function test_a_code_typed_into_the_file_is_never_minted_for_another_row(): void
+    {
+        $taken = 'EMP-'.((int) Employee::max('id') + 1);
+
+        $result = $this->service->importRows([
+            $this->row(['employee_code' => '', 'first_name' => 'Blank']),
+            $this->row(['employee_code' => $taken, 'first_name' => 'Explicit']),
+        ]);
+
+        $this->assertSame([], $result['errors']);
+        $this->assertSame(2, $result['imported']);
+        $this->assertSame($taken, Employee::where('first_name', 'Explicit')->value('code'));
+        $this->assertNotSame($taken, Employee::where('first_name', 'Blank')->value('code'));
+    }
+
+    /**
+     * The codes the generator mints and the ids it counts from drift apart the moment
+     * anybody types a code in by hand, so the next number it reaches can already be
+     * taken. It must step over that code, not hand out a second copy of it.
+     */
+    public function test_the_generator_steps_over_a_code_that_already_exists(): void
+    {
+        // Sits on the code the generator will reach once the next row has been created.
+        Employee::create([
+            'code' => 'EMP-'.((int) Employee::max('id') + 2),
+            'first_name' => 'Squatter', 'last_name' => 'OnTheNextCode',
+            'position_id' => $this->vicePresident->id, 'status' => EmployeeStatus::Active,
+        ]);
+
+        $created = Employee::create([
+            'first_name' => 'Auto', 'last_name' => 'Numbered',
+            'position_id' => $this->vicePresident->id, 'status' => EmployeeStatus::Active,
+        ]);
+
+        $this->assertSame(1, Employee::where('code', $created->code)->count());
+    }
+
+    public function test_a_blank_line_does_not_shift_the_reported_row_numbers(): void
+    {
+        // Physical line 2 is blank, line 3 is valid, line 4 is missing a first name.
+        $file = $this->csvFile(
+            '',
+            ',Somchai,Jaidee,,,,,It,Support,Staff/Officer,2024-01-15,EMP-1005',
+            ',,Jaidee,,,,,It,Support,Staff/Officer,2024-01-15,EMP-1005',
+        );
+
+        $response = $this->actingAs($this->importer())->postJson('/api/employees/import/preview', ['file' => $file]);
+
+        $response->assertOk();
+        $response->assertJsonPath('meta.total', 2);
+        $response->assertJsonPath('data.0.row', 3);
+        $response->assertJsonPath('data.1.row', 4);
+    }
+
+    /** A 5 MB file is tens of thousands of rows; the dialog must not be handed all of them. */
+    public function test_the_preview_returns_at_most_a_page_of_rows_but_counts_them_all(): void
+    {
+        $lines = [];
+        for ($i = 0; $i < EmployeeImportService::PREVIEW_LIMIT + 5; $i++) {
+            $lines[] = ",Somchai{$i},Jaidee,,,,,It,Support,Staff/Officer,2024-01-15,EMP-1005";
+        }
+
+        $response = $this->actingAs($this->importer())
+            ->postJson('/api/employees/import/preview', ['file' => $this->csvFile(...$lines)]);
+
+        $response->assertOk();
+        $response->assertJsonPath('meta.total', EmployeeImportService::PREVIEW_LIMIT + 5);
+        $response->assertJsonPath('meta.valid', EmployeeImportService::PREVIEW_LIMIT + 5);
+        $response->assertJsonPath('meta.shown', EmployeeImportService::PREVIEW_LIMIT);
+        $this->assertCount(EmployeeImportService::PREVIEW_LIMIT, $response->json('data'));
+    }
+
     public function test_still_accepts_the_legacy_code_column_name(): void
     {
         $row = $this->row();
@@ -317,6 +412,60 @@ class EmployeeImportTest extends TestCase
         // The example row is filled from the master data that actually exists.
         $this->assertStringContainsString('Support', $csv);
         $this->assertStringContainsString('EMP-1005', $csv);
+    }
+
+    /**
+     * The sheet is filled in Excel, away from the dialog, so the spellings the import
+     * accepts have to be downloadable alongside the template — not only visible on a
+     * screen nobody has open while they type.
+     */
+    public function test_the_reference_file_lists_the_spellings_the_import_accepts(): void
+    {
+        $response = $this->actingAs($this->importer())->get('/api/employees/import-reference');
+
+        $response->assertOk();
+        $csv = $response->streamedContent();
+
+        $this->assertStringContainsString('column,value,in_department,also_accepted', $csv);
+        // A department by its name, with the tag and code that stand in for it.
+        $this->assertStringContainsString('Information Technology', $csv);
+        $this->assertStringContainsString('DEP-0003', $csv);
+        // A section, and the department it only resolves inside of.
+        $this->assertStringContainsString('Support', $csv);
+        // A position by its title.
+        $this->assertStringContainsString('Staff/Officer', $csv);
+    }
+
+    public function test_a_near_miss_is_told_the_closest_spelling(): void
+    {
+        $result = $this->service->importRows([
+            $this->row(['department' => 'Information Technolgy']),
+        ], dryRun: true);
+
+        $message = implode(' ', $result['rows'][0]['errors']);
+        $this->assertStringContainsString('Information Technolgy', $message);
+        $this->assertStringContainsString('Information Technology', $message, 'the closest spelling is offered');
+    }
+
+    public function test_a_position_near_miss_is_told_the_closest_title(): void
+    {
+        $result = $this->service->importRows([
+            $this->row(['position' => 'Staff / Oficer']),
+        ], dryRun: true);
+
+        $this->assertStringContainsString('Staff/Officer', implode(' ', $result['rows'][0]['errors']));
+    }
+
+    /** Nothing close enough is no suggestion at all — a wrong guess is worse than none. */
+    public function test_nonsense_gets_no_suggestion(): void
+    {
+        $result = $this->service->importRows([
+            $this->row(['department' => 'zzzzzzzzzz']),
+        ], dryRun: true);
+
+        $message = implode(' ', $result['rows'][0]['errors']);
+        $this->assertStringContainsString('zzzzzzzzzz', $message);
+        $this->assertStringNotContainsString('ใกล้เคียง', $message);
     }
 
     public function test_the_preview_endpoint_counts_valid_rows_and_names_ignored_columns(): void
