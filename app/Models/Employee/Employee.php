@@ -68,8 +68,7 @@ class Employee extends Model
     {
         static::creating(function (Employee $employee) {
             if (blank($employee->code)) {
-                $next = (static::max('id') ?? 1040) + 1;
-                $employee->code = 'EMP-'.$next;
+                $employee->code = static::nextFreeCode();
             }
         });
 
@@ -87,6 +86,49 @@ class Employee extends Model
     public function groupRoles(): BelongsToMany
     {
         return $this->belongsToMany(GroupRole::class, 'group_role_employee');
+    }
+
+    /**
+     * The next EMP-#### nobody holds.
+     *
+     * Counting from `max(id)` is only a starting point, never an answer: the moment
+     * anybody types a code in by hand — the CSV import does exactly that — the numbers
+     * and the ids drift apart, and the next one along can already be taken. Stepping
+     * over what exists is what stops that from reaching the database as a unique-key
+     * violation, which the caller has no way to report against a row.
+     *
+     * @param  array<string, true>  $reserved  extra upper-cased codes to treat as taken
+     *                                         (codes about to be written in the same run)
+     */
+    public static function nextFreeCode(array $reserved = []): string
+    {
+        return static::nextFreeCodes(1, $reserved)[0];
+    }
+
+    /**
+     * The next $count free codes in order, resolved in ONE query — what a bulk import
+     * needs, so 500 new employees do not cost 500 scans of the code column.
+     *
+     * @param  array<string, true>  $reserved  upper-cased codes to treat as taken
+     * @return list<string>
+     */
+    public static function nextFreeCodes(int $count, array $reserved = []): array
+    {
+        $taken = static::query()->where('code', 'like', 'EMP-%')->pluck('code')
+            ->mapWithKeys(fn (string $code) => [strtoupper($code) => true])
+            ->all() + $reserved;
+
+        $next = (static::max('id') ?? 1040) + 1;
+        $codes = [];
+        while (count($codes) < $count) {
+            while (isset($taken['EMP-'.$next])) {
+                $next++;
+            }
+            $codes[] = 'EMP-'.$next;
+            $taken['EMP-'.$next] = true;
+        }
+
+        return $codes;
     }
 
     /** The login account linked to this employee, or null if none. */
