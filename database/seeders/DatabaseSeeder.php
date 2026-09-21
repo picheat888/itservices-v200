@@ -10,40 +10,25 @@ use App\Support\Permissions;
 use Illuminate\Database\Seeder;
 
 /**
- * The production seed: the least a fresh install needs to be usable, and nothing
- * an administrator would have to delete afterwards.
+ * The production seed: system configuration, and one account to sign in with.
+ * Business data is the administrator's to enter — there is no demo dataset.
  *
- * Everything here comes from a catalogue in code — permissions, email templates,
- * request workflows, request-form choices — plus one account to sign in with.
- * That is the dividing line: system configuration is seeded, business data is
- * entered by the administrator.
+ * Non-destructive on a second run, so upgrading an installed system never reverts a
+ * renamed role, a revoked permission or a reworded template.
  *
- * There is no demo dataset any more. The seeders that invented employees, assets,
- * tickets, contracts, stock and access records were removed once the system carried
- * real data — fake rows in the repository are only a liability at that point.
- *
- * Four seeders remain outside this one, run by hand on a fresh install because they
- * carry the ORGANISATION's own reference data rather than invented content:
+ * Four seeders are deliberately NOT called from here. They carry this company's own
+ * reference data, and an install that is not this company should start empty:
  *
  *   php artisan db:seed --class=EmployeeDepartmentSeeder   # 11 departments, DEP-#### codes
  *   php artisan db:seed --class=EmployeePositionSeeder     # 14 job titles, PST-#### codes
  *   php artisan db:seed --class=EmployeeSectionSeeder      # 26 sections (needs departments first)
  *   php artisan db:seed --class=MasterDataSeeder           # brands, models, categories, vendors, warehouses
  *
- * They are deliberately not called from here: an install that is not this company
- * should start with an empty org chart rather than somebody else's.
- *
- * Non-destructive on a second run: it creates what is missing and leaves existing
- * rows alone, so upgrading an installed system never reverts a role that was
- * renamed, a permission that was revoked, or a template that was reworded.
- *
- * Deliberately NOT seeded: a Role Group, and the default-group setting that decides
- * which role new employees receive. Those are the administrator's own answer about
- * their organisation, and an install is free to delete every template below and write
- * its own. Until one is created and marked the default on the Permissions page,
- * EmployeeService refuses to provision login accounts rather than guessing a role.
- * The administrator account itself is exempt: it carries the super role directly, so
- * there is always a way in to set this up.
+ * Nor is a Role Group, or the setting naming the default one — that is the
+ * administrator's answer about their own organisation. Until they give it,
+ * EmployeeService refuses to provision login accounts rather than guess a role. The
+ * administrator account is exempt: it carries the super role directly, so there is
+ * always a way in to set this up.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -64,9 +49,8 @@ class DatabaseSeeder extends Seeder
     /**
      * The four role templates and their default grants.
      *
-     * firstOrCreate on both, so a permission key introduced by a later release
-     * lands on its default for every role, while anything an administrator has
-     * since changed keeps their value instead of being reset to the default.
+     * firstOrCreate throughout, so a permission key added by a later release lands on
+     * its default while anything an administrator has changed since keeps their value.
      */
     private function seedRolesAndPermissions(): void
     {
@@ -80,8 +64,7 @@ class DatabaseSeeder extends Seeder
             Role::firstOrCreate(['key' => $role['key']], $role);
         }
 
-        // role_permissions references roles by role_id (the legacy `role` string
-        // column was dropped), so resolve each key to its persisted id first.
+        // role_permissions references roles by id, not by key.
         $roleIdByKey = Role::pluck('id', 'key');
 
         foreach (Permissions::defaults() as $roleKey => $granted) {
@@ -105,31 +88,24 @@ class DatabaseSeeder extends Seeder
     public const SUPER_USERNAME = 'admin';
 
     /**
-     * The password that account is created with — deliberately the most ordinary
-     * string there is, and deliberately in the repository.
+     * A known password in the repository, on purpose.
      *
-     * A generated password has to be copied out of the console before it scrolls away,
-     * and losing it means editing the database to get back in, which is what happened on
-     * the first deployment. Nothing is gained by hiding this one, because it is not what
-     * protects the account: must_change_password is. A flagged account is refused on
-     * every route except the four it needs to replace the password
-     * (see CheckPasswordExpiry), so this buys exactly one sign-in and no access at all.
+     * What protects the account is must_change_password, not secrecy: a flagged account
+     * is refused everywhere except the four routes that replace the password (see
+     * CheckPasswordExpiry), so this buys one sign-in and no access. A generated password
+     * scrolls off the console instead, and losing it means editing the database.
      *
-     * The cost is real and worth naming: between seeding and that first sign-in the
-     * account is open to anyone who can reach the site. Change it as the very next step
-     * after seeding — before the address is given to anyone.
-     *
-     * SEED_SUPER_PASSWORD in the environment overrides it when an install would rather
-     * not have a known starting point at all.
+     * The cost is real: between seeding and that first sign-in the account is open to
+     * anyone who can reach the site. Change it before giving out the address.
+     * SEED_SUPER_PASSWORD overrides it for installs that want no known starting point.
      */
     public const SUPER_TEMP_PASSWORD = 'password';
 
     /**
-     * The one account a fresh install ships with. The super role bypasses every
-     * permission check, so this is enough to sign in and enter everything else.
+     * The one account a fresh install ships with, carrying the super role directly.
      *
-     * An existing super account is left completely alone: re-seeding an installed
-     * system must never reset the administrator's own password.
+     * An existing one is left completely alone: re-seeding an installed system must
+     * never reset the administrator's own password.
      */
     private function seedAdministrator(): void
     {
@@ -163,21 +139,16 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Where the administrator's own details come from, in order of how deliberate they are.
+     * Where the administrator's details come from, most deliberate first: the
+     * environment, then a question at the console, then the documented password.
      *
-     * 1. The environment, when SEED_SUPER_* is set. Scripted installs and CI keep working
-     *    exactly as before, and nothing below can interrupt them.
-     * 2. A question, when there is somebody at the console to answer it. Putting a password
-     *    in .env means it survives in a file on the server long after it is needed, and the
-     *    step is easy to miss: a cached config makes env() return null (Laravel skips
-     *    loading .env entirely when the config is cached), so the account is quietly created
-     *    on the fallback below instead, with no error to notice.
-     * 3. The documented starting password, when nobody is there to ask — tests, and any
-     *    run passed --no-interaction.
+     * Only the console path leaves the account unflagged — a password typed there is
+     * not a known starting point, so there is nothing for a forced change to protect
+     * against.
      *
-     * A password typed and confirmed at the console is not a known starting point, so that
-     * one path does NOT flag the account: there is nothing for a forced change to protect
-     * against. The other two do, for the reason spelled out on SUPER_TEMP_PASSWORD.
+     * Beware the env path when the config is cached: Laravel then skips .env entirely
+     * and env() returns null, so the account is quietly created on the fallback below
+     * with nothing to notice.
      *
      * @return array{name: string, email: string, password: string, must_change_password: bool}
      */
@@ -205,11 +176,9 @@ class DatabaseSeeder extends Seeder
     }
 
     /**
-     * Whether there is somebody at the console to answer a question.
-     *
-     * Read from --no-interaction rather than the input object: the seeder is handed the
-     * SeedCommand, which exposes options but not the input itself. Laravel's own
-     * $this->seed() helper passes --no-interaction, so a test can never hang here.
+     * Whether there is somebody at the console to answer a question. Read off
+     * --no-interaction because a seeder is handed the command, not its input — and
+     * because $this->seed() passes that flag, so a test can never hang here.
      */
     private function canAsk(): bool
     {
