@@ -101,13 +101,7 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /**
-     * Sign-in name of the one account a fresh install ships with.
-     *
-     * Not to be confused with UserRole::SuperAdmin, whose value is also 'super': that
-     * is the ROLE that bypasses every permission check, and it is stored in a different
-     * column. This is only what somebody types at the sign-in box.
-     */
+    /** Sign-in name of the one account a fresh install ships with — not its role. */
     public const SUPER_USERNAME = 'admin';
 
     /**
