@@ -6,6 +6,7 @@ use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -28,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The settings cache lives exactly as long as one application instance.
+        // In production that is one request; in the test suite it is one test, and
+        // without this the rows one test wrote would answer the next one's reads
+        // long after RefreshDatabase had rolled them away.
+        AppSetting::flushCache();
+
         $this->configureRateLimiting();
 
         // Strict morph map for Access Control resources. Because enforceMorphMap()

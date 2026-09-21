@@ -452,7 +452,9 @@ class SettingsController extends Controller
         foreach ($this->defaults as $key => $default) {
             $values[$key] = AppSetting::get($key, $default);
         }
-        $values['brand_name'] = $values['brand_name'] ?: config('app.name', 'IT Services');
+        // The same rule the server-rendered page title answers with — see
+        // AppSetting::brandName().
+        $values['brand_name'] = AppSetting::brandName();
         $values['theme_radius'] = (int) $values['theme_radius'];
 
         $logoPath = AppSetting::get('logo_path');

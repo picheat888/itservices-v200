@@ -13,9 +13,27 @@ const DEFAULT_ASSET_STATUS_COLORS: AssetStatusColors = {
     writeoff: '#dc2626',
 };
 
-// Brand name tracks APP_NAME (exposed to the SPA as VITE_APP_NAME).
-// Editable later from Settings → Branding.
-const DEFAULT_BRAND = import.meta.env.VITE_APP_NAME || 'IT Services';
+/**
+ * The brand the server put in the page (see routes/web.php → app.blade.php).
+ *
+ * Read once at module load, so the very first render already shows this
+ * installation's own name and logo. The store used to start from VITE_APP_NAME
+ * instead — a value frozen into the bundle by `npm run build` — and correct itself
+ * once /api/settings answered, which meant every reload flashed a build-time name
+ * and a placeholder icon, and editing the brand in Settings changed neither until
+ * somebody rebuilt.
+ *
+ * The fallbacks below are only for a page served without the block at all.
+ */
+function brandFromDocument(): { name?: string; sub?: string; logo_url?: string | null } {
+    try {
+        return JSON.parse(document.getElementById('brand')?.textContent ?? '{}');
+    } catch {
+        return {};
+    }
+}
+
+const SERVER_BRAND = brandFromDocument();
 
 interface UiState {
     dark: boolean;
@@ -56,10 +74,10 @@ export const useUiStore = create<UiState>()(
             density: 'normal',
             radius: 10,
             sidebar: 'labeled',
-            brandName: DEFAULT_BRAND,
-            brandSub: 'Service Desk',
+            brandName: SERVER_BRAND.name ?? 'IT Services',
+            brandSub: SERVER_BRAND.sub ?? 'Service Desk',
             accent: '#2563eb',
-            logoUrl: null,
+            logoUrl: SERVER_BRAND.logo_url ?? null,
             assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
             loginPrefsTouched: { dark: false, lang: false },
             setDark: (dark) => set({ dark }),
@@ -78,8 +96,9 @@ export const useUiStore = create<UiState>()(
         }),
         {
             name: 'itservices-ui',
-            // Brand fields aren't persisted yet (no Branding UI), so the brand
-            // always reflects APP_NAME until Settings → Branding ships.
+            // Brand and logo are deliberately absent: they arrive with the page
+            // itself (see SERVER_BRAND above), which is always current, where a
+            // persisted copy would only ever be the last one this browser saw.
             partialize: (s) => ({
                 dark: s.dark,
                 lang: s.lang,
