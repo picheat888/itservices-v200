@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Ties each chain step to the positions allowed to sign it.
+ * Baseline 12/17 — ties each chain step to the positions allowed to sign it.
  *
  * The step labels always read like position names ("Supervisor / Head",
  * "Manager / Asst. Manager"), but resolution took the Nth manager above the

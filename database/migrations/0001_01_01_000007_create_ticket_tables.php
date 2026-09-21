@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 8/11 — the IT help desk.
+ * Baseline 8/17 — the IT help desk.
  *
  * The two SLA clocks are stored as due timestamps rather than recomputed on read,
  * so a change to the working-hours setting cannot silently move the target on
@@ -24,6 +24,9 @@ return new class extends Migration
             $table->text('description');
             $table->string('category');
             $table->string('priority')->nullable();
+            // What KIND of work this is, which is what picks the resolution clock: a
+            // vendor repair runs on calendar time, standard work on business hours.
+            $table->string('work_class', 32)->default('standard');
             $table->string('status')->default('open');
             $table->unsignedBigInteger('requester_id');
             $table->unsignedBigInteger('assignee_id')->nullable();

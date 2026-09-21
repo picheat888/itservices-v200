@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 2/11 — the org chart the whole system hangs off: departments, the
+ * Baseline 2/17 — the org chart the whole system hangs off: departments, the
  * sections inside them, positions, and employees. Employees come last because
  * they point at all three (and at their own manager).
  *

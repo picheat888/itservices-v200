@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Progress notes on a ticket between being taken and being closed.
+ * Baseline 14/17 — progress notes on a ticket between being taken and being closed.
  *
  * The desk had two places to write: a note when taking the case and a resolution when closing
  * it. Everything in between — the part that was ordered, the answer that never came — was said

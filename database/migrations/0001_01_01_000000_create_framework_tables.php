@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 1/11 — tables Laravel itself owns: the cache store, the database
+ * Baseline 1/17 — tables Laravel itself owns: the cache store, the database
  * queue, session storage, Sanctum tokens, and the notifications table behind the
  * in-app bell. Nothing here references an application table, so it goes first.
  *

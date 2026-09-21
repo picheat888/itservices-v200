@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 7/11 — the spare-parts store.
+ * Baseline 7/17 — the spare-parts store.
  *
  * stock_movements is the ledger every other table here answers to: lots carry the
  * FIFO cost layers it created, balances the per-warehouse totals it moved, and
@@ -138,6 +138,7 @@ return new class extends Migration
             $table->string('approver_name', 160)->nullable();
             $table->dateTime('approved_at')->nullable();
             $table->dateTime('fulfilled_at')->nullable();
+            $table->string('fulfilled_by')->nullable();
             $table->dateTime('rejected_at')->nullable();
             $table->timestamps();
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();

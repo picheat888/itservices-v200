@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 5/11 — contracts and rentals, their attachments, and the two ledgers
+ * Baseline 5/17 — contracts and rentals, their attachments, and the two ledgers
  * that keep expiry alerts from repeating themselves:
  *
  *  contract_alert_logs — one row per reminder threshold already emailed

@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 11/11 — admin-managed configuration, none of which belongs in .env.
+ * Baseline 11/17 — admin-managed configuration, none of which belongs in .env.
  *
  *  app_settings    — loose key/value for branding, company details, SLA and
  *                    asset options edited in Settings.
@@ -57,11 +57,18 @@ return new class extends Migration
         Schema::create('email_logs', function (Blueprint $table) {
             $table->id();
             $table->string('template_key')->nullable();
-            $table->string('to_email');
+            // Nullable because a SKIPPED send is logged too, and the whole point of
+            // those rows is that there was no address to send to.
+            $table->string('to_email')->nullable();
+            $table->string('recipient_name')->nullable();
             $table->string('subject');
+            // What actually went out, kept so a log entry can be reopened and read
+            // rather than only reporting that something was sent.
+            $table->text('body_html')->nullable();
             $table->string('status', 10)->default('sent');
             $table->text('error')->nullable();
             $table->timestamp('created_at')->nullable();
+            $table->index(['status', 'created_at']);
         });
     }
 
