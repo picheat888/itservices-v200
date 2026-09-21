@@ -7,6 +7,7 @@ use App\Models\Permission\Role;
 use App\Models\Settings\MailSetting;
 use App\Models\User;
 use App\Support\EmailTemplates;
+use Database\Seeders\EmailTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -56,7 +57,15 @@ class EmailTemplatePreviewTest extends TestCase
         Role::create(['key' => 'super', 'name' => 'Administrator Template', 'is_system' => true]);
         $admin = User::factory()->create(['role' => 'super']);
 
-        foreach (EmailTemplate::all() as $template) {
+        // The templates have to be put there on purpose. They used to arrive by
+        // accident — inserted by the data migrations that the squashed baseline
+        // dropped — and with the table empty this loop ran zero times and proved
+        // nothing while still reporting green.
+        $this->seed(EmailTemplateSeeder::class);
+        $templates = EmailTemplate::all();
+        $this->assertNotEmpty($templates, 'the standard templates are what this test is about');
+
+        foreach ($templates as $template) {
             $html = $this->actingAs($admin)
                 ->get("/api/email-templates/{$template->id}/preview")
                 ->assertOk()

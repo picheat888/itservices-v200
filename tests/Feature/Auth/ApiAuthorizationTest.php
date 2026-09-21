@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Email\EmailTemplate;
 use App\Models\Permission\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,6 +44,15 @@ class ApiAuthorizationTest extends TestCase
     #[DataProvider('gatedWrites')]
     public function test_users_without_permission_are_forbidden(string $method, string $url): void
     {
+        // The email-template case addresses a record by id, and route-model binding
+        // answers 404 before the gate is ever reached — so the row has to exist for
+        // the test to be asking about the permission at all. It used to exist by
+        // accident, inserted by a data migration that the squashed baseline dropped.
+        EmailTemplate::create([
+            'key' => 'gate_probe', 'name' => 'Gate probe',
+            'subject' => 'Gate probe', 'body_html' => '<p>Gate probe</p>',
+        ]);
+
         $user = $this->powerlessUser();
         $this->assertFalse($user->hasPermission('system.manage_roles'));
 
