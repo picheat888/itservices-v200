@@ -22,9 +22,8 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { Check, CheckCircle2, ChevronRight, Clock, Download, Eye, History, Inbox, Plus, Search, X, type LucideIcon } from 'lucide-react';
+import { Check, CheckCircle2, ChevronRight, Clock, Eye, History, Inbox, Plus, Search, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { DecisionDialog, type DecisionAction } from '../components/decision-dialog';
@@ -293,10 +292,6 @@ export default function RequestsPage() {
                     <p className="text-muted-foreground text-sm">{t('requests_sub')}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => useToastStore.getState().push(t('wf_coming_soon'), 'info', t('export'))}>
-                        <Download className="h-4 w-4" />
-                        {t('export')}
-                    </Button>
                     {canSubmit && (
                         <Button onClick={() => openCreate()}>
                             <Plus className="h-4 w-4" />
