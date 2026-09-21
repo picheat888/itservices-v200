@@ -17,6 +17,8 @@ use App\Support\DefaultWorkflows;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
@@ -94,12 +96,16 @@ class RequestDepartmentStepTest extends TestCase
 
     private function submitCctv(): ServiceRequest
     {
-        $response = $this->actingAs($this->requesterUser)->postJson('/api/service-requests', [
+        // A camera request cannot be filed without a plan or a photo of the spot
+        // (RequestSchemas::attachmentsRequired), so one rides along with the submit.
+        Storage::fake('local');
+        $response = $this->actingAs($this->requesterUser)->post('/api/service-requests', [
             'type' => 'cctv',
             'title' => 'Camera over the loading bay',
             'reason' => 'Pallets have gone missing overnight and the bay has no coverage.',
             'fields' => [],
-        ])->assertCreated();
+            'files' => [UploadedFile::fake()->create('bay-plan.pdf', 80, 'application/pdf')],
+        ], ['Accept' => 'application/json'])->assertCreated();
 
         return ServiceRequest::findOrFail($response->json('data.id'));
     }

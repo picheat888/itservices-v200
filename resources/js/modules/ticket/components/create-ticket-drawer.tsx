@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { cn } from '@/shared/lib/utils';
 import type { TicketCategory } from '@/shared/types';
@@ -10,21 +11,16 @@ import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
 import { useUiStore } from '@/stores/ui';
-import { AlertCircle, FileImage, FileText, Loader2, MessageSquarePlus, Paperclip, Send, UploadCloud, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Loader2, MessageSquarePlus, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
 import { TICKET_CATEGORIES, TicketCategoryIcon } from './ticket-meta';
 
 /** Hard cap enforced by the API (files.*|max:10) — mirrored here for the UI. */
 const MAX_FILES = 10;
 
-/** Allowed extensions — mirrors the API's mimes rule. Browser MIME is unreliable
- *  for office/zip files, so we gate the picker/drop by extension. */
+/** Allowed extensions — mirrors the API's mimes rule. */
 const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
-const ACCEPT_ATTR = ACCEPT_EXT.map((e) => `.${e}`).join(',');
-
-/** Human-readable file size (KB/MB). */
-const fmtSize = (b: number) => (b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`);
 
 /** Employee-facing form to raise a ticket. Priority and assignee are set later by IT. */
 export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -38,8 +34,6 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     const [description, setDescription] = useState('');
     const [phone, setPhone] = useState('');
     const [files, setFiles] = useState<File[]>([]);
-    const [dragOver, setDragOver] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     // Per-file upload progress (index → 0..100), populated while uploading after submit.
     const [progress, setProgress] = useState<Record<number, number>>({});
@@ -53,18 +47,7 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             return next;
         });
 
-    // Keep only allowed extensions, cap at MAX_FILES, dedupe by name+size.
-    const addFiles = (list: FileList | File[]) => {
-        const incoming = Array.from(list).filter((f) => ACCEPT_EXT.includes(f.name.split('.').pop()?.toLowerCase() ?? ''));
-        setFiles((prev) => {
-            const merged = [...prev];
-            for (const f of incoming) {
-                if (merged.length >= MAX_FILES) break;
-                if (!merged.some((m) => m.name === f.name && m.size === f.size)) merged.push(f);
-            }
-            return merged;
-        });
-    };
+    const addFiles = (list: FileList | File[]) => setFiles((prev) => mergeFiles(prev, list, ACCEPT_EXT, MAX_FILES));
 
     useEffect(() => {
         if (open) {
@@ -73,7 +56,6 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setDescription('');
             setPhone('');
             setFiles([]);
-            setDragOver(false);
             setErrors({});
             setProgress({});
         }
@@ -222,92 +204,21 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                             <SectionLabel>{t('ticket_attach')}</SectionLabel>
                             <p className="text-muted-foreground mb-3.5 text-xs">{t('ticket_attach_optional')}</p>
 
-                            {/* Drag & drop OR click. Shrinks to a compact bar once files exist. */}
-                            <div
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => inputRef.current?.click()}
-                                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), inputRef.current?.click())}
-                                onDragOver={(e) => {
-                                    e.preventDefault();
-                                    setDragOver(true);
-                                }}
-                                onDragLeave={(e) => {
-                                    e.preventDefault();
-                                    setDragOver(false);
-                                }}
-                                onDrop={(e) => {
-                                    e.preventDefault();
-                                    setDragOver(false);
-                                    addFiles(e.dataTransfer.files);
-                                }}
-                                className={cn(
-                                    'flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed px-4 text-center text-sm transition-colors',
-                                    hasFiles ? 'py-2.5' : 'py-9',
-                                    dragOver
-                                        ? 'border-brand bg-brand/10 text-brand'
-                                        : 'border-input text-muted-foreground hover:border-brand/50 hover:text-brand hover:bg-[#c4c4c40f]',
-                                )}
-                            >
-                                <UploadCloud className={cn('shrink-0', hasFiles ? 'h-5 w-5' : 'h-6 w-6')} />
-                                <span className="text-foreground font-medium">{t('ticket_attach_drop')}</span>
-                                <span className="text-muted-foreground text-[11px]">{t('ticket_attach_types')}</span>
-                                <input
-                                    ref={inputRef}
-                                    type="file"
-                                    multiple
-                                    accept={ACCEPT_ATTR}
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        addFiles(e.target.files ?? []);
-                                        e.target.value = '';
-                                    }}
-                                />
-                            </div>
+                            <FileDropZone accept={ACCEPT_EXT} hint={t('ticket_attach_types')} compact={hasFiles} onPick={addFiles} />
 
                             {hasFiles && (
-                                <div className="mt-3.5">
-                                    <div className="text-brand mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold">
-                                        <Paperclip className="h-3.5 w-3.5" />
-                                        {t('ticket_attach_count').replace('{n}', String(files.length)).replace('{max}', String(MAX_FILES))}
-                                        {uploading && <span className="ml-auto font-mono">{overallPct}%</span>}
-                                    </div>
-                                    {/* One overall bar (outside the scroll area) so progress stays visible for all files. */}
-                                    {uploading && (
-                                        <div className="bg-muted mb-2.5 h-1.5 overflow-hidden rounded-full">
-                                            <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${overallPct}%` }} />
-                                        </div>
-                                    )}
-                                    {/* Caps at ~5 rows and scrolls internally so 10 files never stretch the dialog.
-                                        scrollbar-gutter:stable reserves the scrollbar space at all times, so rows
-                                        (and the ✕) don't shift when the scrollbar appears/disappears past 5 files. */}
-                                    <div className="max-h-[196px] overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-                                        {files.map((f, i) => (
-                                            <div key={i} className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
-                                                <span className="text-muted-foreground shrink-0">
-                                                    {f.type.startsWith('image/') ? (
-                                                        <FileImage className="h-4 w-4" />
-                                                    ) : (
-                                                        <FileText className="h-4 w-4" />
-                                                    )}
-                                                </span>
-                                                <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{f.name}</span>
-                                                <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{fmtSize(f.size)}</span>
-                                                {/* Remove is only available before the upload starts. */}
-                                                {!uploading && (
-                                                    <button
-                                                        type="button"
-                                                        className="text-muted-foreground hover:text-destructive hover:bg-accent grid h-6 w-6 shrink-0 place-items-center rounded-md"
-                                                        onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
-                                                        aria-label={t('delete')}
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <AttachmentList count={files.length} max={MAX_FILES} progressPct={uploading ? overallPct : undefined}>
+                                    {files.map((f, i) => (
+                                        <AttachmentRow
+                                            key={i}
+                                            name={f.name}
+                                            size={f.size}
+                                            mime={f.type}
+                                            // Remove is only available before the upload starts.
+                                            onRemove={uploading ? undefined : () => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                                        />
+                                    ))}
+                                </AttachmentList>
                             )}
                         </section>
                     </div>

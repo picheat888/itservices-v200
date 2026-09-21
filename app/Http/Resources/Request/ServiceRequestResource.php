@@ -110,6 +110,19 @@ class ServiceRequestResource extends JsonResource
             'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved
                 && (bool) $viewer->hasPermission('requests.fulfill')
                 && ! $this->hasCaseInFlight(),
+            // Evidence filed with the request. Only on the detail read — a list row
+            // has nowhere to show a file and would pay a query per row for it.
+            'attachments' => $this->whenLoaded('attachments', fn () => $this->attachments
+                ->map(fn ($a) => [
+                    'id' => $a->id,
+                    'name' => $a->original_name,
+                    'size' => $a->size,
+                    'mime' => $a->mime,
+                    'url' => $a->url(),
+                    'created_at' => $a->created_at?->toDateTimeString(),
+                ])->values()),
+            // Add/remove is the requester's, and only until the first signature lands.
+            'can_attach' => $this->canManageAttachments($viewer),
             // The last movement, spelled out: the feed on the dashboard orders by `at` and
             // writes the rest of it as a sentence. Derived here rather than in the SPA so one
             // rule decides what counts as a movement.

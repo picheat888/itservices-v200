@@ -34,7 +34,8 @@ class RequestController extends Controller
      * @var list<string>
      */
     // ticket.assignee: the trail says who is working the case, not just that one exists.
-    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position'];
+    /** Public so RequestAttachmentController answers with the same shape this one does. */
+    public const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'attachments'];
 
     public function __construct(private readonly RequestService $service) {}
 
@@ -174,17 +175,9 @@ class RequestController extends Controller
 
     public function show(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $user = $request->user();
-        $isParticipant = $user->id === $serviceRequest->user_id
-            || $user->id === $serviceRequest->submitted_by_user_id
-            // The person the request is about — their onboarding predates their account.
-            || ($user->employee_id !== null && $user->employee_id === $serviceRequest->employee_id)
-            || ($user->employee_id !== null && $serviceRequest->approvals()
-                ->actionableBy($user->employee)->exists());
-        abort_unless($isParticipant
-            || $user->isSuper()
-            || $user->hasPermission('requests.view_all')
-            || $user->hasPermission('requests.fulfill'), 403);
+        // The same rule the attachment download route answers to — see
+        // ServiceRequest::isVisibleTo.
+        abort_unless($serviceRequest->isVisibleTo($request->user()), 403);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }

@@ -7,6 +7,7 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Contract\ContractAttachment;
 use App\Models\Employee\Employee;
+use App\Models\Request\RequestAttachment;
 use App\Models\Ticket\TicketAttachment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -41,6 +42,14 @@ class FileController extends Controller
     public function contractAttachment(Request $request, ContractAttachment $attachment): StreamedResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('contracts.view'), 403);
+
+        return $this->stream($attachment->path, $attachment->original_name, $attachment->mime);
+    }
+
+    /** A request attachment — anybody who may open the request it was filed with. */
+    public function requestAttachment(Request $request, RequestAttachment $attachment): StreamedResponse
+    {
+        abort_unless((bool) $attachment->serviceRequest?->isVisibleTo($request->user()), 403);
 
         return $this->stream($attachment->path, $attachment->original_name, $attachment->mime);
     }

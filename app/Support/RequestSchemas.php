@@ -135,6 +135,24 @@ class RequestSchemas
         return self::layouts()[$type->value] ?? 1;
     }
 
+    /**
+     * Services that cannot be filed without a file. Every type accepts attachments;
+     * these are the ones where the request means nothing without one — a camera
+     * request is a place on a plan, and describing it in prose has never once been
+     * enough for the two departments that have to sign it.
+     *
+     * @var list<string>
+     */
+    private const ATTACHMENT_REQUIRED = [
+        RequestType::Cctv->value,
+    ];
+
+    /** Must this service carry at least one file? */
+    public static function attachmentsRequired(RequestType $type): bool
+    {
+        return in_array($type->value, self::ATTACHMENT_REQUIRED, true);
+    }
+
     /** Per-request cache so one page load hits request_options once, not per field. */
     private static ?array $managedCache = null;
 

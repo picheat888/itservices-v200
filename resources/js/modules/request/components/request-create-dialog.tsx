@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { WorkflowStrip } from '@/modules/workflow';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
+import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { SectionLabel } from '@/shared/components/section-label';
 import { REQUEST_BLOCK_REASON_LABEL, REQUEST_TYPE_META } from '@/shared/lib/request-meta';
@@ -18,12 +19,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/shared/ui/textarea';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, Zap } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { type RequestTypeOption } from '../api/requestApi';
 import { useRequestMutations, useRequestOptions } from '../hooks/use-requests';
 
 const LAST_STEP = 2;
+
+/**
+ * Total upload size the wizard will attempt, in bytes. PHP's post_max_size is what
+ * actually refuses a larger body, and it does so before Laravel can answer with
+ * anything readable — so the wizard turns the files away itself, with a sentence.
+ */
+const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 
 /**
  * New Request — a 3-step focus-dialog wizard (the Contract wizard chrome):
@@ -54,8 +62,11 @@ export function RequestCreateDialog({
     const [type, setType] = useState<ServiceRequestType | null>(null);
     const [reason, setReason] = useState('');
     const [fields, setFields] = useState<Record<string, string>>({});
+    const [files, setFiles] = useState<File[]>([]);
     const [err, setErr] = useState<Record<string, string>>({});
     const [saveState, setSaveState] = useState<'idle' | 'done'>('idle');
+    /** Upload percentage of the submit itself — one request, so one bar. */
+    const [uploadPct, setUploadPct] = useState<number | null>(null);
 
     // Reset when (re)opened.
     useEffect(() => {
@@ -64,8 +75,10 @@ export function RequestCreateDialog({
         setType(null);
         setReason('');
         setFields({});
+        setFiles([]);
         setErr({});
         setSaveState('idle');
+        setUploadPct(null);
     }, [open]);
 
     const selected: RequestTypeOption | null = useMemo(() => options?.types.find((o) => o.type === type) ?? null, [options, type]);
@@ -74,6 +87,9 @@ export function RequestCreateDialog({
     const pickType = (option: RequestTypeOption) => {
         setType(option.type);
         setErr({});
+        // The files belong to the service they were picked for — switching service
+        // drops them rather than carrying a floor plan into a software request.
+        setFiles([]);
         // Seed schema defaults (e.g. qty = 1).
         const seeded: Record<string, string> = {};
         for (const f of option.fields) if (f.default != null) seeded[f.key] = String(f.default);
@@ -112,6 +128,12 @@ export function RequestCreateDialog({
             // the whole submit back on the last step.
             if (f.input === 'email' && filled && !isEmail(filled)) e[`field_${f.key}`] = t('req_bad_email');
         }
+        // The same rule the server enforces (RequestSchemas::attachmentsRequired) —
+        // said here so it is answered on step ② rather than by a 422 on step ③.
+        if (selected?.attachments_required && files.length === 0) e.files = t('req_attach_needed');
+        if (files.reduce((sum, f) => sum + f.size, 0) > MAX_TOTAL_BYTES) {
+            e.files = t('req_attach_too_large').replace('{mb}', String(Math.round(MAX_TOTAL_BYTES / 1048576)));
+        }
         return e;
     };
     const stepOwns = (s: number, key: string): boolean => (s === 0 ? key === 'type' : s === 1 ? key !== 'type' : false);
@@ -145,10 +167,15 @@ export function RequestCreateDialog({
         }
         try {
             const created = await submit.mutateAsync({
-                type: type as string,
-                reason: reason.trim(),
-                fields: Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== '')),
+                payload: {
+                    type: type as string,
+                    reason: reason.trim(),
+                    fields: Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== '')),
+                    files,
+                },
+                onProgress: files.length > 0 ? setUploadPct : undefined,
             });
+            setUploadPct(null);
             setSaveState('done');
             useToastStore.getState().push(created.reference, 'success', t('req_submitted'));
             onCreated?.(created);
@@ -157,12 +184,14 @@ export function RequestCreateDialog({
                 onClose();
             }, 600);
         } catch (e) {
+            setUploadPct(null);
             const resp = (e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
             // Map server-side field errors onto the wizard's own field names. Keys
             // with no field on screen (requester, title) fall through to the toast.
+            // `files.0` and friends all point at the one attachment block.
             const serverErrs: Record<string, string> = {};
             for (const [key, msgs] of Object.entries(resp?.errors ?? {})) {
-                const local = key.startsWith('fields.') ? `field_${key.slice(7)}` : key;
+                const local = key.startsWith('fields.') ? `field_${key.slice(7)}` : key.startsWith('files') ? 'files' : key;
                 serverErrs[local] = msgs[0] ?? '';
             }
             if (Object.keys(serverErrs).length) {
@@ -191,6 +220,16 @@ export function RequestCreateDialog({
     // The column count is the service's own choice (RequestSchemas::layouts) —
     // with nothing to put beside the reason it always collapses to one.
     const twoColumnDetails = hasServiceFields && selected?.columns === 2;
+    // Limits come from the server (RequestAttachmentService) so the two never drift;
+    // the fallback only covers the moment before the options call lands.
+    const attachLimits = options?.attachments ?? { max_files: 5, max_size_kb: 10240, extensions: [] };
+    const acceptExtensions = attachLimits.extensions;
+    const attachRequired = !!selected?.attachments_required;
+
+    const addFiles = (list: FileList | File[]) => {
+        setFiles((prev) => mergeFiles(prev, list, acceptExtensions, attachLimits.max_files));
+        clearErr('files');
+    };
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -367,6 +406,51 @@ export function RequestCreateDialog({
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Evidence. Full width under the grid, because a plan or a quote
+                                    is about the whole request rather than about one field. */}
+                                <div className="border-border/70 mt-6 border-t pt-6">
+                                    <SectionLabel>
+                                        {t('req_attach_section')}
+                                        {attachRequired && <span className="text-destructive ml-0.5">*</span>}
+                                    </SectionLabel>
+                                    <p className="text-muted-foreground mb-3.5 text-xs">
+                                        {attachRequired ? t('req_attach_required') : t('req_attach_optional')}
+                                    </p>
+
+                                    <FileDropZone
+                                        accept={acceptExtensions}
+                                        hint={t('req_attach_types')
+                                            .replace('{size}', String(Math.round(attachLimits.max_size_kb / 1024)))
+                                            .replace('{max}', String(attachLimits.max_files))}
+                                        compact={files.length > 0}
+                                        onPick={addFiles}
+                                    />
+
+                                    {files.length > 0 && (
+                                        <AttachmentList count={files.length} max={attachLimits.max_files}>
+                                            {files.map((f, i) => (
+                                                <AttachmentRow
+                                                    key={i}
+                                                    name={f.name}
+                                                    size={f.size}
+                                                    mime={f.type}
+                                                    onRemove={() => {
+                                                        setFiles((prev) => prev.filter((_, j) => j !== i));
+                                                        clearErr('files');
+                                                    }}
+                                                />
+                                            ))}
+                                        </AttachmentList>
+                                    )}
+
+                                    {err.files && (
+                                        <p className="text-destructive mt-2 flex items-center gap-1.5 text-xs">
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            {err.files}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         )}
 
@@ -391,6 +475,9 @@ export function RequestCreateDialog({
                                                 mono={f.mono}
                                             />
                                         ))}
+                                    {files.length > 0 && (
+                                        <ReviewRow k={t('req_attach_section')} v={t('req_attach_review').replace('{n}', String(files.length))} />
+                                    )}
                                     {/* Reason runs long — it gets the full width instead of being squeezed
                                         into a right-aligned cell. */}
                                     <div className="odd:bg-muted/30 px-4 py-2.5">
@@ -398,6 +485,17 @@ export function RequestCreateDialog({
                                         <p className="text-sm whitespace-pre-wrap">{reason}</p>
                                     </div>
                                 </div>
+
+                                {/* The files by name, so what is about to be sent is visible before it is. */}
+                                {files.length > 0 && (
+                                    <div className="mt-4">
+                                        <AttachmentList count={files.length} max={attachLimits.max_files}>
+                                            {files.map((f, i) => (
+                                                <AttachmentRow key={i} name={f.name} size={f.size} mime={f.type} />
+                                            ))}
+                                        </AttachmentList>
+                                    </div>
+                                )}
 
                                 {/* The one place the approval route lives — you are about to commit to it. */}
                                 {selected?.workflow && (
@@ -431,6 +529,16 @@ export function RequestCreateDialog({
                             </>
                         )}
                     </Button>
+                    {/* The upload's own bar — a 30 MB submit takes long enough that the
+                        spinner alone reads as a stall. */}
+                    {uploadPct != null && (
+                        <div className="ml-4 flex items-center gap-2">
+                            <div className="bg-muted h-1.5 w-40 overflow-hidden rounded-full">
+                                <div className="bg-brand h-full rounded-full transition-all" style={{ width: `${uploadPct}%` }} />
+                            </div>
+                            <span className="text-muted-foreground font-mono text-xs">{uploadPct}%</span>
+                        </div>
+                    )}
                     <div className="flex-1" />
                     {/* Step ① needs no Next — choosing a service moves the wizard on. */}
                     {step === 1 && (

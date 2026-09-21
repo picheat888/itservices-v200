@@ -3359,3 +3359,25 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 ### Tests / Verification
 
 **suite = 1,296 passed / 5,524 assertions** · tsc 0 · eslint 0 · prettier · pint passed · build ผ่าน
+
+### Request: แนบไฟล์ประกอบคำขอ (2026-09-21)
+
+คำขอเดิมมีแต่ `reason` กับ `fields` — คนขอกล้องวงจรปิดอธิบายจุดติดตั้งเป็นตัวหนังสือให้ QC กับ SE อ่านแล้วเซ็น ซึ่งไม่เคยพอ · รอบนี้ทุกประเภทแนบไฟล์ได้ และ **CCTV บังคับอย่างน้อย 1 ไฟล์**
+
+**ไฟล์ไปพร้อมกับตอนส่ง ไม่ใช่ตามไปทีหลัง** — Ticket ใช้วิธีสร้างก่อนแล้วค่อยอัปโหลด ซึ่งใช้กับคำขอที่ *บังคับ* แนบไม่ได้: ถ้าอัปโหลดพัง จะเหลือคำขอ CCTV ที่ไม่มีไฟล์ค้างอยู่ทั้งที่ validation บอกว่าห้ามมี · `POST /api/service-requests` จึงเป็น multipart ที่พาไฟล์ไปด้วย และ `RequestService::create()` เขียนไฟล์ใน transaction เดียวกับตัวคำขอ
+
+**แก้ได้จนกว่าคนแรกจะเซ็น** — `ServiceRequest::attachmentsLocked()` คือ "มี approval แถวไหน `approved` แล้วหรือยัง" · ก่อนหน้านั้นผู้ขอ (และคนที่ยื่นแทน) เพิ่ม/ลบได้ผ่าน `POST|DELETE /api/service-requests/{id}/attachments` หลังจากนั้นทั้งสองเส้นตอบ 403 — ผู้อนุมัติตัดสินจากของที่อยู่ตรงหน้า คำขอที่สลับหลักฐานทีหลังได้ไม่ใช่บันทึกของการตัดสินนั้น · **ผู้อนุมัติเองก็แก้ไม่ได้** ตั้งแต่แรก (อ่านและดาวน์โหลดได้อย่างเดียว)
+
+**กฎ "ใครเห็นคำขอได้" ย้ายมาอยู่ที่เดียว** — เดิมฝังอยู่ใน `RequestController::show()` · ย้ายเป็น `ServiceRequest::isVisibleTo()` แล้วให้ route ดาวน์โหลดไฟล์ใช้ตัวเดียวกัน ไฟล์จึงไม่มีทางเปิดได้โดยคนที่เปิดคำขอต้นทางไม่ได้ · binary อยู่บน private disk เหมือน ticket/contract เข้าถึงผ่าน `files.request-attachment` ที่ต้อง login เท่านั้น
+
+**ลิมิต 5 ไฟล์ · 10 MB/ไฟล์** อยู่ที่ `RequestAttachmentService` ที่เดียว แล้วส่งให้ทั้ง validation, endpoint เพิ่มไฟล์ และ `/service-requests/options` (wizard อ่านไปเขียนบรรทัดบอกชนิด/ขนาด) · wizard กันขนาดรวมไม่เกิน 30 MB เองด้วย เพราะ `post_max_size` = 40M จะปัดตกก่อนที่ Laravel จะตอบอะไรที่อ่านรู้เรื่อง
+
+**ของซ้ำสามที่ถูกยุบเป็นหนึ่ง** — กล่อง drag & drop + รายการไฟล์ เคยเขียนซ้ำใน `create-ticket-drawer` กับ `edit-ticket-drawer` และกำลังจะกลายเป็นที่สาม · ดึงออกเป็น `shared/components/file-drop-zone.tsx` (`FileDropZone` · `AttachmentList` · `AttachmentRow` · `mergeFiles` · `formatFileSize`) แล้วให้ทั้งสามหน้าใช้ตัวเดียวกัน — พฤติกรรมเดิมทุกอย่าง ต่างแค่ลิมิตกับบรรทัดกำกับที่ส่งเข้าไป · คีย์ `ticket_attach_drop` / `ticket_attach_count` ย้ายไปเป็น `attachment_drop` / `attachment_count` ใน `common`
+
+**บนหน้าจอ** — wizard ขั้น ② มีบล็อกไฟล์แนบเต็มความกว้างใต้ฟอร์ม (ติดดาวเมื่อเลือก CCTV และไปขั้น ③ ไม่ได้ถ้ายังไม่แนบ) · ขั้น ③ แสดงรายชื่อไฟล์ที่กำลังจะส่ง · footer มี progress bar ของการอัปโหลดจริง · หน้า detail มี section ไฟล์แนบในคอลัมน์ซ้าย ทุกคนที่เปิดคำขอได้กดดาวน์โหลดได้ ส่วนปุ่มเพิ่ม/ลบขึ้นเฉพาะตอนที่ `can_attach` ยังจริง
+
+### Tests / Verification
+
+`RequestAttachmentTest` 11 ตัว — catalog บอกว่าบริการไหนบังคับ · CCTV ไม่แนบ → 422 และไม่มีคำขอเกิดขึ้น · แนบแล้วได้ทั้งแถวและไฟล์บนดิสก์ · บริการอื่นไม่แนบก็ส่งได้ · เพิ่ม/ลบได้ตอนยังไม่มีใครเซ็น · เซ็นแล้วทั้งเพิ่มและลบโดน 403 · ผู้อนุมัติแก้ไฟล์ไม่ได้ · ผู้อนุมัติดาวน์โหลดได้ คนนอกโดน 403 · เกิน 5 ไฟล์ → 422 · `.exe` → 422
+`RequestDepartmentStepTest` / `RequestNamedApproversTest` แก้ fixture ให้ยื่น CCTV พร้อมไฟล์ (กฎใหม่บังคับจริง — เทสต์เดิม 20 ตัวแดงก่อนแก้)
+**suite = 1,307 passed / 5,566 assertions** · tsc 0 · eslint 0 · prettier · pint passed · build ผ่าน · migration รันบน DB จริงแล้ว
