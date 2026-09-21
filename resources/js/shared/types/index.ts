@@ -1002,6 +1002,16 @@ export interface RequestApproval {
 }
 
 /** An IT service request as the API returns it. */
+/** One file filed with a service request. `url` is the authenticated download route. */
+export interface RequestAttachment {
+    id: number;
+    name: string;
+    size: number;
+    mime: string;
+    url: string;
+    created_at: string | null;
+}
+
 export interface ServiceRequest {
     id: number;
     reference: string;
@@ -1052,6 +1062,10 @@ export interface ServiceRequest {
     can_approve: boolean;
     can_cancel: boolean;
     can_fulfill: boolean;
+    /** Files filed with the request — present on the detail read only. */
+    attachments?: RequestAttachment[];
+    /** Whether this viewer may still add or remove files (requester's side, before the first signature). */
+    can_attach: boolean;
     approved_at: string | null;
     rejected_at: string | null;
     fulfilled_at: string | null;

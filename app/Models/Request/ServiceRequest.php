@@ -160,9 +160,72 @@ class ServiceRequest extends Model
         return $this->hasMany(RequestApproval::class)->orderBy('position');
     }
 
+    /** @return HasMany<RequestAttachment, $this> */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(RequestAttachment::class);
+    }
+
     /** The single approval row being waited on right now, or null when settled. */
     public function currentApproval(): ?RequestApproval
     {
         return $this->approvals()->where('status', ApprovalStatus::Current->value)->first();
+    }
+
+    /**
+     * Files stop being the requester's to change the moment somebody signs: an
+     * approver decided on what was in front of them, and a request whose evidence
+     * can still be swapped out afterwards is not a record of that decision.
+     */
+    public function attachmentsLocked(): bool
+    {
+        // The list serializes this for every row and already eager-loads the chain;
+        // asking the database again per row would be a query for an answer in hand.
+        if ($this->relationLoaded('approvals')) {
+            return $this->approvals->contains(fn (RequestApproval $a) => $a->status === ApprovalStatus::Approved);
+        }
+
+        return $this->approvals()->where('status', ApprovalStatus::Approved->value)->exists();
+    }
+
+    /**
+     * May this account read the request at all? Its participants (owner, the person
+     * it is about, whoever filed it, anybody the chain can route to), plus IT and
+     * the module's readers. The single answer behind both the detail endpoint and
+     * the attachment download route, so a file is never reachable by someone who
+     * cannot open the request it belongs to.
+     */
+    public function isVisibleTo(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        $isParticipant = $user->id === $this->user_id
+            || $user->id === $this->submitted_by_user_id
+            // The person the request is about — their onboarding predates their account.
+            || ($user->employee_id !== null && $user->employee_id === $this->employee_id)
+            || ($user->employee_id !== null && $this->approvals()->actionableBy($user->employee)->exists());
+
+        return $isParticipant
+            || $user->isSuper()
+            || $user->hasPermission('requests.view_all')
+            || $user->hasPermission('requests.fulfill');
+    }
+
+    /**
+     * May this account add or remove the request's files right now? The requester's
+     * own evidence, and whoever filed it for them — never an approver, and never
+     * once the first signature has landed.
+     */
+    public function canManageAttachments(?User $user): bool
+    {
+        if ($user === null || $this->attachmentsLocked()) {
+            return false;
+        }
+
+        return $user->id === $this->user_id
+            || $user->id === $this->submitted_by_user_id
+            || ($user->employee_id !== null && $user->employee_id === $this->employee_id);
     }
 }

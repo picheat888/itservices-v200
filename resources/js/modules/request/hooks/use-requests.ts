@@ -42,7 +42,19 @@ export function useRequestMutations() {
         qc.invalidateQueries({ queryKey: SIDEBAR_BADGES_KEY });
     };
     return {
-        submit: useMutation({ mutationFn: (p: SubmitRequestPayload) => requestApi.submit(p), onSuccess: invalidate }),
+        submit: useMutation({
+            mutationFn: (v: { payload: SubmitRequestPayload; onProgress?: (percent: number) => void }) => requestApi.submit(v.payload, v.onProgress),
+            onSuccess: invalidate,
+        }),
+        uploadAttachments: useMutation({
+            mutationFn: (v: { id: number; files: File[]; onProgress?: (percent: number) => void }) =>
+                requestApi.uploadAttachments(v.id, v.files, v.onProgress),
+            onSuccess: invalidate,
+        }),
+        deleteAttachment: useMutation({
+            mutationFn: (v: { id: number; attachmentId: number }) => requestApi.deleteAttachment(v.id, v.attachmentId),
+            onSuccess: invalidate,
+        }),
         approve: useMutation({ mutationFn: (v: { id: number; note?: string }) => requestApi.approve(v.id, v.note), onSuccess: invalidate }),
         reject: useMutation({ mutationFn: (v: { id: number; note: string }) => requestApi.reject(v.id, v.note), onSuccess: invalidate }),
         fulfill: useMutation({ mutationFn: (id: number) => requestApi.fulfill(id), onSuccess: invalidate }),

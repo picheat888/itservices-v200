@@ -10,6 +10,7 @@ use App\Models\Access\SocialPlatform;
 use App\Models\Access\Software;
 use App\Models\Settings\Location;
 use App\Models\Workflow\Workflow;
+use App\Services\Request\RequestAttachmentService;
 use App\Support\RequestSchemas;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,9 @@ class RequestOptionsController extends Controller
                 'type' => $type->value,
                 'fields' => RequestSchemas::for($type),
                 'columns' => RequestSchemas::columns($type),
+                // Whether the wizard stars the attachment block and refuses to move
+                // past step ② without one — the same rule the submit is validated on.
+                'attachments_required' => RequestSchemas::attachmentsRequired($type),
                 'workflow' => $workflow === null ? null : [
                     'id' => $workflow->id,
                     'name' => $workflow->name,
@@ -53,6 +57,13 @@ class RequestOptionsController extends Controller
         return response()->json([
             'data' => [
                 'types' => $types,
+                // The upload limits, so the wizard turns files away before a 40 MB
+                // post reaches PHP rather than after.
+                'attachments' => [
+                    'max_files' => RequestAttachmentService::MAX_FILES,
+                    'max_size_kb' => RequestAttachmentService::MAX_SIZE_KB,
+                    'extensions' => explode(',', RequestAttachmentService::ALLOWED_EXTENSIONS),
+                ],
                 'sources' => [
                     'email_groups' => EmailGroup::orderBy('name')->get(['id', 'name', 'email'])
                         ->map(fn ($g) => ['id' => $g->id, 'label' => $g->email ?: $g->name, 'detail' => $g->name]),

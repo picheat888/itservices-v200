@@ -43,6 +43,7 @@ class RequestService
         private readonly WorkflowResolverService $resolver,
         private readonly RequestNotificationService $notifications,
         private readonly TicketService $tickets,
+        private readonly RequestAttachmentService $attachments,
     ) {}
 
     /**
@@ -167,6 +168,12 @@ class RequestService
                 'last_activity_at' => now(),
                 ...$references,
             ]);
+
+            // Inside the transaction with the row: a service that requires a file was
+            // validated on the files that arrived, so the request must not survive
+            // without them. (Binaries written before a rollback are orphaned on disk,
+            // which costs nothing — no row points at them.)
+            $this->attachments->store($request, $data['files'] ?? []);
 
             // The resolver looks resources up by their schema key, so it sees the
             // whole submitted set — column-backed or not.
