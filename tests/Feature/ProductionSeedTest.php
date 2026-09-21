@@ -46,7 +46,11 @@ class ProductionSeedTest extends TestCase
         $this->assertSame(1, User::count(), 'a production install ships with one account');
 
         $super = User::firstOrFail();
-        $this->assertSame('super', $super->username);
+        // The login name and the role key are different things that used to read the
+        // same. 'admin' is what somebody types at the sign-in box; 'super' is the role
+        // that bypasses every permission check, and nothing about renaming the account
+        // touches it.
+        $this->assertSame('admin', $super->username);
         $this->assertSame('super', $super->role?->key);
         $this->assertTrue($super->must_change_password, 'the seeded password must be replaced at first sign-in');
     }

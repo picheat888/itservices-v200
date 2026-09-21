@@ -101,8 +101,14 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    /** Sign-in name of the one account a fresh install ships with. */
-    public const SUPER_USERNAME = 'super';
+    /**
+     * Sign-in name of the one account a fresh install ships with.
+     *
+     * Not to be confused with UserRole::SuperAdmin, whose value is also 'super': that
+     * is the ROLE that bypasses every permission check, and it is stored in a different
+     * column. This is only what somebody types at the sign-in box.
+     */
+    public const SUPER_USERNAME = 'admin';
 
     /**
      * The password that account is created with — deliberately the most ordinary
@@ -186,7 +192,7 @@ class DatabaseSeeder extends Seeder
         if (filled(env('SEED_SUPER_PASSWORD'))) {
             return [
                 'name' => (string) (env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME),
-                'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'super@mail.com'),
+                'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'admin@mail.com'),
                 'password' => (string) env('SEED_SUPER_PASSWORD'),
                 'must_change_password' => true,
             ];
@@ -198,7 +204,7 @@ class DatabaseSeeder extends Seeder
 
         return [
             'name' => (string) (env('SEED_SUPER_NAME') ?: self::SUPER_USERNAME),
-            'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'super@mail.com'),
+            'email' => (string) (env('SEED_SUPER_EMAIL') ?: 'admin@mail.com'),
             'password' => self::SUPER_TEMP_PASSWORD,
             'must_change_password' => true,
         ];
