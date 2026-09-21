@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 9/11 — the access registries: which software, email groups and file
+ * Baseline 9/17 — the access registries: which software, email groups and file
  * shares exist, and who holds access to each.
  *
  * access_memberships is one polymorphic table across all three registries

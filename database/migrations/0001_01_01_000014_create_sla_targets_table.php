@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Resolution targets as rows an administrator can add to, instead of one JSON blob.
+ * Baseline 15/17 — resolution targets as rows an administrator can add to, instead of one JSON blob.
  *
  * The per-priority map lived in app_settings as a JSON string whose shape was fixed by
  * TicketSla::defaults() — fine while the only question was "how urgent", impossible the moment
@@ -30,6 +30,9 @@ return new class extends Migration
             $table->string('scope', 20);
             $table->string('match_value', 40);
             $table->unsignedSmallInteger('resolve_hours');
+            // Which clock those hours are counted on: business hours for standard work,
+            // calendar time for a repair that sits at a vendor over a weekend.
+            $table->string('clock', 16)->default('business');
             // Switched off rather than deleted: turning a target off for a month and back on
             // is a thing people do, and deleting loses the number they will want again.
             $table->boolean('enabled')->default(true);

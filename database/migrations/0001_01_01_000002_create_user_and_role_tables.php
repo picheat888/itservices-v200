@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 3/11 — who can sign in and what they may do: roles, the login
+ * Baseline 3/17 — who can sign in and what they may do: roles, the login
  * accounts attached to an employee record, the per-role permission grants, and
  * the audit trail.
  *

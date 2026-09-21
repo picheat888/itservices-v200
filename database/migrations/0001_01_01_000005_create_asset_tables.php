@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Baseline 6/11 — IT assets and the hand-over trail behind them.
+ * Baseline 6/17 — IT assets and the hand-over trail behind them.
  *
  * An asset holds both `owner` (the label shown, which may name a shared use
  * rather than a person) and `owner_employee_id` (the FK, set only when a person
@@ -61,6 +61,11 @@ return new class extends Migration
             $table->unsignedBigInteger('asset_id');
             $table->string('asset_tag');
             $table->string('asset_model');
+            // handover / return / recall — read off its own column instead of being
+            // parsed back out of the free-text reason. Indexed with the timestamp
+            // because every question asked of this table is "the recent X events".
+            $table->string('kind', 12)->default('handover');
+            $table->index(['kind', 'created_at']);
             $table->string('from_owner')->nullable();
             $table->string('to_owner');
             $table->string('reason')->nullable();

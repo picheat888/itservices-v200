@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The editable half of an in-app notification.
+ * Baseline 13/17 — the editable half of an in-app notification.
  *
  * Only what an administrator can change lives here: the one-line message, in each
  * language, and whether the notification fires at all. Everything descriptive — what triggers
