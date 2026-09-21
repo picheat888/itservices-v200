@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Contract extends Model
 {
@@ -61,11 +62,34 @@ class Contract extends Model
     {
         static::creating(function (Contract $contract) {
             if (blank($contract->code)) {
-                $year = $contract->start_date ? $contract->start_date->year : now()->year;
-                $next = (static::max('id') ?? 0) + 1;
-                $contract->code = sprintf('CT-%d-%03d', $year, $next);
+                $contract->code = static::nextFreeCode($contract->start_date?->toDateString());
             }
         });
+    }
+
+    /**
+     * The next CT-<year>-### nobody holds.
+     *
+     * Counting from `max(id)` is a starting point, not an answer: contract numbers can
+     * also be typed in by hand on the form, so the number the counter lands on may
+     * already be taken — and `contracts.code` is unique, so that reaches the database
+     * as a violation nobody can report against a field.
+     *
+     * @param  string|null  $startDate  the contract's own start date — the year is part of the code
+     */
+    public static function nextFreeCode(?string $startDate = null): string
+    {
+        $year = $startDate ? Carbon::parse($startDate)->year : now()->year;
+        $taken = static::query()->where('code', 'like', "CT-{$year}-%")->pluck('code')
+            ->mapWithKeys(fn (string $code) => [strtoupper($code) => true])
+            ->all();
+
+        $next = (static::max('id') ?? 0) + 1;
+        while (isset($taken[sprintf('CT-%d-%03d', $year, $next)])) {
+            $next++;
+        }
+
+        return sprintf('CT-%d-%03d', $year, $next);
     }
 
     /** All supported reminder thresholds, in days before expiry (earliest first). */

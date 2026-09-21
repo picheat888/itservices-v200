@@ -53,7 +53,6 @@ export function useContractMutations() {
         expire: useMutation({ mutationFn: (id: number) => contractApi.expire(id), onSuccess: invalidate }),
         reactivate: useMutation({ mutationFn: (id: number) => contractApi.reactivate(id), onSuccess: invalidate }),
         remove: useMutation({ mutationFn: (id: number) => contractApi.remove(id), onSuccess: invalidate }),
-        import: useMutation({ mutationFn: (file: File) => contractApi.import(file), onSuccess: invalidate }),
         uploadAttachments: useMutation({
             mutationFn: (v: { id: number; files: File[] }) => contractApi.uploadAttachments(v.id, v.files),
             onSuccess: invalidate,

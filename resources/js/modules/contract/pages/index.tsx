@@ -24,7 +24,6 @@ import {
     Clock,
     FileText,
     Filter,
-    Import,
     Plus,
     Search,
     TrendingUp,
@@ -34,7 +33,6 @@ import { useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ContractDetailDrawer } from '../components/contract-detail-drawer';
 import { ContractFormDrawer } from '../components/contract-form-drawer';
-import { ImportContractDialog } from '../components/import-contract-dialog';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
@@ -107,7 +105,6 @@ export default function ContractsPage() {
     const canCreate = can('contracts.create');
     const canEdit = can('contracts.edit');
     const canDelete = can('contracts.delete');
-    const canImport = can('contracts.import');
     const canCancel = can('contracts.cancel');
     const canExpire = can('contracts.expire');
     const canReactivate = can('contracts.reactivate');
@@ -125,7 +122,6 @@ export default function ContractsPage() {
     const [perPage, setPerPage] = useState(20);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<Contract | null>(null);
-    const [importOpen, setImportOpen] = useState(false);
     // Newly created contract — pinned at the top with a "New" badge for 8 seconds.
     const [newlyCreated, setNewlyCreated] = useState<Contract | null>(null);
     const newlyCreatedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -263,12 +259,6 @@ export default function ContractsPage() {
                     <p className="text-muted-foreground text-sm">{t('contracts_sub')}</p>
                 </div>
                 <div className="flex gap-2">
-                    {canImport && (
-                        <Button variant="outline" onClick={() => setImportOpen(true)}>
-                            <Import className="h-4 w-4" />
-                            {t('import_contract')}
-                        </Button>
-                    )}
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
@@ -637,7 +627,6 @@ export default function ContractsPage() {
                 canDelete={canDelete}
             />
             <ContractFormDrawer open={adding || formOpen} editing={adding ? null : editing} onClose={closeForm} onCreated={handleCreated} />
-            <ImportContractDialog open={importOpen} onClose={() => setImportOpen(false)} />
         </div>
     );
 }

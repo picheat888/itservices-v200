@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Permission\AuditLogController;
 use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
+use App\Http\Controllers\Api\Request\RequestAttachmentController;
 use App\Http\Controllers\Api\Request\RequestController;
 use App\Http\Controllers\Api\Request\RequestOptionsController;
 use App\Http\Controllers\Api\Settings\AssetModelController;
@@ -122,6 +123,9 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // Employee module
     Route::get('employees/summary', [EmployeeController::class, 'summary'])->name('api.employees.summary');
     Route::get('employees/import-template', [EmployeeController::class, 'importTemplate'])->name('api.employees.import-template');
+    // The spellings the template's department / section / position columns accept —
+    // downloaded beside it, so the list is open while the sheet is being typed.
+    Route::get('employees/import-reference', [EmployeeController::class, 'importReference'])->name('api.employees.import-reference');
     Route::post('employees/import/preview', [EmployeeController::class, 'importPreview'])->name('api.employees.import.preview');
     Route::post('employees/import', [EmployeeController::class, 'import'])->name('api.employees.import');
     // Asked from Step 3 of the Add Employee form, before the employee exists — can the
@@ -181,8 +185,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
 
     // Contract & Rental module
     Route::get('contracts/summary', [ContractController::class, 'summary'])->name('api.contracts.summary');
-    Route::get('contracts/import-template', [ContractController::class, 'importTemplate'])->name('api.contracts.import-template');
-    Route::post('contracts/import', [ContractController::class, 'import'])->name('api.contracts.import');
     Route::post('contracts/{contract}/cancel', [ContractController::class, 'cancel'])->name('api.contracts.cancel');
     Route::post('contracts/{contract}/expire', [ContractController::class, 'expire'])->name('api.contracts.expire');
     Route::post('contracts/{contract}/reactivate', [ContractController::class, 'reactivate'])->name('api.contracts.reactivate');
@@ -253,6 +255,12 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('service-requests/{serviceRequest}/reject', [RequestController::class, 'reject'])->name('api.service-requests.reject');
     Route::post('service-requests/{serviceRequest}/fulfill', [RequestController::class, 'fulfill'])->name('api.service-requests.fulfill');
     Route::post('service-requests/{serviceRequest}/cancel', [RequestController::class, 'cancel'])->name('api.service-requests.cancel');
+    // Files added AFTER the submit. The ones filed with it ride along with the
+    // POST above; both paths are gated in ServiceRequest::canManageAttachments.
+    Route::post('service-requests/{serviceRequest}/attachments', [RequestAttachmentController::class, 'store'])
+        ->name('api.service-requests.attachments.store');
+    Route::delete('service-requests/{serviceRequest}/attachments/{attachment}', [RequestAttachmentController::class, 'destroy'])
+        ->name('api.service-requests.attachments.destroy');
     Route::apiResource('service-requests', RequestController::class)
         ->only(['index', 'store', 'show'])
         ->parameters(['service-requests' => 'serviceRequest']);

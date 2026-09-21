@@ -11,7 +11,7 @@ class ContractPermissionHierarchyTest extends TestCase
     {
         $expected = [
             'contracts.module', 'contracts.view_dashboard', 'contracts.view', 'contracts.view_lifecycle',
-            'contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.import',
+            'contracts.create', 'contracts.edit', 'contracts.delete',
             'contracts.cancel', 'contracts.expire', 'contracts.reactivate', 'contracts.alerts',
         ];
         foreach ($expected as $key) {

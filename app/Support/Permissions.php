@@ -146,7 +146,7 @@ class Permissions
                 // Asset hard delete + Special access (force recall / cancel write-off) stay super-only by default.
                 // Contract Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
                 'contracts.module', 'contracts.view_dashboard', 'contracts.view',
-                'contracts.create', 'contracts.edit', 'contracts.import', 'contracts.alerts',
+                'contracts.create', 'contracts.edit', 'contracts.alerts',
                 'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
                 'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
                 'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
@@ -360,7 +360,7 @@ class Permissions
             'master' => 'contracts.module',
             'groups' => [
                 'contracts.view_dashboard' => [],
-                'contracts.view' => ['contracts.create', 'contracts.edit', 'contracts.delete', 'contracts.import'],
+                'contracts.view' => ['contracts.create', 'contracts.edit', 'contracts.delete'],
                 'contracts.view_lifecycle' => ['contracts.cancel', 'contracts.expire', 'contracts.reactivate'],
                 'contracts.alerts' => [],
             ],

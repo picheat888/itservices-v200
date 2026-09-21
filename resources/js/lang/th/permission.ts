@@ -177,7 +177,6 @@ export const permission: Dict = {
     'perm_act_contracts.create': 'สร้าง',
     'perm_act_contracts.edit': 'แก้ไข',
     'perm_act_contracts.delete': 'ลบ',
-    'perm_act_contracts.import': 'นำเข้าสัญญา (CSV)',
     'perm_act_contracts.cancel': 'ยกเลิกสัญญา',
     'perm_act_contracts.expire': 'สิ้นสุดสัญญา',
     'perm_act_contracts.reactivate': 'เปิดใช้สัญญาอีกครั้ง',
