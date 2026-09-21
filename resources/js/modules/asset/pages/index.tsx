@@ -23,7 +23,6 @@ import {
     ChevronRight,
     CircleDot,
     Clock,
-    Download,
     Filter,
     FlaskConicalOff,
     Layers,
@@ -476,10 +475,6 @@ export default function AssetsPage() {
                     <p className="text-muted-foreground text-sm">{t('assets_sub')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" disabled>
-                        <Download className="h-4 w-4" />
-                        {t('export')}
-                    </Button>
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
