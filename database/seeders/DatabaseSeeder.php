@@ -21,8 +21,8 @@ use Illuminate\Database\Seeder;
  *
  *   php artisan db:seed --class=EmployeeDepartmentSeeder   # 11 departments, DEP-#### codes
  *   php artisan db:seed --class=EmployeePositionSeeder     # 14 job titles, PST-#### codes
- *   php artisan db:seed --class=EmployeeSectionSeeder      # 26 sections (needs departments first)
- *   php artisan db:seed --class=MasterDataSeeder           # brands, models, categories, vendors, warehouses
+ *   php artisan db:seed --class=EmployeeSectionSeeder      # 25 sections (needs departments first)
+ *   php artisan db:seed --class=MasterDataSeeder           # brands, categories, warehouses, units, warranty types
  *
  * Nor is a Role Group, or the setting naming the default one — that is the
  * administrator's answer about their own organisation. Until they give it,
@@ -55,10 +55,10 @@ class DatabaseSeeder extends Seeder
     private function seedRolesAndPermissions(): void
     {
         $roles = [
-            ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator Template', 'color' => '#2563eb', 'is_system' => true],
-            ['key' => UserRole::ITStaff->value, 'name' => 'IT Technician Template', 'color' => '#0284c7', 'is_system' => false],
-            ['key' => UserRole::HR->value, 'name' => 'HR Template', 'color' => '#059669', 'is_system' => false],
-            ['key' => UserRole::Employee->value, 'name' => 'Staff Template', 'color' => '#64748b', 'is_system' => false],
+            ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator', 'color' => '#2563eb', 'is_system' => true],
+            ['key' => UserRole::ITStaff->value, 'name' => 'IT Technician', 'color' => '#0284c7', 'is_system' => false],
+            ['key' => UserRole::HR->value, 'name' => 'HR Recruit', 'color' => '#059669', 'is_system' => false],
+            ['key' => UserRole::Employee->value, 'name' => 'Staff', 'color' => '#64748b', 'is_system' => false],
         ];
         foreach ($roles as $role) {
             Role::firstOrCreate(['key' => $role['key']], $role);
