@@ -52,7 +52,10 @@ return new class extends Migration
             $table->timestamps();
             $table->unsignedBigInteger('role_id')->nullable();
             $table->unique(['role_id', 'permission']);
-            $table->index(['allowed'], 'rp_allowed_idx');
+            // No index on `allowed` on purpose. Both queries that read it were measured:
+            // the per-request lookup (role_id + allowed) takes the unique index above,
+            // and the permission-matrix page (allowed alone, half the table) is a scan the
+            // optimizer chooses over any index. One on `allowed` is only a false signal.
             $table->foreign('role_id')->references('id')->on('roles')->cascadeOnDelete();
         });
 
