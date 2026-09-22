@@ -21,6 +21,23 @@ class Employee extends Model
         'joined_at', 'status', 'resign_reason', 'last_day',
     ];
 
+    /**
+     * An empty string is not an address — it is a blank field. The unique index on `email`
+     * would read two of them as the same value and refuse the second employee, so blank has
+     * to reach the database as NULL (which a unique index lets repeat). Normalising on the
+     * model rather than at each caller is what keeps that true for every write path.
+     */
+    public function setEmailAttribute(?string $value): void
+    {
+        $this->attributes['email'] = blank($value) ? null : trim($value);
+    }
+
+    /** Same reason as email: the username mirror is unique too, so blank has to mean NULL. */
+    public function setUsernameAttribute(?string $value): void
+    {
+        $this->attributes['username'] = blank($value) ? null : trim($value);
+    }
+
     /** Composed full name (EN) for display — first + last. */
     public function getNameAttribute(): string
     {

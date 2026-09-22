@@ -10,6 +10,7 @@ use App\Models\Employee\Section;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -80,6 +81,35 @@ class EmployeeApiTest extends TestCase
         $this->postJson('/api/employees', ['first_name' => 'Second', 'last_name' => 'Copy', 'email' => 'dup@abcd.co.th'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('email');
+    }
+
+    /**
+     * The form rule above is the readable refusal; this is the net under it. Two saves that
+     * passed validation a moment apart — or any path that never saw the form at all — could
+     * land two employees on one address, and every "who holds this mailbox" answer after
+     * that would be a coin toss.
+     */
+    public function test_the_database_itself_refuses_a_duplicate_email(): void
+    {
+        Employee::create(['first_name' => 'First', 'last_name' => 'Owner', 'email' => 'net@abcd.co.th']);
+
+        $this->expectException(QueryException::class);
+        Employee::create(['first_name' => 'Second', 'last_name' => 'Copy', 'email' => 'net@abcd.co.th']);
+    }
+
+    /**
+     * Blank is not an address. It reaches the column as NULL — which a unique index lets
+     * repeat — so the constraint costs nothing to the many employees with no company mailbox.
+     */
+    public function test_employees_without_an_email_do_not_collide(): void
+    {
+        $blank = Employee::create(['first_name' => 'No', 'last_name' => 'Mail', 'email' => '']);
+        $missing = Employee::create(['first_name' => 'Also', 'last_name' => 'None']);
+        $spaces = Employee::create(['first_name' => 'Third', 'last_name' => 'None', 'email' => '   ']);
+
+        $this->assertNull($blank->fresh()->email);
+        $this->assertNull($missing->fresh()->email);
+        $this->assertNull($spaces->fresh()->email);
     }
 
     public function test_employee_email_rejects_unicode_local_part(): void
