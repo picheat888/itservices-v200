@@ -11,15 +11,18 @@ use App\Models\Permission\RolePermission;
 use App\Models\Settings\AppSetting;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Models\Workflow\Workflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
  * Deleting an employee is for a mis-entry — a duplicate or a test row nothing refers to yet.
  *
- * The danger it guards is invisible: `tickets.requester_id` and the access tables cascade, so
- * a delete that slipped past a missing check would take a real person's whole ticket history
- * with it and report success. Every test here is really asking "does the guard still hold".
+ * The danger it guards used to be invisible: `tickets.requester_id`, the access tables and
+ * workflow_step_approvers cascaded, so a delete that slipped past a missing check would take
+ * a real person's whole ticket history with it and report success. Those FKs are
+ * restrictOnDelete now; these tests are what keep the refusal a readable reason rather than
+ * a database error. Every one of them is really asking "does the guard still hold".
  */
 class EmployeeDeleteTest extends TestCase
 {
@@ -194,5 +197,30 @@ class EmployeeDeleteTest extends TestCase
 
         RolePermission::create(['role_id' => $editor->role_id, 'permission' => 'employees.delete', 'allowed' => true]);
         $this->actingAs($editor)->deleteJson("/api/employees/{$employee->id}")->assertOk();
+    }
+
+    /**
+     * Naming somebody on a workflow step is the newest way to point at an employee, and
+     * the one the blocker list did not know about: the pivot row cascaded, so deleting
+     * them left the step with nobody to ask and said nothing about it.
+     */
+    public function test_an_employee_named_on_a_workflow_step_is_refused(): void
+    {
+        $this->actingAs($this->super());
+        $employee = $this->employee('EMP-DELW');
+
+        $workflow = Workflow::create(['request_type' => 'cctv', 'name' => 'CCTV request', 'active' => true]);
+        $step = $workflow->steps()->create([
+            'position' => 1, 'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
+        ]);
+        $step->approvers()->sync([$employee->id]);
+
+        $this->deleteJson("/api/employees/{$employee->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'has_activity')
+            ->assertJsonPath('blockers.0', 'workflow_approver');
+
+        $this->assertDatabaseHas('employees', ['id' => $employee->id]);
+        $this->assertDatabaseHas('workflow_step_approvers', ['workflow_step_id' => $step->id, 'employee_id' => $employee->id]);
     }
 }

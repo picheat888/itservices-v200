@@ -23,7 +23,10 @@ return new class extends Migration
         Schema::create('workflow_step_approvers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workflow_step_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('employee_id')->constrained()->cascadeOnDelete();
+            // restrictOnDelete, not cascade: a person cascading out of here would quietly leave the
+            // step with nobody to ask. EmployeeService::deletionBlockers() reports this as a
+            // blocker first, so the refusal reads as a reason rather than a database error.
+            $table->foreignId('employee_id')->constrained()->restrictOnDelete();
             $table->unique(['workflow_step_id', 'employee_id']);
         });
     }

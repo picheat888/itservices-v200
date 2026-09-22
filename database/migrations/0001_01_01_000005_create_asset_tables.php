@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Schema;
  * alongside personal ones.
  *
  * asset_transfers keeps the tag and model as text on purpose: the row has to stay
- * readable as history even after the asset itself is edited or removed.
+ * readable as history even after the asset itself is renamed or re-modelled. Its
+ * asset_id is restrictOnDelete for the same reason: an asset handed out even once can
+ * no longer be deleted, so the custody trail can never vanish under it.
  */
 return new class extends Migration
 {
@@ -71,7 +73,7 @@ return new class extends Migration
             $table->string('reason')->nullable();
             $table->string('performed_by')->nullable();
             $table->timestamps();
-            $table->foreign('asset_id')->references('id')->on('assets')->cascadeOnDelete();
+            $table->foreign('asset_id')->references('id')->on('assets')->restrictOnDelete();
         });
     }
 

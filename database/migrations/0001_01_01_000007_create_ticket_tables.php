@@ -43,7 +43,10 @@ return new class extends Migration
             $table->timestamps();
             $table->index(['category'], 'tickets_category_idx');
             $table->index(['status'], 'tickets_status_idx');
-            $table->foreign('requester_id')->references('id')->on('employees')->cascadeOnDelete();
+            // restrictOnDelete: a ticket is the requester's history, not a row that belongs to
+            // them. EmployeeService::deletionBlockers() already refuses this delete with a reason;
+            // this is the net under it.
+            $table->foreign('requester_id')->references('id')->on('employees')->restrictOnDelete();
             $table->foreign('assignee_id')->references('id')->on('users')->nullOnDelete();
             $table->foreign('related_asset_id')->references('id')->on('assets')->nullOnDelete();
         });

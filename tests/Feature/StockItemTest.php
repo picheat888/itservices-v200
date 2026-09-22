@@ -9,6 +9,7 @@ use App\Models\Settings\Unit;
 use App\Models\Settings\WarrantyType;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
+use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -322,6 +323,34 @@ class StockItemTest extends TestCase
             ->assertStatus(422);
 
         $this->assertDatabaseHas('stock_items', ['id' => $item->id]);
+    }
+
+    /**
+     * The ledger is the audit trail, and it used to cascade away with the SKU: an item
+     * received and then issued out lands back on zero stock and zero value, which passed
+     * both checks above. The refusal — and the restrictOnDelete FK behind it — is what
+     * stops a delete from taking the movement history with it and reporting success.
+     */
+    public function test_cannot_delete_item_that_has_ever_moved(): void
+    {
+        $item = $this->makeItem(['current_stock' => 0]);
+        $movement = StockMovement::create([
+            'doc_no' => 'RC-0001',
+            'type' => 'receive',
+            'stock_item_id' => $item->id,
+            'qty' => 2,
+            'unit_cost' => 50,
+            'moved_at' => now(),
+        ]);
+
+        $this->actingAs($this->superUser())
+            ->deleteJson("/api/stock-items/{$item->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'has_history')
+            ->assertJsonPath('movements_count', 1);
+
+        $this->assertDatabaseHas('stock_items', ['id' => $item->id]);
+        $this->assertDatabaseHas('stock_movements', ['id' => $movement->id]);
     }
 
     public function test_user_without_delete_permission_cannot_delete(): void

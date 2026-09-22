@@ -76,7 +76,10 @@ return new class extends Migration
             $table->timestamps();
             $table->index(['employee_id', 'revoked_at']);
             $table->index(['resource_type', 'resource_id']);
-            $table->foreign('employee_id')->references('id')->on('employees')->cascadeOnDelete();
+            // restrictOnDelete: a membership row is the record that this person was granted (and
+            // later lost) an access, kept even after it is revoked. Deletion is refused with a
+            // reason by EmployeeService::deletionBlockers(); this is the net under it.
+            $table->foreign('employee_id')->references('id')->on('employees')->restrictOnDelete();
             $table->foreign('granted_by')->references('id')->on('users')->nullOnDelete();
         });
 

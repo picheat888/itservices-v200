@@ -141,6 +141,7 @@ export const employee: Dict = {
     emp_del_block_access_owner: 'เป็นเจ้าของอีเมลกลุ่มหรือ File share',
     emp_del_block_requests: 'เคยยื่นคำขอ',
     emp_del_block_approvals: 'เคยอนุมัติคำขอ',
+    emp_del_block_workflow_approver: 'ถูกระบุเป็นผู้อนุมัติในขั้นตอนของสายอนุมัติ',
     emp_del_block_subordinates: 'มีลูกน้องในสังกัด',
     emp_del_block_account_used: 'บัญชีเข้าใช้งานถูกใช้งานไปแล้ว',
     reset_password: 'รีเซ็ตรหัสผ่าน',
