@@ -69,6 +69,10 @@ return new class extends Migration
             $table->text('error')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->index(['status', 'created_at']);
+            // The nightly prune (logs:prune) works on created_at alone, which the index
+            // above cannot serve because status leads it. This table is the one that grows
+            // fastest — bodies are kept — so the sweep must not scan it whole every night.
+            $table->index('created_at', 'email_logs_created_at_index');
         });
     }
 

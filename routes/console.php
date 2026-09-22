@@ -42,3 +42,9 @@ Schedule::command('tickets:send-sla-alerts')->everyTenMinutes();
 // taken, and what is taken but still open. Weekly for the same reason as the
 // approvals digest — a daily copy of the same list stops being read.
 Schedule::command('tickets:send-weekly-digest')->weeklyOn(1, '08:30');
+
+// Data retention. At 02:00 because it is the one schedule that deletes rather than sends:
+// well clear of the 08:00 mail sweeps, and in the quietest hour the single-site deployment
+// has. Every window is configurable in Settings → Security and ships with audit logs set
+// to keep forever, so out of the box this only ever touches email bodies and read bells.
+Schedule::command('logs:prune')->dailyAt('02:00');

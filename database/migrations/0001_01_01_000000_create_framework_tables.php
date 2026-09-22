@@ -99,6 +99,10 @@ return new class extends Migration
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
             $table->index(['notifiable_type', 'notifiable_id']);
+            // For the nightly prune, which deletes notifications that have been READ and are
+            // older than the retention window. read_at leads because it is the selective half:
+            // an unread bell is never pruned however old it gets.
+            $table->index(['read_at', 'created_at'], 'notifications_read_at_created_at_index');
         });
     }
 
