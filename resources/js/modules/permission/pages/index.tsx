@@ -21,6 +21,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Eye,
+    Lock,
     LogIn,
     Pencil,
     Plus,
@@ -354,6 +355,15 @@ function RolesTab() {
                                 {role.is_super ? t('perm_super_locked') : `${draft.size} ${t('perm_enabled')}`}
                             </div>
                         </div>
+                        {/* Stands where the Save button stands on every other role, because
+                            that is where somebody looks to act — and here the answer is that
+                            they cannot. Amber, not red: the role is protected, not wrong. */}
+                        {role.is_super && (
+                            <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-amber-300/70 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-200">
+                                <Lock className="h-3.5 w-3.5 shrink-0" />
+                                {t('perm_super_readonly')}
+                            </span>
+                        )}
                         {!role.is_super && (
                             <Button
                                 disabled={!dirty || update.isPending}
