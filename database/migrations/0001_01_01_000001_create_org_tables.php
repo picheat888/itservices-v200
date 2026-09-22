@@ -55,9 +55,14 @@ return new class extends Migration
             $table->unsignedBigInteger('section_id')->nullable();
             $table->unsignedBigInteger('position_id')->nullable();
             $table->unsignedBigInteger('manager_id')->nullable();
-            $table->string('email')->nullable();
+            // Unique, and nullable so the many employees without a company address stay
+            // NULL — a unique index lets NULL repeat, an empty string it would not. The
+            // Employee model normalises blank to NULL for exactly that reason.
+            $table->string('email')->nullable()->unique();
             $table->string('phone')->nullable();
-            $table->string('username')->nullable();
+            // Mirror of users.username, which is unique itself — unique here too so the
+            // two can never drift into naming the same login twice.
+            $table->string('username')->nullable()->unique();
             $table->date('joined_at')->nullable();
             $table->string('status')->default('active');
             $table->string('resign_reason')->nullable();
