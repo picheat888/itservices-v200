@@ -77,33 +77,44 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Categories ──────────────────────────────────────────────────────────
+        // `name` is read for English readers and `name_th` for Thai ones, so both
+        // halves are filled. `icon` is a Lucide name from the set IconPicker offers
+        // (shared/lib/lucide-icons.ts) — anything else renders as nothing.
+        //
+        // One table serves three modules. Grouped that way for reading; the database
+        // does not know the difference.
         $categories = [
-            ['name' => 'แล็ปท็อป',           'description' => 'Notebook / Laptop ทุกยี่ห้อ'],
-            ['name' => 'เดสก์ท็อป',          'description' => 'Desktop PC / Mini PC'],
-            ['name' => 'เซิร์ฟเวอร์',        'description' => 'Rack / Tower Server'],
-            ['name' => 'จอภาพ',              'description' => 'Monitor / Display'],
-            ['name' => 'เครื่องพิมพ์',       'description' => 'Printer / MFP / Plotter'],
-            ['name' => 'สวิตช์ / เราเตอร์',  'description' => 'Network Switch, Router, AP'],
-            ['name' => 'UPS',                'description' => 'Uninterruptible Power Supply'],
-            ['name' => 'กล้องวงจรปิด',       'description' => 'CCTV Camera / NVR'],
-            ['name' => 'โทรศัพท์',           'description' => 'IP Phone / Mobile / Tablet'],
-            ['name' => 'อุปกรณ์อื่น ๆ',      'description' => 'อุปกรณ์ IT ที่ไม่อยู่ในหมวดข้างต้น'],
-            ['name' => 'ซอฟต์แวร์ลิขสิทธิ์', 'description' => 'Software license (subscription / perpetual)'],
-            ['name' => 'บำรุงรักษา',          'description' => 'Hardware/Software maintenance & support'],
-            ['name' => 'เช่าอุปกรณ์',         'description' => 'Device / Equipment rental'],
-            ['name' => 'อินเทอร์เน็ต / WAN',  'description' => 'Internet, Leased line, MPLS'],
-            ['name' => 'บริการ Cloud',         'description' => 'IaaS / PaaS / SaaS cloud contract'],
-            ['name' => 'ตลับหมึก / Toner',    'description' => 'Inkjet cartridge และ Laser toner'],
-            ['name' => 'อะไหล่คอมพิวเตอร์',   'description' => 'RAM, SSD, HDD, PSU, CPU'],
-            ['name' => 'สายเคเบิล',           'description' => 'LAN, HDMI, DP, USB, Power cable'],
-            ['name' => 'อุปกรณ์เสริม',        'description' => 'เมาส์, คีย์บอร์ด, Hub, Adapter'],
-            ['name' => 'วัสดุสิ้นเปลือง',     'description' => 'แผ่น CD/DVD, แฟลชไดร์ฟ, กระดาษพิมพ์'],
+            // Assets — physical equipment on the register
+            ['name' => 'Laptop',            'name_th' => 'แล็ปท็อป',           'icon' => 'Laptop',  'description' => 'โน้ตบุ๊ก / แล็ปท็อป ทุกยี่ห้อ'],
+            ['name' => 'Desktop',           'name_th' => 'เดสก์ท็อป',          'icon' => 'PcCase',  'description' => 'เครื่องคอมพิวเตอร์ตั้งโต๊ะ และ Mini PC'],
+            ['name' => 'Server',            'name_th' => 'เซิร์ฟเวอร์',        'icon' => 'Server',  'description' => 'เซิร์ฟเวอร์แบบ Rack และ Tower'],
+            ['name' => 'Monitor',           'name_th' => 'จอภาพ',              'icon' => 'Monitor', 'description' => 'จอคอมพิวเตอร์และจอแสดงผล'],
+            ['name' => 'Printer',           'name_th' => 'เครื่องพิมพ์',       'icon' => 'Printer', 'description' => 'เครื่องพิมพ์ เครื่องมัลติฟังก์ชัน และ Plotter'],
+            ['name' => 'Switch / Router',   'name_th' => 'สวิตช์ / เราเตอร์',  'icon' => 'Router',  'description' => 'อุปกรณ์เครือข่าย สวิตช์ เราเตอร์ และ Access Point'],
+            ['name' => 'UPS',               'name_th' => 'เครื่องสำรองไฟ',     'icon' => 'Battery', 'description' => 'เครื่องสำรองไฟฟ้าและ PDU'],
+            ['name' => 'CCTV',              'name_th' => 'กล้องวงจรปิด',       'icon' => 'Camera',  'description' => 'กล้องวงจรปิดและเครื่องบันทึก NVR'],
+            ['name' => 'Phone',             'name_th' => 'โทรศัพท์',           'icon' => 'Phone',   'description' => 'โทรศัพท์ IP มือถือ และแท็บเล็ต'],
+            ['name' => 'Other equipment',   'name_th' => 'อุปกรณ์อื่น ๆ',      'icon' => 'Package', 'description' => 'อุปกรณ์ไอทีที่ไม่อยู่ในหมวดข้างต้น'],
+
+            // Contracts — what is paid for rather than owned
+            ['name' => 'Software licence',  'name_th' => 'ซอฟต์แวร์ลิขสิทธิ์', 'icon' => 'Key',     'description' => 'ลิขสิทธิ์ซอฟต์แวร์ ทั้งแบบรายปีและซื้อขาด'],
+            ['name' => 'Maintenance',       'name_th' => 'บำรุงรักษา',         'icon' => 'Wrench',  'description' => 'สัญญาบำรุงรักษาและบริการหลังการขาย'],
+            ['name' => 'Equipment rental',  'name_th' => 'เช่าอุปกรณ์',        'icon' => 'Truck',   'description' => 'การเช่าเครื่องและอุปกรณ์'],
+            ['name' => 'Internet / WAN',    'name_th' => 'อินเทอร์เน็ต / WAN', 'icon' => 'Network', 'description' => 'อินเทอร์เน็ต วงจรเช่า และ MPLS'],
+            ['name' => 'Cloud service',     'name_th' => 'บริการคลาวด์',       'icon' => 'Cloud',   'description' => 'บริการคลาวด์ IaaS PaaS และ SaaS'],
+
+            // Stock — counted, issued and replenished
+            ['name' => 'Toner / Cartridge', 'name_th' => 'ตลับหมึก / Toner',   'icon' => 'Box',     'description' => 'ตลับหมึกอิงค์เจ็ตและผงหมึกเลเซอร์'],
+            ['name' => 'Computer parts',    'name_th' => 'อะไหล่คอมพิวเตอร์',  'icon' => 'Cpu',     'description' => 'แรม SSD ฮาร์ดดิสก์ พาวเวอร์ซัพพลาย และซีพียู'],
+            ['name' => 'Cable',             'name_th' => 'สายเคเบิล',          'icon' => 'Cable',   'description' => 'สายแลน HDMI DisplayPort USB และสายไฟ'],
+            ['name' => 'Accessories',       'name_th' => 'อุปกรณ์เสริม',       'icon' => 'Mouse',   'description' => 'เมาส์ คีย์บอร์ด ฮับ และอะแดปเตอร์'],
+            ['name' => 'Consumables',       'name_th' => 'วัสดุสิ้นเปลือง',    'icon' => 'Boxes',   'description' => 'แผ่นซีดี ดีวีดี แฟลชไดรฟ์ และกระดาษพิมพ์'],
         ];
 
         foreach ($categories as $c) {
             Category::updateOrCreate(
                 ['name' => $c['name']],
-                ['description' => $c['description']],
+                ['name_th' => $c['name_th'], 'icon' => $c['icon'], 'description' => $c['description']],
             );
         }
 
