@@ -72,7 +72,7 @@ class RolePermissionController extends Controller
     public function update(Request $request, string $role): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('system.manage_roles'), 403);
-        abort_if(UserRole::isSuperKey($role), 422, 'Administrator Template permissions cannot be changed.');
+        abort_if(UserRole::isSuperKey($role), 422, 'Administrator permissions cannot be changed.');
         $roleId = Role::where('key', $role)->value('id');
         abort_if($roleId === null, 404);
 
