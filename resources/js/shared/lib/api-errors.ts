@@ -38,3 +38,15 @@ export function toastDeleteError(error: unknown, t: (key: string) => string, bod
         useToastStore.getState().push(t('cd_error'), 'error', t('cd_error_title'));
     }
 }
+
+/**
+ * The short reason a 422 refusal carries in `message` (e.g. 'has_history'), with the
+ * rest of the body alongside it for the counts those messages quote. Undefined for any
+ * other failure, so a caller can fall back to its generic wording.
+ */
+export function refusalReason(error: unknown): { reason: string; body: Record<string, unknown> } | undefined {
+    const res = (error as { response?: { status?: number; data?: Record<string, unknown> } })?.response;
+    const message = res?.data?.message;
+    if (res?.status !== 422 || typeof message !== 'string') return undefined;
+    return { reason: message, body: res.data ?? {} };
+}

@@ -1346,4 +1346,30 @@ class AssetApiTest extends TestCase
         $this->deleteJson("/api/assets/{$asset->id}")->assertStatus(422);
         $this->assertDatabaseHas('assets', ['id' => $asset->id]);
     }
+
+    /**
+     * A device handed out and later returned is Ready again and contract-free, so it passed
+     * both checks above — and its custody trail used to cascade away with it. The refusal,
+     * and the restrictOnDelete FK behind it, is what keeps that history.
+     */
+    public function test_delete_blocked_when_asset_has_a_custody_trail(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'source' => 'purchased', 'contract_id' => null]);
+        $transfer = AssetTransfer::create([
+            'asset_id' => $asset->id,
+            'asset_tag' => $asset->asset_code,
+            'asset_model' => 'ThinkPad',
+            'kind' => 'handover',
+            'to_owner' => 'EMP-0001',
+        ]);
+
+        $this->deleteJson("/api/assets/{$asset->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'has_history')
+            ->assertJsonPath('transfers_count', 1);
+
+        $this->assertDatabaseHas('assets', ['id' => $asset->id]);
+        $this->assertDatabaseHas('asset_transfers', ['id' => $transfer->id]);
+    }
 }

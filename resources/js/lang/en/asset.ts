@@ -123,6 +123,7 @@ export const asset: Dict = {
     asset_delete_title: 'Delete asset',
     asset_delete_confirm:
         'Permanently delete this asset? This cannot be undone. Only allowed while it is Ready to deploy and not linked to a contract.',
+    asset_delete_has_history: 'This asset has {count} transfer records. Its custody trail must stay, so it cannot be deleted.',
     asset_recall_sub: 'Cancel this not-yet-accepted hand-over and return the asset to the pool.',
     asset_recall_hint: 'Pick which warehouse to store the asset back into.',
     asset_tab_tickets: 'Repair tickets',

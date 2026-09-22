@@ -9,6 +9,7 @@ export const stock: Dict = {
     stock_sku_auto: 'ระบบกำหนดให้อัตโนมัติ',
     stock_delete_item: 'ลบรายการสินค้า',
     stock_delete_confirm: 'การลบนี้ไม่สามารถย้อนกลับได้',
+    stock_delete_has_history: 'รายการนี้มีประวัติเคลื่อนไหวสต็อก {count} รายการ ลบไม่ได้เพราะต้องเก็บประวัติไว้',
     stock_delete_blocked: 'ลบได้เฉพาะรายการที่คงเหลือ 0 และมูลค่า 0 เท่านั้น',
     stock_item_name_auto: 'อัตโนมัติ',
     stock_item_name_auto_hint: 'สร้างจากยี่ห้อ + รุ่น',

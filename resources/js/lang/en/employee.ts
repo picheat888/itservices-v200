@@ -141,6 +141,7 @@ export const employee: Dict = {
     emp_del_block_access_owner: 'Owns an email group or file share',
     emp_del_block_requests: 'Has submitted requests',
     emp_del_block_approvals: 'Has approved requests',
+    emp_del_block_workflow_approver: 'Named as an approver on a workflow step',
     emp_del_block_subordinates: 'Has people reporting to them',
     emp_del_block_account_used: 'Their login account has been used',
     reset_password: 'Reset Password',

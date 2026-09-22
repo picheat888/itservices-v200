@@ -410,13 +410,22 @@ class AssetController extends Controller
      * (Ready to deploy) and NOT tied to a vendor contract may be removed. A
      * deployed / pending / written-off asset must be recalled or its write-off
      * cancelled first, and a contract-linked (rented) asset must be unlinked so
-     * deleting it can never orphan a live contract line.
+     * deleting it can never orphan a live contract line. An asset that has ever been
+     * handed over is refused too — its custody trail must not go with it.
      */
     public function destroy(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.delete'), 403);
         abort_unless($asset->status === AssetStatus::Ready, 422, 'Only an asset that is Ready to deploy can be deleted.');
         abort_if($asset->contract_id !== null, 422, 'This asset is linked to a contract - unlink it before deleting.');
+
+        // An asset that has been handed out even once owns a custody trail. The FK is
+        // restrictOnDelete, so the database would refuse the delete anyway; refusing here
+        // is what turns that refusal into a reason the dialog can show.
+        $transfers = $asset->transfers()->count();
+        if ($transfers > 0) {
+            return response()->json(['message' => 'has_history', 'transfers_count' => $transfers], 422);
+        }
 
         AuditLog::record('Deleted asset', "{$asset->asset_code} - {$asset->model?->name}");
         $asset->delete();

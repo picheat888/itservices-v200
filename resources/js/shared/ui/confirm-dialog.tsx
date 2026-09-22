@@ -43,6 +43,12 @@ export interface ConfirmOptions {
      * ignored (so a mutation's `mutateAsync` can be passed directly).
      */
     action?: () => unknown | Promise<unknown>;
+    /**
+     * Turns an error thrown by `action` into the reason shown in the dialog. Return
+     * undefined to fall back to the generic message. Kept as a callback so the module
+     * that knows what the server means also owns the wording (and its lang keys).
+     */
+    errorMessage?: (error: unknown) => React.ReactNode | undefined;
 }
 
 const VARIANT: Record<ConfirmVariant, { icon: LucideIcon; tint: string; fg: string; btn: 'destructive' | 'default' }> = {
@@ -70,7 +76,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     // Brief success state — shows a checkmark for a beat before auto-closing,
     // matching the SaveButton "spinner → check" pattern used elsewhere.
     const [done, setDone] = React.useState(false);
-    const [error, setError] = React.useState<string | null>(null);
+    const [error, setError] = React.useState<React.ReactNode>(null);
     const resolver = React.useRef<((v: boolean) => void) | null>(null);
     const cancelRef = React.useRef<HTMLButtonElement>(null);
 
@@ -117,8 +123,11 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
             setError(null);
             setLoading(true);
             await opts.action();
-        } catch {
-            setError(t('cd_error'));
+        } catch (e) {
+            // The caller gets first refusal on the wording: a server that refuses for a
+            // reason (a SKU with a ledger, an asset with a custody trail) can say so here
+            // instead of the dialog showing the same generic failure for every cause.
+            setError(opts.errorMessage?.(e) ?? t('cd_error'));
             setLoading(false);
             return;
         }

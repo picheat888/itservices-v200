@@ -5,6 +5,7 @@ import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { refusalReason } from '@/shared/lib/api-errors';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -337,8 +338,10 @@ export default function StockPage() {
 
     const { remove } = useStockItemMutations();
 
-    // Delete an empty SKU after a confirm. Only items with 0 on-hand and 0 value
-    // are deletable (the button is disabled otherwise); the server enforces this too.
+    // Delete an empty SKU after a confirm. Only items with 0 on-hand and 0 value are
+    // deletable (the button is disabled otherwise); the server enforces this too, and
+    // refuses again for a SKU that has ever moved — the dialog stays open and says so
+    // rather than failing with the generic message.
     const confirmDelete = async (i: StockItem) => {
         await confirm({
             variant: 'danger',
@@ -346,6 +349,11 @@ export default function StockPage() {
             description: t('stock_delete_confirm'),
             entity: { name: i.name, sub: i.sku },
             action: () => remove.mutateAsync(i.id),
+            errorMessage: (e) => {
+                const refusal = refusalReason(e);
+                if (refusal?.reason !== 'has_history') return undefined;
+                return t('stock_delete_has_history').replace('{count}', String(refusal.body.movements_count ?? 0));
+            },
         });
     };
 

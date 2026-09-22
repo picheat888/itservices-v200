@@ -43,6 +43,9 @@ return new class extends Migration
             $table->foreign('warranty_type_id')->references('id')->on('warranty_types')->restrictOnDelete();
         });
 
+        // The ledger. stock_item_id is restrictOnDelete: once a SKU has moved even once,
+        // it can no longer be deleted — the ledger (and the lots, serials and serial events
+        // that hang off it) is the audit trail, and a delete must never take it silently.
         Schema::create('stock_movements', function (Blueprint $table) {
             $table->id();
             $table->string('doc_no', 30)->nullable()->unique();
@@ -58,7 +61,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->dateTime('moved_at');
             $table->timestamps();
-            $table->foreign('stock_item_id')->references('id')->on('stock_items')->cascadeOnDelete();
+            $table->foreign('stock_item_id')->references('id')->on('stock_items')->restrictOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
 
@@ -148,6 +151,12 @@ return new class extends Migration
         Schema::create('stock_counts', function (Blueprint $table) {
             $table->id();
             $table->string('reference')->unique();
+            // The filter the session was opened with, kept as text on purpose — not a foreign
+            // key that was forgotten. StockCountService::open() resolves these names to items
+            // once, inside the same transaction that writes the lines, and nothing reads them
+            // as a lookup afterwards. So the sheet keeps naming the warehouse and category as
+            // they read on the day it was counted, the same way asset_transfers keeps the tag
+            // and model of the device it moved.
             $table->string('warehouse')->nullable();
             $table->string('category')->nullable();
             $table->string('status')->default('draft');

@@ -1,6 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { refusalReason } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Asset } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -124,6 +125,8 @@ export function AssetDetailDrawer({
 
     // Permanently delete an asset — guarded to Ready + not contract-linked (mirrors the
     // server rule in AssetController@destroy). Irreversible, so it uses the danger variant.
+    // An asset that has ever been handed over is refused by the server; the dialog stays
+    // open and names that reason instead of showing the generic failure.
     const askDelete = async (target: Asset) => {
         await confirm({
             variant: 'danger',
@@ -134,6 +137,11 @@ export function AssetDetailDrawer({
             action: async () => {
                 await remove.mutateAsync(target.id);
                 onClose();
+            },
+            errorMessage: (e) => {
+                const refusal = refusalReason(e);
+                if (refusal?.reason !== 'has_history') return undefined;
+                return t('asset_delete_has_history').replace('{count}', String(refusal.body.transfers_count ?? 0));
             },
         });
     };

@@ -345,13 +345,22 @@ class StockItemController extends Controller
 
     /** Delete a stock item (requires stock.delete). Only an empty SKU — zero
      *  on-hand and zero FIFO value — may be removed, so stock or lot value is
-     *  never lost by a delete. The UI mirrors this; this is the safety net. */
+     *  never lost by a delete — and only one that has never moved, so deleting can never
+     *  take a ledger with it. The UI mirrors this; this is the safety net. */
     public function destroy(Request $request, StockItem $stockItem): JsonResponse
     {
         abort_unless((bool) ($request->user()?->isSuper() || $request->user()?->hasPermission('stock.delete')), 403);
 
         if ($stockItem->current_stock !== 0 || $stockItem->stockValue() > 0) {
             return response()->json(['message' => 'Cannot delete: item still has stock or value.'], 422);
+        }
+
+        // A SKU that has ever moved carries a ledger — and the lots, serials and serial
+        // events hanging off it. The FK is restrictOnDelete, so the database would refuse
+        // this anyway; refusing here is what turns that into a reason the UI can show.
+        $movements = $stockItem->movements()->count();
+        if ($movements > 0) {
+            return response()->json(['message' => 'has_history', 'movements_count' => $movements], 422);
         }
 
         AuditLog::record('Deleted stock item', "{$stockItem->sku} - {$stockItem->name}");

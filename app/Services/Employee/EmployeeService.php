@@ -163,9 +163,10 @@ class EmployeeService
      *
      * Deleting is only ever for "this person was typed in by mistake", never for a leaver —
      * a leaver is resigned, because their name has to keep reading correctly on every ticket,
-     * asset and request they touched. That is also why this list is long and cautious:
-     * `tickets.requester_id` and the access tables cascade, so a delete that slipped past a
-     * missing check would take real history with it and say nothing.
+     * asset and request they touched. That is also why this list is long and cautious: it is
+     * the layer that explains WHY a delete is refused. `tickets.requester_id`, the access
+     * tables and workflow_step_approvers are restrictOnDelete underneath it, so a check that
+     * went missing here surfaces as a database error rather than as silent history loss.
      *
      * @return list<string>
      */
@@ -207,6 +208,12 @@ class EmployeeService
             ->orWhereJsonContains('approver_employee_ids', (int) $employee->id)
             ->exists()) {
             $blockers[] = 'approvals';
+        }
+        // Named on a workflow step (as its approver or as the deputy beside them). Letting
+        // this one through would leave the step with nobody to ask and say nothing about it,
+        // so the route has to be pointed at somebody else before the record can go.
+        if (DB::table('workflow_step_approvers')->where('employee_id', $employee->id)->exists()) {
+            $blockers[] = 'workflow_approver';
         }
         if ($employee->subordinates()->exists()) {
             $blockers[] = 'subordinates';
