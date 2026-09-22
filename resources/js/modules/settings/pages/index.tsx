@@ -1079,7 +1079,14 @@ function SecurityTab() {
     const qc = useQueryClient();
     const { data } = useQuery({ queryKey: SECURITY_KEY, queryFn: settingsApi.getSecurity });
 
-    const [form, setForm] = useState<SecuritySettings>({ session_timeout_minutes: 0, password_expiry_days: 0 });
+    const [form, setForm] = useState<SecuritySettings>({
+        session_timeout_minutes: 0,
+        password_expiry_days: 0,
+        email_log_body_days: 0,
+        email_log_days: 0,
+        audit_log_days: 0,
+        notification_days: 0,
+    });
     const [saved, setSaved] = useState(false);
 
     useEffect(() => {
@@ -1099,9 +1106,9 @@ function SecurityTab() {
         setSaved(false);
     };
 
-    // Save is enabled only once a policy value differs from what was loaded.
-    const dirty =
-        !!data && (form.session_timeout_minutes !== data.session_timeout_minutes || form.password_expiry_days !== data.password_expiry_days);
+    // Save is enabled only once a policy value differs from what was loaded. Comparing every
+    // key rather than naming two of them, so a window added later cannot be left out of this.
+    const dirty = !!data && (Object.keys(data) as (keyof SecuritySettings)[]).some((k) => form[k] !== data[k]);
 
     return (
         <div className="max-w-xl">
@@ -1128,6 +1135,54 @@ function SecurityTab() {
                     defaultValue={90}
                     unit={t('unit_days')}
                     onChange={(v) => setVal('password_expiry_days', v)}
+                />
+            </div>
+
+            <div className="mt-8 mb-5">
+                <h2 className="text-lg font-semibold">{t('set_retention')}</h2>
+                <p className="text-muted-foreground text-sm">{t('set_retention_desc')}</p>
+            </div>
+
+            <div className="border-border border-t">
+                <SecurityPolicyRow
+                    label={t('set_email_body_days')}
+                    sub={t('set_email_body_days_help')}
+                    value={form.email_log_body_days}
+                    presets={[30, 60, 90, 180, 365]}
+                    defaultValue={90}
+                    unit={t('unit_days')}
+                    offLabel={t('policy_keep_forever')}
+                    onChange={(v) => setVal('email_log_body_days', v)}
+                />
+                <SecurityPolicyRow
+                    label={t('set_email_log_days')}
+                    sub={t('set_email_log_days_help')}
+                    value={form.email_log_days}
+                    presets={[90, 180, 365, 730, 1095]}
+                    defaultValue={730}
+                    unit={t('unit_days')}
+                    offLabel={t('policy_keep_forever')}
+                    onChange={(v) => setVal('email_log_days', v)}
+                />
+                <SecurityPolicyRow
+                    label={t('set_audit_log_days')}
+                    sub={t('set_audit_log_days_help')}
+                    value={form.audit_log_days}
+                    presets={[365, 730, 1095, 1825, 2555]}
+                    defaultValue={1825}
+                    unit={t('unit_days')}
+                    offLabel={t('policy_keep_forever')}
+                    onChange={(v) => setVal('audit_log_days', v)}
+                />
+                <SecurityPolicyRow
+                    label={t('set_notification_days')}
+                    sub={t('set_notification_days_help')}
+                    value={form.notification_days}
+                    presets={[30, 60, 90, 180, 365]}
+                    defaultValue={90}
+                    unit={t('unit_days')}
+                    offLabel={t('policy_keep_forever')}
+                    onChange={(v) => setVal('notification_days', v)}
                 />
             </div>
 
@@ -1162,6 +1217,10 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
  * an on/off switch plus a preset-value dropdown on the right (only shown when
  * the policy is enabled). A value of 0 means the rule is off; toggling on
  * restores `defaultValue`.
+ *
+ * `offLabel` is what 0 reads as. It defaults to "Off", which is right for a rule that
+ * stops being enforced — but a retention window switched off means the rows are kept
+ * forever, and "Off" next to a log that grows without bound says the opposite.
  */
 function SecurityPolicyRow({
     label,
@@ -1170,6 +1229,7 @@ function SecurityPolicyRow({
     presets,
     defaultValue,
     unit,
+    offLabel,
     onChange,
 }: {
     label: string;
@@ -1178,6 +1238,7 @@ function SecurityPolicyRow({
     presets: number[];
     defaultValue: number;
     unit: string;
+    offLabel?: string;
     onChange: (v: number) => void;
 }) {
     const t = useT();
@@ -1206,7 +1267,7 @@ function SecurityPolicyRow({
                         </SelectContent>
                     </Select>
                 ) : (
-                    <span className="text-muted-foreground text-xs">{t('policy_off')}</span>
+                    <span className="text-muted-foreground text-xs">{offLabel ?? t('policy_off')}</span>
                 )}
                 <Switch checked={on} onChange={(next) => onChange(next ? defaultValue : 0)} />
             </div>

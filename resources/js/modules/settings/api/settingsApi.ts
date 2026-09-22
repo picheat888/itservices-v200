@@ -114,6 +114,11 @@ export interface DisplayPayload {
 export interface SecuritySettings {
     session_timeout_minutes: number;
     password_expiry_days: number;
+    // Data-retention windows the nightly prune reads. 0 here reads as "keep forever".
+    email_log_body_days: number;
+    email_log_days: number;
+    audit_log_days: number;
+    notification_days: number;
 }
 
 export interface MailSettingsData {

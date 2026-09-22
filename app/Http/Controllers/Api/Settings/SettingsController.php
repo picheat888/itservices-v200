@@ -16,6 +16,7 @@ use App\Models\Settings\SlaTarget;
 use App\Models\Ticket\Ticket;
 use App\Services\Email\EmailNotificationService;
 use App\Services\Employee\EmployeeService;
+use App\Services\Settings\LogRetentionService;
 use App\Support\TicketSla;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -347,13 +348,24 @@ class SettingsController extends Controller
         return response()->json(['data' => $this->securityPayload(), 'message' => 'success']);
     }
 
-    /** Updates the security policy (session timeout + password expiry). Gated by route middleware permission:settings.security. */
+    /**
+     * Updates the security policy — session timeout, password expiry, and the data-retention
+     * windows the nightly prune reads. Gated by route middleware permission:settings.security.
+     */
     public function updateSecurity(Request $request): JsonResponse
     {
         $data = $request->validate([
-            // 0 disables the respective policy.
+            // 0 disables the respective policy. For the retention windows below that reads
+            // as "keep forever", which is how audit logs ship.
             'session_timeout_minutes' => ['required', 'integer', 'min:0', 'max:1440'],
             'password_expiry_days' => ['required', 'integer', 'min:0', 'max:3650'],
+            // `sometimes`, unlike the two above: the retention windows arrived later, and a
+            // caller that sends only the authentication policy must keep working rather than
+            // being made to resend settings it has nothing to say about.
+            'email_log_body_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'email_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'audit_log_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
+            'notification_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
         ]);
 
         foreach ($data as $key => $value) {
@@ -365,13 +377,21 @@ class SettingsController extends Controller
     }
 
     /**
-     * @return array{session_timeout_minutes: int, password_expiry_days: int}
+     * @return array{session_timeout_minutes: int, password_expiry_days: int, email_log_body_days: int, email_log_days: int, audit_log_days: int, notification_days: int}
      */
     private function securityPayload(): array
     {
+        $retention = app(LogRetentionService::class);
+
         return [
             'session_timeout_minutes' => (int) AppSetting::get('session_timeout_minutes', '0'),
             'password_expiry_days' => (int) AppSetting::get('password_expiry_days', '0'),
+            // Defaults live on the service that enforces them, so the screen and the nightly
+            // sweep can never disagree about what an unsaved install is doing.
+            'email_log_body_days' => $retention->days('email_log_body_days'),
+            'email_log_days' => $retention->days('email_log_days'),
+            'audit_log_days' => $retention->days('audit_log_days'),
+            'notification_days' => $retention->days('notification_days'),
         ];
     }
 

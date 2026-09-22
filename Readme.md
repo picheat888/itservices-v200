@@ -3381,3 +3381,80 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 `RequestAttachmentTest` 11 ตัว — catalog บอกว่าบริการไหนบังคับ · CCTV ไม่แนบ → 422 และไม่มีคำขอเกิดขึ้น · แนบแล้วได้ทั้งแถวและไฟล์บนดิสก์ · บริการอื่นไม่แนบก็ส่งได้ · เพิ่ม/ลบได้ตอนยังไม่มีใครเซ็น · เซ็นแล้วทั้งเพิ่มและลบโดน 403 · ผู้อนุมัติแก้ไฟล์ไม่ได้ · ผู้อนุมัติดาวน์โหลดได้ คนนอกโดน 403 · เกิน 5 ไฟล์ → 422 · `.exe` → 422
 `RequestDepartmentStepTest` / `RequestNamedApproversTest` แก้ fixture ให้ยื่น CCTV พร้อมไฟล์ (กฎใหม่บังคับจริง — เทสต์เดิม 20 ตัวแดงก่อนแก้)
 **suite = 1,307 passed / 5,566 assertions** · tsc 0 · eslint 0 · prettier · pint passed · build ผ่าน · migration รันบน DB จริงแล้ว
+
+### DB: ลบแล้วประวัติหาย — ปิดสามทางที่เปิดอยู่ (2026-09-21)
+
+ตรวจ FK ทั้ง 84 เส้นใน DB จริงแล้วพบว่า `cascadeOnDelete` ถูกใช้กับ "ลูกแท้" (attachments, ticket_updates, role_permissions) ปนกับ "ประวัติ" ซึ่งไม่เหมือนกัน — ลูกแท้หายไปพร้อมพ่อได้ ประวัติหายไม่ได้ · สามเส้นที่หลุดออกมา **ทำได้ผ่าน UI จริง** ไม่ใช่ทฤษฎี:
+
+| จุด | ลบผ่านได้เพราะ | สิ่งที่หายเงียบ ๆ |
+|---|---|---|
+| `stock_movements.stock_item_id` | `destroy` ปล่อยผ่านเมื่อ `current_stock = 0` + มูลค่า 0 — SKU ที่รับเข้าแล้วเบิกออกหมดเข้าเงื่อนไขพอดี | ledger ทั้งเส้น + lots + serials + serial events |
+| `asset_transfers.asset_id` | `destroy` ปล่อยผ่านเมื่อ status = Ready — เครื่องที่แจกแล้วรับคืนก็กลับมา Ready | custody trail ทั้งหมด |
+| `workflow_step_approvers.employee_id` | `deletionBlockers()` ไม่เคยเช็คตารางนี้ (ฟีเจอร์ระบุตัวบุคคลเพิ่งเพิ่ม) | ชื่อผู้อนุมัติหลุดจาก step → route กลายเป็นเส้นกลวง |
+
+**ปิดที่ "พ่อ" เส้นเดียวพอ** — ไม่ต้องไล่แก้ทั้ง 11 เส้นในสาย stock: เมื่อลบ `stock_items` ไม่ได้แล้ว lots / serials / serial events ที่ห้อยอยู่ก็ปลอดภัยตามไปเอง · `stock_balances` กับ `stock_alert_logs` ยัง cascade ต่อโดยตั้งใจ — เป็นค่า derived ไม่ใช่บันทึก
+
+**พ่วง net อีกสองเส้น** `tickets.requester_id` และ `access_memberships.employee_id` — สองอันนี้ `deletionBlockers()` กันอยู่แล้วและกันได้จริง แต่ comment ในโค้ดเองเขียนว่า "กลัวเส้นนี้" มาตลอด ตอนนี้ชั้น DB กันด้วย
+
+**แต่ RESTRICT เฉย ๆ ทำให้ UX แย่ลง** — `confirm-dialog.tsx` เดิม `catch` แล้วทิ้ง error แสดง `t('cd_error')` เสมอ ผู้ใช้จะเห็นแค่ "เกิดข้อผิดพลาด" · เพิ่ม option `errorMessage?: (error) => ReactNode | undefined` ให้ผู้เรียกแปลเหตุผลเอง (คีย์ภาษาอยู่กับโมดูล ไม่ใช่ที่ `shared/`) แล้วให้ `StockItemController` / `AssetController` ตอบ 422 `has_history` + จำนวนรายการ กลับไป · dialog จึงค้างอยู่พร้อมบรรทัด "มีประวัติเคลื่อนไหว 12 รายการ ลบไม่ได้" แทนข้อความกลาง · helper `refusalReason()` ใน `shared/lib/api-errors.ts` อ่าน 422 ที่ส่ง key มาใน `message`
+
+**ลำดับสำคัญ** — guard ที่ app มาก่อน FK เสมอ ถ้าเปลี่ยน FK ก่อนผู้ใช้จะเจอ error ดิบแทนเหตุผลที่อ่านรู้เรื่อง
+
+**วิธีลง** — เพราะ migration เพิ่งยุบเป็นชุด `0001_01_01_*` และ DB ยังไม่มีข้อมูลธุรกิจ จึงแก้ไฟล์ migration เดิม 5 ไฟล์แล้วยิง `ALTER TABLE` 5 คำสั่งกับ DB ที่มีอยู่ ผลลัพธ์เท่ากับ fresh install ทุกประการ โดยไม่ต้อง `migrate:fresh` (ซึ่งจะทำให้เทมเพลตอีเมลที่แก้มือถูก `EmailTemplateSeeder` เขียนทับ เพราะมันใช้ `updateOrCreate`)
+
+### Tests / Verification
+
+`StockItemTest::test_cannot_delete_item_that_has_ever_moved` · `AssetApiTest::test_delete_blocked_when_asset_has_a_custody_trail` · `EmployeeDeleteTest::test_an_employee_named_on_a_workflow_step_is_refused` — ทั้งสามยืนยันทั้ง 422 ที่มีเหตุผล และว่าแถวประวัติยังอยู่ครบ
+**suite = 1,329 passed / 5,641 assertions** · tsc 0 · pint passed · build ผ่าน · ALTER รันบน DB จริงแล้ว (ยืนยัน `DELETE_RULE = RESTRICT` ครบ 5 เส้น)
+
+### DB: อีเมลพนักงานเป็นของคนเดียว — unique ที่ชั้น DB (2026-09-21)
+
+`employees.email` กับ `employees.username` ไม่มี unique index มาตลอด · ตรวจแล้วพบว่า **ชั้น app กันครบอยู่แล้ว** — `EmployeeImportService` เช็ค 3 ทาง (ซ้ำกับ employee เดิม · ซ้ำกับ `users.email` · ซ้ำกันเองในไฟล์ เทียบแบบ `strtolower()`) และ `StoreEmployeeRequest` มี `Rule::unique` + closure เช็คข้ามตาราง `users` ส่วน `username` ยิ่งไม่ใช่ทางเข้า เพราะ FormRequest จงใจไม่รับคอลัมน์นี้เลย มันเป็นกระจกเงาของ `users.username` ที่ unique อยู่แล้ว
+
+สิ่งที่ยังเหลือจึงไม่ใช่ "รูที่เปิดอยู่" แต่เป็น **net**: validate แล้วค่อย insert ไม่ใช่ atomic (สอง import พร้อมกันผ่านด่านได้ทั้งคู่) และไม่มีอะไรบังคับว่าโค้ดในอนาคตต้องเดินผ่าน FormRequest · จังหวะนี้คือจังหวะที่ถูกที่สุด เพราะตารางยังว่าง — ถ้ารอจนมีข้อมูลจริงแล้วเจอซ้ำ `ALTER` จะล้มทันที
+
+**เลือก unique ธรรมดา ไม่ใช่ unique เฉพาะคน active** — ทางเลือกคือ generated column `IF(status='active', email, NULL)` เพื่อให้รีไซเคิลอีเมลของคนที่ลาออกได้ทันที แต่แลกกับคอลัมน์ที่ต้องอธิบายและ `Rule::unique` ที่จะเข้มกว่า DB จนสับสน · วิธีที่เลือกคือถ้าจะใช้อีเมลซ้ำ ให้ล้างช่องอีเมลของคนเก่าก่อน — ตรวจย้อนหลังได้ชัดว่าใครถือ address นั้นอยู่ "ตอนนี้"
+
+**`NULL` ซ้ำได้ `''` ซ้ำไม่ได้** — คือกับดักของ unique index บนคอลัมน์ที่ปล่อยว่างได้ พนักงานที่ไม่มีอีเมลบริษัทมีเยอะ ถ้าทางไหนเขียน `''` เข้ามาคนที่สองจะชนทันที · ใส่ mutator `setEmailAttribute` / `setUsernameAttribute` ที่ Model แปลง blank → `null` (และ trim) เพื่อให้ข้อนี้จริงกับทุกทางเขียน ไม่ต้องหวังว่าทุก caller จะจำได้ · collation เป็น `utf8mb4_unicode_ci` อยู่แล้ว `A@x.co` กับ `a@x.co` จึงชนกันเองโดยไม่ต้องทำอะไรเพิ่ม
+
+### Tests / Verification
+
+`EmployeeApiTest::test_the_database_itself_refuses_a_duplicate_email` (คาด `QueryException` จากการเขียนที่ไม่ผ่านฟอร์ม) · `::test_employees_without_an_email_do_not_collide` (`''` · ไม่ส่งมา · `'   '` → `NULL` ทั้งสามและอยู่ร่วมกันได้)
+**suite = 1,331 passed / 5,645 assertions** · pint passed · ALTER รันบน DB จริงแล้ว (`employees_email_unique` · `employees_username_unique`)
+
+### DB: เก็บกวาดหลังตรวจสคีมา — สองจุดที่ "ดูผิด" (2026-09-21)
+
+ปิดท้ายการตรวจ DB รอบนี้ด้วยสองอย่างที่ไม่ใช่บั๊ก แต่ทำให้คนอ่านสคีมาเข้าใจผิดได้ (และทำให้ผมเองรายงานผิดมาแล้ว)
+
+**`stock_counts.warehouse` / `.category` ไม่ใช่ FK ที่ลืมใส่** — สองคอลัมน์นี้คือตัวกรองที่ใช้ตอนเปิดใบนับ · `StockCountService::open()` resolve ชื่อ → items **ครั้งเดียว ใน transaction เดียวกับที่เขียน `stock_count_lines`** และอีก 3 action ที่เหลือ (`saveCounts` · `commit` · `cancel`) ทำงานกับไลน์ที่ materialise แล้วล้วน ๆ ไม่มีที่ไหน query ด้วยชื่ออีก · เปลี่ยนชื่อคลังทีหลังจึงไม่กระทบใบที่เปิดค้าง และใบเก่ายังอ่านชื่อแบบวันที่นับ — หลักการเดียวกับ `asset_transfers.asset_tag` · ใส่ comment กำกับไว้แล้วเพราะเดิมไม่มี ต่างจาก `asset_tables` ที่เขียนเจตนาไว้ชัด
+
+**`rp_allowed_idx` ถูกถอด** — index บน `role_permissions.allowed` (boolean, cardinality 2) · วัดด้วย `EXPLAIN` ทั้งสอง query ที่อ่านคอลัมน์นี้: `User::permissions()` (`role_id` + `allowed`) เลือก `role_permissions_role_id_permission_unique` เพราะมี `role_id` นำ ส่วนหน้า matrix (`allowed` อย่างเดียว ได้ครึ่งตาราง) ให้ `key: NULL` — optimizer เห็น index แล้วทิ้ง เลือกสแกนแทน · ไม่มีทางไหนใช้ เขียน comment แทนไว้ว่าทำไมถึงไม่ควรใส่กลับ
+
+**ส่วน `service_requests` ปล่อยไว้ตามเดิม** — 18 index ฟังดูเยอะ แต่ 11 ตัวเป็น index ที่ InnoDB บังคับให้มีบนคอลัมน์ FK (ลบแล้วได้ error 1553) · และ `status` เดี่ยวที่ดูซ้ำกับ `(status, type)` นั้น `EXPLAIN` บอกว่า optimizer **เลือกตัวเดี่ยว** เพราะ key สั้นกว่า — ลบทิ้งคือการแลก ไม่ใช่การเก็บขยะ · เรื่อง index ของตารางนี้ควรรอวัดจาก slow log ตอนมีข้อมูลจริง ไม่ใช่เดาจากรูปร่างสคีมา
+
+### Tests / Verification
+
+ไม่มีเทสต์ใหม่ — ทั้งสองอย่างไม่เปลี่ยนพฤติกรรม · `StockCountTest` 10 ตัว · `PermissionMatrixTest` + `EmployeePermissionGatingTest` 14 ตัวผ่าน · ยืนยันด้วย `EXPLAIN` ซ้ำหลัง `DROP INDEX` ว่า query สิทธิ์ยังเลือก unique index ตัวเดิม
+**pint passed** · `DROP INDEX` รันบน DB จริงแล้ว
+
+### System: ระยะเวลาเก็บ log — กวาดล้างทุกคืน ตั้งค่าได้เอง (2026-09-22)
+
+สามตารางโตไปเรื่อย ๆ โดยไม่มีอะไรลดมันเลย: `email_logs` (เก็บเนื้ออีเมลทุกฉบับ) · `audit_logs` · `notifications` · ทั้งสามไม่ใช่ข้อมูลธุรกิจ แต่เป็น "บันทึกว่าระบบทำอะไรไป" คำถามจึงไม่ใช่ว่าเก็บไหม แต่คือเก็บนานแค่ไหน — และคำตอบเป็นของผู้ดูแลระบบ ไม่ใช่ของโค้ด
+
+**ล้างเนื้อก่อน ลบแถวทีหลัง** — `body_html` คือน้ำหนักเกือบทั้งหมด ส่วนที่เหลือของแถว (ใคร เมื่อไร เทมเพลตไหน สำเร็จหรือไม่) หนักไม่กี่ร้อยไบต์ และเป็นตัวที่ `EmailTemplateController` ใช้นับ `sent_total` / `failed_total` · เนื้อจึงหายที่ 90 วัน แต่แถวอยู่ถึง 730 วัน — ตารางหยุดโต สถิติยังตรง และ log ยังตอบได้ว่า "ส่งไปไหม" นานหลังจากที่มันเลิกตอบว่า "ส่งว่าอะไร" · **ไม่ต้องแก้ frontend เลยสักบรรทัด** เพราะ `EmailLogController::show()` เขียนรองรับ `body_html` ที่เป็น null ไว้อยู่แล้ว (ขึ้นว่า "ไม่ได้บันทึกเนื้อหาไว้" ไม่ใช่กรอบเปล่า)
+
+**`0` = เก็บตลอดไป** ใช้ convention เดียวกับ session timeout / password expiry ที่อยู่หน้าเดียวกัน · ค่าเริ่มต้น: เนื้ออีเมล 90 วัน · แถวอีเมล 730 วัน · **audit log = 0** · แจ้งเตือนที่อ่านแล้ว 90 วัน · audit ตั้ง 0 โดยตั้งใจ — การล้าง audit trail คือการตัดสินใจว่าองค์กรต้องพิสูจน์อะไรได้บ้างในอนาคต ไม่ใช่สิ่งที่ค่า default ในโค้ดควรตัดสินแทน
+
+**แจ้งเตือนที่ยังไม่อ่านไม่ถูกลบ** ไม่ว่าจะเก่าแค่ไหน — มันยังเป็นกล่องข้อความของใครบางคนอยู่
+
+**index ต้องมาก่อน ไม่งั้นกวาดทีสแกนทั้งตาราง** — `email_logs` มี `(status, created_at)` ซึ่ง prune ใช้ไม่ได้เพราะ `status` นำ → เพิ่ม `email_logs_created_at_index` · `notifications` มีแค่ `(notifiable_type, notifiable_id)` → เพิ่ม `(read_at, created_at)` โดยให้ `read_at` นำเพราะเป็นครึ่งที่ selective · `audit_logs` มี `audit_created_at_idx` อยู่แล้ว
+
+**ลบเป็น chunk ละ 1,000 แถว** ไม่ใช่ statement เดียว — DELETE ที่กินข้อมูลทั้งปีถือ lock นานเท่าที่มันทำงาน และตัวนี้รันตอน 02:00 บน DB ตัวเดียวกับที่กะกลางคืนใช้ · เขียน audit หนึ่งบรรทัดต่อรอบ **เฉพาะเมื่อมีอะไรถูกลบจริง** — ถ้าเขียนทุกคืนจะกลายเป็น 365 แถว/ปี ในตารางที่คำสั่งนี้มีไว้ทำให้เล็กลง
+
+**ไฟล์:** `LogRetentionService` (ตรรกะ + `DEFAULTS` ที่หน้าจอกับ sweep อ่านร่วมกัน จะได้ไม่ขัดกัน) · `PruneLogs` (command บาง) · `Schedule::command('logs:prune')->dailyAt('02:00')` · `SettingsController::updateSecurity()` รับ 4 คีย์ใหม่แบบ `sometimes` (client เก่าที่ส่งมาแค่ 2 ฟิลด์ยังทำงานได้) · หน้า Settings → Security เพิ่มกลุ่ม "ระยะเวลาเก็บข้อมูล" ใช้ `SecurityPolicyRow` ตัวเดิม เพิ่ม prop `offLabel` เพราะ 0 ในบริบทนี้อ่านว่า "เก็บตลอดไป" ไม่ใช่ "ปิด"
+
+### Tests / Verification
+
+`LogRetentionTest` 8 ตัว — เนื้อหาย/แถวอยู่ · สถิติ sent/failed ไม่เปลี่ยนหลังล้างเนื้อ · แถวที่เกิน window ถูกลบ · แจ้งเตือนที่ยังไม่อ่านรอด แม้อายุ 400 วัน · audit ไม่ถูกแตะเมื่อไม่ได้ตั้ง window · ตั้ง 0 ทุกช่องแล้วไม่มีอะไรหาย และไม่มี audit line ถูกเขียน · อ่าน/บันทึกค่าผ่าน API ได้ · ส่งมาแค่ 2 ฟิลด์แล้ว window เดิมไม่ถูกล้าง
+**suite = 1,341 passed** · tsc 0 · pint passed · build ผ่าน · `ALTER` เพิ่ม 2 index บน DB จริงแล้ว
+*(`MasterDataSeedTest` 1 ตัวแดงอยู่ เป็นงาน vendor/seeder ที่กำลังทำค้างในอีก session ไม่เกี่ยวกับการแก้ชุดนี้)*
