@@ -1,0 +1,95 @@
+/**
+ * โมดูลรายงาน (ศูนย์รายงาน + รายงาน Ticket & SLA) คำว่า "SLA", "Excel", "PDF" ไม่แปล
+ */
+import type { Dict } from '@/lang/types';
+
+export const report: Dict = {
+    // pages/index.tsx — Report Center
+    rep_center_title: 'ศูนย์รายงาน',
+    rep_center_sub: 'รายงานของทุกโมดูลรวมไว้ที่เดียว เปิดดูบนเว็บ กรองข้อมูล แล้ว Export เป็น Excel หรือ PDF เห็นเฉพาะรายงานของโมดูลที่คุณมีสิทธิ์',
+    rep_search_placeholder: 'ค้นหารายงาน เช่น SLA',
+    rep_filter_all: 'ทั้งหมด',
+    rep_domain_tickets: 'Ticket',
+    rep_count_reports: '{n} รายงาน',
+    rep_empty_title: 'ยังไม่มีรายงานที่เปิดได้',
+    rep_empty_sub: 'บทบาทของคุณยังไม่มีสิทธิ์ดูรายงาน ติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์ของโมดูล',
+    rep_no_match: 'ไม่พบรายงานที่ตรงกับคำค้น',
+    rep_tickets_overview_title: 'ภาพรวม Ticket & SLA',
+    rep_tickets_overview_desc: 'ปริมาณงาน เวลาแก้ไข และการปิดงานตาม SLA แยกตามหมวด ความสำคัญ และแผนก',
+
+    // pages/ticket-overview.tsx — header, KPI tiles
+    rep_export: 'Export',
+    rep_kpi_total: 'Ticket ทั้งหมด',
+    rep_kpi_completed: 'ปิดสำเร็จ',
+    rep_kpi_canceled: 'ยกเลิก {n}',
+    rep_kpi_sla: 'ปิดตาม SLA',
+    rep_kpi_goal: 'เป้า {n}%',
+    rep_kpi_median: 'เวลาแก้ไข (มัธยฐาน)',
+    rep_kpi_p90: 'P90 = {n} ชม.',
+    rep_kpi_backlog: 'ค้างอยู่ตอนนี้',
+    rep_kpi_breached: 'เกิน SLA {n}',
+    rep_kpi_backlog_split: 'เปิด {a} · กำลังทำ {b}',
+    rep_vs_previous: 'จาก {n} ในช่วงก่อนหน้า',
+    rep_hours: 'ชม.',
+    rep_generated_at: 'ข้อมูล ณ {t}',
+
+    // pages/ticket-overview.tsx — charts and breakdowns
+    rep_weekly_title: 'Ticket รายสัปดาห์',
+    rep_weekly_opened: 'เปิดใหม่',
+    rep_weekly_closed: 'ปิดแล้ว',
+    rep_weekly_empty: 'ไม่มี Ticket ในช่วงนี้',
+    rep_sla_priority_title: 'ปิดตาม SLA แยกความสำคัญ',
+    rep_sla_priority_sub: 'เส้น = เป้า',
+    rep_aging_title: 'อายุ Ticket ที่ค้าง',
+    rep_aging_d1: 'ไม่เกิน 1 วัน',
+    rep_aging_d3: '1–3 วัน',
+    rep_aging_d7: '3–7 วัน',
+    rep_aging_older: 'เกิน 7 วัน',
+    rep_by_category: 'แยกตามหมวด',
+    rep_by_department: 'แผนกที่แจ้งมากที่สุด',
+    rep_by_assignee: 'ผลงานเจ้าหน้าที่ IT',
+    rep_col_department: 'แผนก',
+    rep_col_tickets: 'Ticket',
+    rep_col_sla: 'SLA',
+    rep_col_staff: 'ผู้รับผิดชอบ',
+    rep_col_closed: 'ปิด',
+    rep_col_time: 'เวลา',
+    rep_no_department: 'ไม่ระบุแผนก',
+    rep_no_data: 'ไม่มีข้อมูล',
+
+    // components/ticket-report-filter-bar.tsx — filters
+    rep_f_from: 'ตั้งแต่',
+    rep_f_to: 'ถึง',
+    rep_f_category: 'หมวด',
+    rep_f_priority: 'ความสำคัญ',
+    rep_f_department: 'แผนก',
+    rep_f_assignee: 'ผู้รับผิดชอบ',
+    rep_f_any: 'ทั้งหมด',
+    rep_f_n_selected: '{n} หมวด',
+    rep_f_clear: 'ล้างทั้งหมด',
+
+    // components/ticket-report-table.tsx — ticket rows
+    rep_rows_title: 'รายการ Ticket',
+    rep_col_no: 'เลขที่',
+    rep_col_subject: 'เรื่อง',
+    rep_col_category: 'หมวด',
+    rep_col_priority: 'ความสำคัญ',
+    rep_col_status: 'สถานะ',
+    rep_col_assignee: 'ผู้รับผิดชอบ',
+    rep_col_resolve: 'เวลาแก้ไข',
+    rep_sla_met: 'ตรง SLA',
+    rep_sla_breached: 'เกิน SLA',
+
+    // components/export-report-dialog.tsx — export dialog
+    rep_export_eyebrow: 'Export รายงาน',
+    rep_export_format: 'รูปแบบไฟล์',
+    rep_export_xlsx: 'Excel',
+    rep_export_xlsx_desc: 'ข้อมูลทุกแถว พร้อมชีตสรุป กรองและทำ Pivot ต่อได้',
+    rep_export_pdf: 'PDF',
+    rep_export_pdf_desc: 'สรุปและตาราง พร้อมพิมพ์หรือส่งผู้บริหาร',
+    rep_export_scope: 'ใช้ตัวกรองปัจจุบัน · {n} Ticket',
+    rep_export_pdf_cap: 'PDF แสดง {n} รายการล่าสุด ไฟล์ Excel มีครบทุกรายการ',
+    rep_export_go_xlsx: 'ดาวน์โหลด Excel',
+    rep_export_go_pdf: 'ดาวน์โหลด PDF',
+    rep_export_failed: 'สร้างไฟล์ไม่สำเร็จ ลองอีกครั้ง',
+};

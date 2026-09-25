@@ -1,0 +1,95 @@
+/**
+ * Report module (Report Center + Ticket & SLA report). "SLA", "Excel", "PDF" stay untranslated.
+ */
+import type { Dict } from '@/lang/types';
+
+export const report: Dict = {
+    // pages/index.tsx — Report Center
+    rep_center_title: 'Report center',
+    rep_center_sub: 'Reports from every module in one place. Open on screen, filter, then export to Excel or PDF. You only see reports for modules you have access to.',
+    rep_search_placeholder: 'Search reports, e.g. SLA',
+    rep_filter_all: 'All',
+    rep_domain_tickets: 'Tickets',
+    rep_count_reports: '{n} reports',
+    rep_empty_title: 'No reports available',
+    rep_empty_sub: 'Your role has no report access yet. Ask an administrator for the module permissions.',
+    rep_no_match: 'No report matches your search',
+    rep_tickets_overview_title: 'Ticket & SLA overview',
+    rep_tickets_overview_desc: 'Volume, resolution time and SLA compliance by category, priority and department',
+
+    // pages/ticket-overview.tsx — header, KPI tiles
+    rep_export: 'Export',
+    rep_kpi_total: 'Total tickets',
+    rep_kpi_completed: 'Completed',
+    rep_kpi_canceled: 'Canceled {n}',
+    rep_kpi_sla: 'Closed within SLA',
+    rep_kpi_goal: 'Goal {n}%',
+    rep_kpi_median: 'Resolution time (median)',
+    rep_kpi_p90: 'P90 = {n} h',
+    rep_kpi_backlog: 'Open right now',
+    rep_kpi_breached: '{n} past SLA',
+    rep_kpi_backlog_split: 'Open {a} · In progress {b}',
+    rep_vs_previous: 'vs {n} in the previous period',
+    rep_hours: 'h',
+    rep_generated_at: 'Data as of {t}',
+
+    // pages/ticket-overview.tsx — charts and breakdowns
+    rep_weekly_title: 'Tickets per week',
+    rep_weekly_opened: 'Opened',
+    rep_weekly_closed: 'Closed',
+    rep_weekly_empty: 'No tickets in this period',
+    rep_sla_priority_title: 'SLA by priority',
+    rep_sla_priority_sub: 'Line = goal',
+    rep_aging_title: 'Age of open tickets',
+    rep_aging_d1: 'Up to 1 day',
+    rep_aging_d3: '1–3 days',
+    rep_aging_d7: '3–7 days',
+    rep_aging_older: 'Over 7 days',
+    rep_by_category: 'By category',
+    rep_by_department: 'Top requesting departments',
+    rep_by_assignee: 'IT staff performance',
+    rep_col_department: 'Department',
+    rep_col_tickets: 'Tickets',
+    rep_col_sla: 'SLA',
+    rep_col_staff: 'Staff',
+    rep_col_closed: 'Closed',
+    rep_col_time: 'Time',
+    rep_no_department: 'No department',
+    rep_no_data: 'No data',
+
+    // components/ticket-report-filter-bar.tsx — filters
+    rep_f_from: 'From',
+    rep_f_to: 'To',
+    rep_f_category: 'Category',
+    rep_f_priority: 'Priority',
+    rep_f_department: 'Department',
+    rep_f_assignee: 'Assignee',
+    rep_f_any: 'All',
+    rep_f_n_selected: '{n} selected',
+    rep_f_clear: 'Clear all',
+
+    // components/ticket-report-table.tsx — ticket rows
+    rep_rows_title: 'Tickets',
+    rep_col_no: 'No.',
+    rep_col_subject: 'Subject',
+    rep_col_category: 'Category',
+    rep_col_priority: 'Priority',
+    rep_col_status: 'Status',
+    rep_col_assignee: 'Assignee',
+    rep_col_resolve: 'Resolution',
+    rep_sla_met: 'Within SLA',
+    rep_sla_breached: 'Past SLA',
+
+    // components/export-report-dialog.tsx — export dialog
+    rep_export_eyebrow: 'Export report',
+    rep_export_format: 'File format',
+    rep_export_xlsx: 'Excel',
+    rep_export_xlsx_desc: 'Every row plus a summary sheet — filter and pivot further',
+    rep_export_pdf: 'PDF',
+    rep_export_pdf_desc: 'Summary and table ready to print or send to management',
+    rep_export_scope: 'Uses the current filters · {n} tickets',
+    rep_export_pdf_cap: 'The PDF lists the latest {n} tickets; Excel holds them all.',
+    rep_export_go_xlsx: 'Download Excel',
+    rep_export_go_pdf: 'Download PDF',
+    rep_export_failed: 'The file could not be created. Try again.',
+};
