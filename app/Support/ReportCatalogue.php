@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Report\Contract\ContractExpiringReport;
+use App\Services\Report\Tabular\TabularReport;
 
 /**
  * Registry of every report in the Report Center (/reports).
@@ -11,13 +13,23 @@ use App\Models\User;
  * reader must hold ALL of to open it, and the export formats it offers. The hub list,
  * each report's Form Request authorize() and the sidebar all ask this class, so a
  * report is never listed to someone its endpoint would refuse.
+ *
+ * `kind` tells the two report styles apart: `custom` reports (Phase 1) ship their own
+ * controller/routes; `tabular` reports (Phase 2+) are declared once as a TabularReport
+ * class and served entirely by the generic /reports/r/{key} endpoints.
  */
 class ReportCatalogue
 {
     public const TICKETS_OVERVIEW = 'tickets.overview';
 
+    public const CONTRACTS_EXPIRING = 'contracts.expiring';
+
+    public const ASSETS_REGISTER = 'assets.register';
+
+    public const ASSETS_WARRANTY_EXPIRING = 'assets.warranty_expiring';
+
     /**
-     * @return array<string, array{domain: string, requires: list<string>, formats: list<string>}>
+     * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>}>
      */
     public static function definitions(): array
     {
@@ -26,7 +38,15 @@ class ReportCatalogue
             // seeing every ticket is not enough on its own — the reader must also work cases.
             self::TICKETS_OVERVIEW => [
                 'domain' => 'tickets',
+                'kind' => 'custom',
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::CONTRACTS_EXPIRING => [
+                'domain' => 'contracts',
+                'kind' => 'tabular',
+                'class' => ContractExpiringReport::class,
+                'requires' => ['contracts.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
         ];
@@ -49,17 +69,25 @@ class ReportCatalogue
     }
 
     /**
-     * @return list<array{key: string, domain: string, formats: list<string>}>
+     * @return list<array{key: string, domain: string, kind: string, formats: list<string>}>
      */
     public static function forUser(?User $user): array
     {
         $visible = [];
         foreach (self::definitions() as $key => $definition) {
             if (self::allows($user, $key)) {
-                $visible[] = ['key' => $key, 'domain' => $definition['domain'], 'formats' => $definition['formats']];
+                $visible[] = ['key' => $key, 'domain' => $definition['domain'], 'kind' => $definition['kind'], 'formats' => $definition['formats']];
             }
         }
 
         return $visible;
+    }
+
+    /** The tabular definition behind a catalogue key, or null when the key is unknown or not tabular. */
+    public static function tabular(string $key): ?TabularReport
+    {
+        $definition = self::definitions()[$key] ?? null;
+
+        return ($definition['kind'] ?? null) === 'tabular' ? app($definition['class']) : null;
     }
 }

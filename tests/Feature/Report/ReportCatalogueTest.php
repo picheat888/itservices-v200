@@ -41,7 +41,17 @@ class ReportCatalogueTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.key', 'tickets.overview')
             ->assertJsonPath('data.0.domain', 'tickets')
-            ->assertJsonPath('data.0.formats', ['xlsx', 'pdf']);
+            ->assertJsonPath('data.0.formats', ['xlsx', 'pdf'])
+            ->assertJsonPath('data.0.kind', 'custom');
+    }
+
+    public function test_asset_and_contract_viewers_see_their_own_reports_only(): void
+    {
+        $user = $this->userWith(['contracts.view']);
+
+        $keys = array_column($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'), 'key');
+
+        $this->assertSame(['contracts.expiring'], $keys);
     }
 
     public function test_view_all_without_resolve_is_not_enough(): void
