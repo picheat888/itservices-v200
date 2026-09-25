@@ -95,32 +95,67 @@ function TabularReportRows({
     );
 }
 
-export default function TabularReportPage() {
+/**
+ * Everything that needs the loaded definition to exist: the export button, the filter
+ * bar, the rows, and the export dialog. Mounted only once `useTabularDefinition` has
+ * resolved, and keyed by `definition.key` in the parent — so `useTabularFilters` always
+ * seeds synchronously from a real definition, and switching to a different report key
+ * remounts this fresh rather than reusing the previous report's filter state.
+ */
+function TabularReportBody({ reportKey, stem, definition }: { reportKey: string; stem: string; definition: TabularDefinition }) {
     const t = useT();
-    const { key = '' } = useParams<{ key: string }>();
-    const stem = key.replace('.', '_');
-    const defQuery = useTabularDefinition(key);
-    const definition = defQuery.data;
     const { filters, patch, reset } = useTabularFilters(definition);
     const [exportOpen, setExportOpen] = useState(false);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
 
     return (
-        <div className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <Link to="/reports" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
-                        <ChevronLeft className="h-4 w-4" />
-                        {t('rep_center_title')}
-                    </Link>
-                    <h1 className="mt-1 text-2xl font-bold">{t(`rep_${stem}_title`)}</h1>
-                    <p className="text-muted-foreground text-sm">{t(`rep_${stem}_desc`)}</p>
-                </div>
-                <Button onClick={() => setExportOpen(true)} disabled={!definition}>
+        <>
+            <div className="flex justify-end">
+                <Button onClick={() => setExportOpen(true)}>
                     <Download className="h-4 w-4" />
                     {t('rep_export')}
                 </Button>
+            </div>
+            <TabularFilterBar definition={definition} filters={filters} onChange={patch} onReset={reset} />
+            <TabularReportRows
+                key={JSON.stringify(filters)}
+                reportKey={reportKey}
+                definition={definition}
+                filters={filters}
+                onTotalChange={setRowsTotal}
+            />
+            <ExportReportDialog
+                open={exportOpen}
+                onOpenChange={setExportOpen}
+                title={t(`rep_${stem}_title`)}
+                total={rowsTotal}
+                formats={definition.formats}
+                onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format })}
+                isPending={exportMut.isPending}
+                isError={exportMut.isError}
+                onReset={exportMut.reset}
+            />
+        </>
+    );
+}
+
+export default function TabularReportPage() {
+    const t = useT();
+    const { key = '' } = useParams<{ key: string }>();
+    const stem = key.replace('.', '_');
+    const defQuery = useTabularDefinition(key);
+    const definition = defQuery.data;
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <Link to="/reports" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
+                    <ChevronLeft className="h-4 w-4" />
+                    {t('rep_center_title')}
+                </Link>
+                <h1 className="mt-1 text-2xl font-bold">{t(`rep_${stem}_title`)}</h1>
+                <p className="text-muted-foreground text-sm">{t(`rep_${stem}_desc`)}</p>
             </div>
 
             {defQuery.isError ? (
@@ -136,30 +171,7 @@ export default function TabularReportPage() {
                     <Skeleton className="h-72" />
                 </div>
             ) : (
-                <>
-                    <TabularFilterBar definition={definition} filters={filters} onChange={patch} onReset={reset} />
-                    <TabularReportRows
-                        key={JSON.stringify(filters)}
-                        reportKey={key}
-                        definition={definition}
-                        filters={filters}
-                        onTotalChange={setRowsTotal}
-                    />
-                </>
-            )}
-
-            {definition && (
-                <ExportReportDialog
-                    open={exportOpen}
-                    onOpenChange={setExportOpen}
-                    title={t(`rep_${stem}_title`)}
-                    total={rowsTotal}
-                    formats={definition.formats}
-                    onExport={(format) => exportMut.mutateAsync({ key, filters, format })}
-                    isPending={exportMut.isPending}
-                    isError={exportMut.isError}
-                    onReset={exportMut.reset}
-                />
+                <TabularReportBody key={definition.key} reportKey={key} stem={stem} definition={definition} />
             )}
         </div>
     );
