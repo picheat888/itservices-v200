@@ -11,7 +11,7 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
-import { ReportsPage, TicketOverviewReportPage } from '@/modules/report';
+import { ReportsPage, TabularReportPage, TicketOverviewReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
@@ -165,7 +165,7 @@ function App() {
                         <Route
                             path="reports"
                             element={
-                                <RequirePermission anyOf={['tickets.view_all']}>
+                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view']}>
                                     <ReportsPage />
                                 </RequirePermission>
                             }
@@ -175,6 +175,14 @@ function App() {
                             element={
                                 <RequirePermission anyOf={['tickets.view_all']}>
                                     <TicketOverviewReportPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="reports/r/:key"
+                            element={
+                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view']}>
+                                    <TabularReportPage />
                                 </RequirePermission>
                             }
                         />
