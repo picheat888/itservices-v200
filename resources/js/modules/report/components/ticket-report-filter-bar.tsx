@@ -15,7 +15,6 @@ import { ChevronDown } from 'lucide-react';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
 import { categoryKey, priorityKey } from './ticket-labels';
 
-const CATEGORIES = ['hardware', 'software', 'network', 'cctv', 'telephone', 'other'];
 const PRIORITIES = ['critical', 'high', 'medium', 'low'];
 const ALL = 'all';
 
@@ -56,7 +55,7 @@ export function TicketReportFilterBar({
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-48 space-y-1 p-2" align="start">
-                        {CATEGORIES.map((c) => (
+                        {(options?.categories ?? []).map((c) => (
                             <label key={c} className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm">
                                 <Checkbox checked={filters.categories.includes(c)} onCheckedChange={() => toggleCategory(c)} />
                                 {t(categoryKey(c))}

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Report;
 
 use App\Exports\Report\TicketOverviewExport;
+use App\Exports\Report\TicketOverviewRowsSheet;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
@@ -50,6 +51,28 @@ class TicketOverviewExportTest extends TestCase
         Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) use ($inside) {
             return $export->rows->pluck('id')->all() === [$inside->id]
                 && $export->summary['kpi']['total'] === 1;
+        });
+    }
+
+    public function test_the_workbook_translates_enum_values_to_thai_under_the_thai_headings(): void
+    {
+        Excel::fake();
+        $user = $this->deskMember();
+        Ticket::factory()->create([
+            'category' => 'hardware',
+            'priority' => 'high',
+            'status' => 'in_progress',
+            'created_at' => '2026-09-05 08:00',
+        ]);
+
+        $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertOk();
+
+        Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
+            $row = (new TicketOverviewRowsSheet($export->rows))->map($export->rows->first());
+
+            return $row[4] === 'ฮาร์ดแวร์' // category
+                && $row[5] === 'สูง' // priority
+                && $row[6] === 'กำลังดำเนินการ'; // status
         });
     }
 

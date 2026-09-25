@@ -45,7 +45,7 @@
         <h2>SLA ตามความสำคัญ</h2>
         <table class="data"><thead><tr><th>ความสำคัญ</th><th>วัดได้</th><th>%</th></tr></thead><tbody>
         @foreach ($summary['sla_by_priority'] as $p)
-            <tr><td>{{ $p['priority'] }}</td><td>{{ $p['measured'] }}</td><td>{{ $p['rate'] ?? '—' }}</td></tr>
+            <tr><td>{{ \App\Services\Report\TicketLabels::priority($p['priority']) }}</td><td>{{ $p['measured'] }}</td><td>{{ $p['rate'] ?? '—' }}</td></tr>
         @endforeach
         </tbody></table>
     </td>
@@ -53,7 +53,7 @@
         <h2>แยกตามหมวด</h2>
         <table class="data"><thead><tr><th>หมวด</th><th>จำนวน</th></tr></thead><tbody>
         @foreach ($summary['by_category'] as $c)
-            <tr><td>{{ $c['category'] }}</td><td>{{ $c['count'] }}</td></tr>
+            <tr><td>{{ \App\Services\Report\TicketLabels::category($c['category']) }}</td><td>{{ $c['count'] }}</td></tr>
         @endforeach
         </tbody></table>
     </td>
@@ -79,9 +79,9 @@
             <td>{{ $t->ticket_no }}</td>
             <td>{{ $t->subject }}</td>
             <td>{{ $t->requester?->department?->name_th ?: $t->requester?->department?->name }}</td>
-            <td>{{ $t->category?->value }}</td>
-            <td>{{ $t->priority?->value }}</td>
-            <td>{{ $t->status?->value }}</td>
+            <td>{{ \App\Services\Report\TicketLabels::category($t->category?->value) }}</td>
+            <td>{{ \App\Services\Report\TicketLabels::priority($t->priority?->value) }}</td>
+            <td>{{ \App\Services\Report\TicketLabels::status($t->status?->value) }}</td>
             <td>{{ $t->assignee?->name }}</td>
             <td>{{ \App\Support\SystemTime::dateTime($t->created_at) }}</td>
             <td>{{ \App\Services\Report\TicketMetrics::resolveHours($t) }}</td>

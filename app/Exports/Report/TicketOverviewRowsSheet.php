@@ -3,6 +3,7 @@
 namespace App\Exports\Report;
 
 use App\Models\Ticket\Ticket;
+use App\Services\Report\TicketLabels;
 use App\Services\Report\TicketMetrics;
 use App\Support\SystemTime;
 use Illuminate\Support\Collection;
@@ -53,9 +54,9 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
             $ticket->subject,
             $ticket->requester?->name,
             $department?->name_th ?: $department?->name,
-            $ticket->category?->value,
-            $ticket->priority?->value,
-            $ticket->status?->value,
+            TicketLabels::category($ticket->category?->value),
+            TicketLabels::priority($ticket->priority?->value),
+            TicketLabels::status($ticket->status?->value),
             $ticket->assignee?->name,
             SystemTime::dateTime($ticket->created_at),
             SystemTime::dateTime($ticket->resolved_at),
