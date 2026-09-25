@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Report\Asset\AssetRegisterReport;
+use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Tabular\TabularReport;
 
@@ -47,6 +49,20 @@ class ReportCatalogue
                 'kind' => 'tabular',
                 'class' => ContractExpiringReport::class,
                 'requires' => ['contracts.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::ASSETS_REGISTER => [
+                'domain' => 'assets',
+                'kind' => 'tabular',
+                'class' => AssetRegisterReport::class,
+                'requires' => ['assets.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::ASSETS_WARRANTY_EXPIRING => [
+                'domain' => 'assets',
+                'kind' => 'tabular',
+                'class' => WarrantyExpiringReport::class,
+                'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
         ];
