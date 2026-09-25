@@ -12,6 +12,7 @@ import { ChevronLeft, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
+import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
@@ -202,8 +203,7 @@ export default function TicketOverviewReportPage() {
                     </Section>
                 </>
             )}
-            {/* ExportReportDialog is mounted here in Task 9 using exportOpen / setExportOpen. */}
-            {exportOpen && null}
+            {data && <ExportReportDialog open={exportOpen} onOpenChange={setExportOpen} filters={filters} total={data.kpi.total} />}
         </div>
     );
 }
