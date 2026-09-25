@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\Permissions;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -104,6 +105,35 @@ class TicketOverviewReportService
     public function inRange(User $viewer, array $filters): Builder
     {
         return $this->scoped($viewer, $filters)->whereBetween('created_at', [$filters['from'], $filters['to']]);
+    }
+
+    /**
+     * The row table under the charts, newest first.
+     *
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     */
+    public function rows(User $viewer, array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->withRowRelations($this->inRange($viewer, $filters))->latest('id')->paginate($perPage);
+    }
+
+    /**
+     * Every row for an export; `$limit` caps PDF exports.
+     *
+     * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
+     * @return Collection<int, Ticket>
+     */
+    public function exportRows(User $viewer, array $filters, ?int $limit = null): Collection
+    {
+        return $this->withRowRelations($this->inRange($viewer, $filters))
+            ->latest('id')
+            ->when($limit, fn (Builder $q, int $limit) => $q->limit($limit))
+            ->get();
+    }
+
+    private function withRowRelations(Builder $query): Builder
+    {
+        return $query->with(['requester.department:id,name,name_th', 'assignee:id,name']);
     }
 
     /**
