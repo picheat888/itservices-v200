@@ -10,10 +10,15 @@ const W = 640;
 const H = 240;
 const PAD = { l: 34, r: 12, t: 12, b: 28 };
 
-/** Round the axis top up to a tidy step so every tick label is a value the chart reaches. */
+/**
+ * Round the axis top up to a tidy step so every tick label is a value the chart reaches.
+ * Rounds to a multiple of 2*step (not just step) so the middle tick, `max / 2`, always lands
+ * on a whole step too — ticket counts are integers, so a tick like 62.5 would be wrong.
+ */
 function niceMax(value: number): number {
     const step = value <= 10 ? 2 : value <= 50 ? 10 : value <= 200 ? 25 : 100;
-    return Math.max(step, Math.ceil(value / step) * step);
+    const unit = step * 2;
+    return Math.max(unit, Math.ceil(value / unit) * unit);
 }
 
 export function WeeklyTicketChart({ weeks }: { weeks: TicketOverviewSummary['weekly'] }) {
