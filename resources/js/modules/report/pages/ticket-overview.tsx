@@ -20,7 +20,7 @@ import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
-import { useTicketOverview } from '../hooks/use-reports';
+import { useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
@@ -43,6 +43,7 @@ export default function TicketOverviewReportPage() {
     const { filters, patch, reset } = useTicketReportFilters();
     const { data, isLoading, isError, error } = useTicketOverview(filters);
     const [exportOpen, setExportOpen] = useState(false);
+    const exportMut = useExportTicketOverview();
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
 
@@ -223,7 +224,20 @@ export default function TicketOverviewReportPage() {
                     </Section>
                 </>
             )}
-            {data && <ExportReportDialog open={exportOpen} onOpenChange={setExportOpen} filters={filters} total={data.kpi.total} />}
+            {data && (
+                <ExportReportDialog
+                    open={exportOpen}
+                    onOpenChange={setExportOpen}
+                    title={t('rep_tickets_overview_title')}
+                    subtitle={`${filters.from} – ${filters.to}`}
+                    total={data.kpi.total}
+                    formats={['xlsx', 'pdf']}
+                    onExport={(format) => exportMut.mutateAsync({ filters, format })}
+                    isPending={exportMut.isPending}
+                    isError={exportMut.isError}
+                    onReset={exportMut.reset}
+                />
+            )}
         </div>
     );
 }

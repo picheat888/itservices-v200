@@ -1,9 +1,19 @@
 /**
- * Report module HTTP calls — Report Center catalogue and the Ticket & SLA report
- * (summary, rows, file export).
+ * Report module HTTP calls — Report Center catalogue, the Ticket & SLA report
+ * (summary, rows, file export) and the generic tabular reports (definition, rows, export).
  */
 import { http } from '@/shared/lib/http';
-import type { ExportFormat, PagedRows, ReportDefinition, TicketOverviewSummary, TicketReportFilters, TicketReportRow } from '../types';
+import type {
+    ExportFormat,
+    PagedRows,
+    ReportDefinition,
+    TabularDefinition,
+    TabularFilters,
+    TabularRows,
+    TicketOverviewSummary,
+    TicketReportFilters,
+    TicketReportRow,
+} from '../types';
 
 /** Drop unset filters so the query string only carries what the user picked. */
 function ticketParams(f: TicketReportFilters) {
@@ -26,6 +36,11 @@ function filenameFrom(disposition: string | undefined): string | null {
     return plain ? plain[1] : null;
 }
 
+/** Drop null/'' filter values so the query string only carries what the reader picked. */
+function tabularParams(f: TabularFilters) {
+    return Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null && v !== ''));
+}
+
 export const reportApi = {
     catalogue: () => http.get<{ data: ReportDefinition[] }>('/reports').then((r) => r.data.data),
 
@@ -41,5 +56,16 @@ export const reportApi = {
         http.get('/reports/tickets/overview/export', { params: { ...ticketParams(f), format }, responseType: 'blob' }).then((r) => ({
             blob: r.data as Blob,
             filename: filenameFrom(r.headers['content-disposition']) ?? `TicketReport.${format}`,
+        })),
+
+    tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
+
+    tabularRows: (key: string, filters: TabularFilters, page: number, perPage: number) =>
+        http.get<TabularRows>(`/reports/r/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage } }).then((r) => r.data),
+
+    exportTabular: (key: string, filters: TabularFilters, format: ExportFormat) =>
+        http.get(`/reports/r/${key}/export`, { params: { ...tabularParams(filters), format }, responseType: 'blob' }).then((r) => ({
+            blob: r.data as Blob,
+            filename: filenameFrom(r.headers['content-disposition']) ?? `Report.${format}`,
         })),
 };

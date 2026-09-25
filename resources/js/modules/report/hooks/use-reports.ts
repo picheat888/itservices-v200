@@ -1,11 +1,20 @@
 /**
- * Report module React Query hooks — catalogue, Ticket & SLA summary/rows, and export.
+ * Report module React Query hooks — catalogue, Ticket & SLA summary/rows/export, and the
+ * generic tabular report definition/rows/export.
  */
 import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
-import type { ExportFormat, TicketReportFilters } from '../types';
+import type { ExportFormat, TabularFilters, TicketReportFilters } from '../types';
+
+/**
+ * A 4xx (422 invalid filters, 403 no access, 404 unknown report) answers the same however
+ * many times it is asked — retrying only delays the message that can say so.
+ */
+export function noRetryOn4xx(count: number, error: unknown): boolean {
+    return !(isAxiosError(error) && (error.response?.status ?? 500) < 500) && count < 2;
+}
 
 export const useReportCatalogue = () => useQuery({ queryKey: ['reports', 'catalogue'], queryFn: reportApi.catalogue });
 
@@ -17,9 +26,7 @@ export const useTicketOverview = (filters: TicketReportFilters) =>
         placeholderData: keepPreviousData,
         // An invalid range (to before from) is caught client-side instead of being sent.
         enabled: filters.from <= filters.to,
-        // A 4xx (422 invalid range, 403 no access) answers the same however many times it
-        // is asked — retrying only delays the message that can say so.
-        retry: (count, error) => !(isAxiosError(error) && (error.response?.status ?? 500) < 500) && count < 2,
+        retry: noRetryOn4xx,
     });
 
 export const useTicketOverviewRows = (filters: TicketReportFilters, page: number, perPage: number) =>
@@ -34,5 +41,29 @@ export const useTicketOverviewRows = (filters: TicketReportFilters, page: number
 export const useExportTicketOverview = () =>
     useMutation({
         mutationFn: ({ filters, format }: { filters: TicketReportFilters; format: ExportFormat }) => reportApi.exportTicketOverview(filters, format),
+        onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
+    });
+
+export const useTabularDefinition = (key: string) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', key, 'definition'],
+        queryFn: () => reportApi.tabularDefinition(key),
+        staleTime: 5 * 60 * 1000,
+        retry: noRetryOn4xx,
+    });
+
+export const useTabularRows = (key: string, filters: TabularFilters, page: number, perPage: number, enabled: boolean) =>
+    useQuery({
+        queryKey: ['reports', 'tabular', key, 'rows', filters, page, perPage],
+        queryFn: () => reportApi.tabularRows(key, filters, page, perPage),
+        placeholderData: keepPreviousData,
+        enabled,
+        retry: noRetryOn4xx,
+    });
+
+export const useExportTabular = () =>
+    useMutation({
+        mutationFn: ({ key, filters, format }: { key: string; filters: TabularFilters; format: ExportFormat }) =>
+            reportApi.exportTabular(key, filters, format),
         onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
     });
