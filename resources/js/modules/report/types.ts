@@ -1,16 +1,23 @@
 /**
- * Report module types — the Report Center catalogue and the "Ticket & SLA overview" report
+ * Report module types — the Report Center catalogue, the "Ticket & SLA overview" report
  * (shapes mirror App\Services\Report\TicketOverviewReportService::summary() and
- * App\Http\Resources\Report\TicketReportRowResource).
+ * App\Http\Resources\Report\TicketReportRowResource) and the generic tabular reports
+ * (shapes mirror App\Services\Report\Tabular\{ReportFilter,ReportColumn,ReportSummary}::toArray()
+ * and App\Http\Controllers\Api\Report\TabularReportController).
  */
 
-export type ReportKey = 'tickets.overview';
-export type ReportDomain = 'tickets';
+/** 'custom' = a hand-built report (Ticket & SLA overview); 'tabular' = the generic table engine. */
+export type ReportKind = 'custom' | 'tabular';
+// Widened to `string` because the catalogue now also carries tabular report keys
+// (e.g. 'contracts.expiring', 'assets.register', 'assets.warranty_expiring').
+export type ReportKey = string;
+export type ReportDomain = 'tickets' | 'assets' | 'contracts';
 export type ExportFormat = 'xlsx' | 'pdf';
 
 export interface ReportDefinition {
     key: ReportKey;
     domain: ReportDomain;
+    kind: ReportKind;
     formats: ExportFormat[];
 }
 
@@ -74,4 +81,54 @@ export interface TicketReportRow {
 export interface PagedRows<T> {
     data: T[];
     meta: { total: number; per_page: number; current_page: number; last_page: number };
+}
+
+// --- Generic tabular reports (Report\Tabular\*) --------------------------------------
+
+export interface FilterOption {
+    value: string | number;
+    label?: string;
+    label_th?: string | null;
+    label_key?: string;
+}
+
+export interface TabularFilterDef {
+    name: string;
+    type: 'select' | 'date' | 'search';
+    options: FilterOption[];
+    default: string | number | null;
+    label_key: string;
+}
+
+export type ColumnType = 'text' | 'localized' | 'number' | 'money' | 'date' | 'days_left' | 'enum';
+
+export interface TabularColumnDef {
+    key: string;
+    type: ColumnType;
+    label_key: string;
+    /** enum columns only: raw value → i18n key. */
+    labels?: Record<string, string>;
+}
+
+export interface TabularDefinition {
+    key: string;
+    formats: ExportFormat[];
+    filters: TabularFilterDef[];
+    columns: TabularColumnDef[];
+}
+
+/** Filter values keyed by `TabularFilterDef.name`; null/'' means "not set". */
+export type TabularFilters = Record<string, string | number | null>;
+
+export interface SummaryItem {
+    key: string;
+    label_key: string;
+    value: number | null;
+    tone: 'amber' | 'red' | 'green' | null;
+}
+
+export interface TabularRows {
+    data: Array<Record<string, unknown> & { id: number }>;
+    meta: PagedRows<unknown>['meta'];
+    summary: SummaryItem[];
 }

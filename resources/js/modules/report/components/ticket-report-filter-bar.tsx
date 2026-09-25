@@ -9,14 +9,13 @@ import { Card } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { DateInput } from '@/shared/ui/date-input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { useUiStore } from '@/stores/ui';
 import { ChevronDown } from 'lucide-react';
 import type { TicketOverviewSummary, TicketReportFilters } from '../types';
+import { FILTER_SELECT_ALL as ALL, FilterSelect } from './filter-select';
 import { categoryKey, priorityKey } from './ticket-labels';
 
 const PRIORITIES = ['critical', 'high', 'medium', 'low'];
-const ALL = 'all';
 
 export function TicketReportFilterBar({
     filters,
@@ -94,40 +93,5 @@ export function TicketReportFilterBar({
                 {t('rep_f_clear')}
             </Button>
         </Card>
-    );
-}
-
-function FilterSelect({
-    id,
-    label,
-    value,
-    onChange,
-    items,
-    anyLabel,
-}: {
-    id: string;
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    items: { value: string; label: string }[];
-    anyLabel: string;
-}) {
-    return (
-        <div className="flex flex-col gap-1 text-xs">
-            <span className="text-muted-foreground">{label}</span>
-            <Select value={value} onValueChange={onChange}>
-                <SelectTrigger id={id} className="h-9 w-44">
-                    <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value={ALL}>{anyLabel}</SelectItem>
-                    {items.map((i) => (
-                        <SelectItem key={i.value} value={i.value}>
-                            {i.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
     );
 }

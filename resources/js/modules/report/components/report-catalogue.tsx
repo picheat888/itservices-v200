@@ -4,18 +4,19 @@
  */
 import { useT } from '@/lang';
 import { Card } from '@/shared/ui/card';
-import { ChevronRight, type LucideIcon, Wrench } from 'lucide-react';
+import { Box, ChevronRight, FileText, type LucideIcon, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { ReportDefinition, ReportDomain, ReportKey } from '../types';
+import type { ReportDefinition, ReportDomain } from '../types';
 
-export const REPORT_ROUTES: Record<ReportKey, string> = {
-    'tickets.overview': '/reports/tickets-overview',
-};
+/** The ticket overview report keeps its own dedicated page; every tabular report shares the generic one. */
+export function reportRoute(def: ReportDefinition): string {
+    return def.key === 'tickets.overview' ? '/reports/tickets-overview' : `/reports/r/${def.key}`;
+}
 
-const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = { tickets: Wrench };
+const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = { tickets: Wrench, assets: Box, contracts: FileText };
 
 /** i18n key stem per report: `rep_<stem>_title` / `rep_<stem>_desc`. */
-export const reportStem = (key: ReportKey) => key.replace('.', '_');
+export const reportStem = (key: string) => key.replace('.', '_');
 
 function FormatChip({ format }: { format: string }) {
     const tone = format === 'xlsx' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-400/30' : 'text-red-600 dark:text-red-400 border-red-600/30 dark:border-red-400/30';
@@ -43,7 +44,7 @@ export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
                         {items.map((r) => (
                             <Link
                                 key={r.key}
-                                to={REPORT_ROUTES[r.key]}
+                                to={reportRoute(r)}
                                 className="border-border hover:bg-accent flex items-center gap-4 border-b px-5 py-3 last:border-b-0"
                             >
                                 <div className="min-w-0 flex-1">
