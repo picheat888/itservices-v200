@@ -80,6 +80,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     // Report Center — each report authorizes itself through ReportCatalogue.
     Route::get('reports', [ReportController::class, 'index'])->name('api.reports.index');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
+    Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');

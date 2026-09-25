@@ -209,4 +209,34 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame('2026-08-31', $previous['to']);
         $this->assertSame(1, $previous['total']);
     }
+
+    public function test_rows_are_paginated_newest_first_with_sla_state(): void
+    {
+        $user = $this->deskMember();
+        $met = $this->ticket(['status' => 'completed', 'created_at' => '2026-09-02 09:00',
+            'resolved_at' => '2026-09-02 11:00', 'sla_resolve_due_at' => '2026-09-02 13:00']);
+        $late = $this->ticket(['status' => 'in_progress', 'created_at' => '2026-09-10 09:00',
+            'responded_at' => '2026-09-10 09:10', 'sla_resolve_due_at' => '2026-09-11 09:00']);
+
+        $body = $this->actingAs($user)
+            ->getJson('/api/reports/tickets/overview/rows?'.http_build_query([...self::RANGE, 'per_page' => 10]))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame(2, $body['meta']['total']);
+        $this->assertSame($late->id, $body['data'][0]['id']);
+        $this->assertSame('breached', $body['data'][0]['sla']);
+        $this->assertNull($body['data'][0]['resolve_hours']);
+        $this->assertSame('met', $body['data'][1]['sla']);
+        $this->assertEquals(2.0, $body['data'][1]['resolve_hours']);
+        $this->assertSame($met->ticket_no, $body['data'][1]['ticket_no']);
+    }
+
+    public function test_rows_respect_the_same_access_rule(): void
+    {
+        Role::create(['key' => 'plain', 'name' => 'Plain', 'is_system' => false]);
+        $user = User::factory()->create(['role' => 'plain']);
+
+        $this->actingAs($user)->getJson('/api/reports/tickets/overview/rows?'.http_build_query(self::RANGE))->assertForbidden();
+    }
 }
