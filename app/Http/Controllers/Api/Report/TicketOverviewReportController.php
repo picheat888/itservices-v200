@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\Report;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Report\ExportTicketOverviewRequest;
 use App\Http\Requests\Report\TicketOverviewReportRequest;
 use App\Http\Resources\Report\TicketReportRowResource;
+use App\Services\Report\TicketOverviewExporter;
 use App\Services\Report\TicketOverviewReportService;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * "Ticket & SLA overview" report endpoints: summary numbers, the row table, and export.
@@ -32,5 +35,10 @@ class TicketOverviewReportController extends Controller
                 'last_page' => $page->lastPage(),
             ],
         ]);
+    }
+
+    public function export(ExportTicketOverviewRequest $request, TicketOverviewExporter $exporter): Response
+    {
+        return $exporter->download($request->user(), $request->filters(), $request->validated('format'));
     }
 }
