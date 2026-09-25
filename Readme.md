@@ -3491,3 +3491,37 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 ### Tests / Verification
 
 `tests/Feature/Report` + `SidebarRouteGateTest` = **22 passed / 88 assertions** · pint (เฉพาะไฟล์ report) passed, ไม่มีอะไรต้องแก้ · build ผ่าน (`npm run build`)
+
+## Report Module — Phase 2: เครื่องมือรายงานแบบตาราง (2026-09-25)
+
+เฟสนี้เพิ่ม **engine รายงานแบบตาราง (tabular)** ที่ใช้ร่วมกันได้ทุกโมดูล — ต่างจากเฟส 1 ที่ Ticket & SLA overview เขียน controller/route/หน้าเป็นของตัวเองทั้งหมด รายงานสาย tabular ประกาศแค่ **1 คลาส `TabularReport`** (filters/query/columns/summary) แล้วให้ engine ที่มีอยู่แล้ว (`TabularReportController`, `TabularReportExporter`, หน้า React `pages/tabular-report.tsx`) ทำที่เหลือทั้งหมด
+
+**วิธีเพิ่มรายงาน tabular ใหม่**
+1. สร้างคลาส `app/Services/Report/<Domain>/XxxReport.php` extends `App\Services\Report\Tabular\TabularReport` — ประกาศ `key()`, `title()` (Thai, ใช้พิมพ์ไฟล์ export), `filters()`, `query()`, `columns()`, และ `summary()` ถ้าอยากมีมากกว่าค่า total เริ่มต้น (heading ของ column/filter/summary เขียนเป็นภาษาไทยตรงนี้เลย)
+2. เพิ่ม entry ใน `App\Support\ReportCatalogue::definitions()` — ระบุ `domain`, `kind: 'tabular'`, `class`, `requires` (permission ที่ต้องมีครบ) และ `formats`
+3. เพิ่มคีย์ i18n ใน `resources/js/lang/en/report.ts` + `lang/th/report.ts`: `rep_<key_stem>_title` / `_desc` (หัวข้อ+คำอธิบายบนหน้า React), `rep_c_<column key>` ต่อคอลัมน์, `rep_fl_<filter name>` ต่อตัวกรอง, `rep_k_<summary key>` ต่อ summary tile — ใช้คีย์ซ้ำข้ามรายงานได้ถ้าคอลัมน์/ตัวกรองชื่อเดียวกัน (เช่น `rep_c_status`, `rep_fl_category_id`)
+4. เขียนเทสต์ (`tests/Feature/Report/`) อย่างน้อย: definition คืนคอลัมน์/ตัวกรองที่ถูกต้อง, query กรองถูกต้อง, สิทธิ์ปฏิเสธคนไม่มี `requires`, export ไม่พัง — ไม่ต้องแตะ route/controller เพราะ engine เดิมรองรับให้แล้ว
+
+**รายงานใหม่ 3 ตัว (Phase 2)**
+- **สัญญาใกล้หมดอายุ** (`contracts.expiring`, โดเมน `contracts`) — `app/Services/Report/Contract/ContractExpiringReport.php` — สัญญาเช่า/MA/License ที่ end date อยู่ในหน้าต่างที่เลือก (30/60/90/180 วัน) รวมถึงที่เลยวันสิ้นสุดแล้วแต่ยังไม่ถูกปิด (ไม่ cancelled/expired) เพราะยังต้องมีคนจัดการ ต้องมีสิทธิ์ `contracts.view`
+- **ทะเบียนทรัพย์สิน** (`assets.register`, โดเมน `assets`) — `app/Services/Report/Asset/AssetRegisterReport.php` — ทรัพย์สินทุกชิ้น พร้อม serial ผู้ถือ แผนก สถานะ ที่มา และมูลค่า ต้องมีสิทธิ์ `assets.view`
+- **ประกันใกล้หมดอายุ** (`assets.warranty_expiring`, โดเมน `assets`) — `app/Services/Report/Asset/WarrantyExpiringReport.php` — ทรัพย์สินที่ซื้อ (ไม่ใช่เช่า, ไม่ใช่ lifetime warranty, ไม่ถูกตัดจำหน่าย) ที่ประกันจะหมดในหน้าต่างที่เลือก ต้องมีสิทธิ์ `assets.view`
+- ทั้งสามโมดูล (`assets`, `contracts`) ใช้ resolver ร่วมกันผ่าน trait `App\Services\Report\Asset\AssetColumns` (ผู้ถือ/แผนกปัจจุบันของทรัพย์สิน) เพื่อไม่ให้สองรายงาน asset อ่านค่าต่างกัน
+
+**เมนู/route gate ใหม่** เดิม `/reports` เปิดด้วย `anyOf: ['tickets.view_all']` อย่างเดียว ตอนนี้ขยายเป็น `anyOf: ['tickets.view_all', 'assets.view', 'contracts.view']` ทั้งใน `nav.ts` และ route `reports` ใน `App.tsx` (ใครมีสิทธิ์อย่างใดอย่างหนึ่งเห็นเมนู Report ส่วนจะเปิดรายงานไหนได้จริงยังเช็คแยกที่ `ReportCatalogue::allows()` อยู่ดี) และเพิ่ม route ใหม่ `reports/r/:key` (gate เดียวกัน) ให้หน้า generic `TabularReportPage` — ส่วน `reports/tickets-overview` ยังคง gate ด้วย `['tickets.view_all']` เท่าเดิม เพราะเป็นรายงาน custom ของเฟส 1
+
+**Endpoint (generic tabular engine)**
+
+| Method | Path | หน้าที่ |
+|---|---|---|
+| GET | `/api/reports/r/{key}` | นิยามรายงาน (filters/columns) ให้หน้า React วาดฟอร์ม+ตาราง |
+| GET | `/api/reports/r/{key}/rows` | ตารางแถว + summary tiles แบ่งหน้าฝั่ง server ตามตัวกรองปัจจุบัน |
+| GET | `/api/reports/r/{key}/export?format=xlsx\|pdf` | export ตรง (synchronous) ตามตัวกรองปัจจุบัน |
+
+`{key}` คือ key ของรายงานใน `ReportCatalogue` (เช่น `contracts.expiring`, `assets.register`, `assets.warranty_expiring`) — จำกัดรูปแบบด้วย route pattern `[a-z_]+\.[a-z_]+`
+
+**กฎการตั้งชื่อ label** ข้อความที่ผู้ใช้เห็นบนหน้า (หัวคอลัมน์ ป้ายตัวกรอง ป้าย summary ตัวเลือก dropdown) มาจากคีย์ i18n เสมอ (`rep_c_*` / `rep_fl_*` / `rep_k_*` / `rep_opt_*` ที่หน้า React เรียกผ่าน `t()`) ส่วน `heading` ภาษาไทยที่เขียนไว้ในคลาส `ReportColumn`/`ReportFilter`/`ReportSummary` ฝั่ง PHP ใช้เฉพาะตอน export เป็น Excel/PDF (ไฟล์ที่ดาวน์โหลดออกไปเป็นภาษาไทยเสมอ ไม่ผูกกับภาษาที่ผู้ใช้ตั้งบนเว็บ) — เวลาเพิ่มคอลัมน์ใหม่จึงต้องตั้ง heading ภาษาไทยที่ PHP และคีย์ i18n (en+th) ที่หน้าเว็บให้ตรงกันเสมอ
+
+### Tests / Verification
+
+`tests/Feature/Report` + `tests/Unit/Report` + `SidebarRouteGateTest` = **41 passed** · `npx tsc --noEmit` ผ่าน (0 error) · `npm run build` ผ่าน · เช็ค key parity เอง (สคริปต์ node ชั่วคราว) ว่าคีย์ใน `lang/en/report.ts` กับ `lang/th/report.ts` ตรงกันครบ (133 คีย์ทั้งคู่) และทุกคีย์ `rep_*` ที่โค้ดหน้าเว็บ/นิยาม PHP อ้างถึงมีอยู่จริงทั้งสองภาษา
