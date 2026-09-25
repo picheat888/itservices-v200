@@ -4,8 +4,15 @@
  * report (`report.${key}.filters`) so different reports don't clobber each other's
  * saved filters — mirrors `use-ticket-report-filters.ts`, generalized to whatever
  * filter set the report's own definition declares.
+ *
+ * `definition` must already be loaded when this is called — the page only mounts the
+ * component that calls this hook once its `useTabularDefinition` query has resolved
+ * (and remounts it, via `key={definition.key}`, whenever the reader switches reports).
+ * That way the `useState` initialiser below always has a real definition to seed from:
+ * no `{}` render, no "seed effect" running a tick after the first fetch already fired
+ * with no filters, and no risk of report A's filters bleeding into report B.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TabularDefinition, TabularFilters } from '../types';
 
 function defaultsFrom(definition: TabularDefinition): TabularFilters {
@@ -37,20 +44,10 @@ function load(definition: TabularDefinition): TabularFilters {
     }
 }
 
-export function useTabularFilters(definition?: TabularDefinition) {
-    const [filters, setFilters] = useState<TabularFilters>(() => (definition ? load(definition) : {}));
-    // Only reseed when the report itself changes (a fresh key) — not on every refetch of
-    // the same definition, which would otherwise overwrite whatever the reader just picked.
-    const seededKey = useRef<string | null>(definition?.key ?? null);
+export function useTabularFilters(definition: TabularDefinition) {
+    const [filters, setFilters] = useState<TabularFilters>(() => load(definition));
 
     useEffect(() => {
-        if (!definition || seededKey.current === definition.key) return;
-        seededKey.current = definition.key;
-        setFilters(load(definition));
-    }, [definition]);
-
-    useEffect(() => {
-        if (!definition) return;
         try {
             localStorage.setItem(`report.${definition.key}.filters`, JSON.stringify(filters));
         } catch {
@@ -59,7 +56,7 @@ export function useTabularFilters(definition?: TabularDefinition) {
     }, [definition, filters]);
 
     const patch = (next: TabularFilters) => setFilters((f) => ({ ...f, ...next }));
-    const reset = () => definition && setFilters(defaultsFrom(definition));
+    const reset = () => setFilters(defaultsFrom(definition));
 
     return { filters, patch, reset };
 }

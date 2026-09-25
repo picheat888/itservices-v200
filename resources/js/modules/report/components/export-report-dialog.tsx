@@ -49,7 +49,11 @@ export function ExportReportDialog({
     };
 
     const run = () => {
-        onExport(format).then(() => onOpenChange(false));
+        // isError already surfaces the failure inline — nothing else to do with a
+        // rejection here, but it still needs a handler or it's an unhandled rejection.
+        onExport(format)
+            .then(() => onOpenChange(false))
+            .catch(() => {});
     };
 
     const allChoices: Record<ExportFormat, { title: string; desc: string; tone: string }> = {

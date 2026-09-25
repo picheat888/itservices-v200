@@ -27,10 +27,10 @@ function SearchField({ id, label, value, onChange }: { id: string; label: string
 
     // Debounce 300ms so typing does not fire a request per keystroke.
     useEffect(() => {
-        const id = window.setTimeout(() => {
+        const timer = window.setTimeout(() => {
             if (draft !== value) onChange(draft);
         }, 300);
-        return () => window.clearTimeout(id);
+        return () => window.clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [draft]);
 
