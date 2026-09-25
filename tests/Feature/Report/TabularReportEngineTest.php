@@ -107,6 +107,28 @@ class TabularReportEngineTest extends TestCase
             ->getJson('/api/reports/r/tickets.overview')->assertNotFound();
     }
 
+    public function test_definition_and_export_need_contracts_view(): void
+    {
+        $limited = $this->userWith(['assets.view']);
+
+        $this->actingAs($limited)->getJson('/api/reports/r/contracts.expiring')->assertForbidden();
+        $this->actingAs($limited)->get('/api/reports/r/contracts.expiring/export?format=xlsx')->assertForbidden();
+    }
+
+    public function test_xlsx_export_honours_the_current_filters(): void
+    {
+        Excel::fake();
+        $this->contract(['name' => 'Hw', 'type' => 'hardware', 'end_date' => '2026-10-10']);
+        $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-10-10']);
+
+        $this->actingAs($this->userWith(['contracts.view']))
+            ->get('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertOk();
+
+        Excel::assertDownloaded('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
+            return $export->rows->count() === 1;
+        });
+    }
+
     public function test_xlsx_export_carries_thai_headings_and_labels(): void
     {
         Excel::fake();

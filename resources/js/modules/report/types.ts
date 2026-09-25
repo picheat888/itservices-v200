@@ -125,6 +125,8 @@ export interface SummaryItem {
     label_key: string;
     value: number | null;
     tone: 'amber' | 'red' | 'green' | null;
+    /** 'count' (default, plain integer) | 'money' (2 decimals, locale grouping). */
+    format: 'count' | 'money';
 }
 
 export interface TabularRows {

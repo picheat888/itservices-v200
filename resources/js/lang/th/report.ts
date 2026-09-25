@@ -102,7 +102,7 @@ export const report: Dict = {
     rep_err_not_found: 'ไม่พบรายงานนี้',
     rep_err_filter_invalid: 'ตรวจสอบตัวกรองอีกครั้ง',
 
-    // services/Report/* — tabular report titles, columns, filters, summaries
+    // pages/tabular-report.tsx — definition-driven labels (titles, columns, filters, summaries)
     rep_domain_assets: 'ทรัพย์สิน',
     rep_domain_contracts: 'สัญญาและการเช่า',
     rep_contracts_expiring_title: 'สัญญาใกล้หมดอายุ',
@@ -119,6 +119,7 @@ export const report: Dict = {
     rep_c_end_date: 'วันที่สิ้นสุด',
     rep_c_days_left: 'เหลือ (วัน)',
     rep_c_value: 'มูลค่า',
+    rep_c_value_per_period: 'มูลค่าต่องวด',
     rep_c_billing_cycle: 'รอบบิล',
     rep_c_asset_code: 'รหัสทรัพย์สิน',
     rep_c_tag: 'Tag',
@@ -146,7 +147,7 @@ export const report: Dict = {
     rep_k_overdue: 'เลยวันสิ้นสุดแล้ว',
     rep_k_within_30: 'หมดภายใน 30 วัน',
     rep_k_in_use: 'ใช้งานอยู่',
-    rep_k_ready: 'พร้อมจ่าย',
+    rep_k_ready: 'พร้อมส่งมอบ',
     rep_k_purchase_value: 'มูลค่าซื้อรวม',
     rep_opt_30d: '30 วัน',
     rep_opt_60d: '60 วัน',

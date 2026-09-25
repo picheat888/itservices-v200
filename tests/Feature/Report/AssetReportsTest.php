@@ -81,6 +81,10 @@ class AssetReportsTest extends TestCase
         $bySource = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?source=rented')->assertOk()->json();
         $this->assertSame(1, $bySource['meta']['total']);
         $this->assertSame([$rented->id], array_column($bySource['data'], 'id'));
+        // Rented assets store no value of their own — the register must show the linked
+        // contract's value instead of the raw (zeroed) asset column. assertEquals (not
+        // assertSame): a whole-number float round-trips through JSON as an int.
+        $this->assertEquals((float) $rented->contract->value, $bySource['data'][0]['value']);
 
         $bySearch = $this->actingAs($user)->getJson('/api/reports/r/assets.register/rows?search='.$ready->serial)->assertOk()->json();
         $this->assertSame(1, $bySearch['meta']['total']);
@@ -149,7 +153,7 @@ class AssetReportsTest extends TestCase
             $sheet = $export->sheets()[1];
             $row = $sheet->map($export->rows->first());
 
-            return in_array('พร้อมจ่าย', $row, true);
+            return in_array('พร้อมส่งมอบ', $row, true);
         });
     }
 }

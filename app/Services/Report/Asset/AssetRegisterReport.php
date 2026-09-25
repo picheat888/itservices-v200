@@ -26,14 +26,16 @@ class AssetRegisterReport extends TabularReport
         'common' => 'asset_common', 'pending_return' => 'asset_pending_return', 'writeoff' => 'asset_writeoff',
     ];
 
+    // Thai export labels mirror resources/js/lang/th/asset.ts (same asset_* keys) so the
+    // Excel/PDF export never disagrees with the on-screen wording.
     private const STATUS_TH = [
-        'ready' => 'พร้อมจ่าย', 'pending_acceptance' => 'รอยืนยันรับ', 'deployed' => 'ใช้งาน',
-        'common' => 'ส่วนกลาง', 'pending_return' => 'รอรับคืน', 'writeoff' => 'ตัดจำหน่าย',
+        'ready' => 'พร้อมส่งมอบ', 'pending_acceptance' => 'รอรับมอบ', 'deployed' => 'ใช้งานอยู่',
+        'common' => 'Common', 'pending_return' => 'รอรับคืน', 'writeoff' => 'ตัดจำหน่าย',
     ];
 
     private const SOURCE_KEYS = ['purchased' => 'asset_purchase', 'rented' => 'asset_lease'];
 
-    private const SOURCE_TH = ['purchased' => 'ซื้อ', 'rented' => 'เช่า'];
+    private const SOURCE_TH = ['purchased' => 'ซื้อ', 'rented' => 'เช่า / เช่าใช้'];
 
     public function key(): string
     {
@@ -91,7 +93,9 @@ class AssetRegisterReport extends TabularReport
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),
             ReportColumn::localized('department', 'แผนก', fn (Asset $a) => $this->resolveDepartment($a)),
             ReportColumn::text('location', 'สถานที่', fn (Asset $a) => $a->location?->name),
-            ReportColumn::money('value', 'มูลค่า', fn (Asset $a) => $a->value),
+            // Rented assets don't store their own value (fee lives on the linked contract —
+            // AssetResource::toArray follows the same rule); purchased assets carry it directly.
+            ReportColumn::money('value', 'มูลค่า', fn (Asset $a) => $a->source === AssetSource::Rented ? $a->contract?->value : $a->value),
             ReportColumn::date('purchase_date', 'วันที่ซื้อ', fn (Asset $a) => $a->purchase_date),
             ReportColumn::date('cover_end', 'ประกัน/สัญญาถึง', fn (Asset $a) => $a->coverEndsOn()),
         ];
@@ -111,8 +115,8 @@ class AssetRegisterReport extends TabularReport
         return [
             ReportSummary::make('total', 'ทั้งหมด', $total),
             ReportSummary::make('in_use', 'ใช้งานอยู่', $inUse),
-            ReportSummary::make('ready', 'พร้อมจ่าย', $ready),
-            ReportSummary::make('purchase_value', 'มูลค่าซื้อรวม', $purchaseValue),
+            ReportSummary::make('ready', 'พร้อมส่งมอบ', $ready),
+            ReportSummary::make('purchase_value', 'มูลค่าซื้อรวม', $purchaseValue, format: 'money'),
         ];
     }
 }

@@ -75,7 +75,7 @@ class ContractExpiringReport extends TabularReport
             ReportColumn::date('start_date', 'วันที่เริ่ม', fn (Contract $c) => $c->start_date),
             ReportColumn::date('end_date', 'วันที่สิ้นสุด', fn (Contract $c) => $c->end_date),
             ReportColumn::daysLeft('days_left', 'เหลือ (วัน)', fn (Contract $c) => $c->end_date),
-            ReportColumn::money('value', 'มูลค่าต่องวด', fn (Contract $c) => $c->value),
+            ReportColumn::money('value_per_period', 'มูลค่าต่องวด', fn (Contract $c) => $c->value),
             ReportColumn::enum('billing_cycle', 'รอบบิล', fn (Contract $c) => $c->billing_cycle, self::CYCLE_KEYS, self::CYCLE_TH),
         ];
     }
@@ -83,7 +83,8 @@ class ContractExpiringReport extends TabularReport
     public function summary(Builder $query, array $filters): array
     {
         // Models, not pluck(): pluck returns the raw column string, get() returns cast dates.
-        $ends = (clone $query)->get(['id', 'end_date'])->pluck('end_date');
+        // Stripped of the row-listing eager load (vendor) — the summary never reads it.
+        $ends = (clone $query)->setEagerLoads([])->get(['id', 'end_date'])->pluck('end_date');
         $today = today();
 
         return [
