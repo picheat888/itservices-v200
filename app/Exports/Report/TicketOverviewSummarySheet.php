@@ -2,6 +2,7 @@
 
 namespace App\Exports\Report;
 
+use App\Services\Report\TicketLabels;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithTitle;
@@ -46,12 +47,12 @@ class TicketOverviewSummarySheet implements FromArray, ShouldAutoSize, WithTitle
             ['SLA ตามความสำคัญ', 'วัดได้', 'ตรง SLA', '%'],
         ];
         foreach ($s['sla_by_priority'] as $p) {
-            $rows[] = [$p['priority'], $p['measured'], $p['met'], $p['rate']];
+            $rows[] = [TicketLabels::priority($p['priority']), $p['measured'], $p['met'], $p['rate']];
         }
         $rows[] = [];
         $rows[] = ['หมวด', 'จำนวน'];
         foreach ($s['by_category'] as $c) {
-            $rows[] = [$c['category'], $c['count']];
+            $rows[] = [TicketLabels::category($c['category']), $c['count']];
         }
         $rows[] = [];
         $rows[] = ['แผนก', 'จำนวน', 'SLA %'];

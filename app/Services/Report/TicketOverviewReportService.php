@@ -71,7 +71,7 @@ class TicketOverviewReportService
             'by_category' => $this->byCategory($tickets),
             'by_department' => $this->byDepartment($tickets),
             'by_assignee' => $this->byAssignee($completed),
-            'options' => $this->options(),
+            'options' => $this->options($viewer),
         ];
     }
 
@@ -334,16 +334,19 @@ class TicketOverviewReportService
     /**
      * Filter choices. Assignees are the accounts that have ever held a ticket, which
      * keeps the list to IT staff without needing the Employee module's permissions.
+     * Categories are limited to the viewer's ticket levels so the filter never offers
+     * a category the population itself can never contain.
      *
-     * @return array{departments: list<array{id: int, name: string, name_th: ?string}>, assignees: list<array{id: int, name: string}>}
+     * @return array{departments: list<array{id: int, name: string, name_th: ?string}>, assignees: list<array{id: int, name: string}>, categories: list<string>}
      */
-    private function options(): array
+    private function options(User $viewer): array
     {
         $assigneeIds = Ticket::query()->whereNotNull('assignee_id')->distinct()->pluck('assignee_id');
 
         return [
             'departments' => Department::query()->orderBy('name')->get(['id', 'name', 'name_th'])->toArray(),
             'assignees' => User::query()->whereIn('id', $assigneeIds)->orderBy('name')->get(['id', 'name'])->toArray(),
+            'categories' => Permissions::ticketLevelsFor($viewer),
         ];
     }
 }

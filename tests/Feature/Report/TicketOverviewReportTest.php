@@ -123,6 +123,8 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(1, $this->summary($user)['kpi']['total']);
         // Asking for a category you cannot see does not widen the scope.
         $this->assertSame(0, $this->summary($user, ['categories' => ['network']])['kpi']['total']);
+        // The category filter itself only ever offers the viewer's own levels.
+        $this->assertSame(['hardware'], $this->summary($user)['options']['categories']);
     }
 
     public function test_department_priority_and_assignee_filters_narrow_the_population(): void

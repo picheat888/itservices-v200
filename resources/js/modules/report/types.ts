@@ -50,6 +50,7 @@ export interface TicketOverviewSummary {
     options: {
         departments: { id: number; name: string; name_th: string | null }[];
         assignees: { id: number; name: string }[];
+        categories: string[];
     };
 }
 

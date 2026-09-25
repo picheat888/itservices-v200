@@ -8,7 +8,8 @@ import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
-import { ChevronLeft, Clock, Download } from 'lucide-react';
+import { isAxiosError } from 'axios';
+import { AlertCircle, ChevronLeft, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
@@ -40,10 +41,24 @@ export default function TicketOverviewReportPage() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { filters, patch, reset } = useTicketReportFilters();
-    const { data, isLoading } = useTicketOverview(filters);
+    const { data, isLoading, isError, error } = useTicketOverview(filters);
     const [exportOpen, setExportOpen] = useState(false);
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
+
+    // Client-side range check runs before any request; server errors (403/422/other) are
+    // reported once the request comes back. Either way the skeleton never spins forever.
+    const rangeOrderInvalid = filters.from > filters.to;
+    const errorStatus = isAxiosError(error) ? error.response?.status : undefined;
+    const errorMessage = rangeOrderInvalid
+        ? t('rep_err_range_order')
+        : isError
+          ? errorStatus === 403
+              ? t('rep_err_no_access')
+              : errorStatus === 422
+                ? t('rep_err_range_invalid')
+                : t('rep_err_load_failed')
+          : null;
 
     return (
         <div className="space-y-4">
@@ -64,7 +79,12 @@ export default function TicketOverviewReportPage() {
 
             <TicketReportFilterBar filters={filters} options={data?.options} onChange={patch} onReset={reset} />
 
-            {isLoading || !data ? (
+            {errorMessage ? (
+                <Card className="flex flex-col items-center gap-2 border-dashed p-10 text-center">
+                    <AlertCircle className="text-muted-foreground h-8 w-8" />
+                    <p className="text-muted-foreground text-sm">{errorMessage}</p>
+                </Card>
+            ) : isLoading || !data ? (
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
                         {Array.from({ length: 5 }, (_, i) => (
