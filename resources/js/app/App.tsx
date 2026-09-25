@@ -11,6 +11,7 @@ import { DashboardPage } from '@/modules/dashboard';
 import { EmailTemplatesPage } from '@/modules/email-templates';
 import { EmployeesPage } from '@/modules/employee';
 import { PermissionsPage } from '@/modules/permission';
+import { ReportsPage, TicketOverviewReportPage } from '@/modules/report';
 import { RequestsPage } from '@/modules/request';
 import { SettingsPage, useHydrateSettings } from '@/modules/settings';
 import { ItemHistoryPage, StockPage } from '@/modules/stock';
@@ -19,17 +20,14 @@ import { WorkflowsPage } from '@/modules/workflow';
 import { AppErrorScreen } from '@/shared/components/app-error-screen';
 import { useApplyTheme } from '@/shared/hooks/use-apply-theme';
 import { queryClient } from '@/shared/lib/query-client';
-import { SUPER_ROLE, type Role } from '@/shared/types';
+import type { Role } from '@/shared/types';
 import { ConfirmProvider } from '@/shared/ui/confirm-dialog';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 // Placeholder ("coming soon") modules and how their routes are gated.
-// `reports` is role-gated (matching the sidebar nav).
-const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [
-    { path: 'reports', titleKey: 'reports', roles: [SUPER_ROLE, 'admin', 'hr'] },
-];
+const modules: { path: string; titleKey: string; anyOf?: string[]; roles?: Role[] }[] = [];
 
 /**
  * Send an old path to its new one without losing what came after the `?`.
@@ -161,6 +159,22 @@ function App() {
                             element={
                                 <RequirePermission anyOf={['settings.access']}>
                                     <SettingsPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="reports"
+                            element={
+                                <RequirePermission anyOf={['tickets.view_all']}>
+                                    <ReportsPage />
+                                </RequirePermission>
+                            }
+                        />
+                        <Route
+                            path="reports/tickets-overview"
+                            element={
+                                <RequirePermission anyOf={['tickets.view_all']}>
+                                    <TicketOverviewReportPage />
                                 </RequirePermission>
                             }
                         />

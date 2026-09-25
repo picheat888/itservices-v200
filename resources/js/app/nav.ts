@@ -1,4 +1,4 @@
-import { SUPER_ROLE, type NavGroup } from '@/shared/types';
+import type { NavGroup } from '@/shared/types';
 import {
     Box,
     FileText,
@@ -51,7 +51,10 @@ export const navGroups: NavGroup[] = [
     {
         label: 'nav_admin',
         items: [
-            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, roles: [SUPER_ROLE, 'admin', 'hr'] },
+            // Opens for anyone who can read at least one report's data; each later report
+            // phase adds its module key here (and in App.tsx). The hub lists only what the
+            // reader may open (ReportCatalogue).
+            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, anyOf: ['tickets.view_all'] },
             { id: 'workflows', label: 'wf_title', to: '/workflows', icon: Workflow, permission: 'workflows.module' },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-notifications', icon: Mail, permission: 'notifications.module' },
