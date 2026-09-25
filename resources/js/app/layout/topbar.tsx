@@ -1,4 +1,4 @@
-import { navGroups } from '@/app/nav';
+import { findNavItem, navGroups } from '@/app/nav';
 import { useT } from '@/lang';
 import { useNotifications } from '@/modules/notification';
 import { FlagEN, FlagTH } from '@/shared/components/flags';
@@ -24,7 +24,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
 
-    const current = navGroups.flatMap((g) => g.items).find((i) => i.to === pathname);
+    const current = findNavItem(pathname);
     const here = current ? t(current.label) : t('overall');
     /**
      * The sidebar section this page sits in — the same heading the user walked past to get
@@ -35,7 +35,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
      * anything a manager is looking at). Their role and group are on the account card at
      * the foot of the sidebar, where the rest of "who am I" lives.
      */
-    const section = navGroups.find((g) => g.items.some((i) => i.to === pathname));
+    const section = current ? navGroups.find((g) => g.items.includes(current)) : undefined;
 
     return (
         <header className="border-border bg-background flex h-16 shrink-0 items-center gap-3 border-b px-4">
