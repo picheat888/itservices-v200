@@ -3458,3 +3458,36 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 `LogRetentionTest` 8 ตัว — เนื้อหาย/แถวอยู่ · สถิติ sent/failed ไม่เปลี่ยนหลังล้างเนื้อ · แถวที่เกิน window ถูกลบ · แจ้งเตือนที่ยังไม่อ่านรอด แม้อายุ 400 วัน · audit ไม่ถูกแตะเมื่อไม่ได้ตั้ง window · ตั้ง 0 ทุกช่องแล้วไม่มีอะไรหาย และไม่มี audit line ถูกเขียน · อ่าน/บันทึกค่าผ่าน API ได้ · ส่งมาแค่ 2 ฟิลด์แล้ว window เดิมไม่ถูกล้าง
 **suite = 1,341 passed** · tsc 0 · pint passed · build ผ่าน · `ALTER` เพิ่ม 2 index บน DB จริงแล้ว
 *(`MasterDataSeedTest` 1 ตัวแดงอยู่ เป็นงาน vendor/seeder ที่กำลังทำค้างในอีก session ไม่เกี่ยวกับการแก้ชุดนี้)*
+
+## Report Module — Phase 1 (2026-09-25)
+
+โมดูล Report ตัวแรกของระบบ — เดิมมีแค่การ์ด Coming soon บน Dashboard ฝั่ง IT ตอนนี้เปิดเป็นโมดูลของตัวเองที่ `/reports`
+
+**Report Center (`/reports`)** — หน้ารวมรายการรายงาน อ่านจาก `GET /api/reports` ซึ่งคืนเฉพาะรายงานที่ผู้เรียกมีสิทธิ์ครบตาม `ReportCatalogue` (รายงานที่เปิดสิทธิ์ไม่ครบจะไม่ถูกส่งมาเลย ไม่ใช่ส่งมาแล้วเทาไว้) มีช่องค้นหาและชิปกรองตามโดเมน (ตอนนี้มีโดเมนเดียวคือ `tickets`) ส่วนโดเมนอื่นที่ยังไม่ทำ (asset, contract, stock, request, employee, access) ขึ้นเป็นการ์ด "เร็ว ๆ นี้"
+
+**Ticket & SLA overview (`/reports/tickets-overview`)** — รายงานตัวแรกและตัวเดียวของเฟสนี้
+- **ตัวกรอง** ช่วงวันที่ · หมวดหมู่ (จำกัดตามสิทธิ์ `tickets.level_*` ของผู้เรียก) · priority · แผนก · ผู้รับผิดชอบ — เก็บใน `localStorage` เหมือนหน้ารายการ ticket
+- **KPI tiles** จำนวนเคสในช่วง, ปิดทัน SLA, resolve time เฉลี่ย/median/P90, backlog ที่ยังไม่ปิด
+- **กราฟรายสัปดาห์** เปิด/ปิดต่อสัปดาห์, **SLA ตาม priority** พร้อมเส้นเป้าหมาย 90%, **อายุ backlog**, ตาราง **by category / by department / by assignee**
+- **ตารางแถว** แบ่งหน้าฝั่ง server (คอลัมน์เดียวกับตัวกรอง) และ **ไดอะล็อก export** เลือกฟอร์แมต xlsx/pdf ก่อนดาวน์โหลด
+
+**Endpoint**
+
+| Method | Path | หน้าที่ |
+|---|---|---|
+| GET | `/api/reports` | รายการรายงานที่ผู้เรียกเปิดได้ (Report Center) |
+| GET | `/api/reports/tickets/overview` | สรุป KPI/กราฟของรายงาน Ticket & SLA |
+| GET | `/api/reports/tickets/overview/rows` | ตารางแถว ticket แบ่งหน้าฝั่ง server |
+| GET | `/api/reports/tickets/overview/export?format=xlsx\|pdf` | export ตรง (synchronous), PDF จำกัด 1,000 แถว |
+
+**สิทธิ์** เมนู/route gate ด้วย `anyOf: ['tickets.view_all']` (แทนที่ลิสต์ role เดิม super/admin/hr — HR ยังไม่เห็นเมนูนี้จนกว่าจะมีรายงานฝั่งพนักงาน) ส่วนตัวรายงานเองต้องมีทั้ง `tickets.view_all` **และ** `tickets.resolve` (priority/SLA เป็นข้อมูลภายในทีมงาน เห็นทุก ticket อย่างเดียวไม่พอ) และหมวดหมู่ที่กรอง/เห็นได้ถูกจำกัดตามสิทธิ์ `tickets.level_*` ของผู้เรียกเสมอ
+
+**นิยามตัวเลข** ประชากร = ticket ที่สร้างในช่วง `[from 00:00, to 23:59:59]` · วัด SLA เฉพาะเคสที่ปิดแล้วและมีทั้ง `resolved_at`/`sla_resolve_due_at`, ทันเมื่อ `resolved_at <= due` · resolve time = ชั่วโมงปฏิทินจากเปิดถึงปิด · median/P90 ใช้ nearest-rank · backlog = ticket ที่ยังไม่ปิดทั้งหมด **ไม่กรองตามช่วงวันที่** · ช่วงก่อนหน้า (สำหรับเทียบ trend) = ช่วงความยาวเท่ากันก่อน `from`
+
+**Dependency ใหม่** `maatwebsite/excel` (^3.1) สำหรับ export xlsx — ไฟล์อยู่ใต้ `app/Exports/Report/`
+
+**ค้างไว้ (เฟสถัดไป)** รายงาน asset / contract / stock / request / employee / access · export แบบคิว + แผง "My exports" + snapshot strip บนหน้า hub + ปักหมุด + column picker · ส่งรายงานตามกำหนดเวลาทางอีเมล · ตั้งเป้า SLA ได้จากหน้า Settings
+
+### Tests / Verification
+
+`tests/Feature/Report` + `SidebarRouteGateTest` = **22 passed / 88 assertions** · pint (เฉพาะไฟล์ report) passed, ไม่มีอะไรต้องแก้ · build ผ่าน (`npm run build`)
