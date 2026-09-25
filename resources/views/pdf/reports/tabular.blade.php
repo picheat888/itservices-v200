@@ -29,7 +29,7 @@
 
 <table class="kpi"><tr>
     @foreach ($summary as $item)
-        <td>{{ $item->heading }}<b>{{ $item->value ?? '—' }}</b></td>
+        <td>{{ $item->heading }}<b>{{ $item->value === null ? '—' : ($item->format === 'money' ? number_format($item->value, 2) : $item->value) }}</b></td>
     @endforeach
 </tr></table>
 
@@ -47,7 +47,8 @@
     @foreach ($rows as $row)
         <tr>
             @foreach ($report->columns() as $column)
-                <td>{{ $column->exportValue($row) }}</td>
+                @php($cell = $column->exportValue($row))
+                <td>{{ $column->type === 'money' && $cell !== null ? number_format($cell, 2) : $cell }}</td>
             @endforeach
         </tr>
     @endforeach

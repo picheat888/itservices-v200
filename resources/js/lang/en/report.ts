@@ -102,7 +102,7 @@ export const report: Dict = {
     rep_err_not_found: 'This report does not exist',
     rep_err_filter_invalid: 'Check the filters',
 
-    // services/Report/* — tabular report titles, columns, filters, summaries
+    // pages/tabular-report.tsx — definition-driven labels (titles, columns, filters, summaries)
     rep_domain_assets: 'Assets',
     rep_domain_contracts: 'Contracts & rentals',
     rep_contracts_expiring_title: 'Expiring contracts',
@@ -119,6 +119,7 @@ export const report: Dict = {
     rep_c_end_date: 'End date',
     rep_c_days_left: 'Days left',
     rep_c_value: 'Value',
+    rep_c_value_per_period: 'Value per period',
     rep_c_billing_cycle: 'Billing cycle',
     rep_c_asset_code: 'Asset code',
     rep_c_tag: 'Tag',

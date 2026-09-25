@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Report;
 
+use App\Support\ReportCatalogue;
 use Illuminate\Validation\Rule;
 
 /**
- * Export of any tabular report: the screen's filters plus a file format.
+ * Export of any tabular report: the screen's filters plus a file format. The allowed
+ * formats come from the report's own catalogue entry — not every report offers both.
  */
 class ExportTabularReportRequest extends TabularReportRequest
 {
@@ -14,6 +16,8 @@ class ExportTabularReportRequest extends TabularReportRequest
      */
     public function rules(): array
     {
-        return [...parent::rules(), 'format' => ['required', Rule::in(['xlsx', 'pdf'])]];
+        $formats = ReportCatalogue::definitions()[$this->report()->key()]['formats'];
+
+        return [...parent::rules(), 'format' => ['required', Rule::in($formats)]];
     }
 }

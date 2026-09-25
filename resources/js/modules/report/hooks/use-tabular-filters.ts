@@ -33,10 +33,16 @@ function load(definition: TabularDefinition): TabularFilters {
         const parsed: unknown = JSON.parse(localStorage.getItem(`report.${definition.key}.filters`) ?? 'null');
         if (!isTabularFilters(parsed)) return defaultsFrom(definition);
         // Drop stored keys the definition no longer has, and seed any new one from its default.
-        const known = new Set(definition.filters.map((f) => f.name));
+        const byName = new Map(definition.filters.map((f) => [f.name, f]));
         const kept: TabularFilters = {};
         for (const [k, v] of Object.entries(parsed)) {
-            if (known.has(k)) kept[k] = v;
+            const filter = byName.get(k);
+            if (!filter) continue;
+            // A select filter's stored value may point at an option that no longer exists
+            // (master data renamed/removed, or the enum changed) — fall back to its default
+            // rather than sending the request a value the server would reject.
+            if (filter.type === 'select' && v !== null && !filter.options.some((o) => o.value === v)) continue;
+            kept[k] = v;
         }
         return { ...defaultsFrom(definition), ...kept };
     } catch {
