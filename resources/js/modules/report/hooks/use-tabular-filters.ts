@@ -41,7 +41,8 @@ function load(definition: TabularDefinition): TabularFilters {
             // A select filter's stored value may point at an option that no longer exists
             // (master data renamed/removed, or the enum changed) — fall back to its default
             // rather than sending the request a value the server would reject.
-            if (filter.type === 'select' && v !== null && !filter.options.some((o) => o.value === v)) continue;
+            // Compared as strings: the select hands back "4" while master-data options carry 4.
+            if (filter.type === 'select' && v !== null && !filter.options.some((o) => String(o.value) === String(v))) continue;
             kept[k] = v;
         }
         return { ...defaultsFrom(definition), ...kept };
