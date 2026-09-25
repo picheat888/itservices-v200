@@ -69,7 +69,10 @@ class AssetRegisterReport extends TabularReport
                 $w->where('asset_code', 'like', $like)
                     ->orWhere('tag', 'like', $like)
                     ->orWhere('serial', 'like', $like)
-                    ->orWhereHas('model', fn (Builder $m) => $m->where('name', 'like', $like));
+                    ->orWhereHas('model', fn (Builder $m) => $m->where('name', 'like', $like))
+                    // Owner is a shared label on the asset, or the holding employee's code.
+                    ->orWhere('owner', 'like', $like)
+                    ->orWhereHas('ownerEmployee', fn (Builder $e) => $e->where('code', 'like', $like)->orWhere('first_name', 'like', $like)->orWhere('last_name', 'like', $like));
             }))
             ->orderBy('asset_code');
     }
