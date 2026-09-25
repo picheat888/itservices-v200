@@ -1,4 +1,4 @@
-import type { NavGroup } from '@/shared/types';
+import type { NavGroup, NavItem } from '@/shared/types';
 import {
     Box,
     FileText,
@@ -62,3 +62,13 @@ export const navGroups: NavGroup[] = [
         ],
     },
 ];
+
+/**
+ * The menu entry a path belongs to: its own entry, or — for a page below one, such as
+ * /reports/tickets-overview — the entry it sits under. '/' only ever matches itself,
+ * otherwise every page would claim to be the Dashboard.
+ */
+export function findNavItem(pathname: string): NavItem | undefined {
+    const items = navGroups.flatMap((g) => g.items);
+    return items.find((i) => i.to === pathname) ?? items.find((i) => i.to !== '/' && pathname.startsWith(`${i.to}/`));
+}

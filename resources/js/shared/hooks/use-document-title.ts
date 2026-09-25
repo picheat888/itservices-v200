@@ -1,4 +1,4 @@
-import { navGroups } from '@/app/nav';
+import { findNavItem } from '@/app/nav';
 import { useT } from '@/lang';
 import { useUiStore } from '@/stores/ui';
 import { useEffect } from 'react';
@@ -14,7 +14,7 @@ export function useDocumentTitle(explicitKey?: string) {
     const { pathname } = useLocation();
 
     useEffect(() => {
-        const item = navGroups.flatMap((g) => g.items).find((i) => i.to === pathname);
+        const item = findNavItem(pathname);
         const labelKey = explicitKey ?? item?.label ?? 'overall';
         document.title = `${t(labelKey)} - ${brandName}`;
     }, [pathname, explicitKey, lang, t, brandName]);
