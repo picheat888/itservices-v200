@@ -2,10 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Asset\AssetStatus;
+use App\Enums\Contract\ContractType;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
+use App\Models\Asset\Asset;
+use App\Models\Asset\AssetTransfer;
+use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\AssetModel;
@@ -81,7 +86,6 @@ class DemoSeederTest extends TestCase
 
     public function test_the_demo_sends_no_mail(): void
     {
-        $this->markTestIncomplete('mail arrives with DemoAssets in Task 4');
         $this->seedStandard();
         $this->seed(DemoSeeder::class);
 
@@ -96,6 +100,32 @@ class DemoSeederTest extends TestCase
 
         $this->assertOrg();
         $this->assertReferenceAndAccess();
+        $this->assertContractsAndAssets();
+    }
+
+    private function assertContractsAndAssets(): void
+    {
+        $contracts = Contract::all();
+        $this->assertGreaterThanOrEqual(15, $contracts->count());
+        foreach (['active', 'expired', 'cancelled'] as $status) {
+            $this->assertTrue($contracts->contains(fn (Contract $c) => $c->status === $status), "no {$status} contract");
+        }
+        $this->assertTrue($contracts->contains(fn (Contract $c) => $c->status === 'active' && $c->daysRemaining() <= 7), 'none due in 7 days');
+        $this->assertTrue($contracts->contains(fn (Contract $c) => $c->status === 'active' && $c->daysRemaining() > 7 && $c->daysRemaining() <= 30), 'none due in 30 days');
+        foreach (ContractType::cases() as $type) {
+            $this->assertTrue($contracts->contains(fn (Contract $c) => $c->type === $type), "no {$type->value} contract");
+        }
+
+        $this->assertGreaterThanOrEqual(80, Asset::count());
+        foreach (AssetStatus::cases() as $status) {
+            $this->assertTrue(Asset::where('status', $status->value)->exists(), "no {$status->value} asset");
+        }
+        $this->assertTrue(Asset::where('source', 'rented')->whereNotNull('contract_id')->exists());
+        $staff = User::where('username', 'staff.demo')->first()->employee_id;
+        $this->assertSame(2, Asset::where('owner_employee_id', $staff)->where('status', 'deployed')->count());
+        $this->assertSame(1, Asset::where('owner_employee_id', $staff)->where('status', 'pending_acceptance')->count());
+        $this->assertTrue(AssetTransfer::where('kind', 'relocate')->exists());
+        $this->assertTrue(AssetTransfer::where('kind', 'return')->exists());
     }
 
     private function assertReferenceAndAccess(): void

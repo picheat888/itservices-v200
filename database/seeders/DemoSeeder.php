@@ -9,8 +9,10 @@ use App\Models\Permission\Role;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use Database\Seeders\Demo\DemoAccess;
+use Database\Seeders\Demo\DemoAssets;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
+use Database\Seeders\Demo\DemoContracts;
 use Database\Seeders\Demo\DemoOrg;
 use Database\Seeders\Demo\DemoReference;
 use Database\Seeders\Demo\DemoStep;
@@ -38,6 +40,8 @@ class DemoSeeder extends Seeder
         DemoOrg::class,
         DemoReference::class,
         DemoAccess::class,
+        DemoContracts::class,
+        DemoAssets::class,
     ];
 
     public function run(): void
