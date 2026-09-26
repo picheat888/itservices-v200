@@ -10,10 +10,10 @@ export interface RequestPageMeta {
     pending: number;
     approved: number;
     rejected: number;
-    fulfilled: number;
+    completed: number;
     cancelled: number;
     awaiting_me: number;
-    to_fulfill: number;
+    to_complete: number;
     avg_cycle_days: number | null;
 }
 
@@ -30,7 +30,7 @@ export interface RequestListParams {
     search?: string;
     status?: string;
     type?: string;
-    /** Tab scopes: approvals (awaiting me) | queue (IT fulfillment) | mine. */
+    /** Tab scopes: approvals (awaiting me) | queue (IT completion) | mine. */
     scope?: 'approvals' | 'queue' | 'mine';
 }
 
@@ -104,6 +104,6 @@ export const requestApi = {
     },
     approve: (id: number, note?: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/approve`, { note: note || null }),
     reject: (id: number, note: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/reject`, { note }),
-    fulfill: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/fulfill`),
+    complete: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/complete`),
     cancel: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/cancel`),
 };

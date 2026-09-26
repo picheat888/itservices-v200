@@ -346,7 +346,7 @@ class EmailTemplateController extends Controller
             'stock.fulfilled_date' => '20-08-2026',
             'stock.request_summary_table' => EmailTable::render(
                 StockNotificationService::REQUEST_SUMMARY_HEADERS,
-                [['Pending Approval', '2'], ['Awaiting Fulfilment', '1']],
+                [['Pending Approval', '2'], ['Awaiting Completion', '1']],
                 [1],
                 StockNotificationService::REQUEST_SUMMARY_WIDTHS,
             ),
@@ -354,7 +354,7 @@ class EmailTemplateController extends Controller
                 StockNotificationService::REQUEST_HEADERS,
                 [
                     ['REQ-2026-0001', 'Piches Srisuk', '18-08-2026', 'USB-C Docking Station ×2', 'Pending Approval'],
-                    ['REQ-2026-0004', 'Manee Jaidee', '24-08-2026', 'Wireless mouse ×1', 'Awaiting Fulfilment'],
+                    ['REQ-2026-0004', 'Manee Jaidee', '24-08-2026', 'Wireless mouse ×1', 'Awaiting Completion'],
                 ],
                 [],
                 StockNotificationService::REQUEST_WIDTHS,
@@ -434,8 +434,8 @@ class EmailTemplateController extends Controller
             'request.rejected_date' => '20-08-2026',
             'request.cancelled_date' => '22-08-2026',
             'request.ticket_no' => 'TKT-2856',
-            'request.fulfilled_date' => '22-08-2026',
-            'request.fulfilled_by' => 'Kankanok P',
+            'request.completed_date' => '22-08-2026',
+            'request.completed_by' => 'Kankanok P',
             'request.reason' => 'Onboarding request with the new employee,<br />
 first day 01-09-2026.',
             'request.details' => 'Device type: Desktop PC<br>Mailbox address: somchai@inaba-foods.co.th',

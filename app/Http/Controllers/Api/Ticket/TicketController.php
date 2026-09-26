@@ -613,7 +613,7 @@ class TicketController extends Controller
      *
      * A case a request auto-opened settles that request too — see
      * RequestService::settleFromTicket. Closing the case is the delivery; making the
-     * technician press Fulfil afterwards recorded one real event twice, and a request
+     * technician press Complete afterwards recorded one real event twice, and a request
      * whose work was long finished sat in the queue until somebody remembered it.
      */
     public function resolve(Request $request, Ticket $ticket, RequestService $requests): JsonResponse

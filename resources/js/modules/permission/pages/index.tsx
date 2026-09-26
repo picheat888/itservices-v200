@@ -942,7 +942,7 @@ function auditMeta(action: string): { icon: typeof Plus; tone: string } {
     if (/^(created|registered|submitted|opened|uploaded|imported)/.test(a)) return { icon: Plus, tone: 'emerald' };
     if (/^(deleted|removed)/.test(a)) return { icon: Trash2, tone: 'rose' };
     if (/^rejected/.test(a)) return { icon: X, tone: 'rose' };
-    if (/^(approved|accepted|received|committed|fulfilled|resolved)/.test(a)) return { icon: Check, tone: 'emerald' };
+    if (/^(approved|accepted|received|committed|fulfilled|completed|resolved)/.test(a)) return { icon: Check, tone: 'emerald' };
     if (/^(signed|changed own|updated own)/.test(a)) return { icon: LogIn, tone: 'slate' };
     if (/^stock /.test(a)) return { icon: ArrowLeftRight, tone: 'blue' };
     return { icon: Pencil, tone: 'blue' }; // updated / renewed / set / changed / …

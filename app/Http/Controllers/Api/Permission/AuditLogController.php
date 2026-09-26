@@ -14,7 +14,7 @@ class AuditLogController extends Controller
         'created' => ['Created', 'Registered', 'Submitted', 'Opened', 'Uploaded', 'Imported'],
         'updated' => ['Updated', 'Renewed', 'Set', 'Changed', 'Reset', 'Recorded', 'Transferred', 'Took', 'Assigned', 'Cancelled'],
         'deleted' => ['Deleted', 'Removed'],
-        'workflow' => ['Approved', 'Rejected', 'Accepted', 'Received', 'Committed', 'Fulfilled', 'Resolved', 'Stock'],
+        'workflow' => ['Approved', 'Rejected', 'Accepted', 'Received', 'Committed', 'Fulfilled', 'Completed', 'Resolved', 'Stock'],
         'auth' => ['Signed', 'Changed own', 'Updated own'],
     ];
 

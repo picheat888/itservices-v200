@@ -961,7 +961,7 @@ export type ServiceRequestType =
     | 'cctv'
     | 'other';
 
-export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'fulfilled' | 'cancelled';
+export type ServiceRequestStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
 /**
  * Why a request exists (mirrors App\Enums\Request\RequestOrigin): `direct` is
  * somebody asking for themselves, `onboarding` was filed for a new employee who
@@ -976,7 +976,7 @@ export type ApprovalRowStatus = 'waiting' | 'current' | 'approved' | 'rejected' 
  */
 export type ApprovalSkipReason = 'no_manager' | 'no_matching_position' | 'no_resource_owner' | 'requester_is_owner' | 'no_department_approver';
 export type WorkflowActorType = 'chain' | 'owner' | 'it_staff' | 'department';
-export type WorkflowStepKind = 'approval' | 'fulfillment';
+export type WorkflowStepKind = 'approval' | 'completion';
 
 /** One frozen step of a request's resolved approval chain. */
 export interface RequestApproval {
@@ -1040,7 +1040,7 @@ export interface ServiceRequest {
     /** The last movement on this request: `kind` is a code the SPA writes out, `by` the name frozen on the row that moved. */
     activity: {
         at: string | null;
-        kind: 'submitted' | 'approved_step' | 'approved' | 'rejected' | 'cancelled' | 'fulfilled';
+        kind: 'submitted' | 'approved_step' | 'approved' | 'rejected' | 'cancelled' | 'completed';
         by: string | null;
     };
     /**
@@ -1067,12 +1067,12 @@ export interface ServiceRequest {
     progress: { total: number; done: number; current_label: string | null };
     can_approve: boolean;
     can_cancel: boolean;
-    can_fulfill: boolean;
+    can_complete: boolean;
     /** Files filed with the request — present on the detail read only. Fixed at submit. */
     attachments?: RequestAttachment[];
     approved_at: string | null;
     rejected_at: string | null;
-    fulfilled_at: string | null;
+    completed_at: string | null;
     cancelled_at: string | null;
     created_at: string;
 }

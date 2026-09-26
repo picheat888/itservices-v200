@@ -51,7 +51,7 @@ export const requests: Dict = {
     req_activity_approved: 'อนุมัติครบทุกขั้น',
     req_activity_rejected: 'ไม่อนุมัติ',
     req_activity_cancelled: 'ยกเลิก',
-    req_activity_fulfilled: 'ปิดงาน',
+    req_activity_completed: 'เสร็จสิ้น',
     req_recent_title: 'ความเคลื่อนไหวล่าสุด',
     req_inactive: 'ปิดรับคำขอชั่วคราว',
 
@@ -73,14 +73,14 @@ export const requests: Dict = {
     req_status_pending: 'รออนุมัติ',
     req_status_approved: 'อนุมัติแล้ว',
     req_status_rejected: 'ไม่อนุมัติ',
-    req_status_fulfilled: 'ดำเนินการแล้ว',
+    req_status_completed: 'เสร็จสิ้น',
     req_status_cancelled: 'ยกเลิก',
 
     // pages/index.tsx + request-detail-dialog.tsx — ปุ่มสั่งงาน
     req_approve: 'อนุมัติ',
     req_reject: 'ไม่อนุมัติ',
-    req_fulfill: 'ปิดงานแล้ว',
-    req_fulfill_awaits_case: 'คำขอนี้จะปิดอัตโนมัติ เมื่อเคส {no} เสร็จสิ้น',
+    req_complete: 'ยืนยันเสร็จสิ้น',
+    req_complete_awaits_case: 'คำขอนี้จะปิดอัตโนมัติ เมื่อเคส {no} เสร็จสิ้น',
     req_cancel_request: 'ยกเลิกคำขอ',
 
     // request-create-dialog.tsx — wizard สร้างคำขอ
@@ -147,15 +147,15 @@ export const requests: Dict = {
     // request-trail.tsx — เส้นทางการอนุมัติ
     req_trail_title: 'เส้นทางการอนุมัติ',
     req_trail_submitted: 'ยื่นคำขอ',
-    req_trail_fulfillment: 'Admin / ทีม IT ดำเนินการ',
+    req_trail_completion: 'Admin / ทีม IT ดำเนินการให้เสร็จสิ้น',
     req_trail_approved: 'อนุมัติแล้ว',
     req_trail_rejected: 'ไม่อนุมัติ',
     req_trail_waiting: 'รออนุมัติ',
     req_trail_queued: 'ยังไม่ถึงคิว',
     req_trail_skipped: 'ข้ามขั้นนี้',
     req_trail_after_approvals: 'รออนุมัติครบทุกขั้น',
-    req_trail_fulfilled_done: 'เสร็จสิ้น · แจ้งผู้ขอแล้ว',
-    req_trail_fulfilled_by: 'เสร็จสิ้น โดย {name}',
+    req_trail_completed_done: 'เสร็จสิ้น · แจ้งผู้ขอแล้ว',
+    req_trail_completed_by: 'เสร็จสิ้น โดย {name}',
     req_trail_it_pending: 'รอทีม IT ดำเนินการ',
     req_trail_ticket_waiting_take: 'รอรับเคส',
     req_trail_ticket_taken: 'อยู่ระหว่างดำเนินการ',
@@ -168,7 +168,7 @@ export const requests: Dict = {
     req_no_ticket: 'ไม่มี Ticket - สายนี้ปิดงานโดยไม่เปิดเคส',
     req_ticket_auto_hint: 'เปิดเคสอัตโนมัติเรียบร้อยแล้ว',
 
-    // decision-dialog.tsx — อนุมัติ / ไม่อนุมัติ / ปิดงาน / ยกเลิก
+    // decision-dialog.tsx — อนุมัติ / ไม่อนุมัติ / เสร็จสิ้น / ยกเลิก
     req_decide_approve: 'อนุมัติคำขอ',
     req_decide_reject: 'ไม่อนุมัติคำขอ',
     req_decide_note: 'หมายเหตุ (ไม่บังคับ)',
@@ -179,8 +179,8 @@ export const requests: Dict = {
     req_decide_note_ph_reject: 'เช่น เครื่องในแผนกมีจำนวนเยอะแล้ว ให้ใช้เครื่องที่มีอยู่ก่อน',
     req_decide_notify_reject: 'แจ้งกลับผู้ขอทาง Notification + Email แล้วปิดคำขอ',
     req_decide_notify_next: 'ถัดไป: {name}',
-    req_fulfill_title: 'ยืนยันปิดงาน',
-    req_fulfill_hint: 'ยืนยันว่างานเสร็จแล้ว ระบบจะแจ้งผู้ขอ',
+    req_complete_title: 'ยืนยันว่าคำขอเสร็จสิ้น',
+    req_complete_hint: 'ยืนยันว่างานเสร็จแล้ว ระบบจะแจ้งผู้ขอ',
     req_cancel_title: 'ยกเลิกคำขอนี้?',
     req_cancel_hint: 'ระบบจะแจ้งผู้อนุมัติที่กำลังรอ และปิดคำขอนี้',
 };

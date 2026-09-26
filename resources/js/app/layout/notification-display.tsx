@@ -112,14 +112,14 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if (n.data.subtype === 'blocked_no_account') return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         if (n.data.subtype === 'rejected' || n.data.subtype === 'cancelled')
             return { Icon: XCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
-        if (n.data.subtype === 'approved_final' || n.data.subtype === 'fulfilled')
+        if (n.data.subtype === 'approved_final' || n.data.subtype === 'completed')
             return { Icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
         if (n.data.subtype === 'waiting') return { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
         // A step nobody has touched for days — the clock, not the inbox tray.
         if (n.data.subtype === 'stalled') return { Icon: Clock, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
-        // The queue bell is amber only while somebody there still has to press Fulfil. Once
+        // The queue bell is amber only while somebody there still has to press Complete. Once
         // a case carries the delivery it is news, not a task — the case has its own bell.
-        if (n.data.subtype === 'ready_to_fulfill') {
+        if (n.data.subtype === 'ready_to_complete') {
             return n.data.ticket_no
                 ? { Icon: PackageCheck, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' }
                 : { Icon: Inbox, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
@@ -223,12 +223,12 @@ const REQUEST_MESSAGE_KEY: Record<string, string> = {
     stalled: 'notif_request_stalled',
     // The IT queue, which delivers rather than decides. Two readings of the same
     // subtype: with a case open the work lives in the case and this bell only names
-    // it; without one, somebody here still has to press Fulfil.
-    ready_to_fulfill: 'notif_request_ready_manual',
+    // it; without one, somebody here still has to press Complete.
+    ready_to_complete: 'notif_request_ready_manual',
     approved_step: 'notif_request_approved_step',
     approved_final: 'notif_request_approved_final',
     rejected: 'notif_request_rejected',
-    fulfilled: 'notif_request_fulfilled',
+    completed: 'notif_request_completed',
     cancelled: 'notif_request_cancelled',
     // Goes to whoever can provision a login, not to a participant.
     blocked_no_account: 'notif_request_blocked_no_account',
@@ -257,7 +257,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'stock_count') return t('notif_stock_count_draft');
     if (n.data.type === 'request') {
         const key =
-            n.data.subtype === 'ready_to_fulfill' && n.data.ticket_no ? 'notif_request_ready_case' : REQUEST_MESSAGE_KEY[n.data.subtype ?? ''];
+            n.data.subtype === 'ready_to_complete' && n.data.ticket_no ? 'notif_request_ready_case' : REQUEST_MESSAGE_KEY[n.data.subtype ?? ''];
         if (!key) return '';
 
         // Say it is a new hire's request up front — an approver acting from the bell

@@ -27,7 +27,7 @@ interface TrailItem {
 /**
  * Vertical approval trail of one request — mirrors the draw.io flow: submitted
  * → every (frozen) approval step with its decision + remark → the Admin/IT
- * fulfillment hop, or the rejection notice back to the requester.
+ * completion hop, or the rejection notice back to the requester.
  */
 /** "QC Dept. · Asst. Manager / Manager" — who is holding a step that names no one person. */
 function departmentTitle(row: RequestApproval): string {
@@ -87,12 +87,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
      * Once a ticket exists, the ticket is where this step actually stands — nobody has
      * picked it up, or somebody is on it — so that is what it reports.
      */
-    const fulfillmentMeta = (row: RequestApproval): string => {
+    const completionMeta = (row: RequestApproval): string => {
         if (row.status === 'waiting') return t('req_trail_after_approvals');
         if (row.status === 'approved') {
             // Naming who finished it: the trail says who decided every other step, and
             // this is the one where the work actually happened.
-            const done = row.acted_by_name ? t('req_trail_fulfilled_by').replace('{name}', row.acted_by_name) : t('req_trail_fulfilled_done');
+            const done = row.acted_by_name ? t('req_trail_completed_by').replace('{name}', row.acted_by_name) : t('req_trail_completed_done');
 
             return `${done}${row.acted_at ? ` · ${row.acted_at}` : ''}`;
         }
@@ -114,12 +114,12 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
     };
 
     for (const row of approvals) {
-        const isFulfillment = row.kind === 'fulfillment';
+        const isCompletion = row.kind === 'completion';
         const tone: TrailTone =
             row.status === 'approved'
                 ? 'done'
                 : row.status === 'rejected'
-                  ? isFulfillment
+                  ? isCompletion
                       ? 'cancelled'
                       : 'rejected'
                   : row.status === 'current'
@@ -136,7 +136,7 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
                     <X className="h-3 w-3" />
                 ) : row.status === 'skipped' ? (
                     <SkipForward className="h-3 w-3" />
-                ) : isFulfillment ? (
+                ) : isCompletion ? (
                     <Flag className="h-3 w-3" />
                 ) : (
                     <span className="font-mono text-[11px] font-bold">{row.position}</span>
@@ -144,14 +144,14 @@ export function RequestTrail({ request }: { request: ServiceRequest }) {
             // A group step nobody has taken yet has no single name to print. The people it
             // names, or the department and the rungs it accepts, are what the reader can act
             // on — "waiting on a person we cannot name" is the one thing the line must not say.
-            title: isFulfillment
-                ? t('req_trail_fulfillment')
+            title: isCompletion
+                ? t('req_trail_completion')
                 : (row.approver_name ??
                   ((row.approver_candidates ?? []).length > 0 ? candidatesTitle(row) : row.approver_department ? departmentTitle(row) : row.label)),
             // A skipped step with a reason says it all inside the amber note below, so the
             // status line stays quiet instead of printing "skipped" twice. Rows from before
             // reasons were stored still get the plain word.
-            meta: isFulfillment ? fulfillmentMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
+            meta: isCompletion ? completionMeta(row) : row.status === 'skipped' && row.skip_reason ? '' : stepMeta(row),
             note: row.note,
             awaitingAccount: row.awaiting_account,
             skipReason: row.skip_reason,

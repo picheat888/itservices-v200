@@ -21,10 +21,10 @@ use Illuminate\Support\Facades\Notification;
  *
  *  submitted        → requester (receipt) + first approver (action needed)
  *  advanced         → requester (step passed, bell only) + next approver
- *  finalApproved    → requester + the requests.fulfill queue (ready_to_fulfill,
+ *  finalApproved    → requester + the requests.complete queue (ready_to_complete,
  *                     which names the auto-opened case when there is one)
  *  rejected         → requester, carrying the decision remark
- *  fulfilled        → requester
+ *  completed        → requester
  *  cancelled        → the waiting approver's action bell is replaced
  */
 class RequestNotificationService
@@ -82,7 +82,7 @@ class RequestNotificationService
         }
     }
 
-    /** Every approval step passed: requester + the fulfillment queue. */
+    /** Every approval step passed: requester + the completion queue. */
     public function finalApproved(ServiceRequest $request): void
     {
         $followers = $this->followers($request);
@@ -96,20 +96,20 @@ class RequestNotificationService
         //
         // Its own subtype, not the approvers' `waiting`: IT delivers, it does not decide,
         // and a workflow that opened its own case leaves nothing here to press at all —
-        // closing that case is what fulfils the request. The bell names the case so it
+        // closing that case is what completes the request. The bell names the case so it
         // reads as one story with the case's own "new case" bell instead of a second
         // approval step standing next to it.
-        // Gated by notify_approved, not by fulfill: closing a request and wanting to hear
+        // Gated by notify_approved, not by complete: closing a request and wanting to hear
         // that one is ready are separate jobs, and the rota that does the closing changes.
         $queue = $this->recipients('requests.notify_approved')
             ->reject(fn (User $u) => $followers->contains('id', $u->id))
             ->values();
         $this->sendBell(
             $queue,
-            new RequestWorkflowNotification($request, 'ready_to_fulfill'),
-            ['service_request_id' => $request->id, 'subtype' => 'ready_to_fulfill'],
+            new RequestWorkflowNotification($request, 'ready_to_complete'),
+            ['service_request_id' => $request->id, 'subtype' => 'ready_to_complete'],
         );
-        $this->emailEach($queue, 'request.ready_to_fulfill', $request);
+        $this->emailEach($queue, 'request.ready_to_complete', $request);
     }
 
     public function rejected(ServiceRequest $request, RequestApproval $row): void
@@ -126,12 +126,12 @@ class RequestNotificationService
         }
     }
 
-    public function fulfilled(ServiceRequest $request): void
+    public function completed(ServiceRequest $request): void
     {
         $followers = $this->followers($request);
         if ($followers->isNotEmpty()) {
-            Notification::send($followers, new RequestWorkflowNotification($request, 'fulfilled'));
-            $this->emailEach($followers, 'request.fulfilled', $request);
+            Notification::send($followers, new RequestWorkflowNotification($request, 'completed'));
+            $this->emailEach($followers, 'request.completed', $request);
         }
     }
 
@@ -141,7 +141,7 @@ class RequestNotificationService
      *
      * Separate from cancelled() below, which speaks to the approver who was still holding
      * a pending request. Nobody is holding this one: it cleared every step, so the
-     * fulfilment row belongs to the IT queue and carries no person at all. Routed here it
+     * completion row belongs to the IT queue and carries no person at all. Routed here it
      * reached nobody, which is how a request could be closed in silence.
      */
     public function notDelivered(ServiceRequest $request, ?string $reason): void
@@ -155,7 +155,7 @@ class RequestNotificationService
         // actor.name is "who decided this" in every request mail — the rejecting approver in
         // request.rejected, and here the IT staff who closed the case out.
         $this->emailEach($followers, 'request.not_delivered', $request, [
-            'actor.name' => $this->fulfilledBy($request),
+            'actor.name' => $this->completedBy($request),
             'remark' => $this->remark($reason),
         ]);
     }
@@ -388,13 +388,13 @@ class RequestNotificationService
     /**
      * The IT staff who closed the request out.
      *
-     * Kept on the fulfilment row rather than the request: service_requests records WHEN it
-     * was fulfilled but never who did it, and that row is the only place the name lands.
+     * Kept on the completion row rather than the request: service_requests records WHEN it
+     * was completed but never who did it, and that row is the only place the name lands.
      */
-    private function fulfilledBy(ServiceRequest $request): string
+    private function completedBy(ServiceRequest $request): string
     {
         $row = $request->approvals()
-            ->where('kind', WorkflowStepKind::Fulfillment->value)
+            ->where('kind', WorkflowStepKind::Completion->value)
             ->orderByDesc('position')
             ->first();
 
@@ -429,7 +429,7 @@ class RequestNotificationService
      * the first human to look at it, changes how much weight their own signature carries —
      * and it was not written anywhere they could see without opening the portal.
      *
-     * Only the rows BEFORE the one being waited on, and only approval steps: the fulfilment
+     * Only the rows BEFORE the one being waited on, and only approval steps: the completion
      * row is IT's work queue, not a decision anybody made.
      */
     private function approvalHistory(ServiceRequest $request): string
@@ -515,8 +515,8 @@ class RequestNotificationService
             // Set by finalize() before this mail is composed, and only for workflows with
             // auto_ticket on — the others have nothing to open.
             'request.ticket_no' => (string) ($request->ticket?->ticket_no ?: '-'),
-            'request.fulfilled_date' => $request->fulfilled_at?->format('d-m-Y') ?? '-',
-            'request.fulfilled_by' => $this->fulfilledBy($request),
+            'request.completed_date' => $request->completed_at?->format('d-m-Y') ?? '-',
+            'request.completed_by' => $this->completedBy($request),
             // Free text somebody typed, landing in an HTML email.
             'request.reason' => filled($request->reason) ? nl2br(e((string) $request->reason)) : '-',
             'request.details' => $this->detailLines($request),
@@ -550,7 +550,7 @@ class RequestNotificationService
 
     /**
      * The same reminder for a rung that names no person — the IT queue. It goes to whoever
-     * asked to hear about requests that reached fulfilment, since there is no individual
+     * asked to hear about requests that reached completion, since there is no individual
      * holding the step to poke.
      */
     public function remindQueue(ServiceRequest $request, RequestApproval $row, int $days): void

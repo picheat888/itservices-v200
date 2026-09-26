@@ -11,11 +11,11 @@ const MASTER = 'requests.module';
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'requests.submit', children: [], chip: false },
     { view: 'requests.view_all', children: [], chip: false },
-    { view: 'requests.fulfill', children: [], chip: false },
+    { view: 'requests.complete', children: [], chip: false },
 ];
-// Who HEARS about the fulfilment queue, which is not the same question as who may work it —
+// Who HEARS about the completion queue, which is not the same question as who may work it —
 // a manager can want to know a request landed without being the one who closes it. Grouped
-// under a heading rather than under `fulfill` so neither key implies the other; the master
+// under a heading rather than under `complete` so neither key implies the other; the master
 // is their only gate. (Same shape as the Ticket card's level cluster.)
 const NOTIFY = ['requests.notify_approved', 'requests.notify_stalled'];
 // Every gated key under the master.
@@ -184,7 +184,7 @@ export function RequestPermissionTree({
                                 text={
                                     lang === 'th'
                                         ? 'ใครได้ยินเรื่องคิวดำเนินการ - แยกจากใครมีสิทธิ์ปิดงาน หัวหน้าที่อยากรู้ว่ามีงานเข้าเปิดได้โดยไม่ต้องเป็นคนทำเอง'
-                                        : 'Who hears about the fulfilment queue - separate from who may work it, so a manager can follow it without closing anything.'
+                                        : 'Who hears about the completion queue - separate from who may work it, so a manager can follow it without closing anything.'
                                 }
                             />
                         </span>

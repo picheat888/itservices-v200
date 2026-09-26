@@ -27,10 +27,9 @@ const statusTone: Record<string, 'blue' | 'green' | 'amber' | 'gray' | 'red'> = 
     in_progress: 'amber',
     completed: 'green',
     canceled: 'gray',
-    // Requests have their own Pending; tickets do not.
+    // Requests have their own Pending; tickets do not. `completed` is shared with tickets.
     pending: 'amber',
     approved: 'blue',
-    fulfilled: 'green',
     rejected: 'red',
     cancelled: 'gray',
     deployed: 'green',

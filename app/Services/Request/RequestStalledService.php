@@ -58,7 +58,7 @@ class RequestStalledService
             }
 
             // A rung naming nobody is the IT queue; there is no individual to poke, so the
-            // people who asked to hear about fulfilment hear about this too.
+            // people who asked to hear about completion hear about this too.
             if ($row->approver_employee_id === null) {
                 $this->notifications->remindQueue($row->request, $row, $days);
                 $sent['queue']++;
@@ -138,7 +138,7 @@ class RequestStalledService
 
         return RequestApproval::with(['request'])
             ->where('status', ApprovalStatus::Current->value)
-            ->whereIn('kind', [WorkflowStepKind::Approval->value, WorkflowStepKind::Fulfillment->value])
+            ->whereIn('kind', [WorkflowStepKind::Approval->value, WorkflowStepKind::Completion->value])
             ->whereNotNull('became_current_at')
             ->where('became_current_at', '<=', now()->subDays($days))
             ->get()

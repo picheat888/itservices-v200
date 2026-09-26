@@ -43,8 +43,8 @@ export const workflow: Dict = {
 
     // workflow-strip.tsx — แถบลำดับสถานะ
     wf_approval: 'ผู้อนุมัติ',
-    wf_fulfillment: 'ผู้ดำเนินการ',
-    wf_fulfillment_role: 'ผู้ดำเนินการหลังอนุมัติจบ',
+    wf_completion: 'ปิดงาน',
+    wf_completion_role: 'ปิดงานให้เสร็จสิ้นหลังอนุมัติจบ',
     wf_submitted: 'ยื่นคำขอ',
     wf_closed: 'ปิดเคส',
 

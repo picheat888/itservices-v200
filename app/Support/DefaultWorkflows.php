@@ -57,7 +57,7 @@ class DefaultWorkflows
             ['actor_type' => 'chain', 'label' => 'Manager / Asst. Manager', 'kind' => 'approval', 'positions' => self::RUNGS['manager']],
             ['actor_type' => 'chain', 'label' => 'Vice President', 'kind' => 'approval', 'positions' => self::RUNGS['executive']],
         ];
-        $it = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'];
+        $it = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'];
         $owner = ['actor_type' => 'owner', 'label' => 'Resource Owner', 'kind' => 'approval'];
 
         return [

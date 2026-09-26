@@ -105,10 +105,10 @@ class ServiceRequestResource extends JsonResource
             'can_cancel' => $viewer !== null && $this->status === RequestStatus::Pending
                 && ($this->user_id === $viewer->id || $this->submitted_by_user_id === $viewer->id),
             // Held back while a linked case is still in flight: closing that case is what
-            // fulfils the request, so the button would only ever return the 422 that
-            // RequestService::fulfill answers with.
-            'can_fulfill' => $viewer !== null && $this->status === RequestStatus::Approved
-                && (bool) $viewer->hasPermission('requests.fulfill')
+            // completes the request, so the button would only ever return the 422 that
+            // RequestService::complete answers with.
+            'can_complete' => $viewer !== null && $this->status === RequestStatus::Approved
+                && (bool) $viewer->hasPermission('requests.complete')
                 && ! $this->hasCaseInFlight(),
             // Evidence filed with the request. Only on the detail read — a list row
             // has nowhere to show a file and would pay a query per row for it.
@@ -127,7 +127,7 @@ class ServiceRequestResource extends JsonResource
             'activity' => $this->lastActivity($approvalRows),
             'approved_at' => $this->approved_at?->toDateTimeString(),
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
-            'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
+            'completed_at' => $this->completed_at?->toDateTimeString(),
             'cancelled_at' => $this->cancelled_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
         ];
@@ -149,15 +149,15 @@ class ServiceRequestResource extends JsonResource
             ->sortBy('acted_at')
             ->last();
         $queueRow = $this->relationLoaded('approvals')
-            ? $this->approvals->first(fn (RequestApproval $a) => $a->kind === WorkflowStepKind::Fulfillment)
+            ? $this->approvals->first(fn (RequestApproval $a) => $a->kind === WorkflowStepKind::Completion)
             : null;
 
         return match ($this->status) {
             RequestStatus::Rejected => ['at' => $at, 'kind' => 'rejected', 'by' => $signed?->acted_by_name],
             // Cancelled by the requester withdrawing it, or by IT closing the case without
-            // delivering — the fulfilment row names the second one.
+            // delivering — the completion row names the second one.
             RequestStatus::Cancelled => ['at' => $at, 'kind' => 'cancelled', 'by' => $queueRow?->acted_by_name],
-            RequestStatus::Fulfilled => ['at' => $at, 'kind' => 'fulfilled', 'by' => $queueRow?->acted_by_name],
+            RequestStatus::Completed => ['at' => $at, 'kind' => 'completed', 'by' => $queueRow?->acted_by_name],
             RequestStatus::Approved => ['at' => $at, 'kind' => 'approved', 'by' => $signed?->acted_by_name],
             // Still in the chain: either somebody has signed a rung, or nothing has happened
             // since it was filed.
@@ -169,7 +169,7 @@ class ServiceRequestResource extends JsonResource
 
     /**
      * A linked case still open or in progress owns the delivery — see
-     * RequestService::fulfill for why the manual button stands down for it.
+     * RequestService::complete for why the manual button stands down for it.
      *
      * Read only from a loaded relation, because a resource must not query. An absent
      * relation counts as in flight: hiding the button costs a detour through the case,

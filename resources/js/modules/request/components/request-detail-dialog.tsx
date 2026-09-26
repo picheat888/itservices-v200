@@ -34,7 +34,7 @@ import { RequestTrail } from './request-trail';
 /**
  * Focus dialog for one request: summary + typed fields on the left, the
  * approval trail on the right, and viewer-relative actions in the footer
- * (approve/reject for the resolved current approver, fulfill for IT, cancel
+ * (approve/reject for the resolved current approver, complete for IT, cancel
  * for the requester while pending). Deep-linked via /requests?view=<id>.
  *
  * Opening a second request from underneath this one (a deep link, a row behind
@@ -164,7 +164,7 @@ function RequestDetailBody({
     const navigate = useNavigate();
     const confirm = useConfirm();
     const { can } = useAuth();
-    const { fulfill, cancel } = useRequestMutations();
+    const { complete, cancel } = useRequestMutations();
 
     const meta = REQUEST_TYPE_META[request.type];
     // Written in the reader's language from `type`, not read off `request.title` — that
@@ -172,29 +172,29 @@ function RequestDetailBody({
     const shownTitle = requestTitle(request, t);
 
     /**
-     * The Fulfil button is gone because the case is still in flight — closing it is what
+     * The Complete button is gone because the case is still in flight — closing it is what
      * finishes this request. Said out loud, because the same viewer sees the button on a
      * request that opened no case: without a line here, its absence reads as a bug.
      *
-     * `can` rather than `can_fulfill`, which is already false for exactly this reason and
+     * `can` rather than `can_complete`, which is already false for exactly this reason and
      * so cannot tell "IT, standing down" apart from "not IT at all".
      */
     const caseInFlight = request.ticket?.status === 'open' || request.ticket?.status === 'in_progress';
-    const awaitingCase = caseInFlight && request.status === 'approved' && can('requests.fulfill');
+    const awaitingCase = caseInFlight && request.status === 'approved' && can('requests.complete');
 
     const onError = (e: unknown) => {
         const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
         useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
     };
 
-    const confirmFulfill = () =>
+    const confirmComplete = () =>
         confirm({
             variant: 'edit',
-            title: t('req_fulfill_title'),
-            description: t('req_fulfill_hint'),
+            title: t('req_complete_title'),
+            description: t('req_complete_hint'),
             entity: { name: `${request.reference} - ${shownTitle}` },
-            confirmText: t('req_fulfill'),
-            action: () => fulfill.mutateAsync(request.id).catch(onError),
+            confirmText: t('req_complete'),
+            action: () => complete.mutateAsync(request.id).catch(onError),
         });
 
     const confirmCancel = () =>
@@ -333,7 +333,7 @@ function RequestDetailBody({
                 {awaitingCase && request.ticket && (
                     <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
                         <TicketIcon className="h-3.5 w-3.5 shrink-0" />
-                        {t('req_fulfill_awaits_case').replace('{no}', request.ticket.ticket_no)}
+                        {t('req_complete_awaits_case').replace('{no}', request.ticket.ticket_no)}
                     </span>
                 )}
                 {request.can_cancel && (
@@ -346,10 +346,10 @@ function RequestDetailBody({
                     <Button variant="outline" onClick={onClose}>
                         {t('close')}
                     </Button>
-                    {request.can_fulfill && (
-                        <Button onClick={confirmFulfill} disabled={fulfill.isPending}>
+                    {request.can_complete && (
+                        <Button onClick={confirmComplete} disabled={complete.isPending}>
                             <PackageCheck className="h-4 w-4" />
-                            {t('req_fulfill')}
+                            {t('req_complete')}
                         </Button>
                     )}
                     {request.can_approve && (

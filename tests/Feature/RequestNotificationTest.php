@@ -22,7 +22,7 @@ use Tests\TestCase;
 /**
  * Bell fan-out per workflow transition (drawio: every hop notifies Bell +
  * Email): first approver on submit, next approver after a step, requester on
- * reject with the remark, and the fulfill queue after the final approval.
+ * reject with the remark, and the complete queue after the final approval.
  */
 class RequestNotificationTest extends TestCase
 {
@@ -57,7 +57,7 @@ class RequestNotificationTest extends TestCase
         $itRole = Role::firstOrCreate(['key' => 'it'], ['name' => 'IT', 'color' => '#0284c7', 'is_system' => false]);
         // Closing requests and hearing about them are separate permissions: the queue bell
         // follows notify_approved, so an IT user needs both to appear in these tests.
-        foreach (['requests.fulfill', 'requests.notify_approved'] as $permission) {
+        foreach (['requests.complete', 'requests.notify_approved'] as $permission) {
             RolePermission::updateOrCreate(['role_id' => $itRole->id, 'permission' => $permission], ['allowed' => true]);
         }
 
@@ -138,7 +138,7 @@ class RequestNotificationTest extends TestCase
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
 
-        // The fulfillment row names no person at all: it is a queue, not somebody
+        // The completion row names no person at all: it is a queue, not somebody
         // waiting for an account.
         $this->assertCount(0, $this->bells($accountAdmin, 'blocked_no_account'));
     }
@@ -162,10 +162,10 @@ class RequestNotificationTest extends TestCase
         $this->assertCount(1, $this->bells($this->requester, 'approved_step'));
     }
 
-    public function test_final_approval_notifies_requester_and_the_fulfill_queue(): void
+    public function test_final_approval_notifies_requester_and_the_complete_queue(): void
     {
         // No auto-ticket: this test follows the bells of the manual queue, and a request
-        // that opened a case is fulfilled by closing that case instead (the bells of that
+        // that opened a case is completed by closing that case instead (the bells of that
         // path are RequestAutoTicketTest's).
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
@@ -178,18 +178,18 @@ class RequestNotificationTest extends TestCase
         // The queue hears its own subtype, never the approvers' one: this bell asks for a
         // delivery, not a decision. No case was opened here, so it carries no ticket and
         // the SPA renders the "waiting for IT to deliver" copy.
-        $bells = $this->bells($this->itUser, 'ready_to_fulfill');
+        $bells = $this->bells($this->itUser, 'ready_to_complete');
         $this->assertCount(1, $bells);
         $this->assertNull($bells[0]->data['ticket_no']);
         $this->assertCount(0, $this->bells($this->itUser, 'waiting'));
 
-        $this->actingAs($this->itUser)->postJson("/api/service-requests/{$request->id}/fulfill")->assertOk();
-        $this->assertCount(1, $this->bells($this->requester, 'fulfilled'));
+        $this->actingAs($this->itUser)->postJson("/api/service-requests/{$request->id}/complete")->assertOk();
+        $this->assertCount(1, $this->bells($this->requester, 'completed'));
     }
 
     /**
      * A workflow that opens its own case leaves IT nothing to decide and nothing to press:
-     * closing the case is what fulfils the request. The bell has to say that, or it reads
+     * closing the case is what completes the request. The bell has to say that, or it reads
      * as a second approval step sitting next to the case's own "new case" bell.
      */
     public function test_the_queue_bell_names_the_case_when_one_was_opened(): void
@@ -202,7 +202,7 @@ class RequestNotificationTest extends TestCase
         $ticket = $request->fresh()->ticket;
         $this->assertNotNull($ticket, 'the computer workflow is the auto_ticket one');
 
-        $bells = $this->bells($this->itUser, 'ready_to_fulfill');
+        $bells = $this->bells($this->itUser, 'ready_to_complete');
         $this->assertCount(1, $bells);
         $this->assertSame($ticket->ticket_no, $bells[0]->data['ticket_no']);
         $this->assertSame($ticket->id, $bells[0]->data['ticket_id']);
@@ -226,7 +226,7 @@ class RequestNotificationTest extends TestCase
     {
         $this->seed(EmailTemplateSeeder::class);
 
-        foreach (['request.submitted', 'request.ready_to_fulfill', 'request.fulfilled', 'request.approval_needed'] as $key) {
+        foreach (['request.submitted', 'request.ready_to_complete', 'request.completed', 'request.approval_needed'] as $key) {
             $this->assertTrue(EmailTemplate::where('key', $key)->exists(), "missing template {$key}");
         }
     }

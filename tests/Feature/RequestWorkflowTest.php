@@ -30,7 +30,7 @@ use Tests\TestCase;
 
 /**
  * The service-request lifecycle over HTTP: submit → step-by-step approval →
- * fulfillment, with every guard (identity, state, remark) and the snapshot
+ * completion, with every guard (identity, state, remark) and the snapshot
  * property that workflow edits never touch in-flight requests.
  */
 class RequestWorkflowTest extends TestCase
@@ -101,7 +101,7 @@ class RequestWorkflowTest extends TestCase
         return User::factory()->create(['role' => $roleKey, 'employee_id' => $employee?->id]);
     }
 
-    /** Submit a computer request (Sup → Mgr chain + IT fulfillment) and return it. */
+    /** Submit a computer request (Sup → Mgr chain + IT completion) and return it. */
     private function submitComputer(): ServiceRequest
     {
         $response = $this->actingAs($this->requester)->postJson('/api/service-requests', [
@@ -385,7 +385,7 @@ class RequestWorkflowTest extends TestCase
         $request->refresh();
         $this->assertSame(RequestStatus::Approved, $request->status);
         $this->assertNotNull($request->approved_at);
-        // The fulfillment queue row is now the current step.
+        // The completion queue row is now the current step.
         $this->assertSame('it_staff', $request->currentApproval()->actor_type->value);
     }
 
@@ -421,24 +421,24 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable();
     }
 
-    public function test_fulfill_requires_permission_and_approved_status(): void
+    public function test_complete_requires_permission_and_approved_status(): void
     {
         // No auto-ticket, which is where the manual button still applies: with a case
-        // open, closing it is what fulfils the request and this endpoint refuses (see
+        // open, closing it is what completes the request and this endpoint refuses (see
         // RequestAutoTicketTest). This test is about the gate and the precondition.
         Workflow::where('request_type', 'computer')->firstOrFail()->update(['auto_ticket' => false]);
         $request = $this->submitComputer();
-        $it = $this->makeUser('it', ['requests.fulfill']);
+        $it = $this->makeUser('it', ['requests.complete']);
 
-        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/fulfill")->assertUnprocessable();
+        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertUnprocessable();
 
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve");
         $this->actingAs($this->mgrUser)->postJson("/api/service-requests/{$request->id}/approve");
 
-        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/fulfill")->assertForbidden();
-        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/fulfill")->assertOk();
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/complete")->assertForbidden();
+        $this->actingAs($it)->postJson("/api/service-requests/{$request->id}/complete")->assertOk();
 
-        $this->assertSame(RequestStatus::Fulfilled, $request->fresh()->status);
+        $this->assertSame(RequestStatus::Completed, $request->fresh()->status);
     }
 
     public function test_cancel_only_by_the_requester_while_pending(): void
@@ -458,7 +458,7 @@ class RequestWorkflowTest extends TestCase
         $request = $this->submitComputer();
         $before = $request->approvals->pluck('approver_employee_id', 'position')->all();
 
-        // Admin rewrites the computer workflow to a single fulfillment-less step.
+        // Admin rewrites the computer workflow to a single completion-less step.
         $admin = $this->makeUser('wfadmin', ['workflows.module', 'workflows.manage']);
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
         $this->actingAs($admin)->putJson("/api/workflows/{$workflow->id}", [

@@ -270,16 +270,16 @@ class RequestService
     }
 
     /**
-     * Mark an approved request done (the requests.fulfill queue's action).
+     * Mark an approved request done (the requests.complete queue's action).
      *
      * The button is the whole delivery record only when no case was opened — a
      * workflow with auto_ticket off, or one whose case could not be opened. Where a
-     * case exists, closing it is what fulfils the request (settleFromTicket), so
+     * case exists, closing it is what completes the request (settleFromTicket), so
      * this refuses while that case is still in flight.
      */
-    public function fulfill(ServiceRequest $request, User $actor): ServiceRequest
+    public function complete(ServiceRequest $request, User $actor): ServiceRequest
     {
-        abort_unless((bool) $actor->hasPermission('requests.fulfill'), 403);
+        abort_unless((bool) $actor->hasPermission('requests.complete'), 403);
 
         $request = DB::transaction(function () use ($request, $actor) {
             $fresh = ServiceRequest::lockForUpdate()->findOrFail($request->id);
@@ -295,11 +295,11 @@ class RequestService
             abort_if(
                 in_array($fresh->ticket?->status, TicketStatus::live(), true),
                 422,
-                "Ticket {$fresh->ticket?->ticket_no} is still open - closing that case fulfils this request.",
+                "Ticket {$fresh->ticket?->ticket_no} is still open - closing that case completes this request.",
             );
 
             $fresh->approvals()
-                ->where('kind', WorkflowStepKind::Fulfillment->value)
+                ->where('kind', WorkflowStepKind::Completion->value)
                 ->where('status', ApprovalStatus::Current->value)
                 ->first()?->update([
                     'status' => ApprovalStatus::Approved->value,
@@ -308,8 +308,8 @@ class RequestService
                     'acted_at' => now(),
                 ]);
             $fresh->update([
-                'status' => RequestStatus::Fulfilled->value,
-                'fulfilled_at' => now(),
+                'status' => RequestStatus::Completed->value,
+                'completed_at' => now(),
                 'last_activity_at' => now(),
             ]);
 
@@ -317,7 +317,7 @@ class RequestService
         });
 
         $request->refresh()->load('approvals');
-        $this->notifications->fulfilled($request);
+        $this->notifications->completed($request);
 
         return $request;
     }
@@ -328,17 +328,17 @@ class RequestService
      *
      * Closing that ticket IS the delivery: the technician who resolves it is the person
      * who handed the laptop over, and the resolution text they had to write is already
-     * the record of what happened. Asking them to go and press Fulfil afterwards was a
+     * the record of what happened. Asking them to go and press Complete afterwards was a
      * second act of bookkeeping for one real event, and a request whose work was finished
      * days ago would sit in the queue until somebody remembered.
      *
      * A cancelled ticket cancels the request rather than rejecting it: no approver
      * refused this one — it cleared every step and then could not be delivered, so
      * counting it as a rejection would misreport the approval chain. The ticket's own
-     * resolution is stamped on the fulfilment row, which is the same words on both sides
+     * resolution is stamped on the completion row, which is the same words on both sides
      * for whoever checks later.
      *
-     * Deliberately not gated by requests.fulfill. The gate that matters already fired:
+     * Deliberately not gated by requests.complete. The gate that matters already fired:
      * only the ticket's assignee may resolve it. Refusing here would leave the ticket
      * closed and the request stranded, which is the state this exists to prevent.
      *
@@ -359,7 +359,7 @@ class RequestService
             }
 
             $queueRow = $fresh->approvals()
-                ->where('kind', WorkflowStepKind::Fulfillment->value)
+                ->where('kind', WorkflowStepKind::Completion->value)
                 ->where('status', ApprovalStatus::Current->value)
                 ->first();
 
@@ -372,7 +372,7 @@ class RequestService
             ]);
 
             $fresh->update($completed
-                ? ['status' => RequestStatus::Fulfilled->value, 'fulfilled_at' => now(), 'last_activity_at' => now()]
+                ? ['status' => RequestStatus::Completed->value, 'completed_at' => now(), 'last_activity_at' => now()]
                 : ['status' => RequestStatus::Cancelled->value, 'cancelled_at' => now(), 'last_activity_at' => now()]);
 
             return [$fresh, $queueRow];
@@ -386,7 +386,7 @@ class RequestService
         // Named for how it happened, so the trail says the ticket closed this and not
         // that somebody went and pressed the button.
         AuditLog::record(
-            $completed ? 'Fulfilled request via ticket' : 'Cancelled request via ticket',
+            $completed ? 'Completed request via ticket' : 'Cancelled request via ticket',
             $fresh->reference,
             ['ticket' => $ticket->ticket_no],
         );
@@ -396,7 +396,7 @@ class RequestService
         // speaks to an approver still holding a pending request — there is none here, so
         // that route reached nobody and the request closed in silence.
         $completed
-            ? $this->notifications->fulfilled($fresh)
+            ? $this->notifications->completed($fresh)
             : $this->notifications->notDelivered($fresh, $queueRow?->note);
     }
 
@@ -452,7 +452,7 @@ class RequestService
     }
 
     /**
-     * Final approval reached: flip the request, activate the fulfillment queue
+     * Final approval reached: flip the request, activate the completion queue
      * row, and open the IT ticket when the submit-time snapshot asked for one.
      * Runs inside the caller's transaction — a ticket failure rolls the whole
      * approval back, so the approver can simply retry.
@@ -466,7 +466,7 @@ class RequestService
         ]);
 
         $queueRow = $request->approvals()
-            ->where('kind', WorkflowStepKind::Fulfillment->value)
+            ->where('kind', WorkflowStepKind::Completion->value)
             ->where('status', ApprovalStatus::Waiting->value)
             ->orderBy('position')
             ->first();
@@ -716,7 +716,7 @@ class RequestService
         }
     }
 
-    /** The current approval-kind row, 422 when the request waits on fulfillment instead. */
+    /** The current approval-kind row, 422 when the request waits on completion instead. */
     private function currentActionableRow(ServiceRequest $request): RequestApproval
     {
         $row = $request->currentApproval();

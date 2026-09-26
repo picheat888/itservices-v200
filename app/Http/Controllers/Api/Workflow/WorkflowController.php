@@ -73,7 +73,7 @@ class WorkflowController extends Controller
     {
         return once(fn () => ServiceRequest::query()
             ->whereNotNull('workflow_id')
-            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Fulfilled->value])
+            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Completed->value])
             ->where('created_at', '>=', now()->subDays(self::MEASURE_DAYS))
             ->get(['workflow_id', 'created_at', 'approved_at', 'rejected_at'])
             ->groupBy('workflow_id')

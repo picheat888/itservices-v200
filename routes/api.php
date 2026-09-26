@@ -263,7 +263,7 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('service-requests/options', [RequestOptionsController::class, 'index'])->name('api.service-requests.options');
     Route::post('service-requests/{serviceRequest}/approve', [RequestController::class, 'approve'])->name('api.service-requests.approve');
     Route::post('service-requests/{serviceRequest}/reject', [RequestController::class, 'reject'])->name('api.service-requests.reject');
-    Route::post('service-requests/{serviceRequest}/fulfill', [RequestController::class, 'fulfill'])->name('api.service-requests.fulfill');
+    Route::post('service-requests/{serviceRequest}/complete', [RequestController::class, 'complete'])->name('api.service-requests.complete');
     Route::post('service-requests/{serviceRequest}/cancel', [RequestController::class, 'cancel'])->name('api.service-requests.cancel');
     Route::apiResource('service-requests', RequestController::class)
         ->only(['index', 'store', 'show'])

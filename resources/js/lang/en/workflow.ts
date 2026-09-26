@@ -40,8 +40,8 @@ export const workflow: Dict = {
 
     // workflow-strip.tsx — stage strip
     wf_approval: 'Approver',
-    wf_fulfillment: 'Fulfiller',
-    wf_fulfillment_role: 'Fulfiller, after the last approval',
+    wf_completion: 'Completion',
+    wf_completion_role: 'Completion, after the last approval',
     wf_submitted: 'Submitted',
     wf_closed: 'Closed',
 
@@ -86,6 +86,6 @@ export const workflow: Dict = {
     wf_skipped: 'skipped',
     wf_covers: 'Covers',
     wf_owner_preview: 'Resolved from the picked resource at submit',
-    wf_queue_preview: 'IT fulfillment queue · auto-opened ticket',
+    wf_queue_preview: 'IT completion queue · auto-opened ticket',
     wf_save_error_steps: 'Check the step list',
 };
