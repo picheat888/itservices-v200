@@ -209,4 +209,14 @@ export const asset: Dict = {
     mya_since: 'ตั้งแต่',
     mya_owner: 'ผู้ดูแล',
     mya_empty: 'ยังไม่มีรายการ IT จะบันทึกให้ตอนส่งมอบหรือให้สิทธิ์',
+
+    // asset-writeoff-dialog.tsx — writing off with a disposal note
+    asset_writeoff_title: 'ตัดจำหน่ายทรัพย์สินที่เลือก',
+    asset_writeoff_note: 'หมายเหตุการตัดจำหน่าย',
+    asset_writeoff_note_ph: 'เช่น ทิ้ง / ขายซาก / บริจาค / หมดสัญญาเช่า — ระบุรายละเอียดได้เลย',
+    asset_writeoff_note_required: 'กรุณาระบุหมายเหตุการตัดจำหน่าย',
+    asset_writeoff_failed: 'ตัดจำหน่ายไม่สำเร็จ',
+
+    // asset-detail-drawer.tsx — write-off note
+    asset_writeoff_note_label: 'ตัดจำหน่ายแล้ว',
 };

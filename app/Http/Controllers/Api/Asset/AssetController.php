@@ -542,7 +542,10 @@ class AssetController extends Controller
         return (new AssetResource($asset))->additional(['message' => 'success'])->response();
     }
 
-    /** Bulk write-off many assets (requires assets.retire). */
+    /**
+     * Bulk write-off many assets (requires assets.retire). The note is required: it is the
+     * only record of how the asset left (discarded, sold for scrap, donated, lease ended…).
+     */
     public function bulk(Request $request): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.retire'), 403);
@@ -550,7 +553,7 @@ class AssetController extends Controller
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['integer', 'exists:assets,id'],
             'op' => ['required', 'in:writeoff'],
-            'reason' => ['nullable', 'string', 'max:500'],
+            'reason' => ['required', 'string', 'max:500'],
         ]);
 
         $count = $this->service->bulkSetStatus($data['ids'], AssetStatus::Writeoff, $data['reason'] ?? null);

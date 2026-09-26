@@ -166,7 +166,7 @@ export function useAssetMutations() {
         }),
         cancelWriteoff: useMutation({ mutationFn: (id: number) => assetApi.cancelWriteoff(id), onSuccess: invalidate }),
         bulk: useMutation({
-            mutationFn: (v: { ids: number[]; op: 'writeoff'; reason?: string }) => assetApi.bulk(v.ids, v.op, v.reason),
+            mutationFn: (v: { ids: number[]; op: 'writeoff'; reason: string }) => assetApi.bulk(v.ids, v.op, v.reason),
             onSuccess: invalidate,
         }),
         bulkTransfer: useMutation({

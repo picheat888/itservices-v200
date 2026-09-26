@@ -53,6 +53,7 @@ import { ASSET_STATUS_META, AssetStatusBadge, AssetStatusDot, AssetTypeIcon } fr
 import { AssetReceiveModal } from '../components/asset-receive-modal';
 import { AssetTagBadge } from '../components/asset-tag-badge';
 import { AssetTransferDialog } from '../components/asset-transfer-dialog';
+import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
@@ -224,7 +225,7 @@ export default function AssetsPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     // Multi-select is locked to one status group; `selectionStatus` is that group.
     const [selectionStatus, setSelectionStatus] = useState<AssetStatus | null>(null);
-    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location'>(null);
+    const [bulkDialog, setBulkDialog] = useState<null | 'transfer' | 'recall' | 'receive' | 'location' | 'writeoff'>(null);
     const [receiveAsset, setReceiveAsset] = useState<Asset | null>(null);
 
     const { data: warehouses = [] } = useWarehouses();
@@ -288,7 +289,7 @@ export default function AssetsPage() {
         status: statusFilter || undefined,
         warehouse: warehouseFilter || undefined,
     });
-    const { accept, bulk } = useAssetMutations();
+    const { accept } = useAssetMutations();
     const { data: transferLog, isLoading: transfersLoading } = useAssetTransfers();
     const transfers = transferLog?.data ?? [];
     // How far back the endpoint reaches. Only worth saying once the log is actually that long.
@@ -421,11 +422,6 @@ export default function AssetsPage() {
         const groupIds = groupRows.map((a) => a.id);
         setSelectedIds((prev) => (on ? [...new Set([...prev, ...groupIds])] : prev.filter((id) => !groupIds.includes(id))));
         setSelectionStatus(on ? eligibleStatus : null);
-    };
-
-    const runBulk = (op: 'writeoff') => {
-        if (selectedIds.length === 0) return;
-        bulk.mutate({ ids: selectedIds, op }, { onSuccess: clearSelection });
     };
 
     // True when any inventory list control differs from its default — drives the quick "Clear filters" pill.
@@ -900,7 +896,7 @@ export default function AssetsPage() {
                                 {/* Write-off only once back in the pool (Ready) — anything still out must be
                                     recalled / returned to Ready first. */}
                                 {canRetire && selectionStatus === 'ready' && (
-                                    <Button size="sm" variant="destructive" onClick={() => runBulk('writeoff')} disabled={bulk.isPending}>
+                                    <Button size="sm" variant="destructive" onClick={() => setBulkDialog('writeoff')}>
                                         <FlaskConicalOff className="h-4 w-4" />
                                         {t('asset_writeoff')}
                                     </Button>
@@ -1214,6 +1210,15 @@ export default function AssetsPage() {
             <AssetLocationDialog
                 ids={selectedIds}
                 open={bulkDialog === 'location'}
+                onClose={() => setBulkDialog(null)}
+                onDone={() => {
+                    setBulkDialog(null);
+                    clearSelection();
+                }}
+            />
+            <AssetWriteoffDialog
+                ids={selectedIds}
+                open={bulkDialog === 'writeoff'}
                 onClose={() => setBulkDialog(null)}
                 onDone={() => {
                     setBulkDialog(null);

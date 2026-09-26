@@ -233,6 +233,13 @@ export function AssetDetailDrawer({
                     <div className={cn('min-h-0 flex-1', tab === 'overview' ? 'overflow-y-auto px-6 py-6' : 'overflow-hidden p-6')}>
                         {tab === 'overview' && (
                             <div className="space-y-5">
+                                {/* How a written-off asset left — the note typed at write-off (disposal, scrap sale, donation, lease end). */}
+                                {a.status === 'writeoff' && a.last_reason && (
+                                    <div className="border-destructive/30 bg-destructive/5 rounded-lg border px-4 py-3">
+                                        <div className="text-destructive text-xs font-semibold">{t('asset_writeoff_note_label')}</div>
+                                        <div className="mt-1 text-sm whitespace-pre-wrap">{a.last_reason}</div>
+                                    </div>
+                                )}
                                 {/* General information — the linked contract sits here as a sub-field */}
                                 <div>
                                     <SectionLabel>{t('asset_general')}</SectionLabel>

@@ -210,4 +210,14 @@ export const asset: Dict = {
     mya_since: 'since',
     mya_owner: 'Owner',
     mya_empty: 'Nothing here yet. IT records what you hold as it is handed over.',
+
+    // asset-writeoff-dialog.tsx — writing off with a disposal note
+    asset_writeoff_title: 'Write off selected assets',
+    asset_writeoff_note: 'Write-off note',
+    asset_writeoff_note_ph: 'e.g. Discarded / Sold for scrap / Donated / Lease ended — describe it in your own words',
+    asset_writeoff_note_required: 'Please add a write-off note',
+    asset_writeoff_failed: 'Could not write off the assets',
+
+    // asset-detail-drawer.tsx — write-off note
+    asset_writeoff_note_label: 'Written off',
 };
