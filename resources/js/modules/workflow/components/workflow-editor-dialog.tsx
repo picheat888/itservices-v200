@@ -326,8 +326,8 @@ export function WorkflowEditorDialog({ workflow, onClose }: { workflow: Workflow
                                                             department_id: actor === 'department' ? s.department_id : null,
                                                             approver_employee_ids: actor === 'department' ? s.approver_employee_ids : [],
                                                             by_person: actor === 'department' ? s.by_person : false,
-                                                            // Derived, never asked: IT staff fulfills, people approve.
-                                                            kind: actor === 'it_staff' ? 'fulfillment' : 'approval',
+                                                            // Derived, never asked: IT staff completes, people approve.
+                                                            kind: actor === 'it_staff' ? 'completion' : 'approval',
                                                             label: actor === 'owner' ? 'Resource Owner' : actor === 'it_staff' ? 'IT Staff' : s.label,
                                                             position_ids: actor === 'chain' || actor === 'department' ? s.position_ids : [],
                                                         });

@@ -332,12 +332,12 @@ export default function RequestsPage() {
                             <Kpi
                                 icon={Check}
                                 label={t('req_kpi_approved')}
-                                value={String((meta?.approved ?? 0) + (meta?.fulfilled ?? 0))}
+                                value={String((meta?.approved ?? 0) + (meta?.completed ?? 0))}
                                 onClick={() => {
                                     setTab('all');
                                     setStatus('approved');
                                 }}
-                                sub={`${meta?.fulfilled ?? 0} ${t('req_status_fulfilled')}`}
+                                sub={`${meta?.completed ?? 0} ${t('req_status_completed')}`}
                             />
                             <Kpi
                                 icon={X}

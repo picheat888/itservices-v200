@@ -66,7 +66,7 @@ export function WorkflowViewDialog({
                         <InfoCell label={t('wf_applies_to')} value={t(REQUEST_TYPE_META[wf.request_type].labelKey)} />
                         <InfoCell
                             label={t('wf_steps')}
-                            value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_fulfillment_role')}`}
+                            value={`${approvals} ${t(approvals === 1 ? 'req_catalog_approval_one' : 'req_catalog_approval_many')} + ${t('wf_completion_role')}`}
                         />
                         {/* Measured, not configured — and absent rather than zero when this
                             route decided nothing inside the window. The label carries the window
@@ -94,7 +94,7 @@ export function WorkflowViewDialog({
                                     <span
                                         className={cn(
                                             'flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold',
-                                            s.kind === 'fulfillment'
+                                            s.kind === 'completion'
                                                 ? 'bg-brand/10 text-brand'
                                                 : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                                         )}
@@ -104,7 +104,7 @@ export function WorkflowViewDialog({
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-semibold">{s.label}</div>
                                         <div className="text-muted-foreground text-xs">
-                                            {s.kind === 'fulfillment' ? t('wf_fulfillment_role') : t('wf_approval')}
+                                            {s.kind === 'completion' ? t('wf_completion_role') : t('wf_approval')}
                                         </div>
                                         {/* The titles this rung accepts — what resolution matches on. */}
                                         {s.positions.length > 0 && (

@@ -95,7 +95,7 @@ return new class extends Migration
             $table->unsignedBigInteger('ticket_id')->nullable();
             $table->dateTime('approved_at')->nullable();
             $table->dateTime('rejected_at')->nullable();
-            $table->dateTime('fulfilled_at')->nullable();
+            $table->dateTime('completed_at')->nullable();
             $table->dateTime('cancelled_at')->nullable();
             // When this request last MOVED. updated_at bumps on any write at all and a
             // rung signed mid-chain touches no column here, so the activity feed orders

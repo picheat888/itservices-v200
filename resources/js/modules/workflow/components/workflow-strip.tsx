@@ -6,7 +6,7 @@ import { Fragment } from 'react';
 
 /**
  * Horizontal approval-chain visual: Submitted → each step (approval = green,
- * fulfillment = brand) → Closed. The signature workflow element, shared by the
+ * completion = brand) → Closed. The signature workflow element, shared by the
  * Workflows admin cards/dialogs and the New Request route panel.
  *
  * A step shows what kind it is and nothing about timing: the route declares no
@@ -26,7 +26,7 @@ export function WorkflowStrip({ steps }: { steps: Pick<WorkflowStep, 'label' | '
     return (
         <div className="flex items-stretch overflow-x-auto pb-1">
             {nodes.map((node, i) => {
-                const isStep = node.kind === 'approval' || node.kind === 'fulfillment';
+                const isStep = node.kind === 'approval' || node.kind === 'completion';
                 if (isStep) stepNo++;
                 return (
                     <Fragment key={i}>
@@ -35,7 +35,7 @@ export function WorkflowStrip({ steps }: { steps: Pick<WorkflowStep, 'label' | '
                                 className={cn(
                                     'flex h-7 w-7 items-center justify-center rounded-full border-[1.5px] text-xs font-bold',
                                     node.kind === 'approval' && 'border-emerald-500/70 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-                                    node.kind === 'fulfillment' && 'border-brand/70 bg-brand/10 text-brand',
+                                    node.kind === 'completion' && 'border-brand/70 bg-brand/10 text-brand',
                                     !isStep && 'border-border bg-muted/40 text-muted-foreground',
                                 )}
                             >
@@ -50,7 +50,7 @@ export function WorkflowStrip({ steps }: { steps: Pick<WorkflowStep, 'label' | '
                             <span className="max-w-[120px] text-xs leading-tight font-semibold">{node.label}</span>
                             {isStep && (
                                 <span className="text-muted-foreground text-[11px] leading-none">
-                                    {node.kind === 'fulfillment' ? t('wf_fulfillment') : t('wf_approval')}
+                                    {node.kind === 'completion' ? t('wf_completion') : t('wf_approval')}
                                 </span>
                             )}
                         </div>

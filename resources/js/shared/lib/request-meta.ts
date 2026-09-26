@@ -84,7 +84,7 @@ export const REQUEST_BLOCK_REASON_LABEL: Record<string, string> = {
 export const REQUEST_STATUS_META: Record<ServiceRequestStatus, { tone: 'amber' | 'blue' | 'green' | 'red' | 'gray'; labelKey: string }> = {
     pending: { tone: 'amber', labelKey: 'req_status_pending' },
     approved: { tone: 'blue', labelKey: 'req_status_approved' },
-    fulfilled: { tone: 'green', labelKey: 'req_status_fulfilled' },
+    completed: { tone: 'green', labelKey: 'req_status_completed' },
     rejected: { tone: 'red', labelKey: 'req_status_rejected' },
     cancelled: { tone: 'gray', labelKey: 'req_status_cancelled' },
 };

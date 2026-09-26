@@ -125,8 +125,8 @@ export const permission: Dict = {
     'perm_desc_requests.submit': 'เปิดฟอร์มและส่งคำขอได้ · การอนุมัติไม่ใช่สิทธิ์ - แต่ละขั้นไปหาคนที่ workflow ระบุไว้ และมีเพียงคนนั้นที่ตัดสินได้',
     'perm_act_requests.view_all': 'ดูคำขอทั้งหมด',
     'perm_desc_requests.view_all': 'เห็นคำขอทุกใบในองค์กร ไม่ใช่แค่ของตัวเองและใบที่รอตนอนุมัติ',
-    'perm_act_requests.fulfill': 'ดำเนินการคำขอ',
-    'perm_desc_requests.fulfill':
+    'perm_act_requests.complete': 'ปิดงานคำขอ (เสร็จสิ้น)',
+    'perm_desc_requests.complete':
         'ปิดคำขอที่ผ่านการอนุมัติครบทุกขั้นแล้ว และเห็นคิวใบที่รออยู่ · ประเภทคำขอที่ตั้งให้เปิด ticket อัตโนมัติก็ยังต้องทำขั้นนี้ - ticket คุมงาน ส่วนขั้นนี้คือยืนยันว่าส่งมอบแล้ว',
     'perm_act_requests.notify_approved': 'รับแจ้งเตือนคำขอที่อนุมัติครบ',
     'perm_desc_requests.notify_approved':

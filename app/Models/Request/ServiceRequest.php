@@ -39,7 +39,7 @@ class ServiceRequest extends Model
         // `referenceColumns`). Cleared to null if that row is ever deleted; the
         // `fields._display` snapshot still holds the label it was submitted with.
         'request_option_id', 'file_share_id', 'email_group_id', 'social_platform_id', 'software_id', 'location_id',
-        'approved_at', 'rejected_at', 'fulfilled_at', 'cancelled_at', 'last_activity_at',
+        'approved_at', 'rejected_at', 'completed_at', 'cancelled_at', 'last_activity_at',
     ];
 
     /**
@@ -72,7 +72,7 @@ class ServiceRequest extends Model
             'auto_ticket' => 'boolean',
             'approved_at' => 'datetime',
             'rejected_at' => 'datetime',
-            'fulfilled_at' => 'datetime',
+            'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'last_activity_at' => 'datetime',
         ];
@@ -194,6 +194,6 @@ class ServiceRequest extends Model
         return $isParticipant
             || $user->isSuper()
             || $user->hasPermission('requests.view_all')
-            || $user->hasPermission('requests.fulfill');
+            || $user->hasPermission('requests.complete');
     }
 }

@@ -54,7 +54,7 @@ export const requests: Dict = {
     req_activity_approved: 'Fully approved',
     req_activity_rejected: 'Rejected',
     req_activity_cancelled: 'Cancelled',
-    req_activity_fulfilled: 'Fulfilled',
+    req_activity_completed: 'Completed',
     req_recent_title: 'Recent activity',
     req_inactive: 'Not accepting submissions',
 
@@ -76,14 +76,14 @@ export const requests: Dict = {
     req_status_pending: 'Pending',
     req_status_approved: 'Approved',
     req_status_rejected: 'Rejected',
-    req_status_fulfilled: 'Fulfilled',
+    req_status_completed: 'Completed',
     req_status_cancelled: 'Cancelled',
 
     // pages/index.tsx + request-detail-dialog.tsx — action buttons
     req_approve: 'Approve',
     req_reject: 'Reject',
-    req_fulfill: 'Mark fulfilled',
-    req_fulfill_awaits_case: 'This request closes automatically when case {no} is completed.',
+    req_complete: 'Mark completed',
+    req_complete_awaits_case: 'This request closes automatically when case {no} is completed.',
     req_cancel_request: 'Cancel request',
 
     // request-create-dialog.tsx — create wizard
@@ -150,15 +150,15 @@ export const requests: Dict = {
     // request-trail.tsx — approval trail
     req_trail_title: 'Approval trail',
     req_trail_submitted: 'Submitted',
-    req_trail_fulfillment: 'Admin / IT Staff fulfillment',
+    req_trail_completion: 'Admin / IT Staff completion',
     req_trail_approved: 'approved',
     req_trail_rejected: 'rejected',
     req_trail_waiting: 'waiting',
     req_trail_queued: 'not reached yet',
     req_trail_skipped: 'skipped',
     req_trail_after_approvals: 'after all approvals',
-    req_trail_fulfilled_done: 'done · requester notified',
-    req_trail_fulfilled_by: 'Completed by {name}',
+    req_trail_completed_done: 'done · requester notified',
+    req_trail_completed_by: 'Completed by {name}',
     req_trail_it_pending: 'Waiting for the IT team',
     req_trail_ticket_waiting_take: 'Waiting to be picked up',
     req_trail_ticket_taken: 'In progress',
@@ -171,7 +171,7 @@ export const requests: Dict = {
     req_no_ticket: 'No ticket - this workflow closes without one.',
     req_ticket_auto_hint: 'This case was opened automatically.',
 
-    // decision-dialog.tsx — approve / reject / fulfill / cancel
+    // decision-dialog.tsx — approve / reject / complete / cancel
     req_decide_approve: 'Approve request',
     req_decide_reject: 'Reject request',
     req_decide_note: 'Note (optional)',
@@ -182,8 +182,8 @@ export const requests: Dict = {
     req_decide_note_ph_reject: 'e.g. The department has plenty of machines - use an existing one for now',
     req_decide_notify_reject: 'Notifies the requester via Notification + Email, then closes the request.',
     req_decide_notify_next: 'Next: {name}',
-    req_fulfill_title: 'Mark as fulfilled',
-    req_fulfill_hint: 'Confirms the work is done and notifies the requester.',
+    req_complete_title: 'Mark as completed',
+    req_complete_hint: 'Confirms the work is done and notifies the requester.',
     req_cancel_title: 'Cancel this request?',
     req_cancel_hint: 'The waiting approver is notified and the request closes.',
 };

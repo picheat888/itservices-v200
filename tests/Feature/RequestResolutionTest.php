@@ -100,7 +100,7 @@ class RequestResolutionTest extends TestCase
         foreach ($wanted as $level) {
             $steps[] = ['actor_type' => 'chain', 'label' => ucfirst($level), 'kind' => 'approval', 'position_ids' => $levels[$level]];
         }
-        $steps[] = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'];
+        $steps[] = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'];
 
         return $steps;
     }
@@ -161,7 +161,7 @@ class RequestResolutionTest extends TestCase
     {
         [$staff] = $this->ladder();
 
-        // social: 3 chain rungs + IT fulfillment, positions attached by the seeder.
+        // social: 3 chain rungs + IT completion, positions attached by the seeder.
         $rows = $this->resolve('social', $staff);
 
         $this->assertCount(4, $rows);
@@ -199,7 +199,7 @@ class RequestResolutionTest extends TestCase
         $rows = app(WorkflowResolverService::class)->resolveSteps(RequestType::Computer, [
             ['actor_type' => 'chain', 'label' => 'First', 'kind' => 'approval', 'position_ids' => [$mgr->id]],
             ['actor_type' => 'chain', 'label' => 'Second', 'kind' => 'approval', 'position_ids' => [$mgr->id]],
-            ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+            ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
         ], $staff);
 
         $this->assertSame($boss->id, $rows->firstWhere('label', 'First')['approver_employee_id']);
@@ -217,7 +217,7 @@ class RequestResolutionTest extends TestCase
         $rows = app(WorkflowResolverService::class)->resolveSteps(RequestType::Fileshare, [
             ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval', 'position_ids' => [$supTitle->id]],
             ['actor_type' => 'owner', 'label' => 'Resource Owner', 'kind' => 'approval'],
-            ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+            ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
         ], $staff, ['file_share_id' => $share->id]);
 
         // Asking one person to press Approve twice is not two approvals.

@@ -74,7 +74,7 @@ class SidebarBadgeService
 
     /**
      * Things needing MY action in the Request module: approval steps currently
-     * waiting on me as the resolved approver, plus (for requests.fulfill
+     * waiting on me as the resolved approver, plus (for requests.complete
      * holders) the approved queue awaiting IT. Deliberately excludes the
      * user's own in-flight requests — those wait on someone else.
      */
@@ -89,7 +89,7 @@ class SidebarBadgeService
             ->where('kind', WorkflowStepKind::Approval->value)
             ->count();
 
-        $queue = $user?->hasPermission('requests.fulfill')
+        $queue = $user?->hasPermission('requests.complete')
             ? ServiceRequest::where('status', RequestStatus::Approved->value)->count()
             : 0;
 

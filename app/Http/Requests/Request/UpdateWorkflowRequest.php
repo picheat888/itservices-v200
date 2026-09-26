@@ -14,7 +14,7 @@ use Illuminate\Validation\Validator;
 /**
  * Validation for the workflow editor: flags plus a full replacement list of
  * steps. Cross-rules keep every chain sane — at least one approval, at most
- * one fulfillment (and only last, by IT Staff), and owner steps only on types
+ * one completion (and only last, by IT Staff), and owner steps only on types
  * whose resources actually carry an owner (mail groups / file shares).
  */
 class UpdateWorkflowRequest extends FormRequest
@@ -58,16 +58,16 @@ class UpdateWorkflowRequest extends FormRequest
                 $v->errors()->add('steps', 'A workflow needs at least one approval step.');
             }
 
-            $fulfillments = $steps->values()->filter(fn ($s) => ($s['kind'] ?? null) === WorkflowStepKind::Fulfillment->value);
-            if ($fulfillments->count() > 1) {
-                $v->errors()->add('steps', 'Only one fulfillment step is allowed.');
+            $completions = $steps->values()->filter(fn ($s) => ($s['kind'] ?? null) === WorkflowStepKind::Completion->value);
+            if ($completions->count() > 1) {
+                $v->errors()->add('steps', 'Only one completion step is allowed.');
             }
-            if ($fulfillments->isNotEmpty()) {
-                if ($fulfillments->keys()->first() !== $steps->count() - 1) {
-                    $v->errors()->add('steps', 'The fulfillment step must be the last step.');
+            if ($completions->isNotEmpty()) {
+                if ($completions->keys()->first() !== $steps->count() - 1) {
+                    $v->errors()->add('steps', 'The completion step must be the last step.');
                 }
-                if ($fulfillments->first()['actor_type'] !== StepActorType::ItStaff->value) {
-                    $v->errors()->add('steps', 'Fulfillment is performed by IT Staff.');
+                if ($completions->first()['actor_type'] !== StepActorType::ItStaff->value) {
+                    $v->errors()->add('steps', 'Completion is performed by IT Staff.');
                 }
             }
 

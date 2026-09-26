@@ -3585,6 +3585,32 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 
 ---
 
+## Request: Fulfill → Complete / เสร็จสิ้น (2026-09-26)
+
+คำว่า Fulfilled / ดำเนินการแล้ว อ่านเข้าใจยาก จึงเปลี่ยนเป็น **Completed / เสร็จสิ้น** ทั้งชื่อในโค้ดและค่าที่เก็บใน DB — เฉพาะโมดูล Request (ใบเบิกของ Stock ยังใช้ `stock.fulfill` / `fulfilled` เหมือนเดิม)
+
+| ส่วน | เดิม | ใหม่ |
+|---|---|---|
+| สถานะคำขอ (`RequestStatus`) | `Fulfilled` / `'fulfilled'` | `Completed` / `'completed'` |
+| ชนิดขั้นใน workflow (`WorkflowStepKind`) | `Fulfillment` / `'fulfillment'` | `Completion` / `'completion'` |
+| คอลัมน์ `service_requests` | `fulfilled_at` | `completed_at` (แก้ใน migration baseline `…000009`) |
+| Permission | `requests.fulfill` | `requests.complete` |
+| API | `POST /api/service-requests/{id}/fulfill` (`api.service-requests.fulfill`) | `POST /api/service-requests/{id}/complete` (`api.service-requests.complete`) |
+| Controller / Service / Resource | `fulfill()`, `can_fulfill` | `complete()`, `can_complete` |
+| Notification subtype | `ready_to_fulfill`, `fulfilled` | `ready_to_complete`, `completed` |
+| Template | `request.ready_to_fulfill`, `request.fulfilled`, `notif_request_fulfilled`, `{{request.fulfilled_date}}` / `{{request.fulfilled_by}}` | `request.ready_to_complete`, `request.completed`, `notif_request_completed`, `{{request.completed_date}}` / `{{request.completed_by}}` |
+| Audit | `Fulfilled service request` / `…via ticket` | `Completed service request` / `…via ticket` (หมวด workflow กรอง `Completed` เพิ่ม) |
+
+- ภาษาไทย: สถานะ "เสร็จสิ้น" · ปุ่ม "ยืนยันเสร็จสิ้น" · ขั้นสุดท้ายใน workflow "ปิดงาน" · สิทธิ์ "ปิดงานคำขอ (เสร็จสิ้น)"
+- lang key ทุกตัวที่เคยเป็น `*fulfill*` / `*fulfilled*` ของ Request เปลี่ยนเป็น `*complete*` / `*completed*`
+- **ไม่มี migration แปลงข้อมูล** (ตกลงกันให้ล้าง DB) — ฐานเดิมที่ยังมี `fulfilled_at` / `'fulfilled'` / `requests.fulfill` ใช้กับโค้ดนี้ไม่ได้
+
+### Tests / Verification
+
+ชุดเต็ม **1408 passed** (รวม Stock ทั้งหมด ยืนยันว่าไม่โดนเปลี่ยน) · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
 ## Seeding: ติดตั้งใหม่ + ข้อมูล Demo (2026-09-26)
 
 ลำดับที่ต้องรัน — `WorkflowSeeder` (ใน `db:seed`) ต้องเจอแผนก/ตำแหน่งก่อน ไม่งั้น workflow จะไม่มีตำแหน่งผูก และคำขอจะยื่นไม่ได้

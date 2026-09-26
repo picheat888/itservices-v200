@@ -126,12 +126,12 @@ export const permission: Dict = {
         'Open the request form and file a request. Approving is never a permission - a step goes to the person the workflow resolves, and only they can decide it.',
     'perm_act_requests.view_all': 'View all requests',
     'perm_desc_requests.view_all': 'See every request in the organization, not only their own and the ones waiting on them.',
-    'perm_act_requests.fulfill': 'Fulfil requests',
-    'perm_desc_requests.fulfill':
+    'perm_act_requests.complete': 'Complete requests',
+    'perm_desc_requests.complete':
         'Close a request that has cleared every approval, and see the queue waiting for it. A request type set to open a ticket automatically still needs this step - the ticket covers the work, this marks the request delivered.',
     'perm_act_requests.notify_approved': 'Hear about approved requests',
     'perm_desc_requests.notify_approved':
-        'Receive the notification and mail when a request clears its last approval and reaches IT, and the daily reminder while it sits there. Separate from fulfilling on purpose - the rota that closes requests is not always the list of people who want to know.',
+        'Receive the notification and mail when a request clears its last approval and reaches IT, and the daily reminder while it sits there. Separate from completing on purpose - the rota that closes requests is not always the list of people who want to know.',
     'perm_act_requests.notify_stalled': 'Weekly summary of waiting approvals',
     'perm_desc_requests.notify_stalled':
         "Receive a Monday email listing the requests that have waited more than a week for this person's decision. Without it they still get the daily notification in the app.",

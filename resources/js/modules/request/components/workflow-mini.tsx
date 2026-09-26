@@ -21,7 +21,7 @@ export function WorkflowMini({ request }: { request: ServiceRequest }) {
     const total = Math.max(progress.total, 1);
     const rejected = status === 'rejected';
     const cancelled = status === 'cancelled';
-    const settled = status === 'approved' || status === 'fulfilled';
+    const settled = status === 'approved' || status === 'completed';
 
     const label = rejected || cancelled ? '—' : `${Math.min(progress.done, total)}/${total}`;
 

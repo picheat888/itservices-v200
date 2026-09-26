@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
 
 /**
  * Service requests: list/show scoped to what the viewer participates in,
- * submit, and the four workflow transitions (approve / reject / fulfill /
+ * submit, and the four workflow transitions (approve / reject / complete /
  * cancel). All state logic lives in RequestService.
  */
 class RequestController extends Controller
@@ -41,7 +41,7 @@ class RequestController extends Controller
     /**
      * Visibility: view_all (or super) sees everything; everyone else sees the
      * requests they submitted, the ones they appear in as an approver, and —
-     * with requests.fulfill — the approved queue.
+     * with requests.complete — the approved queue.
      */
     public function index(Request $request): JsonResponse
     {
@@ -49,22 +49,22 @@ class RequestController extends Controller
         abort_unless((bool) $user && (
             $user->hasPermission('requests.submit')
             || $user->hasPermission('requests.view_all')
-            || $user->hasPermission('requests.fulfill')
+            || $user->hasPermission('requests.complete')
         ), 403);
 
         $seesAll = $user->isSuper() || $user->hasPermission('requests.view_all');
-        $canFulfill = (bool) $user->hasPermission('requests.fulfill');
+        $canComplete = (bool) $user->hasPermission('requests.complete');
         $employeeId = $user->employee_id;
         // The employee record, not just the id: a step open to a group is matched on this
         // person's department and position as well as on their name.
         $employee = $user->employee;
 
-        $visible = function ($query) use ($seesAll, $canFulfill, $user, $employeeId, $employee) {
+        $visible = function ($query) use ($seesAll, $canComplete, $user, $employeeId, $employee) {
             if ($seesAll) {
                 return $query;
             }
 
-            return $query->where(function ($q) use ($user, $employeeId, $employee, $canFulfill) {
+            return $query->where(function ($q) use ($user, $employeeId, $employee, $canComplete) {
                 // Own requests, plus the ones filed on somebody else's behalf — an
                 // onboarding request has no owner account to match on.
                 $q->where('user_id', $user->id)
@@ -76,13 +76,13 @@ class RequestController extends Controller
                     $q->orWhere('employee_id', $employeeId)
                         ->orWhereHas('approvals', fn ($a) => $a->actionableBy($employee));
                 }
-                if ($canFulfill) {
-                    $q->orWhereIn('status', [RequestStatus::Approved->value, RequestStatus::Fulfilled->value]);
+                if ($canComplete) {
+                    $q->orWhereIn('status', [RequestStatus::Approved->value, RequestStatus::Completed->value]);
                 }
             });
         };
 
-        // Actionable first (pending → approved → fulfilled → the rest), newest within each group.
+        // Actionable first (pending → approved → completed → the rest), newest within each group.
         // approver.user comes along because each row reports whether its approver still
         // lacks a login — without it that is one extra query per approval row. Same for
         // ticket.assignee: every row with a case serializes who holds it.
@@ -98,7 +98,7 @@ class RequestController extends Controller
         $request->query('sort') === 'activity'
             ? $query->orderByDesc('last_activity_at')->latest('id')
             : $query
-                ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'fulfilled' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
+                ->orderByRaw("CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'completed' THEN 2 WHEN 'rejected' THEN 3 ELSE 4 END")
                 ->latest()
                 ->latest('id');
 
@@ -125,7 +125,7 @@ class RequestController extends Controller
                 }
             });
         }
-        // Tab scopes: awaiting my decision / the IT fulfillment queue / only my own.
+        // Tab scopes: awaiting my decision / the IT completion queue / only my own.
         if ($request->query('scope') === 'approvals') {
             // An account with no employee record cannot be anybody's approver, so the answer
             // is nothing — NOT the unfiltered list. The condition used to sit in the `if`,
@@ -137,7 +137,7 @@ class RequestController extends Controller
                 : $query->whereHas('approvals', fn ($a) => $a
                     ->actionableBy($employee)
                     ->where('status', ApprovalStatus::Current->value));
-        } elseif ($request->query('scope') === 'queue' && $canFulfill) {
+        } elseif ($request->query('scope') === 'queue' && $canComplete) {
             $query->where('status', RequestStatus::Approved->value);
         } elseif ($request->query('scope') === 'mine') {
             // "Mine" means about me or by me: the request I filed, the one I filed for
@@ -155,7 +155,7 @@ class RequestController extends Controller
 
         return response()->json([
             'data' => ServiceRequestResource::collection($paginator->items()),
-            'meta' => $this->meta($paginator, $visible, $canFulfill, $employee),
+            'meta' => $this->meta($paginator, $visible, $canComplete, $employee),
         ]);
     }
 
@@ -204,11 +204,11 @@ class RequestController extends Controller
     }
 
     /** Mark an approved request done (IT queue). */
-    public function fulfill(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
+    public function complete(Request $request, ServiceRequest $serviceRequest): ServiceRequestResource
     {
-        $serviceRequest = $this->service->fulfill($serviceRequest, $request->user());
+        $serviceRequest = $this->service->complete($serviceRequest, $request->user());
 
-        AuditLog::record('Fulfilled service request', $serviceRequest->reference);
+        AuditLog::record('Completed service request', $serviceRequest->reference);
 
         return new ServiceRequestResource($serviceRequest->load(self::DETAIL_RELATIONS));
     }
@@ -230,7 +230,7 @@ class RequestController extends Controller
      * @param  callable(Builder): Builder  $visible
      * @return array<string, mixed>
      */
-    private function meta($paginator, callable $visible, bool $canFulfill, ?Employee $employee): array
+    private function meta($paginator, callable $visible, bool $canComplete, ?Employee $employee): array
     {
         $counts = $visible(ServiceRequest::query())
             ->selectRaw('status, count(*) as n')
@@ -247,7 +247,7 @@ class RequestController extends Controller
         // Mean days from submit to the final decision, over the last 200 decided
         // requests (PHP-side for cross-database portability).
         $decided = $visible(ServiceRequest::query())
-            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Fulfilled->value])
+            ->whereIn('status', [RequestStatus::Approved->value, RequestStatus::Rejected->value, RequestStatus::Completed->value])
             ->latest()->limit(200)
             ->get(['created_at', 'approved_at', 'rejected_at']);
         $cycles = $decided
@@ -262,10 +262,10 @@ class RequestController extends Controller
             'pending' => (int) ($counts[RequestStatus::Pending->value] ?? 0),
             'approved' => (int) ($counts[RequestStatus::Approved->value] ?? 0),
             'rejected' => (int) ($counts[RequestStatus::Rejected->value] ?? 0),
-            'fulfilled' => (int) ($counts[RequestStatus::Fulfilled->value] ?? 0),
+            'completed' => (int) ($counts[RequestStatus::Completed->value] ?? 0),
             'cancelled' => (int) ($counts[RequestStatus::Cancelled->value] ?? 0),
             'awaiting_me' => $awaitingMe,
-            'to_fulfill' => $canFulfill ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
+            'to_complete' => $canComplete ? (int) ($counts[RequestStatus::Approved->value] ?? 0) : 0,
             'avg_cycle_days' => $cycles->isEmpty() ? null : round($cycles->avg() / 1440, 1),
         ];
     }

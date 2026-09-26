@@ -32,7 +32,7 @@ use Illuminate\Support\Collection;
  *  - owner steps resolve to the owner_employee_id of the Access resource the
  *    requester picked; unresolvable (no resource / no owner / owner is the
  *    requester / owner has left) becomes skipped with the reason in note
- *  - it_staff steps carry no person — they are the requests.fulfill queue
+ *  - it_staff steps carry no person — they are the requests.complete queue
  *
  * Also powers the workflow editor's "test with employee" preview via
  * resolveSteps() on transient (unsaved) steps.

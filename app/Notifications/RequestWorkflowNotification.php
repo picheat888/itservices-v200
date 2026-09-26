@@ -10,11 +10,11 @@ use Illuminate\Notifications\Notification;
 /**
  * Bell (database) notification for every service-request transition. The
  * subtype tells the SPA which message to render:
- * submitted | waiting | ready_to_fulfill | approved_step | approved_final |
- * rejected | fulfilled | cancelled | blocked_no_account
+ * submitted | waiting | ready_to_complete | approved_step | approved_final |
+ * rejected | completed | cancelled | blocked_no_account
  *
  * `waiting` is only ever an approval rung — a person who has to decide. The IT
- * queue gets `ready_to_fulfill` instead: nobody there decides anything, they
+ * queue gets `ready_to_complete` instead: nobody there decides anything, they
  * deliver, and when the workflow opened its own case they do that in the case.
  *
  * `blocked_no_account` is the odd one out: it goes to the people who can provision
@@ -43,13 +43,13 @@ class RequestWorkflowNotification extends Notification
      * bell, so switching one off in Settings silences exactly the message an administrator
      * was looking at.
      *
-     * `ready_to_fulfill` splits in two on purpose: with a case open the work lives in the
+     * `ready_to_complete` splits in two on purpose: with a case open the work lives in the
      * case and the bell only names it, without one somebody in the queue still has to press
-     * Fulfil. They read differently and are silenced separately.
+     * Complete. They read differently and are silenced separately.
      */
     protected function notificationKey(): string
     {
-        if ($this->subtype === 'ready_to_fulfill') {
+        if ($this->subtype === 'ready_to_complete') {
             return $this->request->ticket?->ticket_no ? 'notif_request_ready_case' : 'notif_request_ready_manual';
         }
 

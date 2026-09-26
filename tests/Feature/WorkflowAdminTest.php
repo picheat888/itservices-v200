@@ -71,13 +71,13 @@ class WorkflowAdminTest extends TestCase
 
         // No approval step at all.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
-            'steps' => [['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment']],
+            'steps' => [['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion']],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps');
 
-        // Fulfillment not last.
+        // Completion not last.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [
-                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion'],
                 ['actor_type' => 'chain', 'label' => 'Boss', 'kind' => 'approval'],
             ],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps');
@@ -101,13 +101,13 @@ class WorkflowAdminTest extends TestCase
                     'actor_type' => 'chain', 'label' => 'Director', 'kind' => 'approval',
                     'position_ids' => [Position::where('title', 'Director')->firstOrFail()->id],
                 ],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertOk()
             ->assertJsonPath('data.name', 'Hardware Request')
             ->assertJsonPath('data.auto_ticket', false)
             ->assertJsonPath('data.steps.0.label', 'Team Lead')
-            ->assertJsonPath('data.steps.2.kind', 'fulfillment');
+            ->assertJsonPath('data.steps.2.kind', 'completion');
 
         $this->assertSame([1, 2, 3], $workflow->fresh()->steps->pluck('position')->all());
     }
@@ -124,7 +124,7 @@ class WorkflowAdminTest extends TestCase
                     'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
                     'department_id' => $qc->id, 'position_ids' => [$manager->id],
                 ],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertOk();
 
@@ -147,7 +147,7 @@ class WorkflowAdminTest extends TestCase
                     'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
                     'department_id' => $qc->id, 'approver_employee_ids' => [$boss->id, $deputy->id],
                 ],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertOk()
             // The order they were named in survives the round trip: the first is who the
@@ -175,7 +175,7 @@ class WorkflowAdminTest extends TestCase
                     'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
                     'department_id' => $qc->id, 'approver_employee_ids' => [$inQc->id, $outsider->id],
                 ],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.approver_employee_ids');
     }
@@ -185,18 +185,18 @@ class WorkflowAdminTest extends TestCase
     {
         $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
         $qc = Department::create(['code' => 'DEP-QC', 'tag' => 'QC', 'name' => 'Quality Control']);
-        $fulfilment = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'];
+        $completion = ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'];
 
         // No department at all.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
-            'steps' => [['actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval'], $fulfilment],
+            'steps' => [['actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval'], $completion],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.department_id');
 
         // A department, but neither a person nor any position in it.
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [
                 ['actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval', 'department_id' => $qc->id],
-                $fulfilment,
+                $completion,
             ],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.position_ids');
     }
@@ -265,7 +265,7 @@ class WorkflowAdminTest extends TestCase
                 ['actor_type' => 'chain', 'label' => 'Supervisor', 'kind' => 'approval', 'position_ids' => [$title('Supervisor')]],
                 ['actor_type' => 'chain', 'label' => 'Manager', 'kind' => 'approval', 'position_ids' => [$title('Manager')]],
                 ['actor_type' => 'chain', 'label' => 'VP', 'kind' => 'approval', 'position_ids' => [$title('Vice President')]],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertOk();
 
@@ -300,7 +300,7 @@ class WorkflowAdminTest extends TestCase
                     'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
                     'department_id' => $qc->id, 'approver_employee_ids' => [$boss->id, $deputy->id],
                 ],
-                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT Staff', 'kind' => 'completion'],
             ],
         ])->assertOk();
 
@@ -338,7 +338,7 @@ class WorkflowAdminTest extends TestCase
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [
                 ['actor_type' => 'chain', 'label' => 'Somebody', 'kind' => 'approval'],
-                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion'],
             ],
         ])->assertUnprocessable()->assertJsonValidationErrors('steps.0.position_ids');
     }
@@ -351,13 +351,13 @@ class WorkflowAdminTest extends TestCase
         $this->actingAs($this->admin)->putJson("/api/workflows/{$workflow->id}", [
             'steps' => [
                 ['actor_type' => 'chain', 'label' => 'Supervisor rung', 'kind' => 'approval', 'position_ids' => $supervisorRung->all()],
-                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'fulfillment'],
+                ['actor_type' => 'it_staff', 'label' => 'IT', 'kind' => 'completion'],
             ],
         ])->assertOk()->assertJsonCount(3, 'data.steps.0.positions');
 
         $saved = $workflow->fresh()->steps()->with('positions')->orderBy('position')->get();
         $this->assertEqualsCanonicalizing($supervisorRung->all(), $saved[0]->positions->pluck('id')->all());
-        // The fulfillment step keeps none — positions only mean something on a rung.
+        // The completion step keeps none — positions only mean something on a rung.
         $this->assertCount(0, $saved[1]->positions);
     }
 }

@@ -67,7 +67,7 @@ export function DecisionDialog({ request, action, onClose }: { request: ServiceR
      *
      * Counted by POSITION rather than from progress.done + 1: `done` also counts skipped
      * rungs, and a rung skipped further down the chain would push the number past where
-     * this approver actually stands. The IT fulfilment row is not part of the count either
+     * this approver actually stands. The IT completion row is not part of the count either
      * way — nobody signs it.
      */
     const rungs = (ctx.request.approvals ?? []).filter((a) => a.kind === 'approval');

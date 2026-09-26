@@ -26,13 +26,13 @@ class Permissions
                 'my', 'jobs',
             ],
             // notify_* gate who HEARS about a request, separately from who may act on it:
-            // the fulfilment queue is a rota, and the people who want the mail about a
+            // the completion queue is a rota, and the people who want the mail about a
             // stalled approval are not always the ones allowed to close it.
             // `module` opens the screen and its sidebar entry, like every other module.
-            // Before it existed the page was gated on "holds any of submit/view_all/fulfill",
+            // Before it existed the page was gated on "holds any of submit/view_all/complete",
             // which meant there was no single switch to hand somebody the module — and the
             // permission card had no master row to hang the rest off.
-            'requests' => ['module', 'submit', 'view_all', 'fulfill', 'notify_approved', 'notify_stalled'],
+            'requests' => ['module', 'submit', 'view_all', 'complete', 'notify_approved', 'notify_stalled'],
             // Reads like every other module: the master opens the screen and its sidebar
             // entry, `manage` is the right to change a chain. Before the master existed,
             // "may look at the approval chains" and "may rewrite them" were one switch.
@@ -551,7 +551,7 @@ class Permissions
      * Request permission tree. The master gates the module and its sidebar entry; everything
      * else sits flat beneath it.
      *
-     * The two notify_* keys deliberately do NOT hang off `fulfill`. They answer "who hears
+     * The two notify_* keys deliberately do NOT hang off `complete`. They answer "who hears
      * that a request reached the queue", which is a different question from "who may work
      * that queue" — a manager can want to follow it without closing anything, and the rota
      * that does the closing changes. RequestNotificationService gates on notify_approved
@@ -566,7 +566,7 @@ class Permissions
             'groups' => [
                 'requests.submit' => [],
                 'requests.view_all' => [],
-                'requests.fulfill' => [],
+                'requests.complete' => [],
                 'requests.notify_approved' => [],
                 'requests.notify_stalled' => [],
             ],

@@ -10,7 +10,7 @@ use Tests\TestCase;
  *
  * The screen locks any key missing from the LIVE set in permission-labels.ts and tags
  * it "(Coming soon)", and renders a module only if it is listed in PERM_SECTIONS or
- * ADMIN_GROUPS. Neither omission fails anywhere: requests.submit / view_all / fulfill
+ * ADMIN_GROUPS. Neither omission fails anywhere: requests.submit / view_all / complete
  * were enforced by the API and granted by default to three roles, yet showed as off,
  * locked and unbuilt — and workflows.manage had no switch at all, grantable only by
  * editing the database.

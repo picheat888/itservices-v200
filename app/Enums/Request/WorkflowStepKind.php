@@ -3,11 +3,11 @@
 namespace App\Enums\Request;
 
 /**
- * What a workflow step does: an approval decision, or the final fulfillment
+ * What a workflow step does: an approval decision, or the final completion
  * work by IT (at most one, always last).
  */
 enum WorkflowStepKind: string
 {
     case Approval = 'approval';
-    case Fulfillment = 'fulfillment';
+    case Completion = 'completion';
 }

@@ -302,7 +302,7 @@ You can tracking progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
-                'key' => 'request.ready_to_fulfill',
+                'key' => 'request.ready_to_complete',
                 // Carries the approval-history table. See widthFor().
                 'width' => 860,
                 'name' => 'Request ready for IT (คำขอพร้อมให้ IT ดำเนินการ)',
@@ -326,13 +326,13 @@ You can tracking progress in {{app.name}}.</p>
                 'cadence' => 'realtime',
             ],
             [
-                'key' => 'request.fulfilled',
-                'name' => 'Request fulfilled (คำขอดำเนินการเสร็จแล้ว)',
+                'key' => 'request.completed',
+                'name' => 'Request completed (คำขอเสร็จสิ้น)',
                 'subject' => 'Your request {{reference.id}} has been completed',
                 'body_html' => '<p>Hi {{user.first_name}},</p>
 <p>✅ Your request has been completed successfully.</p>
-<p><strong style="color:#64748b">Completed Date: </strong>{{request.fulfilled_date}}<br>
-<strong style="color:#64748b">Completed By: </strong>{{request.fulfilled_by}}</p>
+<p><strong style="color:#64748b">Completed Date: </strong>{{request.completed_date}}<br>
+<strong style="color:#64748b">Completed By: </strong>{{request.completed_by}}</p>
 <br>
 <p><strong style="color:#64748b">Request title: </strong>{{request.title}}<br>
 <strong style="color:#64748b">Request No.: </strong>{{reference.id}}<br>
@@ -622,7 +622,7 @@ This report summarizes all stock requests that are still open and have not yet b
 <p><strong>Request Details</strong></p>
 {{stock.requests_table}}
 <p>Please review the open requests and take the necessary action to complete them.</p>
-<p style="color:#64748b"><strong><u>Note</u></strong>: Requests with the status Fulfilled, Rejected, or Cancelled are not included in this report.</p>',
+<p style="color:#64748b"><strong><u>Note</u></strong>: Requests with the status Completed, Rejected, or Cancelled are not included in this report.</p>',
                 'enabled' => true,
                 'cadence' => 'weekly',
             ],

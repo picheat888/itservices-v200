@@ -13,7 +13,7 @@ use Tests\TestCase;
  * Requests was the last workspace module without a master key. Its permission card fell
  * through to the page's plain fallback — a flat list of five switches — because there was
  * no master to hang a tree off, and there was no single switch that handed somebody the
- * module: the page was gated on "holds any of submit / view_all / fulfill".
+ * module: the page was gated on "holds any of submit / view_all / complete".
  *
  * The master exists now. What matters is that it behaves like every other module's, and
  * that roles granted before it existed keep the access they already had.
@@ -30,7 +30,7 @@ class RequestPermissionGateTest extends TestCase
 
     public function test_without_the_master_every_request_key_is_dropped(): void
     {
-        $normalized = Permissions::normalizeRequests(['requests.submit', 'requests.fulfill', 'tickets.create']);
+        $normalized = Permissions::normalizeRequests(['requests.submit', 'requests.complete', 'tickets.create']);
 
         // The module key is what opens the screen; a capability inside a screen nobody can
         // reach is not a grant, it is a loose end.
@@ -41,15 +41,15 @@ class RequestPermissionGateTest extends TestCase
     {
         $granted = ['requests.module', 'requests.notify_approved', 'requests.notify_stalled'];
 
-        // A manager can follow the fulfilment queue without being the one who closes
+        // A manager can follow the completion queue without being the one who closes
         // anything — which is why RequestNotificationService gates the mail on
-        // notify_approved rather than on fulfill. The card must not invent that link.
+        // notify_approved rather than on complete. The card must not invent that link.
         $this->assertEqualsCanonicalizing($granted, Permissions::normalizeRequests($granted));
     }
 
     public function test_the_tree_survives_a_full_grant_untouched(): void
     {
-        $full = ['requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill',
+        $full = ['requests.module', 'requests.submit', 'requests.view_all', 'requests.complete',
             'requests.notify_approved', 'requests.notify_stalled'];
 
         $this->assertEqualsCanonicalizing($full, Permissions::normalizeRequests($full));
@@ -64,13 +64,13 @@ class RequestPermissionGateTest extends TestCase
         // A request key switched on with no master behind it: the screen it lives on would
         // be unreachable, so the grant is dropped on save rather than stored as a loose end.
         $this->putJson("/api/permissions/{$role->key}", [
-            'permissions' => ['requests.notify_stalled', 'requests.fulfill'],
+            'permissions' => ['requests.notify_stalled', 'requests.complete'],
         ])->assertOk();
 
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
 
         $this->assertNotContains('requests.notify_stalled', $stored);
-        $this->assertNotContains('requests.fulfill', $stored);
+        $this->assertNotContains('requests.complete', $stored);
     }
 
     public function test_the_master_alone_carries_the_notification_keys(): void
@@ -87,7 +87,7 @@ class RequestPermissionGateTest extends TestCase
         $stored = RolePermission::where('role_id', $role->id)->where('allowed', true)->pluck('permission')->all();
 
         $this->assertContains('requests.notify_approved', $stored);
-        $this->assertNotContains('requests.fulfill', $stored);
+        $this->assertNotContains('requests.complete', $stored);
     }
 
     public function test_a_role_granted_before_the_master_existed_keeps_the_menu(): void
