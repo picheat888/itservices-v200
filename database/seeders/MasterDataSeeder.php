@@ -32,6 +32,38 @@ class MasterDataSeeder extends Seeder
             ['name' => 'APC',     'description' => 'APC by Schneider Electric - UPS, PDU'],
             ['name' => 'D-Link',  'description' => 'D-Link - สวิตช์, Access Point ระดับ SMB'],
             ['name' => 'Epson',   'description' => 'Epson - เครื่องพิมพ์, สแกนเนอร์'],
+            ['name' => 'Brother', 'description' => 'Brother - เครื่องพิมพ์, เครื่องมัลติฟังก์ชัน'],
+            ['name' => 'TP-Link', 'description' => 'TP-Link - สวิตช์, เราเตอร์, Access Point ระดับ SMB'],
+            ['name' => 'Asus',    'description' => 'Asus - แล็ปท็อป, เดสก์ท็อป, จอภาพ'],
+            ['name' => 'Acer',    'description' => 'Acer - แล็ปท็อป, เดสก์ท็อป, จอภาพ'],
+            ['name' => 'Microsoft', 'description' => 'Microsoft - Surface, ซอฟต์แวร์และบริการคลาวด์'],
+            ['name' => 'VMware', 'description' => 'VMware - ซอฟต์แวร์เวอร์ชวลไลเซชันและคลาวด์'],
+            ['name' => 'Oracle',  'description' => 'Oracle - ซอฟต์แวร์ฐานข้อมูลและคลาวด์'],
+            ['name' => 'Adobe',   'description' => 'Adobe - ซอฟต์แวร์กราฟิกและมัลติมีเดีย'],
+            ['name' => 'Autodesk', 'description' => 'Autodesk - ซอฟต์แวร์ออกแบบและวิศวกรรม'],
+            ['name' => 'Symantec', 'description' => 'Symantec - ซอฟต์แวร์ความปลอดภัยและป้องกันไวรัส'],
+            ['name' => 'McAfee',  'description' => 'McAfee - ซอฟต์แวร์ความปลอดภัยและป้องกันไวรัส'],
+            ['name' => 'Kaspersky', 'description' => 'Kaspersky - ซอฟต์แวร์ความปลอดภัยและป้องกันไวรัส'],
+            ['name' => 'Trend Micro', 'description' => 'Trend Micro - ซอฟต์แวร์ความปลอดภัยและป้องกันไวรัส'],
+            ['name' => 'Fortinet', 'description' => 'Fortinet - ไฟร์วอลล์และอุปกรณ์ความปลอดภัยเครือข่าย'],
+            ['name' => 'Palo Alto Networks', 'description' => 'Palo Alto Networks - ไฟร์วอลล์และอุปกรณ์ความปลอดภัยเครือข่าย'],
+            ['name' => 'SATO', 'description' => 'SATO - เครื่องพิมพ์บาร์โค้ดและอุปกรณ์ติดฉลาก'],
+            ['name' => 'Zebra', 'description' => 'Zebra Technologies - เครื่องพิมพ์บาร์โค้ดและอุปกรณ์ติดฉลาก'],
+            ['name' => 'Honeywell', 'description' => 'Honeywell - เครื่องพิมพ์บาร์โค้ดและอุปกรณ์ติดฉลาก'],
+            ['name' => 'Keyence', 'description' => 'Keyence - เครื่องพิมพ์บาร์โค้ดและอุปกรณ์ติดฉลาก'],
+            ['name' => 'Ricoh', 'description' => 'Ricoh - เครื่องพิมพ์, เครื่องมัลติฟังก์ชัน, สแกนเนอร์'],
+            ['name' => 'Canon', 'description' => 'Canon - เครื่องพิมพ์, เครื่องมัลติฟังก์ชัน, สแกนเนอร์'],
+            ['name' => 'Grandstream', 'description' => 'Grandstream Networks - โทรศัพท์ IP, อุปกรณ์ VoIP และระบบเครือข่าย'],
+            ['name' => 'Yealink', 'description' => 'Yealink - โทรศัพท์ IP, อุปกรณ์ VoIP และระบบเครือข่าย'],
+            ['name' => 'Poly', 'description' => 'Poly (Plantronics + Polycom) - โทรศัพท์ IP, อุปกรณ์ VoIP และระบบเครือข่าย'],
+            ['name' => 'HPE', 'description' => 'Hewlett Packard Enterprise - เซิร์ฟเวอร์, สตอเรจ, อุปกรณ์เครือข่าย'],
+            ['name' => 'Aruba', 'description' => 'Aruba Networks - สวิตช์, เราเตอร์, Access Point ระดับองค์กร'],
+            ['name' => 'Ubiquiti', 'description' => 'Ubiquiti Networks - สวิตช์, เราเตอร์, Access Point ระดับ SMB และบ้าน'],
+            ['name' => 'Synology', 'description' => 'Synology - NAS, เซิร์ฟเวอร์จัดเก็บข้อมูลและระบบสำรองข้อมูล'],
+            ['name' => 'QNAP', 'description' => 'QNAP - NAS, เซิร์ฟเวอร์จัดเก็บข้อมูลและระบบสำรองข้อมูล'],
+            ['name' => 'Western Digital', 'description' => 'Western Digital - ฮาร์ดดิสก์, SSD และอุปกรณ์จัดเก็บข้อมูล'],
+            ['name' => 'Seagate', 'description' => 'Seagate Technology - ฮาร์ดดิสก์, SSD และอุปกรณ์จัดเก็บข้อมูล'],
+            ['name' => 'Kingston', 'description' => 'Kingston Technology - แรม, SSD และอุปกรณ์จัดเก็บข้อมูล'],
         ];
 
         foreach ($brands as $b) {
@@ -39,12 +71,6 @@ class MasterDataSeeder extends Seeder
         }
 
         // ── Categories ──────────────────────────────────────────────────────────
-        // `name` is read for English readers and `name_th` for Thai ones, so both
-        // halves are filled. `icon` is a Lucide name from the set IconPicker offers
-        // (shared/lib/lucide-icons.ts) — anything else renders as nothing.
-        //
-        // One table serves three modules. Grouped that way for reading; the database
-        // does not know the difference.
         $categories = [
             // Assets — physical equipment on the register
             ['name' => 'Laptop',            'name_th' => 'แล็ปท็อป',           'icon' => 'Laptop',  'description' => 'โน้ตบุ๊ก / แล็ปท็อป ทุกยี่ห้อ'],
@@ -54,7 +80,7 @@ class MasterDataSeeder extends Seeder
             ['name' => 'Printer',           'name_th' => 'เครื่องพิมพ์',       'icon' => 'Printer', 'description' => 'เครื่องพิมพ์ เครื่องมัลติฟังก์ชัน และ Plotter'],
             ['name' => 'Switch / Router',   'name_th' => 'สวิตช์ / เราเตอร์',  'icon' => 'Router',  'description' => 'อุปกรณ์เครือข่าย สวิตช์ เราเตอร์ และ Access Point'],
             ['name' => 'UPS',               'name_th' => 'เครื่องสำรองไฟ',     'icon' => 'Battery', 'description' => 'เครื่องสำรองไฟฟ้าและ PDU'],
-            ['name' => 'CCTV',              'name_th' => 'กล้องวงจรปิด',       'icon' => 'Camera',  'description' => 'กล้องวงจรปิดและเครื่องบันทึก NVR'],
+            ['name' => 'CCTV',              'name_th' => 'กล้องวงจรปิด',       'icon' => 'Video',  'description' => 'กล้องวงจรปิดและเครื่องบันทึก NVR'],
             ['name' => 'Phone',             'name_th' => 'โทรศัพท์',           'icon' => 'Phone',   'description' => 'โทรศัพท์ IP มือถือ และแท็บเล็ต'],
             ['name' => 'Other equipment',   'name_th' => 'อุปกรณ์อื่น ๆ',      'icon' => 'Package', 'description' => 'อุปกรณ์ไอทีที่ไม่อยู่ในหมวดข้างต้น'],
 
