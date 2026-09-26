@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Employee\Employee;
+use App\Models\Settings\AppSetting;
+use App\Models\User;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
 use Database\Seeders\Demo\DemoStep;
@@ -15,6 +17,7 @@ use Database\Seeders\MasterDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use RuntimeException;
 use Tests\TestCase;
@@ -78,6 +81,35 @@ class DemoSeederTest extends TestCase
 
         $this->assertSame(0, DB::table('jobs')->count());
         Queue::assertPushed(SendTemplatedEmail::class); // intercepted, not delivered
+    }
+
+    public function test_the_demo_covers_every_state(): void
+    {
+        $this->seedStandard();
+        $this->seed(DemoSeeder::class);
+
+        $this->assertOrg();
+    }
+
+    private function assertOrg(): void
+    {
+        $this->assertGreaterThanOrEqual(38, Employee::count());
+        $this->assertSame(11, Employee::whereNotNull('department_id')->distinct()->count('department_id'));
+
+        foreach (['staff.demo', 'sup.demo', 'mgr.demo', 'vp.demo', 'qc.demo', 'se.demo', 'it.lead', 'it.tech', 'hr.demo'] as $username) {
+            $user = User::where('username', $username)->first();
+            $this->assertNotNull($user, "{$username} missing");
+            $this->assertTrue(Hash::check(DemoSeeder::PASSWORD, $user->password));
+            $this->assertFalse($user->must_change_password);
+            $this->assertNotNull($user->role_id);
+        }
+
+        $this->assertSame('admin', User::where('username', 'it.tech')->first()->role->key);
+        $this->assertSame('hr', User::where('username', 'hr.demo')->first()->role->key);
+        $this->assertNotSame('0', AppSetting::get('default_employee_group_id', '0'));
+
+        $this->assertSame(1, Employee::where('status', 'resigned')->count());
+        $this->assertNull(Employee::where('first_name', 'Mongkol')->value('manager_id'), 'the no-manager case');
     }
 
     public function test_the_clock_never_lands_in_the_future_or_on_a_weekend(): void

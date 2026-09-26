@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Workflow\Workflow;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
+use Database\Seeders\Demo\DemoOrg;
 use Database\Seeders\Demo\DemoStep;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,9 @@ class DemoSeeder extends Seeder
     public const PASSWORD = 'Demo@1234';
 
     /** @var list<class-string<DemoStep>> In order: later steps read what earlier ones registered. */
-    public const STEPS = [];
+    public const STEPS = [
+        DemoOrg::class,
+    ];
 
     public function run(): void
     {
