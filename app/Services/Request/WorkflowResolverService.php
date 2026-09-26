@@ -14,6 +14,7 @@ use App\Models\Access\FileShare;
 use App\Models\Employee\Employee;
 use App\Models\Workflow\Workflow;
 use App\Services\Employee\ApprovalChainService;
+use App\Support\WorkflowStepCompleteness;
 use Illuminate\Support\Collection;
 
 /**
@@ -57,7 +58,7 @@ class WorkflowResolverService
     /**
      * Why this workflow cannot be routed for this requester, or null when it can.
      *
-     * Asked BEFORE a request is created (see RequestService), because the two answers
+     * Asked BEFORE a request is created (see RequestService), because the answers
      * below are broken data rather than valid org shapes: skipping the steps would
      * hand the request a clean run through approvals nobody gave. A rung that finds
      * nobody for any other reason — no one of that rank in the line at all — is a
@@ -68,6 +69,14 @@ class WorkflowResolverService
     public function blockReason(Workflow $workflow, Employee $requester, ?array $steps = null): ?ChainBlockReason
     {
         $steps ??= $this->stepsOf($workflow);
+
+        // Checked first and for every requester: a step naming nobody is the workflow's
+        // fault, and resolving would only skip it — indistinguishable from a line that
+        // simply lacks that rank.
+        if (! WorkflowStepCompleteness::isComplete($steps)) {
+            return ChainBlockReason::WorkflowIncomplete;
+        }
+
         $chainSteps = array_values(array_filter(
             $steps,
             fn (array $step) => StepActorType::from((string) $step['actor_type']) === StepActorType::Chain,

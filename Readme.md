@@ -3525,3 +3525,60 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 ### Tests / Verification
 
 `tests/Feature/Report` + `tests/Unit/Report` + `SidebarRouteGateTest` = **41 passed** · `npx tsc --noEmit` ผ่าน (0 error) · `npm run build` ผ่าน · เช็ค key parity เอง (สคริปต์ node ชั่วคราว) ว่าคีย์ใน `lang/en/report.ts` กับ `lang/th/report.ts` ตรงกันครบ (133 คีย์ทั้งคู่) และทุกคีย์ `rep_*` ที่โค้ดหน้าเว็บ/นิยาม PHP อ้างถึงมีอยู่จริงทั้งสองภาษา
+
+---
+
+## Asset — ตัดจำหน่ายต้องมีหมายเหตุ (2026-09-25)
+
+มาจากการเทียบ Scope of Work ข้อ 5.4 "การตัดจำหน่าย หรือขายซาก" — ข้อตกลงคือไม่ทำรายการวิธีจำหน่ายแบบตายตัว ให้ผู้ดูแลเขียนหมายเหตุเองว่าออกไปอย่างไร (ทิ้ง / ขายซาก / บริจาค / หมดสัญญาเช่า ฯลฯ)
+
+- เดิมปุ่ม **ตัดจำหน่าย** บนแถบ bulk ของหน้า Assets ยิง `POST /api/assets/bulk` ทันทีโดยไม่ส่ง `reason` — API รับได้อยู่แล้วแต่หน้าจอไม่เคยถาม จึงไม่มีบันทึกว่าของหายไปทางไหน
+- ตอนนี้กดแล้วเปิด `AssetWriteoffDialog` (`modules/asset/components/asset-writeoff-dialog.tsx`) ให้กรอกหมายเหตุ (บังคับ, สูงสุด 500 ตัวอักษร) — `AssetController::bulk()` เปลี่ยน `reason` เป็น `required` (ช่องว่างล้วนถูก TrimStrings ทำเป็น null จึงไม่ผ่าน)
+- หมายเหตุเก็บที่ `assets.last_reason` เหมือนเดิม และแสดงเป็นกล่อง "ตัดจำหน่ายแล้ว" บนแท็บ Overview ของ `AssetDetailDrawer` เมื่อสถานะเป็น `writeoff`
+- ไม่มี migration · lang ใหม่ `asset_writeoff_*` (en + th)
+
+### Tests / Verification
+
+`AssetApiTest` = **92 passed** (เพิ่ม `test_bulk_writeoff_requires_a_note`, `test_bulk_writeoff_keeps_the_note_on_the_asset` และให้เทสเดิม 3 ตัวส่งหมายเหตุ) · `npx tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
+## แท็บ Overview ทุกโมดูล + ภาพรวมคำขอบน Dashboard (2026-09-25)
+
+**1. ภาพรวมคำขอบนหน้า Dashboard หลัก** — เดิมหน้าแรกมีภาพรวมของ Ticket / HR / Activity แต่ไม่มีของคำขอ ตอนนี้ `DashboardSummaryService` ส่ง block `requests` ให้คนที่มี `requests.view_all`
+- `by_status` / `by_type` ของคำขอที่ยื่นใน 30 วัน (นับจาก `created_at` แบบเดียวกับ block IT)
+- `waiting` = ขั้นอนุมัติที่ค้างเกิน 3 วัน เรียงจากรอนานสุด 5 รายการ + `waiting_count` — ใช้ชุดเดียวกับกระดิ่งเตือนคำขอค้าง (`RequestStalledService::waitingSteps()` ใหม่, เปิด `daysWaiting()` เป็น public) ตัวเลขบนหน้าแรกจึงเท่ากับจำนวนกระดิ่งเสมอ
+- หน้า React: `RequestsOverviewCard` + `WaitingRequestsCard` (แถวกดแล้วเปิด `/requests?view=<id>`)
+
+**2. แท็บ Dashboard → Overview / ภาพรวม** ใน Employee · Tickets · Requests · Assets · Contracts · Stock · Access (ให้เหมือน Ticket) — ทั้งชื่อที่แสดง, tab id ใน URL (`?tab=overview`), ตัวแปร/คอมโพเนนต์ (`canViewOverview`, `OverviewTab`, `AccessOverview` — ไฟล์ `access-dashboard.tsx` → `access-overview.tsx`, `stock/pages/tabs/dashboard-tab.tsx` → `overview-tab.tsx`) และ lang key (`sub_overview`, `asset_overview`, `ticket_tab_overview`, `requests_tab_overview`)
+- ลิงก์เก่า `?tab=dashboard` ยังใช้ได้ — `shared/lib/tab-param.ts` (`readTabParam`) แปลงเป็น `overview` ก่อนทุกหน้าอ่านค่า
+- หน้า Dashboard หลัก (เมนู Overview → Dashboard) ยังชื่อ Dashboard เหมือนเดิม
+
+**3. Permission** — ป้ายสิทธิ์ `*.view_dashboard` ของ 5 โมดูลแสดงเป็น "Overview / ภาพรวม" พร้อมคำอธิบาย · **key สิทธิ์ไม่เปลี่ยน** (เก็บใน `role_permissions` บนฐานจริง เปลี่ยนแล้วสิทธิ์ที่ตั้งไว้จะหาย)
+
+**4. แท็บหน้าโมดูลหน้าตาเดียวกัน** — เดิมมี 4 แบบ (ขีดเต็มปุ่ม / ขีดเต็มปุ่มแต่ตัวอักษรไม่เป็นสีแบรนด์ / ขีดสั้น inset 12px / ขีดมน inset 8px) ตอนนี้ทั้ง 7 หน้าใช้ `shared/components/page-tabs.tsx` (`PageTabs`) ซึ่งเป็นแบบเดียวกับ `DialogTabs` ของไดอะล็อก: ตัวอักษรสีแบรนด์ + ขีดมน inset เท่ากันทุกแท็บ · ตัวเลขข้างแท็บมี `tone` ตามความหมายเดิม (`alert` แดง = งานค้าง, `warn` เหลือง = ต้องดู, `muted` เทา = จำนวน)
+
+### Tests / Verification
+
+`DashboardSummaryTest` +3 (`requests` block ต้องมีสิทธิ์ · แยกสถานะ/ประเภทในหน้าต่าง · รายการค้างเกินเกณฑ์เรียงรอนานสุด) · Dashboard + Asset + Stalled + SidebarRouteGate = 119 passed · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน · เปิดดูจริงในเบราว์เซอร์ครบ 7 หน้า + หน้าแรก และ `/tickets?tab=dashboard` เข้าแท็บ Overview ถูก
+
+---
+
+## Request: workflow ที่ตั้งไม่ครบยื่นไม่ได้ + ไฟล์แนบล็อกตั้งแต่ยื่น (2026-09-26)
+
+**ต้นเหตุ** — `migrate:fresh --seed` วันที่ 2026-09-21 สร้าง workflow ใหม่ตอนที่ตาราง `positions`/`departments` ยังว่าง (`DatabaseSeeder` ไม่ seed master data) ขั้นแบบ chain และแบบแผนกจึงไม่มีตำแหน่ง/แผนกผูกอยู่เลย ที่หลุดไปได้เพราะตอนยื่น `blockReason()` ตรวจแค่สายบังคับบัญชา ขั้นที่ไม่ได้ระบุใครจึงถูกข้ามด้วย `no_matching_position` แบบเงียบ ๆ (RQ-2026-0002 / 0004 ข้าม Supervisor แล้วไปให้ VP แทน) · แก้ข้อมูลบน DB จริงแล้วด้วย `db:seed --class=WorkflowSeeder` ซึ่งเติมเฉพาะขั้นที่ยังว่าง (ขั้น QC/SE ของ CCTV ยังต้องตั้งตำแหน่งเองในหน้า Workflows)
+
+**1. ยื่นไม่ได้ถ้า workflow ยังตั้งไม่ครบ**
+- `App\Support\WorkflowStepCompleteness` ใหม่ เป็นกฎชุดเดียว: ขั้น chain ต้องมีตำแหน่ง · ขั้นแผนกต้องมีแผนก และต้องมีคนหรือตำแหน่ง — `UpdateWorkflowRequest` (ตอนบันทึก) กับ `WorkflowResolverService::blockReason()` (ตอนยื่น) ใช้ชุดเดียวกัน
+- `ChainBlockReason::WorkflowIncomplete` (`workflow_incomplete`) ตรวจก่อนทุกอย่างและบล็อกทุกคน รวมถึงตำแหน่งพิเศษ · ข้อความ `req_block_workflow_incomplete`: "คำขอยังไม่พร้อมใช้งาน กรุณาติดต่อ IT" / "The request is not available. Please contact IT."
+- precheck ของ Onboarding (`EmployeeController`) รายงานรหัสนี้ด้วย (`add-employee-drawer` ใช้ key เดียวกัน)
+- ขั้นที่ "ในสายไม่มีคนตำแหน่งนี้" ยังข้ามได้เหมือนเดิม — ที่บล็อกคือขั้นที่ไม่ได้ระบุใครเลยเท่านั้น
+
+**2. ไฟล์แนบแก้ไม่ได้หลังยื่น** — ถ้าต้องการเปลี่ยนไฟล์ ต้องยกเลิกคำขอแล้วยื่นใหม่
+- ลบ `RequestAttachmentController` + route `POST/DELETE service-requests/{id}/attachments` · ลบ `ServiceRequest::canManageAttachments()` / `attachmentsLocked()` · ลบ `RequestAttachmentService::delete()` / `remaining()` · ลบ `can_attach` ออกจาก resource และ type
+- `request-detail-dialog.tsx` แสดงไฟล์แบบอ่าน/ดาวน์โหลดได้อย่างเดียว · ลบ `uploadAttachments` / `deleteAttachment` ออกจาก api + hooks
+- ลิมิต (5 ไฟล์, 10 MB, นามสกุลที่อนุญาต) ยังบังคับตอนยื่นผ่าน `StoreServiceRequestRequest`
+
+### Tests / Verification
+
+`RequestWorkflowTest` +2 (ขั้น chain ไม่มีตำแหน่ง → `workflow_incomplete` ทั้งพนักงานทั่วไปและตำแหน่งพิเศษ แล้วยื่นผ่านเมื่อแก้ครบ · ขั้นแผนกขาดแผนก/ขาดคนเซ็น) · `EmployeeOnboardingRequestTest` +1 (precheck ส่ง `workflow_incomplete`) · `RequestAttachmentTest` เขียนใหม่: รวม test เพิ่ม/ลบ/ล็อกหลังเซ็น/ยกเลิก เหลือ `test_a_filed_request_takes_no_further_changes_to_its_files` และย้าย test เกิน 5 ไฟล์/ไฟล์ .exe ไปตรวจตอนยื่น · fixture ของ `RequestAttachmentTest` (seed แผนก) และ `RequestOptionTest` (seed ตำแหน่ง) เคย seed workflow ไม่ครบแบบเดียวกับบน DB จริง · test ของ Request/Workflow/Onboarding 15 ไฟล์ = **201 passed** · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน

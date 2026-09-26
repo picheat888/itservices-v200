@@ -1,5 +1,20 @@
 import type { ApprovalSkipReason, ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
-import { Archive, Cctv, Code2, FolderOpen, HardDrive, Laptop, Mail, MoreHorizontal, Phone, Share2, Smartphone, Users, Wifi, type LucideIcon } from 'lucide-react';
+import {
+    Archive,
+    Cctv,
+    Code2,
+    FolderOpen,
+    HardDrive,
+    Laptop,
+    Mail,
+    MoreHorizontal,
+    Phone,
+    Share2,
+    Smartphone,
+    Users,
+    Wifi,
+    type LucideIcon,
+} from 'lucide-react';
 
 /**
  * Presentation vocabulary for the service-request enums — lives beside the types
@@ -62,6 +77,7 @@ export const REQUEST_SKIP_REASON_LABEL: Record<ApprovalSkipReason, string> = {
 export const REQUEST_BLOCK_REASON_LABEL: Record<string, string> = {
     chain_no_manager: 'req_block_no_manager',
     chain_approver_resigned: 'req_block_approver_resigned',
+    workflow_incomplete: 'req_block_workflow_incomplete',
 };
 
 /** Badge tone + label key per request status, for the shared StatusBadge. */

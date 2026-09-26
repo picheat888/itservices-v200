@@ -26,7 +26,6 @@ use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketOverviewReportController;
-use App\Http\Controllers\Api\Request\RequestAttachmentController;
 use App\Http\Controllers\Api\Request\RequestController;
 use App\Http\Controllers\Api\Request\RequestOptionsController;
 use App\Http\Controllers\Api\Settings\AssetModelController;
@@ -266,12 +265,6 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::post('service-requests/{serviceRequest}/reject', [RequestController::class, 'reject'])->name('api.service-requests.reject');
     Route::post('service-requests/{serviceRequest}/fulfill', [RequestController::class, 'fulfill'])->name('api.service-requests.fulfill');
     Route::post('service-requests/{serviceRequest}/cancel', [RequestController::class, 'cancel'])->name('api.service-requests.cancel');
-    // Files added AFTER the submit. The ones filed with it ride along with the
-    // POST above; both paths are gated in ServiceRequest::canManageAttachments.
-    Route::post('service-requests/{serviceRequest}/attachments', [RequestAttachmentController::class, 'store'])
-        ->name('api.service-requests.attachments.store');
-    Route::delete('service-requests/{serviceRequest}/attachments/{attachment}', [RequestAttachmentController::class, 'destroy'])
-        ->name('api.service-requests.attachments.destroy');
     Route::apiResource('service-requests', RequestController::class)
         ->only(['index', 'store', 'show'])
         ->parameters(['service-requests' => 'serviceRequest']);

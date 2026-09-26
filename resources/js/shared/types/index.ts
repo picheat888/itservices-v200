@@ -1062,10 +1062,8 @@ export interface ServiceRequest {
     can_approve: boolean;
     can_cancel: boolean;
     can_fulfill: boolean;
-    /** Files filed with the request — present on the detail read only. */
+    /** Files filed with the request — present on the detail read only. Fixed at submit. */
     attachments?: RequestAttachment[];
-    /** Whether this viewer may still add or remove files (requester's side, before the first signature). */
-    can_attach: boolean;
     approved_at: string | null;
     rejected_at: string | null;
     fulfilled_at: string | null;

@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\Employee\EmployeeStatus;
 use App\Enums\Request\ApprovalStatus;
+use App\Enums\Request\ChainBlockReason;
 use App\Enums\Request\RequestStatus;
 use App\Enums\Request\RequestType;
 use App\Enums\Ticket\TicketCategory;
 use App\Models\Access\FileShare;
 use App\Models\Access\Software;
+use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Permission\Role;
@@ -17,6 +19,7 @@ use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use App\Services\Request\WorkflowResolverService;
 use App\Services\Sidebar\SidebarBadgeService;
 use App\Support\DefaultWorkflows;
 use Database\Seeders\EmployeePositionSeeder;
@@ -541,6 +544,58 @@ class RequestWorkflowTest extends TestCase
             ->assertJsonPath('errors.requester.0', 'chain_approver_resigned');
 
         $this->assertSame(0, ServiceRequest::count());
+    }
+
+    /**
+     * A chain rung that names no position — left behind by a seeder that ran before the
+     * install had positions — would skip for every requester and quietly hand the request
+     * on. It is refused instead, whoever files it, until the workflow is finished.
+     */
+    public function test_a_request_is_refused_while_its_workflow_has_a_step_that_names_nobody(): void
+    {
+        $rung = Workflow::where('request_type', 'computer')->firstOrFail()
+            ->steps()->where('actor_type', 'chain')->orderBy('position')->firstOrFail();
+        $rung->positions()->detach();
+
+        $this->actingAs($this->requester)->postJson('/api/service-requests', $this->computerPayload())
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.requester.0', 'workflow_incomplete')
+            ->assertJsonPath('errors.requester.1', 'The request is not available. Please contact IT.');
+
+        // A requester with nobody above them is refused the same way: the workflow is
+        // at fault, not the line.
+        $md = Position::create(['code' => 'POS-MD', 'title' => 'Managing Director', 'allow_special_position' => true]);
+        $bossUser = $this->makeUser('user', ['requests.submit'], Employee::create(['first_name' => 'Md', 'position_id' => $md->id]));
+        $this->actingAs($bossUser)->postJson('/api/service-requests', $this->computerPayload())
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.requester.0', 'workflow_incomplete');
+
+        $this->assertSame(0, ServiceRequest::count());
+
+        // Once the rung names its positions again, the same request goes through.
+        $rung->positions()->sync([$this->positionId('Supervisor')]);
+        $this->actingAs($this->requester)->postJson('/api/service-requests', $this->computerPayload())->assertCreated();
+    }
+
+    /** A department step is incomplete without its department, or without anybody in it to sign. */
+    public function test_a_department_step_missing_its_department_or_its_signers_blocks_the_workflow(): void
+    {
+        $workflow = Workflow::where('request_type', 'computer')->firstOrFail();
+        $resolver = app(WorkflowResolverService::class);
+        $department = Department::create(['name' => 'Quality Control']);
+        $step = fn (array $overrides) => [[
+            'actor_type' => 'department', 'label' => 'QC Dept.', 'kind' => 'approval',
+            'position_ids' => [$this->positionId('Manager')], 'department_id' => $department->id,
+            'approver_employee_ids' => [], ...$overrides,
+        ]];
+
+        $this->assertSame(ChainBlockReason::WorkflowIncomplete, $resolver->blockReason($workflow, $this->staff, $step(['department_id' => null])));
+        $this->assertSame(ChainBlockReason::WorkflowIncomplete, $resolver->blockReason($workflow, $this->staff, $step(['position_ids' => []])));
+
+        // Complete — even though nobody in the department holds the position. That is a
+        // skip for this request, not a broken workflow.
+        $this->assertNull($resolver->blockReason($workflow, $this->staff, $step([])));
+        $this->assertNull($resolver->blockReason($workflow, $this->staff, $step(['position_ids' => [], 'approver_employee_ids' => [$this->mgr->id]])));
     }
 
     public function test_a_special_position_may_still_submit_without_a_manager(): void

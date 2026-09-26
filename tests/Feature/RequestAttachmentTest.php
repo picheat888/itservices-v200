@@ -11,6 +11,7 @@ use App\Models\Request\RequestAttachment;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\RequestOption;
 use App\Models\User;
+use Database\Seeders\EmployeeDepartmentSeeder;
 use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
@@ -21,8 +22,8 @@ use Tests\TestCase;
 
 /**
  * Files attached to a service request: what must ride along at submit (a CCTV
- * request cannot be filed without one), who may add or remove them afterwards,
- * and the moment that stops being allowed — the first approver's signature.
+ * request cannot be filed without one), the limits they are held to, who may
+ * download them — and that once filed, they never change.
  */
 class RequestAttachmentTest extends TestCase
 {
@@ -42,6 +43,9 @@ class RequestAttachmentTest extends TestCase
     {
         parent::setUp();
         $this->seed(EmployeePositionSeeder::class);
+        // CCTV's department steps name Quality Control and Safety — without them the
+        // workflow is unfinished and every submit is refused.
+        $this->seed(EmployeeDepartmentSeeder::class);
         $this->seed(RequestOptionSeeder::class);
         $this->seed(WorkflowSeeder::class);
         Storage::fake('local');
@@ -145,64 +149,33 @@ class RequestAttachmentTest extends TestCase
         $this->assertSame(0, RequestAttachment::count());
     }
 
-    public function test_the_requester_adds_a_file_while_nobody_has_signed(): void
+    /**
+     * Once filed, the files are the ones the approvers will decide on — before the
+     * first signature as much as after it. There is no way to add or remove one; a
+     * requester who needs different files cancels and files again.
+     */
+    public function test_a_filed_request_takes_no_further_changes_to_its_files(): void
     {
         $request = $this->submitCctv();
+        $attachment = $request->attachments()->firstOrFail();
+
+        $this->actingAs($this->requester)
+            ->getJson("/api/service-requests/{$request->id}")
+            ->assertOk()
+            ->assertJsonMissingPath('data.can_attach');
 
         $this->actingAs($this->requester)
             ->post("/api/service-requests/{$request->id}/attachments", [
                 'files' => [UploadedFile::fake()->image('camera-spot.jpg')],
             ], ['Accept' => 'application/json'])
-            ->assertOk()
-            ->assertJsonPath('data.attachments.1.name', 'camera-spot.jpg');
-
-        $this->assertSame(2, $request->attachments()->count());
-    }
-
-    public function test_the_requester_removes_a_file_while_nobody_has_signed(): void
-    {
-        $request = $this->submitCctv();
-        $attachment = $request->attachments()->first();
+            ->assertNotFound();
 
         $this->actingAs($this->requester)
             ->deleteJson("/api/service-requests/{$request->id}/attachments/{$attachment->id}")
-            ->assertOk();
-
-        $this->assertDatabaseMissing('request_attachments', ['id' => $attachment->id]);
-        Storage::disk('local')->assertMissing($attachment->path);
-    }
-
-    public function test_the_first_signature_freezes_the_files(): void
-    {
-        $request = $this->submitCctv();
-        $attachment = $request->attachments()->first();
-
-        $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
-
-        $this->actingAs($this->requester)
-            ->post("/api/service-requests/{$request->id}/attachments", [
-                'files' => [UploadedFile::fake()->image('late.jpg')],
-            ], ['Accept' => 'application/json'])
-            ->assertForbidden();
-
-        $this->actingAs($this->requester)
-            ->deleteJson("/api/service-requests/{$request->id}/attachments/{$attachment->id}")
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertSame(1, $request->attachments()->count());
-    }
-
-    public function test_an_approver_does_not_get_to_change_the_requesters_files(): void
-    {
-        $request = $this->submitCctv();
-
-        // The supervisor is the current approver and may read the request, but the
-        // evidence it was filed with is the requester's to manage, not theirs.
-        $this->actingAs($this->supUser)
-            ->post("/api/service-requests/{$request->id}/attachments", [
-                'files' => [UploadedFile::fake()->image('mine.jpg')],
-            ], ['Accept' => 'application/json'])
-            ->assertForbidden();
+        Storage::disk('local')->assertExists($attachment->path);
     }
 
     public function test_an_approver_may_download_the_file_and_a_stranger_may_not(): void
@@ -219,31 +192,30 @@ class RequestAttachmentTest extends TestCase
         $this->actingAs($stranger)->get($url)->assertForbidden();
     }
 
-    public function test_a_request_may_not_carry_more_than_five_files(): void
+    public function test_a_request_may_not_be_filed_with_more_than_five_files(): void
     {
-        $request = $this->submitCctv();
+        $this->actingAs($this->requester)->post('/api/service-requests', [
+            'type' => RequestType::Cctv->value,
+            'reason' => 'The packing bay has no camera covering the loading door.',
+            'files' => collect(range(1, 6))
+                ->map(fn (int $i) => UploadedFile::fake()->image("shot-{$i}.jpg"))->all(),
+        ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('files');
 
-        $this->actingAs($this->requester)
-            ->post("/api/service-requests/{$request->id}/attachments", [
-                'files' => collect(range(1, 5))
-                    ->map(fn (int $i) => UploadedFile::fake()->image("shot-{$i}.jpg"))->all(),
-            ], ['Accept' => 'application/json'])
-            ->assertStatus(422);
-
-        $this->assertSame(1, $request->attachments()->count());
+        $this->assertSame(0, ServiceRequest::count());
     }
 
     public function test_an_executable_is_refused(): void
     {
-        $request = $this->submitCctv();
-
-        $this->actingAs($this->requester)
-            ->post("/api/service-requests/{$request->id}/attachments", [
-                'files' => [UploadedFile::fake()->create('payload.exe', 20, 'application/octet-stream')],
-            ], ['Accept' => 'application/json'])
+        $this->actingAs($this->requester)->post('/api/service-requests', [
+            'type' => RequestType::Cctv->value,
+            'reason' => 'The packing bay has no camera covering the loading door.',
+            'files' => [UploadedFile::fake()->create('payload.exe', 20, 'application/octet-stream')],
+        ], ['Accept' => 'application/json'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('files.0');
 
-        $this->assertSame(1, $request->attachments()->count());
+        $this->assertSame(0, ServiceRequest::count());
     }
 }

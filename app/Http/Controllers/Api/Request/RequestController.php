@@ -34,8 +34,7 @@ class RequestController extends Controller
      * @var list<string>
      */
     // ticket.assignee: the trail says who is working the case, not just that one exists.
-    /** Public so RequestAttachmentController answers with the same shape this one does. */
-    public const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'attachments'];
+    private const DETAIL_RELATIONS = ['approvals.approver.user', 'ticket.assignee', 'workflow', 'employee.position', 'attachments'];
 
     public function __construct(private readonly RequestService $service) {}
 

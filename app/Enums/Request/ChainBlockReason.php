@@ -4,7 +4,8 @@ namespace App\Enums\Request;
 
 /**
  * Why a request cannot be filed at all: the requester's reporting line cannot
- * carry it, and letting it through would mean recording approvals nobody gave.
+ * carry it, or the workflow has a step that can never resolve — either way letting
+ * it through would mean recording approvals nobody gave.
  *
  * Returned as a code, not a sentence — the SPA writes it out through
  * `req_block_*` so the reader sees it in their own language (same reasoning as
@@ -32,12 +33,20 @@ enum ChainBlockReason: string
      */
     case ApproverResigned = 'chain_approver_resigned';
 
+    /**
+     * The workflow itself still holds a step that names nobody (see
+     * WorkflowStepCompleteness), so it would skip for every requester alike. Not the
+     * requester's line at all — IT has to finish the workflow before anyone can file.
+     */
+    case WorkflowIncomplete = 'workflow_incomplete';
+
     /** The English fallback, for API clients that do not translate the code. */
     public function message(): string
     {
         return match ($this) {
             self::NoManager => 'Your reporting line has no manager set, so this request cannot be routed. Ask HR to update it.',
             self::ApproverResigned => 'An approver in your reporting line has left the company. Ask HR to update it before submitting.',
+            self::WorkflowIncomplete => 'The request is not available. Please contact IT.',
         };
     }
 }

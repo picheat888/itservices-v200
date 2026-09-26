@@ -119,9 +119,9 @@ class RequestService
             ]);
         }
 
-        // A reporting line that cannot carry the request stops it here. Filing it
-        // anyway would skip the approval steps and hand it to IT as if everyone above
-        // had signed — see ChainBlockReason for the two cases and why a line that
+        // A reporting line that cannot carry the request — or a workflow step that names
+        // nobody — stops it here. Filing it anyway would skip the approval steps and hand
+        // it to IT as if everyone above had signed — see ChainBlockReason for the cases and why a line that
         // simply lacks a rank is NOT one of them. The code travels to the SPA, which
         // writes it out in the reader's language.
         $block = $this->resolver->blockReason($workflow, $employee);

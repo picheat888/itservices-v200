@@ -78,6 +78,7 @@ const BLOCK_REASON_LABEL: Record<string, string> = {
     chain_approver_resigned: 'emp_onboarding_blocked_resigned',
     chain_no_manager: 'emp_onboarding_blocked_no_manager',
     workflow_inactive: 'emp_onboarding_blocked_workflow',
+    workflow_incomplete: 'req_block_workflow_incomplete',
 };
 
 /** The three steps of the wizard: icon for the stepper, heading + sub-line for the body. */

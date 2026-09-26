@@ -173,22 +173,6 @@ class ServiceRequest extends Model
     }
 
     /**
-     * Files stop being the requester's to change the moment somebody signs: an
-     * approver decided on what was in front of them, and a request whose evidence
-     * can still be swapped out afterwards is not a record of that decision.
-     */
-    public function attachmentsLocked(): bool
-    {
-        // The list serializes this for every row and already eager-loads the chain;
-        // asking the database again per row would be a query for an answer in hand.
-        if ($this->relationLoaded('approvals')) {
-            return $this->approvals->contains(fn (RequestApproval $a) => $a->status === ApprovalStatus::Approved);
-        }
-
-        return $this->approvals()->where('status', ApprovalStatus::Approved->value)->exists();
-    }
-
-    /**
      * May this account read the request at all? Its participants (owner, the person
      * it is about, whoever filed it, anybody the chain can route to), plus IT and
      * the module's readers. The single answer behind both the detail endpoint and
@@ -211,21 +195,5 @@ class ServiceRequest extends Model
             || $user->isSuper()
             || $user->hasPermission('requests.view_all')
             || $user->hasPermission('requests.fulfill');
-    }
-
-    /**
-     * May this account add or remove the request's files right now? The requester's
-     * own evidence, and whoever filed it for them — never an approver, and never
-     * once the first signature has landed.
-     */
-    public function canManageAttachments(?User $user): bool
-    {
-        if ($user === null || $this->attachmentsLocked()) {
-            return false;
-        }
-
-        return $user->id === $this->user_id
-            || $user->id === $this->submitted_by_user_id
-            || ($user->employee_id !== null && $user->employee_id === $this->employee_id);
     }
 }
