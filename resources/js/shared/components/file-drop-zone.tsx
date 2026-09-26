@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { FileImage, FileText, Paperclip, UploadCloud, X } from 'lucide-react';
+import { Download, FileImage, FileText, Paperclip, UploadCloud, X } from 'lucide-react';
 import { useRef, useState, type ReactNode } from 'react';
 
 /**
@@ -135,29 +135,63 @@ export function AttachmentList({ count, max, progressPct, children }: { count: n
     );
 }
 
-/** One file: kind icon, name, size, and a ✕ when it may still be taken back. */
+/**
+ * One file: kind icon, name, size, and a ✕ when it may still be taken back.
+ *
+ * A saved file (one with `href`) gets two extra affordances. `onPreview` turns
+ * the name into a button that opens the in-app viewer — see attachment-preview —
+ * instead of throwing the reader into a new browser tab; an image also swaps its
+ * generic icon for a thumbnail of itself, since the url is already authenticated
+ * and the row is the only place the picture could be recognised from.
+ */
 export function AttachmentRow({
     name,
     size,
     mime,
     href,
+    onPreview,
     onRemove,
 }: {
     name: string;
     size: number;
     mime?: string | null;
-    /** A saved file's authenticated download URL — the name becomes a link to it. */
+    /** A saved file's authenticated download URL — the row gains a download action. */
     href?: string;
+    /** Open this file in the in-app viewer. Without it the name links out to `href`. */
+    onPreview?: () => void;
     onRemove?: () => void;
 }) {
     const t = useT();
 
+    const isImage = mime?.startsWith('image/') === true;
+    const thumb =
+        isImage && href ? (
+            <img src={href} alt="" className="border-border/60 h-7 w-7 rounded border object-cover" />
+        ) : isImage ? (
+            <FileImage className="text-muted-foreground h-4 w-4" />
+        ) : (
+            <FileText className="text-muted-foreground h-4 w-4" />
+        );
+
     return (
         <div className="border-border/60 flex items-center gap-2.5 border-b px-1 py-2 last:border-b-0">
-            <span className="text-muted-foreground shrink-0">
-                {mime?.startsWith('image/') ? <FileImage className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-            </span>
-            {href ? (
+            {onPreview ? (
+                <button type="button" onClick={onPreview} aria-label={t('attachment_preview')} className="shrink-0">
+                    {thumb}
+                </button>
+            ) : (
+                <span className="shrink-0">{thumb}</span>
+            )}
+
+            {onPreview ? (
+                <button
+                    type="button"
+                    onClick={onPreview}
+                    className="hover:text-brand min-w-0 flex-1 truncate text-left text-[13px] font-medium hover:underline"
+                >
+                    {name}
+                </button>
+            ) : href ? (
                 <a
                     href={href}
                     target="_blank"
@@ -169,7 +203,20 @@ export function AttachmentRow({
             ) : (
                 <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{name}</span>
             )}
+
             <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{formatFileSize(size)}</span>
+
+            {href && (
+                <a
+                    href={href}
+                    download={name}
+                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-6 w-6 shrink-0 place-items-center rounded-md"
+                    aria-label={t('attachment_download')}
+                    title={t('attachment_download')}
+                >
+                    <Download className="h-3.5 w-3.5" />
+                </a>
+            )}
             {onRemove && (
                 <button
                     type="button"

@@ -115,6 +115,14 @@ export const common: Dict = {
     attachment_drop: 'ลากไฟล์มาวาง หรือคลิกเพื่อเลือก',
     attachment_count: 'แนบ {n} / {max} ไฟล์แล้ว',
 
+    // attachment-preview.tsx — หน้าต่างดูไฟล์แนบในระบบ
+    attachment_download: 'ดาวน์โหลด',
+    attachment_preview: 'ดูตัวอย่าง',
+    attachment_zoom_in: 'ซูมเข้า',
+    attachment_zoom_out: 'ซูมออก',
+    attachment_zoom_reset: 'ขนาดเดิม',
+    attachment_no_inline_preview: 'ไฟล์ชนิดนี้ดูตัวอย่างในหน้านี้ไม่ได้ - ดาวน์โหลดเพื่อเปิด',
+
     // import-dialog.tsx — หน้าต่างนำเข้า CSV ที่ใช้ร่วมทุกโมดูล
     import_download_template: 'ดาวน์โหลด Template (CSV)',
     import_run: 'นำเข้า',
