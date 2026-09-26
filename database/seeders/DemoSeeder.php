@@ -8,9 +8,11 @@ use App\Models\Employee\Position;
 use App\Models\Permission\Role;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
+use Database\Seeders\Demo\DemoAccess;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
 use Database\Seeders\Demo\DemoOrg;
+use Database\Seeders\Demo\DemoReference;
 use Database\Seeders\Demo\DemoStep;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +36,8 @@ class DemoSeeder extends Seeder
     /** @var list<class-string<DemoStep>> In order: later steps read what earlier ones registered. */
     public const STEPS = [
         DemoOrg::class,
+        DemoReference::class,
+        DemoAccess::class,
     ];
 
     public function run(): void

@@ -3,8 +3,14 @@
 namespace Tests\Feature;
 
 use App\Jobs\SendTemplatedEmail;
+use App\Models\Access\AccessMembership;
+use App\Models\Access\EmailGroup;
+use App\Models\Access\FileShare;
 use App\Models\Employee\Employee;
 use App\Models\Settings\AppSetting;
+use App\Models\Settings\AssetModel;
+use App\Models\Settings\Location;
+use App\Models\Settings\Vendor;
 use App\Models\User;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
@@ -89,6 +95,17 @@ class DemoSeederTest extends TestCase
         $this->seed(DemoSeeder::class);
 
         $this->assertOrg();
+        $this->assertReferenceAndAccess();
+    }
+
+    private function assertReferenceAndAccess(): void
+    {
+        $this->assertGreaterThanOrEqual(8, Vendor::count());
+        $this->assertGreaterThanOrEqual(6, Location::count());
+        $this->assertGreaterThanOrEqual(12, AssetModel::count());
+        $this->assertNotNull(FileShare::where('name', 'Production Share')->value('owner_employee_id'));
+        $this->assertNotNull(EmailGroup::where('email', 'production@example.com')->value('owner_employee_id'));
+        $this->assertGreaterThanOrEqual(10, AccessMembership::whereNull('revoked_at')->count());
     }
 
     private function assertOrg(): void
