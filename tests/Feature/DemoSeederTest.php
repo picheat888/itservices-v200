@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
+use App\Enums\Ticket\TicketCategory;
+use App\Enums\Ticket\TicketStatus;
 use App\Jobs\SendTemplatedEmail;
 use App\Models\Access\AccessMembership;
 use App\Models\Access\EmailGroup;
@@ -21,6 +23,7 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
@@ -107,6 +110,24 @@ class DemoSeederTest extends TestCase
         $this->assertReferenceAndAccess();
         $this->assertContractsAndAssets();
         $this->assertStock();
+        $this->assertTickets();
+    }
+
+    private function assertTickets(): void
+    {
+        $this->assertGreaterThanOrEqual(55, Ticket::count());
+        foreach (TicketStatus::cases() as $status) {
+            $this->assertTrue(Ticket::where('status', $status->value)->exists(), "no {$status->value} ticket");
+        }
+        foreach (TicketCategory::cases() as $category) {
+            $this->assertTrue(Ticket::where('category', $category->value)->exists(), "no {$category->value} ticket");
+        }
+        $this->assertTrue(Ticket::where('status', 'in_progress')->where('sla_resolve_due_at', '<', now())->exists(), 'no breached open case');
+        $this->assertTrue(Ticket::where('status', 'completed')->whereColumn('resolved_at', '>', 'sla_resolve_due_at')->exists(), 'no late completion');
+        $this->assertTrue(Ticket::where('status', 'completed')->whereColumn('resolved_at', '<=', 'sla_resolve_due_at')->exists(), 'no on-time completion');
+        $this->assertTrue(Ticket::where('status', 'open')->where('sla_response_due_at', '<', now())->exists(), 'no case past its response target');
+        $this->assertTrue(Ticket::where('work_class', 'repair_vendor')->exists());
+        $this->assertFalse(Ticket::where('created_at', '>', now())->exists(), 'a ticket in the future');
     }
 
     private function assertStock(): void
