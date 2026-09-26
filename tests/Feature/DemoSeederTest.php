@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\Asset\AssetStatus;
 use App\Enums\Contract\ContractType;
+use App\Enums\Request\RequestStatus;
+use App\Enums\Request\RequestType;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketStatus;
 use App\Jobs\SendTemplatedEmail;
@@ -14,6 +16,9 @@ use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
+use App\Models\Request\RequestApproval;
+use App\Models\Request\RequestAttachment;
+use App\Models\Request\ServiceRequest;
 use App\Models\Settings\AppSetting;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Location;
@@ -111,6 +116,28 @@ class DemoSeederTest extends TestCase
         $this->assertContractsAndAssets();
         $this->assertStock();
         $this->assertTickets();
+        $this->assertRequests();
+    }
+
+    private function assertRequests(): void
+    {
+        $requests = ServiceRequest::all();
+        $this->assertGreaterThanOrEqual(38, $requests->count());
+        foreach (RequestType::cases() as $type) {
+            $this->assertTrue($requests->contains(fn (ServiceRequest $r) => $r->type === $type), "no {$type->value} request");
+        }
+        foreach (RequestStatus::cases() as $status) {
+            $this->assertTrue($requests->contains(fn (ServiceRequest $r) => $r->status === $status), "no {$status->value} request");
+        }
+        $this->assertTrue(ServiceRequest::where('origin', 'onboarding')->exists(), 'no onboarding request');
+        $this->assertTrue(RequestApproval::where('status', 'current')->where('became_current_at', '<=', now()->subDays(3))->exists(), 'no stalled step');
+        $this->assertTrue(RequestApproval::where('status', 'current')->where('actor_type', 'department')->exists(), 'no request waiting on a department');
+        $this->assertTrue(RequestAttachment::exists(), 'no request attachment');
+        $this->assertTrue(
+            ServiceRequest::where('status', 'approved')->whereHas('ticket', fn ($q) => $q->whereIn('status', ['open', 'in_progress']))->exists(),
+            'no approved request with its case still open',
+        );
+        $this->assertTrue(ServiceRequest::where('status', 'completed')->whereNull('ticket_id')->exists(), 'no request completed by hand');
     }
 
     private function assertTickets(): void
