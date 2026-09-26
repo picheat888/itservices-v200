@@ -43,7 +43,10 @@ class TicketAttachmentController extends Controller
 
         $files = $request->file('files');
 
-        $remaining = self::MAX_FILES - $ticket->attachments()->count();
+        // Files mirrored from the service request are not counted: the cap is on what a
+        // technician uploads here, and a case that arrived carrying five of them would
+        // otherwise have half the room left for the photos taken while working it.
+        $remaining = self::MAX_FILES - $ticket->attachments()->whereNull('request_attachment_id')->count();
         if (count($files) > $remaining) {
             return response()->json([
                 'message' => 'แนบไฟล์ได้สูงสุด '.self::MAX_FILES." ไฟล์ต่อตั๋ว (เหลือ {$remaining} ไฟล์)",
@@ -66,11 +69,23 @@ class TicketAttachmentController extends Controller
             ->additional(['message' => 'success'])->response();
     }
 
-    /** Deletes a single attachment (file + row). */
+    /**
+     * Deletes a single attachment (file + row).
+     *
+     * A file mirrored from the service request is refused: the row shares its `path`
+     * with the request's own record, so deleting it here would take the evidence an
+     * approved request was decided on off the disk with it.
+     */
     public function destroy(Request $request, Ticket $ticket, TicketAttachment $attachment): JsonResponse
     {
         abort_unless($this->canManage($request, $ticket), 403);
         abort_unless($attachment->ticket_id === $ticket->id, 404);
+
+        if ($attachment->isMirrored()) {
+            return response()->json([
+                'message' => 'ไฟล์นี้มาจากคำขอ '.($ticket->serviceRequest?->reference ?? '').' ลบออกจากตั๋วไม่ได้',
+            ], 422);
+        }
 
         Storage::disk('local')->delete($attachment->path);
         $attachment->delete();

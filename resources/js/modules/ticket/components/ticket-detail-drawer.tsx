@@ -661,9 +661,16 @@ export function TicketDetailDrawer({
                                                                         {a.name}
                                                                     </button>
                                                                     <div className="text-muted-foreground truncate font-mono text-[11px]">
-                                                                        {formatSize(a.size)}
+                                                                        {formatFileSize(a.size)}
                                                                         {a.created_at ? ` · ${fmtWhen(a.created_at)}` : ''}
                                                                     </div>
+                                                                    {/* Filed with the request, not uploaded here — and not removable. */}
+                                                                    {a.from_request && (
+                                                                        <span className="border-brand/30 bg-brand/5 text-brand mt-1 inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                                                                            <Paperclip className="h-2.5 w-2.5 shrink-0" />
+                                                                            {a.from_request}
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                                 <a
                                                                     href={a.url}

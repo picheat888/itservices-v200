@@ -70,7 +70,10 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     const totalFiles = keptExisting.length + pending.length;
 
     // The cap counts the files already saved, so only the free slots are offered.
-    const addFiles = (list: FileList | File[]) => setPending((prev) => mergeFiles(prev, list, ACCEPT_EXT, MAX_FILES - keptExisting.length));
+    // Files mirrored from the service request are left out of the count, and the
+    // server counts them the same way — they are the request's, not this case's.
+    const ownExisting = keptExisting.filter((a) => !a.from_request).length;
+    const addFiles = (list: FileList | File[]) => setPending((prev) => mergeFiles(prev, list, ACCEPT_EXT, MAX_FILES - ownExisting));
 
     const submit = async () => {
         if (!ticket) return;
@@ -213,7 +216,9 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                             name={a.name}
                                             size={a.size}
                                             mime={a.mime}
-                                            onRemove={saving ? undefined : () => setRemovedIds((prev) => [...prev, a.id])}
+                                            // A file mirrored from the service request has no ✕: it belongs to
+                                            // the request, shares its bytes, and the endpoint refuses the delete.
+                                            onRemove={saving || a.from_request ? undefined : () => setRemovedIds((prev) => [...prev, a.id])}
                                         />
                                     ))}
                                     {pending.map((f, i) => (

@@ -501,6 +501,31 @@ class RequestService
         ], $employee);
 
         $request->update(['ticket_id' => $ticket->id]);
+        $this->mirrorFilesOntoTicket($request, $ticket);
+    }
+
+    /**
+     * Show the request's files on the case it opened, by reference rather than by copy.
+     *
+     * The auto-ticket is a snapshot of the request in words; the evidence is the one
+     * part that would be wasteful to snapshot, so the ticket row carries the same
+     * `path` and names the request attachment it mirrors. Reading it needs no Request
+     * permission — the ticket's own file route gates on the case.
+     *
+     * Only ever runs here, at the moment the case is opened. The request's files are
+     * fixed at submit (nothing adds or removes them afterwards), so the pair cannot drift.
+     */
+    private function mirrorFilesOntoTicket(ServiceRequest $request, Ticket $ticket): void
+    {
+        foreach ($request->attachments()->orderBy('id')->get() as $file) {
+            $ticket->attachments()->create([
+                'request_attachment_id' => $file->id,
+                'original_name' => $file->original_name,
+                'path' => $file->path,
+                'size' => $file->size,
+                'mime' => $file->mime,
+            ]);
+        }
     }
 
     /**

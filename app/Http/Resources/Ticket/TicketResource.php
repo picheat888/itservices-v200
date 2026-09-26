@@ -104,6 +104,11 @@ class TicketResource extends JsonResource
                 'mime' => $a->mime,
                 'url' => $a->url(),
                 'created_at' => $a->created_at?->toIso8601String(),
+                // The reference of the request this file was filed with, for the ones the
+                // case is only mirroring. Read off the already-loaded request rather than
+                // the row's own relation: every mirror on a case comes from that one
+                // request, so there is nothing per-file to look up.
+                'from_request' => $a->isMirrored() ? $this->serviceRequest?->reference : null,
             ])),
 
             // Progress notes, oldest first — only on the single-ticket read, since the list
