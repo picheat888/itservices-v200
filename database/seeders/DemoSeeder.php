@@ -16,6 +16,7 @@ use Database\Seeders\Demo\DemoContracts;
 use Database\Seeders\Demo\DemoOrg;
 use Database\Seeders\Demo\DemoReference;
 use Database\Seeders\Demo\DemoStep;
+use Database\Seeders\Demo\DemoStock;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -42,6 +43,7 @@ class DemoSeeder extends Seeder
         DemoAccess::class,
         DemoContracts::class,
         DemoAssets::class,
+        DemoStock::class,
     ];
 
     public function run(): void
