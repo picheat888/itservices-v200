@@ -77,13 +77,13 @@ class RequestOptionSeeder extends Seeder
                 'device_id' => [
                     ['label_en' => 'Smartphone', 'label_th' => 'สมาร์ตโฟน'],
                     ['label_en' => 'Tablet', 'label_th' => 'แท็บเล็ต'],
-                    ['label_en' => 'Pocket Wi-Fi', 'label_th' => 'พ็อกเก็ตไวไฟ'],
+                    ['label_en' => 'Pocket Wi-Fi', 'label_th' => 'Pocket Wi-Fi'],
                 ],
             ],
             RequestType::Telephone->value => [
                 'device_type_id' => [
-                    ['label_en' => 'Analog phone', 'label_th' => 'โทรศัพท์อนาล็อก'],
-                    ['label_en' => 'IP phone', 'label_th' => 'โทรศัพท์ IP'],
+                    ['label_en' => 'Analog phone', 'label_th' => 'โทรศัพท์ Analog'],
+                    ['label_en' => 'IP phone', 'label_th' => 'โทรศัพท์ IP Phone'],
                 ],
             ],
         ];
