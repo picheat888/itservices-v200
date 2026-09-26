@@ -322,7 +322,7 @@ function RolesTab() {
                                 <span className={cn('block text-sm font-semibold', r.value === role.value && 'text-brand')}>{r.label}</span>
                             </div>
                             {!r.is_system && (
-                                <div className="pointer-events-none flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                                <div className="pointer-events-none flex gap-0.5 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(pointer:coarse)]:pointer-events-auto [@media(pointer:coarse)]:opacity-100">
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();

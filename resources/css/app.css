@@ -209,6 +209,15 @@
         font-family: var(--font-mono);
         font-feature-settings: 'tnum';
     }
+
+    /* Tables on a narrow screen (a tablet in portrait): a reference like RQ-2026-0018 or
+       INK-IT-26-0017 broke at every hyphen into three lines, and column headings split
+       mid-word. Codes (always set in mono) and headings stay on one line; a table that
+       runs out of room scrolls inside its own frame instead. */
+    table .font-mono,
+    table th {
+        white-space: nowrap;
+    }
 }
 
 /* Density scale — applied on the shell wrapper via [data-density] */
@@ -368,6 +377,19 @@
 @media (prefers-reduced-motion: reduce) {
     .animate-shake {
         animation-duration: 0.01ms;
+    }
+
+    /* Dialogs, sheets, dropdowns, selects and tooltips (shared/ui) zoom and slide in and
+       out. Collapse that to an instant rather than removing it: Radix waits for the
+       animation to end before it unmounts a closing layer, so it has to still fire. */
+    [class*='animate-in'],
+    [class*='animate-out'] {
+        animation-duration: 0.01ms !important;
+    }
+
+    /* A radar-style ping has no information the static dot beside it doesn't. */
+    .animate-ping {
+        animation: none;
     }
 }
 

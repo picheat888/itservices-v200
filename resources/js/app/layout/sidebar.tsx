@@ -9,19 +9,19 @@ import type { Role } from '@/shared/types';
 import { useUiStore } from '@/stores/ui';
 import { Loader2, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { useSidebarStyle } from './use-sidebar-style';
 
 export function Sidebar({ onProfile }: { onProfile: () => void }) {
     const t = useT();
     const { user } = useAuth();
     const logout = useLogout();
-    const sidebar = useUiStore((s) => s.sidebar);
+    const { iconsOnly } = useSidebarStyle();
     const brandName = useUiStore((s) => s.brandName);
     const brandSub = useUiStore((s) => s.brandSub);
     const logoUrl = useUiStore((s) => s.logoUrl);
     const lang = useUiStore((s) => s.lang);
     const role = (user?.role ?? 'user') as Role;
     const { data: settings } = useSettings();
-    const iconsOnly = sidebar === 'icons';
     // The account name follows the UI language when the employee record carries a Thai
     // one; the avatar initials stay on the English name so the chip doesn't change shape
     // with the language, exactly as the employee drawer does.

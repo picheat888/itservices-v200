@@ -77,7 +77,10 @@ function ListCard({
                     <Icon className="text-muted-foreground h-4 w-4" />
                     <span className="font-semibold">{title}</span>
                 </div>
-                <Link to={to} className="text-muted-foreground hover:text-foreground text-xs font-medium">
+                <Link
+                    to={to}
+                    className="text-muted-foreground hover:text-foreground text-xs font-medium [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
+                >
                     {t('view_all')} →
                 </Link>
             </div>
@@ -425,7 +428,10 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
                             {t('dash_unassigned')} <b className="text-foreground font-mono">{unassigned}</b>
                         </Link>
                     )}
-                    <Link to="/tickets" className="text-muted-foreground hover:text-foreground text-xs font-medium">
+                    <Link
+                        to="/tickets"
+                        className="text-muted-foreground hover:text-foreground text-xs font-medium [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
+                    >
                         {t('view_all')} →
                     </Link>
                 </div>

@@ -233,7 +233,7 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
                                             }}
                                             aria-label={t('notif_dismiss')}
                                             title={t('notif_dismiss')}
-                                            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                                            className="text-muted-foreground hover:bg-accent hover:text-foreground flex h-6 w-6 items-center justify-center rounded-md opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                                         >
                                             <X className="h-3.5 w-3.5" />
                                         </button>

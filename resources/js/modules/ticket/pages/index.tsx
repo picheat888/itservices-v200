@@ -260,7 +260,7 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
                     key={d}
                     onClick={() => onChange(d)}
                     className={cn(
-                        'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                        'rounded-md px-3 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
                         value === d ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground',
                     )}
                 >
@@ -271,7 +271,7 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
                 <PopoverTrigger asChild>
                     <button
                         className={cn(
-                            'rounded-md px-3 py-1 font-mono text-xs font-medium transition-colors',
+                            'rounded-md px-3 py-1 font-mono text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2',
                             custom ? 'bg-brand text-white' : 'text-muted-foreground hover:text-foreground font-sans',
                         )}
                     >
@@ -931,7 +931,7 @@ export default function TicketsPage() {
                                                 resetFilters();
                                                 changeTab('all');
                                             }}
-                                            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors"
+                                            className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                         >
                                             {t('ticket_view_all')}
                                             <ChevronRight className="h-3.5 w-3.5" />

@@ -217,7 +217,7 @@ export default function RequestsPage() {
             render: (r) => {
                 const Icon = REQUEST_TYPE_META[r.type].icon;
                 return (
-                    <div className="flex max-w-[360px] min-w-0 items-center gap-2.5">
+                    <div className="flex max-w-[230px] min-w-0 items-center gap-2.5 xl:max-w-[360px]">
                         <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
                         <div className="min-w-0">
                             <div className="truncate text-sm font-medium">{requestTitle(r, t)}</div>
@@ -367,7 +367,7 @@ export default function RequestsPage() {
                                     <button
                                         type="button"
                                         onClick={() => setTab('approvals')}
-                                        className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors"
+                                        className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                     >
                                         {t('req_view_all')}
                                         <ChevronRight className="h-3.5 w-3.5" />
@@ -480,7 +480,7 @@ export default function RequestsPage() {
                                 <button
                                     type="button"
                                     onClick={() => setTab('all')}
-                                    className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors"
+                                    className="text-muted-foreground hover:text-foreground ml-auto flex items-center gap-0.5 text-xs font-medium transition-colors [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:py-2"
                                 >
                                     {t('req_view_all')}
                                     <ChevronRight className="h-3.5 w-3.5" />

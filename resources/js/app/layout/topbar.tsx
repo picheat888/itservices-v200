@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { useSidebarStyle } from './use-sidebar-style';
 
 interface TopbarProps {
     /** Whether the notifications panel is open — keeps the bell lit while it is. */
@@ -20,7 +21,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const toggleDark = useUiStore((s) => s.toggleDark);
     const lang = useUiStore((s) => s.lang);
     const toggleLang = useUiStore((s) => s.toggleLang);
-    const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+    const { toggle: toggleSidebar } = useSidebarStyle();
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
 
