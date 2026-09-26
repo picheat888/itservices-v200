@@ -3671,3 +3671,21 @@ php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้
 ### Tests / Verification
 
 `ProductionSeedTest` +2 (Role Group + default group; re-seed ไม่ทับการเลือกของผู้ดูแล) และตรวจชื่อ/จำนวนสิทธิ์ของทั้ง 6 template · test ที่อิงสิทธิ์ตั้งต้นเดิมปรับตาม template ใหม่ (Access: ลบรายการเป็นของ IT Supervisor/Leader, HR ไม่มี Access module; Settings: section ต้องมาพร้อม `settings.access` และ HR/Staff ไม่มี settings) · ชุดเต็ม **1421 passed**
+
+---
+
+## UX/UI: รองรับ iPad mini 5 ขึ้นไป (768×1024 / 1024×768) (2026-09-26)
+
+ตรวจทุกหน้า (16 หน้า) ที่แนวตั้ง 768 และแนวนอน 1024 — ไม่มีหน้าไหนเลื่อนแนวนอนทั้งหน้า แต่ตาราง/แท็บอึดอัดเพราะ sidebar เต็มกินพื้นที่ ~25% จึงแก้:
+
+1. **Sidebar เป็นไอคอนอัตโนมัติเมื่อจอกว้าง < 1280px** — `app/layout/use-sidebar-style.ts` + `shared/hooks/use-media-query.ts`; กด ≡ บนจอแคบ = เปิดชื่อเมนูชั่วคราว (`narrowSidebarOpen` ใน ui store, ไม่ persist) ค่าที่ผู้ใช้บันทึกไว้สำหรับจอกว้างไม่ถูกเขียนทับ
+2. **รหัสและหัวตารางไม่ตัดบรรทัด** — `app.css`: `table .font-mono, table th { white-space: nowrap }` (เดิม `RQ-2026-0018` / `INK-IT-26-0017` แตกเป็น 3 บรรทัด) · คอลัมน์หัวข้อของหน้า Requests แคบลงต่ำกว่า `xl` ทำให้ตารางพอดีกรอบที่ 1024
+3. **แท็บหน้าโมดูลไม่ตกบรรทัด** — `PageTabs` เป็นแถวเดียวเลื่อนแนวนอนได้ (ซ่อน scrollbar) และเลื่อนแท็บที่เลือกให้อยู่ในจอเสมอ
+4. **ปุ่มที่เคยโผล่เฉพาะตอน hover** (แจ้งเตือน, คัดลอกในข้อมูลพนักงาน/คู่มือนำเข้า, แก้ role ในหน้าสิทธิ์) แสดงตลอดบนจอสัมผัส (`@media (pointer: coarse)`) และเมื่อโฟกัสด้วยคีย์บอร์ด
+5. **Reduced motion** — animation เปิด/ปิดของ Dialog/Sheet/Dropdown/Select/Tooltip ลดเหลือทันทีเมื่อผู้ใช้เปิด "ลดการเคลื่อนไหว" และ `animate-ping` หยุด · ปุ่มช่วงวัน (7/30/90 วัน) และลิงก์ "ดูทั้งหมด" มีพื้นที่กดใหญ่ขึ้นบนจอสัมผัส
+
+Effect เดิมที่มีหน้าที่ (toast, shake ตอนกรอกผิด, จุดขั้นอนุมัติปัจจุบัน, ไฟสถานะสต็อก, filter-pop) มีตัวกัน reduced motion ครบอยู่แล้ว ไม่แตะ
+
+### Tests / Verification
+
+ไม่มี JS test runner — ตรวจด้วย iframe ขนาดจริงใน Chrome: ทุกหน้าที่ 768 และ 1024 ไม่เลื่อนแนวนอน, แท็บ 1 แถว, รหัส 1 บรรทัด, sidebar 64px · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน (ยังไม่ได้ทดสอบบน iPad จริง / Safari)

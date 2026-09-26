@@ -245,7 +245,7 @@ export function EmployeeViewDrawer({
                     type="button"
                     onClick={() => copy(value, copyKey)}
                     className={cn(
-                        'hover:bg-accent grid h-7 w-7 shrink-0 place-items-center rounded-md opacity-0 transition group-hover:opacity-100',
+                        'hover:bg-accent grid h-7 w-7 shrink-0 place-items-center rounded-md opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100',
                         copied === copyKey && 'text-emerald-600 opacity-100 dark:text-emerald-400',
                     )}
                     title={t('emp_v_copy')}

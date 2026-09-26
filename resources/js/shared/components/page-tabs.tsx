@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/utils';
+import { useEffect, useRef } from 'react';
 
 export interface PageTab<T extends string> {
     id: T;
@@ -37,8 +38,21 @@ export function PageTabs<T extends string>({
     onChange: (id: T) => void;
     className?: string;
 }) {
+    // One row that scrolls sideways when it runs out of room (a tablet in portrait), rather
+    // than wrapping into a second row that reads as a second set of tabs. The active tab is
+    // kept in view, so a deep link to the last tab doesn't open on a tab you can't see.
+    const listRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const tab = listRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+        tab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, [active]);
+
     return (
-        <div role="tablist" className={cn('border-border flex flex-wrap gap-1 border-b px-2', className)}>
+        <div
+            ref={listRef}
+            role="tablist"
+            className={cn('border-border flex gap-1 overflow-x-auto border-b px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden', className)}
+        >
             {tabs.map((tb) => {
                 const selected = active === tb.id;
                 return (
@@ -49,7 +63,7 @@ export function PageTabs<T extends string>({
                         aria-selected={selected}
                         onClick={() => onChange(tb.id)}
                         className={cn(
-                            'relative inline-flex items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold transition-colors',
+                            'relative inline-flex shrink-0 items-center gap-1.5 rounded-t-lg px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors',
                             selected ? 'text-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                         )}
                     >
@@ -59,7 +73,8 @@ export function PageTabs<T extends string>({
                                 {tb.count.toLocaleString('en-US')}
                             </span>
                         )}
-                        {selected && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
+                        {/* bottom-0, not -bottom-px: the strip scrolls, so anything below its edge is clipped. */}
+                        {selected && <span className="bg-brand absolute inset-x-2 bottom-0 h-0.5 rounded-full" />}
                     </button>
                 );
             })}

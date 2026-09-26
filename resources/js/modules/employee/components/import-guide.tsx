@@ -215,7 +215,7 @@ function ValidValues() {
                             {copied === row.key ? (
                                 <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                             ) : (
-                                <Copy className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+                                <Copy className="text-muted-foreground h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100" />
                             )}
                         </button>
                     ))
