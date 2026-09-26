@@ -230,6 +230,22 @@ class DemoSeederTest extends TestCase
         $this->assertNull(Employee::where('first_name', 'Mongkol')->value('manager_id'), 'the no-manager case');
     }
 
+    public function test_a_weekend_morning_run_leaves_nothing_in_the_future(): void
+    {
+        $sunday = Carbon::parse('next sunday 06:30');
+        Carbon::setTestNow($sunday);
+        $this->seedStandard();
+        $this->seed(DemoSeeder::class);
+        Carbon::setTestNow($sunday); // DemoSeeder resets the clock; pin it again to compare
+
+        foreach (['employees', 'assets', 'asset_transfers', 'contracts', 'stock_movements', 'tickets', 'ticket_updates', 'service_requests', 'request_approvals', 'notifications'] as $table) {
+            $this->assertSame(0, DB::table($table)->where('created_at', '>', $sunday)->count(), "{$table} has rows in the future");
+        }
+        $this->assertSame(0, DB::table('stock_movements')->where('moved_at', '>', $sunday)->count(), 'a stock movement in the future');
+
+        Carbon::setTestNow();
+    }
+
     public function test_the_clock_never_lands_in_the_future_or_on_a_weekend(): void
     {
         $sunday = Carbon::parse('2026-09-27 06:30'); // a Sunday, before office hours
