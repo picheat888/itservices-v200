@@ -96,7 +96,7 @@ export const assetApi = {
         mutate<Asset>('post', `/assets/${id}/recall`, reason ? { warehouse, reason } : { warehouse }),
     // Undo a write-off — restore a retired asset to the Ready pool.
     cancelWriteoff: (id: number) => mutate<Asset>('post', `/assets/${id}/cancel-writeoff`),
-    bulk: async (ids: number[], op: 'writeoff', reason?: string): Promise<{ updated: number }> => {
+    bulk: async (ids: number[], op: 'writeoff', reason: string): Promise<{ updated: number }> => {
         await ensureCsrf();
         const { data } = await http.post<{ updated: number }>('/assets/bulk', { ids, op, reason });
         return data;

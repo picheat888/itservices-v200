@@ -666,6 +666,35 @@ class AssetApiTest extends TestCase
         $this->assertSame('writeoff', $a->fresh()->status->value);
     }
 
+    public function test_bulk_writeoff_requires_a_note(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('reason');
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => '   '])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('reason');
+
+        $this->assertSame('ready', $asset->fresh()->status->value);
+    }
+
+    public function test_bulk_writeoff_keeps_the_note_on_the_asset(): void
+    {
+        $this->actingAs($this->super());
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
+
+        $this->postJson('/api/assets/bulk', ['ids' => [$asset->id], 'op' => 'writeoff', 'reason' => 'ขายซากให้ร้านรับซื้อ 500 บาท'])
+            ->assertOk();
+
+        $this->getJson("/api/assets/{$asset->id}")
+            ->assertOk()
+            ->assertJsonPath('data.status', 'writeoff')
+            ->assertJsonPath('data.last_reason', 'ขายซากให้ร้านรับซื้อ 500 บาท');
+    }
+
     public function test_bulk_writeoff_blocked_while_an_asset_is_employee_held(): void
     {
         $employee = Employee::create(['code' => 'EMP-5001', 'first_name' => 'Hol', 'last_name' => 'Der']);
@@ -687,7 +716,7 @@ class AssetApiTest extends TestCase
         $this->actingAs($this->super());
         $held = Asset::factory()->create(['status' => 'deployed', 'owner' => 'EMP-5002', 'owner_employee_id' => $employee->id]);
 
-        $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$held->id], 'op' => 'writeoff', 'reason' => 'EOL'])
             ->assertStatus(422);
 
         $this->assertSame('deployed', $held->fresh()->status->value);
@@ -700,13 +729,13 @@ class AssetApiTest extends TestCase
         $ready = Asset::factory()->create(['status' => 'ready', 'owner_employee_id' => null]);
 
         // A Common (shared) asset must be recalled to Ready first — the whole batch is rejected.
-        $this->postJson('/api/assets/bulk', ['ids' => [$common->id, $ready->id], 'op' => 'writeoff'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$common->id, $ready->id], 'op' => 'writeoff', 'reason' => 'EOL'])
             ->assertStatus(422);
         $this->assertSame('common', $common->fresh()->status->value);
         $this->assertSame('ready', $ready->fresh()->status->value);
 
         // A Ready asset writes off fine.
-        $this->postJson('/api/assets/bulk', ['ids' => [$ready->id], 'op' => 'writeoff'])
+        $this->postJson('/api/assets/bulk', ['ids' => [$ready->id], 'op' => 'writeoff', 'reason' => 'EOL'])
             ->assertOk()->assertJsonPath('updated', 1);
         $this->assertSame('writeoff', $ready->fresh()->status->value);
     }
