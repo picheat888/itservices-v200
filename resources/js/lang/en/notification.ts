@@ -10,6 +10,9 @@ export const notification: Dict = {
     notif_dismiss: 'Dismiss',
     notif_unread: 'unread',
     notif_showing: 'Showing the {shown} most recent of {total}',
+    notif_group_system: 'Other',
+    notif_password_title: 'Your account',
+    notif_password_expiring: 'Your password expires in {days} days - change it before you are locked out',
     notif_cred_required: 'Needs login account - set username & password',
     notif_resigned: 'Resigned - revoke login account & reclaim assets',
     notif_departure: 'Has resigned - review anything routed through them',
@@ -222,4 +225,7 @@ export const notification: Dict = {
     notification_name_ticket_owner_cancelled: 'Your case was cancelled',
     notification_when_ticket_owner_cancelled: 'Your case is cancelled',
     notification_who_ticket_owner_cancelled: 'The requester',
+    notification_name_password_expiring: 'Password expiring',
+    notification_when_password_expiring: 'Signing in with fewer than 14 days left on the password expiry policy',
+    notification_who_password_expiring: 'The account itself',
 };

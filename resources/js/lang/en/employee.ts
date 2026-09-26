@@ -242,6 +242,8 @@ export const employee: Dict = {
     pwd_ph_current: 'Enter your current password',
     pwd_ph_new: 'Choose your new password',
     pwd_ph_confirm: 'Enter the new password again',
+    pwd_change_title: 'Change password',
+    pwd_change_desc: 'Choose a new password for your account.',
     pwd_expired_title: 'Password expired',
     pwd_expired_desc: 'Your password has expired. Please set a new one to continue.',
     pwd_current: 'Current password',

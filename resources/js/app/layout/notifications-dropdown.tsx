@@ -1,27 +1,26 @@
 import type { AppNotification } from '@/modules/notification';
-import { useDismissNotification, useMarkAllRead, useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
+import {
+    NOTIFICATION_GROUPS,
+    useDismissNotification,
+    useMarkAllRead,
+    useMarkRead,
+    useNotifications,
+    useNotificationText,
+} from '@/modules/notification';
 import { cn } from '@/shared/lib/utils';
+import { useUiStore } from '@/stores/ui';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { iconMeta, moduleOf, notificationMessage, notificationTarget, notificationTitle } from './notification-display';
 
 /**
- * Per-module tabs. A tab only appears once that module has something to show (see
- * `shownTabs`), so there is nothing to gate: the Tickets tab used to carry a `live: false`
- * flag that answered "coming soon" while its five notification types were shipping, being
- * delivered, and showing up in the All tab beside it.
+ * Per-module tabs: "All", then the catalogue's own groups. A tab only appears once that
+ * module has something to show (see `shownTabs`), so there is nothing to gate: the Tickets
+ * tab used to carry a `live: false` flag that answered "coming soon" while its five
+ * notification types were shipping, being delivered, and showing up in the All tab beside it.
  */
-const NOTIF_TABS: { id: string; label: string }[] = [
-    { id: 'all', label: 'notif_all' },
-    { id: 'employees', label: 'employees' },
-    { id: 'tickets', label: 'tickets' },
-    { id: 'requests', label: 'requests' },
-    { id: 'assets', label: 'assets' },
-    { id: 'access', label: 'access_title' },
-    { id: 'contracts', label: 'contracts' },
-    { id: 'stock', label: 'stock' },
-];
+const NOTIF_TABS: { id: string; label: string }[] = [{ id: 'all', label: 'notif_all' }, ...NOTIFICATION_GROUPS];
 
 export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
     // Prefers the wording an administrator set on the Bell tab; falls through to the
@@ -106,7 +105,13 @@ export function NotificationsDropdown({ onClose }: { onClose: () => void }) {
 
     const handleClick = (n: AppNotification) => {
         if (!n.read) markRead.mutate(n.id);
-        navigate(notificationTarget(n));
+        // The password warning has no page to open — what it asks for is the dialog the
+        // shell owns, so it raises that instead of navigating anywhere.
+        if (n.data.type === 'password_expiring') {
+            useUiStore.getState().setPasswordDialog(true);
+        } else {
+            navigate(notificationTarget(n));
+        }
         onClose();
     };
 

@@ -23,5 +23,8 @@ export type {
     NotificationsResponse,
 } from './api/notificationApi';
 
+// The groups a notification belongs to — shared by the tray's tabs and the Settings chips.
+export { NOTIFICATION_GROUPS, notificationGroupLabel } from './groups';
+
 // The Notification tab of Email & Notifications.
 export { NotificationSettingsPane, NotificationSettingsStats } from './components/notification-settings-pane';

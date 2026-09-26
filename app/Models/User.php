@@ -182,6 +182,30 @@ class User extends Authenticatable
         return $this->isSuper() || in_array($permission, $this->permissions(), true);
     }
 
+    /** How long before the expiry the account starts being warned at sign-in. */
+    public const PASSWORD_EXPIRY_WARNING_DAYS = 14;
+
+    /**
+     * Days left before the expiry policy locks this account out, or null when
+     * there is no deadline to count towards — the policy is off, or the password
+     * has never been set and counts as expired rather than as having a countdown.
+     *
+     * Negative once the deadline has passed, so a caller can tell "due today" from
+     * "overdue"; isPasswordExpired() below is the question most callers want.
+     */
+    public function passwordDaysRemaining(): ?int
+    {
+        $days = (int) AppSetting::get('password_expiry_days', '0');
+
+        if ($days <= 0 || $this->password_changed_at === null) {
+            return null;
+        }
+
+        // Whole days between now and the deadline, counted the way a person would:
+        // a deadline later today is 0 days left, not a fraction of one.
+        return (int) now()->startOfDay()->diffInDays($this->password_changed_at->copy()->addDays($days)->startOfDay(), false);
+    }
+
     /**
      * Whether this account's password has exceeded the configured expiry window.
      * Returns false when the policy is disabled (password_expiry_days <= 0).

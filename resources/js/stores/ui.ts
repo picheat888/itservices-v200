@@ -51,6 +51,10 @@ interface UiState {
     // after sign-in (and are then pushed up). Tracked per-field so changing
     // language doesn't clobber the saved theme, and vice-versa.
     loginPrefsTouched: { dark: boolean; lang: boolean };
+    // Transient (not persisted): the user asked to change their password, from the
+    // profile drawer or from the expiry warning in the tray. Lives here rather than in
+    // the shell's own state because the two places that raise it are nowhere near it.
+    passwordDialogOpen: boolean;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -64,6 +68,7 @@ interface UiState {
     setAccent: (accent: string) => void;
     setLogo: (logoUrl: string | null) => void;
     setAssetStatusColors: (colors: AssetStatusColors) => void;
+    setPasswordDialog: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -80,6 +85,7 @@ export const useUiStore = create<UiState>()(
             logoUrl: SERVER_BRAND.logo_url ?? null,
             assetStatusColors: DEFAULT_ASSET_STATUS_COLORS,
             loginPrefsTouched: { dark: false, lang: false },
+            passwordDialogOpen: false,
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
@@ -93,6 +99,7 @@ export const useUiStore = create<UiState>()(
             setAccent: (accent) => set({ accent }),
             setLogo: (logoUrl) => set({ logoUrl }),
             setAssetStatusColors: (assetStatusColors) => set({ assetStatusColors }),
+            setPasswordDialog: (passwordDialogOpen) => set({ passwordDialogOpen }),
         }),
         {
             name: 'itservices-ui',

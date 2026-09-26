@@ -96,9 +96,14 @@ class NotificationTemplateTest extends TestCase
         $source = file_get_contents(base_path('resources/js/lang/en/notification.ts'));
         preg_match_all("/^\s{4}(notif_[a-z0-9_]+):/m", $source, $matches);
 
-        // The seven chrome strings (title, empty, …) are page furniture, not bells.
-        // Page furniture, not notification messages: tray chrome, and the marker a test row wears.
-        $chrome = ['notif_title', 'notif_all', 'notif_mark_all', 'notif_clear_all', 'notif_empty', 'notif_dismiss', 'notif_unread', 'notif_test_prefix', 'notif_showing'];
+        // Page furniture, not notification messages: the tray's own chrome, the marker a
+        // test row wears, the name of a group, and the heading a bell about the reader's
+        // own account wears in place of the record name every other bell names.
+        $chrome = [
+            'notif_title', 'notif_all', 'notif_mark_all', 'notif_clear_all', 'notif_empty',
+            'notif_dismiss', 'notif_unread', 'notif_test_prefix', 'notif_showing',
+            'notif_group_system', 'notif_password_title',
+        ];
         $frontEnd = array_values(array_diff($matches[1], $chrome));
         $catalogue = array_column(NotificationCatalogue::all(), 'key');
 

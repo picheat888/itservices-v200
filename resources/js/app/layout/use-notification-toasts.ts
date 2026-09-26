@@ -1,6 +1,7 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
 import { useToastStore, type ToastTone } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -118,7 +119,13 @@ export function useNotificationToasts(): void {
                 Icon,
                 onActivate: () => {
                     if (!n.read) markReadRef.current.mutate(n.id);
-                    navigateRef.current(target);
+                    // Same exception the tray makes: the password warning asks for a
+                    // dialog, not a page (see notifications-dropdown).
+                    if (n.data.type === 'password_expiring') {
+                        useUiStore.getState().setPasswordDialog(true);
+                    } else {
+                        navigateRef.current(target);
+                    }
                 },
             });
         });
