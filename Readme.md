@@ -3582,3 +3582,43 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 ### Tests / Verification
 
 `RequestWorkflowTest` +2 (ขั้น chain ไม่มีตำแหน่ง → `workflow_incomplete` ทั้งพนักงานทั่วไปและตำแหน่งพิเศษ แล้วยื่นผ่านเมื่อแก้ครบ · ขั้นแผนกขาดแผนก/ขาดคนเซ็น) · `EmployeeOnboardingRequestTest` +1 (precheck ส่ง `workflow_incomplete`) · `RequestAttachmentTest` เขียนใหม่: รวม test เพิ่ม/ลบ/ล็อกหลังเซ็น/ยกเลิก เหลือ `test_a_filed_request_takes_no_further_changes_to_its_files` และย้าย test เกิน 5 ไฟล์/ไฟล์ .exe ไปตรวจตอนยื่น · fixture ของ `RequestAttachmentTest` (seed แผนก) และ `RequestOptionTest` (seed ตำแหน่ง) เคย seed workflow ไม่ครบแบบเดียวกับบน DB จริง · test ของ Request/Workflow/Onboarding 15 ไฟล์ = **201 passed** · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน · pint ผ่าน
+
+---
+
+## Seeding: ติดตั้งใหม่ + ข้อมูล Demo (2026-09-26)
+
+ลำดับที่ต้องรัน — `WorkflowSeeder` (ใน `db:seed`) ต้องเจอแผนก/ตำแหน่งก่อน ไม่งั้น workflow จะไม่มีตำแหน่งผูก และคำขอจะยื่นไม่ได้
+
+```bash
+php artisan migrate:fresh
+php artisan db:seed --class=EmployeeDepartmentSeeder
+php artisan db:seed --class=EmployeePositionSeeder
+php artisan db:seed --class=EmployeeSectionSeeder
+php artisan db:seed --class=MasterDataSeeder
+php artisan db:seed                       # role/สิทธิ์, admin (password), เทมเพลต, workflow, ตัวเลือกคำขอ, SLA
+php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้อมูล demo ทุกโมดูล — รันได้บนฐานที่ยังไม่มีพนักงานเท่านั้น
+```
+
+**DemoSeeder** (`database/seeders/DemoSeeder.php` + `database/seeders/Demo/*`) — ข้อมูลสำหรับพรีเซนต์และ UAT
+- สร้างผ่าน service จริงทุกเหตุการณ์ที่มีขั้นตอน ย้อนเวลาด้วย `DemoClock` (~6 เดือน) → สายอนุมัติ, SLA, ต้นทุน FIFO, audit log, กระดิ่ง ตรงกับของจริง
+- ไม่ส่งอีเมล (`Queue::fake()`) · ทั้งหมดอยู่ใน transaction เดียว (พังกลางทาง = ย้อนหมด) · ผลเหมือนเดิมทุกครั้ง · ไม่มีข้อมูลในอนาคตแม้รันวันหยุด
+- ปฏิเสธการรันถ้ามีพนักงานอยู่แล้ว หรือยังไม่ได้ seed มาตรฐาน
+- ลำดับขั้น: `DemoOrg` (พนักงาน ~40 คน 11 แผนก, Role Group + default, บัญชี 9 บัญชี) → `DemoReference` (vendor, รุ่น, สถานที่) → `DemoAccess` → `DemoContracts` (ครบทุกสถานะ รวมใกล้หมด 7/30 วัน) → `DemoAssets` (80 ชิ้น ครบ 6 สถานะ) → `DemoStock` (25 รายการ, lot หลายราคา, ใบเบิก 4 สถานะ, ตรวจนับ, ต่ำ/หมด/เกิน) → `DemoTickets` (60 ใบ ผ่าน/เลย SLA) → `DemoRequests` (37 คำขอ ครบ 13 ประเภท 5 สถานะ + Onboarding)
+
+| username | ใคร | ใช้ทดสอบ |
+|---|---|---|
+| staff.demo | Staff ฝ่ายผลิต | ยื่นคำขอ / ticket / ทรัพย์สินของฉัน (มี 1 ชิ้นรอรับมอบ) |
+| sup.demo | Supervisor ฝ่ายผลิต | อนุมัติขั้น 1 |
+| mgr.demo | Manager ฝ่ายผลิต | อนุมัติขั้น 2 · เจ้าของ Production Share / Team |
+| vp.demo | Vice President | อนุมัติขั้นบนสุด |
+| qc.demo | QC Manager | ขั้นแผนก QC (CCTV) · เจ้าของ QC Documents / Team |
+| se.demo | Safety Manager | ขั้นแผนก SE (CCTV) |
+| it.lead | IT Supervisor | มอบหมาย ticket, ปิดงานคำขอ, สต็อก |
+| it.tech | ช่าง IT | รับ/แก้ ticket, เบิกของ |
+| hr.demo | HR | เพิ่มพนักงาน / Onboarding |
+
+รหัสผ่านทุกบัญชี `Demo@1234` (ไม่บังคับเปลี่ยน) · `admin` / `password` จาก `db:seed` (บังคับเปลี่ยนครั้งแรก)
+
+### Tests / Verification
+
+`tests/Feature/DemoSeederTest.php` — guard 2 กรณี, rollback + คืนนาฬิกา, ไม่มีอีเมลค้างใน `jobs`, ครอบทุกสถานะทุกโมดูล, รันเช้าวันอาทิตย์ไม่มีข้อมูลในอนาคต, DemoClock
