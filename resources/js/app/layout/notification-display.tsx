@@ -44,6 +44,8 @@ export function moduleOf(type: string, module?: string): string {
     if (type.startsWith('asset')) return 'assets';
     if (type.startsWith('contract')) return 'contracts';
     if (type.startsWith('access')) return 'access';
+    // Notices about the account itself rather than about any business module.
+    if (type === 'password_expiring') return 'system';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -124,6 +126,11 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         }
         return { Icon: Inbox, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' };
     }
+    // A deadline the reader still has time to beat — amber, like every other "act before
+    // this runs out" bell. Marked with the key, because it is about the password itself.
+    if (n.data.type === 'password_expiring') {
+        return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
+    }
     if (n.data.type === 'asset_assigned') {
         return { Icon: PackageCheck, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
     }
@@ -197,6 +204,8 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
     }
     if (n.data.type === 'asset_assigned' || n.data.type === 'asset_return_requested' || n.data.type === 'asset_recalled')
         return `${n.data.asset_model} (${n.data.asset_tag})`;
+    // Nothing to name but the subject itself — the notice is about the reader's own account.
+    if (n.data.type === 'password_expiring') return t('notif_password_title');
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
@@ -236,6 +245,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
             ? t('notif_contract_expired').replace('{days}', String(Math.abs(n.data.days_remaining ?? 0)))
             : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining));
     }
+    if (n.data.type === 'password_expiring') return t('notif_password_expiring').replace('{days}', String(n.data.days_remaining ?? 0));
     if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replace('{from}', n.data.from ?? '—');
     if (n.data.type === 'ticket_new') return t('notif_ticket_new');

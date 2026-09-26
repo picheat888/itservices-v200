@@ -17,6 +17,7 @@ import {
     BellOff,
     CalendarClock,
     Inbox,
+    KeyRound,
     Loader2,
     Package,
     PenLine,
@@ -32,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { NotificationTemplate } from '../api/notificationApi';
+import { NOTIFICATION_GROUPS, notificationGroupLabel } from '../groups';
 import { useNotificationTemplateMutations, useNotificationTemplates } from '../hooks/use-notifications';
 
 /**
@@ -46,6 +48,8 @@ const MODULE_ICON: Record<string, LucideIcon> = {
     requests: Inbox,
     assets: Package,
     tickets: Wrench,
+    // "Other" has no page of its own; the key stands for the one notice in it so far.
+    system: KeyRound,
 };
 
 /**
@@ -166,7 +170,7 @@ function NotificationEditDialog({ bell, onClose }: { bell: NotificationTemplate 
             <DialogContent className="max-w-2xl">
                 <FocusDialogHeader
                     icon={PenLine}
-                    eyebrow={bell.module}
+                    eyebrow={t(notificationGroupLabel(bell.module))}
                     title={t(`notification_name_${suffix(bell.key)}`)}
                     subtitle={t(`notification_when_${suffix(bell.key)}`)}
                 />
@@ -299,7 +303,10 @@ export function NotificationSettingsPane() {
             counts[n.module] = (counts[n.module] ?? 0) + 1;
         });
 
-        return Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
+        // Catalogue order, not alphabetical — the same order the bell tray's tabs use, so
+        // the two screens that list these groups read the same way round.
+        const order = NOTIFICATION_GROUPS.map((g) => g.id);
+        return Object.entries(counts).sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]));
     }, [all]);
 
     /**
@@ -480,7 +487,7 @@ export function NotificationSettingsPane() {
                             module === mod ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:bg-accent',
                         )}
                     >
-                        {mod}
+                        {t(notificationGroupLabel(mod))}
                         <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold', module === mod ? 'bg-white/20' : 'bg-background')}>
                             {count}
                         </span>

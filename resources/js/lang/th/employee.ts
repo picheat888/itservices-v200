@@ -241,6 +241,8 @@ export const employee: Dict = {
     pwd_ph_current: 'โปรดกรอกรหัสปัจจุบัน',
     pwd_ph_new: 'โปรดตั้งรหัสผ่านใหม่',
     pwd_ph_confirm: 'โปรดกรอกรหัสผ่านใหม่อีกครั้ง',
+    pwd_change_title: 'เปลี่ยนรหัสผ่าน',
+    pwd_change_desc: 'ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ',
     pwd_expired_title: 'รหัสผ่านหมดอายุ',
     pwd_expired_desc: 'รหัสผ่านของคุณหมดอายุแล้ว กรุณาตั้งรหัสผ่านใหม่เพื่อใช้งานต่อ',
     pwd_current: 'รหัสผ่านปัจจุบัน',

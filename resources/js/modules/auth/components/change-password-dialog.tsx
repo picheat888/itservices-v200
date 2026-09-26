@@ -14,11 +14,17 @@ import { useState } from 'react';
 const ME_KEY = ['auth', 'me'] as const;
 
 /**
- * Blocking, non-dismissable overlay shown when the user's password has expired
- * (user.password_expired === true). The user must set a new password before they
- * can continue; the only escape hatch is signing out.
+ * Change-password overlay, in two moods.
+ *
+ * Without `onClose` it is the wall: shown when the password has expired
+ * (user.password_expired === true), it cannot be dismissed and the only escape hatch
+ * is signing out.
+ *
+ * With `onClose` the same form is something the user asked for — from the profile
+ * drawer, or from the expiry warning in the notification tray — so it takes a Cancel
+ * instead of a sign-out, and closes itself once the password is changed.
  */
-export function ChangePasswordDialog() {
+export function ChangePasswordDialog({ onClose }: { onClose?: () => void } = {}) {
     const t = useT();
     const qc = useQueryClient();
     const logout = useLogout();
@@ -33,6 +39,9 @@ export function ChangePasswordDialog() {
         onSuccess: (user) => {
             // Refreshes auth state — password_expired is now false, unmounting this overlay.
             qc.setQueryData<User | null>(ME_KEY, user);
+            // A voluntary change has nothing to unmount it: the flag it was opened on is
+            // the caller's, so closing is the caller's too.
+            onClose?.();
         },
         onError: (e: unknown) => {
             const res = (e as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } })?.response;
@@ -65,8 +74,10 @@ export function ChangePasswordDialog() {
                         </div>
                     </div>
 
-                    <h2 className="mb-1 text-center text-base font-semibold">{t('pwd_expired_title')}</h2>
-                    <p className="text-muted-foreground mb-5 text-center text-sm">{t('pwd_expired_desc')}</p>
+                    {/* The wall explains why the app stopped; a voluntary change has no
+                        explaining to do, so it simply names what this form is for. */}
+                    <h2 className="mb-1 text-center text-base font-semibold">{onClose ? t('pwd_change_title') : t('pwd_expired_title')}</h2>
+                    <p className="text-muted-foreground mb-5 text-center text-sm">{onClose ? t('pwd_change_desc') : t('pwd_expired_desc')}</p>
 
                     {/* A real <form> so password managers recognise the pair and offer to fill
                         the current password they have saved; it also gives Enter-to-submit. */}
@@ -112,8 +123,13 @@ export function ChangePasswordDialog() {
                             <Button type="submit" className="w-full" disabled={change.isPending || !current || !next || !confirm}>
                                 {t('pwd_change_submit')}
                             </Button>
-                            <Button type="button" variant="ghost" className="text-muted-foreground w-full" onClick={() => logout.mutate()}>
-                                {t('profile_signout')}
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                className="text-muted-foreground w-full"
+                                onClick={() => (onClose ? onClose() : logout.mutate())}
+                            >
+                                {onClose ? t('cancel') : t('profile_signout')}
                             </Button>
                         </div>
                     </form>

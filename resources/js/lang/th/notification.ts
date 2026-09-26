@@ -10,6 +10,9 @@ export const notification: Dict = {
     notif_dismiss: 'ปิดรายการนี้',
     notif_unread: 'ยังไม่ได้อ่าน',
     notif_showing: 'แสดง {shown} รายการล่าสุด จากทั้งหมด {total}',
+    notif_group_system: 'อื่นๆ',
+    notif_password_title: 'บัญชีของคุณ',
+    notif_password_expiring: 'รหัสผ่านจะหมดอายุในอีก {days} วัน - กรุณาเปลี่ยนก่อนถูกล็อก',
     notif_cred_required: 'ยังไม่มีบัญชี - กรุณาตั้ง Username/Password',
     notif_resigned: 'ลาออก - โปรดเพิกถอนบัญชีและเรียกคืนทรัพย์สิน',
     notif_departure: 'พนักงานลาออก - โปรดตรวจสอบงานที่เกี่ยวข้อง',
@@ -222,4 +225,7 @@ export const notification: Dict = {
     notification_name_ticket_owner_cancelled: 'เคสของคุณถูกยกเลิก',
     notification_when_ticket_owner_cancelled: 'เคสของผู้แจ้งถูกยกเลิก',
     notification_who_ticket_owner_cancelled: 'ผู้แจ้ง',
+    notification_name_password_expiring: 'รหัสผ่านใกล้หมดอายุ',
+    notification_when_password_expiring: 'เข้าสู่ระบบตอนเหลือไม่ถึง 14 วันก่อนรหัสผ่านหมดอายุ',
+    notification_who_password_expiring: 'เจ้าของบัญชีเอง',
 };

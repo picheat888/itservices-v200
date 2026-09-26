@@ -461,7 +461,20 @@ class NotificationCatalogue
                 'message_en' => 'Your ticket was cancelled - tap to see why',
                 'message_th' => 'Ticket ของคุณถูกยกเลิก - แตะเพื่อดูเหตุผล',
                 'enabled' => true,
-            ],        ];
+            ],
+            // 'system' is the module for notices that belong to no business module —
+            // the account itself, and whatever else the platform has to say.
+            [
+                'key' => 'notif_password_expiring',
+                'module' => 'system',
+                'name' => 'Password expiring',
+                'trigger' => 'Signing in with fewer than 14 days left on the password expiry policy',
+                'audience' => 'The account itself',
+                'message_en' => 'Your password expires in {days} days - change it before you are locked out',
+                'message_th' => 'รหัสผ่านจะหมดอายุในอีก {days} วัน - กรุณาเปลี่ยนก่อนถูกล็อก',
+                'enabled' => true,
+            ],
+        ];
     }
 
     /**

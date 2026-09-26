@@ -19,6 +19,8 @@ export function AppShell() {
     // Toaster mounted at the root.
     useNotificationToasts();
     const density = useUiStore((s) => s.density);
+    const passwordDialogOpen = useUiStore((s) => s.passwordDialogOpen);
+    const setPasswordDialog = useUiStore((s) => s.setPasswordDialog);
     const { user } = useAuth();
 
     // Shared with SecurityTab via the same query key — updates immediately when admin saves.
@@ -51,9 +53,17 @@ export function AppShell() {
             <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
 
             {showWarning && <SessionTimeoutModal secondsLeft={secondsLeft} onStay={extendSession} onLogout={doLogout} />}
-            {/* Both block the app until a new password is set, but they explain different
-                reasons: an admin set this one, versus the policy aged it out. */}
-            {user?.must_change_password ? <SetPasswordDialog /> : user?.password_expired ? <ChangePasswordDialog /> : null}
+            {/* The first two block the app until a new password is set, and explain different
+                reasons: an admin set this one, versus the policy aged it out. The third is the
+                same form asked for on purpose — from the profile drawer, or from the expiry
+                warning in the tray — so it is dismissable and comes last. */}
+            {user?.must_change_password ? (
+                <SetPasswordDialog />
+            ) : user?.password_expired ? (
+                <ChangePasswordDialog />
+            ) : passwordDialogOpen ? (
+                <ChangePasswordDialog onClose={() => setPasswordDialog(false)} />
+            ) : null}
         </div>
     );
 }

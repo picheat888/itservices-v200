@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Models\AuditLog;
+use App\Models\User;
+use App\Notifications\PasswordExpiringNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,10 +32,46 @@ class AuthController extends Controller
         }
 
         AuditLog::record('Signed in');
+        $this->warnAboutPasswordExpiry($user);
 
         return (new UserResource($request->user()))
             ->additional(['message' => 'success'])
             ->response();
+    }
+
+    /**
+     * Put a notice in the tray when the expiry policy is about to lock this account out.
+     *
+     * Sign-in is the trigger because the deadline is per-account and moves whenever
+     * somebody changes their password — there is no day on which a sweep could usefully
+     * ask the question for everyone, and arriving is the one moment the notice is certain
+     * to be seen.
+     *
+     * Says nothing once the password has actually expired: CheckPasswordExpiry already
+     * refuses every route by then, and the SPA puts up a dialog that cannot be dismissed.
+     * The same goes for an account owing an administrator-forced change — it is being
+     * asked in a louder way already.
+     *
+     * The previous notice is deleted first, so the tray holds one of these at a time. The
+     * warning is meant to come back at every sign-in until it is acted on, and a notice
+     * that returns has to carry today's count rather than the count it was born with.
+     */
+    private function warnAboutPasswordExpiry(User $user): void
+    {
+        if ($user->must_change_password || $user->isPasswordExpired()) {
+            return;
+        }
+
+        $remaining = $user->passwordDaysRemaining();
+        if ($remaining === null || $remaining > User::PASSWORD_EXPIRY_WARNING_DAYS) {
+            return;
+        }
+
+        $user->notifications()
+            ->where('type', PasswordExpiringNotification::class)
+            ->delete();
+
+        $user->notify(new PasswordExpiringNotification($remaining));
     }
 
     public function logout(Request $request): JsonResponse
