@@ -16,6 +16,11 @@ use App\Models\Settings\AppSetting;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Location;
 use App\Models\Settings\Vendor;
+use App\Models\Stock\StockCount;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\StockLot;
+use App\Models\Stock\StockMovement;
+use App\Models\Stock\StockRequest;
 use App\Models\User;
 use Database\Seeders\Demo\DemoClock;
 use Database\Seeders\Demo\DemoContext;
@@ -101,6 +106,24 @@ class DemoSeederTest extends TestCase
         $this->assertOrg();
         $this->assertReferenceAndAccess();
         $this->assertContractsAndAssets();
+        $this->assertStock();
+    }
+
+    private function assertStock(): void
+    {
+        $items = StockItem::all();
+        $this->assertGreaterThanOrEqual(25, $items->count());
+        foreach (['out', 'low', 'over'] as $state) {
+            $this->assertTrue($items->contains(fn (StockItem $item) => $item->status() === $state), "no {$state} item");
+        }
+        $this->assertGreaterThanOrEqual(2, StockLot::query()->distinct()->count('unit_cost'));
+        $this->assertTrue(StockMovement::where('type', 'transfer')->exists());
+        $this->assertTrue(StockMovement::where('type', 'return')->exists());
+        foreach (['pending', 'approved', 'fulfilled', 'rejected'] as $status) {
+            $this->assertTrue(StockRequest::where('status', $status)->exists(), "no {$status} stock request");
+        }
+        $this->assertTrue(StockCount::where('status', 'draft')->exists());
+        $this->assertTrue(StockCount::where('status', 'committed')->exists());
     }
 
     private function assertContractsAndAssets(): void
