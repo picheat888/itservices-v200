@@ -10,6 +10,7 @@ use App\Models\Access\Software;
 use App\Models\Employee\Department;
 use App\Models\Settings\Brand;
 use App\Services\Access\AccessService;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Access resources and who holds them. The email groups and file shares are owned by
@@ -48,17 +49,38 @@ final class DemoAccess implements DemoStep
         $ctx->resources['fs-production'] = FileShare::create(['name' => 'Production Share', 'path' => '\\\\fs01\\production', 'department_id' => $department['PD'], 'size' => 500, 'size_unit' => 'GB']);
         $ctx->resources['fs-qc'] = FileShare::create(['name' => 'QC Documents', 'path' => '\\\\fs01\\qc', 'department_id' => $department['QC'], 'size' => 200, 'size_unit' => 'GB']);
 
-        $this->access->setOwner($ctx->resources['grp-production'], $ctx->employee('mgr.pd')->id);
-        $this->access->setOwner($ctx->resources['fs-production'], $ctx->employee('mgr.pd')->id);
-        $this->access->setOwner($ctx->resources['grp-qc'], $ctx->employee('mgr.qc')->id);
-        $this->access->setOwner($ctx->resources['fs-qc'], $ctx->employee('mgr.qc')->id);
+        // IT keeps the access register: grants record who gave them.
+        $ctx->actAs($ctx->user('it.lead'));
+        foreach ($ctx->resources as $resource) {
+            $ctx->audit('Created '.$this->noun($resource), $resource->name);
+        }
+
+        foreach (['grp-production' => 'mgr.pd', 'fs-production' => 'mgr.pd', 'grp-qc' => 'mgr.qc', 'fs-qc' => 'mgr.qc'] as $resourceKey => $ownerKey) {
+            $resource = $ctx->resources[$resourceKey];
+            $this->access->setOwner($resource, $ctx->employee($ownerKey)->id);
+            $ctx->audit('Changed '.$this->noun($resource).' owner', $resource->name, ['owner' => $ctx->employee($ownerKey)->name]);
+        }
 
         foreach (self::GRANTS as [$resourceKey, $employeeKey, $level, $daysAgo]) {
-            $this->access->grant($ctx->resources[$resourceKey], $ctx->employee($employeeKey)->id, [
+            $clock->at($clock->daysAgo($daysAgo, 10));
+            $resource = $ctx->resources[$resourceKey];
+            $this->access->grant($resource, $ctx->employee($employeeKey)->id, [
                 'access_level' => $level,
                 'purpose' => 'Daily work',
                 'granted_at' => $clock->daysAgo($daysAgo)->toDateString(),
             ]);
+            $ctx->audit('Added member to '.$this->noun($resource), $resource->name, ['employee' => $ctx->employee($employeeKey)->name]);
         }
+    }
+
+    /** The resource's name as the Access screens write it in the audit log. */
+    private function noun(Model $resource): string
+    {
+        return match (true) {
+            $resource instanceof Software => 'software',
+            $resource instanceof SocialPlatform => 'social platform',
+            $resource instanceof EmailGroup => 'email group',
+            default => 'file share',
+        };
     }
 }

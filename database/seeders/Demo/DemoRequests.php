@@ -106,40 +106,57 @@ final class DemoRequests implements DemoStep
 
     private function one(DemoContext $ctx, DemoClock $clock, int $i, string $type, User $requester, int $daysAgo, string $outcome, string $reason): void
     {
-        $clock->at($clock->daysAgo($daysAgo, 9 + $i % 5));
+        $submitted = $clock->daysAgo($daysAgo, 9 + $i % 5);
+        $clock->at($submitted);
         $ctx->actAs($requester);
-        $request = $this->requests->submit($requester, [
-            'type' => $type,
-            'reason' => $reason,
-            'fields' => $this->fields($ctx, $type, $i),
-            'files' => $type === 'cctv' ? [$this->pdf("cctv-site-{$i}.pdf")] : [],
-        ]);
+        $files = $type === 'cctv' ? [$this->pdf("cctv-site-{$i}.pdf")] : [];
+        try {
+            $request = $this->requests->submit($requester, [
+                'type' => $type,
+                'reason' => $reason,
+                'fields' => $this->fields($ctx, $type, $i),
+                'files' => $files,
+            ]);
+        } finally {
+            foreach ($files as $file) {
+                @unlink($file->getPathname()); // stored on the disk by now; the temp copy is ours to remove
+            }
+        }
+        $ctx->audit('Submitted service request', $request->reference, ['service_request_id' => $request->id, 'type' => $request->type->value]);
 
         [$kind, $steps] = array_pad(explode(':', $outcome, 2), 2, null);
 
         if ($kind === 'cancelled') {
-            $clock->at($clock->daysAgo($daysAgo, 15));
+            $clock->at($clock->after($submitted, $daysAgo, 15));
             $this->requests->cancel($request->fresh(), $requester);
+            $ctx->audit('Cancelled service request', $request->reference);
 
             return;
         }
 
-        // Sign step by step, one working day apart, starting the afternoon of the submit.
+        // Sign step by step, one working day apart, each after the one before it.
         $limit = in_array($kind, ['wait', 'rejected'], true) ? (int) $steps : PHP_INT_MAX;
-        $day = $daysAgo;
+        $last = $submitted;
         for ($signed = 0; $signed < $limit; $signed++) {
             $row = $this->currentApproval($request);
             if ($row === null) {
                 break;
             }
-            $day = max(0, $daysAgo - $signed);
-            $clock->at($clock->daysAgo($day, min(16, 14 + $signed)));
-            $this->requests->approve($request->fresh(), $this->signer($ctx, $row), 'Approved');
+            $last = $clock->after($last, max(0, $daysAgo - $signed), min(16, 14 + $signed));
+            $clock->at($last);
+            $signer = $this->signer($ctx, $row);
+            $ctx->actAs($signer);
+            $this->requests->approve($request->fresh(), $signer, 'Approved');
+            $ctx->audit('Approved service request step', $request->reference);
         }
+        $lastDay = (int) max(0, $clock->base()->copy()->startOfDay()->diffInDays($last->copy()->startOfDay(), true));
 
         if ($kind === 'rejected') {
-            $clock->at($clock->daysAgo(max(0, $day - 1), 16));
-            $this->requests->reject($request->fresh(), $this->signer($ctx, $this->currentApproval($request)), 'Not a business need at this time.');
+            $clock->at($clock->after($last, max(0, $lastDay - 1), 16));
+            $signer = $this->signer($ctx, $this->currentApproval($request));
+            $ctx->actAs($signer);
+            $this->requests->reject($request->fresh(), $signer, 'Not a business need at this time.');
+            $ctx->audit('Rejected service request', $request->reference);
 
             return;
         }
@@ -153,8 +170,9 @@ final class DemoRequests implements DemoStep
         $ctx->actAs($lead);
 
         if ($kind === 'manual') { // "other" opens no case: IT closes it by hand
-            $clock->at($clock->daysAgo(max(0, $day - 2), 14));
+            $clock->at($clock->after($last, max(0, $lastDay - 2), 14));
             $this->requests->complete($request, $lead);
+            $ctx->audit('Completed service request', $request->reference);
 
             return;
         }
@@ -164,8 +182,10 @@ final class DemoRequests implements DemoStep
             return; // approved, its case still waiting in the IT queue
         }
 
-        $clock->at($clock->daysAgo(max(0, $day - 1), 10));
+        $taken = $clock->after($last, max(0, $lastDay - 1), 10);
+        $clock->at($taken);
         $ticket = $this->tickets->take($ticket, $lead, null, 'Preparing the equipment', null);
+        $ctx->audit('Took ticket', "{$ticket->ticket_no} → {$lead->name}");
 
         if ($kind === 'in_progress') {
             return;
@@ -173,8 +193,9 @@ final class DemoRequests implements DemoStep
 
         $delivered = $kind === 'completed';
         $resolution = $delivered ? 'Delivered and set up with the requester.' : 'Not delivered - facilities will provide the canteen TV.';
-        $clock->at($clock->daysAgo(max(0, $day - 3), 15));
+        $clock->at($clock->after($taken, max(0, $lastDay - 3), 15));
         $ticket = $this->tickets->resolve($ticket->fresh(), $delivered, $resolution);
+        $ctx->audit('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
         $this->requests->settleFromTicket($ticket, $lead, $delivered, $resolution);
     }
 

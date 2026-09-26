@@ -14,6 +14,7 @@ use App\Models\Access\EmailGroup;
 use App\Models\Access\FileShare;
 use App\Models\Asset\Asset;
 use App\Models\Asset\AssetTransfer;
+use App\Models\AuditLog;
 use App\Models\Contract\Contract;
 use App\Models\Employee\Employee;
 use App\Models\Request\RequestApproval;
@@ -43,6 +44,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -97,6 +100,60 @@ class DemoSeederTest extends TestCase
         $this->assertFalse(Carbon::hasTestNow(), 'the clock must be real again');
     }
 
+    public function test_it_refuses_an_install_missing_the_master_data(): void
+    {
+        $this->seed(EmployeeDepartmentSeeder::class);
+        $this->seed(EmployeePositionSeeder::class);
+        $this->seed(EmployeeSectionSeeder::class);
+        $this->seed(); // DatabaseSeeder, but no MasterDataSeeder
+
+        $this->assertStringContainsString('MasterDataSeeder', (string) (new DemoSeeder)->refusal());
+    }
+
+    public function test_it_refuses_an_install_that_already_holds_business_data(): void
+    {
+        $this->seedStandard();
+        Vendor::create(['name' => 'A real supplier']);
+
+        $this->assertStringContainsString('empty install', (string) (new DemoSeeder)->refusal());
+    }
+
+    /**
+     * A follow-up step dated "the next day" used to fold back onto the same Friday when
+     * that day was a weekend, and then run at an earlier hour than the step before it.
+     */
+    #[DataProvider('awkwardStarts')]
+    public function test_every_event_follows_the_one_before_it_whatever_day_the_run_starts(string $start): void
+    {
+        Carbon::setTestNow(Carbon::parse($start));
+        $this->seedStandard();
+        $this->seed(DemoSeeder::class);
+        Carbon::setTestNow();
+
+        $this->assertOrdered('tickets', 'responded_at < created_at', $start);
+        $this->assertOrdered('tickets', 'resolved_at < responded_at', $start);
+        $this->assertOrdered('stock_requests', 'approved_at < created_at OR rejected_at < created_at', $start);
+        $this->assertOrdered('stock_requests', 'fulfilled_at < approved_at', $start);
+        $this->assertOrdered('service_requests', 'completed_at < approved_at', $start);
+
+        $this->assertSame(0, DB::table('ticket_updates')->join('tickets', 'tickets.id', '=', 'ticket_updates.ticket_id')
+            ->whereColumn('ticket_updates.created_at', '<', 'tickets.responded_at')->count(), "{$start}: a progress note before the case was picked up");
+        $this->assertSame(0, DB::table('request_approvals')->join('service_requests', 'service_requests.id', '=', 'request_approvals.service_request_id')
+            ->whereColumn('request_approvals.acted_at', '<', 'service_requests.created_at')->count(), "{$start}: a signature before the submit");
+        $this->assertSame(0, DB::table('request_approvals')->whereNotNull('acted_at')->whereColumn('acted_at', '<', 'became_current_at')->count(), "{$start}: a signature before its step was current");
+    }
+
+    /** @return array<string, array{string}> */
+    public static function awkwardStarts(): array
+    {
+        return ['saturday morning' => ['next saturday 10:00'], 'monday before office hours' => ['next monday 07:00']];
+    }
+
+    private function assertOrdered(string $table, string $backwards, string $start): void
+    {
+        $this->assertSame(0, DB::table($table)->whereRaw($backwards)->count(), "{$start}: {$table} has {$backwards}");
+    }
+
     public function test_the_demo_sends_no_mail(): void
     {
         $this->seedStandard();
@@ -104,6 +161,24 @@ class DemoSeederTest extends TestCase
 
         $this->assertSame(0, DB::table('jobs')->count());
         Queue::assertPushed(SendTemplatedEmail::class); // intercepted, not delivered
+
+        // The CCTV evidence went to the (faked) disk, and no temp copy was left behind.
+        $this->assertNotEmpty(Storage::disk('local')->allFiles('requests'));
+        $this->assertSame($this->tempPdfCountBefore, $this->tempPdfCount(), 'temp PDFs left behind');
+    }
+
+    private int $tempPdfCountBefore = 0;
+
+    private function tempPdfCount(): int
+    {
+        return count(glob(sys_get_temp_dir().DIRECTORY_SEPARATOR.'dem*') ?: []);
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local'); // CCTV attachments must never land in the real app storage
+        $this->tempPdfCountBefore = $this->tempPdfCount();
     }
 
     public function test_the_demo_covers_every_state(): void
@@ -117,6 +192,7 @@ class DemoSeederTest extends TestCase
         $this->assertStock();
         $this->assertTickets();
         $this->assertRequests();
+        $this->assertAuditAndAccounts();
     }
 
     private function assertRequests(): void
@@ -138,6 +214,25 @@ class DemoSeederTest extends TestCase
             'no approved request with its case still open',
         );
         $this->assertTrue(ServiceRequest::where('status', 'completed')->whereNull('ticket_id')->exists(), 'no request completed by hand');
+    }
+
+    /** The demo leaves the same audit trail the screens would have. */
+    private function assertAuditAndAccounts(): void
+    {
+        foreach ([
+            'Created ticket', 'Took ticket', 'Assigned ticket', 'Updated ticket progress', 'Resolved ticket',
+            'Registered asset', 'Transferred asset', 'Accepted asset', 'Requested asset return', 'Received asset', 'Bulk asset writeoff',
+            'Created contract', 'Cancelled contract', 'Expired contract',
+            'Submitted service request', 'Approved service request step', 'Rejected service request', 'Cancelled service request', 'Completed service request',
+            'Added member to file share', 'Added member to software',
+        ] as $action) {
+            $this->assertTrue(AuditLog::where('action', $action)->exists(), "no audit row '{$action}'");
+        }
+        $this->assertSame(0, AuditLog::where('action', 'Submitted service request')->where('user_name', 'System')->count(), 'a submit with no actor');
+        $this->assertSame(0, AccessMembership::whereNull('granted_by')->count(), 'a grant with no granter');
+
+        // Freshly set passwords, so a password-expiry policy does not lock the demo out.
+        $this->assertSame(0, User::where('username', 'like', '%.demo')->where('password_changed_at', '<', now()->subDay())->count());
     }
 
     private function assertTickets(): void

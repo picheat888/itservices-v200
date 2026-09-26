@@ -5,6 +5,9 @@ namespace Database\Seeders\Demo;
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
 use App\Enums\Ticket\TicketWorkClass;
+use App\Models\Employee\Employee;
+use App\Models\Ticket\Ticket;
+use App\Models\User;
 use App\Services\Ticket\TicketService;
 
 /**
@@ -68,7 +71,7 @@ final class DemoTickets implements DemoStep
             // The newest stay Open, never taken: one two days old (past its response target), the rest hours old.
             if ($i >= self::FIRST_OPEN) {
                 $clock->at($i === self::FIRST_OPEN ? $clock->daysAgo(2, 9) : $clock->hoursAgo(self::TOTAL - $i));
-                $this->tickets->create($payload, $requester);
+                $this->report($ctx, $payload, $requester);
 
                 continue;
             }
@@ -76,40 +79,74 @@ final class DemoTickets implements DemoStep
             $daysAgo = 180 - $i * 3; // oldest first; index 55 → 15 days ago
             $staff = $i % 3 === 0 ? $lead : $tech;
 
-            $clock->at($clock->daysAgo($daysAgo, 9 + $i % 6));
-            $ticket = $this->tickets->create($payload, $requester);
+            $reported = $clock->daysAgo($daysAgo, 9 + $i % 6);
+            $clock->at($reported);
+            $ticket = $this->report($ctx, $payload, $requester);
 
-            $clock->at($clock->daysAgo($daysAgo, 10 + $i % 6));
+            $picked = $clock->after($reported, $daysAgo, 10 + $i % 6);
+            $clock->at($picked);
+            if ($i % 2 === 0) {
+                $ctx->actAs($staff);
+                $ticket = $this->tickets->take($ticket, $staff, $priorities[$i % 4], 'Checking now', null);
+                $ctx->audit('Took ticket', "{$ticket->ticket_no} → {$staff->name}");
+            } else {
+                $ctx->actAs($lead);
+                $ticket = $this->tickets->assign($ticket, $staff, $priorities[$i % 4], $lead);
+                $ctx->audit('Assigned ticket', "{$ticket->ticket_no} → {$staff->name}");
+            }
             $ctx->actAs($staff);
-            $ticket = $i % 2 === 0
-                ? $this->tickets->take($ticket, $staff, $priorities[$i % 4], 'Checking now', null)
-                : $this->tickets->assign($ticket, $staff, $priorities[$i % 4], $lead);
 
-            if ($i % 9 === 4) {
-                $ticket = $this->tickets->setWorkClass($ticket, $staff, TicketWorkClass::RepairVendor, 'Under warranty - sent to the vendor');
-            } elseif ($i % 9 === 7) {
-                $ticket = $this->tickets->setWorkClass($ticket, $staff, TicketWorkClass::RepairInternal, 'Needs a part from stock');
+            $class = match ($i % 9) {
+                4 => [TicketWorkClass::RepairVendor, 'Under warranty - sent to the vendor'],
+                7 => [TicketWorkClass::RepairInternal, 'Needs a part from stock'],
+                default => null,
+            };
+            if ($class !== null) {
+                $ticket = $this->tickets->setWorkClass($ticket, $staff, $class[0], $class[1]);
+                $ctx->audit('Classified ticket work', "{$ticket->ticket_no} - standard → {$ticket->work_class->value}");
             }
 
             if ($i >= self::FIRST_IN_PROGRESS) {
-                $clock->at($clock->daysAgo(max(0, $daysAgo - 1), 11));
-                $this->tickets->addUpdate($ticket, $staff, 'Waiting for the replacement part to arrive.');
+                $clock->at($clock->after($picked, max(0, $daysAgo - 1), 11));
+                $this->progress($ctx, $ticket, $staff, 'Waiting for the replacement part to arrive.');
 
                 continue;
             }
 
-            $clock->at($clock->daysAgo($daysAgo, 15));
-            $this->tickets->addUpdate($ticket, $staff, 'Diagnosed the problem, working on the fix.');
+            $noted = $clock->after($picked, $daysAgo, 15);
+            $clock->at($noted);
+            $this->progress($ctx, $ticket, $staff, 'Diagnosed the problem, working on the fix.');
 
             // Most close the next day; every seventh drags on for a week.
             $late = $i % 7 === 3;
             $cancelled = in_array($i, self::CANCELLED, true);
-            $clock->at($clock->daysAgo(max(0, $daysAgo - ($late ? 7 : 1)), 16));
-            $this->tickets->resolve(
+            $clock->at($clock->after($noted, max(0, $daysAgo - ($late ? 7 : 1)), 16));
+            $ticket = $this->tickets->resolve(
                 $ticket->fresh(),
                 ! $cancelled,
                 $cancelled ? 'Cancelled - the requester solved it themselves.' : $resolution,
             );
+            $ctx->audit('Resolved ticket', "{$ticket->ticket_no} → {$ticket->status?->value}");
         }
+    }
+
+    /**
+     * Reported by the employee (their login, or "System" when they have none).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function report(DemoContext $ctx, array $payload, Employee $requester): Ticket
+    {
+        $ctx->actAsEmployee($requester);
+        $ticket = $this->tickets->create($payload, $requester);
+        $ctx->audit('Created ticket', "{$ticket->ticket_no} - {$ticket->subject}");
+
+        return $ticket;
+    }
+
+    private function progress(DemoContext $ctx, Ticket $ticket, User $staff, string $note): void
+    {
+        $this->tickets->addUpdate($ticket, $staff, $note);
+        $ctx->audit('Updated ticket progress', "{$ticket->ticket_no} - {$ticket->subject}");
     }
 }

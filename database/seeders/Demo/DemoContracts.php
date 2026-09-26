@@ -39,6 +39,7 @@ final class DemoContracts implements DemoStep
     public function run(DemoContext $ctx, DemoClock $clock): void
     {
         $base = $clock->base();
+        $ctx->actAs($ctx->user('it.lead'));
 
         foreach (self::CONTRACTS as $key => [$name, $type, $vendor, $startAgo, $endIn, $value, $billing]) {
             $clock->at($clock->daysAgo($startAgo));
@@ -53,16 +54,20 @@ final class DemoContracts implements DemoStep
                 'total_value' => $value * 12,
                 'billing_cycle' => $billing,
             ]);
+            $ctx->audit('Created contract', "{$name} ({$ctx->contracts[$key]->code})");
         }
 
         // Ended: expire() a few days after the end date passed.
         foreach (['old-rental' => 40, 'old-isp' => 60] as $key => $endedDaysAgo) {
             $clock->at($clock->daysAgo($endedDaysAgo - 3));
-            $ctx->contracts[$key] = $this->contracts->expire($ctx->contracts[$key]->fresh());
+            $contract = $ctx->contracts[$key] = $this->contracts->expire($ctx->contracts[$key]->fresh());
+            $ctx->audit('Expired contract', "{$contract->name} ({$contract->code})");
         }
 
         // Cancelled while it still had months to run.
         $clock->at($clock->daysAgo(30));
-        $ctx->contracts['cancelled-ma'] = $this->contracts->cancel($ctx->contracts['cancelled-ma']->fresh(), 'Replaced by the new facility contract');
+        $reason = 'Replaced by the new facility contract';
+        $contract = $ctx->contracts['cancelled-ma'] = $this->contracts->cancel($ctx->contracts['cancelled-ma']->fresh(), $reason);
+        $ctx->audit('Cancelled contract', "{$contract->name} ({$contract->code}) - {$reason}");
     }
 }

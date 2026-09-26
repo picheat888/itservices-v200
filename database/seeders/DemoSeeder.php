@@ -2,10 +2,21 @@
 
 namespace Database\Seeders;
 
+use App\Models\Asset\Asset;
+use App\Models\Contract\Contract;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
+use App\Models\Employee\Section;
 use App\Models\Permission\Role;
+use App\Models\Request\ServiceRequest;
+use App\Models\Settings\Category;
+use App\Models\Settings\RequestOption;
+use App\Models\Settings\Unit;
+use App\Models\Settings\Vendor;
+use App\Models\Stock\StockItem;
+use App\Models\Stock\Warehouse;
+use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use Database\Seeders\Demo\DemoAccess;
@@ -68,13 +79,18 @@ class DemoSeeder extends Seeder
      */
     public function refusal(): ?string
     {
-        if (! Position::exists() || ! Department::exists() || ! Workflow::exists() || ! Role::where('key', 'admin')->exists()) {
+        $standardSeed = [Department::class, Position::class, Section::class, Category::class, Warehouse::class, Unit::class, RequestOption::class, Workflow::class];
+        $missing = collect($standardSeed)->contains(fn (string $model) => ! $model::query()->exists());
+        if ($missing || ! Role::where('key', 'admin')->exists()) {
             return 'Run the standard seed first: EmployeeDepartmentSeeder, EmployeePositionSeeder, '
                 .'EmployeeSectionSeeder, MasterDataSeeder, then `php artisan db:seed` (see Readme → Seeding).';
         }
 
-        if (Employee::exists()) {
-            return 'DemoSeeder runs on an empty install only - employees already exist. '
+        // Anything a real install would have entered — the demo must never mix into it.
+        $businessData = [Employee::class, Vendor::class, Asset::class, Contract::class, StockItem::class, Ticket::class, ServiceRequest::class];
+        $inUse = collect($businessData)->contains(fn (string $model) => $model::query()->exists());
+        if ($inUse || User::where('username', '!=', 'admin')->exists()) {
+            return 'DemoSeeder runs on an empty install only - this one already holds data. '
                 .'Reset with `php artisan migrate:fresh` and the standard seed first.';
         }
 
