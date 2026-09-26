@@ -122,9 +122,13 @@ final class DemoOrg implements DemoStep
         ]);
 
         foreach (self::ACCOUNTS as $userKey => [$username, $employeeKey]) {
-            $ctx->users[$userKey] = $this->employees->createUserWithCredentials(
+            $user = $this->employees->createUserWithCredentials(
                 $ctx->employee($employeeKey), $username, DemoSeeder::PASSWORD, false,
             );
+            // The account dates from the org's history, but its password is "just set":
+            // a password-expiry policy must not lock the documented Demo@1234 out.
+            $user->forceFill(['password_changed_at' => $clock->base()])->save();
+            $ctx->users[$userKey] = $user;
         }
     }
 

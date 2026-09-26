@@ -168,7 +168,8 @@ final class DemoStock implements DemoStep
     private function requisitions(DemoContext $ctx, DemoClock $clock, User $lead, User $tech, array $warehouses): void
     {
         foreach (self::REQUISITIONS as [$key, $qty, $daysAgo, $outcome, $w]) {
-            $clock->at($clock->daysAgo($daysAgo, 9));
+            $filed = $clock->daysAgo($daysAgo, 9);
+            $clock->at($filed);
             $ctx->actAs($tech);
             $this->requests->store($this->request($tech, [
                 'stock_item_id' => $ctx->items[$key]->id,
@@ -181,7 +182,8 @@ final class DemoStock implements DemoStep
                 continue;
             }
 
-            $clock->at($clock->daysAgo($daysAgo, 13));
+            $decided = $clock->after($filed, $daysAgo, 13);
+            $clock->at($decided);
             $ctx->actAs($lead);
             if ($outcome === 'rejected') {
                 $this->requests->reject($this->request($lead, []), $requisition);
@@ -191,7 +193,7 @@ final class DemoStock implements DemoStep
 
             $this->requests->approve($this->request($lead, []), $requisition->fresh());
             if ($outcome === 'fulfilled') {
-                $clock->at($clock->daysAgo(max(0, $daysAgo - 1), 10));
+                $clock->at($clock->after($decided, max(0, $daysAgo - 1), 10));
                 $this->requests->fulfill($this->request($lead, [
                     'allocations' => [['warehouse' => $warehouses[$w], 'qty' => $qty]],
                 ]), $requisition->fresh());

@@ -9,8 +9,9 @@ use Illuminate\Support\Carbon;
  * start of the run) and performed "then" via Carbon::setTestNow(), so created_at,
  * SLA deadlines, became_current_at and document numbers all read as history.
  *
- * Office-hours days only: a day that lands on a weekend moves back to Friday, and no
+ * daysAgo() keeps to weekdays: a day that lands on a weekend moves back to Friday. No
  * moment is ever later than the base — a run on Sunday morning still has no future rows.
+ * after() chains a follow-up to the event before it, so that fold-back never reorders them.
  */
 final class DemoClock
 {
@@ -34,6 +35,24 @@ final class DemoClock
         }
 
         return $moment->greaterThan($this->base) ? $this->base->copy()->subMinutes(5) : $moment;
+    }
+
+    /**
+     * A follow-up moment: daysAgo($days, $hour) when that is later than $previous,
+     * otherwise shortly after $previous. "The next working day" can fold back onto the
+     * same Friday, and a fixed hour then lands before the step it follows — this keeps
+     * every chain of events in order. Never later than the base.
+     */
+    public function after(Carbon $previous, int $days, int $hour, int $minute = 0): Carbon
+    {
+        $candidate = $this->daysAgo($days, $hour, $minute);
+        if ($candidate->greaterThan($previous)) {
+            return $candidate;
+        }
+
+        $soon = $previous->copy()->addMinutes(20);
+
+        return $soon->lessThanOrEqualTo($this->base) ? $soon : $previous->copy()->addMinute()->min($this->base);
     }
 
     public function hoursAgo(int $hours): Carbon
