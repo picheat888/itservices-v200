@@ -319,6 +319,7 @@ class DemoSeederTest extends TestCase
 
         $this->assertSame('admin', User::where('username', 'it.tech')->first()->role->key);
         $this->assertSame('hr', User::where('username', 'hr.demo')->first()->role->key);
+        $this->assertSame('it_supervisorleader', User::where('username', 'it.lead')->first()->role->key);
         $this->assertNotSame('0', AppSetting::get('default_employee_group_id', '0'));
 
         $this->assertSame(1, Employee::where('status', 'resigned')->count());

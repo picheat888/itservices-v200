@@ -3621,7 +3621,7 @@ php artisan db:seed --class=EmployeeDepartmentSeeder
 php artisan db:seed --class=EmployeePositionSeeder
 php artisan db:seed --class=EmployeeSectionSeeder
 php artisan db:seed --class=MasterDataSeeder
-php artisan db:seed                       # role/สิทธิ์, admin (password), เทมเพลต, workflow, ตัวเลือกคำขอ, SLA
+php artisan db:seed                       # Role Template + สิทธิ์, Role Group + default group, admin (password), เทมเพลต, workflow, ตัวเลือกคำขอ, SLA
 php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้อมูล demo ทุกโมดูล — รันได้บนฐานที่ยังไม่มีพนักงานเท่านั้น
 ```
 
@@ -3629,7 +3629,7 @@ php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้
 - สร้างผ่าน service จริงทุกเหตุการณ์ที่มีขั้นตอน ย้อนเวลาด้วย `DemoClock` (~6 เดือน) → สายอนุมัติ, SLA, ต้นทุน FIFO, audit log, กระดิ่ง ตรงกับของจริง
 - ไม่ส่งอีเมล (`Queue::fake()`) · ทั้งหมดอยู่ใน transaction เดียว (พังกลางทาง = ย้อนหมด) · ผลเหมือนเดิมทุกครั้ง · ไม่มีข้อมูลในอนาคตแม้รันวันหยุด
 - ปฏิเสธการรันถ้ามีพนักงานอยู่แล้ว หรือยังไม่ได้ seed มาตรฐาน
-- ลำดับขั้น: `DemoOrg` (พนักงาน ~40 คน 11 แผนก, Role Group + default, บัญชี 9 บัญชี) → `DemoReference` (vendor, รุ่น, สถานที่) → `DemoAccess` → `DemoContracts` (ครบทุกสถานะ รวมใกล้หมด 7/30 วัน) → `DemoAssets` (80 ชิ้น ครบ 6 สถานะ) → `DemoStock` (25 รายการ, lot หลายราคา, ใบเบิก 4 สถานะ, ตรวจนับ, ต่ำ/หมด/เกิน) → `DemoTickets` (60 ใบ ผ่าน/เลย SLA) → `DemoRequests` (37 คำขอ ครบ 13 ประเภท 5 สถานะ + Onboarding)
+- ลำดับขั้น: `DemoOrg` (พนักงาน ~40 คน 11 แผนก จัดเข้า Role Group ที่ `db:seed` สร้างไว้ (หาจาก template ไม่ใช่ชื่อ), บัญชี 9 บัญชี) → `DemoReference` (vendor, รุ่น, สถานที่) → `DemoAccess` → `DemoContracts` (ครบทุกสถานะ รวมใกล้หมด 7/30 วัน) → `DemoAssets` (80 ชิ้น ครบ 6 สถานะ) → `DemoStock` (25 รายการ, lot หลายราคา, ใบเบิก 4 สถานะ, ตรวจนับ, ต่ำ/หมด/เกิน) → `DemoTickets` (60 ใบ ผ่าน/เลย SLA) → `DemoRequests` (37 คำขอ ครบ 13 ประเภท 5 สถานะ + Onboarding)
 
 | username | ใคร | ใช้ทดสอบ |
 |---|---|---|
@@ -3639,12 +3639,35 @@ php artisan db:seed --class=DemoSeeder    # (ไม่บังคับ) ข้
 | vp.demo | Vice President | อนุมัติขั้นบนสุด |
 | qc.demo | QC Manager | ขั้นแผนก QC (CCTV) · เจ้าของ QC Documents / Team |
 | se.demo | Safety Manager | ขั้นแผนก SE (CCTV) |
-| it.lead | IT Supervisor | มอบหมาย ticket, ปิดงานคำขอ, สต็อก |
-| it.tech | ช่าง IT | รับ/แก้ ticket, เบิกของ |
-| hr.demo | HR | เพิ่มพนักงาน / Onboarding |
+| it.lead | IT Supervisor (IT Supervisor/Leader) | มอบหมาย ticket, ปิดงานคำขอ, สต็อก |
+| it.tech | ช่าง IT (IT Support) | รับ/แก้ ticket, เบิกของ |
+| hr.demo | HR (HR Recruit) | เพิ่มพนักงาน / Onboarding |
 
 รหัสผ่านทุกบัญชี `Demo@1234` (ไม่บังคับเปลี่ยน) · `admin` / `password` จาก `db:seed` (บังคับเปลี่ยนครั้งแรก)
 
 ### Tests / Verification
 
 `tests/Feature/DemoSeederTest.php` — guard 2 กรณี, rollback + คืนนาฬิกา, ไม่มีอีเมลค้างใน `jobs`, ครอบทุกสถานะทุกโมดูล, รันเช้าวันอาทิตย์ไม่มีข้อมูลในอนาคต, DemoClock
+
+---
+
+## Role Template + Role Group เข้า Seeder (2026-09-26)
+
+ค่าตั้งต้นของ `db:seed` ตรงกับที่ตั้งไว้บน DB จริงแล้ว — **มีผลกับการติดตั้งใหม่เท่านั้น** (seeder ใช้ `firstOrCreate` ไม่เขียนทับสิทธิ์/กลุ่มที่ปรับบนระบบที่ใช้งานอยู่)
+
+| Role Template (key) | ชื่อ | สิทธิ์ | Role Group |
+|---|---|---|---|
+| `super` | Administrator | ทุกสิทธิ์ | Super Administrator |
+| `it_supervisorleader` | IT Supervisor/Leader | 124 | IT Supervisor/Leader |
+| `admin` | IT Support | 69 | IT Support |
+| `it_stock` | IT Admin & Document | 45 | IT Admin & Doc |
+| `hr` | HR Recruit | 18 | HR Recruit |
+| `user` | Staff | 8 | **User** ← default group ของพนักงานใหม่ |
+
+- `Permissions::defaults()` — รายการสิทธิ์ต่อ template สร้างจาก `role_permissions` บน DB (allowed = 1) ไม่ได้พิมพ์เอง
+- `DatabaseSeeder::seedRoleGroups()` — สร้าง Role Group เฉพาะเมื่อยังไม่มีกลุ่มเลย และตั้ง `default_employee_group_id` เฉพาะเมื่อยังไม่ได้เลือก → การเปลี่ยนชื่อ/ลบกลุ่ม หรือเปลี่ยน default ของผู้ดูแลไม่ถูก seed ทับ
+- DemoSeeder จัดคนเข้ากลุ่มตาม template: IT lead → IT Supervisor/Leader, ช่าง → IT Support, 1 คน → IT Admin & Doc, HR → HR Recruit, ที่เหลือ → default group
+
+### Tests / Verification
+
+`ProductionSeedTest` +2 (Role Group + default group; re-seed ไม่ทับการเลือกของผู้ดูแล) และตรวจชื่อ/จำนวนสิทธิ์ของทั้ง 6 template · test ที่อิงสิทธิ์ตั้งต้นเดิมปรับตาม template ใหม่ (Access: ลบรายการเป็นของ IT Supervisor/Leader, HR ไม่มี Access module; Settings: section ต้องมาพร้อม `settings.access` และ HR/Staff ไม่มี settings) · ชุดเต็ม **1421 passed**

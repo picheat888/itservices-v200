@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Enums\UserRole;
+use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Support\Permissions;
 use Illuminate\Database\Seeder;
@@ -24,17 +26,18 @@ use Illuminate\Database\Seeder;
  *   php artisan db:seed --class=EmployeeSectionSeeder      # 25 sections (needs departments first)
  *   php artisan db:seed --class=MasterDataSeeder           # brands, categories, warehouses, units, warranty types
  *
- * Nor is a Role Group, or the setting naming the default one — that is the
- * administrator's answer about their own organisation. Until they give it,
- * EmployeeService refuses to provision login accounts rather than guess a role. The
- * administrator account is exempt: it carries the super role directly, so there is
- * always a way in to set this up.
+ * Role Templates, one Role Group per template and the default group for new employees
+ * ARE seeded — the company's own setup (2026-09-26), so a fresh install can provision
+ * login accounts straight away. Groups are created only when none exist and the default
+ * only when none is chosen, so an administrator's changes survive a re-seed. The
+ * administrator account carries the super role directly, so there is always a way in.
  */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         $this->seedRolesAndPermissions();
+        $this->seedRoleGroups();
         $this->seedAdministrator();
 
         // Each of these reads its own catalogue class and is itself idempotent.
@@ -56,9 +59,11 @@ class DatabaseSeeder extends Seeder
     {
         $roles = [
             ['key' => UserRole::SuperAdmin->value, 'name' => 'Administrator', 'color' => '#2563eb', 'is_system' => true],
-            ['key' => UserRole::ITStaff->value, 'name' => 'IT Technician', 'color' => '#0284c7', 'is_system' => false],
+            ['key' => UserRole::ITStaff->value, 'name' => 'IT Support', 'color' => '#2563eb', 'is_system' => false],
             ['key' => UserRole::HR->value, 'name' => 'HR Recruit', 'color' => '#059669', 'is_system' => false],
             ['key' => UserRole::Employee->value, 'name' => 'Staff', 'color' => '#64748b', 'is_system' => false],
+            ['key' => 'it_supervisorleader', 'name' => 'IT Supervisor/Leader', 'color' => '#2563eb', 'is_system' => false],
+            ['key' => 'it_stock', 'name' => 'IT Admin & Document', 'color' => '#2563eb', 'is_system' => false],
         ];
         foreach ($roles as $role) {
             Role::firstOrCreate(['key' => $role['key']], $role);
@@ -80,6 +85,44 @@ class DatabaseSeeder extends Seeder
                     ['role_id' => $roleId, 'permission' => $key],
                     ['allowed' => in_array($key, $granted, true)],
                 );
+            }
+        }
+    }
+
+    /** Role Group name => the template (role key) behind it. */
+    private const ROLE_GROUPS = [
+        'Super Administrator' => 'super',
+        'IT Supervisor/Leader' => 'it_supervisorleader',
+        'IT Support' => 'admin',
+        'IT Admin & Doc' => 'it_stock',
+        'HR Recruit' => 'hr',
+        'User' => 'user',
+    ];
+
+    /** The group a new employee joins, and so the role their login account gets. */
+    private const DEFAULT_GROUP = 'User';
+
+    /**
+     * One Role Group per template, and the default group for new employees — without a
+     * default no login account can be provisioned (see EmployeeService).
+     *
+     * Only on an install with no groups yet: once an administrator has renamed, removed
+     * or regrouped them, a re-seed must not bring the old ones back. The default is set
+     * only when none is chosen, so their own choice survives an upgrade too.
+     */
+    private function seedRoleGroups(): void
+    {
+        if (! GroupRole::exists()) {
+            $roleIdByKey = Role::pluck('id', 'key');
+            foreach (self::ROLE_GROUPS as $name => $roleKey) {
+                GroupRole::create(['name' => $name, 'role_id' => $roleIdByKey[$roleKey]]);
+            }
+        }
+
+        if ((int) AppSetting::get('default_employee_group_id', '0') === 0) {
+            $defaultId = GroupRole::where('name', self::DEFAULT_GROUP)->value('id');
+            if ($defaultId !== null) {
+                AppSetting::put('default_employee_group_id', (string) $defaultId);
             }
         }
     }

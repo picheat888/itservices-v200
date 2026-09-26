@@ -8,6 +8,7 @@ use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
+use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Request\ServiceRequest;
 use App\Models\Settings\Category;
@@ -79,7 +80,7 @@ class DemoSeeder extends Seeder
      */
     public function refusal(): ?string
     {
-        $standardSeed = [Department::class, Position::class, Section::class, Category::class, Warehouse::class, Unit::class, RequestOption::class, Workflow::class];
+        $standardSeed = [Department::class, Position::class, Section::class, Category::class, Warehouse::class, Unit::class, RequestOption::class, Workflow::class, GroupRole::class];
         $missing = collect($standardSeed)->contains(fn (string $model) => ! $model::query()->exists());
         if ($missing || ! Role::where('key', 'admin')->exists()) {
             return 'Run the standard seed first: EmployeeDepartmentSeeder, EmployeePositionSeeder, '
