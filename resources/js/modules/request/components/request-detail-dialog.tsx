@@ -1,7 +1,7 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
-import { AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
+import { AttachmentRow } from '@/shared/components/file-drop-zone';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
@@ -26,7 +26,7 @@ import { useUiStore } from '@/stores/ui';
 import { Check, PackageCheck, Paperclip, Ticket as TicketIcon, Trash2, UserPlus, X, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRequest, useRequestMutations, useRequestOptions } from '../hooks/use-requests';
+import { useRequest, useRequestMutations } from '../hooks/use-requests';
 import { DecisionDialog, type DecisionAction } from './decision-dialog';
 import { RequestTrail } from './request-trail';
 
@@ -361,45 +361,15 @@ function RequestDetailBody({
 }
 
 /**
- * The files filed with the request: everyone who can open the request can open
- * them, and while `can_attach` holds — the requester's side, before the first
- * signature — they can be added to and taken away.
- *
- * Both writes answer with the whole request, so nothing here is kept in local
- * state; the list simply re-renders from the refreshed record.
+ * The files filed with the request, read-only: everyone who can open the request
+ * can open them. They are fixed at submit — a requester who needs different files
+ * cancels and files again.
  */
 function RequestAttachments({ request }: { request: ServiceRequest }) {
     const t = useT();
-    const confirm = useConfirm();
-    const { uploadAttachments, deleteAttachment } = useRequestMutations();
-    const { data: options } = useRequestOptions(request.can_attach);
-
     const attachments = request.attachments ?? [];
-    const limits = options?.attachments ?? { max_files: 5, max_size_kb: 10240, extensions: [] };
-    const remaining = limits.max_files - attachments.length;
-    const busy = uploadAttachments.isPending || deleteAttachment.isPending;
 
-    const onError = (e: unknown) => {
-        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        useToastStore.getState().push(msg ?? t('attachment_upload_failed'), 'error');
-    };
-
-    const addFiles = (list: FileList | File[]) => {
-        const picked = mergeFiles([], list, limits.extensions, remaining);
-        if (picked.length === 0) return;
-        uploadAttachments.mutateAsync({ id: request.id, files: picked }).catch(onError);
-    };
-
-    const confirmRemove = (attachmentId: number, name: string) =>
-        confirm({
-            variant: 'danger',
-            title: t('delete'),
-            entity: { name },
-            confirmText: t('delete'),
-            action: () => deleteAttachment.mutateAsync({ id: request.id, attachmentId }).catch(onError),
-        });
-
-    if (attachments.length === 0 && !request.can_attach) {
+    if (attachments.length === 0) {
         return (
             <div className="border-border/80 text-muted-foreground flex items-center gap-2.5 rounded-xl border border-dashed px-3.5 py-3 text-xs">
                 <Paperclip className="h-4 w-4 shrink-0" />
@@ -409,35 +379,10 @@ function RequestAttachments({ request }: { request: ServiceRequest }) {
     }
 
     return (
-        <div>
-            {attachments.length > 0 && (
-                <div className="border-border rounded-xl border px-3.5 py-1">
-                    {attachments.map((a) => (
-                        <AttachmentRow
-                            key={a.id}
-                            name={a.name}
-                            size={a.size}
-                            mime={a.mime}
-                            href={a.url}
-                            onRemove={request.can_attach && !busy ? () => confirmRemove(a.id, a.name) : undefined}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {request.can_attach && remaining > 0 && (
-                <div className="mt-2.5">
-                    <FileDropZone
-                        accept={limits.extensions}
-                        hint={t('req_attach_types')
-                            .replace('{size}', String(Math.round(limits.max_size_kb / 1024)))
-                            .replace('{max}', String(limits.max_files))}
-                        compact={attachments.length > 0}
-                        disabled={busy}
-                        onPick={addFiles}
-                    />
-                </div>
-            )}
+        <div className="border-border rounded-xl border px-3.5 py-1">
+            {attachments.map((a) => (
+                <AttachmentRow key={a.id} name={a.name} size={a.size} mime={a.mime} href={a.url} />
+            ))}
         </div>
     );
 }

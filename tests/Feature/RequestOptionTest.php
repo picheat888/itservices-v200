@@ -11,6 +11,7 @@ use App\Models\Settings\RequestOption;
 use App\Models\User;
 use App\Services\Request\RequestService;
 use App\Support\RequestSchemas;
+use Database\Seeders\EmployeePositionSeeder;
 use Database\Seeders\RequestOptionSeeder;
 use Database\Seeders\WorkflowSeeder;
 use Illuminate\Database\QueryException;
@@ -312,6 +313,9 @@ class RequestOptionTest extends TestCase
      */
     private function submitHardwareRequest(int $optionId): ServiceRequest
     {
+        // Positions first: chain rungs seeded without them name nobody, and a workflow
+        // holding such a step refuses every submit.
+        $this->seed(EmployeePositionSeeder::class);
         $this->seed(WorkflowSeeder::class);
 
         // A requester needs a reporting line that can carry the request — submitting

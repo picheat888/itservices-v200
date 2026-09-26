@@ -2,17 +2,17 @@
 
 namespace App\Services\Request;
 
-use App\Models\Request\RequestAttachment;
 use App\Models\Request\ServiceRequest;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 /**
- * Stores and removes the files filed with a service request, and owns the limits
- * those files are held to. Both ways in use it — the ones riding along with the
- * submit (StoreServiceRequestRequest) and the ones added afterwards
- * (RequestAttachmentController) — so a request can never end up holding more, or
- * larger, files than one route alone would have allowed.
+ * Stores the files filed with a service request, and owns the limits those files
+ * are held to (StoreServiceRequestRequest, and the New Request dialog through the
+ * options endpoint).
+ *
+ * Files ride along with the submit and nowhere else: once filed, a request's
+ * evidence is fixed — an approver decides on what was in front of them. A requester
+ * who needs different files cancels and files again.
  */
 class RequestAttachmentService
 {
@@ -50,18 +50,5 @@ class RequestAttachmentService
                 'mime' => $file->getMimeType() ?: 'application/octet-stream',
             ]);
         }
-    }
-
-    /** Removes one attachment — the row and the binary behind it. */
-    public function delete(RequestAttachment $attachment): void
-    {
-        Storage::disk('local')->delete($attachment->path);
-        $attachment->delete();
-    }
-
-    /** How many more files this request may still take. */
-    public function remaining(ServiceRequest $request): int
-    {
-        return max(0, self::MAX_FILES - $request->attachments()->count());
     }
 }

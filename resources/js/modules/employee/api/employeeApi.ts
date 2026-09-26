@@ -160,7 +160,7 @@ export interface OnboardingServiceSchema {
 /**
  * Whether those requests could be routed at all, asked before the employee exists.
  *
- * `reason` is a code — a ChainBlockReason, or `workflow_inactive` — not a sentence,
+ * `reason` is a code — a ChainBlockReason (incl. `workflow_incomplete`), or `workflow_inactive` — not a sentence,
  * so the form writes it out in the reader's language (same contract the submit path
  * uses for a refused reporting line). `resigned_in_chain` is filled only for the
  * resigned case: that message is useless without naming whose record to fix.

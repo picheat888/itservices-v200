@@ -6,6 +6,7 @@ use App\Enums\Request\StepActorType;
 use App\Enums\Request\WorkflowStepKind;
 use App\Models\Employee\Employee;
 use App\Models\Workflow\Workflow;
+use App\Support\WorkflowStepCompleteness;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -70,30 +71,18 @@ class UpdateWorkflowRequest extends FormRequest
                 }
             }
 
-            // A chain rung is defined by the positions that may sign it; without any,
-            // resolution would climb the reporting line looking for nobody.
+            // A step that names nobody can never resolve — the same rule refuses a request
+            // at submit while its workflow still holds such a step.
             foreach ($steps->values() as $index => $step) {
-                $actor = $step['actor_type'] ?? null;
-                if ($actor === StepActorType::Chain->value && empty($step['position_ids'])) {
-                    $v->errors()->add("steps.{$index}.position_ids", 'Choose at least one position that may approve this step.');
+                foreach (WorkflowStepCompleteness::problems((array) $step) as $field => $message) {
+                    $v->errors()->add("steps.{$index}.{$field}", $message);
                 }
 
-                if ($actor !== StepActorType::Department->value) {
+                if (($step['actor_type'] ?? null) !== StepActorType::Department->value) {
                     continue;
                 }
 
-                // A department step with no department is a step that can never find anybody.
-                if (empty($step['department_id'])) {
-                    $v->errors()->add("steps.{$index}.department_id", 'Choose the department that approves this step.');
-                }
-
-                // And it has to say who in that department: the people who may sign, or the
-                // positions it accepts. Neither would leave the step unresolvable in exactly
-                // the way the chain rung above is guarded against.
                 $named = array_values(array_filter((array) ($step['approver_employee_ids'] ?? [])));
-                if ($named === [] && empty($step['position_ids'])) {
-                    $v->errors()->add("steps.{$index}.position_ids", 'Name a person in that department, or the positions that may approve.');
-                }
 
                 // Naming somebody from another department would be a step whose approver is
                 // not in the department it asks — the editor picks from that department's

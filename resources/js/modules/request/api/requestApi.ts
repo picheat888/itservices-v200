@@ -102,25 +102,6 @@ export const requestApi = {
         });
         return data.data;
     },
-    /** Add files to an already-filed request (allowed until the first signature). */
-    uploadAttachments: async (id: number, files: File[], onProgress?: (percent: number) => void): Promise<ServiceRequest> => {
-        await ensureCsrf();
-        const form = new FormData();
-        for (const file of files) form.append('files[]', file);
-
-        const { data } = await http.post<ApiEnvelope<ServiceRequest>>(`/service-requests/${id}/attachments`, form, {
-            onUploadProgress: (e) => {
-                if (onProgress && e.total) onProgress(Math.round((e.loaded / e.total) * 100));
-            },
-        });
-        return data.data;
-    },
-    /** Remove one already-saved file from a request. */
-    deleteAttachment: async (id: number, attachmentId: number): Promise<ServiceRequest> => {
-        await ensureCsrf();
-        const { data } = await http.delete<ApiEnvelope<ServiceRequest>>(`/service-requests/${id}/attachments/${attachmentId}`);
-        return data.data;
-    },
     approve: (id: number, note?: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/approve`, { note: note || null }),
     reject: (id: number, note: string) => mutate<ServiceRequest>('post', `/service-requests/${id}/reject`, { note }),
     fulfill: (id: number) => mutate<ServiceRequest>('post', `/service-requests/${id}/fulfill`),

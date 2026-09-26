@@ -582,6 +582,7 @@ class EmployeeController extends Controller
             ChainBlockReason::ApproverResigned->value,
             ChainBlockReason::NoManager->value,
             self::WORKFLOW_INACTIVE,
+            ChainBlockReason::WorkflowIncomplete->value,
         ])->first(fn (string $candidate) => in_array($candidate, $codes, true));
 
         // Named only for the resigned case — that is the one message that is useless

@@ -239,6 +239,18 @@ class EmployeeOnboardingRequestTest extends TestCase
             ->assertJsonPath('reason', 'workflow_inactive');
     }
 
+    public function test_the_precheck_reports_an_unfinished_workflow_as_its_own_reason(): void
+    {
+        Workflow::where('request_type', 'computer')->firstOrFail()
+            ->steps()->where('actor_type', 'chain')->get()
+            ->each(fn ($step) => $step->positions()->detach());
+
+        $this->precheck()->assertOk()
+            ->assertJsonPath('can_request', false)
+            ->assertJsonPath('reason', 'workflow_incomplete')
+            ->assertJsonPath('blocked_services', ['computer']);
+    }
+
     public function test_a_broken_chain_still_reads_as_the_chain_when_a_workflow_is_also_closed(): void
     {
         Workflow::where('request_type', 'computer')->update(['active' => false]);

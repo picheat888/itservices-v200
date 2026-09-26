@@ -140,6 +140,7 @@ export const requests: Dict = {
     req_block_title: 'Cannot submit yet',
     req_block_no_manager: 'Your reporting line has no manager set. Ask HR to update it before submitting.',
     req_block_approver_resigned: 'An approver in your reporting line has left the company. Ask HR to update it before submitting.',
+    req_block_workflow_incomplete: 'The request is not available. Please contact IT.',
     req_skip_no_manager: 'Skipped - the requester has no manager',
     req_skip_no_matching_position: 'Skipped - nobody above the requester holds this position',
     req_skip_no_department_approver: 'Skipped - that department has nobody in the positions this step accepts',

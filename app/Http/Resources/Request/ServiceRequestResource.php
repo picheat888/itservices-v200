@@ -121,8 +121,6 @@ class ServiceRequestResource extends JsonResource
                     'url' => $a->url(),
                     'created_at' => $a->created_at?->toDateTimeString(),
                 ])->values()),
-            // Add/remove is the requester's, and only until the first signature lands.
-            'can_attach' => $this->canManageAttachments($viewer),
             // The last movement, spelled out: the feed on the dashboard orders by `at` and
             // writes the rest of it as a sentence. Derived here rather than in the SPA so one
             // rule decides what counts as a movement.
