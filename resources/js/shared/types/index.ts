@@ -374,6 +374,12 @@ export interface TicketAttachment {
     mime: string;
     url: string;
     created_at: string | null;
+    /**
+     * Reference of the service request this file was filed with, when the case is
+     * only mirroring it (one file on disk, owned by the request). Null for a file
+     * uploaded to the ticket itself — which is the only kind that can be removed.
+     */
+    from_request?: string | null;
 }
 
 /** State of the SLA clock that currently matters (backend-computed; see App\Support\TicketSla). */
