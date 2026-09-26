@@ -1,5 +1,6 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
+import { AttachmentPreview } from '@/shared/components/attachment-preview';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { AttachmentRow } from '@/shared/components/file-drop-zone';
 import { RecordMissing, recordMissingContentClass } from '@/shared/components/record-missing';
@@ -16,7 +17,7 @@ import {
     requestTitle,
 } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
-import type { ServiceRequest } from '@/shared/types';
+import type { RequestAttachment, ServiceRequest } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
@@ -47,9 +48,13 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
     const { record: request, switching } = useRecordView(requestId, data);
 
     const [decision, setDecision] = useState<DecisionAction | null>(null);
+    // The in-app file viewer. Held up here, and rendered beside the dialog rather than
+    // inside it, so the two never nest — same arrangement as the decision dialog below.
+    const [preview, setPreview] = useState<RequestAttachment | null>(null);
     // A decision belongs to the request it was opened on; switching requests drops it.
     useEffect(() => {
         setDecision(null);
+        setPreview(null);
     }, [requestId]);
 
     // Nothing to show and nothing on the way: the dialog is fully closed.
@@ -67,7 +72,7 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
                     )}
                 >
                     {request ? (
-                        <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} />
+                        <RequestDetailBody request={request} onClose={onClose} onDecide={setDecision} onPreview={setPreview} />
                     ) : isError ? (
                         // The id is well-formed but fetching it failed — a deleted request, or a
                         // link to one this account may not read. `switching` cannot tell that
@@ -81,6 +86,9 @@ export function RequestDetailDialog({ requestId, onClose }: { requestId: number 
             </Dialog>
 
             <DecisionDialog request={decision && request ? request : null} action={decision} onClose={() => setDecision(null)} />
+
+            {/* Attachment viewer — images zoom/pan, PDFs embed, the rest show a file card. */}
+            <AttachmentPreview file={preview} onClose={() => setPreview(null)} />
         </>
     );
 }
@@ -144,10 +152,12 @@ function RequestDetailBody({
     request,
     onClose,
     onDecide,
+    onPreview,
 }: {
     request: ServiceRequest;
     onClose: () => void;
     onDecide: (action: DecisionAction) => void;
+    onPreview: (attachment: RequestAttachment) => void;
 }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
@@ -278,7 +288,7 @@ function RequestDetailBody({
 
                     <div>
                         <SectionLabel>{t('req_attach_section')}</SectionLabel>
-                        <RequestAttachments request={request} />
+                        <RequestAttachments request={request} onPreview={onPreview} />
                     </div>
 
                     {/* Linked ticket */}
@@ -365,7 +375,7 @@ function RequestDetailBody({
  * can open them. They are fixed at submit — a requester who needs different files
  * cancels and files again.
  */
-function RequestAttachments({ request }: { request: ServiceRequest }) {
+function RequestAttachments({ request, onPreview }: { request: ServiceRequest; onPreview: (attachment: RequestAttachment) => void }) {
     const t = useT();
     const attachments = request.attachments ?? [];
 
@@ -381,7 +391,7 @@ function RequestAttachments({ request }: { request: ServiceRequest }) {
     return (
         <div className="border-border rounded-xl border px-3.5 py-1">
             {attachments.map((a) => (
-                <AttachmentRow key={a.id} name={a.name} size={a.size} mime={a.mime} href={a.url} />
+                <AttachmentRow key={a.id} name={a.name} size={a.size} mime={a.mime} href={a.url} onPreview={() => onPreview(a)} />
             ))}
         </div>
     );

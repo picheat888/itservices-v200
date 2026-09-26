@@ -115,6 +115,14 @@ export const common: Dict = {
     attachment_drop: 'Drag & drop files here, or click to choose',
     attachment_count: '{n} / {max} files attached',
 
+    // attachment-preview.tsx — the in-app viewer for a saved file
+    attachment_download: 'Download',
+    attachment_preview: 'Preview',
+    attachment_zoom_in: 'Zoom in',
+    attachment_zoom_out: 'Zoom out',
+    attachment_zoom_reset: 'Reset zoom',
+    attachment_no_inline_preview: "This file type can't be previewed here - download it to open.",
+
     // import-dialog.tsx — the shared bulk-CSV import
     import_download_template: 'Download CSV template',
     import_run: 'Import',

@@ -1,7 +1,9 @@
 import { useT } from '@/lang';
 import { AssetTypeIcon } from '@/modules/asset';
+import { AttachmentPreview, FILE_TONE, KIND_META, fileKind } from '@/shared/components/attachment-preview';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { DialogTabs } from '@/shared/components/dialog-tabs';
+import { formatFileSize } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
@@ -9,70 +11,26 @@ import { REQUEST_TYPE_META } from '@/shared/lib/request-meta';
 import { cn } from '@/shared/lib/utils';
 import type { ServiceRequestType, Ticket, TicketAttachment, TicketStatus, TicketWorkClass } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogTitle, focusDialogContentClass } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
 import { useUiStore } from '@/stores/ui';
 import {
     ArrowRightLeft,
     Check,
     CircleAlert,
     Download,
-    File,
-    FileArchive,
-    FileSpreadsheet,
-    FileText,
     History,
     MessageSquarePlus,
     Paperclip,
     Pencil,
-    Presentation,
     RefreshCcw,
-    RotateCcw,
     Users,
     Wrench,
     X,
     Zap,
-    ZoomIn,
-    ZoomOut,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
+import { useEffect, useState } from 'react';
 import type { ResolveMode } from './resolve-ticket-modal';
 import { TICKET_WORK_CLASS_META, TicketPriorityBadge, TicketSlaBadge, TicketStatusBadge, ticketCategoryIcon } from './ticket-meta';
-
-/** Human-readable file size (KB/MB) for the attachment list. */
-function formatSize(bytes: number): string {
-    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/** Broad file category derived from mime + extension — drives the icon and the preview mode. */
-type FileKind = 'image' | 'pdf' | 'word' | 'excel' | 'ppt' | 'archive' | 'other';
-
-/** Classify an attachment. Only image and pdf can be previewed inline; the rest show a file card. */
-function fileKind(a: TicketAttachment): FileKind {
-    const mime = a.mime ?? '';
-    const ext = a.name.split('.').pop()?.toLowerCase() ?? '';
-    if (mime.startsWith('image/')) return 'image';
-    if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
-    if (ext === 'doc' || ext === 'docx') return 'word';
-    if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') return 'excel';
-    if (ext === 'ppt' || ext === 'pptx') return 'ppt';
-    if (ext === 'zip' || ext === 'rar' || ext === '7z') return 'archive';
-    return 'other';
-}
-
-/** Icon + short format keyword per non-image file kind (keyword is a format name, not translated). */
-const KIND_META: Record<Exclude<FileKind, 'image'>, { Icon: typeof FileText; short: string }> = {
-    pdf: { Icon: FileText, short: 'PDF' },
-    word: { Icon: FileText, short: 'WORD' },
-    excel: { Icon: FileSpreadsheet, short: 'EXCEL' },
-    ppt: { Icon: Presentation, short: 'PPT' },
-    archive: { Icon: FileArchive, short: 'ZIP' },
-    other: { Icon: File, short: 'FILE' },
-};
-
-/** One solid muted tone for every file icon/badge — minimal, monochrome (not translucent); the kind reads from the keyword. */
-const FILE_TONE = 'text-muted-foreground';
 
 /**
  * One-line label/value row for the rail's compact sections (SLA, dates).
@@ -369,15 +327,6 @@ export function TicketDetailDrawer({
     const [tab, setTab] = useState<'details' | 'progress' | 'files'>('details');
     // In-app preview (lightbox) for image and PDF attachments instead of opening a new tab.
     const [preview, setPreview] = useState<TicketAttachment | null>(null);
-    // Same retention trick for the lightbox — render from the last shown file so it
-    // doesn't blank while its own exit animation plays.
-    const [shownPreview, setShownPreview] = useState<TicketAttachment | null>(null);
-    useEffect(() => {
-        if (preview) setShownPreview(preview);
-    }, [preview]);
-    const pv = preview ?? shownPreview;
-    // Imperative zoom controls for the image lightbox (react-zoom-pan-pinch).
-    const zoomRef = useRef<ReactZoomPanPinchRef | null>(null);
     useEffect(() => {
         setPreview(null);
         setTab('details');
@@ -416,12 +365,6 @@ export function TicketDetailDrawer({
     const hasDeskActions = showTake || showAssign || (isWorking && (isMine || showForward));
     const files = view.attachments ?? [];
     const [s1, s2, s3] = spineTones(view.status);
-    // Preview mode: images zoom/pan, PDFs embed via <iframe>, everything else shows a file card.
-    const pvKind = pv ? fileKind(pv) : null;
-    const isImagePreview = pvKind === 'image';
-    const isPdfPreview = pvKind === 'pdf';
-    // Icon/label metadata for the file card (non-image kinds; pdf is embedded, not carded).
-    const pvMeta = pvKind && pvKind !== 'image' ? KIND_META[pvKind] : null;
     // A ticket canceled before anyone took it never reached step 2.
     const wasTaken = view.responded_at != null || view.assignee_name != null;
 
@@ -675,8 +618,8 @@ export function TicketDetailDrawer({
                                                                 <a
                                                                     href={a.url}
                                                                     download={a.name}
-                                                                    aria-label={t('ticket_download')}
-                                                                    title={t('ticket_download')}
+                                                                    aria-label={t('attachment_download')}
+                                                                    title={t('attachment_download')}
                                                                     className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-8 w-8 shrink-0 place-items-center rounded-md"
                                                                 >
                                                                     <Download className="h-4 w-4" />
@@ -920,126 +863,8 @@ export function TicketDetailDrawer({
                 </DialogContent>
             </Dialog>
 
-            {/* Attachment lightbox — images render inline, PDFs embed the browser's viewer via <iframe>. */}
-            <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
-                <DialogContent className="max-w-3xl gap-0 overflow-hidden p-0 [&>button]:hidden">
-                    <div className="border-border flex items-center gap-3 border-b px-4 py-2.5">
-                        <DialogTitle className="min-w-0 flex-1 truncate text-sm font-semibold">{pv?.name}</DialogTitle>
-                        {pv && isImagePreview && (
-                            <div className="flex shrink-0 items-center gap-0.5">
-                                <button
-                                    type="button"
-                                    onClick={() => zoomRef.current?.zoomOut(0.4, 250, 'easeOutCubic')}
-                                    aria-label={t('ticket_zoom_out')}
-                                    title={t('ticket_zoom_out')}
-                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
-                                >
-                                    <ZoomOut className="h-4 w-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => zoomRef.current?.zoomIn(0.4, 250, 'easeOutCubic')}
-                                    aria-label={t('ticket_zoom_in')}
-                                    title={t('ticket_zoom_in')}
-                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
-                                >
-                                    <ZoomIn className="h-4 w-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => zoomRef.current?.resetTransform(250, 'easeOutCubic')}
-                                    aria-label={t('ticket_zoom_reset')}
-                                    title={t('ticket_zoom_reset')}
-                                    className="text-muted-foreground hover:bg-accent hover:text-foreground grid h-7 w-7 place-items-center rounded-md"
-                                >
-                                    <RotateCcw className="h-3.5 w-3.5" />
-                                </button>
-                            </div>
-                        )}
-                        <button
-                            type="button"
-                            onClick={() => setPreview(null)}
-                            aria-label={t('close')}
-                            className="text-muted-foreground hover:text-foreground shrink-0"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                    <div
-                        className="bg-muted/30 flex items-center justify-center overflow-hidden"
-                        onWheelCapture={(e) => {
-                            const inst = zoomRef.current?.instance;
-                            if (!inst) return;
-                            // Smooth mode zooms by step × |deltaY| per event. A mouse notch sends ~100,
-                            // a touchpad tick ~1-10 — so derive step per event: touchpads keep the fast
-                            // fine-grained 0.1 feel, while the zoom per mouse notch is capped at ~0.35.
-                            inst.setup.wheel.step = Math.min(0.1, 0.35 / Math.max(1, Math.abs(e.deltaY)));
-                        }}
-                    >
-                        {pv &&
-                            (isImagePreview ? (
-                                // Zoom (wheel / double-click / +− buttons) and drag-to-pan via react-zoom-pan-pinch.
-                                // wheel.step is only the initial value — onWheelCapture above retunes it per event.
-                                <TransformWrapper
-                                    key={pv.id}
-                                    ref={zoomRef}
-                                    minScale={1}
-                                    maxScale={8}
-                                    smooth
-                                    wheel={{ step: 0.002 }}
-                                    doubleClick={{ mode: 'toggle', animationTime: 250, animationType: 'easeOutCubic' }}
-                                    zoomAnimation={{ animationTime: 250, animationType: 'easeOutCubic' }}
-                                    centerOnInit
-                                >
-                                    <TransformComponent
-                                        wrapperClass="!h-[72vh] !w-full"
-                                        contentClass="!flex !h-full !w-full items-center justify-center"
-                                    >
-                                        <img
-                                            src={pv.url}
-                                            alt={pv.name}
-                                            draggable={false}
-                                            className="max-h-[70vh] w-auto object-contain select-none"
-                                        />
-                                    </TransformComponent>
-                                </TransformWrapper>
-                            ) : isPdfPreview ? (
-                                <iframe src={pv.url} title={pv.name} className="h-[72vh] w-full border-0" />
-                            ) : (
-                                // Office / archive / other: no inline render — show a file card with a download action.
-                                pvMeta && (
-                                    <div className="flex h-[60vh] w-full flex-col items-center justify-center gap-5 p-8 text-center">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <pvMeta.Icon strokeWidth={1.5} className={cn('h-20 w-20', FILE_TONE)} />
-                                            <span
-                                                className={cn(
-                                                    'rounded-full border border-current px-2.5 py-0.5 text-[11px] font-bold tracking-widest',
-                                                    FILE_TONE,
-                                                )}
-                                            >
-                                                {pvMeta.short}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="text-base font-semibold break-all">{pv.name}</div>
-                                            <div className="text-muted-foreground font-mono text-xs">
-                                                {formatSize(pv.size)}
-                                                {pv.created_at ? ` · ${fmtWhen(pv.created_at)}` : ''}
-                                            </div>
-                                            <div className="text-muted-foreground pt-1 text-xs">{t('ticket_no_inline_preview')}</div>
-                                        </div>
-                                        <Button asChild>
-                                            <a href={pv.url} download={pv.name}>
-                                                <Download className="h-4 w-4" />
-                                                {t('ticket_download')}
-                                            </a>
-                                        </Button>
-                                    </div>
-                                )
-                            ))}
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {/* Attachment lightbox — images zoom/pan, PDFs embed the browser's viewer, the rest show a file card. */}
+            <AttachmentPreview file={preview} onClose={() => setPreview(null)} meta={(f) => (f.created_at ? fmtWhen(f.created_at) : '')} />
         </>
     );
 }
