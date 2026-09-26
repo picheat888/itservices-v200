@@ -2,10 +2,12 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority, TicketStatus } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -26,7 +28,6 @@ import {
     ChevronRight,
     CircleDot,
     Clock,
-    Download,
     Flag,
     Gauge,
     History,
@@ -68,7 +69,7 @@ import { TicketUpdateModal } from '../components/ticket-update-modal';
 import { useTickets, useTicketSummary } from '../hooks/use-tickets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
-const TAB_IDS = ['dashboard', 'all', 'mine', 'my'] as const;
+const TAB_IDS = ['overview', 'all', 'mine', 'my'] as const;
 type Tab = (typeof TAB_IDS)[number];
 const ALL = '__all__';
 
@@ -87,7 +88,7 @@ const isTicketTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[
 
 /** Resolve the starting tab from the URL (?tab=), falling back to the first visible tab. */
 function initialTicketTab(visibleTabs: readonly Tab[]): Tab {
-    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
     if (isTicketTab(fromUrl) && visibleTabs.includes(fromUrl)) return fromUrl;
     // A role with no ticket tabs at all still lands somewhere harmless.
     return visibleTabs[0] ?? 'my';
@@ -313,7 +314,7 @@ function RangeSelect({ value, onChange, t }: { value: SummaryRange; onChange: (v
 }
 
 /** Loading placeholder for the dashboard body (KPI cards + category bars + latest list). */
-function TicketDashboardBodySkeleton() {
+function TicketOverviewBodySkeleton() {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
@@ -377,7 +378,7 @@ export default function TicketsPage() {
     const { user, can: has } = useAuth();
     const isIT = has('tickets.view_all');
     const canCreate = has('tickets.create');
-    const canDashboard = has('tickets.view_dashboard');
+    const canOverview = has('tickets.view_dashboard');
     const canJobs = has('tickets.jobs');
     // My Tickets (requester view) has its own gate so it can be granted per role.
     const canMyTickets = has('tickets.my');
@@ -392,7 +393,7 @@ export default function TicketsPage() {
 
     // Tabs the current user can see, in display order — each behind its own gate.
     const visibleTabs: Tab[] = [
-        ...(canDashboard ? (['dashboard'] as Tab[]) : []),
+        ...(canOverview ? (['overview'] as Tab[]) : []),
         ...(isIT ? (['all'] as Tab[]) : []),
         ...(canJobs ? (['mine'] as Tab[]) : []),
         ...(canMyTickets ? (['my'] as Tab[]) : []),
@@ -499,7 +500,7 @@ export default function TicketsPage() {
         [setSearchParams],
     );
 
-    const { data: summary, isLoading: summaryLoading } = useTicketSummary(canDashboard, range);
+    const { data: summary, isLoading: summaryLoading } = useTicketSummary(canOverview, range);
     // Not just `has_repair_rules`: a case can be classified repair before an administrator
     // configures a work-class target (a valid order of operations — TicketService::setWorkClass
     // never requires one to exist). When that happens TicketController already excludes it from
@@ -531,7 +532,7 @@ export default function TicketsPage() {
 
     // The dashboard's "Latest" card has its own fixed query — the tab list's
     // search / filters / sort / page must never leak into it.
-    const { data: latestData } = useTickets({ page: 1, per_page: 5 }, canDashboard && tab === 'dashboard');
+    const { data: latestData } = useTickets({ page: 1, per_page: 5 }, canOverview && tab === 'overview');
     const latestRows = latestData?.data ?? [];
 
     const cats = summary?.by_category ?? [];
@@ -672,10 +673,6 @@ export default function TicketsPage() {
                     <p className="text-muted-foreground text-sm">{t('tickets_sub')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" disabled>
-                        <Download className="h-4 w-4" />
-                        {t('export')}
-                    </Button>
                     {canCreate && (
                         <Button onClick={openCreate}>
                             <Plus className="h-4 w-4" />
@@ -686,46 +683,26 @@ export default function TicketsPage() {
             </div>
 
             <Card className="overflow-hidden">
-                <div className="border-border flex gap-1 border-b px-2">
-                    {visibleTabs.map((tb) => (
-                        <button
-                            key={tb}
-                            onClick={() => changeTab(tb)}
-                            className={cn(
-                                'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                                tab === tb ? 'border-brand text-brand' : 'text-muted-foreground hover:text-foreground border-transparent',
-                            )}
-                        >
-                            {tb === 'dashboard'
-                                ? t('ticket_tab_dashboard')
+                {/* Counts are outstanding work, so all three use the red pill. */}
+                <PageTabs
+                    tabs={visibleTabs.map((tb) => ({
+                        id: tb,
+                        label:
+                            tb === 'overview'
+                                ? t('ticket_tab_overview')
                                 : tb === 'all'
                                   ? t('ticket_tab_all')
                                   : tb === 'mine'
                                     ? t('ticket_tab_mine')
-                                    : t('ticket_tab_my')}
-                            {tb === 'all' && (meta?.open_count ?? 0) > 0 && (
-                                // Tickets still waiting for a take: soft red pill (same as the Stock alert badge).
-                                <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                                    {(meta?.open_count ?? 0).toLocaleString('en-US')}
-                                </span>
-                            )}
-                            {tb === 'mine' && (meta?.my_jobs_count ?? 0) > 0 && (
-                                // My unfinished assignments — same outstanding-work pill.
-                                <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                                    {(meta?.my_jobs_count ?? 0).toLocaleString('en-US')}
-                                </span>
-                            )}
-                            {tb === 'my' && (meta?.my_tickets_count ?? 0) > 0 && (
-                                // My own requests still unresolved — same outstanding-work pill.
-                                <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                                    {(meta?.my_tickets_count ?? 0).toLocaleString('en-US')}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
+                                    : t('ticket_tab_my'),
+                        count: tb === 'all' ? meta?.open_count : tb === 'mine' ? meta?.my_jobs_count : tb === 'my' ? meta?.my_tickets_count : null,
+                        tone: 'alert' as const,
+                    }))}
+                    active={tab}
+                    onChange={changeTab}
+                />
 
-                {tab === 'dashboard' && canDashboard && (
+                {tab === 'overview' && canOverview && (
                     <div className="p-5">
                         {/* Window selector stays put while the numbers below reload. */}
                         <div className="mb-5 flex items-center justify-between gap-3">
@@ -737,7 +714,7 @@ export default function TicketsPage() {
                         </div>
 
                         {summaryLoading ? (
-                            <TicketDashboardBodySkeleton />
+                            <TicketOverviewBodySkeleton />
                         ) : (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">

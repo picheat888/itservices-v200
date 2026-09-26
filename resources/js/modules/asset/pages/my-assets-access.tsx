@@ -37,7 +37,7 @@ type Kind = (typeof KIND_ORDER)[number];
  * Icon and colour per kind.
  *
  * The four access colours are the ones the Access registry already gives each channel
- * (access-dashboard.tsx), so a file share is the same teal wherever somebody meets it. Assets
+ * (access-overview.tsx), so a file share is the same teal wherever somebody meets it. Assets
  * keep the brand colour: they are this module's own subject, not one of access's channels.
  * Colour is what lets a long mixed list be scanned by shape and hue rather than read line by
  * line — the group headings carry the words.

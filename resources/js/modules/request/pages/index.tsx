@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import {
@@ -16,6 +17,7 @@ import {
     REQUEST_TYPES,
     requestTitle,
 } from '@/shared/lib/request-meta';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { ServiceRequest, ServiceRequestStatus, ServiceRequestType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -60,7 +62,7 @@ function headlineValue(request: ServiceRequest, lang: 'en' | 'th'): string {
 /** Sentinel for the filters' "all" row — a SearchableSelect option cannot be empty. */
 const ALL = '__all__';
 /** The tab slugs, which are also what ?tab= carries. */
-const TABS = ['dashboard', 'all', 'approvals'] as const;
+const TABS = ['overview', 'all', 'approvals'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 
@@ -82,13 +84,13 @@ export default function RequestsPage() {
     // Active tab lives in the URL and nowhere else, so a reload or a shared link is
     // exact. Validated rather than cast: `?tab=` with a slug this page does not have used
     // to leave the whole card empty, since no branch below matched it.
-    const tabParam = searchParams.get('tab');
-    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'dashboard'));
+    const tabParam = readTabParam(searchParams.get('tab'));
+    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'overview'));
     useEffect(() => {
         if (isTab(tabParam) && tabParam !== tab) setTabState(tabParam);
     }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
     // Either list scope means the list tab is the one on screen.
-    const isListTab = tab !== 'dashboard';
+    const isListTab = tab !== 'overview';
     const setTab = (next: Tab) => {
         setTabState(next);
         setSearchParams(
@@ -128,7 +130,7 @@ export default function RequestsPage() {
     const meta = pageData?.meta;
 
     // Dashboard only: the oldest requests waiting on ME (inline decisions).
-    const { data: queueData } = useRequests({ page: 1, per_page: 4, scope: 'approvals' }, tab === 'dashboard');
+    const { data: queueData } = useRequests({ page: 1, per_page: 4, scope: 'approvals' }, tab === 'overview');
     const queue = queueData?.data ?? [];
 
     // Dialogs — create via ?add=1, detail via ?view=<id> (bell deep links land here).
@@ -303,38 +305,20 @@ export default function RequestsPage() {
 
             {/* Tab card */}
             <Card className="overflow-hidden p-0">
-                <div className="border-border flex items-center gap-1 border-b px-2">
-                    {/* Two tabs, not three. "Awaiting my approval" was the same table with
-                        `scope=approvals` on the query — a filter wearing a tab's clothes, which
-                        also split one set of filters into two modes of itself. It is a chip
-                        inside the list now; the tab stays lit for either scope. */}
-                    {(
-                        [
-                            ['dashboard', t('requests_tab_dashboard'), null],
-                            ['all', t('requests_tab_list'), meta?.total ?? null],
-                        ] as [Tab, string, number | null][]
-                    ).map(([id, label, count]) => {
-                        const active = id === 'dashboard' ? tab === 'dashboard' : isListTab;
+                {/* Two tabs, not three. "Awaiting my approval" was the same table with
+                    `scope=approvals` on the query — a filter wearing a tab's clothes, which
+                    also split one set of filters into two modes of itself. It is a chip
+                    inside the list now; the tab stays lit for either scope. */}
+                <PageTabs<Tab>
+                    tabs={[
+                        { id: 'overview', label: t('requests_tab_overview') },
+                        { id: 'all', label: t('requests_tab_list'), count: meta?.total ?? null },
+                    ]}
+                    active={isListTab ? 'all' : 'overview'}
+                    onChange={setTab}
+                />
 
-                        return (
-                            <button
-                                key={id}
-                                type="button"
-                                onClick={() => setTab(id)}
-                                className={cn(
-                                    'relative px-3 py-3 text-sm font-medium transition-colors',
-                                    active ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                {label}
-                                {count != null && count > 0 && <span className="text-muted-foreground ml-1.5 font-mono text-xs">{count}</span>}
-                                {active && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {tab === 'dashboard' ? (
+                {tab === 'overview' ? (
                     <div className="space-y-4 p-4">
                         {/* KPI row — each card opens the list it summarises. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

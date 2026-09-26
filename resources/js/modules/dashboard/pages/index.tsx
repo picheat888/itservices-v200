@@ -9,7 +9,16 @@ import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
 import { Box, Building2, Check, FileText, History, Inbox, type LucideIcon, PackageCheck, Ticket, UserMinus, UserPlus, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import type { ActivityRow, DashboardHr, DashboardIt, MyAssetRow, MyRequestRow, MyTicketRow } from '../api/dashboardApi';
+import type {
+    ActivityRow,
+    DashboardHr,
+    DashboardIt,
+    DashboardRequests,
+    MyAssetRow,
+    MyRequestRow,
+    MyTicketRow,
+    WaitingRequestRow,
+} from '../api/dashboardApi';
 import { useDashboardSummary } from '../hooks/use-dashboard';
 
 /** Badge tone per ticket / request status — the same colours the module pages use. */
@@ -451,6 +460,125 @@ function WorkloadCard({ it }: { it: DashboardIt }) {
     );
 }
 
+/** A request's life in order — the list reads like the workflow, not biggest-first. */
+const REQUEST_STATUS_ORDER = ['pending', 'approved', 'completed', 'rejected', 'cancelled'] as const;
+
+const REQUEST_STATUS_DOT: Record<(typeof REQUEST_STATUS_ORDER)[number], string> = {
+    pending: 'bg-amber-500 dark:bg-amber-400',
+    approved: 'bg-blue-500 dark:bg-blue-400',
+    completed: 'bg-emerald-500 dark:bg-emerald-400',
+    rejected: 'bg-red-500 dark:bg-red-400',
+    cancelled: 'bg-gray-400 dark:bg-gray-500',
+};
+
+/**
+ * What came in over the window: split by status, then by what it was for.
+ *
+ * Bars rather than the tickets' ring — five statuses plus up to thirteen types is too many
+ * slices to compare as angles, and one bar style for both halves keeps the card one shape.
+ */
+function RequestsOverviewCard({ requests }: { requests: DashboardRequests }) {
+    const t = useT();
+    const total = REQUEST_STATUS_ORDER.reduce((sum, key) => sum + requests.by_status[key], 0);
+    const busiestType = Math.max(1, ...requests.by_type.map((row) => row.count));
+
+    return (
+        <Card className="overflow-hidden">
+            <div className="border-border flex items-center justify-between border-b px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                    <Inbox className="text-muted-foreground h-4 w-4" />
+                    <span className="font-semibold">{t('dash_requests_overview')}</span>
+                </div>
+                <span className="text-muted-foreground text-xs">
+                    {t('dash_last_days').replace('{n}', String(requests.window_days))} ·{' '}
+                    <b className="text-foreground font-mono font-semibold">{total}</b> {t('dash_requests')}
+                </span>
+            </div>
+            <div className="p-5">
+                {total === 0 ? (
+                    <div className="text-muted-foreground py-12 text-center text-sm">{t('dash_empty_requests_window')}</div>
+                ) : (
+                    <>
+                        <ul className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+                            {REQUEST_STATUS_ORDER.map((key) => (
+                                <li key={key} className="flex items-baseline gap-2 text-sm">
+                                    <span className={cn('h-2 w-2 shrink-0 translate-y-[-1px] rounded-full', REQUEST_STATUS_DOT[key])} />
+                                    <span className="text-muted-foreground truncate">{t(`req_status_${key}`)}</span>
+                                    <span className="ml-auto font-mono font-semibold">{requests.by_status[key]}</span>
+                                    <span className="text-muted-foreground w-9 shrink-0 text-right font-mono text-xs">
+                                        {Math.round((requests.by_status[key] / total) * 100)}%
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="border-border/60 mt-5 border-t pt-4">
+                            <div className="text-muted-foreground mb-3 text-xs font-semibold">{t('dash_requests_by_type')}</div>
+                            <ul className="space-y-3">
+                                {requests.by_type.map((row) => (
+                                    <li key={row.type}>
+                                        <div className="flex items-baseline justify-between gap-3 text-sm">
+                                            <span className="truncate">{t(`req_${row.type}`)}</span>
+                                            <span className="font-mono font-semibold">{row.count}</span>
+                                        </div>
+                                        <div className="bg-secondary mt-1.5 h-1.5 w-full overflow-hidden rounded-full">
+                                            <span
+                                                className="bg-brand block h-full rounded-full"
+                                                style={{ width: `${(row.count / busiestType) * 100}%` }}
+                                            />
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </>
+                )}
+            </div>
+        </Card>
+    );
+}
+
+/**
+ * Steps sitting with somebody past the reminder threshold, longest first — the same set the
+ * morning bell goes out for. Each row opens the request itself.
+ */
+function WaitingRequestsCard({ requests }: { requests: DashboardRequests }) {
+    const t = useT();
+    return (
+        <ListCard
+            title={`${t('dash_waiting_title').replace('{n}', String(requests.waiting_after_days))}${requests.waiting_count > 0 ? ` · ${requests.waiting_count}` : ''}`}
+            icon={Inbox}
+            to="/requests?tab=all"
+            empty={t('dash_empty_waiting')}
+            rows={requests.waiting.length}
+        >
+            {requests.waiting.map((row: WaitingRequestRow) => (
+                <Link key={row.id} to={`/requests?view=${row.id}`} className="hover:bg-accent/50 block transition-colors">
+                    <Row
+                        lead={row.title}
+                        sub={
+                            <>
+                                <span className="font-mono">{row.reference}</span>
+                                {row.waiting_on && (
+                                    <span>
+                                        {' '}
+                                        · {t('dash_waiting_on')} {row.waiting_on}
+                                    </span>
+                                )}
+                            </>
+                        }
+                        trailing={
+                            <span className="shrink-0 font-mono text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                {t('dash_days').replace('{n}', String(row.days))}
+                            </span>
+                        }
+                    />
+                </Link>
+            ))}
+        </ListCard>
+    );
+}
+
 /** Headcount, who just joined, and what IT still owes them. */
 function HrSection({ hr }: { hr: DashboardHr }) {
     const t = useT();
@@ -687,6 +815,13 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <TicketsOverviewCard it={data.it} />
                     <WorkloadCard it={data.it} />
+                </div>
+            )}
+
+            {data?.requests && (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <RequestsOverviewCard requests={data.requests} />
+                    <WaitingRequestsCard requests={data.requests} />
                 </div>
             )}
 

@@ -146,8 +146,25 @@ class RequestStalledService
             ->values();
     }
 
+    /**
+     * Steps that have waited past the daily-nudge threshold, longest first — the same set the
+     * morning bell goes out for, so the front page and the bell never disagree on "waiting".
+     *
+     * @return Collection<int, RequestApproval>
+     */
+    public function waitingSteps(): Collection
+    {
+        return $this->stalledRows(self::NUDGE_AFTER_DAYS)->sortBy('became_current_at')->values();
+    }
+
+    /** The threshold waitingSteps() uses, for the screen to quote. */
+    public function waitingAfterDays(): int
+    {
+        return self::NUDGE_AFTER_DAYS;
+    }
+
     /** Whole days the rung has been current, rounded down — what the reminder quotes. */
-    private function daysWaiting(RequestApproval $row): int
+    public function daysWaiting(RequestApproval $row): int
     {
         return (int) $row->became_current_at->diffInDays(now());
     }

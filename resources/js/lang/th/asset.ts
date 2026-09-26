@@ -3,7 +3,7 @@ import type { Dict } from '@/lang/types';
 export const asset: Dict = {
     assets_title: 'การจัดการทรัพย์สิน',
     assets_sub: 'อุปกรณ์ที่ซื้อและเช่าใช้ในแต่ละแผนก',
-    asset_dashboard: 'Dashboard',
+    asset_overview: 'ภาพรวม',
     asset_inventory: 'รายการทรัพย์สิน',
     asset_transfers: 'ประวัติการโอน',
     transfer_asset: 'โอนทรัพย์สิน',

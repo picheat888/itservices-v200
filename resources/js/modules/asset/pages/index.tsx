@@ -3,9 +3,11 @@ import { useAuth } from '@/modules/auth';
 import { useCategories, useWarehouses } from '@/modules/settings';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { ToneDot } from '@/shared/components/status-badge';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Asset, AssetStatus, AssetSummary, AssetTransferLog, AssetType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -57,15 +59,15 @@ import { AssetWriteoffDialog } from '../components/asset-writeoff-dialog';
 import { useAssetMutations, useAssets, useAssetSummary, useAssetTransfers, usePendingReturns } from '../hooks/use-assets';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
-const TAB_IDS = ['dashboard', 'inventory', 'transfers'] as const;
+const TAB_IDS = ['overview', 'inventory', 'transfers'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isAssetTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
 /** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialAssetTab(): Tab {
-    const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    return isAssetTab(fromUrl) ? fromUrl : 'dashboard';
+    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
+    return isAssetTab(fromUrl) ? fromUrl : 'overview';
 }
 
 function StatCard({ label, value, hint, icon: Icon }: { label: string; value: string | number; hint?: string; icon: typeof Box }) {
@@ -103,7 +105,7 @@ const TYPE_BUCKETS = [
 ] as const;
 
 /** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
-function AssetDashboardSkeleton() {
+function AssetOverviewSkeleton() {
     return (
         <div className="space-y-6 p-5">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -185,7 +187,7 @@ export default function AssetsPage() {
     const canForceRecall = can('assets.force_recall');
     const canCancelWriteoff = can('assets.cancel_writeoff');
     const canDelete = can('assets.delete');
-    const canViewDashboard = can('assets.view_dashboard');
+    const canViewOverview = can('assets.view_dashboard');
     // Accepting a hand-over is the recipient's action only — matched by their employee code.
     const myEmpCode = user?.employee_code ?? null;
 
@@ -208,12 +210,12 @@ export default function AssetsPage() {
         [setSearchParams],
     );
 
-    // The Dashboard tab is gated by assets.view_dashboard — bounce a role without it to Inventory.
+    // The Overview tab is gated by assets.view_dashboard — bounce a role without it to Inventory.
     useEffect(() => {
-        if (tab === 'dashboard' && !canViewDashboard) {
+        if (tab === 'overview' && !canViewOverview) {
             changeTab('inventory');
         }
-    }, [tab, canViewDashboard, changeTab]);
+    }, [tab, canViewOverview, changeTab]);
 
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<AssetType | ''>('');
@@ -535,27 +537,21 @@ export default function AssetsPage() {
             )}
 
             <Card className="overflow-hidden">
-                <div className="border-border flex gap-1 border-b px-2">
-                    {(['dashboard', 'inventory', 'transfers'] as Tab[])
-                        .filter((tb) => tb !== 'dashboard' || canViewDashboard)
-                        .map((tb) => (
-                            <button
-                                key={tb}
-                                onClick={() => changeTab(tb)}
-                                className={cn(
-                                    'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                                    tab === tb ? 'border-brand text-brand' : 'text-muted-foreground hover:text-foreground border-transparent',
-                                )}
-                            >
-                                {tb === 'dashboard' ? t('asset_dashboard') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers')}
-                            </button>
-                        ))}
-                </div>
+                <PageTabs
+                    tabs={(['overview', 'inventory', 'transfers'] as Tab[])
+                        .filter((tb) => tb !== 'overview' || canViewOverview)
+                        .map((tb) => ({
+                            id: tb,
+                            label: tb === 'overview' ? t('asset_overview') : tb === 'inventory' ? t('asset_inventory') : t('asset_transfers'),
+                        }))}
+                    active={tab}
+                    onChange={changeTab}
+                />
 
-                {tab === 'dashboard' && summaryLoading && <AssetDashboardSkeleton />}
-                {tab === 'dashboard' && !summaryLoading && (
+                {tab === 'overview' && summaryLoading && <AssetOverviewSkeleton />}
+                {tab === 'overview' && !summaryLoading && (
                     <div className="space-y-6 p-5">
-                        {/* Summary stats live on the Dashboard tab. */}
+                        {/* Summary stats live on the Overview tab. */}
                         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                             <StatCard label={t('asset_total')} value={summary?.total ?? 0} icon={Box} />
                             <StatCard

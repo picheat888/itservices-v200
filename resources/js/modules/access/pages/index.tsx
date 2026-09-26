@@ -3,8 +3,10 @@ import { useAuth } from '@/modules/auth';
 import { AvatarStack } from '@/shared/components/avatar-stack';
 import { DataTable, type Column } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { AccessKind, EmailGroup, FileShare, SocialPlatform, Software } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -12,16 +14,16 @@ import { Card } from '@/shared/ui/card';
 import { Building2, Folder, Globe, KeyRound, Package, Plus, Tag, Users } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AccessDashboard } from '../components/access-dashboard';
+import { AccessOverview } from '../components/access-overview';
 import { MembersDrawer, type MemberTarget } from '../components/members-drawer';
 import { ResourceModal } from '../components/resource-modal';
 import { useEmailGroups, useFileShares, useSocialPlatforms, useSoftware } from '../hooks/use-access';
 
 /** The overview tab plus the four resource registries. */
-type Tab = 'dashboard' | AccessKind;
+type Tab = 'overview' | AccessKind;
 
 /** Valid tab ids (URL guard) — the active tab is mirrored in the URL `?tab=`. */
-const TAB_IDS = ['dashboard', 'email-groups', 'file-shares', 'social-platforms', 'software'] as const;
+const TAB_IDS = ['overview', 'email-groups', 'file-shares', 'social-platforms', 'software'] as const;
 const isTab = (v: string | null): v is Tab => v != null && (TAB_IDS as readonly string[]).includes(v);
 /** Any of the four access resource shapes — used for the create/edit modal state. */
 type AnyResource = EmailGroup | FileShare | SocialPlatform | Software;
@@ -120,16 +122,16 @@ export default function AccessControlPage() {
     // Coerce the URL tab onto one the user may actually see: Overview needs its key,
     // a registry tab needs its view key; otherwise fall back to the first visible tab.
     const visibleKinds = (['email-groups', 'file-shares', 'social-platforms', 'software'] as AccessKind[]).filter((k) => canView[k]);
-    const firstTab: Tab = canOverview ? 'dashboard' : (visibleKinds[0] ?? 'email-groups');
-    const urlTab = searchParams.get('tab');
+    const firstTab: Tab = canOverview ? 'overview' : (visibleKinds[0] ?? 'email-groups');
+    const urlTab = readTabParam(searchParams.get('tab'));
     const resolvedTab: Tab = isTab(urlTab) ? urlTab : firstTab;
-    const tabAllowed = resolvedTab === 'dashboard' ? canOverview : canView[resolvedTab];
+    const tabAllowed = resolvedTab === 'overview' ? canOverview : canView[resolvedTab];
     const tab: Tab = tabAllowed ? resolvedTab : firstTab;
     // The manage drawer (?view=<id>) and the create form (?add=1) are URL-driven too; both derive below.
     // Only a real record id can match a row; Number('abc') is NaN and matched none.
     const viewId = toRecordId(searchParams.get('view'));
     // ?add=1 is a presence flag — the create form's kind comes from the active (?tab) registry.
-    const adding = searchParams.get('add') != null && tab !== 'dashboard';
+    const adding = searchParams.get('add') != null && tab !== 'overview';
 
     // Switch tab — mirror it in the URL (?tab=) and close any open drawer / create form.
     const setTab = (next: Tab) => {
@@ -139,7 +141,7 @@ export default function AccessControlPage() {
                 const p = new URLSearchParams(sp);
                 p.delete('view');
                 p.delete('add');
-                if (next === 'dashboard') {
+                if (next === 'overview') {
                     p.delete('tab');
                 } else {
                     p.set('tab', next);
@@ -311,7 +313,7 @@ export default function AccessControlPage() {
 
     // Every tab is permission-gated — hide the tab itself (not just its content).
     const tabs: { id: Tab; label: string }[] = [
-        ...(canOverview ? [{ id: 'dashboard' as Tab, label: t('access_tab_overview') }] : []),
+        ...(canOverview ? [{ id: 'overview' as Tab, label: t('access_tab_overview') }] : []),
         ...(canView['email-groups'] ? [{ id: 'email-groups' as Tab, label: t('access_email_groups') }] : []),
         ...(canView['file-shares'] ? [{ id: 'file-shares' as Tab, label: t('access_file_shares') }] : []),
         ...(canView['social-platforms'] ? [{ id: 'social-platforms' as Tab, label: t('access_social') }] : []),
@@ -402,7 +404,7 @@ export default function AccessControlPage() {
     // the loaded list and build its target. Single source of truth — no separate state, so
     // closing (dropping ?open) can never race a reopen. null = drawer closed.
     const members = useMemo<MemberTarget | null>(() => {
-        if (!viewId || tab === 'dashboard') {
+        if (!viewId || tab === 'overview') {
             return null;
         }
         const lists: Record<AccessKind, AnyResource[]> = {
@@ -525,21 +527,10 @@ export default function AccessControlPage() {
 
             {/* Tab card */}
             <Card className="overflow-hidden p-0">
-                <div className="border-border flex items-center gap-1 border-b px-2">
-                    {tabs.map((tb) => (
-                        <button
-                            key={tb.id}
-                            onClick={() => setTab(tb.id)}
-                            className={`relative px-3 py-3 text-sm font-medium ${tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground'}`}
-                        >
-                            {tb.label}
-                            {tab === tb.id && <span className="bg-brand absolute inset-x-3 -bottom-px h-0.5 rounded" />}
-                        </button>
-                    ))}
-                </div>
+                <PageTabs tabs={tabs} active={tab} onChange={setTab} />
 
                 <div className="p-4">
-                    {tab === 'dashboard' && <AccessDashboard onOpenTab={setTab} onOpenResource={openResource} canEdit={canEdit} />}
+                    {tab === 'overview' && <AccessOverview onOpenTab={setTab} onOpenResource={openResource} canEdit={canEdit} />}
                     {tab === 'email-groups' && (
                         <DataTable
                             columns={egColumns}
@@ -592,7 +583,7 @@ export default function AccessControlPage() {
 
             <ResourceModal
                 open={adding || !!editing}
-                kind={editing?.kind ?? (tab !== 'dashboard' ? tab : 'email-groups')}
+                kind={editing?.kind ?? (tab !== 'overview' ? tab : 'email-groups')}
                 row={editing?.row ?? null}
                 onClose={closeModal}
             />

@@ -64,6 +64,24 @@ export interface DashboardIt {
     workload: WorkloadRow[];
 }
 
+/** A request step that has sat with somebody past the reminder threshold. */
+export interface WaitingRequestRow {
+    id: number;
+    reference: string;
+    title: string;
+    waiting_on: string | null;
+    days: number;
+}
+
+export interface DashboardRequests {
+    window_days: number;
+    by_status: { pending: number; approved: number; rejected: number; completed: number; cancelled: number };
+    by_type: { type: string; count: number }[];
+    waiting_after_days: number;
+    waiting_count: number;
+    waiting: WaitingRequestRow[];
+}
+
 export interface RecentHire {
     id: number;
     name: string;
@@ -100,6 +118,7 @@ export interface ActivityRow {
 export interface DashboardSummary {
     mine: DashboardMine;
     it?: DashboardIt;
+    requests?: DashboardRequests;
     hr?: DashboardHr;
     activity?: ActivityRow[];
 }

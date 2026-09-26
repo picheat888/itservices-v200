@@ -55,7 +55,7 @@ export const common: Dict = {
     icon_search: 'ค้นหาไอคอน…',
     record_missing_title: 'ไม่พบข้อมูลนี้',
     record_missing_hint: 'ข้อมูลอาจถูกลบไปแล้ว หรือลิงก์ไม่ถูกต้อง',
-    sub_dashboard: 'Dashboard',
+    sub_overview: 'ภาพรวม',
     sub_directory: 'รายชื่อพนักงาน',
     sub_positions: 'ตำแหน่ง',
     sub_sections: 'หน่วยงาน',

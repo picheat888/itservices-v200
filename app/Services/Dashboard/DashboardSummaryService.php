@@ -11,9 +11,11 @@ use App\Models\Asset\Asset;
 use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
+use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
+use App\Services\Request\RequestStalledService;
 
 /**
  * What the front page shows, assembled in one request.
@@ -32,6 +34,8 @@ use App\Models\User;
  */
 class DashboardSummaryService
 {
+    public function __construct(private readonly RequestStalledService $stalled) {}
+
     /** How many rows each list card shows before "view all". */
     private const LIST_LIMIT = 5;
 
@@ -54,6 +58,9 @@ class DashboardSummaryService
 
         if ($user?->hasPermission('tickets.view_all')) {
             $blocks['it'] = $this->it();
+        }
+        if ($user?->hasPermission('requests.view_all')) {
+            $blocks['requests'] = $this->requests();
         }
         if ($user?->hasPermission('employees.view_dashboard')) {
             $blocks['hr'] = $this->hr();
@@ -252,6 +259,58 @@ class DashboardSummaryService
         }
 
         return $series;
+    }
+
+    /**
+     * The Requests half, for whoever oversees every request: what came in over the window,
+     * what it was for, and which steps are sitting with somebody.
+     *
+     * The window counts by `created_at`, like the IT block, for the same reason. "Waiting" is
+     * the stalled-reminder set (RequestStalledService::waitingSteps), so the number here is the
+     * number of morning bells, not a second definition of slow.
+     *
+     * @return array{window_days: int, by_status: array<string, int>, by_type: list<array{type: string, count: int}>, waiting_after_days: int, waiting_count: int, waiting: list<array<string, mixed>>}
+     */
+    private function requests(): array
+    {
+        $since = now()->subDays(self::WINDOW_DAYS);
+
+        $byStatus = ServiceRequest::where('created_at', '>=', $since)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        // Raw query rows, so `type` comes back as the stored string, not the enum cast.
+        $byType = ServiceRequest::query()
+            ->toBase()
+            ->where('created_at', '>=', $since)
+            ->selectRaw('type, COUNT(*) as total')
+            ->groupBy('type')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn (object $row) => ['type' => (string) $row->type, 'count' => (int) $row->total])
+            ->all();
+
+        $waiting = $this->stalled->waitingSteps();
+
+        return [
+            'window_days' => self::WINDOW_DAYS,
+            'by_status' => collect(RequestStatus::cases())
+                ->mapWithKeys(fn (RequestStatus $status) => [$status->value => (int) ($byStatus[$status->value] ?? 0)])
+                ->all(),
+            'by_type' => $byType,
+            'waiting_after_days' => $this->stalled->waitingAfterDays(),
+            'waiting_count' => $waiting->count(),
+            'waiting' => $waiting->take(self::LIST_LIMIT)
+                ->map(fn (RequestApproval $step) => [
+                    'id' => $step->request->id,
+                    'reference' => $step->request->reference,
+                    'title' => $step->request->title,
+                    // The named approver, or the rung's label when it is open to a group or the IT queue.
+                    'waiting_on' => $step->approver_name ?: $step->label,
+                    'days' => $this->stalled->daysWaiting($step),
+                ])->values()->all(),
+        ];
     }
 
     /**
