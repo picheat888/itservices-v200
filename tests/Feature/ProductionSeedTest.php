@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Permission\GroupRole;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
+use App\Models\Settings\AppSetting;
 use App\Models\User;
 use App\Models\Workflow\Workflow;
 use App\Support\DefaultWorkflows;
@@ -36,7 +38,7 @@ class ProductionSeedTest extends TestCase
         // module records
         'assets', 'asset_transfers', 'contracts', 'tickets', 'stock_items', 'stock_movements', 'service_requests',
         // access registries
-        'softwares', 'email_groups', 'file_shares', 'social_platforms', 'access_memberships', 'group_roles',
+        'softwares', 'email_groups', 'file_shares', 'social_platforms', 'access_memberships',
     ];
 
     public function test_it_creates_exactly_one_administrator_who_must_change_their_password(): void
@@ -104,7 +106,17 @@ class ProductionSeedTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
 
-        $this->assertSame(['admin', 'hr', 'super', 'user'], Role::orderBy('key')->pluck('key')->all());
+        $this->assertSame(
+            ['admin' => 'IT Support', 'hr' => 'HR Recruit', 'it_stock' => 'IT Admin & Document', 'it_supervisorleader' => 'IT Supervisor/Leader', 'super' => 'Administrator', 'user' => 'Staff'],
+            Role::orderBy('key')->pluck('name', 'key')->all(),
+        );
+
+        // The templates as the company set them up (2026-09-26): how many keys each grants.
+        $granted = fn (string $key) => RolePermission::where('role_id', Role::where('key', $key)->value('id'))->where('allowed', true)->count();
+        $this->assertSame(
+            ['admin' => 69, 'hr' => 18, 'user' => 8, 'it_supervisorleader' => 124, 'it_stock' => 45],
+            collect(['admin', 'hr', 'user', 'it_supervisorleader', 'it_stock'])->mapWithKeys(fn ($key) => [$key => $granted($key)])->all(),
+        );
 
         // One row per (role, permission key) — including the denied ones, so revoking
         // later is a value change rather than a delete.
@@ -115,6 +127,35 @@ class ProductionSeedTest extends TestCase
             Role::where('key', 'super')->value('is_system'),
             'the super role is system-owned and must not be deletable'
         );
+    }
+
+    /**
+     * One Role Group per template, and "User" as the group new employees join — without
+     * a default group no login account can be provisioned for anybody.
+     */
+    public function test_it_seeds_the_role_groups_and_the_default_group_for_new_employees(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame(
+            ['HR Recruit' => 'hr', 'IT Admin & Doc' => 'it_stock', 'IT Supervisor/Leader' => 'it_supervisorleader', 'IT Support' => 'admin', 'Super Administrator' => 'super', 'User' => 'user'],
+            GroupRole::with('role')->orderBy('name')->get()->mapWithKeys(fn (GroupRole $g) => [$g->name => $g->role->key])->all(),
+        );
+        $this->assertSame((string) GroupRole::where('name', 'User')->value('id'), AppSetting::get('default_employee_group_id'));
+    }
+
+    /** An administrator's own choice of default group, and their renamed groups, survive a re-seed. */
+    public function test_re_seeding_keeps_the_administrators_group_choices(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $hr = GroupRole::where('name', 'HR Recruit')->firstOrFail();
+        AppSetting::put('default_employee_group_id', (string) $hr->id);
+        GroupRole::where('name', 'User')->update(['name' => 'Everyone']);
+
+        $this->seed(DatabaseSeeder::class);
+
+        $this->assertSame((string) $hr->id, AppSetting::get('default_employee_group_id'));
+        $this->assertSame(6, GroupRole::count(), 'a renamed group must not come back as a duplicate');
     }
 
     /** A revoked permission must survive an upgrade that re-runs the seed. */

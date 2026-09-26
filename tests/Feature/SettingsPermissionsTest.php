@@ -33,12 +33,24 @@ class SettingsPermissionsTest extends TestCase
         $this->assertNotContains('system.edit_settings', Permissions::all());
     }
 
-    public function test_settings_permissions_are_not_granted_by_default(): void
+    /**
+     * The company's templates (2026-09-26) do grant settings sections — to IT only, and
+     * never a section without the settings.access master that opens the screen.
+     */
+    public function test_default_settings_grants_carry_the_master_and_stay_with_it(): void
     {
         foreach (Permissions::defaults() as $role => $granted) {
-            foreach ($granted as $key) {
-                $this->assertStringStartsNotWith('settings.', $key, "{$role} should not be granted {$key}");
+            $sections = array_filter($granted, fn (string $key) => str_starts_with($key, 'settings.') && $key !== 'settings.access');
+            if ($sections !== []) {
+                $this->assertContains('settings.access', $granted, "{$role} holds a settings section without settings.access");
             }
+        }
+
+        foreach (['hr', 'user'] as $role) {
+            $this->assertEmpty(
+                array_filter(Permissions::defaults()[$role], fn (string $key) => str_starts_with($key, 'settings.')),
+                "{$role} should not be granted any settings",
+            );
         }
     }
 

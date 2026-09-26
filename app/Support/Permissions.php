@@ -123,63 +123,64 @@ class Permissions
     }
 
     /**
-     * Default permission grants per role (super omitted = all).
+     * Default permission grants per Role Template (super omitted = all) — the templates
+     * as the company set them up on 2026-09-26. DatabaseSeeder writes them with
+     * firstOrCreate, so a change here reaches fresh installs, never an existing one.
      *
      * @return array<string, list<string>>
      */
     public static function defaults(): array
     {
         return [
-            // IT Technician — broad operational access, configurable
+            // IT Support — day-to-day tickets, requests, assets and access
             'admin' => [
-                'tickets.module', 'tickets.view_dashboard', 'tickets.view_all',
-                'tickets.resolve', 'tickets.forward', 'tickets.assign', 'tickets.set_work_class',
-                'tickets.level_hardware', 'tickets.level_software', 'tickets.level_network',
-                'tickets.level_cctv', 'tickets.level_telephone', 'tickets.level_other',
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'tickets.jobs',
-                'requests.module', 'requests.submit', 'requests.view_all', 'requests.fulfill',
-                'requests.notify_approved', 'requests.notify_stalled',
-                'workflows.module', 'workflows.manage',
-                'assets.module', 'assets.view_dashboard', 'assets.view', 'assets.register', 'assets.edit',
-                'assets.manage', 'assets.transfer', 'assets.receive', 'assets.retire',
-                'assets.my', 'assets.return', 'access.my',
-                // Asset hard delete + Special access (force recall / cancel write-off) stay super-only by default.
-                // Contract Lifecycle (cancel/expire/reactivate) and hard delete stay super-only by default.
-                'contracts.module', 'contracts.view_dashboard', 'contracts.view',
-                'contracts.create', 'contracts.edit', 'contracts.alerts',
-                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
-                'stock.request', 'stock.approve', 'stock.fulfill', 'stock.receive', 'stock.transfer', 'stock.return',
-                'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
-                'employees.view_section', 'employees.view_department', 'employees.view_position',
-                'employees.add', 'employees.import', 'employees.edit',
-                'employees.reset_password', 'employees.resign', 'employees.cancel_resign', 'employees.set_credentials',
-                // Employee hard delete (mis-entries only) stays super-only by default, like the
-                // other hard deletes above.
-                'access.module', 'access.overview',
-                'access.email_view', 'access.email_add', 'access.email_edit', 'access.email_delete',
-                'access.file_view', 'access.file_add', 'access.file_edit', 'access.file_delete',
-                'access.social_view', 'access.social_add', 'access.social_edit', 'access.social_delete',
-                'access.software_view', 'access.software_add', 'access.software_edit', 'access.software_delete',
-                'system.manage_permissions', 'system.manage_roles', 'system.manage_groups',
-                'system.view_audit',
+                'access.email_add', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_edit', 'access.software_view',
+                'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.return', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'contracts.alerts', 'contracts.module', 'contracts.view', 'contracts.view_dashboard',
+                'employees.add', 'employees.edit', 'employees.module', 'employees.reset_password', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
+                'settings.access', 'settings.requestdata',
+                'stock.module', 'stock.request', 'stock.view', 'stock.view_dashboard', 'stock.view_request',
+                'tickets.create', 'tickets.edit_own', 'tickets.forward', 'tickets.jobs', 'tickets.level_cctv', 'tickets.level_hardware', 'tickets.level_network', 'tickets.level_other', 'tickets.level_software', 'tickets.level_telephone', 'tickets.module', 'tickets.my', 'tickets.resolve', 'tickets.set_work_class', 'tickets.view_all', 'tickets.view_dashboard',
             ],
-            // HR — full Employee function + own tickets/requests
+            // HR Recruit — the employee register, plus self-service
             'hr' => [
-                'employees.module', 'employees.view_dashboard', 'employees.view', 'employees.view_org',
-                'employees.view_section', 'employees.view_department', 'employees.view_position',
-                'employees.add', 'employees.import', 'employees.edit', 'employees.edit_own',
-                'access.module', 'access.overview',
-                'access.email_view', 'access.file_view', 'access.social_view', 'access.software_view',
-                'assets.my', 'assets.return', 'access.my',
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit',
-                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
-                'stock.request',
+                'access.my',
+                'assets.my', 'assets.return',
+                'employees.add', 'employees.edit', 'employees.module', 'employees.resign', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'requests.module', 'requests.submit',
+                'tickets.create', 'tickets.edit_own', 'tickets.my',
             ],
-            // Employee — own tickets/requests + own profile only
+            // Staff — self-service only
             'user' => [
-                'tickets.create', 'tickets.edit_own', 'tickets.my', 'requests.module', 'requests.submit', 'employees.edit_own', 'assets.my', 'assets.return', 'access.my',
-                'stock.module', 'stock.view_dashboard', 'stock.view', 'stock.view_request', 'stock.view_events',
-                'stock.request',
+                'access.my',
+                'assets.my', 'assets.return',
+                'requests.module', 'requests.submit',
+                'tickets.create', 'tickets.edit_own', 'tickets.my',
+            ],
+            // IT Supervisor/Leader — everything IT runs, including permissions and settings
+            'it_supervisorleader' => [
+                'access.email_add', 'access.email_delete', 'access.email_edit', 'access.email_view', 'access.file_add', 'access.file_delete', 'access.file_edit', 'access.file_view', 'access.module', 'access.my', 'access.overview', 'access.social_add', 'access.social_delete', 'access.social_edit', 'access.social_view', 'access.software_add', 'access.software_delete', 'access.software_edit', 'access.software_view',
+                'assets.cancel_writeoff', 'assets.delete', 'assets.edit', 'assets.force_recall', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
+                'employees.add', 'employees.cancel_resign', 'employees.delete', 'employees.department_add', 'employees.department_delete', 'employees.department_edit', 'employees.edit', 'employees.edit_own', 'employees.module', 'employees.position_add', 'employees.position_delete', 'employees.position_edit', 'employees.position_special', 'employees.reset_password', 'employees.resign', 'employees.section_add', 'employees.section_delete', 'employees.section_edit', 'employees.set_credentials', 'employees.view', 'employees.view_dashboard', 'employees.view_department', 'employees.view_org', 'employees.view_position', 'employees.view_section',
+                'notifications.email_edit', 'notifications.email_test', 'notifications.email_toggle', 'notifications.inapp_edit', 'notifications.inapp_test', 'notifications.inapp_toggle', 'notifications.logs', 'notifications.module',
+                'requests.complete', 'requests.module', 'requests.notify_approved', 'requests.notify_stalled', 'requests.submit', 'requests.view_all',
+                'settings.access', 'settings.assets', 'settings.company', 'settings.masterdata', 'settings.requestdata', 'settings.sla',
+                'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
+                'system.manage_permissions', 'system.view_audit',
+                'tickets.assign', 'tickets.create', 'tickets.edit_own', 'tickets.forward', 'tickets.jobs', 'tickets.level_cctv', 'tickets.level_hardware', 'tickets.level_network', 'tickets.level_other', 'tickets.level_software', 'tickets.level_telephone', 'tickets.module', 'tickets.my', 'tickets.resolve', 'tickets.set_work_class', 'tickets.view_all', 'tickets.view_dashboard',
+                'workflows.manage', 'workflows.module',
+            ],
+            // IT Admin & Document — assets, contracts and the stock room
+            'it_stock' => [
+                'access.my',
+                'assets.delete', 'assets.edit', 'assets.manage', 'assets.module', 'assets.my', 'assets.receive', 'assets.register', 'assets.retire', 'assets.return', 'assets.special', 'assets.transfer', 'assets.view', 'assets.view_dashboard',
+                'contracts.alerts', 'contracts.cancel', 'contracts.create', 'contracts.delete', 'contracts.edit', 'contracts.expire', 'contracts.module', 'contracts.reactivate', 'contracts.view', 'contracts.view_dashboard', 'contracts.view_lifecycle',
+                'requests.module', 'requests.submit',
+                'settings.access', 'settings.assets', 'settings.masterdata',
+                'stock.approve', 'stock.fulfill', 'stock.manage_items', 'stock.module', 'stock.receive', 'stock.request', 'stock.return', 'stock.transfer', 'stock.view', 'stock.view_count', 'stock.view_dashboard', 'stock.view_events', 'stock.view_request',
+                'tickets.create', 'tickets.my',
             ],
         ];
     }

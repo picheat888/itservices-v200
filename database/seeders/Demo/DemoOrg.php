@@ -8,10 +8,10 @@ use App\Models\Employee\Employee;
 use App\Models\Employee\Position;
 use App\Models\Employee\Section;
 use App\Models\Permission\GroupRole;
-use App\Models\Permission\Role;
 use App\Models\Settings\AppSetting;
 use App\Services\Employee\EmployeeService;
 use Database\Seeders\DemoSeeder;
+use RuntimeException;
 
 /**
  * The demo organisation: one VP over eleven departments, each Manager → Supervisor →
@@ -19,8 +19,9 @@ use Database\Seeders\DemoSeeder;
  * a real holder. Plus three UAT cases: a resigned leaf, a new hire with no account yet
  * (HR files their onboarding in DemoRequests), and one employee with no manager.
  *
- * Role Groups: IT Team (IT Technician), HR (HR Recruit), Staff (Staff, the default for
- * new employees) — without a default group no login account can be provisioned.
+ * Role Groups come from DatabaseSeeder: IT leads in IT Supervisor/Leader, one IT officer
+ * in IT Admin & Doc, IT staff in IT Support, HR in HR Recruit, everyone else in the
+ * default group for new employees (User).
  */
 final class DemoOrg implements DemoStep
 {
@@ -132,23 +133,38 @@ final class DemoOrg implements DemoStep
         }
     }
 
-    /** IT → IT Team, HR → HR, everyone else → Staff (the default for new employees). */
+    /**
+     * Employee key => the Role Template (role key) whose group they join, for the people
+     * not in the default group: IT's leads run the whole department, one IT officer keeps
+     * the asset / stock register, and HR works the employee register. Everyone else joins
+     * the default group for new employees, exactly as a new hire would.
+     *
+     * Groups are found by their template, not their name — an administrator may have
+     * renamed them.
+     */
+    private const TEMPLATE_OF = [
+        'mgr.it' => 'it_supervisorleader',
+        'sup.it' => 'it_supervisorleader',
+        'it.2' => 'it_stock',
+        'it.tech' => 'admin',
+        'it.3' => 'admin',
+        'mgr.hr' => 'hr',
+        'hr.staff' => 'hr',
+        'hr.2' => 'hr',
+    ];
+
+    /** Puts each person into an existing Role Group; the default group for everyone else. */
     private function groups(DemoContext $ctx): void
     {
-        $it = GroupRole::create(['name' => 'IT Team', 'role_id' => Role::where('key', 'admin')->value('id')]);
-        $hr = GroupRole::create(['name' => 'HR', 'role_id' => Role::where('key', 'hr')->value('id')]);
-        $staff = GroupRole::create(['name' => 'Staff', 'role_id' => Role::where('key', 'user')->value('id')]);
-        AppSetting::put('default_employee_group_id', (string) $staff->id);
+        $default = GroupRole::find((int) AppSetting::get('default_employee_group_id', '0'))
+            ?? throw new RuntimeException('No default Role Group for new employees - run `php artisan db:seed` first.');
 
-        $itDepartment = (int) Department::where('tag', 'IT')->value('id');
-        $hrDepartment = (int) Department::where('tag', 'HR')->value('id');
-
-        foreach ($ctx->employees as $employee) {
-            $group = match ((int) $employee->department_id) {
-                $itDepartment => $it,
-                $hrDepartment => $hr,
-                default => $staff,
-            };
+        foreach ($ctx->employees as $key => $employee) {
+            $template = self::TEMPLATE_OF[$key] ?? null;
+            $group = $template === null
+                ? $default
+                : GroupRole::whereHas('role', fn ($q) => $q->where('key', $template))->orderBy('id')->first()
+                    ?? throw new RuntimeException("No Role Group uses the '{$template}' template - run `php artisan db:seed` first.");
             $group->employees()->attach($employee->id);
         }
     }

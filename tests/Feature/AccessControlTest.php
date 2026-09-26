@@ -64,10 +64,11 @@ class AccessControlTest extends TestCase
         $this->assertNotContains('access.manage', Permissions::all());
         $this->assertContains('access.module', Permissions::defaults()['admin']);
         $this->assertContains('access.email_edit', Permissions::defaults()['admin']);
-        // HR keeps read-only visibility: module + overview + every registry view, no actions.
-        $this->assertContains('access.module', Permissions::defaults()['hr']);
-        $this->assertContains('access.email_view', Permissions::defaults()['hr']);
-        $this->assertNotContains('access.email_edit', Permissions::defaults()['hr']);
+        // HR sees only their own access (the 2026-09-26 templates); deleting a registry entry is the IT leads'.
+        $this->assertNotContains('access.module', Permissions::defaults()['hr']);
+        $this->assertContains('access.my', Permissions::defaults()['hr']);
+        $this->assertNotContains('access.email_delete', Permissions::defaults()['admin']);
+        $this->assertContains('access.email_delete', Permissions::defaults()['it_supervisorleader']);
     }
 
     public function test_normalize_access_enforces_the_hierarchy(): void
@@ -141,7 +142,7 @@ class AccessControlTest extends TestCase
     public function test_cannot_delete_group_with_active_members(): void
     {
         $this->seedDefaultPermissions();
-        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $this->actingAs(User::factory()->create(['role' => 'it_supervisorleader']));
         $g = EmailGroup::create(['name' => 'QA', 'email' => 'qa@x.co']);
         $e = Employee::create(['first_name' => 'A', 'last_name' => 'B']);
         $g->memberships()->create(['employee_id' => $e->id, 'access_level' => 'Member', 'granted_at' => '2026-01-01']);
@@ -264,7 +265,7 @@ class AccessControlTest extends TestCase
     public function test_access_directory_actions_are_audit_logged(): void
     {
         $this->seedDefaultPermissions();
-        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $this->actingAs(User::factory()->create(['role' => 'it_supervisorleader']));
         $dept = Department::create(['name' => 'IT', 'tag' => 'IT']);
         $owner = Employee::create(['first_name' => 'Ow', 'last_name' => 'Ner']);
         $emp = Employee::create(['first_name' => 'Mem', 'last_name' => 'Ber']);
@@ -375,8 +376,13 @@ class AccessControlTest extends TestCase
         $this->seedDefaultPermissions();
         Software::create(['name' => 'Acrobat', 'license_type' => 'subscription', 'product_key' => 'SECRET-KEY']);
 
-        // hr can view the access directory but not manage → sees only that a key exists, not its value.
-        $this->actingAs(User::factory()->create(['role' => 'hr']));
+        // A role that may view the software register but not edit it sees only that a key exists, not its value.
+        // No shipped template is view-only any more, so the test makes one.
+        $viewer = Role::create(['key' => 'sw_viewer', 'name' => 'Software viewer']);
+        foreach (['access.module', 'access.software_view'] as $permission) {
+            RolePermission::create(['role_id' => $viewer->id, 'permission' => $permission, 'allowed' => true]);
+        }
+        $this->actingAs(User::factory()->create(['role' => 'sw_viewer']));
         $this->getJson('/api/software')
             ->assertOk()
             ->assertJsonPath('data.0.has_product_key', true)
@@ -469,7 +475,7 @@ class AccessControlTest extends TestCase
     {
         Storage::fake('local');
         $this->seedDefaultPermissions();
-        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $this->actingAs(User::factory()->create(['role' => 'it_supervisorleader']));
 
         Storage::disk('local')->put('social-logos/sm.png', 'bytes');
         Storage::disk('local')->put('software-logos/sw.png', 'bytes');
