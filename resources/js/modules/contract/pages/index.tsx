@@ -2,9 +2,11 @@ import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useCurrency } from '@/modules/settings';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Contract, ContractStatus, ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -36,15 +38,15 @@ import { ContractFormDrawer } from '../components/contract-form-drawer';
 import { useContract, useContracts, useContractSummary } from '../hooks/use-contracts';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
-const TAB_IDS = ['dashboard', 'all'] as const;
+const TAB_IDS = ['overview', 'all'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isContractTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
 /** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialContractTab(): Tab {
-    const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    return isContractTab(fromUrl) ? fromUrl : 'dashboard';
+    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
+    return isContractTab(fromUrl) ? fromUrl : 'overview';
 }
 
 function StatCard({
@@ -336,34 +338,22 @@ export default function ContractsPage() {
             )}
 
             <Card className="overflow-hidden">
-                <div className="border-border flex gap-1 border-b px-2">
-                    {(
-                        [
-                            { id: 'dashboard', label: t('sub_dashboard') },
-                            { id: 'all', label: t('all_contracts') },
-                        ] as { id: Tab; label: string }[]
-                    ).map((tb) => (
-                        <button
-                            key={tb.id}
-                            onClick={() => {
-                                changeTab(tb.id);
-                                setPage(1);
-                                setTypeFilter('');
-                                setStatusFilter('');
-                            }}
-                            className={cn(
-                                'relative px-4 py-3 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'text-brand' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                        >
-                            {tb.label}
-                            {tab === tb.id && <span className="bg-brand absolute inset-x-2 -bottom-px h-0.5 rounded-full" />}
-                        </button>
-                    ))}
-                </div>
+                <PageTabs<Tab>
+                    tabs={[
+                        { id: 'overview', label: t('sub_overview') },
+                        { id: 'all', label: t('all_contracts') },
+                    ]}
+                    active={tab}
+                    onChange={(id) => {
+                        changeTab(id);
+                        setPage(1);
+                        setTypeFilter('');
+                        setStatusFilter('');
+                    }}
+                />
 
-                {tab === 'dashboard' ? (
-                    <DashboardTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
+                {tab === 'overview' ? (
+                    <OverviewTab summary={summary} maxVendor={maxVendor} onSelect={setSelectedId} />
                 ) : (
                     <div className="space-y-3 p-5">
                         <div className="flex flex-wrap items-center gap-2">
@@ -694,7 +684,7 @@ const bannerBlinkStyles = `
 @media (prefers-reduced-motion: reduce) { .cf-blink { animation: none; } }
 `;
 
-function DashboardTab({
+function OverviewTab({
     summary,
     maxVendor,
     onSelect,

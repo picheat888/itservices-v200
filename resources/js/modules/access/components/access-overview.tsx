@@ -334,7 +334,7 @@ function IssuesDrawer({
  * checklist, and the most-reached resources — all in the app's card/table idiom.
  * Clicking a KPI card or a table row opens that registry tab via `onOpenTab`.
  */
-export function AccessDashboard({
+export function AccessOverview({
     onOpenTab,
     onOpenResource,
     canEdit,
@@ -350,7 +350,7 @@ export function AccessDashboard({
     // Whether the governance triage drawer is open (every issue group in one panel).
     const [issuesOpen, setIssuesOpen] = useState(false);
 
-    if (isLoading || !data) return <DashboardSkeleton />;
+    if (isLoading || !data) return <OverviewSkeleton />;
 
     const total = data.total_grants || 0;
     const maxGrants = Math.max(1, ...CHANNELS.map((c) => data.channels[c.key].grants));
@@ -650,7 +650,7 @@ export function AccessDashboard({
 }
 
 /** Pulse skeleton mirroring the overview layout while the summary loads. */
-function DashboardSkeleton() {
+function OverviewSkeleton() {
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

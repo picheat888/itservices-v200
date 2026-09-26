@@ -3,9 +3,11 @@ import { useAuth } from '@/modules/auth';
 import { useCategories, useCurrency, useWarehouses } from '@/modules/settings';
 import { Column, DataTable } from '@/shared/components/data-table';
 import { FilterPopover } from '@/shared/components/filter-popover';
+import { PageTabs } from '@/shared/components/page-tabs';
 import { SearchableSelect } from '@/shared/components/searchable-select';
 import { StatusBadge, ToneDot } from '@/shared/components/status-badge';
 import { refusalReason } from '@/shared/lib/api-errors';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { StockItem, StockItemStatus, StockMovementType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -40,12 +42,12 @@ import { StockItemDetailModal } from '../components/stock-item-detail-modal';
 import { StockItemModal } from '../components/stock-item-modal';
 import { useStockCounts, useStockItemMutations, useStockItemsPage, useStockRequests, useStockSummary } from '../hooks/use-stock';
 import { AuditTab } from './tabs/counting-tab';
-import { DashboardTab } from './tabs/dashboard-tab';
 import { MovementsTab } from './tabs/movements-tab';
+import { OverviewTab } from './tabs/overview-tab';
 import { RequestsTab } from './tabs/requests-tab';
 
 // The page's tabs. The active tab is mirrored in the URL (?tab=) so a reload / shared link stays put.
-const STOCK_TABS = ['dashboard', 'items', 'movements', 'requests', 'audit'] as const;
+const STOCK_TABS = ['overview', 'items', 'movements', 'requests', 'audit'] as const;
 type StockTab = (typeof STOCK_TABS)[number];
 
 // localStorage key for the Items-tab filters (search + category + warehouse + status).
@@ -216,8 +218,8 @@ export default function StockPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     // Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard.
     const isStockTab = (v: string | null): v is StockTab => STOCK_TABS.includes(v as StockTab);
-    const urlTab = searchParams.get('tab');
-    const initialTab: StockTab = isStockTab(urlTab) ? urlTab : 'dashboard';
+    const urlTab = readTabParam(searchParams.get('tab'));
+    const initialTab: StockTab = isStockTab(urlTab) ? urlTab : 'overview';
     const [tab, setTab] = useState<StockTab>(initialTab);
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
@@ -446,7 +448,7 @@ export default function StockPage() {
     const itemAlerts = summary ? summary.out_count + summary.low_count + summary.over_count : 0;
 
     const allTabs = [
-        { id: 'dashboard' as const, label: t('sub_dashboard'), view: 'view_dashboard' },
+        { id: 'overview' as const, label: t('sub_overview'), view: 'view_dashboard' },
         { id: 'items' as const, label: t('stock_items_tab'), count: itemAlerts || undefined, view: 'view' },
         { id: 'requests' as const, label: t('stock_requests_tab'), count: outstandingRequests || undefined, view: 'view_request' },
         { id: 'audit' as const, label: t('stock_audit_tab'), count: draftCounts || undefined, view: 'view_count' },
@@ -506,30 +508,12 @@ export default function StockPage() {
             )}
 
             <Card className="overflow-hidden">
-                <div className="border-border flex flex-wrap gap-1 border-b px-3 pt-1">
-                    {tabs.map((tb) => (
-                        <button
-                            key={tb.id}
-                            onClick={() => changeTab(tb.id)}
-                            className={cn(
-                                '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
-                            )}
-                        >
-                            {tb.label}
-                            {tb.count != null && (
-                                // Outstanding-work / stock alert: soft red pill.
-                                <span className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                                    {tb.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
+                {/* Outstanding work and stock alerts: red pills. */}
+                <PageTabs tabs={tabs.map((tb) => ({ ...tb, tone: 'alert' as const }))} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
-                    {tab === 'dashboard' && (
-                        <DashboardTab
+                    {tab === 'overview' && (
+                        <OverviewTab
                             summary={summary}
                             t={t}
                             kpis={kpis}

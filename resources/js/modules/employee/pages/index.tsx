@@ -1,10 +1,12 @@
 import { useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { Column, DataTable } from '@/shared/components/data-table';
+import { type PageTab, PageTabs } from '@/shared/components/page-tabs';
 import { RecordMissingDialog } from '@/shared/components/record-missing';
 import { TableSkeleton } from '@/shared/components/skeletons';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { UserAvatar } from '@/shared/components/user-avatar';
+import { readTabParam } from '@/shared/lib/tab-param';
 import { cn, toRecordId } from '@/shared/lib/utils';
 import type { Department, Employee, Position } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -58,23 +60,18 @@ import { useDepartmentMutations, useDepartments } from '../hooks/use-departments
 import { useEmployee, useEmployeeDirectory, useEmployeeMutations, useEmployeeSummary } from '../hooks/use-employees';
 import { usePositionMutations, usePositions } from '../hooks/use-positions';
 
-const TAB_IDS = ['dashboard', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
+const TAB_IDS = ['overview', 'directory', 'positions', 'departments', 'sections', 'orgchart'] as const;
 type Tab = (typeof TAB_IDS)[number];
 
 const isTab = (v: string | null): v is Tab => (TAB_IDS as readonly string[]).includes(v ?? '');
 
 /** One entry on the sub-tab bar; `count` renders as a small badge with `countTitle` as its tooltip. */
-interface TabItem {
-    id: Tab;
-    label: string;
-    count?: number;
-    countTitle?: string;
-}
+type TabItem = PageTab<Tab>;
 
 /** Resolve the starting tab from the URL (?tab=) so reloads / shared links are exact; otherwise the dashboard. */
 function initialTab(): Tab {
-    const fromUrl = new URLSearchParams(window.location.search).get('tab');
-    return isTab(fromUrl) ? fromUrl : 'dashboard';
+    const fromUrl = readTabParam(new URLSearchParams(window.location.search).get('tab'));
+    return isTab(fromUrl) ? fromUrl : 'overview';
 }
 
 export default function EmployeesPage() {
@@ -91,7 +88,7 @@ export default function EmployeesPage() {
     const canDelete = can('employees.delete');
     const canSetCredentials = can('employees.set_credentials');
 
-    const canViewDashboard = can('employees.view_dashboard');
+    const canViewOverview = can('employees.view_dashboard');
     const canViewDirectory = can('employees.view');
     const canViewSections = can('employees.view_section');
     const canViewDepartments = can('employees.view_department');
@@ -233,11 +230,12 @@ export default function EmployeesPage() {
     // The Directory badge counts active staff still waiting for a login account — work left to do,
     // not a headcount — so it is tinted amber and hidden once everyone has one.
     const tabs: TabItem[] = [
-        canViewDashboard && { id: 'dashboard' as Tab, label: t('sub_dashboard') },
+        canViewOverview && { id: 'overview' as Tab, label: t('sub_overview') },
         canViewDirectory && {
             id: 'directory' as Tab,
             label: t('sub_directory'),
             count: summary?.no_account || undefined,
+            tone: 'warn' as const,
             countTitle: t('cred_no_account'),
         },
         canViewSections && { id: 'sections' as Tab, label: t('sub_sections') },
@@ -479,33 +477,12 @@ export default function EmployeesPage() {
             </div>
 
             <Card className="overflow-hidden">
-                <div className="border-border flex flex-wrap gap-1 border-b px-3 pt-1">
-                    {tabs.map((tb) => (
-                        <button
-                            key={tb.id}
-                            onClick={() => changeTab(tb.id)}
-                            className={cn(
-                                '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                                tab === tb.id ? 'border-brand text-foreground' : 'text-muted-foreground hover:text-foreground border-transparent',
-                            )}
-                        >
-                            {tb.label}
-                            {tb.count != null && (
-                                <span
-                                    title={tb.countTitle}
-                                    className="ml-1.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 font-mono text-xs text-amber-600 dark:text-amber-400"
-                                >
-                                    {tb.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
+                <PageTabs tabs={tabs} active={tab} onChange={changeTab} />
 
                 <div className="p-5">
-                    {tab === 'dashboard' && summaryLoading && <EmployeeDashboardSkeleton />}
-                    {tab === 'dashboard' && !summaryLoading && (
-                        <Dashboard
+                    {tab === 'overview' && summaryLoading && <EmployeeOverviewSkeleton />}
+                    {tab === 'overview' && !summaryLoading && (
+                        <OverviewTab
                             summary={summary}
                             departments={departments}
                             positions={positions}
@@ -916,7 +893,7 @@ import type { EmployeeSummary } from '../api/employeeApi';
 const DASH_DEPT_LIMIT = 8;
 
 /** Pulse skeleton mirroring the dashboard (KPI row + trend + two 2-col grids) while the summary loads. */
-function EmployeeDashboardSkeleton() {
+function EmployeeOverviewSkeleton() {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -960,7 +937,7 @@ function EmployeeDashboardSkeleton() {
     );
 }
 
-function Dashboard({
+function OverviewTab({
     summary,
     departments,
     positions,

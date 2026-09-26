@@ -38,4 +38,12 @@ export const dashboard: Dict = {
     dash_empty_hires: 'ยังไม่มีพนักงานเข้าใหม่',
     dash_empty_activity: 'ยังไม่มีความเคลื่อนไหว',
     dash_cases: 'เคส',
+    dash_requests_overview: 'ภาพรวมคำขอ',
+    dash_requests: 'คำขอ',
+    dash_requests_by_type: 'แยกตามประเภท',
+    dash_empty_requests_window: 'ยังไม่มีคำขอในช่วงนี้',
+    dash_waiting_title: 'ค้างเกิน {n} วัน',
+    dash_waiting_on: 'รอ',
+    dash_days: '{n} วัน',
+    dash_empty_waiting: 'ไม่มีคำขอที่ค้างนานขนาดนั้น',
 };

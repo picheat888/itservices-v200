@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Employee\Department;
 use App\Models\Employee\Employee;
 use App\Models\Permission\RolePermission;
+use App\Models\Request\RequestApproval;
 use App\Models\Request\ServiceRequest;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
@@ -264,5 +265,68 @@ class DashboardSummaryTest extends TestCase
 
         $this->assertSame('Created employee', $feed[0]['action']);
         $this->assertSame('Somchai', $feed[0]['target']);
+    }
+
+    /** A request row with the bare fields the block reads. */
+    private function request(string $reference, string $type, string $status, array $extra = []): ServiceRequest
+    {
+        return ServiceRequest::create([
+            'reference' => $reference, 'type' => $type, 'origin' => 'direct',
+            'requester_name' => 'Somchai', 'title' => "Request {$reference}",
+            'reason' => 'Needed for work.', 'status' => $status,
+        ] + $extra);
+    }
+
+    public function test_the_requests_block_needs_the_view_all_right(): void
+    {
+        $plain = $this->staff();
+
+        $body = $this->actingAs($plain)->getJson('/api/dashboard/summary')->assertOk()->json('data');
+
+        $this->assertArrayNotHasKey('requests', $body);
+    }
+
+    public function test_the_requests_block_splits_the_window_by_status_and_type(): void
+    {
+        $overseer = $this->staffWith(['requests.view_all']);
+
+        $this->request('RQ-2026-0001', 'computer', 'pending');
+        $this->request('RQ-2026-0002', 'computer', 'approved');
+        $this->request('RQ-2026-0003', 'email', 'rejected');
+        // Older than the window: out of both splits.
+        $old = $this->request('RQ-2026-0004', 'email', 'completed');
+        $old->forceFill(['created_at' => now()->subDays(60)])->save();
+
+        $block = $this->actingAs($overseer)->getJson('/api/dashboard/summary')->assertOk()->json('data.requests');
+
+        $this->assertSame(30, $block['window_days']);
+        $this->assertSame(['pending' => 1, 'approved' => 1, 'rejected' => 1, 'completed' => 0, 'cancelled' => 0], $block['by_status']);
+        // Busiest type first.
+        $this->assertSame([['type' => 'computer', 'count' => 2], ['type' => 'email', 'count' => 1]], $block['by_type']);
+    }
+
+    /**
+     * "Waiting" is the stalled-reminder set: a current step past the nudge threshold. A step
+     * that became current yesterday is not waiting yet, and the longest wait is listed first.
+     */
+    public function test_the_requests_block_lists_steps_that_have_waited_too_long(): void
+    {
+        $overseer = $this->staffWith(['requests.view_all']);
+
+        $step = fn (ServiceRequest $request, string $name, int $daysAgo) => RequestApproval::create([
+            'service_request_id' => $request->id, 'position' => 1, 'actor_type' => 'chain', 'kind' => 'approval',
+            'label' => 'Manager', 'approver_name' => $name, 'status' => 'current', 'became_current_at' => now()->subDays($daysAgo),
+        ]);
+        $step($this->request('RQ-2026-0101', 'computer', 'pending'), 'Manee', 5);
+        $step($this->request('RQ-2026-0102', 'mobile', 'pending'), 'Somsak', 9);
+        $step($this->request('RQ-2026-0103', 'email', 'pending'), 'Fresh', 1);
+
+        $block = $this->actingAs($overseer)->getJson('/api/dashboard/summary')->assertOk()->json('data.requests');
+
+        $this->assertSame(3, $block['waiting_after_days']);
+        $this->assertSame(2, $block['waiting_count']);
+        $this->assertSame(['RQ-2026-0102', 'RQ-2026-0101'], array_column($block['waiting'], 'reference'));
+        $this->assertSame('Somsak', $block['waiting'][0]['waiting_on']);
+        $this->assertSame(9, $block['waiting'][0]['days']);
     }
 }

@@ -23,7 +23,7 @@ export const requests: Dict = {
     requests_title: 'คำขอบริการ',
     requests_sub: 'ยื่นคำขอบริการ IT และติดตามทุกขั้นการอนุมัติ',
     requests_new: 'คำขอใหม่',
-    requests_tab_dashboard: 'ภาพรวม',
+    requests_tab_overview: 'ภาพรวม',
     requests_tab_all: 'คำขอทั้งหมด',
     requests_tab_list: 'คำขอ',
     requests_tab_approvals: 'รออนุมัติจากฉัน',

@@ -26,7 +26,7 @@ export const requests: Dict = {
     requests_title: 'Requests',
     requests_sub: 'Submit IT service requests and track every approval step.',
     requests_new: 'New request',
-    requests_tab_dashboard: 'Dashboard',
+    requests_tab_overview: 'Overview',
     requests_tab_all: 'All requests',
     requests_tab_list: 'Requests',
     requests_tab_approvals: 'Awaiting my approval',
