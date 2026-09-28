@@ -445,7 +445,7 @@ class TicketController extends Controller
     public function store(StoreTicketRequest $request): JsonResponse
     {
         $employee = $request->user()?->employee;
-        abort_if($employee === null, 422, 'Your account is not linked to an employee record.');
+        abort_if($employee === null, 422, 'no_employee_link');
 
         $ticket = $this->service->create($request->validated(), $employee);
         AuditLog::record('Created ticket', "{$ticket->ticket_no} - {$ticket->subject}");
@@ -472,14 +472,14 @@ class TicketController extends Controller
         abort_unless(
             (bool) $request->user()?->hasPermission("tickets.level_{$ticket->category?->value}"),
             403,
-            'Your Ticket Level does not cover this category.'
+            'level_not_covered'
         );
-        abort_unless($ticket->status === TicketStatus::Open && $ticket->isUnassigned(), 422, 'Ticket is not open for taking.');
+        abort_unless($ticket->status === TicketStatus::Open && $ticket->isUnassigned(), 422, 'not_open_for_taking');
         // Anti case-pumping: a case can never be handled by the person who filed it.
         abort_if(
             $ticket->requester_id !== null && $ticket->requester_id === $request->user()?->employee_id,
             422,
-            'You cannot take a case you filed yourself.'
+            'own_case'
         );
 
         // A case opened from an approved request carries its own target, decided by what was
@@ -510,7 +510,7 @@ class TicketController extends Controller
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.assign'), 403);
         $this->assertNotTheRequester($request, $ticket);
-        abort_unless($ticket->status === TicketStatus::Open, 422, 'Only open tickets can be assigned.');
+        abort_unless($ticket->status === TicketStatus::Open, 422, 'not_open');
 
         // Same rule as take(): a request-born case is never given a priority.
         $fromRequest = $ticket->serviceRequest()->exists();
@@ -522,12 +522,12 @@ class TicketController extends Controller
         $staff = User::findOrFail($data['assignee_id']);
         // Assign hands a case to someone ELSE — taking it yourself is what Take Case
         // is for (it records an initial note and skips the self-addressed bell).
-        abort_if($staff->id === $request->user()?->id, 422, 'Use Take Case to work this ticket yourself.');
+        abort_if($staff->id === $request->user()?->id, 422, 'self_assign');
         // Anti case-pumping: a case can never be handled by the person who filed it.
         abort_if(
             $staff->employee_id !== null && $staff->employee_id === $ticket->requester_id,
             422,
-            'A case cannot be assigned to the person who filed it.'
+            'target_is_requester'
         );
         $this->assertCanReceive($staff, $ticket);
         $ticket = $this->service->assign($ticket, $staff, isset($data['priority']) ? TicketPriority::from($data['priority']) : null, $request->user());
@@ -552,7 +552,7 @@ class TicketController extends Controller
         // A dispatcher who filed this one is out too — see assertNotTheRequester. The
         // assignee branch above cannot reach here: a case never lands with its requester.
         $this->assertNotTheRequester($request, $ticket);
-        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be forwarded.');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'not_in_progress');
 
         $data = $request->validate([
             'assignee_id' => ['required', Rule::exists('users', 'id'), Rule::notIn([$ticket->assignee_id])],
@@ -563,7 +563,7 @@ class TicketController extends Controller
         abort_if(
             $staff->employee_id !== null && $staff->employee_id === $ticket->requester_id,
             422,
-            'A case cannot be forwarded to the person who filed it.'
+            'target_is_requester'
         );
         $this->assertCanReceive($staff, $ticket);
 
@@ -589,7 +589,7 @@ class TicketController extends Controller
         abort_if(
             $employeeId !== null && $employeeId === $ticket->requester_id,
             403,
-            'You filed this case - somebody else decides who works it.'
+            'requester_cannot_route'
         );
     }
 
@@ -599,11 +599,11 @@ class TicketController extends Controller
      */
     private function assertCanReceive(User $staff, Ticket $ticket): void
     {
-        abort_unless($staff->hasPermission('tickets.resolve'), 422, 'The chosen staff cannot work cases (tickets.resolve).');
+        abort_unless($staff->hasPermission('tickets.resolve'), 422, 'target_cannot_work');
         abort_unless(
             $staff->hasPermission("tickets.level_{$ticket->category?->value}"),
             422,
-            "The chosen staff's Ticket Level does not cover this category."
+            'target_level_not_covered'
         );
     }
 
@@ -619,8 +619,8 @@ class TicketController extends Controller
     public function resolve(Request $request, Ticket $ticket, RequestService $requests): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
-        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can resolve this ticket.');
-        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be resolved.');
+        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'not_assignee');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'not_in_progress');
 
         $data = $request->validate([
             'mode' => ['required', 'in:complete,cancel'],
@@ -645,8 +645,8 @@ class TicketController extends Controller
     public function storeUpdate(Request $request, Ticket $ticket): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('tickets.resolve'), 403);
-        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'Only the assignee can update this ticket.');
-        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'Only a case in progress can be updated.');
+        abort_unless($ticket->assignee_id === $request->user()?->id, 403, 'not_assignee');
+        abort_unless(in_array($ticket->status, TicketStatus::working(), true), 422, 'not_in_progress');
 
         // Kind of work is for a case somebody reported that then has to go to a technician.
         // A case opened from an approved request already carries a target of its own, decided
@@ -678,7 +678,7 @@ class TicketController extends Controller
                     && ($ticket->category === null
                         || ! isset(TicketSla::rules()[SlaScope::WorkClass->value][TicketSla::workClassKey($ticket->category->value, $class->value)])),
                 422,
-                'No target is set for that kind of work on this type of ticket.',
+                'no_work_class_target',
             );
             $ticket = $this->service->setWorkClass($ticket, $request->user(), $class, $data['body']);
             AuditLog::record(

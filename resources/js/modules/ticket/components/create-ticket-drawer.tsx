@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
+import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +11,6 @@ import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { useUiStore } from '@/stores/ui';
 import { AlertCircle, Loader2, MessageSquarePlus, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
@@ -25,7 +25,6 @@ const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'x
 /** Employee-facing form to raise a ticket. Priority and assignee are set later by IT. */
 export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { create, uploadAttachments } = useTicketMutations();
 
     // No default — the employee must consciously pick an issue type (validated on submit).
@@ -37,6 +36,14 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
     const [errors, setErrors] = useState<Record<string, string>>({});
     // Per-file upload progress (index → 0..100), populated while uploading after submit.
     const [progress, setProgress] = useState<Record<number, number>>({});
+    // Why the server refused, shown as the banner over the form.
+    const [formError, setFormError] = useState('');
+    // What a failed submit already saved, so Submit again finishes the job instead of repeating
+    // it: the ticket once it exists, and how many of the files (from the top) are on it.
+    const [createdId, setCreatedId] = useState<number | null>(null);
+    const [savedFiles, setSavedFiles] = useState(0);
+    // Once the ticket exists only the files are still to send — its details can no longer change here.
+    const created = createdId !== null;
 
     /** Drop one field's validation error — typing/picking counts as fixing it. */
     const clearError = (key: string) =>
@@ -58,35 +65,59 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
             setFiles([]);
             setErrors({});
             setProgress({});
+            setFormError('');
+            setCreatedId(null);
+            setSavedFiles(0);
         }
     }, [open]);
 
     const submit = async () => {
         const e: Record<string, string> = {};
-        if (!category) e.category = lang === 'th' ? 'กรุณาเลือกประเภทปัญหา' : 'Please select an issue type';
-        if (subject.trim().length < 5)
-            e.subject = lang === 'th' ? 'กรุณาระบุหัวข้อ (อย่างน้อย 5 ตัวอักษร)' : 'Please describe the issue (min 5 characters)';
-        if (description.trim().length < 10)
-            e.description = lang === 'th' ? 'กรุณากรอกรายละเอียด (อย่างน้อย 10 ตัวอักษร)' : 'Please provide a description (min 10 characters)';
+        if (!category) e.category = t('ticket_err_category');
+        if (subject.trim().length < 5) e.subject = t('ticket_err_subject');
+        if (description.trim().length < 10) e.description = t('ticket_err_description');
         // Internal extensions can be as short as 3 digits (e.g. 123).
-        if (phone.replace(/\D/g, '').length < 3) e.phone = lang === 'th' ? 'เบอร์โทรไม่ถูกต้อง' : 'Please provide a callback phone number';
+        if (phone.replace(/\D/g, '').length < 3) e.phone = t('ticket_err_phone');
         setErrors(e);
         if (Object.keys(e).length || !category) return;
 
-        const ticket = await create.mutateAsync({
-            subject: subject.trim(),
-            description: description.trim(),
-            category,
-            callback_phone: phone.trim(),
-        });
-        if (files.length > 0 && ticket?.id) {
-            await uploadAttachments.mutateAsync({
-                id: ticket.id,
-                files,
-                onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [index]: percent })),
-            });
+        setFormError('');
+        // The files already on the ticket stay full; the rest start again from empty.
+        setProgress(Object.fromEntries(files.slice(0, savedFiles).map((_, i) => [i, 100])));
+        let saved = savedFiles;
+        try {
+            let id = createdId;
+            if (id === null) {
+                const ticket = await create.mutateAsync({
+                    subject: subject.trim(),
+                    description: description.trim(),
+                    category,
+                    callback_phone: phone.trim(),
+                });
+                id = ticket.id;
+                setCreatedId(id);
+            }
+            if (files.length > saved) {
+                const offset = saved;
+                await uploadAttachments.mutateAsync({
+                    id,
+                    files: files.slice(offset),
+                    onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [offset + index]: percent })),
+                    onSaved: (index) => {
+                        saved = offset + index + 1;
+                    },
+                });
+            }
+            onClose();
+        } catch (err: unknown) {
+            setSavedFiles(saved);
+            // One file per request, so a file the upload rules turn down comes back as `files.0`.
+            setFormError(
+                hasFieldError(err, 'files.0')
+                    ? t('ticket_refusal_file_rejected').replace('{name}', files[saved]?.name ?? '')
+                    : refusalText(err, t, 'ticket_refusal_'),
+            );
         }
-        onClose();
     };
 
     const uploading = uploadAttachments.isPending;
@@ -108,6 +139,16 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
 
                 {/* Two equal columns: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
+                    {formError && (
+                        <div
+                            key={formError}
+                            className="bg-destructive/10 text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm sm:col-span-2"
+                        >
+                            {created && <p className="font-medium">{t('ticket_open_files_pending')}</p>}
+                            <p>{formError}</p>
+                        </div>
+                    )}
+
                     {/* LEFT: what's wrong */}
                     <div className="space-y-6">
                         <section>
@@ -120,11 +161,12 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         key={c}
                                         selected={category === c}
                                         invalid={!!errors.category}
+                                        disabled={created}
                                         onClick={() => {
                                             setCategory(c);
                                             clearError('category');
                                         }}
-                                        className="flex flex-col items-start gap-1 rounded-lg p-3 text-left"
+                                        className="flex flex-col items-start gap-1 rounded-lg p-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         <span
                                             className={cn(
@@ -159,7 +201,9 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                             setSubject(e.target.value);
                                             clearError('subject');
                                         }}
-                                        placeholder={lang === 'th' ? 'เช่น เชื่อมต่อ VPN ไม่ได้' : "e.g. Can't connect to VPN"}
+                                        disabled={created}
+                                        maxLength={200}
+                                        placeholder={t('ticket_subject_ph')}
                                     />
                                 </Field>
                                 <Field label={t('ticket_description')} required error={errors.description}>
@@ -170,11 +214,9 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                             clearError('description');
                                         }}
                                         rows={5}
-                                        placeholder={
-                                            lang === 'th'
-                                                ? 'เกิดอะไรขึ้น ลองทำอะไรไปแล้วบ้าง เห็นข้อความ error อย่างไร'
-                                                : 'What happened, what did you try, what error did you see?'
-                                        }
+                                        disabled={created}
+                                        maxLength={5000}
+                                        placeholder={t('ticket_description_ph')}
                                     />
                                 </Field>
                             </div>
@@ -194,7 +236,9 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                         setPhone(e.target.value);
                                         clearError('phone');
                                     }}
+                                    disabled={created}
                                     className="font-mono"
+                                    maxLength={60}
                                     placeholder="+66 81 234 5678 / ext. 1305"
                                 />
                             </Field>
@@ -214,8 +258,11 @@ export function CreateTicketDrawer({ open, onClose }: { open: boolean; onClose: 
                                             name={f.name}
                                             size={f.size}
                                             mime={f.type}
-                                            // Remove is only available before the upload starts.
-                                            onRemove={uploading ? undefined : () => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                                            // Remove is only available before the upload starts, and never for a
+                                            // file a failed submit already put on the ticket.
+                                            onRemove={
+                                                uploading || i < savedFiles ? undefined : () => setFiles((prev) => prev.filter((_, j) => j !== i))
+                                            }
                                         />
                                     ))}
                                 </AttachmentList>

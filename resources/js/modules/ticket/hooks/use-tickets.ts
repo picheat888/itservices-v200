@@ -50,6 +50,12 @@ export const useTicketRequesterAssets = (ticketId?: number | null) =>
 // The Tickets badge ("needs my attention") now comes from the combined
 // /api/sidebar-badges endpoint — see shared/hooks/use-sidebar-badges.
 
+/**
+ * Every write on a case. All but `create` refresh on failure as well as on success: a
+ * refusal usually means the case moved on (someone else took it, it closed), and a
+ * half-finished upload or removal has still changed it — either way the drawer behind the
+ * dialog should show the case as it now stands.
+ */
 export function useTicketMutations() {
     const qc = useQueryClient();
     const invalidate = () => {
@@ -66,41 +72,45 @@ export function useTicketMutations() {
         create: useMutation({ mutationFn: (p: CreateTicketPayload) => ticketApi.create(p), onSuccess: invalidate }),
         update: useMutation({
             mutationFn: (v: { id: number; payload: UpdateTicketPayload }) => ticketApi.update(v.id, v.payload),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         take: useMutation({
             mutationFn: (v: { id: number; priority?: TicketPriority; note?: string | null; related_asset_id?: number | null }) =>
                 ticketApi.take(v.id, { ...(v.priority ? { priority: v.priority } : {}), note: v.note, related_asset_id: v.related_asset_id }),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         assign: useMutation({
             mutationFn: (v: { id: number; assignee_id: number; priority?: TicketPriority }) =>
                 ticketApi.assign(v.id, { assignee_id: v.assignee_id, ...(v.priority ? { priority: v.priority } : {}) }),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         forward: useMutation({
             mutationFn: (v: { id: number; assignee_id: number }) => ticketApi.forward(v.id, { assignee_id: v.assignee_id }),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         addUpdate: useMutation({
             mutationFn: (v: { id: number; body: string; work_class?: TicketWorkClass }) =>
                 ticketApi.addUpdate(v.id, { body: v.body, ...(v.work_class ? { work_class: v.work_class } : {}) }),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         /** Classify a case's kind of work — the deadline moves, so this invalidates the same as every other mutation here. */
         resolve: useMutation({
             mutationFn: (v: { id: number; mode: 'complete' | 'cancel'; resolution: string }) =>
                 ticketApi.resolve(v.id, { mode: v.mode, resolution: v.resolution }),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
         uploadAttachments: useMutation({
-            mutationFn: (v: { id: number; files: File[]; onProgress?: (index: number, percent: number) => void }) =>
-                ticketApi.uploadAttachments(v.id, v.files, v.onProgress),
-            onSuccess: invalidate,
+            mutationFn: (v: {
+                id: number;
+                files: File[];
+                onProgress?: (index: number, percent: number) => void;
+                onSaved?: (index: number) => void;
+            }) => ticketApi.uploadAttachments(v.id, v.files, v.onProgress, v.onSaved),
+            onSettled: invalidate,
         }),
         deleteAttachment: useMutation({
             mutationFn: (v: { id: number; attachmentId: number }) => ticketApi.deleteAttachment(v.id, v.attachmentId),
-            onSuccess: invalidate,
+            onSettled: invalidate,
         }),
     };
 }

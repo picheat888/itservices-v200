@@ -50,3 +50,33 @@ export function refusalReason(error: unknown): { reason: string; body: Record<st
     if (res?.status !== 422 || typeof message !== 'string') return undefined;
     return { reason: message, body: res.data ?? {} };
 }
+
+/**
+ * The sentence for a refused action, in the reader's language.
+ *
+ * Endpoints that refuse with a short reason in `message` ('not_open_for_taking',
+ * 'not_enough_stock') are worded by the lang key `<prefix><reason>`, with every {name} in it
+ * filled from the same-named field of the response (the figures the reason quotes). Anything
+ * else — a reason with no sentence yet, a plain validation failure, a dropped connection —
+ * falls back to `<prefix>forbidden` (403), `<prefix>invalid` (422) or `<prefix>failed`, so a
+ * dialog always has something to say instead of failing silently.
+ *
+ * `format` turns a quoted value into words when a raw value would not do (a status key into
+ * its label, say); by default it is shown as it came.
+ */
+export function refusalText(
+    error: unknown,
+    t: (key: string) => string,
+    prefix: string,
+    format: (name: string, value: unknown) => string = (_name, value) => String(value ?? ''),
+): string {
+    const res = (error as { response?: { status?: number; data?: Record<string, unknown> } })?.response;
+    const body = res?.data ?? {};
+    const reason = typeof body.message === 'string' && /^[a-z0-9_]+$/.test(body.message) ? body.message : '';
+    const key = `${prefix}${reason}`;
+    if (reason && t(key) !== key) {
+        return t(key).replace(/\{(\w+)\}/g, (whole, name: string) => (name in body ? format(name, body[name]) : whole));
+    }
+    const fallback = res?.status === 403 ? 'forbidden' : res?.status === 422 ? 'invalid' : 'failed';
+    return t(`${prefix}${fallback}`);
+}

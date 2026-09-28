@@ -187,6 +187,35 @@ class RequestAutoTicketTest extends TestCase
     }
 
     /**
+     * The Assign dialog leaves priority out on a case a request opened, as Take Case always
+     * did: the endpoint refuses one there, and the case is handed over without it.
+     */
+    public function test_a_case_opened_from_a_request_is_assigned_without_a_priority(): void
+    {
+        $request = $this->submitComputer();
+        $this->actingAs($this->bossUser)->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+        $request->refresh();
+
+        $role = Role::firstOrCreate(['key' => 'admin'], ['name' => 'IT', 'color' => '#0284c7', 'is_system' => false]);
+        foreach (['tickets.resolve', 'tickets.level_hardware'] as $permission) {
+            RolePermission::updateOrCreate(['role_id' => $role->id, 'permission' => $permission], ['allowed' => true]);
+        }
+        $tech = User::factory()->create(['role' => 'admin', 'employee_id' => Employee::create(['first_name' => 'Tech'])->id]);
+        $dispatcher = User::factory()->create(['role' => 'super', 'employee_id' => Employee::create(['first_name' => 'Lead'])->id]);
+
+        $this->actingAs($dispatcher)
+            ->postJson("/api/tickets/{$request->ticket_id}/assign", ['assignee_id' => $tech->id, 'priority' => 'high'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('priority');
+
+        $this->actingAs($dispatcher)
+            ->postJson("/api/tickets/{$request->ticket_id}/assign", ['assignee_id' => $tech->id])
+            ->assertOk()
+            ->assertJsonPath('data.assignee_id', $tech->id)
+            ->assertJsonPath('data.status', 'in_progress');
+    }
+
+    /**
      * A case opened from a request is a snapshot of what was approved — the subject
      * carries the reference, the body carries the typed fields somebody signed for.
      * Letting the requester rewrite it turns the approval into a record of something

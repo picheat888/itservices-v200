@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { refusalText } from '@/shared/lib/api-errors';
 import { formatDateTime as fmtTz } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketWorkClass } from '@/shared/types';
@@ -128,8 +129,7 @@ export function TicketUpdateModal({
             });
             onClose();
         } catch (e: unknown) {
-            const data = (e as { response?: { data?: { message?: string } } })?.response?.data;
-            setFormError(data?.message ?? t('ticket_update_err_failed'));
+            setFormError(refusalText(e, t, 'ticket_refusal_'));
         }
     };
 

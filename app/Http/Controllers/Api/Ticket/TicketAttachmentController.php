@@ -48,9 +48,8 @@ class TicketAttachmentController extends Controller
         // otherwise have half the room left for the photos taken while working it.
         $remaining = self::MAX_FILES - $ticket->attachments()->whereNull('request_attachment_id')->count();
         if (count($files) > $remaining) {
-            return response()->json([
-                'message' => 'แนบไฟล์ได้สูงสุด '.self::MAX_FILES." ไฟล์ต่อตั๋ว (เหลือ {$remaining} ไฟล์)",
-            ], 422);
+            // A reason and its figures; the SPA words it in the reader's language.
+            return response()->json(['message' => 'too_many_files', 'max' => self::MAX_FILES, 'remaining' => $remaining], 422);
         }
 
         foreach ($files as $file) {
@@ -82,9 +81,7 @@ class TicketAttachmentController extends Controller
         abort_unless($attachment->ticket_id === $ticket->id, 404);
 
         if ($attachment->isMirrored()) {
-            return response()->json([
-                'message' => 'ไฟล์นี้มาจากคำขอ '.($ticket->serviceRequest?->reference ?? '').' ลบออกจากตั๋วไม่ได้',
-            ], 422);
+            return response()->json(['message' => 'file_from_request', 'reference' => $ticket->serviceRequest?->reference ?? ''], 422);
         }
 
         Storage::disk('local')->delete($attachment->path);

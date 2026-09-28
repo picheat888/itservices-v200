@@ -126,7 +126,10 @@ class TicketApiTest extends TestCase
         $ticket = Ticket::factory()->create(['requester_id' => $staff->employee_id]);
         $this->actingAs($staff);
 
-        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertStatus(422);
+        // A reason, not a sentence: the SPA words it in the reader's language.
+        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'own_case');
     }
 
     public function test_a_case_cannot_be_assigned_to_its_requester(): void
@@ -136,7 +139,8 @@ class TicketApiTest extends TestCase
         $this->actingAs($this->userWithEmployee('super'));
 
         $this->postJson("/api/tickets/{$ticket->id}/assign", ['assignee_id' => $staff->id, 'priority' => 'low'])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'target_is_requester');
     }
 
     public function test_assignee_can_forward_their_case_to_another_staff(): void
@@ -171,12 +175,16 @@ class TicketApiTest extends TestCase
         $requesterStaff = $this->userWithEmployee('super');
         $ticket->update(['requester_id' => $requesterStaff->employee_id]);
         $this->actingAs($owner);
-        $this->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $requesterStaff->id])->assertStatus(422);
+        $this->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $requesterStaff->id])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'target_is_requester');
 
         // Open cases use take/assign, not forward.
         $open = Ticket::factory()->create(['status' => 'open']);
         $this->actingAs($this->userWithEmployee('super'));
-        $this->postJson("/api/tickets/{$open->id}/forward", ['assignee_id' => $next->id])->assertStatus(422);
+        $this->postJson("/api/tickets/{$open->id}/forward", ['assignee_id' => $next->id])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'not_in_progress');
     }
 
     public function test_cannot_take_an_already_assigned_ticket(): void
@@ -185,7 +193,10 @@ class TicketApiTest extends TestCase
         $ticket = Ticket::factory()->create(['assignee_id' => $staff->id, 'status' => 'in_progress']);
         $this->actingAs($this->userWithEmployee('super'));
 
-        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])->assertStatus(422);
+        // The two-technicians-click-at-once case: the second one is told the case is gone.
+        $this->postJson("/api/tickets/{$ticket->id}/take", ['priority' => 'low'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'not_open_for_taking');
     }
 
     public function test_a_dispatcher_cannot_assign_a_case_to_themselves(): void
@@ -196,7 +207,8 @@ class TicketApiTest extends TestCase
         $this->actingAs($me);
 
         $this->postJson("/api/tickets/{$ticket->id}/assign", ['assignee_id' => $me->id, 'priority' => 'low'])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'self_assign');
     }
 
     public function test_super_can_assign_a_ticket_to_a_staff_member(): void
@@ -245,7 +257,8 @@ class TicketApiTest extends TestCase
         $this->actingAs($other);
 
         $this->postJson("/api/tickets/{$ticket->id}/resolve", ['mode' => 'complete', 'resolution' => 'Trying to close another staff case.'])
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertJsonPath('message', 'not_assignee');
     }
 
     public function test_requester_sees_only_their_own_tickets(): void
