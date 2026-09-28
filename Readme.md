@@ -3689,3 +3689,22 @@ Effect เดิมที่มีหน้าที่ (toast, shake ตอน�
 ### Tests / Verification
 
 ไม่มี JS test runner — ตรวจด้วย iframe ขนาดจริงใน Chrome: ทุกหน้าที่ 768 และ 1024 ไม่เลื่อนแนวนอน, แท็บ 1 แถว, รหัส 1 บรรทัด, sidebar 64px · `tsc --noEmit` ผ่าน · eslint + prettier ผ่าน (ยังไม่ได้ทดสอบบน iPad จริง / Safari)
+
+---
+
+## Ticket / Stock / Contract: เหตุผลที่ server ปฏิเสธแสดงเป็นสองภาษา + ย้ายข้อความ UI เข้าไฟล์ lang (2026-09-26)
+
+แก้ตามผลตรวจแอปข้อ 1, 2, 4, 6 และ 7 ส่วนข้อ 3 (import CSV ให้ Super admin ทำเท่านั้น) และข้อ 5 คงเดิมตามที่ตั้งใจ
+
+- **มอบหมายเคสที่เปิดจากคำขอ (ข้อ 1)** — dialog มอบหมายซ่อนช่อง priority และไม่ส่ง priority เมื่อเคสมาจากคำขอ (API ไม่รับ priority ของเคสแบบนี้ เดิมกดแล้วเงียบ)
+- **Dialog ของ Ticket บอกเหตุผลเมื่อถูกปฏิเสธ (ข้อ 2)** — รับเคส / มอบหมาย / ส่งต่อ / ปิดเคส / อัปเดตความคืบหน้า / เปิด Ticket / แก้ไข Ticket แสดงแบนเนอร์สีแดงแทนการเงียบ · ปุ่มแก้ไขเช็ก `tickets.edit_own` เหมือน endpoint · mutation ของ Ticket refresh ทั้งตอนสำเร็จและล้มเหลว (`onSettled`) เพื่อให้ drawer ด้านหลังแสดงสถานะล่าสุด
+- **กดส่งซ้ำไม่สร้างของซ้ำ** — เปิด Ticket แล้วแนบไฟล์ไม่ผ่าน: กดส่งอีกครั้งจะแนบเฉพาะไฟล์ที่เหลือเข้า Ticket เดิมและล็อกช่องรายละเอียด · แก้ไข Ticket แล้วล้มกลางทาง: ไฟล์ที่อัปโหลด/ลบไปแล้วจะไม่ถูกทำซ้ำ (`ticketApi.uploadAttachments` มี callback `onSaved`) · ไฟล์ที่ server ไม่รับ (ชนิด/ขนาด) บอกชื่อไฟล์ · ช่องหัวข้อ / รายละเอียด / เบอร์โทรจำกัดความยาวเท่ากับ server
+- **ยืนยันการลาออกอีกรอบ (ข้อ 4)** — หลังกด "ยืนยันลาออก" มี dialog ยืนยันแบบ danger (`useConfirm`) บอกวันทำงานวันสุดท้าย และแจ้งว่าอุปกรณ์จะถูกเรียกคืนและแจ้ง IT ทันที ซึ่งการยกเลิกลาออกภายหลังไม่คืนให้
+- **เหตุผลการปฏิเสธเป็น reason key (ข้อ 6)** — `App\Support\Refusal::fail($reason, $details, $field)` (ยังเป็น ValidationException) ใช้ในโดเมน Stock · `TicketController` / `TicketAttachmentController` ตอบ reason key แทนประโยคภาษาเดียว · frontend แปลด้วย `refusalText()` (`shared/lib/api-errors.ts`) → คีย์ `ticket_refusal_*` / `stock_refusal_*` พร้อมเติม `{placeholder}` จาก response · Stock ใช้ `modules/stock/lib/refusal.ts` (แปลงสถานะคำขอเป็นชื่อที่แสดง) ทั้งใน toast และ confirm dialog ของคำขอ / การนับสต็อก / การลบ SKU
+- **ย้ายข้อความ hardcode เข้า lang (ข้อ 6)** — โมดูล Contract ทั้งหมด (98 คีย์), Ticket (ฟอร์มเปิด/แก้ไข, ปิดเคส), Stock movement drawer (ย้ายคลัง), Resign modal
+- **CLAUDE.md (ข้อ 7)** — Ticket workflow เหลือ 4 สถานะตามระบบจริง: เปิด → กำลังดำเนินการ → เสร็จสิ้น / ยกเลิก (ปรับ enum ตัวอย่างด้วย)
+- ยังเหลือข้อความ hardcode ในโมดูลอื่นราว 160 บรรทัด (Permission, Asset, แท็บอื่นของ Stock, Email templates ฯลฯ) — ยังไม่ได้ย้าย
+
+### Tests / Verification
+
+PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket, StockWorkflow, StockCount, StockCountSerial, StockBalance) โดย assert reason key และค่าที่ส่งมาด้วย + test ใหม่ `test_a_case_opened_from_a_request_is_assigned_without_a_priority` · Pint ผ่าน · `tsc --noEmit` ผ่าน · eslint (0 error) + prettier ผ่าน · สคริปต์ตรวจ lang: th/en ตรงกัน ไม่มีคีย์ซ้ำข้ามไฟล์ ทุก `t('…')` มีคีย์ และทุก reason ของ backend มีคีย์ครบสองภาษา
