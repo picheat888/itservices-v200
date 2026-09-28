@@ -14,6 +14,7 @@ import { useToastStore } from '@/stores/toast';
 import { AlertTriangle, Check, ClipboardList, FileText, Loader2, Search, Trash2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useStockCount, useStockCountMutations, useStockCounts, useStockItems } from '../../hooks/use-stock';
+import { stockRefusalText } from '../../lib/refusal';
 
 /** Stock Count / Audit: open a session, enter physical counts, commit adjustments. */
 export function AuditTab({ can }: { can: (p: string) => boolean }) {
@@ -86,8 +87,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
     };
 
     const onError = (e: unknown) => {
-        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
+        useToastStore.getState().push(stockRefusalText(e, t), 'error');
     };
 
     // Seed the inputs from the session's stored counts whenever it loads/changes.
@@ -275,6 +275,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                 confirmText: t('stock_count_cancel'),
                                 cancelText: t('stock_count_back'),
                                 action: () => cancel.mutateAsync(s.id),
+                                errorMessage: (e) => stockRefusalText(e, t),
                             });
                         }}
                         title={t('stock_count_cancel')}
@@ -694,6 +695,7 @@ export function AuditTab({ can }: { can: (p: string) => boolean }) {
                                                     entity: { name: session.reference },
                                                     confirmText: t('stock_count_commit'),
                                                     cancelText: t('stock_count_back'),
+                                                    errorMessage: (e) => stockRefusalText(e, t),
                                                     action: async () => {
                                                         await save.mutateAsync({ id: session.id, counts: countsPayload() });
                                                         await commit.mutateAsync({ id: session.id, mode, missingSerials: {} });

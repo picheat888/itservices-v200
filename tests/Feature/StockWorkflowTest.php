@@ -92,7 +92,11 @@ class StockWorkflowTest extends TestCase
         $this->actingAs($this->superUser())
             ->postJson('/api/stock-movements', ['type' => 'transfer', 'stock_item_id' => $item->id, 'qty' => 5, 'from_label' => 'WH-HQ', 'to_label' => 'WH-2'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('qty');
+            ->assertJsonValidationErrors('qty')
+            // A reason and its figures, which the SPA puts into a sentence of its own.
+            ->assertJsonPath('message', 'not_enough_stock_in_warehouse')
+            ->assertJsonPath('warehouse', 'WH-HQ')
+            ->assertJsonPath('available', 1);
     }
 
     public function test_movement_requires_type_specific_permission(): void
@@ -160,7 +164,10 @@ class StockWorkflowTest extends TestCase
         $this->actingAs($this->superUser())
             ->postJson("/api/stock-requests/{$req->id}/fulfill")
             ->assertUnprocessable()
-            ->assertJsonValidationErrors('status');
+            ->assertJsonValidationErrors('status')
+            ->assertJsonPath('message', 'request_wrong_status')
+            ->assertJsonPath('expected', 'approved')
+            ->assertJsonPath('current', 'pending');
     }
 
     public function test_fulfill_deducts_from_chosen_source_warehouse(): void
@@ -226,7 +233,7 @@ class StockWorkflowTest extends TestCase
         // Allocations total 4, not 5 โ’ rejected, nothing deducted.
         $this->postJson("/api/stock-requests/{$req->id}/fulfill", [
             'allocations' => [['warehouse' => 'WH-1', 'qty' => 3], ['warehouse' => 'WH-2', 'qty' => 1]],
-        ])->assertStatus(422);
+        ])->assertStatus(422)->assertJsonPath('message', 'allocation_mismatch')->assertJsonPath('qty', 5);
 
         $this->assertSame(5, $item->fresh()->current_stock);
         $this->assertSame('approved', $req->fresh()->status);

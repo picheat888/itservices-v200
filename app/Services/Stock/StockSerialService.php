@@ -7,7 +7,7 @@ use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\User;
-use Illuminate\Validation\ValidationException;
+use App\Support\Refusal;
 
 class StockSerialService
 {
@@ -35,9 +35,7 @@ class StockSerialService
             ->get();
 
         if ($serials->count() !== count($ids)) {
-            throw ValidationException::withMessages([
-                'serial_ids' => 'Some selected serials are not in stock for this item.',
-            ]);
+            Refusal::fail('serials_not_in_stock', field: 'serial_ids');
         }
 
         StockItemSerial::whereIn('id', $serials->pluck('id'))->update(['status' => 'issued']);

@@ -91,7 +91,9 @@ class StockCountSerialTest extends TestCase
         $lineId = $count['lines'][0]['id'];
         $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$lineId => 1]])->assertOk();
 
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])->assertStatus(422);
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", ['mode' => 'manual'])
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'count_serial_needs_auto');
         $this->assertSame(3, $item->fresh()->current_stock);
     }
 
@@ -108,7 +110,7 @@ class StockCountSerialTest extends TestCase
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
             'mode' => 'auto',
             'missing_serials' => [(string) $item->id => [$serials[0]->id]],
-        ])->assertStatus(422);
+        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_missing_mismatch')->assertJsonPath('need', 2)->assertJsonPath('sku', 'UPS-1');
         $this->assertSame(3, $item->fresh()->current_stock);
     }
 
@@ -140,6 +142,6 @@ class StockCountSerialTest extends TestCase
         $this->postJson("/api/stock-counts/{$count['id']}/commit", [
             'mode' => 'auto',
             'missing_serials' => [(string) $item->id => []],
-        ])->assertStatus(422);
+        ])->assertStatus(422)->assertJsonPath('message', 'count_serial_over')->assertJsonPath('sku', 'UPS-1');
     }
 }

@@ -14,10 +14,10 @@ use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Services\Stock\StockSerialService;
 use App\Support\DocNumber;
+use App\Support\Refusal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class StockRequestController extends Controller
 {
@@ -153,9 +153,7 @@ class StockRequestController extends Controller
             $item = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id);
 
             if ($item->current_stock < $stockRequest->qty) {
-                throw ValidationException::withMessages([
-                    'qty' => "Not enough stock: {$item->current_stock} available.",
-                ]);
+                Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
             }
 
             // Build the per-warehouse allocation map (warehouse => qty).
@@ -167,9 +165,7 @@ class StockRequestController extends Controller
                     ->whereIn('id', $data['serial_ids'] ?? [])
                     ->get();
                 if ($serials->count() !== $stockRequest->qty) {
-                    throw ValidationException::withMessages([
-                        'serial_ids' => "Select exactly {$stockRequest->qty} in-stock serial(s) to issue.",
-                    ]);
+                    Refusal::fail('issue_serials_mismatch', ['qty' => $stockRequest->qty], 'serial_ids');
                 }
                 $allocation = $serials->groupBy(fn (StockItemSerial $s) => $s->warehouse?->name ?: 'Unassigned')->map->count();
             } elseif (! empty($data['allocations'])) {
@@ -182,9 +178,7 @@ class StockRequestController extends Controller
             }
 
             if ((int) $allocation->sum() !== $stockRequest->qty) {
-                throw ValidationException::withMessages([
-                    'allocations' => "Allocation across warehouses must total {$stockRequest->qty}.",
-                ]);
+                Refusal::fail('allocation_mismatch', ['qty' => $stockRequest->qty], 'allocations');
             }
 
             $reference = $stockRequest->reference ?? "REQ-{$stockRequest->id}";
@@ -247,9 +241,7 @@ class StockRequestController extends Controller
     private function assertStatus(StockRequest $stockRequest, string $expected): void
     {
         if ($stockRequest->status !== $expected) {
-            throw ValidationException::withMessages([
-                'status' => "Request must be {$expected} (currently {$stockRequest->status}).",
-            ]);
+            Refusal::fail('request_wrong_status', ['expected' => $expected, 'current' => $stockRequest->status], 'status');
         }
     }
 }

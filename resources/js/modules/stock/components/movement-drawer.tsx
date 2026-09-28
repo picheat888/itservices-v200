@@ -12,6 +12,7 @@ import { useToastStore } from '@/stores/toast';
 import { AlertTriangle, ArrowDownToLine, ArrowRight, Box, Check, MoveRight, Pencil, Plus, Printer, ShieldCheck, Trash2, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useExistingSerials, useRecordMovement, useStockItem, useStockItems } from '../hooks/use-stock';
+import { stockRefusalText } from '../lib/refusal';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -285,8 +286,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 });
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
-                const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
+                useToastStore.getState().push(stockRefusalText(e, t), 'error');
             }
             return;
         }
@@ -304,8 +304,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 });
                 setTimeout(onClose, CLOSE_DELAY_MS);
             } catch (e) {
-                const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-                useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
+                useToastStore.getState().push(stockRefusalText(e, t), 'error');
             }
             return;
         }
@@ -337,8 +336,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                 setTimeout(onClose, CLOSE_DELAY_MS);
             }
         } catch (e) {
-            const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-            useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
+            useToastStore.getState().push(stockRefusalText(e, t), 'error');
         }
     };
 
@@ -442,7 +440,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             <div className="flex items-center gap-1.5">
                                 <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-xs">
                                     <MoveRight className="h-3 w-3" />
-                                    TRF-XXXXXX - เลขเอกสารจะสร้างอัตโนมัติ
+                                    TRF-XXXXXX - {t('stock_mv_doc_auto')}
                                 </span>
                                 <span
                                     className={cn(
@@ -498,7 +496,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             {sameWarehouse && (
                                 <div className="text-destructive flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs dark:border-red-800 dark:bg-red-950/30">
                                     <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                                    ต้นทางและปลายทางต้องไม่ใช่คลังเดียวกัน
+                                    {t('stock_mv_same_warehouse')}
                                 </div>
                             )}
 
@@ -506,7 +504,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                             {from && !sameWarehouse && (
                                 <div className="bg-muted/50 flex items-center justify-between rounded-md px-3 py-2">
                                     <span className="text-muted-foreground text-xs">
-                                        คงเหลือที่ <b className="text-foreground">{from}</b>
+                                        {t('stock_mv_available_at')} <b className="text-foreground">{from}</b>
                                     </span>
                                     <span
                                         className={cn(
@@ -536,9 +534,9 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                         className="font-mono"
                                     />
                                     {qty > sourceBalance && sourceBalance > 0 && (
-                                        <p className="text-destructive mt-1 text-xs">จำนวนเกินคงเหลือในคลังต้นทาง</p>
+                                        <p className="text-destructive mt-1 text-xs">{t('stock_mv_qty_over_source')}</p>
                                     )}
-                                    {sourceBalance === 0 && <p className="text-destructive mt-1 text-xs">ไม่มีสินค้าในคลังต้นทาง</p>}
+                                    {sourceBalance === 0 && <p className="text-destructive mt-1 text-xs">{t('stock_mv_source_empty')}</p>}
                                 </Field>
                             )}
 
@@ -547,7 +545,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                                            เลือก Serial ที่จะย้าย
+                                            {t('stock_mv_pick_transfer_serials')}
                                         </span>
                                         {availableTransferSerials.length > 0 && (
                                             <button
@@ -561,7 +559,9 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                                     }
                                                 }}
                                             >
-                                                {transferSerialIds.size === availableTransferSerials.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+                                                {transferSerialIds.size === availableTransferSerials.length
+                                                    ? t('stock_return_select_none')
+                                                    : t('stock_return_select_all')}
                                             </button>
                                         )}
                                     </div>
@@ -602,7 +602,7 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                         </div>
                                     ) : (
                                         <div className="text-muted-foreground rounded-md border border-dashed py-5 text-center text-xs">
-                                            ไม่มี Serial ที่พร้อมย้ายจากคลัง {from || '—'}
+                                            {t('stock_mv_no_transfer_serials').replace('{warehouse}', from || '—')}
                                         </div>
                                     )}
 
@@ -619,12 +619,13 @@ export function MovementDrawer({ kind, onClose }: { kind: StockMovementType | nu
                                             </div>
                                             <div className="mt-1.5 flex items-center gap-x-3 text-xs">
                                                 <span>
-                                                    <b className="font-mono">{transferSerialIds.size}</b>/{availableTransferSerials.length} เลือก
+                                                    <b className="font-mono">{transferSerialIds.size}</b>/{availableTransferSerials.length}{' '}
+                                                    {t('stock_mv_selected')}
                                                 </span>
                                                 {transferSerialIds.size > 0 && (
                                                     <span className="text-brand flex items-center gap-1">
                                                         <Check className="h-3 w-3" />
-                                                        พร้อมย้าย
+                                                        {t('stock_mv_ready_to_move')}
                                                     </span>
                                                 )}
                                             </div>

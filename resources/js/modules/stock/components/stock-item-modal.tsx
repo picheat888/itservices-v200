@@ -15,6 +15,7 @@ import { useToastStore } from '@/stores/toast';
 import { useEffect, useState } from 'react';
 import type { StockItemPayload } from '../api/stockApi';
 import { useStockItemMutations } from '../hooks/use-stock';
+import { stockRefusalText } from '../lib/refusal';
 
 const CLOSE_DELAY_MS = 1100;
 
@@ -120,8 +121,8 @@ export function StockItemModal({ open, item, onClose }: { open: boolean; item?: 
                 await create.mutateAsync(form);
             }
             setTimeout(onClose, CLOSE_DELAY_MS);
-        } catch {
-            useToastStore.getState().push('Something went wrong.', 'error');
+        } catch (e) {
+            useToastStore.getState().push(stockRefusalText(e, t), 'error');
         }
     };
 

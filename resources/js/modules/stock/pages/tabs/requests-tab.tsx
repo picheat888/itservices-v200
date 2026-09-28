@@ -12,6 +12,7 @@ import { useToastStore } from '@/stores/toast';
 import { AlertTriangle, ArrowUpFromLine, Check, FilePlus2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useStockItem, useStockRequestActions, useStockRequests } from '../../hooks/use-stock';
+import { stockRefusalText } from '../../lib/refusal';
 
 const REQ_TONE: Record<StockRequestStatus, 'amber' | 'blue' | 'green' | 'red'> = {
     pending: 'amber',
@@ -74,8 +75,7 @@ export function RequestsTab({
     }, [fulfillReq?.id, fulfillItem]);
 
     const onError = (e: unknown) => {
-        const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        useToastStore.getState().push(msg ?? 'Something went wrong.', 'error');
+        useToastStore.getState().push(stockRefusalText(e, t), 'error');
     };
 
     // One-line summary of the request, shown inside the confirm dialogs.
@@ -88,6 +88,7 @@ export function RequestsTab({
             entity: { name: reqSummary(r) },
             confirmText: t('stock_approve'),
             action: () => approve.mutateAsync(r.id),
+            errorMessage: (e) => stockRefusalText(e, t),
         });
     };
 
@@ -98,6 +99,7 @@ export function RequestsTab({
             entity: { name: reqSummary(r) },
             confirmText: t('stock_reject'),
             action: () => reject.mutateAsync(r.id),
+            errorMessage: (e) => stockRefusalText(e, t),
         });
     };
 
