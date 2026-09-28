@@ -166,6 +166,12 @@ export const employee: Dict = {
     resign_err_reason: 'Required',
     resign_err_lastday: 'Required',
     resign_err_failed: 'Could not record the resignation - please try again.',
+    resign_err_forbidden: 'You are not allowed to record resignations.',
+    resign_err_invalid: 'This could not be saved - check the date and the reason.',
+    resign_reason_ph: 'e.g. Voluntary resignation, role change…',
+    resign_confirm_title: 'Record this resignation?',
+    resign_confirm_desc:
+        'Last working day: {date}\nTheir account closes after that day, but the devices they still hold are recalled and IT is told the moment you confirm. Cancelling the resignation later does not give the devices back.',
     emp_first_name: 'First name (English)',
     emp_first_name_ph: 'Enter the first name in English',
     emp_last_name: 'Last name (English)',
