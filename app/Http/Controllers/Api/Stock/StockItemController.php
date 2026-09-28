@@ -352,7 +352,7 @@ class StockItemController extends Controller
         abort_unless((bool) ($request->user()?->isSuper() || $request->user()?->hasPermission('stock.delete')), 403);
 
         if ($stockItem->current_stock !== 0 || $stockItem->stockValue() > 0) {
-            return response()->json(['message' => 'Cannot delete: item still has stock or value.'], 422);
+            return response()->json(['message' => 'item_has_stock'], 422);
         }
 
         // A SKU that has ever moved carries a ledger — and the lots, serials and serial

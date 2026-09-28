@@ -11,6 +11,7 @@ use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
 use App\Models\User;
+use App\Support\Refusal;
 use Illuminate\Support\Facades\DB;
 
 class StockCountService
@@ -71,7 +72,7 @@ class StockCountService
      */
     public function saveCounts(StockCount $count, array $countedByLineId): StockCount
     {
-        abort_unless($count->status === StockCountStatus::Draft, 422, 'Count is not editable.');
+        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_not_editable');
 
         DB::transaction(function () use ($count, $countedByLineId) {
             foreach ($count->lines as $line) {
@@ -103,13 +104,13 @@ class StockCountService
      */
     public function commit(StockCount $count, User $user, StockCountAdjustMode $mode = StockCountAdjustMode::Auto, array $missingSerials = []): StockCount
     {
-        abort_unless($count->status === StockCountStatus::Draft, 422, 'Count is already closed.');
+        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_closed');
 
         $lines = $count->lines()->with('item')->get();
 
         // Manual is report-only; it can't reconcile the per-unit serials a serialized count needs.
         if ($mode === StockCountAdjustMode::Manual && $lines->contains(fn ($l) => (bool) $l->item?->track_serial)) {
-            abort(422, 'Serialized counts must be committed with Auto.');
+            abort(422, 'count_serial_needs_auto');
         }
 
         DB::transaction(function () use ($count, $user, $mode, $lines, $missingSerials) {
@@ -169,7 +170,9 @@ class StockCountService
      */
     private function reconcileSerials(StockItem $item, int $variance, array $serialIds, string $reference, User $user): void
     {
-        abort_if($variance > 0, 422, "Counted exceeds recorded serials for {$item->sku}.");
+        if ($variance > 0) {
+            Refusal::fail('count_serial_over', ['sku' => $item->sku]);
+        }
 
         $need = abs($variance);
         $ids = array_values(array_unique(array_map('intval', $serialIds)));
@@ -179,11 +182,9 @@ class StockCountService
             ->whereIn('id', $ids)
             ->get();
 
-        abort_if(
-            count($ids) !== $need || $serials->count() !== $need,
-            422,
-            "Select exactly {$need} missing serial(s) for {$item->sku}."
-        );
+        if (count($ids) !== $need || $serials->count() !== $need) {
+            Refusal::fail('count_serial_missing_mismatch', ['need' => $need, 'sku' => $item->sku]);
+        }
 
         StockItemSerial::whereIn('id', $serials->pluck('id'))
             ->update(['status' => 'adjusted', 'reference' => $reference]);
@@ -201,7 +202,7 @@ class StockCountService
     /** Cancel a draft session without touching stock. */
     public function cancel(StockCount $count): StockCount
     {
-        abort_unless($count->status === StockCountStatus::Draft, 422, 'Only a draft can be canceled.');
+        abort_unless($count->status === StockCountStatus::Draft, 422, 'count_not_draft');
         $count->update(['status' => StockCountStatus::Canceled]);
 
         return $count;

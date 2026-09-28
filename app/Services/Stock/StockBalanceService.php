@@ -5,7 +5,7 @@ namespace App\Services\Stock;
 use App\Models\Stock\StockBalance;
 use App\Models\Stock\StockItem;
 use App\Models\Stock\Warehouse;
-use Illuminate\Validation\ValidationException;
+use App\Support\Refusal;
 
 /**
  * Owns per-warehouse on-hand quantities (stock_balances). Callers run these inside
@@ -43,9 +43,7 @@ class StockBalanceService
             ->first();
         $available = (int) ($balance->qty ?? 0);
         if ($available < $qty) {
-            throw ValidationException::withMessages([
-                'qty' => "Not enough stock in {$warehouse}: {$available} available.",
-            ]);
+            Refusal::fail('not_enough_stock_in_warehouse', ['warehouse' => $warehouse, 'available' => $available], 'qty');
         }
         $balance->qty -= $qty;
         $balance->save();
@@ -55,7 +53,7 @@ class StockBalanceService
     public function move(StockItem $item, string $from, string $to, int $qty): void
     {
         if ($from === $to) {
-            throw ValidationException::withMessages(['to_label' => 'Source and destination warehouse must differ.']);
+            Refusal::fail('same_warehouse', field: 'to_label');
         }
         $this->remove($item, $from, $qty);
         $this->add($item, $to, $qty);

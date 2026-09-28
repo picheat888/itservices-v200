@@ -15,6 +15,7 @@ use App\Services\Stock\StockLotService;
 use App\Services\Stock\StockNotificationService;
 use App\Support\DocNumber;
 use App\Support\DocumentName;
+use App\Support\Refusal;
 use App\Support\SystemTime;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +24,6 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Picqer\Barcode\Renderers\HtmlRenderer;
 use Picqer\Barcode\Types\TypeCode128;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -215,26 +215,20 @@ class StockMovementController extends Controller
             ->values();
 
         if ($serials->isEmpty()) {
-            throw ValidationException::withMessages([
-                'serials' => 'This item is serialized - capture a serial for every unit.',
-            ]);
+            Refusal::fail('serials_required', field: 'serials');
         }
 
         // Duplicates within the submitted batch (case-insensitive).
         $dupes = $serials->map(fn ($s) => mb_strtolower($s))->duplicates()->unique();
         if ($dupes->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'serials' => 'Duplicate serials in this batch: '.$dupes->implode(', '),
-            ]);
+            Refusal::fail('serials_duplicate', ['serials' => $dupes->implode(', ')], 'serials');
         }
 
         // Already registered against any SKU in the system (case-insensitive).
         $lowered = $serials->map(fn ($s) => mb_strtolower($s))->all();
         $clash = StockItemSerial::whereIn(DB::raw('LOWER(serial)'), $lowered)->pluck('serial');
         if ($clash->isNotEmpty()) {
-            throw ValidationException::withMessages([
-                'serials' => 'Already in stock: '.$clash->implode(', '),
-            ]);
+            Refusal::fail('serials_already_in_stock', ['serials' => $clash->implode(', ')], 'serials');
         }
 
         return $serials->all();
@@ -254,9 +248,7 @@ class StockMovementController extends Controller
 
         $ids = array_values(array_unique(array_map('intval', $data['serial_ids'] ?? [])));
         if ($ids === []) {
-            throw ValidationException::withMessages([
-                'serial_ids' => 'This item is serialized - select the issued serial(s) to return.',
-            ]);
+            Refusal::fail('return_serials_required', field: 'serial_ids');
         }
 
         $issued = StockItemSerial::whereIn('id', $ids)
@@ -265,9 +257,7 @@ class StockMovementController extends Controller
             ->count();
 
         if ($issued !== count($ids)) {
-            throw ValidationException::withMessages([
-                'serial_ids' => 'Each selected serial must belong to this item and be currently issued.',
-            ]);
+            Refusal::fail('return_serials_invalid', field: 'serial_ids');
         }
     }
 
@@ -306,7 +296,7 @@ class StockMovementController extends Controller
             // Outbound (non-transfer) needs enough total stock; transfer/issue per-warehouse
             // guard is enforced by the balance service below.
             if (! $inbound && ! $isTransfer && $item->current_stock < $qty) {
-                throw ValidationException::withMessages(['qty' => "Not enough stock: {$item->current_stock} available."]);
+                Refusal::fail('not_enough_stock', ['available' => $item->current_stock], 'qty');
             }
 
             $unitCost = $type === 'receive' && isset($data['unit_cost']) ? (float) $data['unit_cost'] : null;

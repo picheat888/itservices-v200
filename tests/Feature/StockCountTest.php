@@ -97,7 +97,7 @@ class StockCountTest extends TestCase
         $this->assertSame(10, $item->fresh()->current_stock);
         $this->assertSame(0, StockMovement::count());
 
-        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422);
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertStatus(422)->assertJsonPath('message', 'count_closed');
     }
 
     public function test_manual_commit_is_report_only(): void
