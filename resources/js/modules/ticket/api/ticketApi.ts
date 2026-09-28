@@ -83,9 +83,16 @@ export const ticketApi = {
     /**
      * Uploads attachments ONE AT A TIME so each file reports its own progress
      * (axios onUploadProgress is per-request). onProgress(index, 0..100) fires as
-     * each file streams; returns the ticket from the final response.
+     * each file streams; returns the ticket from the final response. onSaved(index) fires
+     * once that file is on the ticket — the upload stops at the first failure, so the files
+     * saved are always the leading ones, and a retry can send just the rest.
      */
-    uploadAttachments: async (id: number, files: File[], onProgress?: (index: number, percent: number) => void): Promise<Ticket> => {
+    uploadAttachments: async (
+        id: number,
+        files: File[],
+        onProgress?: (index: number, percent: number) => void,
+        onSaved?: (index: number) => void,
+    ): Promise<Ticket> => {
         await ensureCsrf();
         let latest: Ticket | undefined;
         for (let i = 0; i < files.length; i++) {
@@ -98,6 +105,7 @@ export const ticketApi = {
             });
             latest = data.data;
             onProgress?.(i, 100);
+            onSaved?.(i);
         }
         return latest as Ticket;
     },

@@ -3,6 +3,7 @@ import { useAssets } from '@/modules/asset';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketCategory, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -39,6 +40,7 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
     const fromRequest = !!ticket?.from_request;
     const [note, setNote] = useState('');
     const [assetId, setAssetId] = useState('');
+    const [formError, setFormError] = useState('');
 
     // Retain a "shown" copy so the content doesn't blank out during the Radix exit animation.
     const [shown, setShown] = useState<Ticket | null>(null);
@@ -75,21 +77,28 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
             setPriority('medium');
             setNote('');
             setAssetId('');
+            setFormError('');
         }
     }, [ticket]);
 
     const submit = async () => {
         if (!ticket) return;
-        await take.mutateAsync({
-            id: ticket.id,
-            // Omitted entirely rather than sent as null: the endpoint rejects the key outright
-            // on a request-born case, which is what keeps the rule true for anything posting
-            // at the API and not only for this dialog.
-            ...(fromRequest ? {} : { priority }),
-            note: note.trim() || null,
-            related_asset_id: assetId ? Number(assetId) : null,
-        });
-        onClose();
+        setFormError('');
+        try {
+            await take.mutateAsync({
+                id: ticket.id,
+                // Omitted entirely rather than sent as null: the endpoint rejects the key outright
+                // on a request-born case, which is what keeps the rule true for anything posting
+                // at the API and not only for this dialog.
+                ...(fromRequest ? {} : { priority }),
+                note: note.trim() || null,
+                related_asset_id: assetId ? Number(assetId) : null,
+            });
+            onClose();
+        } catch (e: unknown) {
+            // Two people pressing Take at once is the usual cause — the second one is told the case is gone.
+            setFormError(refusalText(e, t, 'ticket_refusal_'));
+        }
     };
 
     const pending = take.isPending;
@@ -107,6 +116,12 @@ export function TakeCaseModal({ ticket, onClose }: { ticket: Ticket | null; onCl
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
+                    {formError && (
+                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm">
+                            {formError}
+                        </div>
+                    )}
+
                     {!fromRequest && (
                         <Field label={t('ticket_priority')} required>
                             <div className="flex flex-wrap gap-2">

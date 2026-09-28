@@ -480,8 +480,13 @@ export default function TicketsPage() {
     // admin/super override (a case's content belongs to the person who opened it).
     // A case a service request opened is excluded outright: its words are a snapshot
     // of what was approved, and the endpoint refuses the edit (UpdateTicketRequest).
+    // The requester also needs tickets.edit_own — the endpoint checks it first.
     const canEditDetail =
-        !!shownTicket && shownTicket.status === 'open' && shownTicket.requester_id === user?.employee_id && !shownTicket.from_request;
+        has('tickets.edit_own') &&
+        !!shownTicket &&
+        shownTicket.status === 'open' &&
+        shownTicket.requester_id === user?.employee_id &&
+        !shownTicket.from_request;
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(

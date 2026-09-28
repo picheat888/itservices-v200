@@ -3,6 +3,7 @@ import { useAuth } from '@/modules/auth';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketPriority } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -14,7 +15,11 @@ import { TICKET_PRIORITY_META } from './ticket-meta';
 
 const PRIORITIES: TicketPriority[] = ['critical', 'high', 'medium', 'low'];
 
-/** Super admin assigns an open case to a chosen IT staff with a priority. */
+/**
+ * A dispatcher assigns an open case to a chosen IT staff — with a priority, unless the case was
+ * opened from an approved request. Such a case already carries its target, the endpoint refuses a
+ * priority on it, and offering one would make every assignment of it fail (same rule as Take Case).
+ */
 export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
     const { assign } = useTicketMutations();
@@ -29,6 +34,8 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
     const { user: me } = useAuth();
     const [assigneeId, setAssigneeId] = useState('');
     const [priority, setPriority] = useState<TicketPriority>('medium');
+    const [formError, setFormError] = useState('');
+    const fromRequest = !!view?.from_request;
 
     // Assign hands a case to someone ELSE — the dispatcher takes via Take Case instead
     // (the API rejects self-assign too) — and never to the person who filed it, which the
@@ -46,13 +53,20 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
         if (ticket) {
             setAssigneeId('');
             setPriority('medium');
+            setFormError('');
         }
     }, [ticket]);
 
     const submit = async () => {
         if (!ticket || !assigneeId) return;
-        await assign.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId), priority });
-        onClose();
+        setFormError('');
+        try {
+            await assign.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId), priority: fromRequest ? undefined : priority });
+            onClose();
+        } catch (e: unknown) {
+            // Most often somebody acted on the case first — say so rather than failing silently.
+            setFormError(refusalText(e, t, 'ticket_refusal_'));
+        }
     };
 
     const pending = assign.isPending;
@@ -69,27 +83,35 @@ export function AssignTicketModal({ ticket, onClose }: { ticket: Ticket | null; 
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
+                    {formError && (
+                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm">
+                            {formError}
+                        </div>
+                    )}
+
                     <Field label={t('ticket_select_staff')} required>
                         <SearchableSelect value={assigneeId} onChange={setAssigneeId} options={staffOptions} />
                     </Field>
 
-                    <Field label={t('ticket_priority')} required>
-                        <div className="flex flex-wrap gap-2">
-                            {PRIORITIES.map((p) => (
-                                <button
-                                    key={p}
-                                    type="button"
-                                    onClick={() => setPriority(p)}
-                                    className={cn(
-                                        'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-                                        priority === p ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
-                                    )}
-                                >
-                                    {t(TICKET_PRIORITY_META[p].key)}
-                                </button>
-                            ))}
-                        </div>
-                    </Field>
+                    {!fromRequest && (
+                        <Field label={t('ticket_priority')} required>
+                            <div className="flex flex-wrap gap-2">
+                                {PRIORITIES.map((p) => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => setPriority(p)}
+                                        className={cn(
+                                            'rounded-full px-3 py-1 text-sm font-medium transition-colors',
+                                            priority === p ? 'bg-brand text-white' : 'bg-muted text-muted-foreground hover:text-foreground',
+                                        )}
+                                    >
+                                        {t(TICKET_PRIORITY_META[p].key)}
+                                    </button>
+                                ))}
+                            </div>
+                        </Field>
+                    )}
 
                     <div className="flex items-start gap-2 rounded-md bg-blue-500/10 px-3 py-2.5 text-sm text-blue-600 dark:text-blue-400">
                         <Info className="mt-0.5 h-4 w-4 shrink-0" />

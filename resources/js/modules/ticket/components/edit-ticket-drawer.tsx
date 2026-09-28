@@ -3,6 +3,7 @@ import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { AttachmentList, AttachmentRow, FileDropZone, mergeFiles } from '@/shared/components/file-drop-zone';
 import { SectionLabel } from '@/shared/components/section-label';
+import { hasFieldError, refusalText } from '@/shared/lib/api-errors';
 import { cn } from '@/shared/lib/utils';
 import type { Ticket, TicketAttachment, TicketCategory } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
@@ -10,7 +11,6 @@ import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import { useUiStore } from '@/stores/ui';
 import { Loader2, Pencil, Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTicketMutations } from '../hooks/use-tickets';
@@ -29,7 +29,6 @@ const ACCEPT_EXT = ['pdf', 'png', 'jpg', 'jpeg', 'zip', 'doc', 'docx', 'xls', 'x
  */
 export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; onClose: () => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { update, uploadAttachments, deleteAttachment } = useTicketMutations();
 
     const [category, setCategory] = useState<TicketCategory>('hardware');
@@ -37,12 +36,17 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     const [description, setDescription] = useState('');
     const [phone, setPhone] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
+    // Why the server refused, shown as the banner over the form.
+    const [formError, setFormError] = useState('');
 
     // Attachments: already-saved files (with pending removals) + newly picked files.
     // Both are applied on Save (upload new, delete removed).
     const [existing, setExisting] = useState<TicketAttachment[]>([]);
     const [removedIds, setRemovedIds] = useState<number[]>([]);
     const [pending, setPending] = useState<File[]>([]);
+    // How many of the new files (from the top) a failed save already put on the ticket —
+    // Save again sends only the rest.
+    const [savedFiles, setSavedFiles] = useState(0);
     const [progress, setProgress] = useState<Record<number, number>>({});
     // Count of removed attachments already deleted during save (delete has no byte progress).
     const [deleted, setDeleted] = useState(0);
@@ -58,9 +62,11 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
         setDescription(ticket.description ?? '');
         setPhone(ticket.callback_phone ?? '');
         setErrors({});
+        setFormError('');
         setExisting(ticket.attachments ?? []);
         setRemovedIds([]);
         setPending([]);
+        setSavedFiles(0);
         setProgress({});
         setDeleted(0);
         setSaving(false);
@@ -78,38 +84,57 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
     const submit = async () => {
         if (!ticket) return;
         const e: Record<string, string> = {};
-        if (subject.trim().length < 5)
-            e.subject = lang === 'th' ? 'กรุณาระบุหัวข้อ (อย่างน้อย 5 ตัวอักษร)' : 'Please describe the issue (min 5 characters)';
-        if (description.trim().length < 10)
-            e.description = lang === 'th' ? 'กรุณากรอกรายละเอียด (อย่างน้อย 10 ตัวอักษร)' : 'Please provide a description (min 10 characters)';
-        if (phone.replace(/\D/g, '').length < 3) e.phone = lang === 'th' ? 'เบอร์โทรไม่ถูกต้อง' : 'Please provide a callback phone number';
+        if (subject.trim().length < 5) e.subject = t('ticket_err_subject');
+        if (description.trim().length < 10) e.description = t('ticket_err_description');
+        if (phone.replace(/\D/g, '').length < 3) e.phone = t('ticket_err_phone');
         setErrors(e);
         if (Object.keys(e).length) return;
 
         setDeleted(0);
+        setFormError('');
+        // The files already on the ticket stay full; the rest start again from empty.
+        setProgress(Object.fromEntries(pending.slice(0, savedFiles).map((_, i) => [i, 100])));
         setSaving(true);
+        let saved = savedFiles;
+        const removedNow: number[] = [];
         try {
             await update.mutateAsync({
                 id: ticket.id,
                 payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
             });
-            if (pending.length > 0) {
+            if (pending.length > saved) {
+                const offset = saved;
                 await uploadAttachments.mutateAsync({
                     id: ticket.id,
-                    files: pending,
-                    onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [index]: percent })),
+                    files: pending.slice(offset),
+                    onProgress: (index, percent) => setProgress((prev) => ({ ...prev, [offset + index]: percent })),
+                    onSaved: (index) => {
+                        saved = offset + index + 1;
+                    },
                 });
             }
             for (const attachmentId of removedIds) {
                 await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
+                removedNow.push(attachmentId);
                 setDeleted((d) => d + 1);
             }
             // Hold the finished bar at 100% for a beat so it doesn't vanish mid-fill.
             if (totalOps > 0) {
                 await new Promise((resolve) => setTimeout(resolve, 450));
             }
-        } catch {
-            // Mutation errors surface via the global handler; just re-enable the form.
+        } catch (err: unknown) {
+            // The global handler covers only dropped connections and server faults; a refusal
+            // is this dialog's to explain. Whatever did get saved is kept from being sent twice
+            // (a second removal of the same file would be refused as missing).
+            setSavedFiles(saved);
+            setExisting((prev) => prev.filter((a) => !removedNow.includes(a.id)));
+            setRemovedIds((prev) => prev.filter((id) => !removedNow.includes(id)));
+            // One file per request, so a file the upload rules turn down comes back as `files.0`.
+            setFormError(
+                hasFieldError(err, 'files.0')
+                    ? t('ticket_refusal_file_rejected').replace('{name}', pending[saved]?.name ?? '')
+                    : refusalText(err, t, 'ticket_refusal_'),
+            );
             setSaving(false);
             return;
         }
@@ -130,6 +155,15 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
 
                 {/* Two equal columns mirroring Open Ticket: left = describe the issue, right = reach-back + evidence. */}
                 <div className="grid flex-1 grid-cols-1 content-start gap-x-10 gap-y-6 overflow-y-auto border-t px-6 py-6 sm:grid-cols-2">
+                    {formError && (
+                        <div
+                            key={formError}
+                            className="bg-destructive/10 text-destructive animate-shake space-y-1 rounded-lg px-3.5 py-2.5 text-sm sm:col-span-2"
+                        >
+                            <p>{formError}</p>
+                        </div>
+                    )}
+
                     {/* LEFT: what's wrong */}
                     <div className="space-y-6">
                         <section>
@@ -166,7 +200,8 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                     <Input
                                         value={subject}
                                         onChange={(e) => setSubject(e.target.value)}
-                                        placeholder={lang === 'th' ? 'เช่น เชื่อมต่อ VPN ไม่ได้' : "e.g. Can't connect to VPN"}
+                                        maxLength={200}
+                                        placeholder={t('ticket_subject_ph')}
                                     />
                                 </Field>
                                 <Field label={t('ticket_description')} required error={errors.description}>
@@ -174,11 +209,8 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows={5}
-                                        placeholder={
-                                            lang === 'th'
-                                                ? 'เกิดอะไรขึ้น ลองทำอะไรไปแล้วบ้าง เห็นข้อความ error อย่างไร'
-                                                : 'What happened, what did you try, what error did you see?'
-                                        }
+                                        maxLength={5000}
+                                        placeholder={t('ticket_description_ph')}
                                     />
                                 </Field>
                             </div>
@@ -196,6 +228,7 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                     value={phone}
                                     onChange={(e) => setPhone(e.target.value)}
                                     className="font-mono"
+                                    maxLength={60}
                                     placeholder="+66 81 234 5678 / ext. 1305"
                                 />
                             </Field>
@@ -227,7 +260,10 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                                             name={f.name}
                                             size={f.size}
                                             mime={f.type}
-                                            onRemove={uploading ? undefined : () => setPending((prev) => prev.filter((_, j) => j !== i))}
+                                            // Not for a file a failed save already put on the ticket.
+                                            onRemove={
+                                                uploading || i < savedFiles ? undefined : () => setPending((prev) => prev.filter((_, j) => j !== i))
+                                            }
                                         />
                                     ))}
                                 </AttachmentList>

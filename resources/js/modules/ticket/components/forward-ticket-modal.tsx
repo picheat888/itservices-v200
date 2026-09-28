@@ -2,6 +2,7 @@ import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
+import { refusalText } from '@/shared/lib/api-errors';
 import type { Ticket } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
@@ -25,6 +26,7 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     // Only staff whose Ticket Level covers this case's category can receive it.
     const { data: staff = [] } = useTicketStaff(!!view, view?.category);
     const [assigneeId, setAssigneeId] = useState('');
+    const [formError, setFormError] = useState('');
 
     // Neither the current assignee (they already have it) nor the person who filed the case
     // (anti case-pumping) can receive it — the API rejects both, so neither is offered.
@@ -38,13 +40,21 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
     );
 
     useEffect(() => {
-        if (ticket) setAssigneeId('');
+        if (ticket) {
+            setAssigneeId('');
+            setFormError('');
+        }
     }, [ticket]);
 
     const submit = async () => {
         if (!ticket || !assigneeId) return;
-        await forward.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId) });
-        onClose();
+        setFormError('');
+        try {
+            await forward.mutateAsync({ id: ticket.id, assignee_id: Number(assigneeId) });
+            onClose();
+        } catch (e: unknown) {
+            setFormError(refusalText(e, t, 'ticket_refusal_'));
+        }
     };
 
     const pending = forward.isPending;
@@ -61,6 +71,12 @@ export function ForwardTicketModal({ ticket, onClose }: { ticket: Ticket | null;
                 />
 
                 <div className="flex-1 space-y-6 overflow-y-auto border-t px-6 py-6">
+                    {formError && (
+                        <div key={formError} className="bg-destructive/10 text-destructive animate-shake rounded-lg px-3.5 py-2.5 text-sm">
+                            {formError}
+                        </div>
+                    )}
+
                     <Field label={t('ticket_select_staff')} required>
                         {/* No placeholder override: SearchableSelect falls back to the shared
                             "Select…" key. An em dash is this app's marker for "no value" in

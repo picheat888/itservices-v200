@@ -150,7 +150,9 @@ class RequestTicketFileBridgeTest extends TestCase
 
         $this->actingAs($this->technician)
             ->deleteJson("/api/tickets/{$ticket->id}/attachments/{$mirror->id}")
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'file_from_request')
+            ->assertJsonPath('reference', $request->reference);
 
         $this->assertDatabaseHas('ticket_attachments', ['id' => $mirror->id]);
         Storage::disk('local')->assertExists($request->attachments()->firstOrFail()->path);
@@ -229,7 +231,9 @@ class RequestTicketFileBridgeTest extends TestCase
             ->post("/api/tickets/{$ticket->id}/attachments", [
                 'files' => [UploadedFile::fake()->image('one-too-many.jpg')],
             ], ['Accept' => 'application/json'])
-            ->assertStatus(422);
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'too_many_files')
+            ->assertJsonPath('remaining', 0);
     }
 
     /** The case's file list says where a mirrored file came from. */
