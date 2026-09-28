@@ -1,8 +1,10 @@
 import { useT } from '@/lang';
 import { Field } from '@/shared/components/field';
+import { refusalText } from '@/shared/lib/api-errors';
 import { cn, focusFirstError } from '@/shared/lib/utils';
 import type { Employee } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
+import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { DateInput } from '@/shared/ui/date-input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Label } from '@/shared/ui/label';
@@ -21,6 +23,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const { resign } = useEmployeeMutations();
+    const confirm = useConfirm();
     const [reason, setReason] = useState('');
     const [lastDay, setLastDay] = useState('');
     const [errors, setErrors] = useState<{ lastDay?: string; reason?: string }>({});
@@ -66,13 +69,25 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
         }
 
         if (!employee) return;
+        // Asked once more, on its own: the moment this is recorded every device they hold is
+        // recalled and IT is told. Cancelling the resignation later gives the person their
+        // status back, but not those.
+        const confirmed = await confirm({
+            variant: 'danger',
+            icon: UserMinus,
+            title: t('resign_confirm_title'),
+            description: t('resign_confirm_desc').replace('{date}', lastDay),
+            entity: { name, sub: employee.code },
+            confirmText: t('resign_submit'),
+        });
+        if (!confirmed) return;
+
         setFormError('');
         try {
             await resign.mutateAsync({ id: employee.id, reason, lastDay });
             onDone();
         } catch (err: unknown) {
-            const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
-            setFormError(data?.message ?? t('resign_err_failed'));
+            setFormError(refusalText(err, t, 'resign_err_'));
         }
     };
 
@@ -158,9 +173,8 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                         setErrors((p) => ({ ...p, reason: undefined }));
                                     }}
                                     className="min-h-24 resize-none"
-                                    placeholder={
-                                        lang === 'th' ? 'เช่น โอนย้ายตำแหน่ง ลาออกโดยสมัครใจ ฯลฯ' : 'e.g. Voluntary resignation, role change…'
-                                    }
+                                    maxLength={500}
+                                    placeholder={t('resign_reason_ph')}
                                 />
                             </Field>
                         </section>
@@ -187,8 +201,7 @@ export function ResignModal({ employee, onClose, onDone }: { employee: Employee 
                                 {pageCount > 1 && (
                                     <div className="border-border text-muted-foreground flex items-center justify-between gap-3 border-t px-3 py-2 text-sm">
                                         <span>
-                                            {start + 1}&ndash;{Math.min(start + ASSETS_PER_PAGE, heldAssets.length)} {lang === 'th' ? 'จาก' : 'of'}{' '}
-                                            {heldAssets.length}
+                                            {start + 1}&ndash;{Math.min(start + ASSETS_PER_PAGE, heldAssets.length)} {t('emp_of')} {heldAssets.length}
                                         </span>
                                         <div className="flex items-center gap-1.5">
                                             <button
