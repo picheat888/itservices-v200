@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\CheckSessionTimeout;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\Auth\UserResource;
 use App\Models\AuditLog;
@@ -22,6 +23,9 @@ class AuthController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        // A remembered sign-in lasts as long as its remember cookie; the idle timeout only
+        // applies to one without it (see CheckSessionTimeout).
+        $request->session()->put(CheckSessionTimeout::REMEMBERED, $request->boolean('remember'));
 
         // Backfill the password timestamp for legacy accounts so enabling the
         // expiry policy later doesn't instantly lock everyone out — their clock
@@ -181,6 +185,16 @@ class AuthController extends Controller
             'password_changed_at' => now(),
             'must_change_password' => false,
         ])->save();
+
+        // Every other device is signed out — sessions and remember cookies alike — while
+        // this one stays in. A remembered sign-in gets a fresh cookie for the new token,
+        // or it would silently stop being remembered.
+        // A token-authenticated client has no session to keep, so everything goes.
+        $session = $request->hasSession() ? $request->session() : null;
+        $user->signOutEverywhere($session?->getId());
+        if ($session?->get(CheckSessionTimeout::REMEMBERED) === true) {
+            Auth::guard('web')->login($user, true);
+        }
 
         AuditLog::record('Changed own password');
 

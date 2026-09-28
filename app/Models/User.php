@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -204,6 +207,35 @@ class User extends Authenticatable
         // Whole days between now and the deadline, counted the way a person would:
         // a deadline later today is 0 days left, not a fraction of one.
         return (int) now()->startOfDay()->diffInDays($this->password_changed_at->copy()->addDays($days)->startOfDay(), false);
+    }
+
+    /**
+     * Sign the account out everywhere — after its password is reset or changed.
+     *
+     * Laravel keeps only the user id in the session, and a "remember me" cookie carries a
+     * token that outlives any session, so a new password alone leaves every other device
+     * signed in. That matters because the usual reason to change a password is a suspected
+     * takeover. Ends every session (but $keepSessionId — the device making the change),
+     * every API token, and every remember cookie, by rotating the token they must match.
+     */
+    public function signOutEverywhere(?string $keepSessionId = null): void
+    {
+        // Keyed off the table rather than the configured driver so the behaviour is the same
+        // everywhere it is stored — and testable. (Sessions held outside the database, e.g.
+        // in Redis, would need their own eviction; this app stores them here.)
+        $table = config('session.table', 'sessions');
+        if (Schema::hasTable($table)) {
+            DB::table($table)
+                ->where('user_id', $this->id)
+                ->when($keepSessionId !== null, fn ($q) => $q->where('id', '!=', $keepSessionId))
+                ->delete();
+        }
+
+        // API tokens, for any client that authenticates with one instead of a cookie.
+        $this->tokens()->delete();
+
+        $this->setRememberToken(Str::random(60));
+        $this->saveQuietly();
     }
 
     /**

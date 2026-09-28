@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Auth;
 
+use App\Http\Middleware\CheckSessionTimeout;
 use App\Models\Employee\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -20,6 +21,10 @@ class UserResource extends JsonResource
 
         return [
             'id' => $this->id,
+            // Whether the viewer's own sign-in was remembered — the SPA's idle-logout timer
+            // stands down for it, as the server's does. Only ever describes the session this
+            // request came in on: this resource is the signed-in account, never somebody else's.
+            'remembered' => $request->hasSession() && $request->session()->get(CheckSessionTimeout::REMEMBERED) === true,
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
