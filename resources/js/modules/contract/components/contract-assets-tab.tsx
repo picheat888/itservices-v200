@@ -1,8 +1,8 @@
+import { useT } from '@/lang';
 import { AssetDetailDrawer, assetApi } from '@/modules/asset';
 import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { type Asset, type ContractLinkedAsset } from '@/shared/types';
-import { useUiStore } from '@/stores/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Package } from 'lucide-react';
 import { useState } from 'react';
@@ -18,7 +18,7 @@ const ASSET_TONE: Record<string, 'green' | 'amber' | 'red' | 'blue' | 'gray'> = 
 
 /** Assets tab: a fill-height data table of the contract's linked assets; a row opens the asset detail (read-only). */
 export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] }) {
-    const lang = useUiStore((s) => s.lang);
+    const t = useT();
     const [assetId, setAssetId] = useState<number | null>(null);
 
     // Linked assets carry only a subset of fields; fetch the full asset on demand for the detail drawer.
@@ -32,20 +32,20 @@ export function ContractAssetsTab({ assets }: { assets: ContractLinkedAsset[] })
         return (
             <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 py-16 text-sm">
                 <Package className="text-muted-foreground/50 h-8 w-8" />
-                {lang === 'th' ? 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน' : 'No assets linked to this contract'}
+                {t('contract_assets_empty')}
             </div>
         );
     }
 
     const columns: Column<ContractLinkedAsset>[] = [
-        { key: 'asset_code', header: 'Asset ID', render: (a) => <span className="font-mono text-xs">{a.asset_code}</span> },
-        { key: 'name', header: lang === 'th' ? 'ชื่อ' : 'Name', render: (a) => <span className="font-medium">{a.name}</span> },
-        { key: 'type', header: lang === 'th' ? 'ประเภท' : 'Type', render: (a) => a.type ?? '—' },
-        { key: 'serial', header: 'Serial', render: (a) => <span className="font-mono text-xs">{a.serial ?? '—'}</span> },
-        { key: 'owner', header: lang === 'th' ? 'เจ้าของ' : 'Owner', render: (a) => a.owner ?? '—' },
+        { key: 'asset_code', header: t('contract_asset_col_id'), render: (a) => <span className="font-mono text-xs">{a.asset_code}</span> },
+        { key: 'name', header: t('contract_asset_col_name'), render: (a) => <span className="font-medium">{a.name}</span> },
+        { key: 'type', header: t('contract_label_type'), render: (a) => a.type ?? '—' },
+        { key: 'serial', header: t('contract_asset_col_serial'), render: (a) => <span className="font-mono text-xs">{a.serial ?? '—'}</span> },
+        { key: 'owner', header: t('contract_asset_col_owner'), render: (a) => a.owner ?? '—' },
         {
             key: 'status',
-            header: lang === 'th' ? 'สถานะ' : 'Status',
+            header: t('contract_label_status'),
             render: (a) => (a.status ? <StatusBadge tone={ASSET_TONE[a.status] ?? 'gray'}>{a.status.replace(/_/g, ' ')}</StatusBadge> : '—'),
         },
     ];

@@ -1,7 +1,6 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { type ContractAttachment } from '@/shared/types';
-import { useUiStore } from '@/stores/ui';
 import { Download, ExternalLink, FileText } from 'lucide-react';
 import { useState } from 'react';
 
@@ -32,7 +31,6 @@ function TruncName({ name, className }: { name: string; className?: string }) {
 /** Attachments tab: file list on the left, an in-dialog PDF preview filling the frame on the right. */
 export function ContractAttachmentsTab({ attachments }: { attachments: ContractAttachment[] }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const [selected, setSelected] = useState(0);
 
     if (attachments.length === 0) {
@@ -82,7 +80,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         className="border-border hover:bg-accent inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
                     >
                         <ExternalLink className="h-3.5 w-3.5" />
-                        {lang === 'th' ? 'เปิดแท็บใหม่' : 'Open in new tab'}
+                        {t('contract_open_new_tab')}
                     </a>
                     <a
                         href={active.url}
@@ -90,7 +88,7 @@ export function ContractAttachmentsTab({ attachments }: { attachments: ContractA
                         className="border-border hover:bg-accent inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold"
                     >
                         <Download className="h-3.5 w-3.5" />
-                        {lang === 'th' ? 'ดาวน์โหลด' : 'Download'}
+                        {t('contract_download')}
                     </a>
                 </div>
                 <iframe key={active.id} src={active.url} title={active.name} className="min-h-0 flex-1 bg-[#525659]" />
