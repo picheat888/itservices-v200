@@ -81,4 +81,136 @@ export const contract: Dict = {
     contract_cancel_reason_ph: 'เช่น เลิกใช้ผู้ให้บริการ, เปลี่ยนไปใช้สัญญาใหม่ ฯลฯ',
     contract_cancel_reason_required: 'กรุณาระบุเหตุผล',
     contract_cancel_failed: 'ยกเลิกไม่สำเร็จ',
+
+    // contract-form-drawer.tsx — wizard header, stepper and footer
+    contract_form_new: 'สัญญาใหม่',
+    contract_form_edit: 'แก้ไขสัญญา',
+    contract_step_details: 'ข้อมูลสัญญา',
+    contract_step_reminders: 'แจ้งเตือน',
+    contract_step_link_assets: 'เชื่อมโยงทรัพย์สิน',
+    contract_back: 'ย้อนกลับ',
+    contract_next: 'ถัดไป',
+    contract_saving: 'กำลังบันทึก…',
+    contract_saved: 'บันทึกแล้ว',
+    contract_save_changes: 'บันทึกการแก้ไข',
+
+    // contract-form-drawer.tsx — step headings
+    contract_step_n: 'ขั้นที่ {n}',
+    contract_step_type_sub: 'เลือกหมวดหมู่ เพื่อให้ระบบแสดงเฉพาะฟิลด์ที่จำเป็น',
+    contract_step_details_title: 'ข้อมูลสัญญา',
+    contract_step_details_sub: 'ระบุรหัสอ้างอิง รายละเอียด ผู้จำหน่าย ชื่อสัญญา และแนบเอกสารสัญญา',
+    contract_step_term_title: 'ระยะเวลาและมูลค่า',
+    contract_step_term_sub: 'กำหนดวันเริ่ม–สิ้นสุด มูลค่า และรอบการเรียกเก็บ',
+    contract_step_reminders_title: 'แจ้งเตือนก่อนหมดอายุ',
+    contract_step_reminders_sub: 'เลือกอย่างน้อย 1 ช่วง ระบบจะส่งอีเมลและแจ้งเตือนในระบบ',
+    contract_step_link_assets_sub: 'เลือกทรัพย์สินที่ผูกกับสัญญานี้ (เฉพาะสัญญาประเภท Hardware)',
+    contract_step_review_title: 'ตรวจสอบก่อนบันทึก',
+    contract_step_review_sub: 'ตรวจสอบความถูกต้อง แก้ไขขั้นใดก็ได้จากแถบด้านบน',
+
+    // contract-form-drawer.tsx — type cards
+    contract_type_software_sub: 'License / SaaS',
+    contract_type_hardware_sub: 'เช่า / บำรุงรักษา',
+    contract_type_service_sub: 'บริการ / สนับสนุน',
+    contract_type_connectivity_sub: 'อินเทอร์เน็ต / วงจร',
+    contract_type_other_sub: 'อื่น ๆ',
+
+    // contract-form-drawer.tsx — contract details and term fields
+    contract_details_ph: 'เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี',
+    contract_vendor_ph: 'เลือกผู้จำหน่าย',
+    contract_name_ph: 'เช่น Microsoft 365 - 320 สิทธิ์',
+    contract_notes_ph: 'รายละเอียดเพิ่มเติม (ถ้ามี)',
+    contract_estimate: 'ประมาณการ',
+    contract_estimate_use: 'ใช้ค่านี้',
+
+    // contract-form-drawer.tsx — linked assets picker
+    contract_link_assets_hardware_only: 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware - เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้',
+    contract_link_assets_search_ph: 'ค้นหา tag / ชื่อ',
+    contract_link_assets_loading: 'กำลังโหลด…',
+    contract_link_assets_none: 'ไม่มี asset ให้เลือก',
+    contract_link_assets_selected: 'เลือกแล้ว {n} รายการ',
+
+    // contract-form-drawer.tsx — review card
+    contract_review_code: 'Contract No',
+    contract_review_name: 'Contract name',
+    contract_review_term: 'ระยะเวลา',
+    contract_review_assets_linked: '{n} รายการ',
+    contract_files_one: '{n} ไฟล์',
+    contract_files_many: '{n} ไฟล์',
+
+    // contract-form-drawer.tsx — validation messages
+    contract_err_required: 'จำเป็นต้องกรอก',
+    contract_err_end_before_start: 'ต้องไม่ก่อนวันเริ่ม',
+    contract_err_notify_required: 'เลือกอย่างน้อย 1 ช่วง',
+
+    // pages/index.tsx — alert banners
+    contract_banner_expiring_one: 'ใกล้หมดอายุ : {n} สัญญา',
+    contract_banner_expiring_many: 'ใกล้หมดอายุ : {n} สัญญา',
+    contract_banner_overdue_one: 'เกินกำหนด : {n} สัญญา',
+    contract_banner_overdue_many: 'เกินกำหนด : {n} สัญญา',
+
+    // pages/index.tsx — filters and sort
+    contract_filter_all_types: 'ทุกประเภท',
+    contract_filter_all_statuses: 'ทุกสถานะ',
+    contract_filter_sort: 'เรียงตาม',
+    contract_sort_end_asc: 'วันหมดอายุ (ใกล้สุดก่อน)',
+    contract_sort_end_desc: 'วันหมดอายุ (ไกลสุดก่อน)',
+    contract_sort_created_desc: 'เพิ่มล่าสุด',
+    contract_sort_created_asc: 'เพิ่มเก่าสุด',
+    contract_sort_value_desc: 'มูลค่า (สูงสุดก่อน)',
+    contract_sort_value_asc: 'มูลค่า (ต่ำสุดก่อน)',
+
+    // pages/index.tsx — contract table and pagination
+    contract_days_overdue_short: 'เกินกำหนด {n} วัน',
+    contract_badge_new: 'ใหม่',
+    contract_rows_per_page: 'แสดง',
+    contract_page_of: 'จาก',
+
+    // pages/index.tsx — Overview tab
+    contract_hint_in_reminder: 'ตามช่วงแจ้งเตือนสัญญา',
+    contract_hint_excl_cancelled: 'ไม่รวมสัญญาที่ยกเลิก',
+    contract_timeline_upcoming: 'กำลังจะถึง',
+    contract_timeline_in_reminder: 'ในช่วงแจ้งเตือน',
+    contract_timeline_overdue: 'เลยกำหนด',
+    contract_timeline_empty: 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้',
+    contract_timeline_expired_ago: 'หมดอายุไป {n} วัน',
+    contract_timeline_now: 'ปัจจุบัน',
+
+    // contract-detail-drawer.tsx — header, tabs and days badge
+    contract_eyebrow: 'สัญญา',
+    contract_tab_overview: 'ภาพรวม',
+    contract_tab_assets: 'ทรัพย์สิน',
+    contract_days_overdue: 'เกินกำหนด {n} วัน',
+    contract_expires_in: 'หมดอายุใน {n} วัน',
+    contract_days_left: 'เหลือ {n} วัน',
+
+    // contract-detail-drawer.tsx — close and reactivate confirmations
+    contract_cannot_close_title: 'ยังปิดสัญญาไม่ได้',
+    contract_cannot_close_desc: 'ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก {n} รายการ',
+    contract_got_it: 'เข้าใจแล้ว',
+    contract_reactivate_confirm_title: 'เปิดใช้สัญญาอีกครั้ง?',
+
+    // contract-detail-drawer.tsx — Overview and Notifications tabs
+    contract_months_one: '{n} เดือน',
+    contract_months_many: '{n} เดือน',
+    contract_notify_chip: '{n} วัน',
+    contract_reminder_days_before: '{n} วันก่อนหมดอายุ',
+
+    // contract-assets-tab.tsx — linked assets table
+    contract_assets_empty: 'สัญญานี้ยังไม่ได้ผูกทรัพย์สิน',
+    contract_asset_col_id: 'Asset ID',
+    contract_asset_col_name: 'ชื่อ',
+    contract_asset_col_serial: 'Serial',
+    contract_asset_col_owner: 'เจ้าของ',
+
+    // contract-attachments-tab.tsx — preview toolbar
+    contract_open_new_tab: 'เปิดแท็บใหม่',
+    contract_download: 'ดาวน์โหลด',
+
+    // contract-form-drawer.tsx + contract-detail-drawer.tsx + pages/index.tsx + contract-assets-tab.tsx — labels and day counts used on several screens
+    contract_label_type: 'ประเภท',
+    contract_label_status: 'สถานะ',
+    contract_label_review: 'ตรวจสอบ',
+    contract_days_one: '{n} วัน',
+    contract_days_many: '{n} วัน',
+    contract_days_short: '{n}d',
 };

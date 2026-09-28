@@ -27,12 +27,12 @@ function formatSize(bytes: number): string {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string; subTh: string; subEn: string }[] = [
-    { value: 'software', icon: FileText, labelKey: 'contract_type_software', subTh: 'License / SaaS', subEn: 'License / SaaS' },
-    { value: 'hardware', icon: Laptop, labelKey: 'contract_type_hardware', subTh: 'เช่า / บำรุงรักษา', subEn: 'Lease / maintenance' },
-    { value: 'service', icon: Cog, labelKey: 'contract_type_service', subTh: 'บริการ / สนับสนุน', subEn: 'Service / support' },
-    { value: 'connectivity', icon: Wifi, labelKey: 'contract_type_connectivity', subTh: 'อินเทอร์เน็ต / วงจร', subEn: 'Internet / circuit' },
-    { value: 'other', icon: Package, labelKey: 'contract_type_other', subTh: 'อื่น ๆ', subEn: 'Other' },
+const TYPE_META: { value: ContractType; icon: typeof FileText; labelKey: string; subKey: string }[] = [
+    { value: 'software', icon: FileText, labelKey: 'contract_type_software', subKey: 'contract_type_software_sub' },
+    { value: 'hardware', icon: Laptop, labelKey: 'contract_type_hardware', subKey: 'contract_type_hardware_sub' },
+    { value: 'service', icon: Cog, labelKey: 'contract_type_service', subKey: 'contract_type_service_sub' },
+    { value: 'connectivity', icon: Wifi, labelKey: 'contract_type_connectivity', subKey: 'contract_type_connectivity_sub' },
+    { value: 'other', icon: Package, labelKey: 'contract_type_other', subKey: 'contract_type_other_sub' },
 ];
 
 const REMINDER_DAYS = [150, 120, 90, 60, 45, 30, 7] as const;
@@ -288,7 +288,7 @@ export function ContractFormDrawer({
     /** Collect every validation error across the whole form (used on Save). */
     const buildErrors = (): Record<string, string> => {
         const e: Record<string, string> = {};
-        const required = lang === 'th' ? 'จำเป็นต้องกรอก' : 'Required';
+        const required = t('contract_err_required');
         if (!form.code.trim()) e.code = required;
         if (!form.vendor_id) e.vendor_id = required;
         if (!form.details.trim()) e.details = required;
@@ -298,10 +298,10 @@ export function ContractFormDrawer({
         if (!form.value.trim()) e.value = required;
         if (!editing && !form.total_value.trim()) e.total_value = required;
         if (form.start_date && form.end_date && form.end_date < form.start_date) {
-            e.end_date = lang === 'th' ? 'ต้องไม่ก่อนวันเริ่ม' : 'Must be after start';
+            e.end_date = t('contract_err_end_before_start');
         }
         if (!REMINDER_DAYS.some((d) => form[`notify_${d}` as ReminderKey])) {
-            e.notify = lang === 'th' ? 'เลือกอย่างน้อย 1 ช่วง' : 'Select at least one';
+            e.notify = t('contract_err_notify_required');
         }
         return e;
     };
@@ -392,18 +392,19 @@ export function ContractFormDrawer({
 
     const saving = create.isPending || update.isPending || uploadAttachments.isPending || deleteAttachment.isPending;
 
-    // Step metadata for the horizontal stepper.
+    // Step labels (lang keys) for the horizontal stepper.
     const steps = [
-        { th: 'ประเภท', en: 'Type' },
-        { th: 'ข้อมูลสัญญา', en: 'Details' },
-        { th: 'ระยะเวลา & มูลค่า', en: 'Term & value' },
-        { th: 'แจ้งเตือน', en: 'Reminders' },
-        { th: 'เชื่อมโยงทรัพย์สิน', en: 'Link assets' },
-        { th: 'ตรวจสอบ', en: 'Review' },
+        'contract_label_type',
+        'contract_step_details',
+        'contract_section_term',
+        'contract_step_reminders',
+        'contract_step_link_assets',
+        'contract_label_review',
     ];
 
     const TypeIcon = TYPE_META.find((m) => m.value === form.type)?.icon ?? FileText;
     const selectedNotify = REMINDER_DAYS.filter((d) => form[`notify_${d}` as ReminderKey]);
+    const attachmentCount = visibleExisting.length + pending.length;
 
     return (
         <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -411,8 +412,8 @@ export function ContractFormDrawer({
                 {/* Header */}
                 <FocusDialogHeader
                     icon={TypeIcon}
-                    eyebrow={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : lang === 'th' ? 'สัญญาใหม่' : 'New contract'}
-                    title={editing ? (lang === 'th' ? 'แก้ไขสัญญา' : 'Edit contract') : t('new_contract')}
+                    eyebrow={editing ? t('contract_form_edit') : t('contract_form_new')}
+                    title={editing ? t('contract_form_edit') : t('new_contract')}
                     code={editing ? editing.code : undefined}
                     srDescription={t('contract_register_sub')}
                 />
@@ -453,7 +454,7 @@ export function ContractFormDrawer({
                                         active ? 'text-brand' : done ? 'text-foreground' : 'text-muted-foreground',
                                     )}
                                 >
-                                    {lang === 'th' ? s.th : s.en}
+                                    {t(s)}
                                 </span>
                             </button>
                         );
@@ -466,13 +467,11 @@ export function ContractFormDrawer({
                         {/* ── Step 1 · Type ───────────────────────────── */}
                         {step === 0 && (
                             <div className="mx-auto w-full max-w-[820px]">
-                                <p className="text-brand mb-1 text-xs font-bold tracking-wide uppercase">{lang === 'th' ? 'ขั้นที่ 1' : 'Step 1'}</p>
-                                <h2 className="text-xl font-extrabold tracking-tight">{lang === 'th' ? 'ประเภทสัญญา' : 'Contract type'}</h2>
-                                <p className="text-muted-foreground mt-1 mb-6 text-sm">
-                                    {lang === 'th'
-                                        ? 'เลือกหมวดหมู่ เพื่อให้ระบบแสดงเฉพาะฟิลด์ที่จำเป็น'
-                                        : 'Pick a category so the form shows only what matters.'}
+                                <p className="text-brand mb-1 text-xs font-bold tracking-wide uppercase">
+                                    {t('contract_step_n').replace('{n}', '1')}
                                 </p>
+                                <h2 className="text-xl font-extrabold tracking-tight">{t('contract_type')}</h2>
+                                <p className="text-muted-foreground mt-1 mb-6 text-sm">{t('contract_step_type_sub')}</p>
                                 <div className="grid grid-cols-5 gap-3">
                                     {TYPE_META.map((tp) => {
                                         const Icon = tp.icon;
@@ -491,9 +490,7 @@ export function ContractFormDrawer({
                                                 <Icon className="h-6 w-6" />
                                                 <span className="text-[13px] leading-tight font-semibold">
                                                     {t(tp.labelKey)}
-                                                    <span className="text-muted-foreground mt-0.5 block text-[11px] font-medium">
-                                                        {lang === 'th' ? tp.subTh : tp.subEn}
-                                                    </span>
+                                                    <span className="text-muted-foreground mt-0.5 block text-[11px] font-medium">{t(tp.subKey)}</span>
                                                 </span>
                                             </ChoiceCard>
                                         );
@@ -505,14 +502,7 @@ export function ContractFormDrawer({
                         {/* ── Step 2 · Contract info (+ attachments) ───── */}
                         {step === 1 && (
                             <div className="mx-auto w-full max-w-[860px] space-y-6">
-                                <StepHead
-                                    lang={lang}
-                                    num={2}
-                                    thTitle="ข้อมูลสัญญา"
-                                    enTitle="Contract details"
-                                    thSub="ระบุรหัสอ้างอิง รายละเอียด ผู้จำหน่าย ชื่อสัญญา และแนบเอกสารสัญญา"
-                                    enSub="Reference code, details, vendor, contract name, and attach the contract file."
-                                />
+                                <StepHead num={2} title={t('contract_step_details_title')} sub={t('contract_step_details_sub')} />
 
                                 <div className="grid grid-cols-2 gap-6">
                                     {/* Left — contract info */}
@@ -530,9 +520,7 @@ export function ContractFormDrawer({
                                             <Input
                                                 value={form.details}
                                                 onChange={(e) => upd('details', e.target.value)}
-                                                placeholder={
-                                                    lang === 'th' ? 'เช่น สัญญาเช่าเครื่องพิมพ์ประจำปี' : 'e.g. Annual printer lease agreement'
-                                                }
+                                                placeholder={t('contract_details_ph')}
                                             />
                                         </Field>
 
@@ -541,7 +529,7 @@ export function ContractFormDrawer({
                                                 value={form.vendor_id}
                                                 onChange={(v) => upd('vendor_id', v)}
                                                 options={vendorOptions}
-                                                placeholder={lang === 'th' ? 'เลือกผู้จำหน่าย' : 'Select vendor'}
+                                                placeholder={t('contract_vendor_ph')}
                                             />
                                         </Field>
 
@@ -549,16 +537,16 @@ export function ContractFormDrawer({
                                             <Input
                                                 value={form.name}
                                                 onChange={(e) => upd('name', e.target.value)}
-                                                placeholder={lang === 'th' ? 'เช่น Microsoft 365 - 320 สิทธิ์' : 'e.g. Microsoft 365 - 320 seats'}
+                                                placeholder={t('contract_name_ph')}
                                             />
                                         </Field>
 
-                                        <Field label={lang === 'th' ? 'หมายเหตุ' : 'Notes'}>
+                                        <Field label={t('contract_notes')}>
                                             <Textarea
                                                 value={form.notes}
                                                 onChange={(e) => upd('notes', e.target.value)}
                                                 rows={3}
-                                                placeholder={lang === 'th' ? 'รายละเอียดเพิ่มเติม (ถ้ามี)' : 'Additional notes (optional)'}
+                                                placeholder={t('contract_notes_ph')}
                                             />
                                         </Field>
                                     </div>
@@ -647,14 +635,7 @@ export function ContractFormDrawer({
                         {/* ── Step 3 · Term & value ───────────────────── */}
                         {step === 2 && (
                             <div className="mx-auto w-full max-w-[560px] space-y-5">
-                                <StepHead
-                                    lang={lang}
-                                    num={3}
-                                    thTitle="ระยะเวลาและมูลค่า"
-                                    enTitle="Term & value"
-                                    thSub="กำหนดวันเริ่ม–สิ้นสุด มูลค่า และรอบการเรียกเก็บ"
-                                    enSub="Set the start/end dates, value, and billing cycle."
-                                />
+                                <StepHead num={3} title={t('contract_step_term_title')} sub={t('contract_step_term_sub')} />
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <Field label={t('contract_start')} required error={err.start_date} name="start_date">
@@ -712,12 +693,12 @@ export function ContractFormDrawer({
                                             onClick={() => upd('total_value', String(totalValueEstimate))}
                                             className="text-muted-foreground hover:text-brand mt-1 text-xs transition-colors"
                                         >
-                                            {lang === 'th' ? 'ประมาณการ' : 'Est.'} ≈{' '}
+                                            {t('contract_estimate')} ≈{' '}
                                             <span className="text-foreground font-mono font-semibold">
                                                 {symbol}
                                                 {totalValueEstimate.toLocaleString()}
                                             </span>{' '}
-                                            · {lang === 'th' ? 'ใช้ค่านี้' : 'use this'}
+                                            · {t('contract_estimate_use')}
                                         </button>
                                     )}
                                 </Field>
@@ -727,14 +708,7 @@ export function ContractFormDrawer({
                         {/* ── Step 4 · Reminders ──────────────────────── */}
                         {step === 3 && (
                             <div className="mx-auto w-full max-w-[560px] space-y-5">
-                                <StepHead
-                                    lang={lang}
-                                    num={4}
-                                    thTitle="แจ้งเตือนก่อนหมดอายุ"
-                                    enTitle="Expiry reminders"
-                                    thSub="เลือกอย่างน้อย 1 ช่วง ระบบจะส่งอีเมลและแจ้งเตือนในระบบ"
-                                    enSub="Pick at least one window. We'll email and notify you in-app."
-                                />
+                                <StepHead num={4} title={t('contract_step_reminders_title')} sub={t('contract_step_reminders_sub')} />
                                 <Field label={t('contract_notify')} required error={err.notify}>
                                     <div className="flex flex-wrap gap-2">
                                         {REMINDER_DAYS.map((d) => {
@@ -752,7 +726,7 @@ export function ContractFormDrawer({
                                                             : 'border-border text-muted-foreground hover:bg-accent',
                                                     )}
                                                 >
-                                                    {d} {lang === 'th' ? 'วัน' : 'days'}
+                                                    {t('contract_days_many').replace('{n}', String(d))}
                                                 </button>
                                             );
                                         })}
@@ -764,21 +738,12 @@ export function ContractFormDrawer({
                         {/* ── Step 5 · Link assets ────────────────────── */}
                         {step === 4 && (
                             <div className="mx-auto w-full max-w-[560px] space-y-5">
-                                <StepHead
-                                    lang={lang}
-                                    num={5}
-                                    thTitle="เชื่อมโยงทรัพย์สิน"
-                                    enTitle="Link assets"
-                                    thSub="เลือกทรัพย์สินที่ผูกกับสัญญานี้ (เฉพาะสัญญาประเภท Hardware)"
-                                    enSub="Choose the assets covered by this contract (Hardware contracts only)."
-                                />
+                                <StepHead num={5} title={t('contract_step_link_assets')} sub={t('contract_step_link_assets_sub')} />
 
                                 {!isHardware ? (
                                     <div className="border-input bg-muted/40 text-muted-foreground flex items-center justify-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm">
                                         <Info className="h-4 w-4 shrink-0" />
-                                        {lang === 'th'
-                                            ? 'ผูกทรัพย์สินได้เฉพาะสัญญาประเภท Hardware - เปลี่ยนประเภทที่ขั้นแรกเพื่อเปิดใช้'
-                                            : 'Only Hardware contracts can link assets - change the type in step 1 to enable this.'}
+                                        {t('contract_link_assets_hardware_only')}
                                     </div>
                                 ) : (
                                     <Field label={t('contract_link_assets')} help={t('contract_link_assets_sub')}>
@@ -788,18 +753,18 @@ export function ContractFormDrawer({
                                                 <Input
                                                     value={assetSearch}
                                                     onChange={(e) => setAssetSearch(e.target.value)}
-                                                    placeholder={lang === 'th' ? 'ค้นหา tag / ชื่อ' : 'Search tag / name'}
+                                                    placeholder={t('contract_link_assets_search_ph')}
                                                     className="border-0 pl-9 focus-visible:ring-0"
                                                 />
                                             </div>
                                             <div className="max-h-72 overflow-auto">
                                                 {assetsLoading ? (
                                                     <div className="text-muted-foreground px-3 py-4 text-center text-sm">
-                                                        {lang === 'th' ? 'กำลังโหลด…' : 'Loading…'}
+                                                        {t('contract_link_assets_loading')}
                                                     </div>
                                                 ) : filteredAssets.length === 0 ? (
                                                     <div className="text-muted-foreground px-3 py-4 text-center text-sm">
-                                                        {lang === 'th' ? 'ไม่มี asset ให้เลือก' : 'No assets available'}
+                                                        {t('contract_link_assets_none')}
                                                     </div>
                                                 ) : (
                                                     filteredAssets.map((a) => {
@@ -830,7 +795,7 @@ export function ContractFormDrawer({
                                                 )}
                                             </div>
                                             <div className="border-border text-muted-foreground border-t px-3 py-1.5 text-xs">
-                                                {lang === 'th' ? `เลือกแล้ว ${form.asset_ids.length} รายการ` : `${form.asset_ids.length} selected`}
+                                                {t('contract_link_assets_selected').replace('{n}', String(form.asset_ids.length))}
                                             </div>
                                         </div>
                                     </Field>
@@ -841,34 +806,27 @@ export function ContractFormDrawer({
                         {/* ── Step 6 · Review ─────────────────────────── */}
                         {step === 5 && (
                             <div className="mx-auto w-full max-w-[640px] space-y-5">
-                                <StepHead
-                                    lang={lang}
-                                    num={6}
-                                    thTitle="ตรวจสอบก่อนบันทึก"
-                                    enTitle="Review before saving"
-                                    thSub="ตรวจสอบความถูกต้อง แก้ไขขั้นใดก็ได้จากแถบด้านบน"
-                                    enSub="Double-check the details - jump to any step from the bar above."
-                                />
+                                <StepHead num={6} title={t('contract_step_review_title')} sub={t('contract_step_review_sub')} />
 
                                 <div className="border-border overflow-hidden rounded-xl border">
                                     <div className="border-border/60 grid grid-cols-2 gap-5 border-b px-4 py-3.5">
                                         <div>
                                             <div className="text-muted-foreground mb-0.5 text-[10.5px] font-bold tracking-wide uppercase">
-                                                Contract No
+                                                {t('contract_review_code')}
                                             </div>
                                             <div className="font-mono text-sm font-bold">{form.code || '—'}</div>
                                         </div>
                                         <div className="text-right">
                                             <div className="text-muted-foreground mb-0.5 text-[10.5px] font-bold tracking-wide uppercase">
-                                                Contract name
+                                                {t('contract_review_name')}
                                             </div>
                                             <div className="text-sm font-semibold">{form.name || form.details || '—'}</div>
                                         </div>
                                     </div>
-                                    <ReviewRow k={lang === 'th' ? 'ประเภท' : 'Type'} v={t(TYPE_META.find((m) => m.value === form.type)!.labelKey)} />
+                                    <ReviewRow k={t('contract_label_type')} v={t(TYPE_META.find((m) => m.value === form.type)!.labelKey)} />
                                     <ReviewRow k={t('contract_vendor')} v={vendorOptions.find((o) => o.value === form.vendor_id)?.label || '—'} />
                                     <ReviewRow
-                                        k={lang === 'th' ? 'ระยะเวลา' : 'Term'}
+                                        k={t('contract_review_term')}
                                         v={form.start_date && form.end_date ? `${form.start_date} → ${form.end_date}` : '—'}
                                         mono
                                     />
@@ -882,21 +840,20 @@ export function ContractFormDrawer({
                                     )}
                                     <ReviewRow
                                         k={t('contract_notify')}
-                                        v={selectedNotify.length ? `${selectedNotify.join(' · ')} ${lang === 'th' ? 'วัน' : 'days'}` : '—'}
+                                        v={selectedNotify.length ? t('contract_days_many').replace('{n}', selectedNotify.join(' · ')) : '—'}
                                     />
                                     {isHardware && (
                                         <ReviewRow
                                             k={t('contract_link_assets')}
-                                            v={lang === 'th' ? `${form.asset_ids.length} รายการ` : `${form.asset_ids.length} linked`}
+                                            v={t('contract_review_assets_linked').replace('{n}', String(form.asset_ids.length))}
                                         />
                                     )}
                                     <ReviewRow
                                         k={t('contract_attachments')}
-                                        v={
-                                            lang === 'th'
-                                                ? `${visibleExisting.length + pending.length} ไฟล์`
-                                                : `${visibleExisting.length + pending.length} files`
-                                        }
+                                        v={t(attachmentCount === 1 ? 'contract_files_one' : 'contract_files_many').replace(
+                                            '{n}',
+                                            String(attachmentCount),
+                                        )}
                                     />
                                 </div>
                                 {fileErr && <p className="text-destructive text-xs">{fileErr}</p>}
@@ -913,7 +870,7 @@ export function ContractFormDrawer({
                         ) : (
                             <>
                                 <ChevronLeft className="h-4 w-4" />
-                                {lang === 'th' ? 'ย้อนกลับ' : 'Back'}
+                                {t('contract_back')}
                             </>
                         )}
                     </Button>
@@ -927,24 +884,18 @@ export function ContractFormDrawer({
 
                     {step < LAST_STEP ? (
                         <Button onClick={goNext}>
-                            {lang === 'th' ? 'ถัดไป' : 'Next'}
+                            {t('contract_next')}
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     ) : (
                         <Button onClick={submit} disabled={saving || saveState === 'done'}>
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                             {saving
-                                ? lang === 'th'
-                                    ? 'กำลังบันทึก…'
-                                    : 'Saving…'
+                                ? t('contract_saving')
                                 : saveState === 'done'
-                                  ? lang === 'th'
-                                      ? 'บันทึกแล้ว'
-                                      : 'Saved!'
+                                  ? t('contract_saved')
                                   : editing
-                                    ? lang === 'th'
-                                        ? 'บันทึกการแก้ไข'
-                                        : 'Save changes'
+                                    ? t('contract_save_changes')
                                     : t('save')}
                         </Button>
                     )}
@@ -954,27 +905,14 @@ export function ContractFormDrawer({
     );
 }
 
-/** Per-step heading: small step number, bold title, muted subtitle. */
-function StepHead({
-    lang,
-    num,
-    thTitle,
-    enTitle,
-    thSub,
-    enSub,
-}: {
-    lang: string;
-    num: number;
-    thTitle: string;
-    enTitle: string;
-    thSub: string;
-    enSub: string;
-}) {
+/** Per-step heading: small step number, bold title, muted subtitle. `title` / `sub` arrive already translated. */
+function StepHead({ num, title, sub }: { num: number; title: string; sub: string }) {
+    const t = useT();
     return (
         <div>
-            <p className="text-brand text-xs font-bold tracking-wide uppercase">{lang === 'th' ? `ขั้นที่ ${num}` : `Step ${num}`}</p>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight">{lang === 'th' ? thTitle : enTitle}</h2>
-            <p className="text-muted-foreground mt-1 text-sm">{lang === 'th' ? thSub : enSub}</p>
+            <p className="text-brand text-xs font-bold tracking-wide uppercase">{t('contract_step_n').replace('{n}', String(num))}</p>
+            <h2 className="mt-1 text-xl font-extrabold tracking-tight">{title}</h2>
+            <p className="text-muted-foreground mt-1 text-sm">{sub}</p>
         </div>
     );
 }

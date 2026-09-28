@@ -79,17 +79,11 @@ function StatCard({
 /** Days-remaining cell: gray when cancelled/expired, blue far out, amber inside the reminder window, red once overdue. */
 function DaysCell({ days, inReminder, status }: { days: number; inReminder: boolean; status: ContractStatus }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     if (status === 'cancelled') return <StatusBadge tone="gray">{t('contract_cancelled')}</StatusBadge>;
     if (status === 'expired') return <StatusBadge tone="gray">{t('contract_expired')}</StatusBadge>;
-    if (days <= 0) return <StatusBadge tone="red">{lang === 'th' ? `เกินกำหนด ${-days} วัน` : `${-days}d overdue`}</StatusBadge>;
-    if (inReminder)
-        return (
-            <StatusBadge tone="amber">
-                {days} {lang === 'th' ? 'วัน' : 'days'}
-            </StatusBadge>
-        );
-    return <StatusBadge tone="blue">{days}d</StatusBadge>;
+    if (days <= 0) return <StatusBadge tone="red">{t('contract_days_overdue_short').replace('{n}', String(-days))}</StatusBadge>;
+    if (inReminder) return <StatusBadge tone="amber">{t('contract_days_many').replace('{n}', String(days))}</StatusBadge>;
+    return <StatusBadge tone="blue">{t('contract_days_short').replace('{n}', String(days))}</StatusBadge>;
 }
 
 const TYPE_TONE: Record<ContractType, 'blue' | 'violet' | 'amber' | 'green' | 'gray'> = {
@@ -102,7 +96,6 @@ const TYPE_TONE: Record<ContractType, 'blue' | 'violet' | 'amber' | 'green' | 'g
 
 export default function ContractsPage() {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const { can } = useAuth();
     const canCreate = can('contracts.create');
     const canEdit = can('contracts.edit');
@@ -281,9 +274,10 @@ export default function ContractsPage() {
                                 </div>
                                 <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
                                     <p className="text-foreground text-sm font-medium">
-                                        {lang === 'th'
-                                            ? `ใกล้หมดอายุ : ${summary.expiring} สัญญา`
-                                            : `Expiring Soon : ${summary.expiring} Contract${summary.expiring !== 1 ? 's' : ''}`}
+                                        {t(summary.expiring === 1 ? 'contract_banner_expiring_one' : 'contract_banner_expiring_many').replace(
+                                            '{n}',
+                                            String(summary.expiring),
+                                        )}
                                     </p>
                                     <p className="mt-3 text-sm md:mt-0 md:ml-6">
                                         <button
@@ -295,7 +289,7 @@ export default function ContractsPage() {
                                             }}
                                             className="font-medium whitespace-nowrap text-amber-800 hover:text-amber-600 dark:text-amber-300 dark:hover:text-amber-200"
                                         >
-                                            {lang === 'th' ? 'ตรวจสอบ' : 'Review'}
+                                            {t('contract_label_review')}
                                             <span aria-hidden="true"> →</span>
                                         </button>
                                     </p>
@@ -312,9 +306,10 @@ export default function ContractsPage() {
                                 </div>
                                 <div className="ml-3 flex-1 md:flex md:items-center md:justify-between">
                                     <p className="text-foreground text-sm font-medium">
-                                        {lang === 'th'
-                                            ? `เกินกำหนด : ${summary.overdue} สัญญา`
-                                            : `Overdue : ${summary.overdue} Contract${summary.overdue !== 1 ? 's' : ''}`}
+                                        {t(summary.overdue === 1 ? 'contract_banner_overdue_one' : 'contract_banner_overdue_many').replace(
+                                            '{n}',
+                                            String(summary.overdue),
+                                        )}
                                     </p>
                                     <p className="mt-3 text-sm md:mt-0 md:ml-6">
                                         <button
@@ -326,7 +321,7 @@ export default function ContractsPage() {
                                             }}
                                             className="font-medium whitespace-nowrap text-red-800 hover:text-red-600 dark:text-red-300 dark:hover:text-red-200"
                                         >
-                                            {lang === 'th' ? 'ตรวจสอบ' : 'Review'}
+                                            {t('contract_label_review')}
                                             <span aria-hidden="true"> →</span>
                                         </button>
                                     </p>
@@ -372,19 +367,19 @@ export default function ContractsPage() {
                             <FilterPopover count={activeFilterCount} width={460} onClear={clearFilters} resultCount={totalRows}>
                                 {() => {
                                     const sortOptions = [
-                                        { value: 'end_asc', label: lang === 'th' ? 'วันหมดอายุ (ใกล้สุดก่อน)' : 'Expiry: soonest first' },
-                                        { value: 'end_desc', label: lang === 'th' ? 'วันหมดอายุ (ไกลสุดก่อน)' : 'Expiry: latest first' },
-                                        { value: 'created_desc', label: lang === 'th' ? 'เพิ่มล่าสุด' : 'Newest added' },
-                                        { value: 'created_asc', label: lang === 'th' ? 'เพิ่มเก่าสุด' : 'Oldest added' },
-                                        { value: 'value_desc', label: lang === 'th' ? 'มูลค่า (สูงสุดก่อน)' : 'Value: highest first' },
-                                        { value: 'value_asc', label: lang === 'th' ? 'มูลค่า (ต่ำสุดก่อน)' : 'Value: lowest first' },
+                                        { value: 'end_asc', label: t('contract_sort_end_asc') },
+                                        { value: 'end_desc', label: t('contract_sort_end_desc') },
+                                        { value: 'created_desc', label: t('contract_sort_created_desc') },
+                                        { value: 'created_asc', label: t('contract_sort_created_asc') },
+                                        { value: 'value_desc', label: t('contract_sort_value_desc') },
+                                        { value: 'value_asc', label: t('contract_sort_value_asc') },
                                     ];
                                     return (
                                         <div className="grid grid-cols-2 gap-3">
                                             <div>
                                                 <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
                                                     <Filter className="h-3.5 w-3.5" />
-                                                    {lang === 'th' ? 'ประเภท' : 'Type'}
+                                                    {t('contract_label_type')}
                                                 </div>
                                                 <SearchableSelect
                                                     active={!!typeFilter}
@@ -396,8 +391,8 @@ export default function ContractsPage() {
                                                     options={[
                                                         {
                                                             value: ALL_TYPES,
-                                                            label: lang === 'th' ? 'ทุกประเภท' : 'All types',
-                                                            search: lang === 'th' ? 'ทุกประเภท' : 'All types',
+                                                            label: t('contract_filter_all_types'),
+                                                            search: t('contract_filter_all_types'),
                                                             icon: <ToneDot tone="gray" />,
                                                         },
                                                         {
@@ -436,7 +431,7 @@ export default function ContractsPage() {
                                             <div>
                                                 <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
                                                     <Clock className="h-3.5 w-3.5" />
-                                                    {lang === 'th' ? 'สถานะ' : 'Status'}
+                                                    {t('contract_label_status')}
                                                 </div>
                                                 <SearchableSelect
                                                     active={!!statusFilter}
@@ -448,8 +443,8 @@ export default function ContractsPage() {
                                                     options={[
                                                         {
                                                             value: ALL_STATUS,
-                                                            label: lang === 'th' ? 'ทุกสถานะ' : 'All statuses',
-                                                            search: lang === 'th' ? 'ทุกสถานะ' : 'All statuses',
+                                                            label: t('contract_filter_all_statuses'),
+                                                            search: t('contract_filter_all_statuses'),
                                                             icon: <ToneDot tone="gray" />,
                                                         },
                                                         {
@@ -470,7 +465,7 @@ export default function ContractsPage() {
                                             <div className="col-span-2">
                                                 <div className="text-muted-foreground mb-1 flex items-center gap-1.5 text-xs font-medium">
                                                     <ArrowUpDown className="h-3.5 w-3.5" />
-                                                    {lang === 'th' ? 'เรียงตาม' : 'Sort by'}
+                                                    {t('contract_filter_sort')}
                                                 </div>
                                                 <SearchableSelect
                                                     active={sort !== DEFAULT_SORT}
@@ -552,7 +547,7 @@ export default function ContractsPage() {
 
                         <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t pt-3 text-sm">
                             <div className="flex items-center gap-2">
-                                <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                                <span>{t('contract_rows_per_page')}</span>
                                 <Select
                                     value={String(perPage)}
                                     onValueChange={(v) => {
@@ -576,7 +571,7 @@ export default function ContractsPage() {
                             <div className="flex items-center gap-3">
                                 <span>
                                     {totalRows === 0 ? 0 : (currentPage - 1) * perPageDisplay + 1}–{Math.min(currentPage * perPageDisplay, totalRows)}{' '}
-                                    {lang === 'th' ? 'จาก' : 'of'} {totalRows}
+                                    {t('contract_page_of')} {totalRows}
                                 </span>
                                 <div className="flex items-center gap-1">
                                     <button
@@ -624,7 +619,6 @@ export default function ContractsPage() {
 /** Single contract row — shared by the normal list and the "new" pinned row. */
 function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: boolean; onSelect: (id: number) => void }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     return (
         <tr
             onClick={() => onSelect(c.id)}
@@ -638,7 +632,7 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
                     <span className="text-muted-foreground font-mono text-xs">{c.code}</span>
                     {isNew && (
                         <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
-                            {lang === 'th' ? 'ใหม่' : 'New'}
+                            {t('contract_badge_new')}
                         </span>
                     )}
                 </div>
@@ -662,9 +656,7 @@ function ContractRow({ c, isNew = false, onSelect }: { c: Contract; isNew?: bool
                           ? t('contract_expired')
                           : c.status === 'overdue'
                             ? t('contract_overdue')
-                            : lang === 'th'
-                              ? 'ใช้งาน'
-                              : 'Active'}
+                            : t('contract_active')}
                 </StatusBadge>
             </td>
         </tr>
@@ -783,17 +775,11 @@ function OverviewTab({
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                 <StatCard label={t('contract_total')} value={summary.total} icon={FileText} />
                 <StatCard label={t('contract_active')} value={summary.active} icon={CheckCircle2} />
-                <StatCard
-                    label={t('expiring_soon')}
-                    value={summary.expiring}
-                    hint={lang === 'th' ? 'ตามช่วงแจ้งเตือนสัญญา' : 'within reminder window'}
-                    hintDanger
-                    icon={Clock}
-                />
+                <StatCard label={t('expiring_soon')} value={summary.expiring} hint={t('contract_hint_in_reminder')} hintDanger icon={Clock} />
                 <StatCard
                     label={t('contract_annual_value')}
                     value={summary.annual_value}
-                    hint={lang === 'th' ? 'ไม่รวมสัญญาที่ยกเลิก' : 'excluding cancelled'}
+                    hint={t('contract_hint_excl_cancelled')}
                     icon={TrendingUp}
                 />
             </div>
@@ -808,23 +794,21 @@ function OverviewTab({
                     <div className="text-muted-foreground flex items-center gap-3 text-[11px]">
                         <span className="flex items-center gap-1.5">
                             <span className="bg-brand h-2 w-2 rounded-full" />
-                            {lang === 'th' ? 'กำลังจะถึง' : 'Upcoming'}
+                            {t('contract_timeline_upcoming')}
                         </span>
                         <span className="flex items-center gap-1.5">
                             <span className="h-2 w-2 rounded-full bg-amber-500" />
-                            {lang === 'th' ? 'ในช่วงแจ้งเตือน' : 'In reminder window'}
+                            {t('contract_timeline_in_reminder')}
                         </span>
                         <span className="flex items-center gap-1.5">
                             <span className="bg-destructive h-2 w-2 rounded-full" />
-                            {lang === 'th' ? 'เลยกำหนด' : 'Overdue'}
+                            {t('contract_timeline_overdue')}
                         </span>
                     </div>
                 </div>
 
                 {summary.timeline.length === 0 ? (
-                    <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-6 text-center text-sm">
-                        {lang === 'th' ? 'ไม่มีสัญญาที่หมดอายุในช่วง 12 เดือนนี้' : 'No expirations in this 12-month window.'}
-                    </div>
+                    <div className="bg-muted/50 text-muted-foreground rounded-md px-3 py-6 text-center text-sm">{t('contract_timeline_empty')}</div>
                 ) : (
                     <div className="bg-muted/40 relative overflow-hidden rounded-lg">
                         {/* Full-height NOW column highlight, sitting behind the dots and labels */}
@@ -850,8 +834,8 @@ function OverviewTab({
                                     key={c.id}
                                     title={
                                         c.days <= 0
-                                            ? `${c.code} · ${c.name} - ${c.end} (${lang === 'th' ? `หมดอายุไป ${-c.days} วัน` : `expired ${-c.days}d ago`})`
-                                            : `${c.code} · ${c.name} - ${c.end} (${c.days} ${lang === 'th' ? 'วัน' : 'days'})`
+                                            ? `${c.code} · ${c.name} - ${c.end} (${t('contract_timeline_expired_ago').replace('{n}', String(-c.days))})`
+                                            : `${c.code} · ${c.name} - ${c.end} (${t('contract_days_many').replace('{n}', String(c.days))})`
                                     }
                                     onClick={() => onSelect(c.id)}
                                     className={cn(
@@ -866,9 +850,7 @@ function OverviewTab({
                             {months.map((m) => (
                                 <div key={m.key} className="text-center leading-tight">
                                     {m.isNow && (
-                                        <div className="text-brand text-[9px] font-bold tracking-wide uppercase">
-                                            {lang === 'th' ? 'ปัจจุบัน' : 'NOW'}
-                                        </div>
+                                        <div className="text-brand text-[9px] font-bold tracking-wide uppercase">{t('contract_timeline_now')}</div>
                                     )}
                                     <div className={cn('text-[11px] font-medium', m.isNow ? 'text-brand font-bold' : 'text-foreground')}>
                                         {m.label}
@@ -923,7 +905,7 @@ function OverviewTab({
                                 className="hover:bg-accent/40 flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
                             >
                                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500/15 font-mono text-xs font-bold text-amber-600 dark:text-amber-400">
-                                    {c.days}d
+                                    {t('contract_days_short').replace('{n}', String(c.days))}
                                 </span>
                                 <div className="min-w-0 flex-1">
                                     <div className="truncate text-sm font-medium">{c.name}</div>

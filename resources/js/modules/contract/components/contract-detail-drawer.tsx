@@ -8,7 +8,6 @@ import { type Contract, type ContractType } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Dialog, DialogContent, focusDialogContentClass } from '@/shared/ui/dialog';
-import { useUiStore } from '@/stores/ui';
 import { Archive, Ban, Clock, Cog, FileText, Laptop, type LucideIcon, Package, RotateCcw, SquarePen, Trash2, Wifi } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useContractMutations } from '../hooks/use-contracts';
@@ -61,7 +60,6 @@ export function ContractDetailDrawer({
     canDelete: boolean;
 }) {
     const t = useT();
-    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const { expire, reactivate, remove } = useContractMutations();
     const [tab, setTab] = useState<TabId>('overview');
@@ -92,12 +90,9 @@ export function ContractDetailDrawer({
             await confirm({
                 variant: 'warn',
                 hideCancel: true,
-                title: lang === 'th' ? 'ยังปิดสัญญาไม่ได้' : 'Cannot close yet',
-                description:
-                    lang === 'th'
-                        ? `ต้อง write-off ทรัพย์สินที่ผูกกับสัญญานี้ให้ครบก่อน ยังเหลืออีก ${pending.length} รายการ`
-                        : `Every linked asset must be written off first. ${pending.length} asset(s) still need write-off.`,
-                confirmText: lang === 'th' ? 'เข้าใจแล้ว' : 'Got it',
+                title: t('contract_cannot_close_title'),
+                description: t('contract_cannot_close_desc').replace('{n}', String(pending.length)),
+                confirmText: t('contract_got_it'),
             });
             return false;
         }
@@ -130,7 +125,7 @@ export function ContractDetailDrawer({
     const handleReactivate = async () => {
         await confirm({
             variant: 'edit',
-            title: lang === 'th' ? 'เปิดใช้สัญญาอีกครั้ง?' : 'Reactivate this contract?',
+            title: t('contract_reactivate_confirm_title'),
             entity: { name: c.name, sub: c.code },
             confirmText: t('contract_reactivate'),
             action: async () => {
@@ -170,9 +165,7 @@ export function ContractDetailDrawer({
               ? t('contract_expired')
               : c.status === 'overdue'
                 ? t('contract_overdue')
-                : lang === 'th'
-                  ? 'ใช้งาน'
-                  : 'Active';
+                : t('contract_active');
     const TypeIcon = TYPE_ICON[c.type] ?? FileText;
 
     // Days-remaining badge (header titleSuffix): hidden once terminal; colored by state.
@@ -189,24 +182,18 @@ export function ContractDetailDrawer({
         >
             <Clock className="h-3 w-3" />
             {days <= 0
-                ? lang === 'th'
-                    ? `เกินกำหนด ${-days} วัน`
-                    : `${-days} days overdue`
+                ? t('contract_days_overdue').replace('{n}', String(-days))
                 : c.in_reminder
-                  ? lang === 'th'
-                      ? `หมดอายุใน ${days} วัน`
-                      : `Expires in ${days} days`
-                  : lang === 'th'
-                    ? `เหลือ ${days} วัน`
-                    : `${days} days left`}
+                  ? t('contract_expires_in').replace('{n}', String(days))
+                  : t('contract_days_left').replace('{n}', String(days))}
         </span>
     );
 
     const tabs: { id: TabId; label: string; count?: number }[] = [
-        { id: 'overview', label: lang === 'th' ? 'ภาพรวม' : 'Overview' },
-        { id: 'notify', label: lang === 'th' ? 'การแจ้งเตือน' : 'Notifications' },
-        { id: 'assets', label: lang === 'th' ? 'ทรัพย์สิน' : 'Assets', count: c.linked_assets.length },
-        { id: 'attachments', label: lang === 'th' ? 'เอกสารแนบ' : 'Attachments', count: c.attachments.length },
+        { id: 'overview', label: t('contract_tab_overview') },
+        { id: 'notify', label: t('contract_section_notify') },
+        { id: 'assets', label: t('contract_tab_assets'), count: c.linked_assets.length },
+        { id: 'attachments', label: t('contract_attachments'), count: c.attachments.length },
     ];
 
     return (
@@ -215,7 +202,7 @@ export function ContractDetailDrawer({
                 <DialogContent className={focusDialogContentClass}>
                     <FocusDialogHeader
                         icon={TypeIcon}
-                        eyebrow={lang === 'th' ? 'สัญญา' : 'Contract'}
+                        eyebrow={t('contract_eyebrow')}
                         title={c.name || c.details || ''}
                         code={c.code}
                         srDescription={c.vendor}
@@ -275,12 +262,16 @@ export function ContractDetailDrawer({
                                         <KV
                                             label={t('contract_duration')}
                                             value={(() => {
-                                                const mo = lang === 'th' ? 'เดือน' : c.duration_months === 1 ? 'month' : 'months';
-                                                const dy = lang === 'th' ? 'วัน' : c.duration_days === 1 ? 'day' : 'days';
-                                                if (c.duration_months > 0 && c.duration_days > 0)
-                                                    return `${c.duration_months} ${mo} ${c.duration_days} ${dy}`;
-                                                if (c.duration_months > 0) return `${c.duration_months} ${mo}`;
-                                                return `${c.duration_days} ${dy}`;
+                                                const monthsText = t(
+                                                    c.duration_months === 1 ? 'contract_months_one' : 'contract_months_many',
+                                                ).replace('{n}', String(c.duration_months));
+                                                const daysText = t(c.duration_days === 1 ? 'contract_days_one' : 'contract_days_many').replace(
+                                                    '{n}',
+                                                    String(c.duration_days),
+                                                );
+                                                if (c.duration_months > 0 && c.duration_days > 0) return `${monthsText} ${daysText}`;
+                                                if (c.duration_months > 0) return monthsText;
+                                                return daysText;
                                             })()}
                                         />
                                         <KV label={t('contract_billing')} value={t(`contract_billing_${c.billing_cycle}`)} />
@@ -332,15 +323,14 @@ export function ContractDetailDrawer({
                                                         : 'border-border text-muted-foreground/40 line-through',
                                                 )}
                                             >
-                                                {n.d}
-                                                {lang === 'th' ? ' วัน' : 'd'}
+                                                {t('contract_notify_chip').replace('{n}', String(n.d))}
                                             </span>
                                         ))}
                                     </div>
                                 </div>
                                 <KV
                                     label={t('contract_reminder_threshold')}
-                                    value={c.reminder_days ? `${c.reminder_days} ${lang === 'th' ? 'วันก่อนหมดอายุ' : 'days before expiry'}` : '—'}
+                                    value={c.reminder_days ? t('contract_reminder_days_before').replace('{n}', String(c.reminder_days)) : '—'}
                                 />
                             </div>
                         )}

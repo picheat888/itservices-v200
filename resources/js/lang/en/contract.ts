@@ -82,4 +82,136 @@ export const contract: Dict = {
     contract_cancel_reason_ph: 'e.g. Vendor no longer used, replaced by a new contract…',
     contract_cancel_reason_required: 'Please provide a reason',
     contract_cancel_failed: 'Cancellation failed',
+
+    // contract-form-drawer.tsx — wizard header, stepper and footer
+    contract_form_new: 'New contract',
+    contract_form_edit: 'Edit contract',
+    contract_step_details: 'Details',
+    contract_step_reminders: 'Reminders',
+    contract_step_link_assets: 'Link assets',
+    contract_back: 'Back',
+    contract_next: 'Next',
+    contract_saving: 'Saving…',
+    contract_saved: 'Saved!',
+    contract_save_changes: 'Save changes',
+
+    // contract-form-drawer.tsx — step headings
+    contract_step_n: 'Step {n}',
+    contract_step_type_sub: 'Pick a category so the form shows only what matters.',
+    contract_step_details_title: 'Contract details',
+    contract_step_details_sub: 'Reference code, details, vendor, contract name, and attach the contract file.',
+    contract_step_term_title: 'Term & value',
+    contract_step_term_sub: 'Set the start/end dates, value, and billing cycle.',
+    contract_step_reminders_title: 'Expiry reminders',
+    contract_step_reminders_sub: "Pick at least one window. We'll email and notify you in-app.",
+    contract_step_link_assets_sub: 'Choose the assets covered by this contract (Hardware contracts only).',
+    contract_step_review_title: 'Review before saving',
+    contract_step_review_sub: 'Double-check the details - jump to any step from the bar above.',
+
+    // contract-form-drawer.tsx — type cards
+    contract_type_software_sub: 'License / SaaS',
+    contract_type_hardware_sub: 'Lease / maintenance',
+    contract_type_service_sub: 'Service / support',
+    contract_type_connectivity_sub: 'Internet / circuit',
+    contract_type_other_sub: 'Other',
+
+    // contract-form-drawer.tsx — contract details and term fields
+    contract_details_ph: 'e.g. Annual printer lease agreement',
+    contract_vendor_ph: 'Select vendor',
+    contract_name_ph: 'e.g. Microsoft 365 - 320 seats',
+    contract_notes_ph: 'Additional notes (optional)',
+    contract_estimate: 'Est.',
+    contract_estimate_use: 'use this',
+
+    // contract-form-drawer.tsx — linked assets picker
+    contract_link_assets_hardware_only: 'Only Hardware contracts can link assets - change the type in step 1 to enable this.',
+    contract_link_assets_search_ph: 'Search tag / name',
+    contract_link_assets_loading: 'Loading…',
+    contract_link_assets_none: 'No assets available',
+    contract_link_assets_selected: '{n} selected',
+
+    // contract-form-drawer.tsx — review card
+    contract_review_code: 'Contract No',
+    contract_review_name: 'Contract name',
+    contract_review_term: 'Term',
+    contract_review_assets_linked: '{n} linked',
+    contract_files_one: '{n} file',
+    contract_files_many: '{n} files',
+
+    // contract-form-drawer.tsx — validation messages
+    contract_err_required: 'Required',
+    contract_err_end_before_start: 'Must be after start',
+    contract_err_notify_required: 'Select at least one',
+
+    // pages/index.tsx — alert banners
+    contract_banner_expiring_one: 'Expiring Soon : {n} Contract',
+    contract_banner_expiring_many: 'Expiring Soon : {n} Contracts',
+    contract_banner_overdue_one: 'Overdue : {n} Contract',
+    contract_banner_overdue_many: 'Overdue : {n} Contracts',
+
+    // pages/index.tsx — filters and sort
+    contract_filter_all_types: 'All types',
+    contract_filter_all_statuses: 'All statuses',
+    contract_filter_sort: 'Sort by',
+    contract_sort_end_asc: 'Expiry: soonest first',
+    contract_sort_end_desc: 'Expiry: latest first',
+    contract_sort_created_desc: 'Newest added',
+    contract_sort_created_asc: 'Oldest added',
+    contract_sort_value_desc: 'Value: highest first',
+    contract_sort_value_asc: 'Value: lowest first',
+
+    // pages/index.tsx — contract table and pagination
+    contract_days_overdue_short: '{n}d overdue',
+    contract_badge_new: 'New',
+    contract_rows_per_page: 'Rows per page',
+    contract_page_of: 'of',
+
+    // pages/index.tsx — Overview tab
+    contract_hint_in_reminder: 'within reminder window',
+    contract_hint_excl_cancelled: 'excluding cancelled',
+    contract_timeline_upcoming: 'Upcoming',
+    contract_timeline_in_reminder: 'In reminder window',
+    contract_timeline_overdue: 'Overdue',
+    contract_timeline_empty: 'No expirations in this 12-month window.',
+    contract_timeline_expired_ago: 'expired {n}d ago',
+    contract_timeline_now: 'NOW',
+
+    // contract-detail-drawer.tsx — header, tabs and days badge
+    contract_eyebrow: 'Contract',
+    contract_tab_overview: 'Overview',
+    contract_tab_assets: 'Assets',
+    contract_days_overdue: '{n} days overdue',
+    contract_expires_in: 'Expires in {n} days',
+    contract_days_left: '{n} days left',
+
+    // contract-detail-drawer.tsx — close and reactivate confirmations
+    contract_cannot_close_title: 'Cannot close yet',
+    contract_cannot_close_desc: 'Every linked asset must be written off first. {n} asset(s) still need write-off.',
+    contract_got_it: 'Got it',
+    contract_reactivate_confirm_title: 'Reactivate this contract?',
+
+    // contract-detail-drawer.tsx — Overview and Notifications tabs
+    contract_months_one: '{n} month',
+    contract_months_many: '{n} months',
+    contract_notify_chip: '{n}d',
+    contract_reminder_days_before: '{n} days before expiry',
+
+    // contract-assets-tab.tsx — linked assets table
+    contract_assets_empty: 'No assets linked to this contract',
+    contract_asset_col_id: 'Asset ID',
+    contract_asset_col_name: 'Name',
+    contract_asset_col_serial: 'Serial',
+    contract_asset_col_owner: 'Owner',
+
+    // contract-attachments-tab.tsx — preview toolbar
+    contract_open_new_tab: 'Open in new tab',
+    contract_download: 'Download',
+
+    // contract-form-drawer.tsx + contract-detail-drawer.tsx + pages/index.tsx + contract-assets-tab.tsx — labels and day counts used on several screens
+    contract_label_type: 'Type',
+    contract_label_status: 'Status',
+    contract_label_review: 'Review',
+    contract_days_one: '{n} day',
+    contract_days_many: '{n} days',
+    contract_days_short: '{n}d',
 };
