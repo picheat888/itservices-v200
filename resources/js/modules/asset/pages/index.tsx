@@ -21,6 +21,7 @@ import {
     Box,
     Check,
     CheckCircle2,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
     CircleDot,
@@ -30,6 +31,7 @@ import {
     Layers,
     Lock,
     MapPin,
+    MoreHorizontal,
     PackageCheck,
     Plus,
     RefreshCcw,
@@ -103,6 +105,28 @@ const TYPE_BUCKETS = [
     { key: 'used', labelKey: 'asset_bucket_used', status: 'deployed' },
     { key: 'writeoff', labelKey: 'asset_writeoff', status: 'writeoff' },
 ] as const;
+
+/** How many types the "Assets in the system" card lists before folding the rest into one row. */
+const TYPE_ROWS_SHOWN = 3;
+
+/** Marker type of the folded row — not a category name any master data can take. */
+const OTHER_TYPES = '__other__';
+
+/** A row of that card: one type, or the folded rest (`folded` = how many types it holds). */
+type TypeBar = AssetSummary['by_type'][number] & { folded?: number };
+
+/** Sums the leftover types into the single "other" row. */
+function foldTypeBars(rest: AssetSummary['by_type']): TypeBar {
+    const sum = (key: 'count' | 'ready' | 'used' | 'writeoff') => rest.reduce((n, b) => n + b[key], 0);
+    return {
+        type: OTHER_TYPES as AssetSummary['by_type'][number]['type'],
+        count: sum('count'),
+        ready: sum('ready'),
+        used: sum('used'),
+        writeoff: sum('writeoff'),
+        folded: rest.length,
+    };
+}
 
 /** Pulse skeleton mirroring the dashboard layout (KPI row + card pair + table) while the summary loads. */
 function AssetOverviewSkeleton() {
@@ -193,6 +217,9 @@ export default function AssetsPage() {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const [tab, setTab] = useState<Tab>(initialAssetTab);
+    // Unfolds the "Assets in the system" card — a way of looking at one card, so component
+    // state rather than a URL parameter.
+    const [showAllTypes, setShowAllTypes] = useState(false);
 
     // Switch tab and mirror it in the URL (?tab=) so reloads / shared links stay put.
     const changeTab = useCallback(
@@ -451,7 +478,15 @@ export default function AssetsPage() {
     ].filter((c): c is { key: string; label: string; clear: () => void } => c !== null);
     const activeFilterCount = activeChips.length;
 
-    const typeBars = summary?.by_type ?? [];
+    // The card grows a row per category, and categories are master data an admin can keep
+    // adding to — so it shows the biggest few and folds the rest into one "other" row, which
+    // keeps every asset in the picture at a fixed height. Folding only pays off from two
+    // leftover types up; a single one is shown as itself. The list arrives sorted by count.
+    const allTypeBars = summary?.by_type ?? [];
+    const foldTypes = !showAllTypes && allTypeBars.length > TYPE_ROWS_SHOWN + 1;
+    const typeBars: TypeBar[] = foldTypes
+        ? [...allTypeBars.slice(0, TYPE_ROWS_SHOWN), foldTypeBars(allTypeBars.slice(TYPE_ROWS_SHOWN))]
+        : allTypeBars;
     const maxTypeCount = Math.max(1, ...typeBars.map((b) => b.count));
     // Same status palette the badges use, so the chart and the table below it agree.
     const statusColors = useUiStore((s) => s.assetStatusColors);
@@ -462,8 +497,8 @@ export default function AssetsPage() {
     };
     // Spoken/hover description of a bar — the row's counts are marked by color alone, so the
     // written-out split is what a screen reader and a hover both get.
-    const typeBarTitle = (b: AssetSummary['by_type'][number]) =>
-        `${catLabel(b.type)}: ${TYPE_BUCKETS.map((s) => `${b[s.key]} ${t(s.labelKey)}`).join(', ')}`;
+    const typeLabel = (b: TypeBar) => (b.type === OTHER_TYPES ? t('asset_type_others').replace('{n}', String(b.folded ?? 0)) : catLabel(b.type));
+    const typeBarTitle = (b: TypeBar) => `${typeLabel(b)}: ${TYPE_BUCKETS.map((s) => `${b[s.key]} ${t(s.labelKey)}`).join(', ')}`;
 
     return (
         <div className="space-y-6">
@@ -592,9 +627,13 @@ export default function AssetsPage() {
                                         // three-way split — a single unit of write-off came out a few pixels wide.
                                         <div key={b.type} className="space-y-1.5">
                                             <div className="flex items-baseline gap-3">
-                                                <div className="flex min-w-0 flex-1 items-center gap-2 text-sm" title={catLabel(b.type)}>
-                                                    <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
-                                                    <span className="truncate">{catLabel(b.type)}</span>
+                                                <div className="flex min-w-0 flex-1 items-center gap-2 text-sm" title={typeLabel(b)}>
+                                                    {b.type === OTHER_TYPES ? (
+                                                        <MoreHorizontal className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                    ) : (
+                                                        <AssetTypeIcon type={b.type} className="text-muted-foreground h-4 w-4 shrink-0" />
+                                                    )}
+                                                    <span className="truncate">{typeLabel(b)}</span>
                                                 </div>
                                                 {/* Each count carries its bucket's dot, so it reads without
                                                     counting columns against the legend. An empty bucket fades
@@ -637,6 +676,19 @@ export default function AssetsPage() {
                                         </div>
                                     ))}
                                     {typeBars.length === 0 && <div className="text-muted-foreground py-6 text-center text-sm">{t('asset_none')}</div>}
+                                    {allTypeBars.length > TYPE_ROWS_SHOWN + 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAllTypes((v) => !v)}
+                                            aria-expanded={showAllTypes}
+                                            className="text-muted-foreground hover:text-foreground mx-auto flex items-center gap-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:py-2"
+                                        >
+                                            {showAllTypes
+                                                ? t('asset_types_show_less')
+                                                : t('asset_types_show_all').replace('{n}', String(allTypeBars.length))}
+                                            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showAllTypes && 'rotate-180')} />
+                                        </button>
+                                    )}
                                 </div>
                             </Card>
 
