@@ -45,6 +45,8 @@ export interface User {
     password_expired: boolean;
     /** True when an admin set the current password — the user must replace it before continuing. */
     must_change_password: boolean;
+    /** This sign-in was made with "remember me" — it lasts the cookie's 7 days, not the idle window. */
+    remembered: boolean;
 }
 
 export interface ApiEnvelope<T> {

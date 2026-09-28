@@ -29,7 +29,10 @@ export function AppShell() {
         queryFn: settingsApi.getSecurity,
         staleTime: 5 * 60_000,
     });
-    const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(security?.session_timeout_minutes ?? 0);
+    // A remembered sign-in lasts as long as its remember cookie, so the idle timer stands
+    // down for it — the server exempts it the same way (CheckSessionTimeout).
+    const idleMinutes = user?.remembered ? 0 : (security?.session_timeout_minutes ?? 0);
+    const { showWarning, secondsLeft, extendSession, doLogout } = useSessionTimeout(idleMinutes);
     const [notifOpen, setNotifOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
 

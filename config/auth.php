@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -39,6 +41,9 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            // "Remember me" keeps a browser signed in for 7 days from the sign-in (in
+            // minutes). Laravel's own default is 400 days.
+            'remember' => (int) env('AUTH_REMEMBER_MINUTES', 60 * 24 * 7),
         ],
     ],
 
@@ -62,7 +67,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
 
         // 'users' => [

@@ -3723,3 +3723,18 @@ Effect เดิมที่มีหน้าที่ (toast, shake ตอน�
 ### Tests / Verification
 
 PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket, StockWorkflow, StockCount, StockCountSerial, StockBalance) โดย assert reason key และค่าที่ส่งมาด้วย + test ใหม่ `test_a_case_opened_from_a_request_is_assigned_without_a_priority` · Pint ผ่าน · `tsc --noEmit` ผ่าน · eslint (0 error) + prettier ผ่าน · สคริปต์ตรวจ lang: th/en ตรงกัน ไม่มีคีย์ซ้ำข้ามไฟล์ ทุก `t('…')` มีคีย์ และทุก reason ของ backend มีคีย์ครบสองภาษา
+
+---
+
+## Auth: Remember me 7 วัน · ข้าม idle timeout · เปลี่ยนรหัสแล้วเครื่องอื่นหลุด (2026-09-28)
+
+1. **Remember me อยู่ได้ 7 วัน** (เดิม 400 วัน ค่าเริ่มต้น Laravel) — `config/auth.php` guard `web` → `'remember' => AUTH_REMEMBER_MINUTES` (ค่าเริ่ม 10080)
+2. **ติ๊ก Remember = ไม่โดน idle timeout** (Settings → หมดเวลาเข้าใช้งาน) อยู่ได้ครบ 7 วัน · ไม่ติ๊ก = ออกจากระบบเมื่อไม่ใช้งานตามที่ตั้ง เหมือนเดิม
+   - login เก็บ `_sec_remembered` ใน session (`CheckSessionTimeout::REMEMBERED`) · session ที่ guard กู้คืนจาก remember cookie (`viaRemember()`) นับเป็น remembered ด้วย
+   - `CheckSessionTimeout` ข้ามการนับเวลาเฉพาะ session ที่ remembered · `UserResource` ส่ง `remembered` ให้ SPA → `app-shell` ปิดตัวจับเวลาฝั่งหน้าเว็บให้ด้วย
+3. **เปลี่ยนรหัสผ่าน / แอดมินรีเซ็ตรหัส = ออกจากระบบทุกเครื่อง** — `User::signOutEverywhere()` (ย้ายมาจาก EmployeeController) ลบ session + API token และ **หมุน `remember_token`** (เดิมรีเซ็ตรหัสแล้ว cookie remember ยังพากลับเข้าระบบได้) · เปลี่ยนรหัสเองจะคงเครื่องที่กำลังใช้ไว้ และออก remember cookie ใหม่ให้ถ้าเครื่องนั้นติ๊ก remember
+- ข้อความช่วยเหลือของ Settings → หมดเวลาเข้าใช้งาน บอกว่า Remember อยู่ได้ 7 วันแทน
+
+### Tests / Verification
+
+`tests/Feature/Auth/RememberMeTest.php` ใหม่ 7 ข้อ (cookie 7 วัน, session จำว่า remember หรือไม่, remember ไม่โดน idle, กู้จาก cookie = remembered, ไม่ remember ยังหมดอายุ, เปลี่ยนรหัสเอง → token หมุน + session อื่นหาย + cookie เก่าใช้ไม่ได้, แอดมินรีเซ็ต → token หมุน) · Auth + Credentials + Security + PasswordExpiry = **101 passed** · `tsc --noEmit` ผ่าน · pint ผ่าน

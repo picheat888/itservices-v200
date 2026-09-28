@@ -111,7 +111,7 @@ export const settings: Dict = {
     set_security: 'Security',
     set_security_desc: 'Authentication and session policies.',
     set_session_timeout: 'Session timeout',
-    set_session_timeout_help: 'Auto sign-out after the selected minutes of inactivity.',
+    set_session_timeout_help: 'Auto sign-out after the selected minutes of inactivity. A sign-in with "Remember me" ticked stays for 7 days instead.',
     set_password_expiry: 'Password expiration',
     set_password_expiry_help: 'Force a password change after the selected number of days.',
     unit_minutes: 'minutes',
@@ -173,7 +173,8 @@ export const settings: Dict = {
     set_sla_approx_calendar_days: '≈ {n} days',
     set_sla_request_title: 'Targets for cases opened from a request',
     set_sla_request_desc: 'Resolution targets for the cases the system opens from an approved request.',
-    set_sla_hours_note: 'The response SLA counts only these hours, as does any resolution target set to working hours. Targets set to calendar time ignore this window and keep counting through nights, days off and the break.',
+    set_sla_hours_note:
+        'The response SLA counts only these hours, as does any resolution target set to working hours. Targets set to calendar time ignore this window and keep counting through nights, days off and the break.',
     set_sla_err_response: 'Must be 1–10080 minutes',
     set_sla_err_resolve: 'Must be 1–8760 hours',
     set_sla_err_order: 'Resolution must be ≥ the response target',
