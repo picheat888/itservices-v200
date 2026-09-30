@@ -1,8 +1,9 @@
 /**
  * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail: the reader's scheduled report emails — how
  * often and to whom, when the next one goes out, how the last one went — with edit, pause /
- * resume, send now and delete. Hidden while there are none; a schedule is set from a
- * report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules (GET /api/reports/schedules).
+ * resume, send now and delete. With none yet it shows the design's intro card instead; a
+ * schedule is set from a report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules
+ * (GET /api/reports/schedules).
  */
 import { useT } from '@/lang';
 import { refusalText } from '@/shared/lib/api-errors';
@@ -13,10 +14,11 @@ import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { Switch } from '@/shared/ui/switch';
 import { useToastStore } from '@/stores/toast';
-import { CalendarClock, Pencil, Send, Trash2 } from 'lucide-react';
+import { CalendarClock, Clock, Pencil, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useDeleteSchedule, useReportCatalogue, useReportSchedules, useSendScheduleNow, useUpdateSchedule } from '../hooks/use-reports';
 import type { ReportScheduleItem } from '../types';
+import { RailHeading } from './my-exports';
 import { reportStem } from './report-catalogue';
 import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
@@ -124,19 +126,24 @@ export function ScheduledReports() {
     // The last schedule opened, kept while the dialog animates closed so it does not blank.
     const [shown, setShown] = useState<ReportScheduleItem | null>(null);
 
-    if (items.length === 0) return null;
+    // None yet: the design's "ส่งรายงานทางอีเมลตามเวลา" card, saying where one is set.
+    if (items.length === 0) {
+        return (
+            <Card className="space-y-2 p-4">
+                <h4 className="flex items-center gap-2 text-[13.5px] font-bold">
+                    <Clock className="text-muted-foreground h-4 w-4" />
+                    {t('rep_schedule_eyebrow')}
+                </h4>
+                <p className="text-muted-foreground text-[12.5px]">{t('rep_schedules_intro')}</p>
+            </Card>
+        );
+    }
 
     const formats = (key: string) => catalogue.find((r) => r.key === key)?.formats ?? ['pdf'];
 
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
-            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-4 py-3">
-                <span className="bg-brand/10 text-brand flex h-7 w-7 items-center justify-center rounded-md">
-                    <CalendarClock className="h-4 w-4" />
-                </span>
-                <span className="font-semibold">{t('rep_schedules_title')}</span>
-                <span className="text-muted-foreground ml-auto text-xs">{t('rep_schedules_sub')}</span>
-            </div>
+            <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} note={t('rep_schedules_sub')} />
             {items.map((item) => (
                 <ScheduleRow
                     key={item.id}

@@ -8,7 +8,7 @@ export const report: Dict = {
     rep_center_title: 'Report center',
     rep_center_sub:
         'Reports from every module in one place. Open on screen, filter, then export to Excel or PDF. You only see reports for modules you have access to.',
-    rep_search_placeholder: 'Search reports, e.g. SLA',
+    rep_search_placeholder: 'Search reports, e.g. SLA, warranty, leavers',
     rep_filter_all: 'All',
     rep_domain_tickets: 'Tickets',
     rep_count_reports: '{n} reports',
@@ -18,6 +18,7 @@ export const report: Dict = {
     rep_last_export_at: 'Exported {t}',
     rep_last_export_building: 'Building file',
     rep_last_export_failed: 'Export failed',
+    rep_last_export_none: 'No file yet',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 days',
     rep_period_month: 'This month',
@@ -39,7 +40,11 @@ export const report: Dict = {
     rep_snap_sub_rate: '{n}% utilisation',
     rep_snap_sub_overdue: '{n} past end date',
     rep_snap_sub_out: '{n} out of stock',
-    rep_snap_delta_pt: '{n} pt vs previous period',
+    rep_snap_delta_pt: '{n} pt',
+    rep_snap_same: 'No change',
+    rep_snap_pill_renew: 'Renew',
+    rep_snap_pill_reorder: 'Reorder',
+    rep_snap_none_tickets_open: 'No open tickets',
     rep_snap_none_sla_rate: 'No case closed in this period yet',
     // components/column-picker.tsx — column picker
     rep_columns: 'Columns',
@@ -149,6 +154,7 @@ export const report: Dict = {
     rep_scope_filters: '{n} filter(s)',
     rep_scope_columns: '{n} columns',
     rep_my_exports_sub: 'Kept for download for {days} days',
+    rep_my_exports_empty: 'No files yet - use Export on a report page and the file waits here',
     rep_my_exports_st_queued: 'Queued',
     rep_my_exports_st_running: 'Building',
     rep_my_exports_st_ready: 'Ready',
@@ -208,6 +214,7 @@ export const report: Dict = {
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'Scheduled reports',
     rep_schedules_sub: 'Emailed automatically',
+    rep_schedules_intro: 'Have a report emailed daily, weekly or monthly as PDF or Excel - use Schedule on the report page.',
     rep_schedules_next: 'Next {t}',
     rep_schedules_paused: 'Paused',
     rep_schedules_last_sent: 'Last sent {t}',
