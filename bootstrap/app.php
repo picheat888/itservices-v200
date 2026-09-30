@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\SetRequestLocale;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->statefulApi();
         // Apply the standard 'api' rate limiter (60/min) to every API route.
-        $middleware->api(append: ['throttle:api']);
+        $middleware->api(append: ['throttle:api', SetRequestLocale::class]);
         $middleware->alias([
             'permission' => EnsurePermission::class,
         ]);

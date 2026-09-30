@@ -1,6 +1,7 @@
 import { ME_KEY, queryClient } from '@/shared/lib/query-client';
 import { useAppErrorStore } from '@/stores/app-error';
 import { useToastStore } from '@/stores/toast';
+import { useUiStore } from '@/stores/ui';
 import axios from 'axios';
 
 // Same-origin SPA: Laravel serves the app and the API, so cookies flow
@@ -14,6 +15,14 @@ export const http = axios.create({
         Accept: 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     },
+});
+
+// Tell the server which language the reader has the app in, so validation and sign-in
+// messages come back in it (SetRequestLocale). Read per request: switching language
+// takes effect on the very next call.
+http.interceptors.request.use((cfg) => {
+    cfg.headers.set('X-Locale', useUiStore.getState().lang);
+    return cfg;
 });
 
 // Server-side inactivity timeout (CheckSessionTimeout middleware) returns
