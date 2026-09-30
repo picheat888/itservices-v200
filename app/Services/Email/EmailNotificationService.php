@@ -151,6 +151,30 @@ class EmailNotificationService
         SendTemplatedEmail::dispatch($toEmail, $subject, $html, $key, $actionUrl, $actionLabel, $template->name, $recipientName);
     }
 
+    /**
+     * An enabled template rendered with $vars (plus the global ones), or null when the
+     * administrator has it switched off — for senders already in the worker that call
+     * deliver() themselves (a scheduled report, which carries an attachment).
+     *
+     * @param  array<string, mixed>  $vars
+     * @return array{subject: string, html: string, eyebrow: string}|null
+     */
+    public function renderTemplate(string $key, array $vars): ?array
+    {
+        $template = EmailTemplate::where('key', $key)->where('enabled', true)->first();
+        if (! $template) {
+            return null;
+        }
+
+        $vars += $this->globalVars();
+
+        return [
+            'subject' => $this->render($template->subject, $vars),
+            'html' => $this->render($template->body_html, $vars),
+            'eyebrow' => $template->name,
+        ];
+    }
+
     /** Sends a one-off test email synchronously; returns true on success. */
     public function sendTest(string $toEmail): bool
     {
@@ -165,7 +189,7 @@ class EmailNotificationService
      * Core send: applies DB SMTP config, sends the mailable, logs the result,
      * and bumps the template's last_sent_at. Returns true on success.
      */
-    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null): bool
+    public function deliver(string $toEmail, string $subject, string $html, ?string $templateKey, ?string $actionUrl = null, ?string $actionLabel = null, ?string $eyebrow = null, ?string $recipientName = null, ?string $attachmentPath = null, ?string $attachmentName = null): bool
     {
         $brand = AppSetting::get('brand_name') ?: config('app.name', 'IT Service Desk');
         $subject = $this->brandedSubject($subject);
@@ -173,7 +197,7 @@ class EmailNotificationService
         $this->mailConfig->apply();
 
         try {
-            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile(), EmailTemplates::widthFor($templateKey)));
+            Mail::to($toEmail)->send(new TemplatedMail($subject, $html, $eyebrow, $actionUrl, $actionLabel, $brand, $this->brandLogoFile(), EmailTemplates::widthFor($templateKey), $attachmentPath, $attachmentName));
             $status = 'sent';
             $error = null;
         } catch (\Throwable $e) {

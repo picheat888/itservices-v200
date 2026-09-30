@@ -332,6 +332,13 @@ class EmailTemplateController extends Controller
             'user.first_name' => explode(' ', $name)[0] ?: 'there',
             'user.email' => $request->user()->email ?? 'user@example.com',
             'count' => 3,
+            // report.scheduled — a weekly schedule set by the person previewing.
+            'report.name' => 'ทะเบียนทรัพย์สิน',
+            'report.period' => '2026-09-21 to 2026-09-27',
+            'report.rows' => '1,248',
+            'report.frequency' => 'Every Monday at 07:00',
+            'report.owner' => $name,
+            'report.attachment_note' => 'The report file is attached.',
             'stock.sku' => 'SKU-1042',
             'stock.name' => 'USB-C Docking Station',
             'stock.qty' => 2,

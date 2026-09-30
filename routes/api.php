@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\ReportController;
 use App\Http\Controllers\Api\Report\ReportExportController;
+use App\Http\Controllers\Api\Report\ReportScheduleController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketOverviewReportController;
 use App\Http\Controllers\Api\Request\RequestController;
@@ -88,6 +89,13 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/exports/{export}/download', [ReportExportController::class, 'download'])->whereNumber('export')->name('api.reports.exports.download');
     Route::post('reports/exports/{export}/retry', [ReportExportController::class, 'retry'])->whereNumber('export')->name('api.reports.exports.retry');
     Route::delete('reports/exports/{export}', [ReportExportController::class, 'destroy'])->whereNumber('export')->name('api.reports.exports.destroy');
+    // Scheduled report emails — set from a report page (the two POSTs below), managed on the hub.
+    Route::get('reports/schedules', [ReportScheduleController::class, 'index'])->name('api.reports.schedules.index');
+    Route::put('reports/schedules/{schedule}', [ReportScheduleController::class, 'update'])->whereNumber('schedule')->name('api.reports.schedules.update');
+    Route::delete('reports/schedules/{schedule}', [ReportScheduleController::class, 'destroy'])->whereNumber('schedule')->name('api.reports.schedules.destroy');
+    Route::post('reports/schedules/{schedule}/send-now', [ReportScheduleController::class, 'sendNow'])->whereNumber('schedule')->name('api.reports.schedules.send-now');
+    Route::post('reports/tickets/overview/schedule', [ReportScheduleController::class, 'storeTicketOverview'])->name('api.reports.tickets.overview.schedule');
+    Route::post('reports/r/{key}/schedule', [ReportScheduleController::class, 'storeTabular'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.schedule');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');

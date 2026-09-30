@@ -15,6 +15,7 @@ export const notification: Dict = {
     notif_password_expiring: 'รหัสผ่านจะหมดอายุในอีก {days} วัน - กรุณาเปลี่ยนก่อนถูกล็อก',
     notif_report_export_ready: 'ไฟล์ {format} พร้อมแล้ว - ดาวน์โหลดได้ที่ ไฟล์ Export ของฉัน',
     notif_report_export_failed: 'สร้างไฟล์ {format} ไม่สำเร็จ - ลองอีกครั้งได้ที่ ไฟล์ Export ของฉัน',
+    notif_report_schedule_failed: 'ส่งรายงานตามเวลาไม่สำเร็จ - ตรวจสอบได้ที่ศูนย์รายงาน',
     notif_cred_required: 'ยังไม่มีบัญชี - กรุณาตั้ง Username/Password',
     notif_resigned: 'ลาออก - โปรดเพิกถอนบัญชีและเรียกคืนทรัพย์สิน',
     notif_departure: 'พนักงานลาออก - โปรดตรวจสอบงานที่เกี่ยวข้อง',
@@ -240,4 +241,7 @@ export const notification: Dict = {
     notification_name_report_export_failed: 'สร้างไฟล์รายงานไม่สำเร็จ',
     notification_when_report_export_failed: 'ไฟล์รายงานที่ขอจากศูนย์รายงานสร้างไม่สำเร็จ',
     notification_who_report_export_failed: 'ผู้ที่ขอไฟล์',
+    notification_name_report_schedule_failed: 'ส่งรายงานตามเวลาไม่สำเร็จ',
+    notification_when_report_schedule_failed: 'รายงานที่ตั้งเวลาไว้ในศูนย์รายงานสร้างหรือส่งอีเมลไม่สำเร็จ',
+    notification_who_report_schedule_failed: 'ผู้ที่ตั้งเวลาส่ง',
 };

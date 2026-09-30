@@ -70,6 +70,9 @@ export interface NotificationData {
     report_key?: string;
     format?: string;
     file_name?: string | null;
+    // A scheduled report that did not go out (report_schedule) - error: forbidden | build_failed | template_disabled | delivery_failed
+    report_schedule_id?: number;
+    error?: string | null;
 }
 
 export interface AppNotification {

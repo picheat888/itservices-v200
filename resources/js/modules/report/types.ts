@@ -16,6 +16,31 @@ export type ExportFormat = 'xlsx' | 'pdf';
 
 export type ReportExportStatus = 'queued' | 'running' | 'ready' | 'failed';
 
+export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
+
+/** What the schedule dialog sets — the report and its filters come from the page. */
+export interface ScheduleInput {
+    format: ExportFormat;
+    frequency: ScheduleFrequency;
+    send_hour: number;
+    recipients: string[];
+}
+
+/** One scheduled report email (ReportScheduleResource). */
+export interface ReportScheduleItem extends ScheduleInput {
+    id: number;
+    report_key: ReportKey;
+    filters: Record<string, unknown>;
+    columns: string[] | null;
+    active: boolean;
+    next_run_at: string | null;
+    last_run_at: string | null;
+    last_status: 'sent' | 'failed' | null;
+    /** forbidden | build_failed | template_disabled | delivery_failed */
+    last_error: string | null;
+    created_at: string;
+}
+
 /** One file on "ไฟล์ Export ของฉัน" (ReportExportResource). */
 export interface ReportExportItem {
     id: number;
