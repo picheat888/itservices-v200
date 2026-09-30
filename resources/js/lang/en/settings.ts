@@ -155,6 +155,8 @@ export const settings: Dict = {
     set_country: 'Country',
     set_currency: 'Currency',
     settings_saved: 'Saved',
+    settings_save_failed: 'The values were not accepted. Please check them and try again.',
+    settings_save_failed_title: 'Not saved',
     settings_coming_soon: 'This section ships alongside its module in a later phase.',
     settings_super_only: 'Only the Super Administrator can change these settings.',
     set_sla_title: 'Service-level agreements',

@@ -15,28 +15,31 @@ const SUCCESS_DURATION_MS = 2000;
 
 /**
  * Save button with three states: idle (label), loading (spinner), and success
- * (a checkmark that pops in). The checkmark fires when the parent flags
- * `success` OR right after the spinner finishes (loading true → false), then
- * reverts to the idle label on its own. Used across the Settings tabs.
+ * (a checkmark that pops in). The checkmark fires when the parent flags `success`
+ * — and only then — and reverts to the idle label on its own. Used across the
+ * Settings tabs.
+ *
+ * It used to also fire whenever the spinner stopped, which is just as true of a
+ * save the server refused: the button said "Saved" over a failed save. A spinner
+ * stopping says the request ended, not how.
  */
 export function SaveButton({ loading, success, disabled, children, ...props }: SaveButtonProps) {
     const t = useT();
     const [showSuccess, setShowSuccess] = useState(false);
-    const wasLoading = useRef(false);
+    const wasSuccess = useRef(false);
 
     useEffect(() => {
-        // A save just finished when the spinner was on and has now turned off.
-        const finishedLoading = wasLoading.current && !loading;
-        wasLoading.current = !!loading;
-
-        if (!success && !finishedLoading) {
+        // Fire on the rising edge only, so a flag left true doesn't re-show the check.
+        const rose = !!success && !wasSuccess.current;
+        wasSuccess.current = !!success;
+        if (!rose) {
             return;
         }
 
         setShowSuccess(true);
         const id = setTimeout(() => setShowSuccess(false), SUCCESS_DURATION_MS);
         return () => clearTimeout(id);
-    }, [loading, success]);
+    }, [success]);
 
     return (
         <Button disabled={loading || disabled} {...props}>
