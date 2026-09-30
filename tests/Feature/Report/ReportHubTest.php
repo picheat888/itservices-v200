@@ -120,6 +120,30 @@ class ReportHubTest extends TestCase
         $this->assertSame(1, $tiles['stock_below_min']['value']);
     }
 
+    /** The open-ticket tile carries how the open count moved over the period (the mockup's sparkline). */
+    public function test_snapshot_open_tickets_trend_across_the_period(): void
+    {
+        $user = $this->userWith(['tickets.view_all', 'tickets.resolve', 'tickets.level_hardware']);
+        // Open since before the month and still open: counted at every point.
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'open', 'created_at' => '2026-08-20 10:00:00']);
+        // Closed mid-month: open at the start only.
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'completed', 'created_at' => '2026-08-25 10:00:00', 'resolved_at' => '2026-09-05 10:00:00']);
+        // Raised on the 20th and still open: open at the end only.
+        Ticket::factory()->create(['category' => 'hardware', 'status' => 'in_progress', 'created_at' => '2026-09-20 10:00:00']);
+        // Outside the reader's levels: never counted.
+        Ticket::factory()->create(['category' => 'network', 'status' => 'open', 'created_at' => '2026-08-01 10:00:00']);
+
+        $tile = collect($this->actingAs($user)->getJson('/api/reports/snapshot?period=month')->assertOk()->json('data.tiles'))->keyBy('key')['tickets_open'];
+
+        $this->assertSame(2, $tile['value']);
+        $this->assertCount(7, $tile['trend']);
+        $this->assertSame(2, $tile['trend'][0]);
+        $this->assertSame(2, $tile['trend'][6]);
+        $this->assertSame(1, min($tile['trend']));
+        $this->assertEquals(0.0, $tile['delta']);
+        $this->assertCount(7, collect($this->actingAs($user)->getJson('/api/reports/snapshot?period=month')->json('data.tiles'))->keyBy('key')['sla_rate']['trend']);
+    }
+
     public function test_snapshot_period_moves_the_counted_over_time_tiles(): void
     {
         $user = $this->userWith(['requests.view_all', 'contracts.view']);

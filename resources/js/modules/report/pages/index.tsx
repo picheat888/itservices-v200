@@ -3,7 +3,7 @@
  * strip (SnapshotStrip), then two columns as in the design: the reports this user may open
  * (search, module chips, a "pinned" chip) on the left, and a rail with their queued files
  * (MyExports — "ไฟล์ Export ของฉัน") and scheduled report emails (ScheduledReports) on the
- * right — shown only while it has something in it. Below xl the rail follows the reports.
+ * right. Below xl the rail follows the reports.
  * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
@@ -13,10 +13,10 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { LineChart, Search, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
-import { ReportCatalogue, reportStem } from '../components/report-catalogue';
+import { byDomainOrder, ReportCatalogue, reportStem } from '../components/report-catalogue';
 import { ScheduledReports } from '../components/scheduled-reports';
 import { PeriodSwitch, SnapshotStrip, useSnapshotPeriod } from '../components/snapshot-strip';
-import { useMyExports, useReportCatalogue, useReportSchedules } from '../hooks/use-reports';
+import { useReportCatalogue } from '../hooks/use-reports';
 import type { ReportDomain } from '../types';
 
 type Chip = ReportDomain | 'all' | 'pinned';
@@ -27,12 +27,7 @@ export default function ReportsPage() {
     const [query, setQuery] = useState('');
     const [chip, setChip] = useState<Chip>('all');
     const [period, setPeriod] = useSnapshotPeriod();
-    // The rail's two panels hide themselves when empty; the column goes with them.
-    const { data: exportsList = [] } = useMyExports();
-    const { data: schedules = [] } = useReportSchedules();
-    const hasRail = exportsList.length > 0 || schedules.length > 0;
-
-    const domains = [...new Set(reports.map((r) => r.domain))];
+    const domains = [...new Set(reports.map((r) => r.domain))].sort(byDomainOrder);
     const pinnedCount = reports.filter((r) => r.pinned).length;
     // Un-pinning the last pinned report while its chip is open falls back to "all".
     const domain: Chip = chip === 'pinned' && pinnedCount === 0 ? 'all' : chip;
@@ -64,7 +59,7 @@ export default function ReportsPage() {
 
             <SnapshotStrip period={period} />
 
-            <div className={cn('grid items-start gap-5', hasRail && 'xl:grid-cols-[minmax(0,1fr)_360px]')}>
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
                 <div className="min-w-0 space-y-4">
                     {isLoading ? (
                         <Skeleton className="h-40 w-full" />
@@ -76,8 +71,8 @@ export default function ReportsPage() {
                         </div>
                     ) : (
                         <>
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="relative w-full sm:max-w-xs">
+                            <div className="space-y-3.5">
+                                <div className="relative w-full">
                                     <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                                     <Input
                                         id="report-search"
@@ -116,12 +111,10 @@ export default function ReportsPage() {
                     )}
                 </div>
 
-                {hasRail && (
-                    <aside className="space-y-4">
-                        <MyExports />
-                        <ScheduledReports />
-                    </aside>
-                )}
+                <aside className="space-y-4">
+                    <MyExports />
+                    <ScheduledReports />
+                </aside>
             </div>
         </div>
     );

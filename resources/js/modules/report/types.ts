@@ -81,9 +81,11 @@ export interface SnapshotTile {
     /** "x / total" tiles only. */
     total: number | null;
     unit: 'percent' | null;
-    /** Change against the period before, in percentage points (SLA tile). */
+    /** Change over the period: SLA points against the period before; open tickets since its start. */
     delta: number | null;
     secondary: { key: string; value: number | null } | null;
+    /** The value across the period (7 points; null = nothing measured there) — the sparkline. */
+    trend: (number | null)[] | null;
 }
 
 export interface ReportSnapshot {

@@ -1,18 +1,20 @@
 /**
- * "ไฟล์ Export ของฉัน" in the Report Center's right rail: the files this person queued from a report's
- * Export dialog, newest first — waiting / being built (polled until done), ready to
- * download for 7 days, or failed with a Retry. Hidden while there is nothing to list.
+ * "ไฟล์ Export ของฉัน" in the Report Center's right rail, as the design draws it: the files this
+ * person queued from a report's Export dialog, newest first — each row names the report and
+ * the slice it holds, then waiting / being built (with a bar, polled until done), ready to
+ * download for 7 days (rows · size · how long ago), or failed with a Retry.
  * Data: useMyExports (GET /api/reports/exports).
  */
 import { useT } from '@/lang';
 import { refusalText } from '@/shared/lib/api-errors';
-import { formatDateTime } from '@/shared/lib/datetime';
+import { formatDateTime, relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
 import { useToastStore } from '@/stores/toast';
-import { AlertCircle, CheckCircle2, Clock, Download, FolderDown, Loader2, RotateCcw, Trash2 } from 'lucide-react';
+import { useUiStore } from '@/stores/ui';
+import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
 import { useDeleteExport, useDownloadExport, useMyExports, useRetryExport } from '../hooks/use-reports';
 import type { ReportExportItem, ReportExportStatus } from '../types';
 import { reportStem } from './report-catalogue';
@@ -39,6 +41,7 @@ function formatSize(bytes: number | null): string | null {
 
 function ExportRow({ item }: { item: ReportExportItem }) {
     const t = useT();
+    const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
     const download = useDownloadExport();
     const retry = useRetryExport();
@@ -47,12 +50,11 @@ function ExportRow({ item }: { item: ReportExportItem }) {
     const title = t(`rep_${reportStem(item.report_key)}_title`);
     const slow = item.status === 'queued' && Date.now() - new Date(item.created_at).getTime() > SLOW_QUEUE_MS;
 
-    const details: string[] = [formatDateTime(item.created_at)];
-    if (item.status === 'ready') {
-        if (item.rows_count != null) details.push(t('rep_my_exports_rows').replace('{n}', String(item.rows_count)));
-        const size = formatSize(item.size_bytes);
-        if (size) details.push(size);
-    }
+    const details: string[] = [];
+    if (item.rows_count != null) details.push(t('rep_my_exports_rows').replace('{n}', String(item.rows_count)));
+    const size = formatSize(item.size_bytes);
+    if (size) details.push(size);
+    details.push(relativeTime(item.finished_at ?? item.created_at, lang, ''));
     // The panel heading already says how long files are kept; the exact day sits in the tooltip.
     const keptUntil = item.expires_at ? t('rep_my_exports_kept_until').replace('{date}', formatDateTime(item.expires_at, false)) : undefined;
 
@@ -75,11 +77,13 @@ function ExportRow({ item }: { item: ReportExportItem }) {
         if (ok) useToastStore.getState().push(t('rep_my_exports_deleted'), 'error', undefined, 'trash', { duration: 4000 });
     };
 
+    const building = item.status === 'queued' || item.status === 'running';
+
     return (
-        <div className="border-border flex gap-3 border-b px-4 py-3 last:border-b-0">
+        <div className="border-border flex items-start gap-3 border-b px-4 py-3 last:border-b-0">
             <span
                 className={cn(
-                    'flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase',
+                    'border-border flex h-10 w-[34px] shrink-0 items-center justify-center rounded-md border font-mono text-[9.5px] font-bold uppercase',
                     item.format === 'xlsx'
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : 'bg-red-500/10 text-red-600 dark:text-red-400',
@@ -88,51 +92,71 @@ function ExportRow({ item }: { item: ReportExportItem }) {
                 {item.format}
             </span>
             <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold" title={title}>
-                    {title}
+                <div className="text-[13px] leading-snug font-semibold">
+                    {title} · {reportScope(item.filters, item.columns_count, t, lang)}
                 </div>
-                <div className="text-muted-foreground truncate text-xs">{reportScope(item.filters, item.columns_count, t)}</div>
-                <div className="text-muted-foreground text-xs" title={keptUntil}>
-                    {details.join(' · ')}
+                <div className="text-muted-foreground mt-0.5 text-[11.5px]" title={keptUntil}>
+                    {item.status === 'failed' ? (
+                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                            <span className={cn('inline-flex h-5 items-center gap-1 rounded-full px-2 text-[11px] font-semibold', tone)}>
+                                <Icon className="h-3 w-3" />
+                                {t('rep_my_exports_st_failed')}
+                            </span>
+                            {item.error && t(`rep_my_exports_err_${item.error}`)}
+                        </span>
+                    ) : building ? (
+                        `${t(`rep_my_exports_st_${item.status}`)}…`
+                    ) : (
+                        details.join(' · ')
+                    )}
                 </div>
-                {/* A ready file needs no badge — its Download button says it. The others do. */}
-                {item.status !== 'ready' && (
-                    <span className={cn('mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold', tone)}>
-                        <Icon className={cn('h-3.5 w-3.5', spin && 'animate-spin motion-reduce:animate-none')} />
-                        {t(`rep_my_exports_st_${item.status}`)}
-                    </span>
-                )}
-                {item.status === 'failed' && item.error && (
-                    <div className="text-destructive mt-0.5 text-xs">{t(`rep_my_exports_err_${item.error}`)}</div>
-                )}
-                {slow && <div className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
-                {(item.status === 'ready' || item.status === 'failed' || item.status === 'queued') && (
-                    <div className="mt-2 flex items-center gap-1">
-                        {item.status === 'ready' && (
-                            <Button size="sm" variant="outline" onClick={onDownload} disabled={download.isPending}>
-                                {download.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                {t('rep_my_exports_download')}
-                            </Button>
-                        )}
-                        {item.status === 'failed' && (
-                            <Button size="sm" variant="outline" onClick={onRetry} disabled={retry.isPending}>
-                                {retry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-                                {t('rep_my_exports_retry')}
-                            </Button>
-                        )}
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={onDelete}
-                            aria-label={t('rep_my_exports_delete')}
-                            title={t('rep_my_exports_delete')}
-                            className="text-muted-foreground ml-auto"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                {building && (
+                    // Indeterminate: the queue gives no percentage. Still under reduced motion.
+                    <div className="bg-muted mt-2 h-1 overflow-hidden rounded-full" aria-hidden="true">
+                        <span className={cn('bg-brand block h-full w-3/5 animate-pulse rounded-full motion-reduce:animate-none', spin && 'w-4/5')} />
                     </div>
                 )}
+                {slow && <div className="mt-1 text-[11.5px] text-amber-600 dark:text-amber-400">{t('rep_my_exports_slow')}</div>}
             </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+                {item.status === 'ready' && (
+                    <Button size="sm" variant="outline" onClick={onDownload} disabled={download.isPending} className="h-[30px] px-2.5 text-xs">
+                        {download.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                        {t('rep_my_exports_download')}
+                    </Button>
+                )}
+                {item.status === 'failed' && (
+                    <Button size="sm" variant="outline" onClick={onRetry} disabled={retry.isPending} className="h-[30px] px-2.5 text-xs">
+                        {retry.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                        {t('rep_my_exports_retry')}
+                    </Button>
+                )}
+                {item.status !== 'running' && (
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onDelete}
+                        aria-label={t('rep_my_exports_delete')}
+                        title={t('rep_my_exports_delete')}
+                        className="text-muted-foreground h-[30px] w-[30px]"
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+/** The design's rail card heading: muted icon + title, a note on the right. */
+export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; title: string; note?: string }) {
+    return (
+        <div className="border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5">
+            <h3 className="flex items-center gap-2 text-sm font-bold">
+                <Icon className="text-muted-foreground h-4 w-4" />
+                {title}
+            </h3>
+            {note && <span className="text-muted-foreground text-xs">{note}</span>}
         </div>
     );
 }
@@ -141,20 +165,14 @@ export function MyExports() {
     const t = useT();
     const { data: items = [] } = useMyExports();
 
-    if (items.length === 0) return null;
-
     return (
         <Card id="my-exports" className="overflow-hidden">
-            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-4 py-3">
-                <span className="bg-brand/10 text-brand flex h-7 w-7 items-center justify-center rounded-md">
-                    <FolderDown className="h-4 w-4" />
-                </span>
-                <span className="font-semibold">{t('rep_my_exports_title')}</span>
-                <span className="text-muted-foreground ml-auto text-xs">{t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))}</span>
-            </div>
-            {items.map((item) => (
-                <ExportRow key={item.id} item={item} />
-            ))}
+            <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
+            {items.length === 0 ? (
+                <p className="text-muted-foreground px-[18px] py-4 text-[12.5px]">{t('rep_my_exports_empty')}</p>
+            ) : (
+                items.map((item) => <ExportRow key={item.id} item={item} />)
+            )}
         </Card>
     );
 }

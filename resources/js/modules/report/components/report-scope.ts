@@ -1,7 +1,10 @@
 /**
- * One short line saying which slice of a report a file or a schedule holds — "2026-09-01 –
- * 2026-09-30 · 2 filters · 5 columns" — built from the filters it was made with. Used by the
- * Report Center rail (my-exports.tsx) so two files of the same report can be told apart.
+ * One short line saying which slice of a report a file or a schedule holds — "ก.ย. 2026 ·
+ * กรอง 2 อย่าง · 5 คอลัมน์" — built from the filters it was made with. Used by the Report
+ * Center rail (my-exports.tsx) so two files of the same report can be told apart. Dates are
+ * written short, as the design does ("ส.ค. 2026"): a whole calendar month by its name, any
+ * other range as "1 ก.ค. – 25 ก.ย. 2026". Gregorian years in both languages, like the rest
+ * of the app's dates.
  */
 type Translate = (key: string) => string;
 
@@ -9,12 +12,43 @@ const DATE_KEYS = new Set(['from', 'to', 'as_of']);
 
 const isSet = (value: unknown) => value !== null && value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
 
-export function reportScope(filters: Record<string, unknown>, columnsCount: number | null, t: Translate): string {
+/** "YYYY-MM-DD" as a local date (no timezone shift). */
+function parse(value: string): Date | null {
+    const [y, m, d] = value.split('-').map(Number);
+    return y && m && d ? new Date(y, m - 1, d) : null;
+}
+
+function locale(lang: string): string {
+    return lang === 'th' ? 'th-TH-u-ca-gregory' : 'en-GB';
+}
+
+const format = (date: Date, lang: string, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(locale(lang), options).format(date);
+
+export function compactRange(fromValue: string, toValue: string, lang: string): string {
+    const from = parse(fromValue);
+    const to = parse(toValue);
+    if (!from || !to) return `${fromValue} – ${toValue}`;
+
+    const lastOfMonth = new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate();
+    const sameMonth = from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth();
+    if (sameMonth && from.getDate() === 1 && to.getDate() === lastOfMonth) {
+        return format(from, lang, { month: 'short', year: 'numeric' });
+    }
+    const sameYear = from.getFullYear() === to.getFullYear();
+    const start = format(from, lang, sameYear ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
+
+    return `${start} – ${format(to, lang, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}
+
+export function reportScope(filters: Record<string, unknown>, columnsCount: number | null, t: Translate, lang: string): string {
     const parts: string[] = [];
     if (typeof filters.from === 'string' && typeof filters.to === 'string') {
-        parts.push(`${filters.from} – ${filters.to}`);
+        parts.push(compactRange(filters.from, filters.to, lang));
     } else if (typeof filters.as_of === 'string') {
-        parts.push(t('rep_scope_as_of').replace('{date}', filters.as_of));
+        const asOf = parse(filters.as_of);
+        parts.push(
+            t('rep_scope_as_of').replace('{date}', asOf ? format(asOf, lang, { day: 'numeric', month: 'short', year: 'numeric' }) : filters.as_of),
+        );
     }
 
     const narrowed = Object.entries(filters).filter(([key, value]) => !DATE_KEYS.has(key) && isSet(value)).length;
