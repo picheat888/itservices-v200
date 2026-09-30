@@ -11,7 +11,7 @@ const MASTER = 'stock.module';
 // Event) that gate their whole feature rather than a view/management split.
 const GROUPS: { view: string; children: string[]; chip?: boolean }[] = [
     { view: 'stock.view_dashboard', children: [] },
-    { view: 'stock.view', children: ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'] },
+    { view: 'stock.view', children: ['stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer'] },
     { view: 'stock.view_request', children: ['stock.request', 'stock.approve', 'stock.fulfill'] },
     { view: 'stock.view_count', children: [], chip: false },
     { view: 'stock.view_events', children: [], chip: false },

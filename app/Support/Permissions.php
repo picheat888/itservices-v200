@@ -54,7 +54,7 @@ class Permissions
             'stock' => [
                 'module',
                 'view_dashboard', 'view', 'view_request', 'view_count', 'view_events',
-                'manage_items', 'receive', 'return', 'transfer',
+                'manage_items', 'delete', 'receive', 'return', 'transfer',
                 'request', 'approve', 'fulfill',
             ],
             'employees' => [
@@ -196,7 +196,7 @@ class Permissions
             'master' => 'stock.module',
             'groups' => [
                 'stock.view_dashboard' => [],
-                'stock.view' => ['stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer'],
+                'stock.view' => ['stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer'],
                 'stock.view_request' => ['stock.request', 'stock.approve', 'stock.fulfill'],
                 'stock.view_count' => [],
                 'stock.view_events' => [],

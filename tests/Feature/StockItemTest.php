@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Permission\Role;
+use App\Models\Permission\RolePermission;
 use App\Models\Settings\AssetModel;
 use App\Models\Settings\Brand;
 use App\Models\Settings\Category;
@@ -12,6 +14,7 @@ use App\Models\Stock\StockLot;
 use App\Models\Stock\StockMovement;
 use App\Models\Stock\StockRequest;
 use App\Models\User;
+use App\Support\Permissions;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -293,6 +296,29 @@ class StockItemTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseMissing('stock_items', ['id' => $item->id]);
+    }
+
+    /**
+     * stock.delete was checked but missing from the permission catalogue, so no role could
+     * ever be granted it — deleting a SKU was the super admin's alone.
+     */
+    public function test_stock_delete_is_grantable_to_a_role(): void
+    {
+        $this->assertContains('stock.delete', Permissions::all());
+
+        $role = Role::create(['key' => 'stock_deleter', 'name' => 'Stock deleter', 'is_system' => false]);
+        $this->actingAs($this->superUser())->putJson("/api/permissions/{$role->key}", [
+            'permissions' => ['stock.module', 'stock.view', 'stock.delete'],
+        ])->assertOk();
+        $this->assertTrue(RolePermission::where('role_id', $role->id)->where('permission', 'stock.delete')->where('allowed', true)->exists());
+
+        $item = $this->makeItem(['current_stock' => 0]);
+        $this->actingAs(User::factory()->create(['role' => $role->key]))
+            ->deleteJson("/api/stock-items/{$item->id}")->assertOk();
+        $this->assertDatabaseMissing('stock_items', ['id' => $item->id]);
+
+        // Like its siblings, it needs the item list (stock.view) on.
+        $this->assertNotContains('stock.delete', Permissions::normalizeStock(['stock.module', 'stock.delete']));
     }
 
     public function test_cannot_delete_item_that_still_has_stock(): void

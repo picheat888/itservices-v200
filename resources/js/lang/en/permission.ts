@@ -195,6 +195,7 @@ export const permission: Dict = {
     'perm_desc_stock.view_count': '🔔 Must be ON to receive the draft stock-count reminder (notification).',
     'perm_act_stock.view_events': 'Event',
     'perm_act_stock.manage_items': 'Manage SKU',
+    'perm_act_stock.delete': 'Delete SKU',
     'perm_act_stock.receive': 'Receive',
     'perm_act_stock.return': 'Return',
     'perm_act_stock.transfer': 'Transfer',
