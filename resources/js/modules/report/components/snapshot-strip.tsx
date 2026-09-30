@@ -3,6 +3,10 @@
  * and one tile per snapshot figure the reader may see (GET /api/reports/snapshot). Each tile
  * opens the report its number comes from. Chosen period is remembered in localStorage
  * (`reports.snapshot.period`), like a list filter.
+ *
+ * Only some numbers follow the period — the SLA rate and requests submitted — the rest are
+ * states as of now (ReportSnapshotService). The ones that follow it say which period in
+ * their own text, so switching the period shows exactly what moved.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -48,15 +52,22 @@ function Delta({ value }: { value: number }) {
     );
 }
 
-function Tile({ tile }: { tile: SnapshotTile }) {
+/** Tiles whose main number is counted over the chosen period rather than as of now. */
+const PERIOD_TILES = new Set(['sla_rate']);
+
+function Tile({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) {
     const t = useT();
     const value = tile.value === null ? '—' : tile.unit === 'percent' ? `${tile.value}%` : tile.value.toLocaleString();
     const secondary = tile.secondary;
+    const periodWords = t(`rep_period_in_${period}`);
+    const label = PERIOD_TILES.has(tile.key) ? `${t(`rep_snap_${tile.key}`)} ${periodWords}` : t(`rep_snap_${tile.key}`);
 
     return (
         <Link to={reportRoute({ key: tile.report_key })} className="group">
             <Card className="group-hover:border-brand/40 flex h-full min-w-0 flex-col gap-1 p-4 transition-colors">
-                <div className="text-muted-foreground truncate text-sm">{t(`rep_snap_${tile.key}`)}</div>
+                <div className="text-muted-foreground truncate text-sm" title={label}>
+                    {label}
+                </div>
                 <div className="font-mono text-2xl font-bold">
                     {value}
                     {tile.total !== null && <span className="text-muted-foreground ml-1 text-sm font-medium">/ {tile.total.toLocaleString()}</span>}
@@ -66,8 +77,11 @@ function Tile({ tile }: { tile: SnapshotTile }) {
                         <Delta value={tile.delta} />
                     ) : secondary && secondary.value !== null ? (
                         <span className={cn(secondary.value > 0 && SECONDARY_TONE[secondary.key])}>
-                            {t(`rep_snap_sub_${secondary.key}`).replace('{n}', secondary.value.toLocaleString())}
+                            {t(`rep_snap_sub_${secondary.key}`).replace('{n}', secondary.value.toLocaleString()).replace('{period}', periodWords)}
                         </span>
+                    ) : tile.value === null ? (
+                        // Nothing to measure yet (no case closed in the period) — say so rather than a bare dash.
+                        <span>{t(`rep_snap_none_${tile.key}`)}</span>
                     ) : (
                         <span>&nbsp;</span>
                     )}
@@ -94,11 +108,12 @@ export function SnapshotStrip() {
 
     return (
         <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('rep_period_label')}>
                 {PERIODS.map((p) => (
                     <button
                         key={p}
                         type="button"
+                        aria-pressed={period === p}
                         onClick={() => setPeriod(p)}
                         className={cn(
                             'h-8 rounded-full border px-3 text-xs font-semibold',
@@ -112,7 +127,7 @@ export function SnapshotStrip() {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                 {isLoading || !data
                     ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-24" />)
-                    : data.tiles.map((tile) => <Tile key={tile.key} tile={tile} />)}
+                    : data.tiles.map((tile) => <Tile key={tile.key} tile={tile} period={period} />)}
             </div>
         </div>
     );

@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
-import { ScheduleReportDialog } from '../components/schedule-report-dialog';
+import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
 import { TabularFilterBar } from '../components/tabular-filter-bar';
@@ -157,6 +157,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 onOpenChange={setScheduleOpen}
                 title={t(`rep_${stem}_title`)}
                 formats={definition.formats}
+                coverage={scheduleCoverage(definition.filters.filter((f) => f.type === 'date').map((f) => f.name))}
                 onSubmit={(input) =>
                     scheduleMut
                         .mutateAsync({ kind: 'tabular', key: reportKey, filters, columns: exportColumns, input })

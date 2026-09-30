@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { useDeleteSchedule, useReportCatalogue, useReportSchedules, useSendScheduleNow, useUpdateSchedule } from '../hooks/use-reports';
 import type { ReportScheduleItem } from '../types';
 import { reportStem } from './report-catalogue';
-import { hourLabel, ScheduleReportDialog } from './schedule-report-dialog';
+import { hourLabel, scheduleCoverage, ScheduleReportDialog } from './schedule-report-dialog';
 
 function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () => void }) {
     const t = useT();
@@ -150,6 +150,8 @@ export function ScheduledReports() {
                     onOpenChange={(open) => !open && setEditing(null)}
                     title={t(`rep_${reportStem(shown.report_key)}_title`)}
                     formats={formats(shown.report_key)}
+                    // The ticket overview keeps from/to too, so the stored filter names answer for every report.
+                    coverage={scheduleCoverage(Object.keys(shown.filters))}
                     initial={shown}
                     onSubmit={(input) => update.mutateAsync({ id: shown.id, patch: input })}
                     isPending={update.isPending}

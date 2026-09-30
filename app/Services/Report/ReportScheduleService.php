@@ -295,8 +295,13 @@ class ReportScheduleService
     /** @param  array{from: CarbonImmutable, to: CarbonImmutable}  $period */
     private function periodLabel(ReportSchedule $schedule, array $period, CarbonImmutable $runAt): string
     {
-        if ($this->dateFilterNames($schedule->report_key) === []) {
+        $names = $this->dateFilterNames($schedule->report_key);
+        if ($names === []) {
             return 'As of '.$runAt->format('Y-m-d H:i');
+        }
+        // A point-in-time report (stock valuation's `as_of`) stands at the period's last day.
+        if (! in_array('from', $names, true) && ! in_array('to', $names, true)) {
+            return 'As of '.$period['to']->toDateString();
         }
 
         $from = $period['from']->toDateString();
