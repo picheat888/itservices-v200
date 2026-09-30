@@ -75,6 +75,25 @@ class ReportCatalogueTest extends TestCase
         $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
     }
 
+    public function test_every_mockup_report_is_listed_for_a_reader_with_every_permission(): void
+    {
+        $keysFor = fn (array $permissions) => array_column(
+            $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
+
+        $this->assertSame(
+            ['tickets.overview', 'tickets.by_department', 'tickets.staff_performance', 'tickets.backlog'],
+            $keysFor(['tickets.view_all', 'tickets.resolve']),
+        );
+        $this->assertSame(
+            ['assets.register', 'assets.warranty_expiring', 'assets.by_status_department', 'assets.transfer_history'],
+            $keysFor(['assets.view']),
+        );
+        $this->assertCount(19, $keysFor([
+            'tickets.view_all', 'tickets.resolve', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events',
+            'requests.view_all', 'employees.view', 'access.software_view',
+        ]));
+    }
+
     public function test_view_all_without_resolve_is_not_enough(): void
     {
         $user = $this->userWith(['tickets.view_all']);

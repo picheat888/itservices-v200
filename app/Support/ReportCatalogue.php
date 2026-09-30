@@ -5,6 +5,8 @@ namespace App\Support;
 use App\Models\User;
 use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetRegisterReport;
+use App\Services\Report\Asset\AssetsByStatusDepartmentReport;
+use App\Services\Report\Asset\AssetTransferHistoryReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
@@ -17,6 +19,9 @@ use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
 use App\Services\Report\Tabular\TabularReport;
+use App\Services\Report\Ticket\StaffPerformanceReport;
+use App\Services\Report\Ticket\TicketBacklogReport;
+use App\Services\Report\Ticket\TicketsByDepartmentReport;
 
 /**
  * Registry of every report in the Report Center (/reports).
@@ -33,6 +38,16 @@ use App\Services\Report\Tabular\TabularReport;
 class ReportCatalogue
 {
     public const TICKETS_OVERVIEW = 'tickets.overview';
+
+    public const TICKETS_BY_DEPARTMENT = 'tickets.by_department';
+
+    public const TICKETS_STAFF_PERFORMANCE = 'tickets.staff_performance';
+
+    public const TICKETS_BACKLOG = 'tickets.backlog';
+
+    public const ASSETS_BY_STATUS_DEPARTMENT = 'assets.by_status_department';
+
+    public const ASSETS_TRANSFER_HISTORY = 'assets.transfer_history';
 
     public const CONTRACTS_EXPIRING = 'contracts.expiring';
 
@@ -74,6 +89,29 @@ class ReportCatalogue
                 'requires' => ['tickets.view_all', 'tickets.resolve'],
                 'formats' => ['xlsx', 'pdf'],
             ],
+            // The tabular ticket reports all carry SLA verdicts, so they ask what the overview
+            // asks; within that, each counts only the reader's `tickets.level_*` categories.
+            self::TICKETS_BY_DEPARTMENT => [
+                'domain' => 'tickets',
+                'kind' => 'tabular',
+                'class' => TicketsByDepartmentReport::class,
+                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::TICKETS_STAFF_PERFORMANCE => [
+                'domain' => 'tickets',
+                'kind' => 'tabular',
+                'class' => StaffPerformanceReport::class,
+                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::TICKETS_BACKLOG => [
+                'domain' => 'tickets',
+                'kind' => 'tabular',
+                'class' => TicketBacklogReport::class,
+                'requires' => ['tickets.view_all', 'tickets.resolve'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
             self::CONTRACTS_EXPIRING => [
                 'domain' => 'contracts',
                 'kind' => 'tabular',
@@ -99,6 +137,20 @@ class ReportCatalogue
                 'domain' => 'assets',
                 'kind' => 'tabular',
                 'class' => WarrantyExpiringReport::class,
+                'requires' => ['assets.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::ASSETS_BY_STATUS_DEPARTMENT => [
+                'domain' => 'assets',
+                'kind' => 'tabular',
+                'class' => AssetsByStatusDepartmentReport::class,
+                'requires' => ['assets.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::ASSETS_TRANSFER_HISTORY => [
+                'domain' => 'assets',
+                'kind' => 'tabular',
+                'class' => AssetTransferHistoryReport::class,
                 'requires' => ['assets.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
