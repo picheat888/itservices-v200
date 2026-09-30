@@ -69,4 +69,23 @@ class GuestAccessTest extends TestCase
             $this->assertStringNotContainsString($needle, $flat, "settings payload should not expose '{$needle}'");
         }
     }
+
+    /**
+     * Before sign-in the page needs its name, logo and theme — nothing about the company
+     * behind it (legal name, tax ID, address) or how the desk runs (SLA targets).
+     */
+    public function test_a_guest_gets_branding_and_theme_only(): void
+    {
+        $data = $this->getJson('/api/settings')->assertOk()->json('data');
+
+        $this->assertEqualsCanonicalizing(
+            ['brand_name', 'brand_sub', 'logo_url', 'theme_accent', 'theme_density', 'theme_radius'],
+            array_keys($data),
+        );
+
+        $signedIn = $this->actingAs(User::factory()->create())->getJson('/api/settings')->assertOk()->json('data');
+        foreach (['company_name', 'legal_name', 'tax_id', 'address', 'ticket_sla'] as $key) {
+            $this->assertArrayHasKey($key, $signedIn);
+        }
+    }
 }
