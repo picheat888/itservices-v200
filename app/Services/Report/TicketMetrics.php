@@ -5,6 +5,7 @@ namespace App\Services\Report;
 use App\Enums\Ticket\TicketStatus;
 use App\Models\Ticket\Ticket;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 
 /**
  * Per-ticket measurements shared by the ticket reports, their row resource and their
@@ -20,6 +21,23 @@ final class TicketMetrics
         }
 
         return round($ticket->created_at->diffInMinutes($ticket->resolved_at, true) / 60, 1);
+    }
+
+    /**
+     * Nearest-rank percentile of an ascending list of hours, one decimal; null when empty.
+     * The one "median resolve time" of the ticket reports (p = 0.5).
+     *
+     * @param  Collection<int, float>  $sorted
+     */
+    public static function percentile(Collection $sorted, float $p): ?float
+    {
+        if ($sorted->isEmpty()) {
+            return null;
+        }
+
+        $index = max(0, (int) ceil($p * $sorted->count()) - 1);
+
+        return round((float) $sorted[$index], 1);
     }
 
     /**

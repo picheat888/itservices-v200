@@ -51,7 +51,7 @@ class ApprovalTimeReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        [$from, $to] = $this->dateRange($filters);
+        [$from, $to] = $this->dayRange($filters);
         $hours = $this->hoursWaited();
         $approver = self::APPROVER;
 
