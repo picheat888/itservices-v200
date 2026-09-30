@@ -448,6 +448,10 @@ class AssetController extends Controller
         ]);
         // Already out of the pool (employee-deployed or shared/common) — recall or return it first.
         abort_if($asset->isDeployed() || $asset->status === AssetStatus::Common, 422, 'Asset is deployed - mark it returned first.');
+        // Anything else that is not in the pool is mid-move or retired: a hand-over waiting
+        // on its recipient, a return waiting on IT, a write-off. The screen only offers
+        // Transfer on a Ready asset; the API now agrees.
+        abort_unless($asset->status === AssetStatus::Ready, 422, 'Only a Ready asset can be handed over.');
 
         $asset = $this->service->transfer($asset, $data, $request->user()?->name);
         AuditLog::record('Transferred asset', "{$asset->asset_code} → {$asset->ownerCode()}");
@@ -461,6 +465,9 @@ class AssetController extends Controller
         // Only the recipient may confirm receipt — IT can hand over but not accept on their behalf.
         $employeeId = $request->user()?->linkedEmployee()?->id;
         abort_unless($employeeId !== null && $employeeId === $asset->owner_employee_id, 403);
+        // Accepting confirms a hand-over; on anything else (a return under way above all) it
+        // would flip the asset back to in use behind IT's back.
+        abort_unless($asset->status === AssetStatus::PendingAcceptance, 422, 'Only a pending hand-over can be accepted.');
         $asset = $this->service->accept($asset);
         AuditLog::record('Accepted asset', $asset->asset_code);
 
@@ -492,6 +499,9 @@ class AssetController extends Controller
     public function markReceived(Request $request, Asset $asset): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('assets.receive'), 403);
+        // Same rule as bulk receive. Receiving anything else would pull a held asset out of
+        // someone's hands (force recall's job) or quietly undo a write-off.
+        abort_unless($asset->status === AssetStatus::PendingReturn, 422, 'Only assets pending return can be received.');
         $data = $request->validate([
             'warehouse' => ['required', 'string', 'max:120'],
         ]);
