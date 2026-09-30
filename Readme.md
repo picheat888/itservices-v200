@@ -3934,3 +3934,13 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `ReportScheduleTest` ใหม่ 15 ข้อ (รอบเวลา/ช่วงข้อมูลทั้ง 3 แบบ, แทนตัวกรองวันที่, ตั้งจากหน้ารายงาน + Ticket overview, validation อีเมล/จำนวน, สิทธิ์, จำกัด 10, sweep ส่งทุกผู้รับพร้อมไฟล์แนบ, workbook เฉพาะช่วง, เสียสิทธิ์แล้วหยุด, template ปิด, ไฟล์ใหญ่ไป My exports, แก้ไข/หยุด/เปิด, คนอื่นแตะไม่ได้, ส่งตอนนี้/ลบ) · `NotificationEmailPairingTest` ยกเว้นตระกูล `report.` (อีเมลคือตัวรายงาน ไม่มี bell คู่) · ชุดเต็ม **1539 passed** · build + tsc + eslint + prettier + pint ผ่าน
+
+## Seeder ไม่ทับข้อมูลที่ admin แก้ (2026-09-30)
+
+- **`EmailTemplateSeeder`** — เปลี่ยน `updateOrCreate` → `firstOrCreate` · รัน `db:seed` ซ้ำจะเพิ่มเฉพาะ template ที่ยังไม่มี ไม่ทับ template ที่แก้ในหน้า Email template อีกต่อไป (ตรงกับที่ `DatabaseSeeder` เขียนไว้) · อยากได้ค่ามาตรฐานคืน = ปุ่ม Reset ในหน้า Email template · template ใหม่ในอนาคตรัน seeder ได้เลย
+- **`MasterDataSeeder`** (แยก commit) — เปลี่ยนเป็น `firstOrCreate` เช่นกัน · คำอธิบาย / ชื่อไทย / ไอคอนของยี่ห้อ หมวด คลัง หน่วย และประเภทประกันที่แก้ใน Settings ไม่ถูกทับ
+- แก้ comment ที่ยังเล่าพฤติกรรมเดิม (`NotificationTemplateSeeder`, migration `report.scheduled`)
+
+### Tests / Verification
+
+`EmailTemplateResetTest` (+2: seed ซ้ำแล้ว template ที่แก้ยังอยู่, seed ซ้ำเติม template ที่ขาด) · `MasterDataSeedTest` (+1: seed ซ้ำแล้วค่าที่แก้ยังอยู่) · เทสต์ใหม่ทั้ง 2 ไฟล์ fail กับ seeder เดิม pass กับของใหม่ · ชุดเต็ม **1542 passed** · pint ผ่าน
