@@ -53,8 +53,10 @@ export const navGroups: NavGroup[] = [
         items: [
             // Opens for anyone who can read at least one report's data; each later report
             // phase adds its module key here (and in App.tsx). The hub lists only what the
-            // reader may open (ReportCatalogue).
-            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, anyOf: ['tickets.view_all', 'assets.view', 'contracts.view'] },
+            // reader may open (ReportCatalogue). Kept on one line: SidebarRouteGateTest reads
+            // each entry with a single-line regex.
+            // prettier-ignore
+            { id: 'reports', label: 'reports', to: '/reports', icon: LineChart, anyOf: ['tickets.view_all', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events'] },
             { id: 'workflows', label: 'wf_title', to: '/workflows', icon: Workflow, permission: 'workflows.module' },
             { id: 'permissions', label: 'permissions', to: '/permissions', icon: Shield, permission: 'system.manage_permissions' },
             { id: 'notifications', label: 'notifications', to: '/email-notifications', icon: Mail, permission: 'notifications.module' },

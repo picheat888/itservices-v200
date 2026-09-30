@@ -51,7 +51,16 @@ class ReportCatalogueTest extends TestCase
 
         $keys = array_column($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'), 'key');
 
-        $this->assertSame(['contracts.expiring'], $keys);
+        $this->assertSame(['contracts.expiring', 'contracts.monthly_cost'], $keys);
+    }
+
+    public function test_stock_reports_split_between_view_and_the_event_log(): void
+    {
+        $keysFor = fn (array $permissions) => array_column(
+            $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
+
+        $this->assertSame(['stock.below_min', 'stock.valuation'], $keysFor(['stock.view']));
+        $this->assertSame(['stock.movements'], $keysFor(['stock.view_events']));
     }
 
     public function test_view_all_without_resolve_is_not_enough(): void

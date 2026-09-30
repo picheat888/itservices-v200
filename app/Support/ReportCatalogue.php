@@ -6,6 +6,10 @@ use App\Models\User;
 use App\Services\Report\Asset\AssetRegisterReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
+use App\Services\Report\Contract\ContractMonthlyCostReport;
+use App\Services\Report\Stock\StockBelowMinReport;
+use App\Services\Report\Stock\StockMovementReport;
+use App\Services\Report\Stock\StockValuationReport;
 use App\Services\Report\Tabular\TabularReport;
 
 /**
@@ -30,6 +34,14 @@ class ReportCatalogue
 
     public const ASSETS_WARRANTY_EXPIRING = 'assets.warranty_expiring';
 
+    public const CONTRACTS_MONTHLY_COST = 'contracts.monthly_cost';
+
+    public const STOCK_MOVEMENTS = 'stock.movements';
+
+    public const STOCK_BELOW_MIN = 'stock.below_min';
+
+    public const STOCK_VALUATION = 'stock.valuation';
+
     /**
      * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>}>
      */
@@ -51,6 +63,13 @@ class ReportCatalogue
                 'requires' => ['contracts.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
+            self::CONTRACTS_MONTHLY_COST => [
+                'domain' => 'contracts',
+                'kind' => 'tabular',
+                'class' => ContractMonthlyCostReport::class,
+                'requires' => ['contracts.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
             self::ASSETS_REGISTER => [
                 'domain' => 'assets',
                 'kind' => 'tabular',
@@ -63,6 +82,28 @@ class ReportCatalogue
                 'kind' => 'tabular',
                 'class' => WarrantyExpiringReport::class,
                 'requires' => ['assets.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            // The movement log is its own permission in the stock module (stock.view_events).
+            self::STOCK_MOVEMENTS => [
+                'domain' => 'stock',
+                'kind' => 'tabular',
+                'class' => StockMovementReport::class,
+                'requires' => ['stock.view_events'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::STOCK_BELOW_MIN => [
+                'domain' => 'stock',
+                'kind' => 'tabular',
+                'class' => StockBelowMinReport::class,
+                'requires' => ['stock.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::STOCK_VALUATION => [
+                'domain' => 'stock',
+                'kind' => 'tabular',
+                'class' => StockValuationReport::class,
+                'requires' => ['stock.view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
         ];

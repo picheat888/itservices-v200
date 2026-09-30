@@ -165,7 +165,7 @@ function App() {
                         <Route
                             path="reports"
                             element={
-                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view']}>
+                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events']}>
                                     <ReportsPage />
                                 </RequirePermission>
                             }
@@ -181,7 +181,7 @@ function App() {
                         <Route
                             path="reports/r/:key"
                             element={
-                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view']}>
+                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events']}>
                                     <TabularReportPage />
                                 </RequirePermission>
                             }
