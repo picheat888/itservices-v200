@@ -59,9 +59,22 @@ class SettingsController extends Controller
         'writeoff' => '#dc2626',
     ];
 
-    public function show(): JsonResponse
+    /** What the page may show before anybody signs in: its name, logo and theme. */
+    private const PUBLIC_KEYS = ['brand_name', 'brand_sub', 'logo_url', 'theme_accent', 'theme_density', 'theme_radius'];
+
+    /**
+     * The route sits outside the sign-in check because the login page themes itself from
+     * it. A guest therefore gets PUBLIC_KEYS only; the company's legal details, the SLA
+     * rules and the rest come back once a session exists (the SPA refetches after login).
+     */
+    public function show(?Request $request = null): JsonResponse
     {
-        return response()->json(['data' => $this->payload(), 'message' => 'success']);
+        $payload = $this->payload();
+        if (($request ?? request())->user('sanctum') === null) {
+            $payload = array_intersect_key($payload, array_flip(self::PUBLIC_KEYS));
+        }
+
+        return response()->json(['data' => $payload, 'message' => 'success']);
     }
 
     /** Company information (Settings -> Company). Gated by route middleware permission:settings.company. */
