@@ -10,6 +10,7 @@ use App\Models\Settings\Vendor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -18,7 +19,7 @@ use Tests\TestCase;
  */
 class TabularReportEngineTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -112,7 +113,7 @@ class TabularReportEngineTest extends TestCase
         $limited = $this->userWith(['assets.view']);
 
         $this->actingAs($limited)->getJson('/api/reports/r/contracts.expiring')->assertForbidden();
-        $this->actingAs($limited)->get('/api/reports/r/contracts.expiring/export?format=xlsx')->assertForbidden();
+        $this->actingAs($limited)->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx')->assertForbidden();
     }
 
     public function test_xlsx_export_honours_the_current_filters(): void
@@ -122,9 +123,9 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Sw', 'type' => 'software', 'end_date' => '2026-10-10']);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->get('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertOk();
+            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx&type=hardware')->assertAccepted();
 
-        Excel::assertDownloaded('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
             return $export->rows->count() === 1;
         });
     }
@@ -135,9 +136,9 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Soon', 'type' => 'hardware', 'end_date' => '2026-10-15']);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->get('/api/reports/r/contracts.expiring/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/contracts.expiring/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_contracts-expiring_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
             $row = $sheet->map($export->rows->first());
 
@@ -152,7 +153,7 @@ class TabularReportEngineTest extends TestCase
         $this->contract(['name' => 'Soon', 'end_date' => '2026-10-15']);
 
         $response = $this->actingAs($this->userWith(['contracts.view']))
-            ->get('/api/reports/r/contracts.expiring/export?format=pdf');
+            ->exportReport('/api/reports/r/contracts.expiring/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

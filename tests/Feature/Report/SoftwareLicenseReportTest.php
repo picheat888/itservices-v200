@@ -11,6 +11,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,7 @@ use Tests\TestCase;
  */
 class SoftwareLicenseReportTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     private int $seq = 0;
 
@@ -124,13 +125,13 @@ class SoftwareLicenseReportTest extends TestCase
         $this->catalogue();
         $user = $this->userWith(['access.software_view']);
 
-        $this->actingAs($user)->get('/api/reports/r/access.software_licenses/export?format=xlsx')->assertOk();
-        Excel::assertDownloaded('Report_access-software_licenses_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->actingAs($user)->exportReport('/api/reports/r/access.software_licenses/export?format=xlsx')->assertAccepted();
+        $this->assertExportStored('Report_access-software_licenses_2026-09-25.xlsx', function (TabularReportExport $export) {
             return in_array('ผู้ลาออกที่ยังถือ', $export->sheets()[1]->headings(), true)
                 && in_array('ฟรี', $export->sheets()[1]->map($export->rows->firstWhere('name', 'VS Code')), true);
         });
 
-        $pdf = $this->actingAs($user)->get('/api/reports/r/access.software_licenses/export?format=pdf');
+        $pdf = $this->actingAs($user)->exportReport('/api/reports/r/access.software_licenses/export?format=pdf');
         $pdf->assertOk();
         $this->assertSame('application/pdf', $pdf->headers->get('Content-Type'));
     }

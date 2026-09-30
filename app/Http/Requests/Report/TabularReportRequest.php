@@ -45,4 +45,14 @@ class TabularReportRequest extends FormRequest
     {
         return $this->report()->resolveFilters($this->validated());
     }
+
+    /**
+     * The validated filter input alone — what a queued export stores to rebuild the file.
+     *
+     * @return array<string, mixed>
+     */
+    public function filterInput(): array
+    {
+        return collect($this->validated())->except(['format', 'columns', 'per_page'])->all();
+    }
 }

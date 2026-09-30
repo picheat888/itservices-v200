@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Api\Report;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\ExportTabularReportRequest;
 use App\Http\Requests\Report\TabularReportRequest;
+use App\Http\Resources\Report\ReportExportResource;
+use App\Services\Report\ReportExportService;
 use App\Services\Report\Tabular\ReportSummary;
-use App\Services\Report\Tabular\TabularReportExporter;
 use App\Support\ReportCatalogue;
 use Illuminate\Http\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Endpoints shared by every tabular report (/api/reports/r/{key}): what to draw, the rows
- * with their headline numbers, and the file export.
+ * with their headline numbers, and queuing the file export.
  */
 class TabularReportController extends Controller
 {
@@ -45,10 +45,17 @@ class TabularReportController extends Controller
         ]);
     }
 
-    public function export(ExportTabularReportRequest $request, TabularReportExporter $exporter): Response
+    /** Queue the file (202) — it is built by GenerateReportExport and lands in "ไฟล์ Export ของฉัน". */
+    public function export(ExportTabularReportRequest $request, ReportExportService $exports): JsonResponse
     {
-        $report = $request->report()->showOnly($request->shownColumns());
+        $export = $exports->queue(
+            $request->user(),
+            $request->report()->key(),
+            $request->validated('format'),
+            $request->filterInput(),
+            $request->shownColumns(),
+        );
 
-        return $exporter->download($report, $request->user(), $request->filters(), $request->validated('format'));
+        return response()->json(['data' => new ReportExportResource($export), 'message' => 'success'], 202);
     }
 }

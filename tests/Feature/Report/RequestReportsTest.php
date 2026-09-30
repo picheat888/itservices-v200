@@ -13,6 +13,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -22,7 +23,7 @@ use Tests\TestCase;
  */
 class RequestReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     private int $seq = 0;
 
@@ -202,7 +203,7 @@ class RequestReportsTest extends TestCase
         $this->request('computer', 'pending');
 
         $response = $this->actingAs($this->userWith(['requests.view_all']))
-            ->get('/api/reports/r/requests.summary/export?format=pdf');
+            ->exportReport('/api/reports/r/requests.summary/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
@@ -214,9 +215,9 @@ class RequestReportsTest extends TestCase
         $this->request('computer', 'pending');
 
         $this->actingAs($this->userWith(['requests.view_all']))
-            ->get('/api/reports/r/requests.summary/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/requests.summary/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_requests-summary_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_requests-summary_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
 
             return in_array('ประเภทคำขอ', $sheet->headings(), true)

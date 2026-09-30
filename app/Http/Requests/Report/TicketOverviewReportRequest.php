@@ -4,6 +4,7 @@ namespace App\Http\Requests\Report;
 
 use App\Enums\Ticket\TicketCategory;
 use App\Enums\Ticket\TicketPriority;
+use App\Services\Report\TicketOverviewReportService;
 use App\Support\ReportCatalogue;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
@@ -66,13 +67,16 @@ class TicketOverviewReportRequest extends FormRequest
      */
     public function filters(): array
     {
-        return [
-            'from' => CarbonImmutable::parse($this->validated('from'))->startOfDay(),
-            'to' => CarbonImmutable::parse($this->validated('to'))->endOfDay(),
-            'categories' => array_values($this->validated('categories') ?? []),
-            'priority' => $this->validated('priority'),
-            'department_id' => $this->filled('department_id') ? (int) $this->validated('department_id') : null,
-            'assignee_id' => $this->filled('assignee_id') ? (int) $this->validated('assignee_id') : null,
-        ];
+        return TicketOverviewReportService::resolveFilters($this->validated());
+    }
+
+    /**
+     * The validated filter input alone — what a queued export stores to rebuild the file.
+     *
+     * @return array<string, mixed>
+     */
+    public function filterInput(): array
+    {
+        return collect($this->validated())->except(['format', 'per_page'])->all();
     }
 }

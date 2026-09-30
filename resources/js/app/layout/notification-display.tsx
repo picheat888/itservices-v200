@@ -8,6 +8,8 @@ import {
     CheckCircle2,
     ClipboardList,
     Clock,
+    FileDown,
+    FileX,
     FlaskConical,
     Gauge,
     Inbox,
@@ -45,7 +47,7 @@ export function moduleOf(type: string, module?: string): string {
     if (type.startsWith('contract')) return 'contracts';
     if (type.startsWith('access')) return 'access';
     // Notices about the account itself rather than about any business module.
-    if (type === 'password_expiring') return 'system';
+    if (type === 'password_expiring' || type === 'report_export') return 'system';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -128,6 +130,12 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
     }
     // A deadline the reader still has time to beat — amber, like every other "act before
     // this runs out" bell. Marked with the key, because it is about the password itself.
+    // A file the reader asked for: ready = emerald download, failed = red.
+    if (n.data.type === 'report_export') {
+        return n.data.subtype === 'failed'
+            ? { Icon: FileX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' }
+            : { Icon: FileDown, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
+    }
     if (n.data.type === 'password_expiring') {
         return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
@@ -206,6 +214,8 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
         return `${n.data.asset_model} (${n.data.asset_tag})`;
     // Nothing to name but the subject itself — the notice is about the reader's own account.
     if (n.data.type === 'password_expiring') return t('notif_password_title');
+    // Named by the report, in the reader's language (rep_<stem>_title, as the Report Center lists it).
+    if (n.data.type === 'report_export') return t(`rep_${(n.data.report_key ?? '').replace('.', '_')}_title`);
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
@@ -246,6 +256,11 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
             : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining));
     }
     if (n.data.type === 'password_expiring') return t('notif_password_expiring').replace('{days}', String(n.data.days_remaining ?? 0));
+    if (n.data.type === 'report_export')
+        return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replace(
+            '{format}',
+            (n.data.format ?? '').toUpperCase(),
+        );
     if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replace('{from}', n.data.from ?? '—');
     if (n.data.type === 'ticket_forwarded_away') return t('notif_ticket_forwarded_away').replace('{to}', n.data.to ?? '—');
@@ -314,6 +329,8 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_recalled') return '/my-assets-access';
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
+    // The file waits in "ไฟล์ Export ของฉัน" on the Report Center.
+    if (n.data.type === 'report_export') return '/reports';
     const mod = moduleOf(n.data.type, n.data.module);
     // The stuck-request bell asks for an account, so it opens the person who needs one
     // rather than the request nobody can act on yet.

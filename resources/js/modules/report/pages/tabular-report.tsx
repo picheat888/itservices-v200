@@ -141,7 +141,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 note={exportColumns ? t('rep_export_columns_note').replace('{n}', String(exportColumns.length)) : undefined}
                 onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format, columns: exportColumns })}
                 isPending={exportMut.isPending}
-                isError={exportMut.isError}
+                error={exportMut.error}
                 onReset={exportMut.reset}
             />
         </>

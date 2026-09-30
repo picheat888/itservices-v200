@@ -65,6 +65,11 @@ export interface NotificationData {
     grants?: number;
     owned?: number;
     total?: number;
+    // A queued report file (report_export) - subtype: ready | failed
+    report_export_id?: number;
+    report_key?: string;
+    format?: string;
+    file_name?: string | null;
 }
 
 export interface AppNotification {

@@ -1,17 +1,20 @@
 /**
- * Generic export dialog shared by every report page: pick Excel or PDF, then run the
+ * Generic export dialog shared by every report page: pick Excel or PDF, then queue the
  * caller's own export (ticket overview or a tabular report). Centered focus dialog
- * (FocusDialogHeader) per the app's dialog standard. The dialog owns only the format
- * choice and the PDF-cap note; the caller owns the mutation (isPending/isError/reset)
- * and closes the dialog itself on success.
+ * (FocusDialogHeader) per the app's dialog standard. The dialog owns the format choice,
+ * the PDF-cap note and the "file is being built" toast (which opens the Report Center,
+ * where "ไฟล์ Export ของฉัน" lists it); the caller owns the mutation (isPending/error/reset).
  */
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';
+import { refusalText } from '@/shared/lib/api-errors';
 import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
+import { useToastStore } from '@/stores/toast';
 import { Download, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { ExportFormat } from '../types';
 
 /** Mirrors TabularReportExporter::PDF_ROW_LIMIT (and TicketOverviewExporter's own copy). */
@@ -27,7 +30,7 @@ export function ExportReportDialog({
     note,
     onExport,
     isPending,
-    isError,
+    error,
     onReset,
 }: {
     open: boolean;
@@ -40,10 +43,12 @@ export function ExportReportDialog({
     note?: string;
     onExport: (format: ExportFormat) => Promise<unknown>;
     isPending: boolean;
-    isError: boolean;
+    /** The mutation's error — a refusal (e.g. too many files waiting) is worded from its reason. */
+    error: unknown;
     onReset: () => void;
 }) {
     const t = useT();
+    const navigate = useNavigate();
     const [format, setFormat] = useState<ExportFormat>(formats[0] ?? 'xlsx');
 
     const handleOpenChange = (next: boolean) => {
@@ -52,10 +57,17 @@ export function ExportReportDialog({
     };
 
     const run = () => {
-        // isError already surfaces the failure inline — nothing else to do with a
+        // `error` already surfaces the failure inline — nothing else to do with a
         // rejection here, but it still needs a handler or it's an unhandled rejection.
         onExport(format)
-            .then(() => onOpenChange(false))
+            .then(() => {
+                onOpenChange(false);
+                // The file is built on the queue; its bell says when it is ready.
+                useToastStore.getState().push(t('rep_export_queued'), 'success', t('rep_export_queued_title'), undefined, {
+                    duration: 6000,
+                    onActivate: () => navigate('/reports'),
+                });
+            })
             .catch(() => {});
     };
 
@@ -88,7 +100,9 @@ export function ExportReportDialog({
                                 }}
                                 className="flex gap-3 rounded-lg p-3 text-left"
                             >
-                                <span className={`flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase ${c.tone}`}>
+                                <span
+                                    className={`flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase ${c.tone}`}
+                                >
                                     {c.value}
                                 </span>
                                 <span>
@@ -105,7 +119,7 @@ export function ExportReportDialog({
                             <div className="text-muted-foreground mt-1 text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
                         )}
                     </div>
-                    {isError && <div className="text-destructive text-sm">{t('rep_export_failed')}</div>}
+                    {error != null && <div className="text-destructive text-sm">{refusalText(error, t, 'rep_export_refusal_')}</div>}
                 </div>
                 <DialogFooter className="border-border border-t px-6 py-4">
                     <Button onClick={run} disabled={isPending}>

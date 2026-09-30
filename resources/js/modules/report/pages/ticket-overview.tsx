@@ -118,7 +118,9 @@ export default function TicketOverviewReportPage() {
                             label={t('rep_kpi_median')}
                             value={fmt(data.kpi.median_resolve_hours)}
                             unit={data.kpi.median_resolve_hours === null ? undefined : t('rep_hours')}
-                            footer={data.kpi.p90_resolve_hours === null ? undefined : t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))}
+                            footer={
+                                data.kpi.p90_resolve_hours === null ? undefined : t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))
+                            }
                         />
                         <KpiTile
                             label={t('rep_kpi_backlog')}
@@ -130,7 +132,9 @@ export default function TicketOverviewReportPage() {
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
-                            footer={t('rep_kpi_backlog_split').replace('{a}', String(data.backlog.open)).replace('{b}', String(data.backlog.in_progress))}
+                            footer={t('rep_kpi_backlog_split')
+                                .replace('{a}', String(data.backlog.open))
+                                .replace('{b}', String(data.backlog.in_progress))}
                             alert={data.backlog.breached > 0}
                         />
                     </div>
@@ -144,7 +148,12 @@ export default function TicketOverviewReportPage() {
                         <div className="space-y-3">
                             <Section title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')}>
                                 <HorizontalBars
-                                    bars={data.sla_by_priority.map((p) => ({ key: p.priority, label: t(priorityKey(p.priority)), value: p.rate, tone: PRIORITY_FILL[p.priority] }))}
+                                    bars={data.sla_by_priority.map((p) => ({
+                                        key: p.priority,
+                                        label: t(priorityKey(p.priority)),
+                                        value: p.rate,
+                                        tone: PRIORITY_FILL[p.priority],
+                                    }))}
                                     max={100}
                                     unit="%"
                                     goal={data.sla_goal}
@@ -181,7 +190,9 @@ export default function TicketOverviewReportPage() {
                                             <td className="px-4 py-2 text-right font-mono">{d.count}</td>
                                             <td
                                                 className={`px-4 py-2 text-right font-mono ${
-                                                    d.sla_rate !== null && d.sla_rate < data.sla_goal ? 'font-bold text-red-600 dark:text-red-400' : ''
+                                                    d.sla_rate !== null && d.sla_rate < data.sla_goal
+                                                        ? 'font-bold text-red-600 dark:text-red-400'
+                                                        : ''
                                                 }`}
                                             >
                                                 {d.sla_rate === null ? '—' : `${d.sla_rate}%`}
@@ -234,7 +245,7 @@ export default function TicketOverviewReportPage() {
                     formats={['xlsx', 'pdf']}
                     onExport={(format) => exportMut.mutateAsync({ filters, format })}
                     isPending={exportMut.isPending}
-                    isError={exportMut.isError}
+                    error={exportMut.error}
                     onReset={exportMut.reset}
                 />
             )}

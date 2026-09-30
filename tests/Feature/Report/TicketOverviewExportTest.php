@@ -11,6 +11,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,7 @@ use Tests\TestCase;
  */
 class TicketOverviewExportTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     private const QUERY = 'from=2026-09-01&to=2026-09-30';
 
@@ -47,9 +48,9 @@ class TicketOverviewExportTest extends TestCase
         $inside = Ticket::factory()->create(['category' => 'hardware', 'created_at' => '2026-09-05 08:00']);
         Ticket::factory()->create(['category' => 'hardware', 'created_at' => '2026-08-05 08:00']);
 
-        $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertOk();
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) use ($inside) {
+        $this->assertExportStored('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) use ($inside) {
             return $export->rows->pluck('id')->all() === [$inside->id]
                 && $export->summary['kpi']['total'] === 1;
         });
@@ -66,9 +67,9 @@ class TicketOverviewExportTest extends TestCase
             'created_at' => '2026-09-05 08:00',
         ]);
 
-        $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertOk();
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
+        $this->assertExportStored('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
             $row = (new TicketOverviewRowsSheet($export->rows))->map($export->rows->first());
 
             return $row[4] === 'ฮาร์ดแวร์' // category
@@ -87,9 +88,9 @@ class TicketOverviewExportTest extends TestCase
         Ticket::factory()->create(['category' => 'hardware', 'requester_id' => $thai->id, 'created_at' => '2026-09-05 08:00']);
         Ticket::factory()->create(['category' => 'hardware', 'requester_id' => $english->id, 'created_at' => '2026-09-06 08:00']);
 
-        $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertOk();
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
+        $this->assertExportStored('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
             $sheet = new TicketOverviewRowsSheet($export->rows);
             $names = $export->rows->map(fn ($t) => $sheet->map($t)[2])->sort()->values()->all();
 
@@ -102,7 +103,7 @@ class TicketOverviewExportTest extends TestCase
         $user = $this->deskMember();
         Ticket::factory()->create(['category' => 'hardware', 'created_at' => '2026-09-05 08:00']);
 
-        $response = $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=pdf');
+        $response = $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
@@ -112,7 +113,7 @@ class TicketOverviewExportTest extends TestCase
     public function test_an_unknown_format_is_rejected(): void
     {
         $this->actingAs($this->deskMember())
-            ->getJson('/api/reports/tickets/overview/export?'.self::QUERY.'&format=csv')
+            ->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=csv')
             ->assertUnprocessable()->assertJsonValidationErrors('format');
     }
 
@@ -121,6 +122,6 @@ class TicketOverviewExportTest extends TestCase
         Role::create(['key' => 'plain', 'name' => 'Plain', 'is_system' => false]);
         $user = User::factory()->create(['role' => 'plain']);
 
-        $this->actingAs($user)->getJson('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertForbidden();
+        $this->actingAs($user)->exportReport('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertForbidden();
     }
 }

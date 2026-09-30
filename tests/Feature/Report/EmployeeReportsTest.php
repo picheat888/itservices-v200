@@ -10,6 +10,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Request\ServiceRequest;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -18,7 +19,7 @@ use Tests\TestCase;
  */
 class EmployeeReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     private int $seq = 0;
 
@@ -164,7 +165,7 @@ class EmployeeReportsTest extends TestCase
         $user = $this->userWith(['employees.view']);
 
         foreach (['employees.joiners_leavers', 'employees.leaver_assets'] as $key) {
-            $response = $this->actingAs($user)->get("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }
