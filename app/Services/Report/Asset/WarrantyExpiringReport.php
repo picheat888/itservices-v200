@@ -59,7 +59,7 @@ class WarrantyExpiringReport extends TabularReport
     public function columns(): array
     {
         return [
-            ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code),
+            ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (Asset $a) => $a->asset_code)->linkTo('/assets', fn (Asset $a) => $a->id),
             ReportColumn::localized('category', 'หมวด', fn (Asset $a) => $a->category ? ['name' => $a->category->name, 'name_th' => $a->category->name_th] : null),
             ReportColumn::text('model', 'รุ่น', fn (Asset $a) => $a->model?->name),
             ReportColumn::text('holder', 'ผู้ถือ', fn (Asset $a) => $this->resolveHolder($a)),

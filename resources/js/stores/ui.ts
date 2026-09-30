@@ -58,6 +58,9 @@ interface UiState {
     // Transient (not persisted): on a narrow screen the sidebar shows icons whatever the
     // saved style; this is the reader asking to see the labels for now.
     narrowSidebarOpen: boolean;
+    // Transient (not persisted): a page deeper than its menu entry names itself here, and
+    // the topbar trail adds it after the entry (Reports / <report name>). See useCrumbTail.
+    crumbTail: string | null;
     setDark: (dark: boolean) => void;
     toggleDark: () => void;
     setLang: (lang: Lang) => void;
@@ -73,6 +76,7 @@ interface UiState {
     setAssetStatusColors: (colors: AssetStatusColors) => void;
     setPasswordDialog: (open: boolean) => void;
     setNarrowSidebarOpen: (open: boolean) => void;
+    setCrumbTail: (label: string | null) => void;
 }
 
 export const useUiStore = create<UiState>()(
@@ -91,6 +95,7 @@ export const useUiStore = create<UiState>()(
             loginPrefsTouched: { dark: false, lang: false },
             passwordDialogOpen: false,
             narrowSidebarOpen: false,
+            crumbTail: null,
             setDark: (dark) => set({ dark }),
             toggleDark: () => set((s) => ({ dark: !s.dark })),
             setLang: (lang) => set({ lang }),
@@ -106,6 +111,7 @@ export const useUiStore = create<UiState>()(
             setAssetStatusColors: (assetStatusColors) => set({ assetStatusColors }),
             setPasswordDialog: (passwordDialogOpen) => set({ passwordDialogOpen }),
             setNarrowSidebarOpen: (narrowSidebarOpen) => set({ narrowSidebarOpen }),
+            setCrumbTail: (crumbTail) => set({ crumbTail }),
         }),
         {
             name: 'itservices-ui',

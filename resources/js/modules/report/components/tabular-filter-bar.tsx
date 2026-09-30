@@ -14,7 +14,11 @@ import { useEffect, useState } from 'react';
 import type { TabularDefinition, TabularFilters } from '../types';
 import { FILTER_SELECT_ALL as ALL, FilterSelect } from './filter-select';
 
-function optionLabel(t: (key: string) => string, lang: 'en' | 'th', option: { label?: string; label_th?: string | null; label_key?: string }): string {
+function optionLabel(
+    t: (key: string) => string,
+    lang: 'en' | 'th',
+    option: { label?: string; label_th?: string | null; label_key?: string },
+): string {
     if (option.label_key) return t(option.label_key);
     return (lang === 'th' && option.label_th) || option.label || '';
 }
@@ -84,7 +88,7 @@ export function TabularFilterBar({
                                 id={`rep-fl-${filter.name}`}
                                 value={value ? String(value) : ''}
                                 onChange={(v) => onChange({ [filter.name]: v || null })}
-                                className="w-40"
+                                className="h-9 w-40"
                             />
                         </label>
                     );

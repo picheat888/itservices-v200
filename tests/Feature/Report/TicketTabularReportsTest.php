@@ -195,6 +195,21 @@ class TicketTabularReportsTest extends TestCase
         $this->assertSame(1, $summary['breached']['value']);
     }
 
+    /** A ticket number opens the case: the column says it links, each row carries where to. */
+    public function test_backlog_rows_link_to_their_case(): void
+    {
+        $this->seedTickets();
+        $user = $this->reader();
+
+        $definition = $this->actingAs($user)->getJson('/api/reports/r/tickets.backlog')->assertOk()->json('data.columns');
+        $this->assertSame('/tickets', collect($definition)->firstWhere('key', 'ticket_no')['link']);
+        $this->assertArrayNotHasKey('link', collect($definition)->firstWhere('key', 'subject') ?? []);
+
+        foreach ($this->actingAs($user)->getJson('/api/reports/r/tickets.backlog/rows')->assertOk()->json('data') as $row) {
+            $this->assertSame(['ticket_no' => "/tickets?view={$row['id']}"], $row['_links']);
+        }
+    }
+
     public function test_backlog_sla_filter(): void
     {
         $this->seedTickets();

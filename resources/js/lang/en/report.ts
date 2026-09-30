@@ -15,6 +15,9 @@ export const report: Dict = {
     rep_filter_pinned: 'Pinned',
     rep_pin: 'Pin this report',
     rep_unpin: 'Unpin',
+    rep_last_export_at: 'Exported {t}',
+    rep_last_export_building: 'Building file',
+    rep_last_export_failed: 'Export failed',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 days',
     rep_period_month: 'This month',
@@ -61,6 +64,7 @@ export const report: Dict = {
     rep_kpi_breached: '{n} past SLA',
     rep_kpi_backlog_split: 'Open {a} · In progress {b}',
     rep_vs_previous: 'vs {n} in the previous period',
+    rep_vs_previous_sla: 'Previous period {n}%',
     rep_hours: 'h',
     rep_generated_at: 'Data as of {t}',
     rep_err_range_order: "The 'to' date is before the 'from' date",
@@ -125,6 +129,9 @@ export const report: Dict = {
     rep_export_pdf_desc: 'Summary and table ready to print or send to management',
     rep_export_scope: 'Uses the current filters · {n} rows',
     rep_export_pdf_cap: 'The PDF lists the latest {n} tickets; Excel holds them all.',
+    rep_export_queue_note:
+        'The file is built in the background - you can close this. You will be notified when it is ready, and it is kept in My exports for 7 days.',
+    rep_dialog_cancel: 'Cancel',
     rep_export_go_xlsx: 'Create Excel file',
     rep_export_go_pdf: 'Create PDF file',
     rep_export_queued_title: 'Creating your file',
@@ -137,6 +144,10 @@ export const report: Dict = {
 
     // components/my-exports.tsx — My exports panel
     rep_my_exports_title: 'My exports',
+    rep_scope_all: 'Unfiltered',
+    rep_scope_as_of: 'As of {date}',
+    rep_scope_filters: '{n} filter(s)',
+    rep_scope_columns: '{n} columns',
     rep_my_exports_sub: 'Kept for download for {days} days',
     rep_my_exports_st_queued: 'Queued',
     rep_my_exports_st_running: 'Building',

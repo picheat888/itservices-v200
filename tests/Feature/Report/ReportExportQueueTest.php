@@ -81,7 +81,9 @@ class ReportExportQueueTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.status', 'ready')
-            ->assertJsonMissingPath('data.0.filters');
+            // The row says which file it is: the filters it was built with, the picked columns.
+            ->assertJsonPath('data.0.filters', [])
+            ->assertJsonPath('data.0.columns_count', null);
 
         $download = $this->actingAs($user)->get("/api/reports/exports/{$id}/download")->assertOk();
         $this->assertSame('application/pdf', $download->headers->get('Content-Type'));

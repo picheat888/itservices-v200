@@ -47,6 +47,9 @@ export interface ReportExportItem {
     report_key: ReportKey;
     format: ExportFormat;
     status: ReportExportStatus;
+    /** The filters it was built with, and how many columns were picked (null = all). */
+    filters: Record<string, unknown>;
+    columns_count: number | null;
     file_name: string | null;
     rows_count: number | null;
     size_bytes: number | null;

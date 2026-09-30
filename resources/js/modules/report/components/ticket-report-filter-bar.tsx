@@ -37,11 +37,11 @@ export function TicketReportFilterBar({
         <Card className="flex flex-wrap items-end gap-3 p-3">
             <label className="flex flex-col gap-1 text-xs">
                 <span className="text-muted-foreground">{t('rep_f_from')}</span>
-                <DateInput id="rep-from" value={filters.from} onChange={(v) => v && onChange({ from: v })} className="w-40" />
+                <DateInput id="rep-from" value={filters.from} onChange={(v) => v && onChange({ from: v })} className="h-9 w-40" />
             </label>
             <label className="flex flex-col gap-1 text-xs">
                 <span className="text-muted-foreground">{t('rep_f_to')}</span>
-                <DateInput id="rep-to" value={filters.to} onChange={(v) => v && onChange({ to: v })} className="w-40" />
+                <DateInput id="rep-to" value={filters.to} onChange={(v) => v && onChange({ to: v })} className="h-9 w-40" />
             </label>
 
             <div className="flex flex-col gap-1 text-xs">
@@ -49,7 +49,9 @@ export function TicketReportFilterBar({
                 <Popover>
                     <PopoverTrigger asChild>
                         <Button id="rep-category" variant="outline" size="sm" className="w-40 justify-between">
-                            {filters.categories.length === 0 ? t('rep_f_any') : t('rep_f_n_selected').replace('{n}', String(filters.categories.length))}
+                            {filters.categories.length === 0
+                                ? t('rep_f_any')
+                                : t('rep_f_n_selected').replace('{n}', String(filters.categories.length))}
                             <ChevronDown className="h-4 w-4 opacity-60" />
                         </Button>
                     </PopoverTrigger>

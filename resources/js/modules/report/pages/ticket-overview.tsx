@@ -10,13 +10,13 @@ import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
-import { AlertCircle, CalendarClock, ChevronLeft, Clock, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
+import { ReportHeader } from '../components/report-header';
 import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
@@ -36,6 +36,24 @@ function Section({ title, sub, children }: { title: string; sub?: React.ReactNod
             </div>
             {children}
         </Card>
+    );
+}
+
+/**
+ * "▲ 17% จาก 35 ในช่วงก่อนหน้า" — the direction and size of the change against the period
+ * before. Neutral colour on purpose: more tickets is neither good nor bad by itself.
+ */
+function Change({ current, previous, label }: { current: number; previous: number; label: string }) {
+    if (previous === 0 || current === previous) return <>{label}</>;
+    const pct = Math.round(((current - previous) / previous) * 100);
+
+    return (
+        <span className="inline-flex items-center gap-1">
+            <span className="text-foreground font-medium">
+                {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
+            </span>
+            {label}
+        </span>
     );
 }
 
@@ -67,26 +85,22 @@ export default function TicketOverviewReportPage() {
 
     return (
         <div className="space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <Link to="/reports" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
-                        <ChevronLeft className="h-4 w-4" />
-                        {t('rep_center_title')}
-                    </Link>
-                    <h1 className="mt-1 text-2xl font-bold">{t('rep_tickets_overview_title')}</h1>
-                    <p className="text-muted-foreground text-sm">{t('rep_tickets_overview_desc')}</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data}>
-                        <CalendarClock className="h-4 w-4" />
-                        {t('rep_schedule')}
-                    </Button>
-                    <Button onClick={() => setExportOpen(true)} disabled={!data}>
-                        <Download className="h-4 w-4" />
-                        {t('rep_export')}
-                    </Button>
-                </div>
-            </div>
+            <ReportHeader
+                title={t('rep_tickets_overview_title')}
+                description={t('rep_tickets_overview_desc')}
+                actions={
+                    <>
+                        <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data}>
+                            <CalendarClock className="h-4 w-4" />
+                            {t('rep_schedule')}
+                        </Button>
+                        <Button onClick={() => setExportOpen(true)} disabled={!data}>
+                            <Download className="h-4 w-4" />
+                            {t('rep_export')}
+                        </Button>
+                    </>
+                }
+            />
 
             <TicketReportFilterBar filters={filters} options={data?.options} onChange={patch} onReset={reset} />
 
@@ -110,7 +124,13 @@ export default function TicketOverviewReportPage() {
                         <KpiTile
                             label={t('rep_kpi_total')}
                             value={String(data.kpi.total)}
-                            footer={t('rep_vs_previous').replace('{n}', String(data.previous.total))}
+                            footer={
+                                <Change
+                                    current={data.kpi.total}
+                                    previous={data.previous.total}
+                                    label={t('rep_vs_previous').replace('{n}', String(data.previous.total))}
+                                />
+                            }
                         />
                         <KpiTile
                             label={t('rep_kpi_completed')}
@@ -123,6 +143,10 @@ export default function TicketOverviewReportPage() {
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
                             alert={data.kpi.sla_rate !== null && data.kpi.sla_rate < data.sla_goal}
+                            meter={data.kpi.sla_rate === null ? undefined : { value: data.kpi.sla_rate, goal: data.sla_goal }}
+                            footer={
+                                data.previous.sla_rate === null ? undefined : t('rep_vs_previous_sla').replace('{n}', String(data.previous.sla_rate))
+                            }
                         />
                         <KpiTile
                             label={t('rep_kpi_median')}
@@ -201,7 +225,7 @@ export default function TicketOverviewReportPage() {
                         </Section>
                         <Section title={t('rep_by_department')}>
                             <table className="w-full text-sm">
-                                <thead className="bg-muted text-muted-foreground text-xs uppercase">
+                                <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>
                                         <th className="px-4 py-2 text-left">{t('rep_col_department')}</th>
                                         <th className="px-4 py-2 text-right">{t('rep_col_tickets')}</th>
@@ -229,7 +253,7 @@ export default function TicketOverviewReportPage() {
                         </Section>
                         <Section title={t('rep_by_assignee')}>
                             <table className="w-full text-sm">
-                                <thead className="bg-muted text-muted-foreground text-xs uppercase">
+                                <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>
                                         <th className="px-4 py-2 text-left">{t('rep_col_staff')}</th>
                                         <th className="px-4 py-2 text-right">{t('rep_col_closed')}</th>

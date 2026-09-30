@@ -65,14 +65,14 @@ class ItPendingRequestReport extends TabularReport
     public function columns(): array
     {
         return [
-            ReportColumn::text('request_no', 'เลขที่คำขอ', fn (ServiceRequest $r) => $r->reference),
+            ReportColumn::text('request_no', 'เลขที่คำขอ', fn (ServiceRequest $r) => $r->reference)->linkTo('/requests', fn (ServiceRequest $r) => $r->id),
             ReportColumn::enum('request_type', 'ประเภทคำขอ', fn (ServiceRequest $r) => $r->type, self::typeKeys(), self::typeTh()),
             ReportColumn::text('title', 'เรื่อง', fn (ServiceRequest $r) => $r->title),
             ReportColumn::text('requester', 'ผู้ขอ', fn (ServiceRequest $r) => $r->requester_name),
             ReportColumn::text('department_name', 'แผนก', fn (ServiceRequest $r) => $r->department_name),
             ReportColumn::date('approved_at', 'อนุมัติเมื่อ', fn (ServiceRequest $r) => $r->approved_at),
             ReportColumn::number('waiting_days', 'รอมาแล้ว (วัน)', fn (ServiceRequest $r) => $this->waitingDays($r)),
-            ReportColumn::text('ticket_no', 'Ticket', fn (ServiceRequest $r) => $r->ticket?->ticket_no),
+            ReportColumn::text('ticket_no', 'Ticket', fn (ServiceRequest $r) => $r->ticket?->ticket_no)->linkTo('/tickets', fn (ServiceRequest $r) => $r->ticket?->id),
             ReportColumn::enum('ticket_status', 'สถานะ Ticket', fn (ServiceRequest $r) => $r->ticket?->status, self::TICKET_STATUS_KEYS, self::ticketStatusTh()),
             ReportColumn::text('assignee', 'ผู้รับผิดชอบ', fn (ServiceRequest $r) => $r->ticket?->assignee?->name),
         ];

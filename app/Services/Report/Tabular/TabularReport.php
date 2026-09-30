@@ -161,9 +161,15 @@ abstract class TabularReport
     public function row(Model $model): array
     {
         $row = ['id' => $model->getKey()];
+        $links = [];
         foreach ($this->columns() as $column) {
             $row[$column->key] = $column->value($model);
+            if (($link = $column->link($model)) !== null) {
+                $links[$column->key] = $link;
+            }
         }
+        // Cell → record page, for the columns declared with linkTo() (ReportColumn).
+        $row['_links'] = (object) $links;
 
         return $row;
     }

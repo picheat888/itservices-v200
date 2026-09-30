@@ -5,7 +5,7 @@ import { FlagEN, FlagTH } from '@/shared/components/flags';
 import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useSidebarStyle } from './use-sidebar-style';
 
 interface TopbarProps {
@@ -25,6 +25,7 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
     const { data: notifData } = useNotifications();
     const unreadCount = notifData?.unread ?? 0;
 
+    const crumbTail = useUiStore((s) => s.crumbTail);
     const current = findNavItem(pathname);
     const here = current ? t(current.label) : t('overall');
     /**
@@ -55,7 +56,18 @@ export function Topbar({ notifOpen, onToggleNotif }: TopbarProps) {
                         <span className="text-muted-foreground">/</span>
                     </>
                 )}
-                <span className="font-medium">{here}</span>
+                {crumbTail && current ? (
+                    // A page below its menu entry (a report): the entry leads back up, the tail names the page.
+                    <>
+                        <Link to={current.to} className="text-muted-foreground hover:text-foreground">
+                            {here}
+                        </Link>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="max-w-[40ch] truncate font-medium">{crumbTail}</span>
+                    </>
+                ) : (
+                    <span className="font-medium">{here}</span>
+                )}
             </div>
 
             <div className="flex-1" />

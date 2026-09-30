@@ -1,14 +1,18 @@
 /**
- * Report Center list: reports grouped by module, each row linking to its report page and
- * showing the export formats it offers, with a star to pin it. Mirrors the "ศูนย์รายงาน" screen of the design.
+ * Report Center list: reports grouped by module, each row linking to its report page with a
+ * star to pin it, and — as in the design's "Export ล่าสุด" column — how the reader's latest
+ * file of it went (being built, failed, or when it was made), from "ไฟล์ Export ของฉัน".
+ * Every report offers both Excel and PDF, so the row no longer spends room saying so.
  */
 import { useT } from '@/lang';
+import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { useUiStore } from '@/stores/ui';
 import { Box, ChevronRight, FileText, Inbox, type LucideIcon, MonitorCog, Star, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useToggleReportPin } from '../hooks/use-reports';
-import type { ReportDefinition, ReportDomain } from '../types';
+import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
+import type { ReportDefinition, ReportDomain, ReportExportItem } from '../types';
 
 /** The ticket overview report keeps its own dedicated page; every tabular report shares the generic one. */
 export function reportRoute(def: Pick<ReportDefinition, 'key'>): string {
@@ -28,9 +32,30 @@ const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = {
 /** i18n key stem per report: `rep_<stem>_title` / `rep_<stem>_desc`. */
 export const reportStem = (key: string) => key.replace('.', '_');
 
-function FormatChip({ format }: { format: string }) {
-    const tone = format === 'xlsx' ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600/30 dark:border-emerald-400/30' : 'text-red-600 dark:text-red-400 border-red-600/30 dark:border-red-400/30';
-    return <span className={`rounded border px-1.5 py-0.5 font-mono text-[10.5px] font-bold uppercase ${tone}`}>{format}</span>;
+/** The reader's latest file of this report, if it is still kept. */
+function LastExport({ item }: { item?: ReportExportItem }) {
+    const t = useT();
+    const lang = useUiStore((st) => st.lang);
+    if (!item) return null;
+    if (item.status === 'queued' || item.status === 'running') {
+        return (
+            <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                {t('rep_last_export_building')}
+            </span>
+        );
+    }
+    if (item.status === 'failed') {
+        return (
+            <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-400">
+                {t('rep_last_export_failed')}
+            </span>
+        );
+    }
+    return (
+        <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {t('rep_last_export_at').replace('{t}', relativeTime(item.finished_at ?? item.created_at, lang, ''))}
+        </span>
+    );
 }
 
 /** Star toggle in front of a report row — sits outside the row's link so it never navigates. */
@@ -55,6 +80,10 @@ function PinButton({ report }: { report: ReportDefinition }) {
 
 export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
     const t = useT();
+    const { data: exportsList = [] } = useMyExports();
+    // Newest first from the API, so the first one seen per report is its latest.
+    const latest = new Map<string, ReportExportItem>();
+    for (const item of exportsList) if (!latest.has(item.report_key)) latest.set(item.report_key, item);
     const domains = [...new Set(reports.map((r) => r.domain))];
 
     return (
@@ -79,10 +108,8 @@ export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
                                         <div className="font-semibold">{t(`rep_${reportStem(r.key)}_title`)}</div>
                                         <div className="text-muted-foreground text-sm">{t(`rep_${reportStem(r.key)}_desc`)}</div>
                                     </div>
-                                    <div className="hidden gap-1 sm:flex">
-                                        {r.formats.map((f) => (
-                                            <FormatChip key={f} format={f} />
-                                        ))}
+                                    <div className="hidden sm:block">
+                                        <LastExport item={latest.get(r.key)} />
                                     </div>
                                     <ChevronRight className="text-muted-foreground h-4 w-4" />
                                 </Link>

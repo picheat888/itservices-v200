@@ -72,7 +72,7 @@ class AssetTransferHistoryReport extends TabularReport
     {
         return [
             ReportColumn::date('moved_at', 'วันที่', fn (AssetTransfer $t) => $t->created_at),
-            ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (AssetTransfer $t) => $t->asset_tag),
+            ReportColumn::text('asset_code', 'รหัสทรัพย์สิน', fn (AssetTransfer $t) => $t->asset_tag)->linkTo('/assets', fn (AssetTransfer $t) => $t->asset_id),
             ReportColumn::text('model', 'รุ่น', fn (AssetTransfer $t) => $t->asset_model),
             ReportColumn::enum('transfer_kind', 'รายการ', fn (AssetTransfer $t) => $t->kind, self::KIND_KEYS, self::KIND_TH),
             ReportColumn::text('from_label', 'จาก', fn (AssetTransfer $t) => $this->party($t, 'from_owner')),
