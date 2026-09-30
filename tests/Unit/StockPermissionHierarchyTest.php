@@ -13,14 +13,14 @@ class StockPermissionHierarchyTest extends TestCase
             'stock.module',
             'stock.view_dashboard', 'stock.view', 'stock.view_request',
             'stock.view_count', 'stock.view_events',
-            'stock.manage_items', 'stock.receive', 'stock.return', 'stock.transfer',
+            'stock.manage_items', 'stock.delete', 'stock.receive', 'stock.return', 'stock.transfer',
             'stock.request', 'stock.approve', 'stock.fulfill',
         ];
         foreach ($expected as $key) {
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
         $stockKeys = array_filter(Permissions::all(), fn ($k) => str_starts_with($k, 'stock.'));
-        $this->assertCount(13, $stockKeys);
+        $this->assertCount(14, $stockKeys);
 
         // Counting and Event collapsed to a single switch each — no separate action key.
         $this->assertNotContains('stock.count', Permissions::all());
