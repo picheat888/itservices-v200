@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -15,7 +16,7 @@ const MASTER = 'workflows.module';
  * master above it. It is here so the card reads the same way as its neighbours — a master,
  * then a subject, then what you may do to it — rather than as a master with one loose row.
  */
-const GROUP = { label: { en: 'Workflows', th: 'Workflow' }, keys: ['workflows.manage'] };
+const GROUP = { labelKey: 'perm_ui_group_workflows', keys: ['workflows.manage'] };
 const GATED_KEYS = [MASTER, ...GROUP.keys];
 
 const label = (key: string, lang: Lang) => actionLabel('workflows', key.replace('workflows.', ''), lang);
@@ -93,9 +94,7 @@ export function WorkflowPermissionTree({
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
@@ -105,7 +104,7 @@ export function WorkflowPermissionTree({
             <div className={cn('px-3.5 py-1 transition-opacity', !masterOn && 'opacity-40')}>
                 <div className="py-0.5">
                     <div className="flex min-h-[34px] items-center gap-2">
-                        <span className="text-sm font-medium">{lang === 'th' ? GROUP.label.th : GROUP.label.en}</span>
+                        <span className="text-sm font-medium">{translate(lang, GROUP.labelKey)}</span>
                     </div>
                     <div className="border-border ml-2 space-y-0.5 border-l pl-3">
                         {GROUP.keys.map((key) => {

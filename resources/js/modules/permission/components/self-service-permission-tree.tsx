@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -119,9 +120,7 @@ export function SelfServicePermissionTree({
             <PermissionCardHeader module="self_service" on={activeCount} total={totalCount} lang={lang} />
 
             <div className="bg-brand/5 border-border border-b px-3.5 py-2">
-                <div className="text-muted-foreground text-[10.5px]">
-                    {lang === 'th' ? 'บริการตนเอง · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of every module master'}
-                </div>
+                <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service_all')}</div>
             </div>
 
             <div className="px-3.5 py-1">

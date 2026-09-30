@@ -1,4 +1,4 @@
-import { useT } from '@/lang';
+import { translate, useT } from '@/lang';
 import { Field } from '@/shared/components/field';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
@@ -63,7 +63,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
             return (
                 <span className="flex items-center gap-1.5">
                     <Check className="h-4 w-4" />
-                    {lang === 'th' ? 'บันทึกแล้ว' : 'Saved'}
+                    {translate(lang, 'perm_ui_saved')}
                 </span>
             );
         }
@@ -71,7 +71,7 @@ export function RoleModal({ open, onClose, role }: { open: boolean; onClose: () 
             return (
                 <span className="flex items-center gap-1.5">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {lang === 'th' ? 'กำลังบันทึก…' : 'Saving…'}
+                    {translate(lang, 'perm_ui_saving')}
                 </span>
             );
         }

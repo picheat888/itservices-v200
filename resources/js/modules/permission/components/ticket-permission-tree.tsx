@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -140,9 +141,7 @@ export function TicketPermissionTree({
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
@@ -163,7 +162,7 @@ export function TicketPermissionTree({
                                 <span className="ml-auto flex items-center gap-2">
                                     {group.chip !== false && (
                                         <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {lang === 'th' ? 'ดู' : 'View'}
+                                            {translate(lang, 'perm_ui_view')}
                                         </span>
                                     )}
                                     <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
@@ -195,14 +194,8 @@ export function TicketPermissionTree({
                 <div className="py-0.5">
                     <div className="flex min-h-[34px] items-center gap-2">
                         <span className="flex items-center gap-1 text-sm font-medium">
-                            {lang === 'th' ? 'ระดับประเภทเคส (Tickets Level)' : 'Tickets Level'}
-                            <InfoHint
-                                text={
-                                    lang === 'th'
-                                        ? 'จำกัดประเภทเคสที่เจ้าหน้าที่เห็น รับ และถูกแจ้งเตือน - ไม่ติ๊กเลย = ไม่เห็นเคสใด'
-                                        : 'Scopes which categories this role may see, take and be alerted about - none ticked = no cases at all.'
-                                }
-                            />
+                            {translate(lang, 'perm_ui_tickets_level')}
+                            <InfoHint text={translate(lang, 'perm_ui_tickets_level_hint')} />
                         </span>
                     </div>
                     <div className="border-border ml-2 space-y-0.5 border-l pl-3">
@@ -223,9 +216,7 @@ export function TicketPermissionTree({
                 <div className="flex min-h-[34px] items-center gap-2">
                     <div className="min-w-0">
                         <div className="text-sm font-medium">{label(STANDALONE.view, lang)}</div>
-                        <div className="text-muted-foreground text-[10.5px]">
-                            {lang === 'th' ? 'บริการตนเอง · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of the master'}
-                        </div>
+                        <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_service')}</div>
                     </div>
                     <span className="ml-auto">
                         <Switch on={createOn} locked={isSuper} onClick={() => toggle(STANDALONE.view)} />

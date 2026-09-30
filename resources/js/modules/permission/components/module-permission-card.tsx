@@ -116,7 +116,8 @@ export function ModulePermissionCard({
 }: {
     module: string;
     keys: string[];
-    subtitle: { en: string; th: string };
+    /** Already in the reader's language. */
+    subtitle: string;
     master: ModuleMaster;
     draft: Set<string>;
     setDraft: React.Dispatch<React.SetStateAction<Set<string>>>;
@@ -124,7 +125,7 @@ export function ModulePermissionCard({
     lang: Lang;
 }) {
     const has = (key: string) => isSuper || draft.has(key);
-    const sub = lang === 'th' ? subtitle.th : subtitle.en;
+    const sub = subtitle;
     const label = (key: string) => {
         const [mod, action] = key.split('.');
         return actionLabel(mod, action, lang);
