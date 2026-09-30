@@ -3944,3 +3944,8 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `EmailTemplateResetTest` (+2: seed ซ้ำแล้ว template ที่แก้ยังอยู่, seed ซ้ำเติม template ที่ขาด) · `MasterDataSeedTest` (+1: seed ซ้ำแล้วค่าที่แก้ยังอยู่) · เทสต์ใหม่ทั้ง 2 ไฟล์ fail กับ seeder เดิม pass กับของใหม่ · ชุดเต็ม **1542 passed** · pint ผ่าน
+
+## `composer run dev` รัน scheduler ด้วย (2026-09-30)
+
+- เพิ่ม `php artisan schedule:work` (ชื่อ `schedule`) เข้าสคริปต์ `dev` — งานตามเวลาทั้ง 11 ตัวใน `routes/console.php` (เตือน SLA, เตือนสัญญา/สต็อก/คำขอค้าง, สรุปรายสัปดาห์, รายงานตามเวลา, ล้าง log/ไฟล์ Export) ทำงานบนเครื่อง dev ตอนเปิด `composer run dev` · ก่อนหน้านี้ไม่มีตัวไหนรันเลย
+- ทำงานเฉพาะตอนสคริปต์เปิดอยู่ (รอบที่พลาดไม่รันย้อนหลัง) · production ใช้ Windows Task Scheduler รัน `php artisan schedule:run` ทุกนาทีแทน
