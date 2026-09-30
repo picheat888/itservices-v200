@@ -102,6 +102,15 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                 id: ticket.id,
                 payload: { subject: subject.trim(), description: description.trim(), category, callback_phone: phone.trim() },
             });
+            // Removals first: the server caps a case at MAX_FILES, so swapping files on a full
+            // ticket has to free the slots before the new ones arrive — uploading first was
+            // refused as too_many_files. A file removed here was removed on purpose, so an
+            // upload failing afterwards still leaves the case as the reader asked.
+            for (const attachmentId of removedIds) {
+                await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
+                removedNow.push(attachmentId);
+                setDeleted((d) => d + 1);
+            }
             if (pending.length > saved) {
                 const offset = saved;
                 await uploadAttachments.mutateAsync({
@@ -112,11 +121,6 @@ export function EditTicketDrawer({ ticket, onClose }: { ticket: Ticket | null; o
                         saved = offset + index + 1;
                     },
                 });
-            }
-            for (const attachmentId of removedIds) {
-                await deleteAttachment.mutateAsync({ id: ticket.id, attachmentId });
-                removedNow.push(attachmentId);
-                setDeleted((d) => d + 1);
             }
             // Hold the finished bar at 100% for a beat so it doesn't vanish mid-fill.
             if (totalOps > 0) {
