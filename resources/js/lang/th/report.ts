@@ -76,6 +76,7 @@ export const report: Dict = {
     rep_by_category: 'แยกตามหมวด',
     rep_by_department: 'แผนกที่แจ้งมากที่สุด',
     rep_by_assignee: 'ผลงานเจ้าหน้าที่ IT',
+    rep_col_requester: 'ผู้แจ้ง',
     rep_col_department: 'แผนก',
     rep_col_tickets: 'Ticket',
     rep_col_sla: 'SLA',

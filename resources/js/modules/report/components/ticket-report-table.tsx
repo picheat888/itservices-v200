@@ -24,6 +24,12 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
     const columns: Column<TicketReportRow>[] = [
         { key: 'no', header: t('rep_col_no'), width: '150px', render: (r) => <span className="font-mono text-xs">{r.ticket_no}</span> },
         { key: 'subject', header: t('rep_col_subject'), render: (r) => <span className="truncate">{r.subject}</span> },
+        {
+            key: 'requester',
+            header: t('rep_col_requester'),
+            width: '160px',
+            render: (r) => <span className="truncate">{(lang === 'th' && r.requester_name_th) || r.requester_name || '—'}</span>,
+        },
         { key: 'dept', header: t('rep_col_department'), width: '140px', render: (r) => (lang === 'th' && r.department_name_th) || r.department_name || '—' },
         { key: 'cat', header: t('rep_col_category'), width: '110px', render: (r) => (r.category ? t(categoryKey(r.category)) : '—') },
         {

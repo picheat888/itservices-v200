@@ -243,6 +243,20 @@ class TicketOverviewReportTest extends TestCase
         $this->actingAs($user)->getJson('/api/reports/tickets/overview/rows?'.http_build_query(self::RANGE))->assertForbidden();
     }
 
+    public function test_rows_carry_the_requesters_name_in_both_languages(): void
+    {
+        $user = $this->deskMember();
+        $requester = Employee::create(['first_name' => 'Somchai', 'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี']);
+        $this->ticket(['requester_id' => $requester->id, 'created_at' => '2026-09-05 09:00']);
+
+        $row = $this->actingAs($user)
+            ->getJson('/api/reports/tickets/overview/rows?'.http_build_query(self::RANGE))
+            ->assertOk()->json('data.0');
+
+        $this->assertSame('Somchai Jaidee', $row['requester_name']);
+        $this->assertSame('สมชาย ใจดี', $row['requester_name_th']);
+    }
+
     /** Every ticket report narrows by opening date, so that range has an index to use. */
     public function test_tickets_are_indexed_by_opening_date(): void
     {

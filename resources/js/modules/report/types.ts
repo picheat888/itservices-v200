@@ -92,6 +92,7 @@ export interface TicketReportRow {
     ticket_no: string;
     subject: string;
     requester_name: string | null;
+    requester_name_th: string | null;
     department_name: string | null;
     department_name_th: string | null;
     category: string | null;
