@@ -24,6 +24,7 @@ export function ExportReportDialog({
     subtitle,
     total,
     formats,
+    note,
     onExport,
     isPending,
     isError,
@@ -35,6 +36,8 @@ export function ExportReportDialog({
     subtitle?: string;
     total: number;
     formats: ExportFormat[];
+    /** One extra line under the scope note (e.g. "only the 5 columns shown"). */
+    note?: string;
     onExport: (format: ExportFormat) => Promise<unknown>;
     isPending: boolean;
     isError: boolean;
@@ -97,6 +100,7 @@ export function ExportReportDialog({
                     </div>
                     <div className="bg-brand/5 rounded-lg px-3 py-2 text-sm">
                         {t('rep_export_scope').replace('{n}', String(total))}
+                        {note && <div className="text-muted-foreground mt-1 text-xs">{note}</div>}
                         {format === 'pdf' && total > PDF_ROW_LIMIT && (
                             <div className="text-muted-foreground mt-1 text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
                         )}

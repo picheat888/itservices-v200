@@ -36,7 +36,7 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, 
      */
     public function headings(): array
     {
-        return array_map(fn (ReportColumn $c) => $c->heading, $this->report->columns());
+        return array_map(fn (ReportColumn $c) => $c->heading, $this->report->exportColumns());
     }
 
     /**
@@ -45,6 +45,6 @@ class TabularRowsSheet implements FromCollection, ShouldAutoSize, WithHeadings, 
      */
     public function map($model): array
     {
-        return array_map(fn (ReportColumn $c) => $c->exportValue($model), $this->report->columns());
+        return array_map(fn (ReportColumn $c) => $c->exportValue($model), $this->report->exportColumns());
     }
 }

@@ -19,6 +19,32 @@ export interface ReportDefinition {
     domain: ReportDomain;
     kind: ReportKind;
     formats: ExportFormat[];
+    /** Pinned by the current user (ReportPinService). */
+    pinned: boolean;
+}
+
+/** Period of the hub's number strip — mirrors ReportSnapshotService::PERIODS. */
+export type SnapshotPeriod = '7d' | 'month' | 'quarter' | 'year';
+
+/** One tile of the hub's number strip (ReportSnapshotService::tile()). */
+export interface SnapshotTile {
+    key: string;
+    /** The report the tile opens — its number comes from that report. */
+    report_key: ReportKey;
+    value: number | null;
+    /** "x / total" tiles only. */
+    total: number | null;
+    unit: 'percent' | null;
+    /** Change against the period before, in percentage points (SLA tile). */
+    delta: number | null;
+    secondary: { key: string; value: number | null } | null;
+}
+
+export interface ReportSnapshot {
+    period: SnapshotPeriod;
+    from: string;
+    to: string;
+    tiles: SnapshotTile[];
 }
 
 export interface TicketReportFilters {

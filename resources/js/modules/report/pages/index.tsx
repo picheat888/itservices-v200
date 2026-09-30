@@ -1,28 +1,41 @@
 /**
- * Report Center page (/reports) — lists the reports this user may open, with search and
- * module chips. Server decides visibility (GET /api/reports → ReportCatalogue).
+ * Report Center page (/reports) — the number strip (SnapshotStrip), then the reports this
+ * user may open with search, module chips and a "pinned" chip. Server decides visibility
+ * (GET /api/reports → ReportCatalogue) and remembers pins (ReportPinService).
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { LineChart, Search } from 'lucide-react';
+import { LineChart, Search, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { ReportCatalogue, reportStem } from '../components/report-catalogue';
+import { SnapshotStrip } from '../components/snapshot-strip';
 import { useReportCatalogue } from '../hooks/use-reports';
 import type { ReportDomain } from '../types';
+
+type Chip = ReportDomain | 'all' | 'pinned';
 
 export default function ReportsPage() {
     const t = useT();
     const { data: reports = [], isLoading } = useReportCatalogue();
     const [query, setQuery] = useState('');
-    const [domain, setDomain] = useState<ReportDomain | 'all'>('all');
+    const [chip, setChip] = useState<Chip>('all');
 
     const domains = [...new Set(reports.map((r) => r.domain))];
+    const pinnedCount = reports.filter((r) => r.pinned).length;
+    // Un-pinning the last pinned report while its chip is open falls back to "all".
+    const domain: Chip = chip === 'pinned' && pinnedCount === 0 ? 'all' : chip;
+    const chips: { id: Chip; label: string; count: number }[] = [
+        { id: 'all', label: t('rep_filter_all'), count: reports.length },
+        ...(pinnedCount > 0 ? [{ id: 'pinned' as const, label: t('rep_filter_pinned'), count: pinnedCount }] : []),
+        ...domains.map((d) => ({ id: d, label: t(`rep_domain_${d}`), count: reports.filter((r) => r.domain === d).length })),
+    ];
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
         return reports.filter((r) => {
-            if (domain !== 'all' && r.domain !== domain) return false;
+            if (domain === 'pinned' && !r.pinned) return false;
+            if (domain !== 'all' && domain !== 'pinned' && r.domain !== domain) return false;
             if (!q) return true;
             const stem = reportStem(r.key);
             return `${t(`rep_${stem}_title`)} ${t(`rep_${stem}_desc`)}`.toLowerCase().includes(q);
@@ -35,6 +48,8 @@ export default function ReportsPage() {
                 <h1 className="text-2xl font-bold">{t('rep_center_title')}</h1>
                 <p className="text-muted-foreground mt-1 max-w-2xl text-sm">{t('rep_center_sub')}</p>
             </div>
+
+            <SnapshotStrip />
 
             {isLoading ? (
                 <Skeleton className="h-40 w-full" />
@@ -52,17 +67,19 @@ export default function ReportsPage() {
                             <Input id="report-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('rep_search_placeholder')} className="pl-9" />
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                            {(['all', ...domains] as const).map((d) => (
+                            {chips.map((c) => (
                                 <button
-                                    key={d}
+                                    key={c.id}
                                     type="button"
-                                    onClick={() => setDomain(d)}
+                                    onClick={() => setChip(c.id)}
                                     className={cn(
-                                        'h-8 rounded-full border px-3 text-xs font-semibold',
-                                        domain === d ? 'bg-brand border-brand text-brand-foreground' : 'border-border text-muted-foreground bg-background',
+                                        'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
+                                        domain === c.id ? 'bg-brand border-brand text-brand-foreground' : 'border-border text-muted-foreground bg-background',
                                     )}
                                 >
-                                    {d === 'all' ? t('rep_filter_all') : t(`rep_domain_${d}`)}
+                                    {c.id === 'pinned' && <Star className="h-3.5 w-3.5" />}
+                                    {c.label}
+                                    <span className="font-mono opacity-70">{c.count}</span>
                                 </button>
                             ))}
                         </div>

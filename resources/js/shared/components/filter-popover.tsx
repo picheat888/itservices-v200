@@ -1,6 +1,6 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -14,15 +14,23 @@ const PANEL_WIDTH = 288;
  *
  * The panel is rendered as a portal at document.body with fixed positioning so it
  * is never clipped by an `overflow-hidden` ancestor (e.g. the Stock Card).
+ *
+ * `label` / `icon` rename the trigger and panel title for other "pick from a list" panels
+ * (e.g. the report column picker); they default to "Filters" + the sliders icon.
  */
 export function FilterPopover({
     count,
     width = PANEL_WIDTH,
     onClear,
     resultCount,
+    label,
+    icon: Icon = SlidersHorizontal,
     children,
 }: {
     count: number;
+    /** Trigger + panel title; defaults to the "Filters" string. */
+    label?: string;
+    icon?: LucideIcon;
     /** Panel width in px — widen when the content lays out in multiple columns. */
     width?: number;
     /** Renders a "Clear all" button in the panel header (disabled while nothing is set). */
@@ -103,8 +111,8 @@ export function FilterPopover({
                     count > 0 ? 'border-brand/50 bg-brand/5 text-brand' : 'border-input hover:bg-accent',
                 )}
             >
-                <SlidersHorizontal className="h-4 w-4" />
-                {t('filters')}
+                <Icon className="h-4 w-4" />
+                {label ?? t('filters')}
                 {count > 0 && (
                     <span className="bg-brand text-brand-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                         {count}
@@ -122,8 +130,8 @@ export function FilterPopover({
                         <style>{`@keyframes filter-pop{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:none}}`}</style>
 
                         <div className="border-border/60 flex items-center gap-2 border-b px-3.5 py-2.5">
-                            <SlidersHorizontal className="text-muted-foreground h-3.5 w-3.5" />
-                            <span className="text-sm font-semibold">{t('filters')}</span>
+                            <Icon className="text-muted-foreground h-3.5 w-3.5" />
+                            <span className="text-sm font-semibold">{label ?? t('filters')}</span>
                             {count > 0 && (
                                 <span className="bg-brand/10 text-brand flex h-5 min-w-5 items-center justify-center rounded-full px-1 font-mono text-[11px] font-bold">
                                     {count}

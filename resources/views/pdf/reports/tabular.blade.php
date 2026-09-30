@@ -39,14 +39,14 @@
 @endif
 <table class="data">
     <thead><tr>
-        @foreach ($report->columns() as $column)
+        @foreach ($report->exportColumns() as $column)
             <th>{{ $column->heading }}</th>
         @endforeach
     </tr></thead>
     <tbody>
     @foreach ($rows as $row)
         <tr>
-            @foreach ($report->columns() as $column)
+            @foreach ($report->exportColumns() as $column)
                 @php($cell = $column->exportValue($row))
                 <td>{{ $column->type === 'money' && $cell !== null ? number_format($cell, 2) : $cell }}</td>
             @endforeach
