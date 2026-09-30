@@ -1,8 +1,8 @@
 /**
- * Number strip on top of the Report Center: period chips (7 days / month / quarter / year)
- * and one tile per snapshot figure the reader may see (GET /api/reports/snapshot). Each tile
- * opens the report its number comes from. Chosen period is remembered in localStorage
- * (`reports.snapshot.period`), like a list filter.
+ * Number strip on top of the Report Center: one tile per snapshot figure the reader may see
+ * (GET /api/reports/snapshot), each opening the report its number comes from. The period
+ * (7 days / month / quarter / year) is the page's — PeriodSwitch beside the heading, held by
+ * useSnapshotPeriod and remembered in localStorage (`reports.snapshot.period`).
  *
  * Only some numbers follow the period — the SLA rate and requests submitted — the rest are
  * states as of now (ReportSnapshotService). The ones that follow it say which period in
@@ -91,10 +91,9 @@ function Tile({ tile, period }: { tile: SnapshotTile; period: SnapshotPeriod }) 
     );
 }
 
-export function SnapshotStrip() {
-    const t = useT();
+/** The chosen period, remembered in localStorage like a list filter. */
+export function useSnapshotPeriod(): [SnapshotPeriod, (period: SnapshotPeriod) => void] {
     const [period, setPeriod] = useState<SnapshotPeriod>(loadPeriod);
-    const { data, isLoading } = useReportSnapshot(period);
 
     useEffect(() => {
         try {
@@ -104,31 +103,43 @@ export function SnapshotStrip() {
         }
     }, [period]);
 
+    return [period, setPeriod];
+}
+
+/** Segmented period control — sits beside the Report Center heading. */
+export function PeriodSwitch({ period, onChange }: { period: SnapshotPeriod; onChange: (period: SnapshotPeriod) => void }) {
+    const t = useT();
+
+    return (
+        <div className="bg-muted inline-flex gap-0.5 rounded-lg p-1" role="group" aria-label={t('rep_period_label')}>
+            {PERIODS.map((p) => (
+                <button
+                    key={p}
+                    type="button"
+                    aria-pressed={period === p}
+                    onClick={() => onChange(p)}
+                    className={cn(
+                        'focus-visible:ring-brand/30 h-7 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none',
+                        period === p ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                >
+                    {t(`rep_period_${p}`)}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+export function SnapshotStrip({ period }: { period: SnapshotPeriod }) {
+    const { data, isLoading } = useReportSnapshot(period);
+
     if (!isLoading && (data?.tiles.length ?? 0) === 0) return null;
 
     return (
-        <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={t('rep_period_label')}>
-                {PERIODS.map((p) => (
-                    <button
-                        key={p}
-                        type="button"
-                        aria-pressed={period === p}
-                        onClick={() => setPeriod(p)}
-                        className={cn(
-                            'h-8 rounded-full border px-3 text-xs font-semibold',
-                            period === p ? 'bg-brand border-brand text-brand-foreground' : 'border-border text-muted-foreground bg-background',
-                        )}
-                    >
-                        {t(`rep_period_${p}`)}
-                    </button>
-                ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-                {isLoading || !data
-                    ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-24" />)
-                    : data.tiles.map((tile) => <Tile key={tile.key} tile={tile} period={period} />)}
-            </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            {isLoading || !data
+                ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-24" />)
+                : data.tiles.map((tile) => <Tile key={tile.key} tile={tile} period={period} />)}
         </div>
     );
 }

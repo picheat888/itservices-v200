@@ -11,15 +11,17 @@ import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { isAxiosError } from 'axios';
-import { AlertCircle, CalendarClock, ChevronLeft, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
+import { ReportHeader } from '../components/report-header';
 import { ScheduleReportDialog, scheduleCoverage } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
 import { TabularFilterBar } from '../components/tabular-filter-bar';
+import { useCanOpen } from '../hooks/use-can-open';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
@@ -61,6 +63,7 @@ function TabularReportRows({
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const { data, isLoading, isFetching, isError, error } = useTabularRows(reportKey, filters, page, perPage, true);
+    const canOpen = useCanOpen();
 
     useEffect(() => {
         if (data) onTotalChange(data.meta.total);
@@ -70,11 +73,17 @@ function TabularReportRows({
         return <ErrorCard message={errorMessageFor(t, error)} />;
     }
 
-    const columns: Column<Record<string, unknown> & { id: number }>[] = visibleColumns.map((column) => ({
+    // Codes, dates, numbers and names stay on one line (the table scrolls sideways instead);
+    // free text is cut at a readable width and keeps its full value in a tooltip.
+    const columns: Column<Record<string, unknown> & { id: number; _links?: Record<string, string> }>[] = visibleColumns.map((column) => ({
         key: column.key,
         header: t(column.label_key),
         align: column.type === 'number' || column.type === 'money' ? 'right' : undefined,
-        render: (row) => <TabularCell column={column} value={row[column.key]} />,
+        className: column.type === 'text' || column.type === 'localized' ? 'max-w-[22rem] truncate whitespace-nowrap' : 'whitespace-nowrap',
+        render: (row) => {
+            const href = row._links?.[column.key];
+            return <TabularCell column={column} value={row[column.key]} href={href && canOpen(href) ? href : undefined} />;
+        },
     }));
 
     return (
@@ -121,17 +130,23 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
 
     return (
         <>
-            <div className="flex justify-end gap-2">
-                <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />
-                <Button variant="outline" onClick={() => setScheduleOpen(true)}>
-                    <CalendarClock className="h-4 w-4" />
-                    {t('rep_schedule')}
-                </Button>
-                <Button onClick={() => setExportOpen(true)}>
-                    <Download className="h-4 w-4" />
-                    {t('rep_export')}
-                </Button>
-            </div>
+            <ReportHeader
+                title={t(`rep_${stem}_title`)}
+                description={t(`rep_${stem}_desc`)}
+                actions={
+                    <>
+                        <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />
+                        <Button variant="outline" onClick={() => setScheduleOpen(true)}>
+                            <CalendarClock className="h-4 w-4" />
+                            {t('rep_schedule')}
+                        </Button>
+                        <Button onClick={() => setExportOpen(true)}>
+                            <Download className="h-4 w-4" />
+                            {t('rep_export')}
+                        </Button>
+                    </>
+                }
+            />
             <TabularFilterBar definition={definition} filters={filters} onChange={patch} onReset={reset} />
             <TabularReportRows
                 key={JSON.stringify(filters)}
@@ -180,19 +195,15 @@ export default function TabularReportPage() {
 
     return (
         <div className="space-y-4">
-            <div>
-                <Link to="/reports" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm">
-                    <ChevronLeft className="h-4 w-4" />
-                    {t('rep_center_title')}
-                </Link>
-                <h1 className="mt-1 text-2xl font-bold">{t(`rep_${stem}_title`)}</h1>
-                <p className="text-muted-foreground text-sm">{t(`rep_${stem}_desc`)}</p>
-            </div>
-
             {defQuery.isError ? (
-                <ErrorCard message={errorMessageFor(t, defQuery.error)} />
+                <>
+                    <ReportHeader title={t(`rep_${stem}_title`)} description={t(`rep_${stem}_desc`)} />
+                    <ErrorCard message={errorMessageFor(t, defQuery.error)} />
+                </>
             ) : defQuery.isLoading || !definition ? (
                 <div className="space-y-4">
+                    {/* The heading shows at once; its actions arrive with the definition. */}
+                    <ReportHeader title={t(`rep_${stem}_title`)} description={t(`rep_${stem}_desc`)} />
                     <Skeleton className="h-16 w-full" />
                     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                         {Array.from({ length: 4 }, (_, i) => (

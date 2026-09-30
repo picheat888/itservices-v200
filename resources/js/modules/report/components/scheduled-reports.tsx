@@ -1,5 +1,5 @@
 /**
- * "รายงานที่ตั้งเวลาไว้" on the Report Center: the reader's scheduled report emails — how
+ * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail: the reader's scheduled report emails — how
  * often and to whom, when the next one goes out, how the last one went — with edit, pause /
  * resume, send now and delete. Hidden while there are none; a schedule is set from a
  * report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules (GET /api/reports/schedules).
@@ -57,7 +57,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                   .replace('{n}', String(item.recipients.length - 1));
 
     return (
-        <div className={cn('border-border flex flex-wrap items-center gap-3 border-b px-5 py-3 last:border-b-0', !item.active && 'opacity-60')}>
+        <div className="border-border flex gap-3 border-b px-4 py-3 last:border-b-0">
             <span
                 className={cn(
                     'flex h-10 w-9 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold uppercase',
@@ -69,7 +69,10 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 {item.format}
             </span>
             <div className="min-w-0 flex-1">
-                <div className="truncate font-semibold">{title}</div>
+                {/* A paused schedule reads faded; its switch stays at full strength so it reads as the way back. */}
+                <div className={cn('truncate text-sm font-semibold', !item.active && 'opacity-60')} title={title}>
+                    {title}
+                </div>
                 <div className="text-muted-foreground truncate text-xs">
                     {when} · {recipients}
                 </div>
@@ -88,25 +91,25 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                         </>
                     )}
                 </div>
-            </div>
-            <div className="flex items-center gap-1">
-                <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={onSendNow}
-                    disabled={!item.active || sendNow.isPending}
-                    aria-label={t('rep_schedules_send_now')}
-                    title={t('rep_schedules_send_now')}
-                >
-                    <Send className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={onEdit} aria-label={t('rep_schedules_edit')} title={t('rep_schedules_edit')}>
-                    <Pencil className="h-4 w-4" />
-                </Button>
-                <Button size="icon" variant="ghost" onClick={onDelete} aria-label={t('rep_schedules_delete')} title={t('rep_schedules_delete')}>
-                    <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="mt-2 flex items-center gap-1">
+                    <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={onSendNow}
+                        disabled={!item.active || sendNow.isPending}
+                        aria-label={t('rep_schedules_send_now')}
+                        title={t('rep_schedules_send_now')}
+                    >
+                        <Send className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={onEdit} aria-label={t('rep_schedules_edit')} title={t('rep_schedules_edit')}>
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={onDelete} aria-label={t('rep_schedules_delete')} title={t('rep_schedules_delete')}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
         </div>
     );
@@ -127,12 +130,12 @@ export function ScheduledReports() {
 
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
-            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-5 py-3">
+            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-4 py-3">
                 <span className="bg-brand/10 text-brand flex h-7 w-7 items-center justify-center rounded-md">
                     <CalendarClock className="h-4 w-4" />
                 </span>
                 <span className="font-semibold">{t('rep_schedules_title')}</span>
-                <span className="text-muted-foreground text-xs">{t('rep_schedules_sub')}</span>
+                <span className="text-muted-foreground ml-auto text-xs">{t('rep_schedules_sub')}</span>
             </div>
             {items.map((item) => (
                 <ScheduleRow

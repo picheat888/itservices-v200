@@ -55,7 +55,7 @@ class ContractExpiringReport extends TabularReport
     public function columns(): array
     {
         return [
-            ReportColumn::text('code', 'เลขที่สัญญา', fn (Contract $c) => $c->code),
+            ReportColumn::text('code', 'เลขที่สัญญา', fn (Contract $c) => $c->code)->linkTo('/contracts', fn (Contract $c) => $c->id),
             ReportColumn::text('name', 'ชื่อสัญญา', fn (Contract $c) => $c->name),
             ReportColumn::localized('vendor', 'ผู้ขาย', fn (Contract $c) => $c->vendor ? ['name' => $c->vendor->name, 'name_th' => $c->vendor->name_th] : null),
             ReportColumn::enum('type', 'ประเภท', fn (Contract $c) => $c->type, self::TYPE_KEYS, self::TYPE_TH),

@@ -164,7 +164,7 @@ export function ScheduleReportDialog({
                 />
                 <div className="space-y-5 px-6 pb-2">
                     <div className="space-y-2">
-                        <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('rep_schedule_frequency')}</div>
+                        <div className="text-muted-foreground text-xs font-semibold">{t('rep_schedule_frequency')}</div>
                         <div className="grid gap-2 sm:grid-cols-3">
                             {FREQUENCIES.map((f) => (
                                 <ChoiceCard key={f} selected={frequency === f} onClick={() => setFrequency(f)} className="rounded-lg p-3 text-left">
@@ -179,7 +179,7 @@ export function ScheduleReportDialog({
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                            <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('rep_schedule_hour')}</div>
+                            <div className="text-muted-foreground text-xs font-semibold">{t('rep_schedule_hour')}</div>
                             <Select value={String(hour)} onValueChange={(v) => setHour(Number(v))}>
                                 <SelectTrigger aria-label={t('rep_schedule_hour')}>
                                     <SelectValue />
@@ -194,7 +194,7 @@ export function ScheduleReportDialog({
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('rep_export_format')}</div>
+                            <div className="text-muted-foreground text-xs font-semibold">{t('rep_export_format')}</div>
                             <div className="flex gap-2">
                                 {formats.map((f) => (
                                     <ChoiceCard
@@ -214,7 +214,7 @@ export function ScheduleReportDialog({
                     </div>
 
                     <div className="space-y-2">
-                        <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold tracking-wide uppercase">
+                        <div className="text-muted-foreground flex items-baseline justify-between text-xs font-semibold">
                             <span>{t('rep_schedule_recipients')}</span>
                             <span className="font-mono normal-case">
                                 {recipients.length}/{MAX_RECIPIENTS}
@@ -278,6 +278,9 @@ export function ScheduleReportDialog({
                     )}
                 </div>
                 <DialogFooter className="border-border border-t px-6 py-4">
+                    <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+                        {t('rep_dialog_cancel')}
+                    </Button>
                     <Button onClick={submit} disabled={isPending}>
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
                         {initial ? t('rep_schedule_save') : t('rep_schedule_create')}

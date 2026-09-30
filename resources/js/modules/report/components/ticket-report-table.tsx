@@ -7,6 +7,8 @@ import { type Column, DataTable } from '@/shared/components/data-table';
 import { StatusBadge } from '@/shared/components/status-badge';
 import { useUiStore } from '@/stores/ui';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useCanOpen } from '../hooks/use-can-open';
 import { useTicketOverviewRows } from '../hooks/use-reports';
 import type { TicketReportFilters, TicketReportRow } from '../types';
 import { categoryKey, priorityKey, statusKey } from './ticket-labels';
@@ -20,17 +22,42 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(20);
     const { data, isLoading, isFetching } = useTicketOverviewRows(filters, page, perPage);
+    const canOpenTickets = useCanOpen()('/tickets');
 
     const columns: Column<TicketReportRow>[] = [
-        { key: 'no', header: t('rep_col_no'), width: '150px', render: (r) => <span className="font-mono text-xs">{r.ticket_no}</span> },
-        { key: 'subject', header: t('rep_col_subject'), render: (r) => <span className="truncate">{r.subject}</span> },
+        {
+            key: 'no',
+            header: t('rep_col_no'),
+            width: '170px',
+            className: 'whitespace-nowrap',
+            render: (r) =>
+                canOpenTickets ? (
+                    <Link to={`/tickets?view=${r.id}`} className="text-brand font-mono text-xs font-medium hover:underline">
+                        {r.ticket_no}
+                    </Link>
+                ) : (
+                    <span className="font-mono text-xs">{r.ticket_no}</span>
+                ),
+        },
+        {
+            key: 'subject',
+            header: t('rep_col_subject'),
+            className: 'truncate whitespace-nowrap',
+            render: (r) => <span title={r.subject}>{r.subject}</span>,
+        },
         {
             key: 'requester',
             header: t('rep_col_requester'),
             width: '160px',
+            className: 'truncate whitespace-nowrap',
             render: (r) => <span className="truncate">{(lang === 'th' && r.requester_name_th) || r.requester_name || '—'}</span>,
         },
-        { key: 'dept', header: t('rep_col_department'), width: '140px', render: (r) => (lang === 'th' && r.department_name_th) || r.department_name || '—' },
+        {
+            key: 'dept',
+            header: t('rep_col_department'),
+            width: '140px',
+            render: (r) => (lang === 'th' && r.department_name_th) || r.department_name || '—',
+        },
         { key: 'cat', header: t('rep_col_category'), width: '110px', render: (r) => (r.category ? t(categoryKey(r.category)) : '—') },
         {
             key: 'prio',
@@ -38,8 +65,19 @@ export function TicketReportTable({ filters }: { filters: TicketReportFilters })
             width: '110px',
             render: (r) => (r.priority ? <StatusBadge tone={PRIORITY_TONE[r.priority]}>{t(priorityKey(r.priority))}</StatusBadge> : '—'),
         },
-        { key: 'status', header: t('rep_col_status'), width: '130px', render: (r) => <StatusBadge tone={STATUS_TONE[r.status]}>{t(statusKey(r.status))}</StatusBadge> },
-        { key: 'assignee', header: t('rep_col_assignee'), width: '140px', render: (r) => r.assignee_name ?? '—' },
+        {
+            key: 'status',
+            header: t('rep_col_status'),
+            width: '130px',
+            render: (r) => <StatusBadge tone={STATUS_TONE[r.status]}>{t(statusKey(r.status))}</StatusBadge>,
+        },
+        {
+            key: 'assignee',
+            header: t('rep_col_assignee'),
+            width: '170px',
+            className: 'truncate whitespace-nowrap',
+            render: (r) => r.assignee_name ?? '—',
+        },
         {
             key: 'hours',
             header: t('rep_col_resolve'),

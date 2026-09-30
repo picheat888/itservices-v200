@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
  * One column of a tabular report. `value()` feeds the page (typed, so the page can format
  * it per language), `exportValue()` feeds Excel/PDF (flat, Thai). Both read the row through
  * the same resolver, so the screen and the file can never disagree.
+ *
+ * `linkTo()` makes the cell open the record on its own module page (`/tickets?view=5`); the
+ * page only turns it into a link when the reader may open that module (nav.ts anyOf).
  */
 final class ReportColumn
 {
@@ -26,6 +29,36 @@ final class ReportColumn
         private readonly array $labelKeys = [],
         private readonly array $exportLabels = [],
     ) {}
+
+    /** Module page the cell links to ("/tickets"). */
+    private ?string $linkPath = null;
+
+    /** @var (Closure(Model): (int|null))|null */
+    private ?Closure $linkId = null;
+
+    /**
+     * Link the cell to the record on its module page — `?view={id}` opens its detail there.
+     *
+     * @param  Closure(Model): (int|null)  $id
+     */
+    public function linkTo(string $path, Closure $id): self
+    {
+        $this->linkPath = $path;
+        $this->linkId = $id;
+
+        return $this;
+    }
+
+    /** The cell's link for this row, or null when it has none (no link declared, or no record). */
+    public function link(Model $row): ?string
+    {
+        if ($this->linkPath === null || $this->linkId === null) {
+            return null;
+        }
+        $id = ($this->linkId)($row);
+
+        return $id === null ? null : "{$this->linkPath}?view={$id}";
+    }
 
     public static function text(string $key, string $heading, Closure $resolve): self
     {
@@ -96,11 +129,14 @@ final class ReportColumn
     }
 
     /**
-     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>}
+     * @return array{key: string, type: string, label_key: string, labels?: array<string, string>, link?: string}
      */
     public function toArray(): array
     {
         $column = ['key' => $this->key, 'type' => $this->type, 'label_key' => "rep_c_{$this->key}"];
+        if ($this->linkPath !== null) {
+            $column['link'] = $this->linkPath;
+        }
         if ($this->type === 'enum') {
             $column['labels'] = $this->labelKeys;
         }

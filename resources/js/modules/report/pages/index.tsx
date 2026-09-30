@@ -1,8 +1,10 @@
 /**
- * Report Center page (/reports) — the number strip (SnapshotStrip), the person's queued files
- * (MyExports — "ไฟล์ Export ของฉัน"), their scheduled report emails (ScheduledReports), then the reports this
- * user may open with search, module chips and a "pinned" chip. Server decides visibility
- * (GET /api/reports → ReportCatalogue) and remembers pins (ReportPinService).
+ * Report Center page (/reports) — heading with the period control (PeriodSwitch), the number
+ * strip (SnapshotStrip), then two columns as in the design: the reports this user may open
+ * (search, module chips, a "pinned" chip) on the left, and a rail with their queued files
+ * (MyExports — "ไฟล์ Export ของฉัน") and scheduled report emails (ScheduledReports) on the
+ * right — shown only while it has something in it. Below xl the rail follows the reports.
+ * Server decides visibility (GET /api/reports → ReportCatalogue) and remembers pins.
  */
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
@@ -13,8 +15,8 @@ import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
 import { ReportCatalogue, reportStem } from '../components/report-catalogue';
 import { ScheduledReports } from '../components/scheduled-reports';
-import { SnapshotStrip } from '../components/snapshot-strip';
-import { useReportCatalogue } from '../hooks/use-reports';
+import { PeriodSwitch, SnapshotStrip, useSnapshotPeriod } from '../components/snapshot-strip';
+import { useMyExports, useReportCatalogue, useReportSchedules } from '../hooks/use-reports';
 import type { ReportDomain } from '../types';
 
 type Chip = ReportDomain | 'all' | 'pinned';
@@ -24,6 +26,11 @@ export default function ReportsPage() {
     const { data: reports = [], isLoading } = useReportCatalogue();
     const [query, setQuery] = useState('');
     const [chip, setChip] = useState<Chip>('all');
+    const [period, setPeriod] = useSnapshotPeriod();
+    // The rail's two panels hide themselves when empty; the column goes with them.
+    const { data: exportsList = [] } = useMyExports();
+    const { data: schedules = [] } = useReportSchedules();
+    const hasRail = exportsList.length > 0 || schedules.length > 0;
 
     const domains = [...new Set(reports.map((r) => r.domain))];
     const pinnedCount = reports.filter((r) => r.pinned).length;
@@ -47,65 +54,75 @@ export default function ReportsPage() {
 
     return (
         <div className="space-y-5">
-            <div>
-                <h1 className="text-2xl font-bold">{t('rep_center_title')}</h1>
-                <p className="text-muted-foreground mt-1 max-w-2xl text-sm">{t('rep_center_sub')}</p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-bold">{t('rep_center_title')}</h1>
+                    <p className="text-muted-foreground mt-1 max-w-[72ch] text-sm">{t('rep_center_sub')}</p>
+                </div>
+                <PeriodSwitch period={period} onChange={setPeriod} />
             </div>
 
-            <SnapshotStrip />
+            <SnapshotStrip period={period} />
 
-            <MyExports />
-
-            <ScheduledReports />
-
-            {isLoading ? (
-                <Skeleton className="h-40 w-full" />
-            ) : reports.length === 0 ? (
-                <div className="border-border flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
-                    <LineChart className="text-muted-foreground h-10 w-10" />
-                    <div className="mt-3 font-medium">{t('rep_empty_title')}</div>
-                    <p className="text-muted-foreground mt-1 max-w-sm text-sm">{t('rep_empty_sub')}</p>
-                </div>
-            ) : (
-                <>
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="relative w-full max-w-sm">
-                            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                            <Input
-                                id="report-search"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder={t('rep_search_placeholder')}
-                                className="pl-9"
-                            />
+            <div className={cn('grid items-start gap-5', hasRail && 'xl:grid-cols-[minmax(0,1fr)_360px]')}>
+                <div className="min-w-0 space-y-4">
+                    {isLoading ? (
+                        <Skeleton className="h-40 w-full" />
+                    ) : reports.length === 0 ? (
+                        <div className="border-border flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
+                            <LineChart className="text-muted-foreground h-10 w-10" />
+                            <div className="mt-3 font-medium">{t('rep_empty_title')}</div>
+                            <p className="text-muted-foreground mt-1 max-w-sm text-sm">{t('rep_empty_sub')}</p>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
-                            {chips.map((c) => (
-                                <button
-                                    key={c.id}
-                                    type="button"
-                                    onClick={() => setChip(c.id)}
-                                    className={cn(
-                                        'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
-                                        domain === c.id
-                                            ? 'bg-brand border-brand text-brand-foreground'
-                                            : 'border-border text-muted-foreground bg-background',
-                                    )}
-                                >
-                                    {c.id === 'pinned' && <Star className="h-3.5 w-3.5" />}
-                                    {c.label}
-                                    <span className="font-mono opacity-70">{c.count}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    {visible.length === 0 ? (
-                        <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
                     ) : (
-                        <ReportCatalogue reports={visible} />
+                        <>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="relative w-full sm:max-w-xs">
+                                    <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                                    <Input
+                                        id="report-search"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder={t('rep_search_placeholder')}
+                                        className="pl-9"
+                                    />
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {chips.map((c) => (
+                                        <button
+                                            key={c.id}
+                                            type="button"
+                                            onClick={() => setChip(c.id)}
+                                            className={cn(
+                                                'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
+                                                domain === c.id
+                                                    ? 'bg-brand border-brand text-brand-foreground'
+                                                    : 'border-border text-muted-foreground bg-background',
+                                            )}
+                                        >
+                                            {c.id === 'pinned' && <Star className="h-3.5 w-3.5" />}
+                                            {c.label}
+                                            <span className="font-mono opacity-70">{c.count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {visible.length === 0 ? (
+                                <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
+                            ) : (
+                                <ReportCatalogue reports={visible} />
+                            )}
+                        </>
                     )}
-                </>
-            )}
+                </div>
+
+                {hasRail && (
+                    <aside className="space-y-4">
+                        <MyExports />
+                        <ScheduledReports />
+                    </aside>
+                )}
+            </div>
         </div>
     );
 }

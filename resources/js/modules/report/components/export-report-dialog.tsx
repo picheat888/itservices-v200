@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/button';
 import { ChoiceCard } from '@/shared/ui/choice-card';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
 import { useToastStore } from '@/stores/toast';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Info, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ExportFormat } from '../types';
@@ -88,7 +88,7 @@ export function ExportReportDialog({
                     srDescription={t('rep_export_eyebrow')}
                 />
                 <div className="space-y-4 px-6 pb-2">
-                    <div className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('rep_export_format')}</div>
+                    <div className="text-muted-foreground text-xs font-semibold">{t('rep_export_format')}</div>
                     <div className="grid gap-3 sm:grid-cols-2">
                         {choices.map((c) => (
                             <ChoiceCard
@@ -119,9 +119,17 @@ export function ExportReportDialog({
                             <div className="text-muted-foreground mt-1 text-xs">{t('rep_export_pdf_cap').replace('{n}', String(PDF_ROW_LIMIT))}</div>
                         )}
                     </div>
+                    {/* Said before the click, as in the design — the file is not what comes back from the button. */}
+                    <div className="flex gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-sm">
+                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span>{t('rep_export_queue_note')}</span>
+                    </div>
                     {error != null && <div className="text-destructive text-sm">{refusalText(error, t, 'rep_export_refusal_')}</div>}
                 </div>
                 <DialogFooter className="border-border border-t px-6 py-4">
+                    <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+                        {t('rep_dialog_cancel')}
+                    </Button>
                     <Button onClick={run} disabled={isPending}>
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         {format === 'xlsx' ? t('rep_export_go_xlsx') : t('rep_export_go_pdf')}

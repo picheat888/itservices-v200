@@ -14,6 +14,9 @@ export const report: Dict = {
     rep_filter_pinned: 'ปักหมุด',
     rep_pin: 'ปักหมุดรายงานนี้',
     rep_unpin: 'เลิกปักหมุด',
+    rep_last_export_at: 'Export ล่าสุด {t}',
+    rep_last_export_building: 'กำลังสร้างไฟล์',
+    rep_last_export_failed: 'Export ไม่สำเร็จ',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 วัน',
     rep_period_month: 'เดือนนี้',
@@ -60,6 +63,7 @@ export const report: Dict = {
     rep_kpi_breached: 'เกิน SLA {n}',
     rep_kpi_backlog_split: 'เปิด {a} · กำลังทำ {b}',
     rep_vs_previous: 'จาก {n} ในช่วงก่อนหน้า',
+    rep_vs_previous_sla: 'ช่วงก่อนหน้า {n}%',
     rep_hours: 'ชม.',
     rep_generated_at: 'ข้อมูล ณ {t}',
     rep_err_range_order: 'วันที่สิ้นสุดอยู่ก่อนวันที่เริ่มต้น',
@@ -124,6 +128,8 @@ export const report: Dict = {
     rep_export_pdf_desc: 'สรุปและตาราง พร้อมพิมพ์หรือส่งผู้บริหาร',
     rep_export_scope: 'ใช้ตัวกรองปัจจุบัน · {n} รายการ',
     rep_export_pdf_cap: 'PDF แสดง {n} รายการล่าสุด ไฟล์ Excel มีครบทุกรายการ',
+    rep_export_queue_note: 'ไฟล์จะสร้างอยู่เบื้องหลัง ปิดหน้านี้ได้เลย เสร็จแล้วจะแจ้งที่กระดิ่ง และเก็บไว้ใน ไฟล์ Export ของฉัน 7 วัน',
+    rep_dialog_cancel: 'ยกเลิก',
     rep_export_go_xlsx: 'สร้างไฟล์ Excel',
     rep_export_go_pdf: 'สร้างไฟล์ PDF',
     rep_export_queued_title: 'กำลังสร้างไฟล์',
@@ -136,6 +142,10 @@ export const report: Dict = {
 
     // components/my-exports.tsx — My exports panel
     rep_my_exports_title: 'ไฟล์ Export ของฉัน',
+    rep_scope_all: 'ไม่ได้กรอง',
+    rep_scope_as_of: 'ณ {date}',
+    rep_scope_filters: 'กรอง {n} อย่าง',
+    rep_scope_columns: '{n} คอลัมน์',
     rep_my_exports_sub: 'เก็บไว้ให้ดาวน์โหลด {days} วัน',
     rep_my_exports_st_queued: 'รอคิว',
     rep_my_exports_st_running: 'กำลังสร้าง',

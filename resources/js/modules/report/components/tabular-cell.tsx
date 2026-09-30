@@ -2,10 +2,16 @@
  * One cell of a generic tabular report table: formats a column's raw value per its
  * `ColumnType` (mirrors App\Services\Report\Tabular\ReportColumn::value()). Shared by
  * every tabular report page so a report definition only has to declare types, not markup.
+ *
+ * A zero is drawn faint so the numbers that mean something stand out of a mostly-empty
+ * grid; free text keeps its whole value in a tooltip (the column truncates it); and a
+ * column declared with linkTo() opens its record when the reader may open that module.
  */
 import { useT } from '@/lang';
 import { StatusBadge } from '@/shared/components/status-badge';
+import { cn } from '@/shared/lib/utils';
 import { useUiStore } from '@/stores/ui';
+import { Link } from 'react-router-dom';
 import type { TabularColumnDef } from '../types';
 
 function DaysLeftBadge({ value }: { value: number }) {
@@ -14,7 +20,20 @@ function DaysLeftBadge({ value }: { value: number }) {
     return <StatusBadge tone={tone}>{t('rep_days_left').replace('{n}', String(value))}</StatusBadge>;
 }
 
-export function TabularCell({ column, value }: { column: TabularColumnDef; value: unknown }) {
+const ZERO = 'text-muted-foreground/60';
+
+export function TabularCell({ column, value, href }: { column: TabularColumnDef; value: unknown; href?: string }) {
+    const content = <CellValue column={column} value={value} />;
+    if (!href || value === null || value === undefined || value === '') return content;
+
+    return (
+        <Link to={href} className="text-brand font-medium hover:underline">
+            {content}
+        </Link>
+    );
+}
+
+function CellValue({ column, value }: { column: TabularColumnDef; value: unknown }) {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
 
@@ -30,10 +49,12 @@ export function TabularCell({ column, value }: { column: TabularColumnDef; value
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
             });
-            return <span className="font-mono">{formatted}</span>;
+            return <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{formatted}</span>;
         }
         case 'number':
-            return <span className="font-mono">{value === null || value === undefined ? '—' : String(value)}</span>;
+            return (
+                <span className={cn('font-mono', Number(value) === 0 && ZERO)}>{value === null || value === undefined ? '—' : String(value)}</span>
+            );
         case 'date':
             return <span className="font-mono">{(value as string | null) ?? '—'}</span>;
         case 'days_left':
@@ -45,6 +66,6 @@ export function TabularCell({ column, value }: { column: TabularColumnDef; value
         }
         case 'text':
         default:
-            return <>{(value as string | null) || '—'}</>;
+            return <span title={(value as string | null) || undefined}>{(value as string | null) || '—'}</span>;
     }
 }

@@ -7,8 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One queued report file on "ไฟล์ Export ของฉัน". The stored filters are not sent back —
- * the list names the report and when it was asked for; the file itself carries the rest.
+ * One queued report file on "ไฟล์ Export ของฉัน". The stored filters and the number of picked
+ * columns come back so the row can say which file this is (its date range, "3 filters",
+ * "5 columns") — two exports of one report are otherwise indistinguishable. They are the
+ * owner's own input; nobody else ever sees the row.
  *
  * @mixin ReportExport
  */
@@ -25,6 +27,8 @@ class ReportExportResource extends JsonResource
             'format' => $this->format,
             'status' => $this->status,
             'file_name' => $this->file_name,
+            'filters' => (object) ($this->filters ?? []),
+            'columns_count' => is_array($this->columns) ? count($this->columns) : null,
             'rows_count' => $this->rows_count,
             'size_bytes' => $this->size_bytes,
             'error' => $this->error,
