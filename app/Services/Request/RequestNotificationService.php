@@ -288,8 +288,11 @@ class RequestNotificationService
             return collect();
         }
 
+        // The requester can hold one of the group's positions; they are not asked to sign
+        // their own request (RequestApproval::acceptsEmployee refuses them too).
         $employeeIds = Employee::where('department_id', $row->approver_department_id)
             ->whereIn('position_id', array_map('intval', $row->approver_position_ids))
+            ->when($row->request?->employee_id, fn ($q, $ownerId) => $q->where('id', '!=', $ownerId))
             ->pluck('id');
 
         return User::whereIn('employee_id', $employeeIds)->get();

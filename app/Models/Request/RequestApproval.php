@@ -87,10 +87,14 @@ class RequestApproval extends Model
             : [];
     }
 
-    /** Whether this employee may act on a group step. */
+    /**
+     * Whether this employee may act on a group step. Never the person the request is for:
+     * a department group can include the requester (they hold one of its positions), and
+     * the resolver only keeps them out of the "is anybody left?" check, not out of the row.
+     */
     public function acceptsEmployee(?Employee $employee): bool
     {
-        if ($employee === null) {
+        if ($employee === null || $this->isRequestOf($employee)) {
             return false;
         }
 
@@ -120,6 +124,11 @@ class RequestApproval extends Model
             return $query->whereRaw('1 = 0');
         }
 
+        // Nobody acts on their own request — see acceptsEmployee().
+        $query->whereHas('request', fn (Builder $r) => $r
+            ->whereNull('employee_id')
+            ->orWhere('employee_id', '!=', $employee->id));
+
         return $query->where(function (Builder $q) use ($employee) {
             $q->where('approver_employee_id', $employee->id)
                 ->orWhere(fn (Builder $named) => $named
@@ -133,6 +142,16 @@ class RequestApproval extends Model
                     ->whereJsonContains('approver_position_ids', (int) $employee->position_id));
             }
         });
+    }
+
+    /** True when this row belongs to a request filed for this employee. */
+    private function isRequestOf(Employee $employee): bool
+    {
+        $ownerId = $this->relationLoaded('request')
+            ? $this->request?->employee_id
+            : ServiceRequest::query()->whereKey($this->service_request_id)->value('employee_id');
+
+        return $ownerId !== null && (int) $ownerId === (int) $employee->id;
     }
 
     /** @return BelongsTo<ServiceRequest, $this> */
