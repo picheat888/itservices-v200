@@ -287,6 +287,26 @@ class RequestDepartmentStepTest extends TestCase
             ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
     }
 
+    /** Cancelling a request that waits on a group tells the whole group, as the wait did. */
+    public function test_cancelling_while_a_department_group_waits_tells_the_group(): void
+    {
+        $qcManager = $this->staffIn($this->qc, 'Manager', 'QcMgr');
+        $qcAsst = $this->staffIn($this->qc, 'Asst. Manager', 'QcAsst');
+        $this->staffIn($this->safety, 'Supervisor', 'SeSup');
+        $request = $this->submitCctv();
+        $this->actingAs($this->userFor($this->sup))
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        $this->actingAs($this->requesterUser)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+
+        foreach ([$qcManager, $qcAsst] as $member) {
+            $subtypes = User::where('employee_id', $member->id)->firstOrFail()->notifications()->get()
+                ->map(fn ($n) => $n->data['subtype'] ?? null)->all();
+            // The "waiting" bell is replaced by the cancellation, not left beside it.
+            $this->assertSame(['cancelled'], $subtypes, $member->first_name);
+        }
+    }
+
     public function test_editing_the_workflow_does_not_change_a_request_already_in_flight(): void
     {
         $this->staffIn($this->qc, 'Manager', 'QcMgr');
