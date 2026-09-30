@@ -21,18 +21,6 @@ class AssetRegisterReport extends TabularReport
 {
     use AssetColumns;
 
-    private const STATUS_KEYS = [
-        'ready' => 'asset_ready', 'pending_acceptance' => 'asset_pending_accept', 'deployed' => 'asset_deployed',
-        'common' => 'asset_common', 'pending_return' => 'asset_pending_return', 'writeoff' => 'asset_writeoff',
-    ];
-
-    // Thai export labels mirror resources/js/lang/th/asset.ts (same asset_* keys) so the
-    // Excel/PDF export never disagrees with the on-screen wording.
-    private const STATUS_TH = [
-        'ready' => 'พร้อมส่งมอบ', 'pending_acceptance' => 'รอรับมอบ', 'deployed' => 'ใช้งานอยู่',
-        'common' => 'Common', 'pending_return' => 'รอรับคืน', 'writeoff' => 'ตัดจำหน่าย',
-    ];
-
     private const SOURCE_KEYS = ['purchased' => 'asset_purchase', 'rented' => 'asset_lease'];
 
     private const SOURCE_TH = ['purchased' => 'ซื้อ', 'rented' => 'เช่า / เช่าใช้'];

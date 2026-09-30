@@ -4,7 +4,7 @@
  */
 import { useT } from '@/lang';
 import { Card } from '@/shared/ui/card';
-import { Box, ChevronRight, FileText, type LucideIcon, Warehouse, Wrench } from 'lucide-react';
+import { Box, ChevronRight, FileText, Inbox, type LucideIcon, MonitorCog, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ReportDefinition, ReportDomain } from '../types';
 
@@ -13,7 +13,15 @@ export function reportRoute(def: ReportDefinition): string {
     return def.key === 'tickets.overview' ? '/reports/tickets-overview' : `/reports/r/${def.key}`;
 }
 
-const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = { tickets: Wrench, assets: Box, contracts: FileText, stock: Warehouse };
+const DOMAIN_ICONS: Record<ReportDomain, LucideIcon> = {
+    tickets: Wrench,
+    assets: Box,
+    contracts: FileText,
+    stock: Warehouse,
+    requests: Inbox,
+    employees: Users,
+    access: MonitorCog,
+};
 
 /** i18n key stem per report: `rep_<stem>_title` / `rep_<stem>_desc`. */
 export const reportStem = (key: string) => key.replace('.', '_');
