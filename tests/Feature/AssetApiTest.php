@@ -515,6 +515,67 @@ class AssetApiTest extends TestCase
             ->assertJsonPath('data.owned_since', fn ($d) => is_string($d) && $d !== '');
     }
 
+    /**
+     * The single-asset actions guard the same states the screen and the bulk actions do —
+     * the API used to accept them from any state.
+     */
+    public function test_receive_only_takes_an_asset_that_is_pending_return(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-7702', 'first_name' => 'Still', 'last_name' => 'Using']);
+        foreach (['deployed', 'writeoff', 'ready', 'pending_acceptance', 'common'] as $status) {
+            $asset = Asset::factory()->create(['status' => $status, 'owner_employee_id' => $status === 'deployed' ? $employee->id : null, 'owner' => null]);
+
+            $this->postJson("/api/assets/{$asset->id}/receive", ['warehouse' => 'Central IT'])->assertUnprocessable();
+            $this->assertSame($status, $asset->fresh()->status->value, $status);
+        }
+    }
+
+    public function test_accept_only_confirms_a_pending_handover(): void
+    {
+        $employee = Employee::create(['code' => 'EMP-9002', 'first_name' => 'Rec', 'last_name' => 'Ipient']);
+        $holder = User::factory()->create(['role' => 'user', 'employee_id' => $employee->id]);
+        // Returning it is under way — the holder cannot flip it back to in use.
+        $asset = Asset::factory()->create(['status' => 'pending_return', 'owner' => null, 'owner_employee_id' => $employee->id]);
+
+        $this->actingAs($holder)->postJson("/api/assets/{$asset->id}/accept")->assertUnprocessable();
+
+        $this->assertSame('pending_return', $asset->fresh()->status->value);
+    }
+
+    public function test_transfer_only_hands_over_a_ready_asset(): void
+    {
+        $this->actingAs($this->super());
+        $employee = Employee::create(['code' => 'EMP-9003', 'first_name' => 'New', 'last_name' => 'Holder']);
+        $location = Location::create(['name' => 'HQ']);
+        foreach (['writeoff', 'pending_return', 'pending_acceptance'] as $status) {
+            $asset = Asset::factory()->create(['status' => $status, 'owner' => null, 'owner_employee_id' => null]);
+
+            $this->postJson("/api/assets/{$asset->id}/transfer", [
+                'mode' => 'employee', 'owner_employee_id' => $employee->id, 'location_id' => $location->id,
+            ])->assertUnprocessable();
+            $this->assertSame($status, $asset->fresh()->status->value, $status);
+        }
+    }
+
+    public function test_editing_an_asset_cannot_change_its_status_or_holder(): void
+    {
+        $this->actingAs($this->super());
+        Employee::create(['code' => 'EMP-9004', 'first_name' => 'Would', 'last_name' => 'Be']);
+        $asset = Asset::factory()->create(['status' => 'ready', 'owner' => null, 'owner_employee_id' => null]);
+
+        $this->putJson("/api/assets/{$asset->id}", [
+            'category_id' => $asset->category_id, 'model_id' => $asset->model_id, 'source' => 'purchased',
+            'vendor_id' => $this->vendorId(), 'value' => 100,
+            'status' => 'deployed', 'owner' => 'EMP-9004',
+        ])->assertOk();
+
+        $fresh = $asset->fresh();
+        $this->assertSame('ready', $fresh->status->value);
+        $this->assertNull($fresh->owner_employee_id);
+        $this->assertNull($fresh->owner);
+    }
+
     public function test_transfer_notifies_the_recipient_employee(): void
     {
         $employee = Employee::create(['code' => 'EMP-8001', 'first_name' => 'New', 'last_name' => 'Owner']);
