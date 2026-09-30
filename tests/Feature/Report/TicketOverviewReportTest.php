@@ -9,6 +9,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
@@ -240,5 +241,11 @@ class TicketOverviewReportTest extends TestCase
         $user = User::factory()->create(['role' => 'plain']);
 
         $this->actingAs($user)->getJson('/api/reports/tickets/overview/rows?'.http_build_query(self::RANGE))->assertForbidden();
+    }
+
+    /** Every ticket report narrows by opening date, so that range has an index to use. */
+    public function test_tickets_are_indexed_by_opening_date(): void
+    {
+        $this->assertTrue(Schema::hasIndex('tickets', ['created_at']));
     }
 }
