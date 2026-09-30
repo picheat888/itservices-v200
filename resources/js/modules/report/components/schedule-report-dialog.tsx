@@ -32,12 +32,25 @@ const looksLikeEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valu
 
 export const hourLabel = (hour: number) => `${String(hour).padStart(2, '0')}:00`;
 
+/**
+ * What one run of a report covers, read off its date filters (the same rule the server uses
+ * to roll them — ReportScheduleService::filtersFor): `from`/`to` = the period that just
+ * closed, a lone `as_of` = the standing at its end, none = the state when the mail goes out.
+ */
+export type ScheduleCoverage = 'range' | 'as_of' | 'now';
+
+export function scheduleCoverage(dateFilterNames: string[]): ScheduleCoverage {
+    if (dateFilterNames.includes('from') || dateFilterNames.includes('to')) return 'range';
+    return dateFilterNames.includes('as_of') ? 'as_of' : 'now';
+}
+
 export function ScheduleReportDialog({
     open,
     onOpenChange,
     title,
     subtitle,
     formats,
+    coverage,
     initial,
     onSubmit,
     isPending,
@@ -49,6 +62,7 @@ export function ScheduleReportDialog({
     title: string;
     subtitle?: string;
     formats: ExportFormat[];
+    coverage: ScheduleCoverage;
     /** An existing schedule being edited; a new one starts from the reader's own address. */
     initial?: ScheduleInput;
     onSubmit: (input: ScheduleInput) => Promise<unknown>;
@@ -155,7 +169,9 @@ export function ScheduleReportDialog({
                             {FREQUENCIES.map((f) => (
                                 <ChoiceCard key={f} selected={frequency === f} onClick={() => setFrequency(f)} className="rounded-lg p-3 text-left">
                                     <span className="block text-sm font-semibold">{t(`rep_schedule_freq_${f}`)}</span>
-                                    <span className="text-muted-foreground text-xs">{t(`rep_schedule_freq_${f}_desc`)}</span>
+                                    <span className="text-muted-foreground text-xs">
+                                        {t(coverage === 'range' ? `rep_schedule_freq_${f}_desc` : `rep_schedule_freq_${f}_when`)}
+                                    </span>
                                 </ChoiceCard>
                             ))}
                         </div>
@@ -251,8 +267,11 @@ export function ScheduleReportDialog({
                     </div>
 
                     <div className="bg-brand/5 rounded-lg px-3 py-2 text-sm">
-                        {t(`rep_schedule_period_${frequency}`).replace('{time}', hourLabel(hour))}
-                        <div className="text-muted-foreground mt-1 text-xs">{t('rep_schedule_filters_note')}</div>
+                        {t(`rep_schedule_when_${frequency}`).replace('{time}', hourLabel(hour))}{' '}
+                        {t(coverage === 'now' ? 'rep_schedule_cover_now' : `rep_schedule_cover_${coverage}_${frequency}`)}
+                        <div className="text-muted-foreground mt-1 text-xs">
+                            {t(coverage === 'now' ? 'rep_schedule_filters_note_now' : 'rep_schedule_filters_note')}
+                        </div>
                     </div>
                     {error != null && badIndexes.size === 0 && !fieldErrors.recipients && (
                         <div className="text-destructive text-sm">{refusalText(error, t, 'rep_schedule_refusal_')}</div>

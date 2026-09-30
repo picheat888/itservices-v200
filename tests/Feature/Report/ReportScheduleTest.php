@@ -114,6 +114,25 @@ class ReportScheduleTest extends TestCase
         $this->assertSame(['from' => '2026-09-28', 'to' => '2026-10-04', 'kind' => 'handover'], $filters);
     }
 
+    /** The mail names what a run covers: a range, a point in time, or the state at send time. */
+    public function test_the_mail_names_the_period_the_way_the_report_counts_it(): void
+    {
+        $owner = $this->userWith(['assets.view', 'stock.view', 'stock.view_events']);
+        $range = $this->schedule($owner, ['report_key' => 'stock.movements']);
+        $point = $this->schedule($owner, ['report_key' => 'stock.valuation']);
+        $now = $this->schedule($owner, ['report_key' => 'assets.register']);
+
+        foreach ([$range, $point, $now] as $schedule) {
+            (new SendScheduledReport($schedule->id, '2026-10-05T07:00:00+07:00'))->handle(app(ReportScheduleService::class));
+        }
+
+        $subjects = collect(Mail::sent(TemplatedMail::class))->map(fn (TemplatedMail $m) => $m->subjectLine)->all();
+        $this->assertCount(3, $subjects);
+        $this->assertStringContainsString('2026-09-28 to 2026-10-04', $subjects[0]);
+        $this->assertStringContainsString('As of 2026-10-04', $subjects[1]);
+        $this->assertStringContainsString('As of 2026-10-05 07:00', $subjects[2]);
+    }
+
     // ── setting one up ──────────────────────────────────────────────────────────────
 
     public function test_a_schedule_is_set_from_a_report_page_with_its_filters(): void

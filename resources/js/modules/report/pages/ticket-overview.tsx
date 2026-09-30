@@ -27,7 +27,7 @@ import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
 
-function Section({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+function Section({ title, sub, children }: { title: string; sub?: React.ReactNode; children: React.ReactNode }) {
     return (
         <Card className="overflow-hidden">
             <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3">
@@ -150,7 +150,22 @@ export default function TicketOverviewReportPage() {
                     </div>
 
                     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-                        <Section title={t('rep_weekly_title')} sub={`■ ${t('rep_weekly_opened')}  ■ ${t('rep_weekly_closed')}`}>
+                        <Section
+                            title={t('rep_weekly_title')}
+                            sub={
+                                // Swatches in the bars' own fills (weekly-ticket-chart.tsx), so the key reads.
+                                <span className="inline-flex items-center gap-3">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <i className="bg-brand inline-block h-2.5 w-2.5 rounded-sm" />
+                                        {t('rep_weekly_opened')}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <i className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" />
+                                        {t('rep_weekly_closed')}
+                                    </span>
+                                </span>
+                            }
+                        >
                             <div className="px-4 py-3">
                                 <WeeklyTicketChart weeks={data.weekly} />
                             </div>
@@ -250,6 +265,7 @@ export default function TicketOverviewReportPage() {
                 onOpenChange={setScheduleOpen}
                 title={t('rep_tickets_overview_title')}
                 formats={['xlsx', 'pdf']}
+                coverage="range"
                 onSubmit={(input) =>
                     scheduleMut
                         .mutateAsync({ kind: 'tickets', filters, input })
