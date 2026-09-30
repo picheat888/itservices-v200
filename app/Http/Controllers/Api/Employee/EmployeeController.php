@@ -612,8 +612,16 @@ class EmployeeController extends Controller
             ->response()->setStatusCode(201);
     }
 
-    public function show(Employee $employee): JsonResponse
+    /** One employee's full record: the Employee module's detail view, or your own profile. */
+    public function show(Request $request, Employee $employee): JsonResponse
     {
+        $user = $request->user();
+        abort_unless(
+            (bool) $user?->hasPermission('employees.view')
+                || ($user?->employee_id !== null && (int) $user->employee_id === (int) $employee->id),
+            403,
+        );
+
         return (new EmployeeResource($employee->load(['department', 'position', 'section'])))->response();
     }
 
