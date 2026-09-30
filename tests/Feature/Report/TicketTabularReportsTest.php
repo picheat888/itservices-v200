@@ -9,6 +9,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -19,7 +20,7 @@ use Tests\TestCase;
  */
 class TicketTabularReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     /** @var array<string, mixed> */
     private array $set = [];
@@ -222,7 +223,7 @@ class TicketTabularReportsTest extends TestCase
         $user = $this->reader();
 
         foreach (['tickets.by_department', 'tickets.staff_performance', 'tickets.backlog'] as $key) {
-            $response = $this->actingAs($user)->get("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

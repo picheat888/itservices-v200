@@ -12,6 +12,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -20,7 +21,7 @@ use Tests\TestCase;
  */
 class AssetActivityReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -131,9 +132,9 @@ class AssetActivityReportsTest extends TestCase
         $this->transfer('handover', '2026-09-10 09:00:00');
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->get('/api/reports/r/assets.transfer_history/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/assets.transfer_history/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_assets-transfer_history_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_assets-transfer_history_2026-09-25.xlsx', function (TabularReportExport $export) {
             $row = $export->sheets()[1]->map($export->rows->first());
 
             return in_array('ส่งมอบ', $row, true) && in_array('Somchai Deploy (EMP-9)', $row, true);
@@ -147,7 +148,7 @@ class AssetActivityReportsTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         foreach (['assets.by_status_department', 'assets.transfer_history'] as $key) {
-            $response = $this->actingAs($user)->get("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

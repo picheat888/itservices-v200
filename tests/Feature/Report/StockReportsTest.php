@@ -14,6 +14,7 @@ use App\Models\Stock\Warehouse;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -23,7 +24,7 @@ use Tests\TestCase;
  */
 class StockReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     private int $docSeq = 0;
 
@@ -248,9 +249,9 @@ class StockReportsTest extends TestCase
         $this->movement($this->item(), 'receive', 1, '2026-09-02 09:00:00', ['unit_cost' => 10]);
 
         $this->actingAs($this->userWith(['stock.view_events']))
-            ->get('/api/reports/r/stock.movements/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/stock.movements/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_stock-movements_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
 
             return in_array('เลขที่เอกสาร', $sheet->headings(), true)
@@ -264,7 +265,7 @@ class StockReportsTest extends TestCase
         $user = $this->userWith(['stock.view', 'stock.view_events']);
 
         foreach (['stock.movements', 'stock.below_min', 'stock.valuation'] as $key) {
-            $response = $this->actingAs($user)->get("/api/reports/r/{$key}/export?format=pdf");
+            $response = $this->actingAs($user)->exportReport("/api/reports/r/{$key}/export?format=pdf");
             $response->assertOk();
             $this->assertSame('application/pdf', $response->headers->get('Content-Type'), $key);
         }

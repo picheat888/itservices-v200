@@ -1,5 +1,6 @@
 /**
- * Report Center page (/reports) — the number strip (SnapshotStrip), then the reports this
+ * Report Center page (/reports) — the number strip (SnapshotStrip), the person's queued files
+ * (MyExports — "ไฟล์ Export ของฉัน"), then the reports this
  * user may open with search, module chips and a "pinned" chip. Server decides visibility
  * (GET /api/reports → ReportCatalogue) and remembers pins (ReportPinService).
  */
@@ -9,6 +10,7 @@ import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
 import { LineChart, Search, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { MyExports } from '../components/my-exports';
 import { ReportCatalogue, reportStem } from '../components/report-catalogue';
 import { SnapshotStrip } from '../components/snapshot-strip';
 import { useReportCatalogue } from '../hooks/use-reports';
@@ -51,6 +53,8 @@ export default function ReportsPage() {
 
             <SnapshotStrip />
 
+            <MyExports />
+
             {isLoading ? (
                 <Skeleton className="h-40 w-full" />
             ) : reports.length === 0 ? (
@@ -64,7 +68,13 @@ export default function ReportsPage() {
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="relative w-full max-w-sm">
                             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                            <Input id="report-search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('rep_search_placeholder')} className="pl-9" />
+                            <Input
+                                id="report-search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder={t('rep_search_placeholder')}
+                                className="pl-9"
+                            />
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                             {chips.map((c) => (
@@ -74,7 +84,9 @@ export default function ReportsPage() {
                                     onClick={() => setChip(c.id)}
                                     className={cn(
                                         'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold',
-                                        domain === c.id ? 'bg-brand border-brand text-brand-foreground' : 'border-border text-muted-foreground bg-background',
+                                        domain === c.id
+                                            ? 'bg-brand border-brand text-brand-foreground'
+                                            : 'border-border text-muted-foreground bg-background',
                                     )}
                                 >
                                     {c.id === 'pinned' && <Star className="h-3.5 w-3.5" />}

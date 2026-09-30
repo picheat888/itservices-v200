@@ -10,6 +10,7 @@ use App\Models\Settings\Vendor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -18,7 +19,7 @@ use Tests\TestCase;
  */
 class ContractMonthlyCostReportTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -103,9 +104,9 @@ class ContractMonthlyCostReportTest extends TestCase
         $this->contract(['name' => 'Yr', 'billing_cycle' => 'yearly', 'value' => 12000]);
 
         $this->actingAs($this->userWith(['contracts.view']))
-            ->get('/api/reports/r/contracts.monthly_cost/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/contracts.monthly_cost/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_contracts-monthly_cost_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_contracts-monthly_cost_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
             $row = $sheet->map($export->rows->first());
 
@@ -120,7 +121,7 @@ class ContractMonthlyCostReportTest extends TestCase
         $this->contract([]);
 
         $response = $this->actingAs($this->userWith(['contracts.view']))
-            ->get('/api/reports/r/contracts.monthly_cost/export?format=pdf');
+            ->exportReport('/api/reports/r/contracts.monthly_cost/export?format=pdf');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

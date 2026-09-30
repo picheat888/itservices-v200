@@ -14,6 +14,24 @@ export type ReportKey = string;
 export type ReportDomain = 'tickets' | 'assets' | 'contracts' | 'stock' | 'requests' | 'employees' | 'access';
 export type ExportFormat = 'xlsx' | 'pdf';
 
+export type ReportExportStatus = 'queued' | 'running' | 'ready' | 'failed';
+
+/** One file on "ไฟล์ Export ของฉัน" (ReportExportResource). */
+export interface ReportExportItem {
+    id: number;
+    report_key: ReportKey;
+    format: ExportFormat;
+    status: ReportExportStatus;
+    file_name: string | null;
+    rows_count: number | null;
+    size_bytes: number | null;
+    /** forbidden | build_failed */
+    error: string | null;
+    created_at: string;
+    finished_at: string | null;
+    expires_at: string | null;
+}
+
 export interface ReportDefinition {
     key: ReportKey;
     domain: ReportDomain;

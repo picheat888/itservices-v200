@@ -11,6 +11,7 @@ use App\Models\Permission\RolePermission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -21,7 +22,7 @@ use Tests\TestCase;
  */
 class AssetReportsTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -147,9 +148,9 @@ class AssetReportsTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
 
         $this->actingAs($this->userWith(['assets.view']))
-            ->get('/api/reports/r/assets.register/export?format=xlsx')->assertOk();
+            ->exportReport('/api/reports/r/assets.register/export?format=xlsx')->assertAccepted();
 
-        Excel::assertDownloaded('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
             $sheet = $export->sheets()[1];
             $row = $sheet->map($export->rows->first());
 

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\Permission\GroupRoleController;
 use App\Http\Controllers\Api\Permission\RoleController;
 use App\Http\Controllers\Api\Permission\RolePermissionController;
 use App\Http\Controllers\Api\Report\ReportController;
+use App\Http\Controllers\Api\Report\ReportExportController;
 use App\Http\Controllers\Api\Report\TabularReportController;
 use App\Http\Controllers\Api\Report\TicketOverviewReportController;
 use App\Http\Controllers\Api\Request\RequestController;
@@ -82,12 +83,17 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('reports/snapshot', [ReportController::class, 'snapshot'])->name('api.reports.snapshot');
     Route::put('reports/{key}/pin', [ReportController::class, 'pin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.pin');
     Route::delete('reports/{key}/pin', [ReportController::class, 'unpin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.unpin');
+    // "ไฟล์ Export ของฉัน" — files queued by the export endpoints below; each one its owner's only.
+    Route::get('reports/exports', [ReportExportController::class, 'index'])->name('api.reports.exports.index');
+    Route::get('reports/exports/{export}/download', [ReportExportController::class, 'download'])->whereNumber('export')->name('api.reports.exports.download');
+    Route::post('reports/exports/{export}/retry', [ReportExportController::class, 'retry'])->whereNumber('export')->name('api.reports.exports.retry');
+    Route::delete('reports/exports/{export}', [ReportExportController::class, 'destroy'])->whereNumber('export')->name('api.reports.exports.destroy');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
-    Route::get('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
+    Route::post('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
     Route::get('reports/r/{key}', [TabularReportController::class, 'definition'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular');
     Route::get('reports/r/{key}/rows', [TabularReportController::class, 'rows'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.rows');
-    Route::get('reports/r/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
+    Route::post('reports/r/{key}/export', [TabularReportController::class, 'export'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.tabular.export');
     Route::post('profile', [AuthController::class, 'updateProfile'])->name('api.profile.update');
     Route::put('password', [AuthController::class, 'changePassword'])
         ->withoutMiddleware(CheckPasswordExpiry::class)->name('api.password.change');

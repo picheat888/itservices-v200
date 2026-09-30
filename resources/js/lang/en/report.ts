@@ -6,7 +6,8 @@ import type { Dict } from '@/lang/types';
 export const report: Dict = {
     // pages/index.tsx — Report Center
     rep_center_title: 'Report center',
-    rep_center_sub: 'Reports from every module in one place. Open on screen, filter, then export to Excel or PDF. You only see reports for modules you have access to.',
+    rep_center_sub:
+        'Reports from every module in one place. Open on screen, filter, then export to Excel or PDF. You only see reports for modules you have access to.',
     rep_search_placeholder: 'Search reports, e.g. SLA',
     rep_filter_all: 'All',
     rep_domain_tickets: 'Tickets',
@@ -118,9 +119,33 @@ export const report: Dict = {
     rep_export_pdf_desc: 'Summary and table ready to print or send to management',
     rep_export_scope: 'Uses the current filters · {n} rows',
     rep_export_pdf_cap: 'The PDF lists the latest {n} tickets; Excel holds them all.',
-    rep_export_go_xlsx: 'Download Excel',
-    rep_export_go_pdf: 'Download PDF',
-    rep_export_failed: 'The file could not be created. Try again.',
+    rep_export_go_xlsx: 'Create Excel file',
+    rep_export_go_pdf: 'Create PDF file',
+    rep_export_queued_title: 'Creating your file',
+    rep_export_queued: 'You will be notified when it is ready - download it from My exports on the Report Center',
+    rep_export_refusal_failed: 'The file could not be created. Try again.',
+    rep_export_refusal_invalid: 'The filters are not valid - check them and try again',
+    rep_export_refusal_forbidden: 'You do not have access to export this report',
+    rep_export_refusal_export_queue_full: 'You already have {limit} files waiting - let them finish before asking for another',
+    rep_export_refusal_export_not_failed: 'This file did not fail - there is nothing to retry',
+
+    // components/my-exports.tsx — My exports panel
+    rep_my_exports_title: 'My exports',
+    rep_my_exports_sub: 'Kept for download for {days} days',
+    rep_my_exports_st_queued: 'Queued',
+    rep_my_exports_st_running: 'Building',
+    rep_my_exports_st_ready: 'Ready',
+    rep_my_exports_st_failed: 'Failed',
+    rep_my_exports_err_forbidden: 'You no longer have access to this report',
+    rep_my_exports_err_build_failed: 'The file could not be built',
+    rep_my_exports_rows: '{n} rows',
+    rep_my_exports_kept_until: 'Kept until {date}',
+    rep_my_exports_slow: 'Waiting longer than usual - ask an administrator to check the queue worker',
+    rep_my_exports_download: 'Download',
+    rep_my_exports_retry: 'Retry',
+    rep_my_exports_delete: 'Remove file',
+    rep_my_exports_deleted: 'File removed',
+    rep_my_exports_download_failed: 'Download failed - the file may have expired',
 
     // pages/tabular-report.tsx — generic table report
     rep_days_left: '{n} days',

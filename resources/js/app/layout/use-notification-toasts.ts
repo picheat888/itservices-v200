@@ -1,5 +1,6 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
+import { REPORT_EXPORTS_KEY } from '@/modules/report';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
@@ -134,6 +135,10 @@ export function useNotificationToasts(): void {
         // refresh them now so they update alongside the toast, not on their own poll.
         if (fresh.some((n) => n.data.type?.startsWith('asset'))) {
             ASSET_QUERY_KEYS.forEach((queryKey) => qc.invalidateQueries({ queryKey }));
+        }
+        // A report file finished (or failed) — the exports list on the Report Center shows it now.
+        if (fresh.some((n) => n.data.type === 'report_export')) {
+            qc.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY });
         }
     }, [data, qc]);
 }

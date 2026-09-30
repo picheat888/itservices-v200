@@ -1,12 +1,12 @@
 /**
- * Report module React Query hooks — catalogue (+ pinning), the hub number strip, Ticket & SLA summary/rows/export, and the
- * generic tabular report definition/rows/export.
+ * Report module React Query hooks — catalogue (+ pinning), the hub number strip, Ticket & SLA summary/rows/export, the
+ * generic tabular report definition/rows/export, and "ไฟล์ Export ของฉัน" (queued files: list, download, retry, remove).
  */
 import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
-import type { ExportFormat, ReportDefinition, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
+import type { ExportFormat, ReportDefinition, ReportExportItem, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
 
 /**
  * A 4xx (422 invalid filters, 403 no access, 404 unknown report) answers the same however
@@ -17,6 +17,9 @@ export function noRetryOn4xx(count: number, error: unknown): boolean {
 }
 
 const CATALOGUE_KEY = ['reports', 'catalogue'] as const;
+
+/** "ไฟล์ Export ของฉัน" — also refreshed by the shell when a report_export bell arrives. */
+export const REPORT_EXPORTS_KEY = ['reports', 'exports'] as const;
 
 export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue });
 
@@ -68,11 +71,15 @@ export const useTicketOverviewRows = (filters: TicketReportFilters, page: number
         enabled: filters.from <= filters.to,
     });
 
-export const useExportTicketOverview = () =>
-    useMutation({
+/** Queue the file; the exports list picks it up (and polls until it is built). */
+export function useExportTicketOverview() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
         mutationFn: ({ filters, format }: { filters: TicketReportFilters; format: ExportFormat }) => reportApi.exportTicketOverview(filters, format),
-        onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
     });
+}
 
 export const useTabularDefinition = (key: string) =>
     useQuery({
@@ -91,9 +98,47 @@ export const useTabularRows = (key: string, filters: TabularFilters, page: numbe
         retry: noRetryOn4xx,
     });
 
-export const useExportTabular = () =>
-    useMutation({
+/** Queue the file; the exports list picks it up (and polls until it is built). */
+export function useExportTabular() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
         mutationFn: ({ key, filters, format, columns }: { key: string; filters: TabularFilters; format: ExportFormat; columns?: string[] }) =>
             reportApi.exportTabular(key, filters, format, columns),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
+    });
+}
+
+const isBuilding = (item: ReportExportItem) => item.status === 'queued' || item.status === 'running';
+
+/** Polls every few seconds only while a file is still waiting or being built. */
+export const useMyExports = () =>
+    useQuery({
+        queryKey: REPORT_EXPORTS_KEY,
+        queryFn: reportApi.myExports,
+        refetchInterval: (query) => (query.state.data?.some(isBuilding) ? 3000 : false),
+    });
+
+export const useDownloadExport = () =>
+    useMutation({
+        mutationFn: (item: ReportExportItem) => reportApi.downloadExport(item),
         onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
     });
+
+export function useRetryExport() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: number) => reportApi.retryExport(id),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
+    });
+}
+
+export function useDeleteExport() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: number) => reportApi.deleteExport(id),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
+    });
+}

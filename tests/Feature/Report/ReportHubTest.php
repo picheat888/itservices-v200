@@ -15,6 +15,7 @@ use App\Models\Ticket\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Maatwebsite\Excel\Facades\Excel;
+use Tests\Concerns\ExportsReports;
 use Tests\TestCase;
 
 /**
@@ -23,7 +24,7 @@ use Tests\TestCase;
  */
 class ReportHubTest extends TestCase
 {
-    use RefreshDatabase;
+    use ExportsReports, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -160,9 +161,9 @@ class ReportHubTest extends TestCase
         $user = $this->userWith(['assets.view']);
 
         $this->actingAs($user)
-            ->get('/api/reports/r/assets.register/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertOk();
+            ->exportReport('/api/reports/r/assets.register/export?format=xlsx&columns[]=status&columns[]=asset_code')->assertAccepted();
 
-        Excel::assertDownloaded('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
+        $this->assertExportStored('Report_assets-register_2026-09-25.xlsx', function (TabularReportExport $export) {
             return $export->sheets()[1]->headings() === ['รหัสทรัพย์สิน', 'สถานะ']
                 && count($export->sheets()[1]->map($export->rows->first())) === 2;
         });
@@ -172,7 +173,7 @@ class ReportHubTest extends TestCase
     {
         $user = $this->userWith(['assets.view']);
 
-        $this->actingAs($user)->getJson('/api/reports/r/assets.register/export?format=xlsx&columns[]=salary')->assertUnprocessable();
+        $this->actingAs($user)->exportReport('/api/reports/r/assets.register/export?format=xlsx&columns[]=salary')->assertUnprocessable();
     }
 
     public function test_pdf_export_with_picked_columns_streams(): void
@@ -180,7 +181,7 @@ class ReportHubTest extends TestCase
         Asset::factory()->create(['status' => 'ready']);
 
         $response = $this->actingAs($this->userWith(['assets.view']))
-            ->get('/api/reports/r/assets.register/export?format=pdf&columns[]=asset_code');
+            ->exportReport('/api/reports/r/assets.register/export?format=pdf&columns[]=asset_code');
 
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));

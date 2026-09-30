@@ -48,3 +48,7 @@ Schedule::command('tickets:send-weekly-digest')->weeklyOn(1, '08:30');
 // has. Every window is configurable in Settings → Security and ships with audit logs set
 // to keep forever, so out of the box this only ever touches email bodies and read bells.
 Schedule::command('logs:prune')->dailyAt('02:00');
+
+// Report files queued from the Report Center are kept for 7 days (ReportExport::KEEP_DAYS).
+// Same quiet hour as the retention sweep above — it deletes, it never sends.
+Schedule::command('reports:prune-exports')->dailyAt('02:15');

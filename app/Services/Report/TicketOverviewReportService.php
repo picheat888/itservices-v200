@@ -38,6 +38,25 @@ class TicketOverviewReportService
     ];
 
     /**
+     * The report's filters from validated request input. Static so a queued export
+     * (GenerateReportExport) rebuilds exactly what the screen asked for from the input it stored.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}
+     */
+    public static function resolveFilters(array $input): array
+    {
+        return [
+            'from' => CarbonImmutable::parse($input['from'])->startOfDay(),
+            'to' => CarbonImmutable::parse($input['to'])->endOfDay(),
+            'categories' => array_values($input['categories'] ?? []),
+            'priority' => $input['priority'] ?? null,
+            'department_id' => filled($input['department_id'] ?? null) ? (int) $input['department_id'] : null,
+            'assignee_id' => filled($input['assignee_id'] ?? null) ? (int) $input['assignee_id'] : null,
+        ];
+    }
+
+    /**
      * @param  array{from: CarbonImmutable, to: CarbonImmutable, categories: list<string>, priority: ?string, department_id: ?int, assignee_id: ?int}  $filters
      * @return array<string, mixed>
      */

@@ -1,12 +1,14 @@
 /**
  * Report module HTTP calls — Report Center catalogue, the Ticket & SLA report
- * (summary, rows, file export) and the generic tabular reports (definition, rows, export).
+ * (summary, rows, queued export), the generic tabular reports (definition, rows, queued export)
+ * and "ไฟล์ Export ของฉัน" (list, download, retry, remove).
  */
 import { http } from '@/shared/lib/http';
 import type {
     ExportFormat,
     PagedRows,
     ReportDefinition,
+    ReportExportItem,
     ReportSnapshot,
     SnapshotPeriod,
     TabularDefinition,
@@ -60,21 +62,32 @@ export const reportApi = {
             .get<PagedRows<TicketReportRow>>('/reports/tickets/overview/rows', { params: { ...ticketParams(f), page, per_page: perPage } })
             .then((r) => r.data),
 
+    /** Queues the file (202); it is built on the worker and appears in the exports list. */
     exportTicketOverview: (f: TicketReportFilters, format: ExportFormat) =>
-        http.get('/reports/tickets/overview/export', { params: { ...ticketParams(f), format }, responseType: 'blob' }).then((r) => ({
-            blob: r.data as Blob,
-            filename: filenameFrom(r.headers['content-disposition']) ?? `TicketReport.${format}`,
-        })),
+        http
+            .post<{ data: ReportExportItem }>('/reports/tickets/overview/export', null, { params: { ...ticketParams(f), format } })
+            .then((r) => r.data.data),
 
     tabularDefinition: (key: string) => http.get<{ data: TabularDefinition }>(`/reports/r/${key}`).then((r) => r.data.data),
 
     tabularRows: (key: string, filters: TabularFilters, page: number, perPage: number) =>
         http.get<TabularRows>(`/reports/r/${key}/rows`, { params: { ...tabularParams(filters), page, per_page: perPage } }).then((r) => r.data),
 
-    /** `columns` = the keys the page's column picker keeps; omitted when every column shows. */
+    /** Queues the file (202). `columns` = the keys the page's column picker keeps; omitted when every column shows. */
     exportTabular: (key: string, filters: TabularFilters, format: ExportFormat, columns?: string[]) =>
-        http.get(`/reports/r/${key}/export`, { params: { ...tabularParams(filters), format, columns }, responseType: 'blob' }).then((r) => ({
+        http
+            .post<{ data: ReportExportItem }>(`/reports/r/${key}/export`, null, { params: { ...tabularParams(filters), format, columns } })
+            .then((r) => r.data.data),
+
+    myExports: () => http.get<{ data: ReportExportItem[] }>('/reports/exports').then((r) => r.data.data),
+
+    downloadExport: (item: ReportExportItem) =>
+        http.get(`/reports/exports/${item.id}/download`, { responseType: 'blob' }).then((r) => ({
             blob: r.data as Blob,
-            filename: filenameFrom(r.headers['content-disposition']) ?? `Report.${format}`,
+            filename: filenameFrom(r.headers['content-disposition']) ?? item.file_name ?? `Report.${item.format}`,
         })),
+
+    retryExport: (id: number) => http.post<{ data: ReportExportItem }>(`/reports/exports/${id}/retry`).then((r) => r.data.data),
+
+    deleteExport: (id: number) => http.delete(`/reports/exports/${id}`),
 };

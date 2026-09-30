@@ -3899,3 +3899,20 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `TicketOverviewReportTest` (+2: index, ชื่อสองภาษา) · `TicketOverviewExportTest` (+1: Excel ชื่อไทย) · `MailAndSlaValidationTest` (+2: ตั้งเป้าแล้วรายงานตาม, รับเฉพาะ 1–100) · ชุดเต็ม **1513 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน
+
+## Report Module — Phase 5b: Export ผ่านคิว + "ไฟล์ Export ของฉัน" (2026-09-30)
+
+ทุกการ Export ของรายงานทั้ง 19 ตัวเข้าคิวทุกครั้ง (ผู้ใช้เลือก) — ไม่มีการดาวน์โหลดตรงจาก request อีกแล้ว
+
+- **ตารางใหม่ `report_exports`** (migration `2026_09_30_160942` รันบน DB จริงแล้ว) — เก็บว่าใครขอรายงานไหน รูปแบบอะไร ตัวกรอง/คอลัมน์ที่เลือก สถานะ `queued → running → ready | failed` ไฟล์อยู่ใน private disk `report-exports/{id}/` เก็บ 7 วัน (`ReportExport::KEEP_DAYS`)
+- **Endpoint** — `POST /api/reports/r/{key}/export` และ `POST /api/reports/tickets/overview/export` ตอบ 202 (เดิมเป็น GET ดาวน์โหลดตรง) · `GET /api/reports/exports` · `GET …/{id}/download` · `POST …/{id}/retry` · `DELETE …/{id}` — เห็น/ใช้ได้เฉพาะเจ้าของ (คนอื่นได้ 404)
+- **`GenerateReportExport` job** (tries 1, timeout 600s) → `ReportExportService::build()` เช็กสิทธิ์ `ReportCatalogue` ซ้ำตอนสร้าง (เสียสิทธิ์ระหว่างรอ = failed `forbidden`) · error อื่น = `build_failed` + log · ตัว Export สองตัวมี `store()` ใช้ build path เดียวกับของเดิม
+- **แจ้งเตือน (bell)** `notif_report_export_ready` / `notif_report_export_failed` (module system) — ตั้งปิด/แก้ข้อความได้ในหน้า Notification เหมือน bell อื่น · คลิกแล้วไปศูนย์รายงาน
+- **จำกัด 5 ไฟล์ที่รอ/กำลังสร้างต่อคน** — เกินได้ refusal `export_queue_full`
+- **`reports:prune-exports`** ทุกวัน 02:15 — ลบไฟล์หมดอายุ และแถวที่ค้างคิวเกิน 24 ชม. (worker ตาย)
+- **หน้าเว็บ** — ปุ่มในไดอะล็อก Export เป็น "สร้างไฟล์ Excel/PDF" → ปิดไดอะล็อก + toast "กำลังสร้างไฟล์" (คลิกไปศูนย์รายงาน) · แผง **ไฟล์ Export ของฉัน** บนหน้า hub (ใต้แถบตัวเลข) แสดงสถานะ/จำนวนแถว/ขนาด/เก็บถึงวันไหน, ปุ่มดาวน์โหลด · ลองใหม่ · ลบ (useConfirm) · poll ทุก 3 วิเฉพาะตอนมีไฟล์กำลังสร้าง + รีเฟรชทันทีเมื่อ bell มา · รอคิวเกิน 2 นาทีขึ้นเตือนให้ตรวจ Queue worker
+- **`composer run dev`** — `queue:listen` เพิ่ม `--timeout=660` (ค่าเดิม 60 วิ: งานที่นานเกินทำให้ listener ตายทั้งตัว — เคยเกิดแล้ว 2026-09-26)
+
+### Tests / Verification
+
+`ReportExportQueueTest` ใหม่ 11 ข้อ (สร้าง/รายการ/ดาวน์โหลด, Ticket overview, คนอื่นเข้าไม่ได้, ลบไฟล์, ไฟล์ยังไม่เสร็จดาวน์โหลดไม่ได้, เสียสิทธิ์ก่อนสร้าง, error แล้ว retry, retry ได้เฉพาะ failed, จำกัด 5 ไฟล์, prune, GET เดิมใช้ไม่ได้แล้ว) · test export เดิม 11 ไฟล์ย้ายไปใช้ trait `Tests\Concerns\ExportsReports` (POST → job → download) · ชุดเต็ม **1524 passed** · `npm run build` ผ่าน · tsc + eslint + prettier + pint ผ่าน
