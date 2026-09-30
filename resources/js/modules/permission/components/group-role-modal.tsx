@@ -1,4 +1,4 @@
-import { useT } from '@/lang';
+import { translate, useT } from '@/lang';
 import { departmentApi, useDepartments, useEmployees } from '@/modules/employee';
 import { Field } from '@/shared/components/field';
 import { SearchableSelect } from '@/shared/components/searchable-select';
@@ -160,7 +160,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             return (
                 <span className="flex items-center gap-1.5">
                     <Check className="h-4 w-4" />
-                    {lang === 'th' ? 'บันทึกแล้ว' : 'Saved'}
+                    {translate(lang, 'perm_ui_saved')}
                 </span>
             );
         }
@@ -168,7 +168,7 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             return (
                 <span className="flex items-center gap-1.5">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {lang === 'th' ? 'กำลังบันทึก…' : 'Saving…'}
+                    {translate(lang, 'perm_ui_saving')}
                 </span>
             );
         }
@@ -264,14 +264,14 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
                                                     className="border-brand text-brand hover:bg-brand/10 flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
                                                 >
                                                     <UserPlus className="h-3 w-3" />
-                                                    {lang === 'th' ? 'เพิ่มทั้งหมด' : 'Add all'}
+                                                    {translate(lang, 'perm_ui_add_all')}
                                                 </button>
                                             )}
                                         </div>
                                         {deptMembersLoading && <div className="text-muted-foreground py-2 text-center text-xs">…</div>}
                                         {!deptMembersLoading && deptMembers.length === 0 && (
                                             <div className="text-muted-foreground py-2 text-center text-xs">
-                                                {lang === 'th' ? 'ไม่มีพนักงานในแผนกนี้' : 'No employees in this department'}
+                                                {translate(lang, 'perm_ui_no_dept_employees')}
                                             </div>
                                         )}
                                         {!deptMembersLoading && deptMembers.length > 0 && (
@@ -322,14 +322,10 @@ export function GroupRoleModal({ open, onClose, group }: { open: boolean; onClos
             <Dialog open={pendingMoves !== null} onOpenChange={(o) => !o && setPendingMoves(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{lang === 'th' ? 'ยืนยันการย้ายกลุ่ม' : 'Confirm group move'}</DialogTitle>
+                        <DialogTitle>{translate(lang, 'perm_ui_confirm_group_move')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-3">
-                        <p className="text-muted-foreground text-sm">
-                            {lang === 'th'
-                                ? `พนักงานต่อไปนี้จะถูกย้ายมาอยู่กลุ่ม “${name}” และสิทธิ์ (role) จะเปลี่ยนตามกลุ่มใหม่ - 1 คนอยู่ได้กลุ่มเดียวเท่านั้น:`
-                                : `These employees will be moved into “${name}” and their permission role will change - an employee may belong to only one group:`}
-                        </p>
+                        <p className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_group_move_note').replace('{name}', name)}</p>
                         <ul className="space-y-1.5">
                             {(pendingMoves ?? []).map((m) => (
                                 <li

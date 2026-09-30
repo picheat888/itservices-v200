@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
 import { Check, Lock } from 'lucide-react';
@@ -135,9 +136,7 @@ export function EmployeePermissionTree({
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
@@ -154,7 +153,7 @@ export function EmployeePermissionTree({
                                 <span className="ml-auto flex items-center gap-2">
                                     {group.chip !== false && (
                                         <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {lang === 'th' ? 'ดู' : 'View'}
+                                            {translate(lang, 'perm_ui_view')}
                                         </span>
                                     )}
                                     <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
@@ -181,9 +180,7 @@ export function EmployeePermissionTree({
             <div className="border-border flex items-center gap-2.5 border-t px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-medium">{label(STANDALONE, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ทุกผู้ใช้แก้โปรไฟล์ตัวเองได้ · ไม่ขึ้นกับตัวหลัก' : 'Self-service · independent of the master'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_self_profile')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={editOwnOn} locked={isSuper} onClick={() => toggle(STANDALONE)} />

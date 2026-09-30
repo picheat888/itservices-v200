@@ -1,4 +1,4 @@
-import { useT } from '@/lang';
+import { translate, useT } from '@/lang';
 import { useAuth } from '@/modules/auth';
 import { useDepartments, useEmployees, usePositions, useSections } from '@/modules/employee';
 import { InfoHint } from '@/shared/components/info-hint';
@@ -6,7 +6,7 @@ import { SearchableSelect } from '@/shared/components/searchable-select';
 import { CardGridSkeleton, ListSkeleton, TableSkeleton } from '@/shared/components/skeletons';
 import { formatDateTime as fmtDateTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
-import { SUPER_ROLE } from '@/shared/types';
+import { SUPER_ROLE, type Lang } from '@/shared/types';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
@@ -199,13 +199,13 @@ const ADMIN_GROUPS: { module: string; keys: string[] }[] = [
 // Administration modules rendered with the richer Stock-style card (identity
 // band + master switch). Modules without an entry fall back to the plain list
 // card. `master` controls how the top switch behaves (see ModuleMaster).
-const ADMIN_CARD_META: Record<string, { subtitle: { en: string; th: string }; master: ModuleMaster }> = {
+const ADMIN_CARD_META: Record<string, { subtitleKey: string; master: ModuleMaster }> = {
     permissions: {
-        subtitle: { en: 'Gates the Permissions module and its sidebar entry', th: 'คุมโมดูล Permissions และเมนูใน sidebar' },
+        subtitleKey: 'perm_ui_permissions_card_sub',
         master: { mode: 'key', key: 'system.manage_permissions' },
     },
     settings: {
-        subtitle: { en: 'Gates the Settings module and its sidebar entry', th: 'คุมโมดูล Settings และเมนูใน sidebar' },
+        subtitleKey: 'perm_ui_settings_card_sub',
         master: { mode: 'key', key: 'settings.access' },
     },
 };
@@ -315,9 +315,7 @@ function RolesTab() {
     return (
         <>
             <div className="border-border flex items-center justify-between border-b p-3">
-                <span className="text-muted-foreground text-sm">
-                    {lang === 'th' ? 'Role Templates ทั้งหมดในระบบ' : 'All Role Templates in the System'}
-                </span>
+                <span className="text-muted-foreground text-sm">{translate(lang, 'perm_ui_all_templates')}</span>
                 <Button onClick={() => setRoleModal({ open: true, role: null })}>
                     <Plus className="h-4 w-4" />
                     {t('perm_new_role')}
@@ -561,7 +559,7 @@ function RolesTab() {
                                                         key={group.module}
                                                         module={group.module}
                                                         keys={group.keys}
-                                                        subtitle={cardMeta.subtitle}
+                                                        subtitle={translate(lang, cardMeta.subtitleKey)}
                                                         master={cardMeta.master}
                                                         draft={draft}
                                                         setDraft={setDraft}
@@ -682,7 +680,7 @@ function GroupRolesTab() {
                                 <span className="text-brand truncate font-medium">{defaultGroup.name}</span>
                             </>
                         ) : (
-                            <span className="text-muted-foreground">{lang === 'th' ? '(ยังไม่ได้ตั้งค่า)' : '(not set)'}</span>
+                            <span className="text-muted-foreground">{translate(lang, 'perm_ui_not_set')}</span>
                         )}
                     </button>
                 </div>
@@ -744,7 +742,7 @@ function GroupRolesTab() {
                                 <span className="text-foreground flex items-center gap-1.5 font-mono font-semibold">
                                     <Users className="h-3.5 w-3.5" /> {g.member_count}
                                 </span>
-                                <span>{lang === 'th' ? 'สมาชิก' : 'Members'}</span>
+                                <span>{translate(lang, 'perm_ui_members')}</span>
                             </div>
                         </Card>
                     );
@@ -770,7 +768,7 @@ function GroupRolesTab() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="__none__">
-                                    <span className="text-muted-foreground">{lang === 'th' ? '(ยังไม่ได้ตั้งค่า)' : '(none)'}</span>
+                                    <span className="text-muted-foreground">{translate(lang, 'perm_ui_none_set')}</span>
                                 </SelectItem>
                                 {groups.map((g) => (
                                     <SelectItem key={g.id} value={String(g.id)}>
@@ -795,7 +793,7 @@ function GroupRolesTab() {
                                 const ok = await confirm({
                                     variant: 'edit',
                                     title: t('perm_default_group'),
-                                    entity: groupToSet ? { name: groupName } : { name: lang === 'th' ? 'ยกเลิกการตั้งค่า' : 'Clear default group' },
+                                    entity: groupToSet ? { name: groupName } : { name: translate(lang, 'perm_ui_clear_default') },
                                     action: () => setDefaultGroup.mutateAsync(groupToSet),
                                 });
 
@@ -815,7 +813,7 @@ function GroupRolesTab() {
 }
 
 /** Renders the diff detail panel for a single audit entry. */
-function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: string; lookups: AuditLookups }) {
+function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; lang: Lang; lookups: AuditLookups }) {
     const t = useT();
     const hasPermDiff = (details.added?.length ?? 0) > 0 || (details.removed?.length ?? 0) > 0;
     const hasRoleChange = details.from !== undefined || details.to !== undefined;
@@ -879,7 +877,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     {(details.added ?? []).length > 0 && (
                         <div className="min-w-0">
                             <div className="mb-1 text-[11px] font-semibold tracking-wide text-emerald-600 uppercase">
-                                {lang === 'th' ? 'เพิ่มสิทธิ์' : 'Added'}
+                                {translate(lang, 'perm_ui_log_added')}
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {(details.added ?? []).map((key) => {
@@ -900,7 +898,7 @@ function AuditDetailPanel({ details, lang, lookups }: { details: AuditDetails; l
                     {(details.removed ?? []).length > 0 && (
                         <div className="min-w-0">
                             <div className="mb-1 text-[11px] font-semibold tracking-wide text-rose-500 uppercase">
-                                {lang === 'th' ? 'ถอดสิทธิ์' : 'Removed'}
+                                {translate(lang, 'perm_ui_log_removed')}
                             </div>
                             <div className="flex flex-wrap gap-1">
                                 {(details.removed ?? []).map((key) => {
@@ -984,12 +982,12 @@ function auditInitials(name: string | null): string {
  *
  * The absolute form is passed in (system timezone) rather than derived from the browser's zone.
  */
-function auditAgo(iso: string, lang: string, absolute: string): string {
+function auditAgo(iso: string, lang: Lang, absolute: string): string {
     const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-    if (m < 1) return lang === 'th' ? 'เมื่อสักครู่' : 'just now';
-    if (m < 60) return lang === 'th' ? `${m} น.` : `${m}m`;
+    if (m < 1) return translate(lang, 'perm_ui_just_now');
+    if (m < 60) return translate(lang, 'perm_ui_minutes_short').replace('{n}', String(m));
     const h = Math.floor(m / 60);
-    if (h < 24) return lang === 'th' ? `${h} ชม.` : `${h}h`;
+    if (h < 24) return translate(lang, 'perm_ui_hours_short').replace('{n}', String(h));
     return absolute;
 }
 
@@ -1065,15 +1063,15 @@ function AuditTab() {
     }, [q, category, user]);
 
     const categoryOptions = [
-        { value: 'all', label: lang === 'th' ? 'ทุกประเภท' : 'All actions' },
-        { value: 'created', label: lang === 'th' ? 'สร้าง' : 'Created' },
-        { value: 'updated', label: lang === 'th' ? 'แก้ไข' : 'Updated' },
-        { value: 'deleted', label: lang === 'th' ? 'ลบ' : 'Deleted' },
-        { value: 'workflow', label: lang === 'th' ? 'อนุมัติ / สต็อก' : 'Workflow' },
-        { value: 'auth', label: lang === 'th' ? 'เข้าระบบ' : 'Auth' },
+        { value: 'all', label: translate(lang, 'perm_ui_all_actions') },
+        { value: 'created', label: translate(lang, 'perm_ui_log_created') },
+        { value: 'updated', label: translate(lang, 'perm_ui_log_updated') },
+        { value: 'deleted', label: translate(lang, 'perm_ui_log_deleted') },
+        { value: 'workflow', label: translate(lang, 'perm_ui_log_workflow') },
+        { value: 'auth', label: translate(lang, 'perm_ui_log_auth') },
     ].map((o) => ({ ...o, search: o.label }));
     const userOptions = [
-        { value: 'all', label: lang === 'th' ? 'ทุกคน' : 'All users', search: '' },
+        { value: 'all', label: translate(lang, 'perm_ui_all_users'), search: '' },
         ...users.map((u) => ({ value: u, label: u, search: u })),
     ];
 
@@ -1230,7 +1228,7 @@ function AuditTab() {
             {/* Pagination bar */}
             <div className="border-border text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-t px-5 py-3 text-sm">
                 <div className="flex items-center gap-2">
-                    <span>{lang === 'th' ? 'แสดง' : 'Rows per page'}</span>
+                    <span>{translate(lang, 'perm_ui_rows_per_page')}</span>
                     <Select value={String(pageSize)} onValueChange={(v) => handlePageSize(Number(v) as 10 | 20 | 50 | 100)}>
                         <SelectTrigger className="h-8 w-[72px]">
                             <SelectValue />
@@ -1247,7 +1245,7 @@ function AuditTab() {
 
                 <div className="flex items-center gap-3">
                     <span>
-                        {from}–{to} {lang === 'th' ? 'จาก' : 'of'} {total}
+                        {from}–{to} {translate(lang, 'perm_ui_of')} {total}
                     </span>
                     <div className="flex items-center gap-1">
                         <button

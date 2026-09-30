@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -123,9 +124,7 @@ export function RequestPermissionTree({
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
@@ -146,7 +145,7 @@ export function RequestPermissionTree({
                                 <span className="ml-auto flex items-center gap-2">
                                     {group.chip !== false && (
                                         <span className="bg-brand/10 text-brand rounded px-1.5 py-0.5 text-[9px] font-semibold tracking-wide uppercase">
-                                            {lang === 'th' ? 'ดู' : 'View'}
+                                            {translate(lang, 'perm_ui_view')}
                                         </span>
                                     )}
                                     <Switch on={viewOn} locked={isSuper || !masterOn} onClick={() => toggle(group.view)} />
@@ -179,14 +178,8 @@ export function RequestPermissionTree({
                 <div className="py-0.5">
                     <div className="flex min-h-[34px] items-center gap-2">
                         <span className="flex items-center gap-1 text-sm font-medium">
-                            {lang === 'th' ? 'แจ้งเตือน' : 'Notifications'}
-                            <InfoHint
-                                text={
-                                    lang === 'th'
-                                        ? 'ใครได้ยินเรื่องคิวดำเนินการ - แยกจากใครมีสิทธิ์ปิดงาน หัวหน้าที่อยากรู้ว่ามีงานเข้าเปิดได้โดยไม่ต้องเป็นคนทำเอง'
-                                        : 'Who hears about the completion queue - separate from who may work it, so a manager can follow it without closing anything.'
-                                }
-                            />
+                            {translate(lang, 'perm_ui_notifications')}
+                            <InfoHint text={translate(lang, 'perm_ui_request_notify_hint')} />
                         </span>
                     </div>
                     <div className="border-border ml-2 space-y-0.5 border-l pl-3">

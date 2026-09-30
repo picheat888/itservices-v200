@@ -1,3 +1,4 @@
+import { translate } from '@/lang';
 import { InfoHint } from '@/shared/components/info-hint';
 import { cn } from '@/shared/lib/utils';
 import type { Lang } from '@/shared/types';
@@ -20,15 +21,15 @@ const MASTER = 'notifications.module';
  * decision about how it reads. The controllers enforce the split by looking at which fields
  * a save actually changed, so neither right can be used to do the other's work.
  */
-const GROUPS: { id: string; label: { en: string; th: string }; keys: string[] }[] = [
+const GROUPS: { id: string; labelKey: string; keys: string[] }[] = [
     {
         id: 'email',
-        label: { en: 'Email', th: 'อีเมล' },
+        labelKey: 'perm_ui_group_email',
         keys: ['notifications.email_edit', 'notifications.email_toggle', 'notifications.email_test'],
     },
     {
         id: 'inapp',
-        label: { en: 'Notification', th: 'การแจ้งเตือนในระบบ' },
+        labelKey: 'perm_ui_group_inapp',
         keys: ['notifications.inapp_edit', 'notifications.inapp_toggle', 'notifications.inapp_test'],
     },
 ];
@@ -138,9 +139,7 @@ export function NotificationPermissionTree({
             <div className="bg-brand/5 border-border flex items-center gap-2.5 border-b px-3.5 py-2.5">
                 <div className="min-w-0">
                     <div className="text-sm font-semibold">{label(MASTER, lang)}</div>
-                    <div className="text-muted-foreground text-[10.5px]">
-                        {lang === 'th' ? 'ตัวหลัก · คุมโมดูลและไอคอนใน sidebar' : 'Master · gates the module and the sidebar icon'}
-                    </div>
+                    <div className="text-muted-foreground text-[10.5px]">{translate(lang, 'perm_ui_master_note')}</div>
                 </div>
                 <div className="ml-auto">
                     <Switch on={masterOn} locked={isSuper} onClick={() => toggle(MASTER)} />
@@ -152,7 +151,7 @@ export function NotificationPermissionTree({
                     <div key={group.id} className="py-0.5">
                         {/* A heading, not a switch — see the component docblock. */}
                         <div className="flex min-h-[34px] items-center gap-2">
-                            <span className="text-sm font-medium">{lang === 'th' ? group.label.th : group.label.en}</span>
+                            <span className="text-sm font-medium">{translate(lang, group.labelKey)}</span>
                         </div>
                         <div className="border-border ml-2 space-y-0.5 border-l pl-3">
                             {group.keys.map((key) => (
