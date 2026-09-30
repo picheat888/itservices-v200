@@ -91,7 +91,6 @@ export const permission: Dict = {
     perm_mod_permissions: 'สิทธิ์การใช้งาน',
     perm_mod_notifications: 'Email & Notification',
     perm_mod_settings: 'ตั้งค่า',
-    perm_mod_reports: 'รายงาน',
     'perm_act_tickets.module': 'การเข้าถึง Ticket',
     'perm_act_tickets.view_dashboard': 'ภาพรวม',
     'perm_desc_tickets.view_dashboard': 'เห็นแท็บภาพรวม - เคสเข้า/ปิด, งานค้าง และการ์ด SLA',
@@ -251,11 +250,6 @@ export const permission: Dict = {
     'perm_desc_notifications.logs': 'อ่านประวัติการส่งทุกฉบับและเหตุที่ข้ามไป รวมถึงผู้รับและเนื้อความ',
     'perm_act_system.view_audit': 'ดูบันทึกการตรวจสอบ',
     // ผังสิทธิ์ — Reports
-    'perm_act_reports.view': 'ดูรายงาน',
-    'perm_act_reports.run': 'เรียกใช้รายงาน',
-    'perm_act_reports.export': 'ส่งออกข้อมูล (CSV / XLSX)',
-    'perm_act_reports.schedule': 'ตั้งกำหนดการอัตโนมัติ',
-    'perm_act_reports.custom': 'สร้างรายงานแบบกำหนดเอง',
     // ผังสิทธิ์ — Email Templates
     // ผังสิทธิ์ — Settings
     'perm_act_settings.access': 'เข้าถึงการตั้งค่า',
