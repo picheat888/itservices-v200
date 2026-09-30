@@ -76,6 +76,7 @@ export const report: Dict = {
     rep_by_category: 'By category',
     rep_by_department: 'Top requesting departments',
     rep_by_assignee: 'IT staff performance',
+    rep_col_requester: 'Requester',
     rep_col_department: 'Department',
     rep_col_tickets: 'Tickets',
     rep_col_sla: 'SLA',

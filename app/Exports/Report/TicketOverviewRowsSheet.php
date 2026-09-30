@@ -52,7 +52,8 @@ class TicketOverviewRowsSheet implements FromCollection, ShouldAutoSize, WithHea
         return [
             $ticket->ticket_no,
             $ticket->subject,
-            $ticket->requester?->name,
+            // The file is Thai throughout, so the requester's Thai name leads when the record has one.
+            $ticket->requester?->name_th ?: $ticket->requester?->name,
             $department?->name_th ?: $department?->name,
             TicketLabels::category($ticket->category?->value),
             TicketLabels::priority($ticket->priority?->value),

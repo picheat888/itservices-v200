@@ -4,6 +4,7 @@ namespace Tests\Feature\Report;
 
 use App\Exports\Report\TicketOverviewExport;
 use App\Exports\Report\TicketOverviewRowsSheet;
+use App\Models\Employee\Employee;
 use App\Models\Permission\Role;
 use App\Models\Permission\RolePermission;
 use App\Models\Ticket\Ticket;
@@ -73,6 +74,26 @@ class TicketOverviewExportTest extends TestCase
             return $row[4] === 'ฮาร์ดแวร์' // category
                 && $row[5] === 'สูง' // priority
                 && $row[6] === 'กำลังดำเนินการ'; // status
+        });
+    }
+
+    /** The workbook is Thai throughout — the requester too, when the record has a Thai name. */
+    public function test_the_workbook_names_the_requester_in_thai_when_there_is_one(): void
+    {
+        Excel::fake();
+        $user = $this->deskMember();
+        $thai = Employee::create(['first_name' => 'Somchai', 'last_name' => 'Jaidee', 'first_name_th' => 'สมชาย', 'last_name_th' => 'ใจดี']);
+        $english = Employee::create(['first_name' => 'John', 'last_name' => 'Smith']);
+        Ticket::factory()->create(['category' => 'hardware', 'requester_id' => $thai->id, 'created_at' => '2026-09-05 08:00']);
+        Ticket::factory()->create(['category' => 'hardware', 'requester_id' => $english->id, 'created_at' => '2026-09-06 08:00']);
+
+        $this->actingAs($user)->get('/api/reports/tickets/overview/export?'.self::QUERY.'&format=xlsx')->assertOk();
+
+        Excel::assertDownloaded('TicketReport_2026-09-01_2026-09-30_2026-09-25.xlsx', function (TicketOverviewExport $export) {
+            $sheet = new TicketOverviewRowsSheet($export->rows);
+            $names = $export->rows->map(fn ($t) => $sheet->map($t)[2])->sort()->values()->all();
+
+            return $names === ['John Smith', 'สมชาย ใจดี'];
         });
     }
 
