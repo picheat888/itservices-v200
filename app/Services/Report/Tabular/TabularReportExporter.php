@@ -32,7 +32,9 @@ class TabularReportExporter
         }
 
         $rows = (clone $query)->limit(self::PDF_ROW_LIMIT)->get();
-        $total = collect($summary)->firstWhere('key', 'total')?->value ?? $rows->count();
+        // Counted off the query, not the `total` tile: a grouped report's rows (one per request
+        // type, per approver) are not what its headline total counts.
+        $total = (clone $query)->toBase()->getCountForPagination();
 
         return Pdf::loadView('pdf.reports.tabular', [
             'report' => $report,
