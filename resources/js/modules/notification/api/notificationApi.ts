@@ -37,6 +37,8 @@ export interface NotificationData {
     asset_model?: string;
     asset_nickname?: string | null;
     from?: string | null;
+    // ticket_forwarded_away — who the case went to (`by` = who moved it)
+    to?: string | null;
     // Service request notifications (request) — subtype: submitted | waiting | stalled |
     // ready_to_complete | approved_step | approved_final | rejected | completed | cancelled
     // (ready_to_complete carries ticket_no when the workflow opened its own case)

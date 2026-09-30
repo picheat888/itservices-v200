@@ -11,6 +11,7 @@ use App\Models\Ticket\TicketUpdate;
 use App\Models\User;
 use App\Notifications\TicketAssignedNotification;
 use App\Notifications\TicketCreatedNotification;
+use App\Notifications\TicketForwardedAwayNotification;
 use App\Notifications\TicketForwardedNotification;
 use App\Notifications\TicketOwnerNotification;
 use App\Services\Email\EmailNotificationService;
@@ -185,10 +186,27 @@ class TicketService
      * or unavailable). Priority, responded_at and the SLA deadlines all stay put —
      * forwarding never restarts a clock. The receiving staff gets a bell.
      */
-    public function forward(Ticket $ticket, User $staff): Ticket
+    public function forward(Ticket $ticket, User $staff, ?User $actor = null): Ticket
     {
-        $fromName = $ticket->assignee?->name;
+        $previous = $ticket->assignee;
+        $fromName = $previous?->name;
         $ticket->update(['assignee_id' => $staff->id]);
+
+        // The hand-over goes on the case's own timeline, so whoever opens it later sees who
+        // held it before — the audit log was the only trace, and only administrators read it.
+        $ticket->updates()->create([
+            'user_id' => $actor?->id,
+            'author_name' => (string) ($actor?->name ?? $fromName ?? ''),
+            'kind' => TicketUpdate::KIND_FORWARDED,
+            'body' => '',
+            'meta' => ['from' => $fromName, 'to' => (string) $staff->name],
+        ]);
+
+        // The technician it was taken from hears where it went — unless they passed it on
+        // themselves.
+        if ($previous !== null && $previous->id !== $actor?->id) {
+            $previous->notify(new TicketForwardedAwayNotification($ticket->fresh(), (string) $staff->name, $actor?->name));
+        }
 
         $staff->notify(new TicketForwardedNotification($ticket->fresh(), $fromName));
         // The receiving staff also gets the templated email (bell alone is easy to miss).

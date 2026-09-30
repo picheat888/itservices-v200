@@ -116,6 +116,9 @@ class TicketResource extends JsonResource
             'updates' => $this->whenLoaded('updates', fn () => $this->updates->map(fn ($u) => [
                 'id' => $u->id,
                 'author_name' => $u->author_name,
+                // 'note' (typed) or an event the SPA words itself from `meta` ('forwarded').
+                'kind' => $u->kind ?? 'note',
+                'meta' => $u->meta,
                 'body' => $u->body,
                 'created_at' => $u->created_at?->toIso8601String(),
             ])),

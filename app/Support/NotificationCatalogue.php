@@ -393,6 +393,16 @@ class NotificationCatalogue
                 'enabled' => true,
             ],
             [
+                'key' => 'notif_ticket_forwarded_away',
+                'module' => 'tickets',
+                'name' => 'Your case was forwarded',
+                'trigger' => 'Somebody else passes a case you hold to another technician',
+                'audience' => 'The technician who held the case',
+                'message_en' => 'Your case was forwarded to {to}',
+                'message_th' => 'เคสของคุณถูกส่งต่อให้ {to}',
+                'enabled' => true,
+            ],
+            [
                 'key' => 'notif_ticket_new',
                 'module' => 'tickets',
                 'name' => 'New case waiting',

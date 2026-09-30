@@ -106,6 +106,8 @@ export const ticket: Dict = {
     ticket_activity: 'ไทม์ไลน์',
     ticket_created_event: 'ตั๋วถูกสร้าง',
     ticket_taken_by: 'รับเคสโดย',
+    ticket_forwarded_event: 'ส่งต่อเคสจาก {from} ให้ {to}',
+    ticket_forwarded_by: 'ส่งต่อโดย {name}',
     ticket_waiting: 'รอเจ้าหน้าที่รับเคส',
     ticket_completed_event: 'ปิดเคสแล้ว',
     ticket_canceled_event: 'ปิดเคส - ยกเลิก',

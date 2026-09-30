@@ -202,7 +202,7 @@ function slaTargetSource(target: NonNullable<Ticket['sla_target']>, t: (key: str
 }
 
 /** One row of the progress timeline. The two ends of the case sit in the same list as the notes. */
-type ProgressKind = 'taken' | 'note' | 'completed' | 'canceled';
+type ProgressKind = 'taken' | 'note' | 'forwarded' | 'completed' | 'canceled';
 
 interface ProgressEntry {
     key: string;
@@ -236,6 +236,19 @@ function progressEntries(ticket: Ticket, t: (key: string) => string): ProgressEn
     }
 
     for (const u of ticket.updates ?? []) {
+        if (u.kind === 'forwarded') {
+            entries.push({
+                key: `update-${u.id}`,
+                kind: 'forwarded',
+                title: t('ticket_forwarded_event')
+                    .replace('{from}', u.meta?.from || '—')
+                    .replace('{to}', u.meta?.to || '—'),
+                when: u.created_at,
+                // Who moved it, when that was a dispatcher rather than the person it left.
+                body: u.author_name && u.author_name !== u.meta?.from ? t('ticket_forwarded_by').replace('{name}', u.author_name) : null,
+            });
+            continue;
+        }
         entries.push({ key: `update-${u.id}`, kind: 'note', title: u.author_name, when: u.created_at, body: u.body });
     }
 
@@ -262,6 +275,8 @@ function progressEntries(ticket: Ticket, t: (key: string) => string): ProgressEn
 const PROGRESS_META: Record<ProgressKind, { Icon: typeof Check; dot: string; body?: string }> = {
     taken: { Icon: Zap, dot: 'bg-brand/10 text-brand' },
     note: { Icon: MessageSquarePlus, dot: 'bg-muted text-muted-foreground' },
+    // Same violet as the forward bell, so the hand-over reads as the same event in both places.
+    forwarded: { Icon: ArrowRightLeft, dot: 'bg-violet-500/10 text-violet-600 dark:text-violet-400' },
     completed: {
         Icon: Check,
         dot: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',

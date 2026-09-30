@@ -14,7 +14,19 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class TicketUpdate extends Model
 {
-    protected $fillable = ['ticket_id', 'user_id', 'author_name', 'body'];
+    /** A progress note somebody typed. */
+    public const KIND_NOTE = 'note';
+
+    /** The case changed hands; `meta` = {from, to}. Written by TicketService::forward. */
+    public const KIND_FORWARDED = 'forwarded';
+
+    protected $fillable = ['ticket_id', 'user_id', 'author_name', 'kind', 'body', 'meta'];
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['meta' => 'array'];
+    }
 
     public function ticket(): BelongsTo
     {

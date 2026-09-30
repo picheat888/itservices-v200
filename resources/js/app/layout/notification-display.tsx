@@ -72,7 +72,7 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
         if (n.data.subtype?.endsWith('breached')) return { Icon: Gauge, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
         return { Icon: Gauge, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
-    if (n.data.type === 'ticket_forwarded') {
+    if (n.data.type === 'ticket_forwarded' || n.data.type === 'ticket_forwarded_away') {
         return { Icon: ArrowRightLeft, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10' };
     }
     if (n.data.type === 'ticket_new') {
@@ -248,6 +248,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
     if (n.data.type === 'password_expiring') return t('notif_password_expiring').replace('{days}', String(n.data.days_remaining ?? 0));
     if (n.data.type === 'ticket_sla') return t(`notif_ticket_sla_${n.data.subtype}` as Parameters<Translate>[0]);
     if (n.data.type === 'ticket_forwarded') return t('notif_ticket_forwarded').replace('{from}', n.data.from ?? '—');
+    if (n.data.type === 'ticket_forwarded_away') return t('notif_ticket_forwarded_away').replace('{to}', n.data.to ?? '—');
     if (n.data.type === 'ticket_new') return t('notif_ticket_new');
     if (n.data.type === 'ticket_assigned') return t('notif_ticket_assigned');
     if (n.data.type === 'ticket_owner')
