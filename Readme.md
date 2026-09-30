@@ -3556,6 +3556,34 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 
 `StockReportsTest` (10) + `ContractMonthlyCostReportTest` (5) ใหม่ · `ReportCatalogueTest` เพิ่มเคสแยกสิทธิ์สต็อก · `tests/Feature/Report` + `SidebarRouteGateTest` = **53 passed** · รัน query ทั้ง 4 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน · `npx tsc --noEmit` + eslint ผ่าน · pint ผ่าน · คีย์ i18n ที่ 4 รายงานอ้างถึง (74 คีย์) มีครบทั้ง en/th
 
+## Report Module — Phase 4: รายงานคำขอ พนักงาน และสิทธิ์ (2026-09-30)
+
+เพิ่มรายงานแบบตาราง 6 ตัวบน engine เดิม — ไม่มี route/controller/migration ใหม่ รวมเป็น **14 จาก 19 รายงาน** ใน mockup · หน้า hub มีโดเมนใหม่ `requests` / `employees` / `access` · เมนู/route `/reports` เพิ่ม `requests.view_all`, `employees.view`, `access.software_view` ใน `anyOf`
+
+| รายงาน | key | 1 แถว = | สิทธิ์ |
+|---|---|---|---|
+| **สรุปคำขอตามประเภทและสถานะ** | `requests.summary` | ประเภทคำขอ: ทั้งหมด / รออนุมัติ / อนุมัติแล้ว (รอ IT) / เสร็จ / ไม่อนุมัติ / ยกเลิก / % อนุมัติ · ช่วงวันที่ยื่น (ค่าเริ่มต้น = ต้นปีถึงวันนี้), แผนกผู้ขอ | `requests.view_all` |
+| **ระยะเวลาอนุมัติแต่ละขั้น** | `requests.approval_time` | ผู้อนุมัติ: จำนวนขั้น, ค้างอยู่ตอนนี้, เฉลี่ย/นานสุด/ค้างนานสุด (วัน) เรียงคนที่เฉลี่ยช้าสุดก่อน · ช่วงวันที่ขั้นมาถึง (ค่าเริ่มต้น = เดือนนี้), ประเภทคำขอ | `requests.view_all` |
+| **คำขอที่รอดำเนินการโดย IT** | `requests.it_pending` | คำขอสถานะ `approved` (ผ่านอนุมัติแล้ว รอ IT ส่งมอบ) รอนานสุดก่อน พร้อมเลข Ticket, สถานะ Ticket, ผู้รับผิดชอบ · summary รอเกิน 3 / 7 วัน, ยังไม่มี Ticket | `requests.view_all` |
+| **พนักงานเข้าใหม่และลาออก** | `employees.joiners_leavers` | พนักงานที่เริ่มงาน (`joined_at`) หรือวันสุดท้าย (`last_day`) อยู่ในช่วง (ค่าเริ่มต้น = ต้นเดือนถึงสิ้นเดือน) เรียงตามวันที่ · ตัวกรองเข้า/ออก, แผนก | `employees.view` |
+| **ทรัพย์สินค้างคืนจากผู้ลาออก** | `employees.leaver_assets` | ทรัพย์สินที่ยังอยู่ในชื่อพนักงานสถานะ resigned เรียงวันสุดท้ายเก่าสุดก่อน พร้อมเหลือกี่วัน (ติดลบ = เลยแล้ว) | `employees.view` |
+| **การใช้ License ซอฟต์แวร์** | `access.software_licenses` | ซอฟต์แวร์: ซื้อไว้ / ใช้ไป / คงเหลือ / % ใช้งาน / ผู้ลาออกที่ยังถือ / รายชื่อผู้ถือ · กรองประเภท License, การใช้งาน (เกิน/เต็ม/ยังว่าง/ไม่จำกัด), ค้นหา | `access.software_view` |
+
+**กติกาที่ตัดสินใจไว้**
+- **ระยะเวลาอนุมัติ** นับเฉพาะขั้น `approval` (ขั้น `completion` เป็นงานของ IT ดูในรายงานคำขอรอ IT) · ผู้อนุมัติ = คนที่กดตัดสิน ถ้ายังไม่มีคือผู้อนุมัติที่ระบุชื่อไว้ ถ้าไม่มีทั้งคู่ใช้ label ของขั้น (ขั้นแบบแผนก/กลุ่มที่ยังไม่มีใครรับ) · ขั้นที่ยังรออยู่นับถึงตอนนี้ · ขั้น `current` ของคำขอที่ไม่ใช่ pending แล้ว (ถูกยกเลิกทับ) **ไม่นับ** เพราะไม่มีใครถืออยู่จริง · summary "เฉลี่ยทั้งหมด" ถ่วงตามจำนวนขั้น · คำนวณชั่วโมงใน SQL แยกตาม driver (`TIMESTAMPDIFF` บน MariaDB, `julianday` บน SQLite ของเทสต์)
+- **เตรียมเครื่อง** (เฉพาะคนเข้าใหม่) อ่านจากคำขอ onboarding (`origin = onboarding`) ที่ HR ยื่นตอน Add Employee: มีใบที่ยัง pending/approved = กำลังเตรียม, ไม่มีใบค้าง = พร้อม, ไม่มีคำขอเลย = ไม่มีคำขอ · คนที่เข้าและออกในช่วงเดียวกันแสดงครั้งเดียวเป็น "ลาออก" · resigned ที่ยังไม่มีวันสุดท้ายยังนับเป็นคนเข้าใหม่
+- **รายงานพนักงานใช้แค่ `employees.view`** ตาม pattern "peek" เดิมของแท็บ Assets ในหน้าพนักงาน (ไม่ต้องมี `assets.view`) และไม่แสดงมูลค่าทรัพย์สิน
+- **License ที่ใช้ไป** = membership ที่ยังไม่ revoke (ตัวเลขเดียวกับหน้า Access) · seats ว่าง = ไม่จำกัดจำนวน
+
+**แก้ใน engine / โค้ดร่วม**
+- `TabularReportExporter` — PDF นับจำนวนแถวจาก query (`getCountForPagination`) แทนการอ่าน summary `total` เพราะรายงานแบบ group (1 แถว = ประเภท / ผู้อนุมัติ) มี total คนละความหมายกับจำนวนแถว เดิมจะขึ้นข้อความ "แสดง N รายการแรก" ผิด
+- ป้ายสถานะทรัพย์สินย้ายจาก `AssetRegisterReport` เข้า trait `AssetColumns` ให้รายงานผู้ลาออกใช้ชุดเดียวกัน · trait ใหม่ `App\Services\Report\Request\RequestLabels` (ประเภท/สถานะคำขอ ใช้คีย์ `req_*` ของโมดูลคำขอ + `RequestType::labelTh()`)
+- คอลัมน์เลขที่คำขอใช้คีย์ `rep_c_request_no` (ไม่ใช้ `rep_c_reference` ซึ่งเป็น "อ้างอิง" ของรายงานสต็อก)
+
+### Tests / Verification
+
+`RequestReportsTest` (8) + `EmployeeReportsTest` (5) + `SoftwareLicenseReportTest` (4) ใหม่ · `ReportCatalogueTest` เพิ่มเคสสิทธิ์ 3 โดเมน · `tests/Feature/Report` + `SidebarRouteGateTest` = **71 passed** · รันทั้ง 6 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน · คีย์ i18n ที่ 6 รายงานอ้างถึง (132 คีย์) มีครบ en/th
+
 ---
 
 ## Asset — ตัดจำหน่ายต้องมีหมายเหตุ (2026-09-25)
