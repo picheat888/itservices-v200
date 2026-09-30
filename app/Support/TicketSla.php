@@ -31,6 +31,27 @@ class TicketSla
     /** Storage key for the single first-response target (minutes). */
     public const RESPONSE_KEY = 'ticket_sla_response';
 
+    /** Storage key for the SLA goal: the share of cases that should close within target (%). */
+    public const GOAL_KEY = 'ticket_sla_goal';
+
+    /** Default SLA goal: 90% of cases closed within their target. */
+    public static function goalDefault(): int
+    {
+        return 90;
+    }
+
+    /**
+     * The SLA goal the reports hold the met-rate against (Ticket & SLA overview's KPI badge,
+     * red rows, goal line). Set in Settings → SLA; a missing or out-of-range value reads as
+     * the default.
+     */
+    public static function goalPercent(): int
+    {
+        $stored = (int) AppSetting::get(self::GOAL_KEY, (string) self::goalDefault());
+
+        return $stored >= 1 && $stored <= 100 ? $stored : self::goalDefault();
+    }
+
     /** Default first-response target: 120 working minutes for every case. */
     public static function responseDefault(): int
     {

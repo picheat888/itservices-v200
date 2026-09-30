@@ -178,6 +178,10 @@ export const settings: Dict = {
     set_sla_hours_note:
         'The response SLA counts only these hours, as does any resolution target set to working hours. Targets set to calendar time ignore this window and keep counting through nights, days off and the break.',
     set_sla_err_response: 'Must be 1–10080 minutes',
+    set_sla_goal: 'SLA goal',
+    set_sla_goal_help:
+        'The share of cases that should close within target. The Ticket & SLA report draws it as the goal line and judges the met rate against it.',
+    set_sla_err_goal: 'Must be 1–100%',
     set_sla_err_resolve: 'Must be 1–8760 hours',
     set_sla_err_order: 'Resolution must be ≥ the response target',
     set_sla_hours_title: 'Working days',

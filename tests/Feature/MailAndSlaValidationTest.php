@@ -90,4 +90,31 @@ class MailAndSlaValidationTest extends TestCase
             ->putJson('/api/settings/sla', $payload)
             ->assertOk();
     }
+
+    /** The SLA goal used to be a constant (90) in the report service; it is now a setting. */
+    public function test_the_sla_goal_is_set_in_settings_and_drawn_on_the_report(): void
+    {
+        $admin = $this->admin();
+        $report = fn () => $this->actingAs($admin)
+            ->getJson('/api/reports/tickets/overview?from=2026-09-01&to=2026-09-30')->assertOk()->json('data.sla_goal');
+
+        $this->assertSame(90, $this->actingAs($admin)->getJson('/api/settings')->json('data.ticket_sla_goal'));
+        $this->assertSame(90, $report());
+
+        $this->actingAs($admin)
+            ->putJson('/api/settings/sla', ['ticket_sla' => ['high' => ['resolve' => 8]], 'ticket_sla_goal' => 85])
+            ->assertOk()
+            ->assertJsonPath('data.ticket_sla_goal', 85);
+        $this->assertSame(85, $report());
+    }
+
+    public function test_the_sla_goal_is_a_whole_percent(): void
+    {
+        foreach ([0, 101, 'high'] as $goal) {
+            $this->actingAs($this->admin())
+                ->putJson('/api/settings/sla', ['ticket_sla' => ['high' => ['resolve' => 8]], 'ticket_sla_goal' => $goal])
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['ticket_sla_goal']);
+        }
+    }
 }

@@ -20,6 +20,8 @@ export interface SettingsData {
     ticket_sla_request: TicketSlaRequestTarget[];
     ticket_sla_work_class: TicketSlaWorkClassTarget[];
     ticket_sla_response: number;
+    /** Share of cases that should close within target (%), the reports' goal line. */
+    ticket_sla_goal: number;
     ticket_sla_hours: TicketSlaHours;
     /**
      * Name of the role a new employee ends up with, via the default Role Group set on the
@@ -86,6 +88,7 @@ export interface TicketSlaPayload {
     /** The WHOLE list, same as ticket_sla_request — omit the key to leave these rules alone. */
     ticket_sla_work_class?: TicketSlaWorkClassTarget[];
     ticket_sla_response?: number;
+    ticket_sla_goal?: number;
     ticket_sla_hours?: TicketSlaHours;
 }
 
