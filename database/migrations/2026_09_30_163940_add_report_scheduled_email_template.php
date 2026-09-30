@@ -6,9 +6,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Adds the `report.scheduled` email template (the mail a scheduled report is sent in) to an
- * existing install. EmailTemplateSeeder must not run on a live database — it overwrites the
- * templates administrators have edited — so the one new row is inserted here, and only when
- * it is not there yet.
+ * existing install, inserted only when it is not there yet. Written while EmailTemplateSeeder
+ * still overwrote edited templates (it has since become firstOrCreate, so a re-seed would add
+ * this row too); kept so `migrate` alone brings an install up to date.
  */
 return new class extends Migration
 {

@@ -36,6 +36,35 @@ class EmailTemplateResetTest extends TestCase
         }
     }
 
+    /** A template an administrator reworded or switched off survives a re-seed — firstOrCreate, not updateOrCreate. */
+    public function test_a_re_seed_keeps_an_edited_template(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        EmailTemplate::where('key', 'ticket.created')->update([
+            'name' => 'Our own name', 'subject' => 'Our own subject', 'body_html' => '<p>ours</p>', 'enabled' => false,
+        ]);
+
+        $this->seed(EmailTemplateSeeder::class);
+
+        $this->assertDatabaseHas('email_templates', [
+            'key' => 'ticket.created', 'name' => 'Our own name', 'subject' => 'Our own subject', 'body_html' => '<p>ours</p>', 'enabled' => false,
+        ]);
+        $this->assertSame(1, EmailTemplate::where('key', 'ticket.created')->count());
+    }
+
+    /** A template the catalogue gained since the last seed is added by running it again. */
+    public function test_a_re_seed_adds_a_missing_template(): void
+    {
+        $this->seed(EmailTemplateSeeder::class);
+        EmailTemplate::where('key', 'stock.alert_digest')->delete();
+
+        $this->seed(EmailTemplateSeeder::class);
+
+        $standard = EmailTemplates::find('stock.alert_digest');
+        $this->assertDatabaseHas('email_templates', ['key' => 'stock.alert_digest', 'subject' => $standard['subject']]);
+        $this->assertSame(count(EmailTemplates::all()), EmailTemplate::count());
+    }
+
     public function test_reset_restores_one_template_to_standard(): void
     {
         $this->seed(EmailTemplateSeeder::class);
