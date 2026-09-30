@@ -8,6 +8,7 @@ use App\Models\Employee\Department;
 use App\Models\Ticket\Ticket;
 use App\Models\User;
 use App\Support\Permissions;
+use App\Support\TicketSla;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -31,9 +32,6 @@ use Illuminate\Support\Collection;
  */
 class TicketOverviewReportService
 {
-    /** Target line drawn on the SLA meter. */
-    public const SLA_GOAL_PERCENT = 90;
-
     private const POPULATION_COLUMNS = [
         'id', 'category', 'priority', 'status', 'created_at', 'resolved_at',
         'sla_resolve_due_at', 'assignee_id', 'requester_id',
@@ -55,7 +53,8 @@ class TicketOverviewReportService
         return [
             'range' => ['from' => $filters['from']->toDateString(), 'to' => $filters['to']->toDateString()],
             'generated_at' => $now->format('Y-m-d H:i'),
-            'sla_goal' => self::SLA_GOAL_PERCENT,
+            // Settings → SLA (TicketSla::goalPercent) — the goal line and badge on the report.
+            'sla_goal' => TicketSla::goalPercent(),
             'kpi' => [
                 'total' => $tickets->count(),
                 'completed' => $completed->count(),

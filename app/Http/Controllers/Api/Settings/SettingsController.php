@@ -154,6 +154,9 @@ class SettingsController extends Controller
             'ticket_sla_work_class.*.clock' => ['sometimes', new Enum(TicketSlaClock::class)],
             'ticket_sla_work_class.*.enabled' => ['sometimes', 'boolean'],
             'ticket_sla_response' => ['sometimes', 'required', 'integer', 'min:1', 'max:10080'],
+            // The share of cases that should close within target — what the reports hold
+            // the met-rate against. Absent key = leave it alone.
+            'ticket_sla_goal' => ['sometimes', 'required', 'integer', 'min:1', 'max:100'],
             // Working window the SLA clocks count against (days: ISO weekday 1–7).
             'ticket_sla_hours' => ['sometimes', 'required', 'array'],
             'ticket_sla_hours.days' => ['required_with:ticket_sla_hours', 'array', 'min:1'],
@@ -247,6 +250,9 @@ class SettingsController extends Controller
 
         if (isset($data['ticket_sla_response'])) {
             AppSetting::put(TicketSla::RESPONSE_KEY, (string) $data['ticket_sla_response']);
+        }
+        if (isset($data['ticket_sla_goal'])) {
+            AppSetting::put(TicketSla::GOAL_KEY, (string) $data['ticket_sla_goal']);
         }
         if (isset($data['ticket_sla_hours'])) {
             AppSetting::put(TicketSla::HOURS_KEY, json_encode($data['ticket_sla_hours']));
@@ -514,6 +520,7 @@ class SettingsController extends Controller
         // target, and the working window — saved values merged over defaults.
         $values['ticket_sla'] = TicketSla::targets();
         $values['ticket_sla_response'] = TicketSla::responseMinutes();
+        $values['ticket_sla_goal'] = TicketSla::goalPercent();
         $values['ticket_sla_hours'] = TicketSla::hours();
         // Request-type targets are a list the administrator adds to, so they come back as
         // rows (including the switched-off ones) rather than merged over anything.

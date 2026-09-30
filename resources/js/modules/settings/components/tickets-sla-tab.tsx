@@ -103,6 +103,7 @@ export function TicketsSlaTab() {
     const storedRequest = data?.ticket_sla_request;
     const storedWork = data?.ticket_sla_work_class;
     const storedResponse = data?.ticket_sla_response;
+    const storedGoal = data?.ticket_sla_goal;
     const storedHours = data?.ticket_sla_hours;
     // What an unconfigured request type shows: the medium target, which is what a case with no
     // priority is judged against anyway. Read off the saved values rather than the editable
@@ -128,6 +129,9 @@ export function TicketsSlaTab() {
     // First response is one system-wide target — priority doesn't exist while a case waits.
     const [respTarget, setRespTarget] = useState(120);
     const [respError, setRespError] = useState('');
+    // The share of cases that should close within target — the goal line the reports draw.
+    const [goal, setGoal] = useState(90);
+    const [goalError, setGoalError] = useState('');
     const [hours, setHours] = useState<TicketSlaHours>({
         days: [1, 2, 3, 4, 5],
         start: '08:00',
@@ -151,6 +155,9 @@ export function TicketsSlaTab() {
     useEffect(() => {
         if (storedResponse != null) setRespTarget(storedResponse);
     }, [storedResponse]);
+    useEffect(() => {
+        if (storedGoal != null) setGoal(storedGoal);
+    }, [storedGoal]);
     useEffect(() => {
         if (storedHours) setHours(storedHours);
     }, [storedHours]);
@@ -176,6 +183,7 @@ export function TicketsSlaTab() {
         reqDirty ||
         workDirty ||
         (storedResponse != null && respTarget !== storedResponse) ||
+        (storedGoal != null && goal !== storedGoal) ||
         (!!stored && SLA_PRIORITIES.some((p) => draft[p] && (draft[p].resolve !== stored[p]?.resolve || draft[p].clock !== stored[p]?.clock)));
 
     const setRequestTarget = (type: string, patch: Partial<TicketSlaRequestTarget>) => {
@@ -238,6 +246,11 @@ export function TicketsSlaTab() {
         setSaved(false);
         setRespError('');
     };
+    const changeGoal = (value: number) => {
+        setGoal(value);
+        setSaved(false);
+        setGoalError('');
+    };
 
     // First response is in minutes (1–10080, one system-wide value), resolution in
     // hours (1–8760) and must be at least the first-response target (in minutes).
@@ -294,18 +307,23 @@ export function TicketsSlaTab() {
             }
         }
 
+        const goalErr = !Number.isInteger(goal) || goal < 1 || goal > 100 ? t('set_sla_err_goal') : '';
+
         setRespError(respErr);
+        setGoalError(goalErr);
         setErrors(next);
         setReqErrors(reqNext);
         setWorkErrors(workNext);
         setHoursError(windowErr);
-        if (respErr || Object.keys(next).length > 0 || Object.keys(reqNext).length > 0 || Object.keys(workNext).length > 0 || windowErr) return;
+        if (respErr || goalErr || Object.keys(next).length > 0 || Object.keys(reqNext).length > 0 || Object.keys(workNext).length > 0 || windowErr)
+            return;
         update.mutate(
             {
                 ticket_sla: draft,
                 ticket_sla_request: reqTargets,
                 ticket_sla_work_class: workTargets,
                 ticket_sla_response: respTarget,
+                ticket_sla_goal: goal,
                 ticket_sla_hours: hours,
             },
             { onSuccess: () => setSaved(true) },
@@ -348,6 +366,33 @@ export function TicketsSlaTab() {
                     <Info className="h-4 w-4 shrink-0" />
                     <span>{t('set_sla_response_note')}</span>
                 </div>
+            </div>
+
+            {/* The goal the reports hold the met-rate against — how many cases should make it. */}
+            <div className="border-border mb-6 border-t pt-5">
+                <h3 className="text-sm font-semibold">{t('set_sla_goal')}</h3>
+                <p className="text-muted-foreground mt-0.5 mb-2.5 text-xs">{t('set_sla_goal_help')}</p>
+                <div className="flex items-center gap-2">
+                    <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={Number.isFinite(goal) ? goal : ''}
+                        onChange={(e) => changeGoal(e.target.valueAsNumber)}
+                        aria-invalid={!!goalError}
+                        className={cn(
+                            'h-9 w-24 font-mono',
+                            goalError && 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive/25',
+                        )}
+                    />
+                    <span className="text-sm">%</span>
+                </div>
+                {goalError && (
+                    <p className="text-destructive mt-1.5 flex items-center gap-1.5 text-xs">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {goalError}
+                    </p>
+                )}
             </div>
 
             {/* Resolution targets — its own section so the two goals read separately. */}
