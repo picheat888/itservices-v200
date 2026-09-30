@@ -193,6 +193,7 @@ export const permission: Dict = {
     'perm_desc_stock.view_count': '🔔 ต้องเปิดถึงจะได้รับแจ้งเตือนการนับสต็อกที่ค้าง (กระดิ่ง)',
     'perm_act_stock.view_events': 'การเคลื่อนไหว',
     'perm_act_stock.manage_items': 'จัดการรายการสินค้า (SKU, Min/Max)',
+    'perm_act_stock.delete': 'ลบรายการสินค้า',
     'perm_act_stock.receive': 'รับเข้าคลัง',
     'perm_act_stock.return': 'รับคืนพัสดุ',
     'perm_act_stock.transfer': 'ย้ายระหว่างคลัง',

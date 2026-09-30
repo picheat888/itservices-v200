@@ -75,6 +75,7 @@ const LIVE = new Set<string>([
     'stock.view_count',
     'stock.view_events',
     'stock.manage_items',
+    'stock.delete',
     'stock.receive',
     'stock.return',
     'stock.transfer',
