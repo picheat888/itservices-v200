@@ -31,6 +31,7 @@ class TabularReportController extends Controller
         $filters = $request->filters();
         $query = $report->query($request->user(), $filters);
         $page = (clone $query)->paginate((int) ($request->validated('per_page') ?? 20));
+        $report->hydrateRows($page->getCollection(), $request->user(), $filters);
 
         return response()->json([
             'data' => array_map(fn ($model) => $report->row($model), $page->items()),

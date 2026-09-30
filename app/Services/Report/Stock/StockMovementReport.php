@@ -11,7 +11,6 @@ use App\Services\Report\Tabular\ReportFilter;
 use App\Services\Report\Tabular\ReportSummary;
 use App\Services\Report\Tabular\TabularReport;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -47,7 +46,7 @@ class StockMovementReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        [$from, $to] = $this->range($filters);
+        [$from, $to] = $this->dayRange($filters);
 
         return StockMovement::query()
             ->with(['item' => fn ($q) => $q->select('id', 'sku', 'name', 'category_id', 'unit_id')->with(self::ITEM_RELATIONS)])
@@ -97,19 +96,5 @@ class StockMovementReport extends TabularReport
             ReportSummary::make('qty_out', 'จำนวนออก', (int) $bare()->whereNotIn('type', [...StockMovement::INBOUND, 'transfer'])->sum('qty'), 'amber'),
             ReportSummary::make('receive_value', 'มูลค่ารับเข้า', round((float) $bare()->where('type', 'receive')->sum(DB::raw('qty * COALESCE(unit_cost, 0)')), 2), format: 'money'),
         ];
-    }
-
-    /**
-     * The filter's date range as whole days; a reversed range is read the right way round.
-     *
-     * @param  array<string, mixed>  $filters
-     * @return array{0: Carbon, 1: Carbon}
-     */
-    private function range(array $filters): array
-    {
-        $from = Carbon::parse($filters['from'])->startOfDay();
-        $to = Carbon::parse($filters['to'])->endOfDay();
-
-        return $from->lte($to) ? [$from, $to] : [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
     }
 }

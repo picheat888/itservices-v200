@@ -50,7 +50,7 @@ class RequestSummaryReport extends TabularReport
 
     public function query(User $viewer, array $filters): Builder
     {
-        [$from, $to] = $this->dateRange($filters);
+        [$from, $to] = $this->dayRange($filters);
 
         // Status values are enum constants, never reader input, so they are inlined.
         $counts = collect(self::COUNTS)

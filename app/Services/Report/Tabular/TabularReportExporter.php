@@ -28,10 +28,14 @@ class TabularReportExporter
         $filename = DocumentName::make('Report', [str_replace('.', '-', $report->key())], $format);
 
         if ($format === 'xlsx') {
-            return Excel::download(new TabularReportExport($report, $summary, (clone $query)->get()), $filename);
+            $rows = (clone $query)->get();
+            $report->hydrateRows($rows, $viewer, $filters);
+
+            return Excel::download(new TabularReportExport($report, $summary, $rows), $filename);
         }
 
         $rows = (clone $query)->limit(self::PDF_ROW_LIMIT)->get();
+        $report->hydrateRows($rows, $viewer, $filters);
         // Counted off the query, not the `total` tile: a grouped report's rows (one per request
         // type, per approver) are not what its headline total counts.
         $total = (clone $query)->toBase()->getCountForPagination();

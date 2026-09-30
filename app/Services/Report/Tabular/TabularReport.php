@@ -5,6 +5,8 @@ namespace App\Services\Report\Tabular;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * A table-style report of the Report Center, declared once: its filters, its query, its
@@ -47,6 +49,30 @@ abstract class TabularReport
     {
         return [ReportSummary::make('total', 'ทั้งหมด', (clone $query)->count())];
     }
+
+    /**
+     * A pair of date filters as whole days; a reversed range is read the right way round.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    protected function dayRange(array $filters, string $fromKey = 'from', string $toKey = 'to'): array
+    {
+        $from = Carbon::parse($filters[$fromKey])->startOfDay();
+        $to = Carbon::parse($filters[$toKey])->endOfDay();
+
+        return $from->lte($to) ? [$from, $to] : [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+    }
+
+    /**
+     * Batch-load whatever the columns need beyond the query itself, for the rows about to be
+     * shown or exported (a median per row, names looked up by code) — one pass over the
+     * set instead of a query per row. Called before any row() / export mapping. Default: nothing.
+     *
+     * @param  Collection<int, Model>  $rows
+     * @param  array<string, mixed>  $filters
+     */
+    public function hydrateRows(Collection $rows, User $viewer, array $filters): void {}
 
     public function pdfOrientation(): string
     {

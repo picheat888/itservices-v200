@@ -168,13 +168,7 @@ class TicketOverviewReportService
     /** Nearest-rank percentile of an ascending list; null when empty. */
     private function percentile(Collection $sorted, float $p): ?float
     {
-        if ($sorted->isEmpty()) {
-            return null;
-        }
-
-        $index = max(0, (int) ceil($p * $sorted->count()) - 1);
-
-        return round((float) $sorted[$index], 1);
+        return TicketMetrics::percentile($sorted, $p);
     }
 
     /**
