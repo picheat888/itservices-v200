@@ -165,7 +165,18 @@ function App() {
                         <Route
                             path="reports"
                             element={
-                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events']}>
+                                <RequirePermission
+                                    anyOf={[
+                                        'tickets.view_all',
+                                        'assets.view',
+                                        'contracts.view',
+                                        'stock.view',
+                                        'stock.view_events',
+                                        'requests.view_all',
+                                        'employees.view',
+                                        'access.software_view',
+                                    ]}
+                                >
                                     <ReportsPage />
                                 </RequirePermission>
                             }
@@ -181,7 +192,18 @@ function App() {
                         <Route
                             path="reports/r/:key"
                             element={
-                                <RequirePermission anyOf={['tickets.view_all', 'assets.view', 'contracts.view', 'stock.view', 'stock.view_events']}>
+                                <RequirePermission
+                                    anyOf={[
+                                        'tickets.view_all',
+                                        'assets.view',
+                                        'contracts.view',
+                                        'stock.view',
+                                        'stock.view_events',
+                                        'requests.view_all',
+                                        'employees.view',
+                                        'access.software_view',
+                                    ]}
+                                >
                                     <TabularReportPage />
                                 </RequirePermission>
                             }

@@ -11,7 +11,7 @@ export type ReportKind = 'custom' | 'tabular';
 // Widened to `string` because the catalogue now also carries tabular report keys
 // (e.g. 'contracts.expiring', 'assets.register', 'assets.warranty_expiring').
 export type ReportKey = string;
-export type ReportDomain = 'tickets' | 'assets' | 'contracts' | 'stock';
+export type ReportDomain = 'tickets' | 'assets' | 'contracts' | 'stock' | 'requests' | 'employees' | 'access';
 export type ExportFormat = 'xlsx' | 'pdf';
 
 export interface ReportDefinition {

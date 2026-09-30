@@ -63,6 +63,18 @@ class ReportCatalogueTest extends TestCase
         $this->assertSame(['stock.movements'], $keysFor(['stock.view_events']));
     }
 
+    public function test_request_employee_and_access_reports_follow_their_module_permission(): void
+    {
+        $keysFor = fn (array $permissions) => array_column(
+            $this->actingAs($this->userWith($permissions))->getJson('/api/reports')->assertOk()->json('data'), 'key');
+
+        $this->assertSame(['requests.summary', 'requests.approval_time', 'requests.it_pending'], $keysFor(['requests.view_all']));
+        $this->assertSame(['employees.joiners_leavers', 'employees.leaver_assets'], $keysFor(['employees.view']));
+        $this->assertSame(['access.software_licenses'], $keysFor(['access.software_view']));
+        // Submitting or completing requests is not reading them all.
+        $this->assertSame([], $keysFor(['requests.submit', 'requests.complete']));
+    }
+
     public function test_view_all_without_resolve_is_not_enough(): void
     {
         $user = $this->userWith(['tickets.view_all']);

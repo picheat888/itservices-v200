@@ -3,10 +3,16 @@
 namespace App\Support;
 
 use App\Models\User;
+use App\Services\Report\Access\SoftwareLicenseReport;
 use App\Services\Report\Asset\AssetRegisterReport;
 use App\Services\Report\Asset\WarrantyExpiringReport;
 use App\Services\Report\Contract\ContractExpiringReport;
 use App\Services\Report\Contract\ContractMonthlyCostReport;
+use App\Services\Report\Employee\JoinersLeaversReport;
+use App\Services\Report\Employee\LeaverAssetsReport;
+use App\Services\Report\Request\ApprovalTimeReport;
+use App\Services\Report\Request\ItPendingRequestReport;
+use App\Services\Report\Request\RequestSummaryReport;
 use App\Services\Report\Stock\StockBelowMinReport;
 use App\Services\Report\Stock\StockMovementReport;
 use App\Services\Report\Stock\StockValuationReport;
@@ -41,6 +47,18 @@ class ReportCatalogue
     public const STOCK_BELOW_MIN = 'stock.below_min';
 
     public const STOCK_VALUATION = 'stock.valuation';
+
+    public const REQUESTS_SUMMARY = 'requests.summary';
+
+    public const REQUESTS_APPROVAL_TIME = 'requests.approval_time';
+
+    public const REQUESTS_IT_PENDING = 'requests.it_pending';
+
+    public const EMPLOYEES_JOINERS_LEAVERS = 'employees.joiners_leavers';
+
+    public const EMPLOYEES_LEAVER_ASSETS = 'employees.leaver_assets';
+
+    public const ACCESS_SOFTWARE_LICENSES = 'access.software_licenses';
 
     /**
      * @return array<string, array{domain: string, kind: string, class?: class-string<TabularReport>, requires: list<string>, formats: list<string>}>
@@ -104,6 +122,50 @@ class ReportCatalogue
                 'kind' => 'tabular',
                 'class' => StockValuationReport::class,
                 'requires' => ['stock.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::REQUESTS_SUMMARY => [
+                'domain' => 'requests',
+                'kind' => 'tabular',
+                'class' => RequestSummaryReport::class,
+                'requires' => ['requests.view_all'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::REQUESTS_APPROVAL_TIME => [
+                'domain' => 'requests',
+                'kind' => 'tabular',
+                'class' => ApprovalTimeReport::class,
+                'requires' => ['requests.view_all'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::REQUESTS_IT_PENDING => [
+                'domain' => 'requests',
+                'kind' => 'tabular',
+                'class' => ItPendingRequestReport::class,
+                'requires' => ['requests.view_all'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            // Employee reports follow the Employee detail's own-module "peek": employees.view
+            // is enough to see what a person holds, without assets.view.
+            self::EMPLOYEES_JOINERS_LEAVERS => [
+                'domain' => 'employees',
+                'kind' => 'tabular',
+                'class' => JoinersLeaversReport::class,
+                'requires' => ['employees.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::EMPLOYEES_LEAVER_ASSETS => [
+                'domain' => 'employees',
+                'kind' => 'tabular',
+                'class' => LeaverAssetsReport::class,
+                'requires' => ['employees.view'],
+                'formats' => ['xlsx', 'pdf'],
+            ],
+            self::ACCESS_SOFTWARE_LICENSES => [
+                'domain' => 'access',
+                'kind' => 'tabular',
+                'class' => SoftwareLicenseReport::class,
+                'requires' => ['access.software_view'],
                 'formats' => ['xlsx', 'pdf'],
             ],
         ];
