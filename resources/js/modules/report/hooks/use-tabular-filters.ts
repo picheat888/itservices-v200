@@ -51,12 +51,25 @@ function load(definition: TabularDefinition): TabularFilters {
     }
 }
 
+/**
+ * What gets remembered. A date filter still on its default ("today", "start of this month")
+ * is left out so it rolls forward with the calendar on the next visit instead of freezing
+ * on the day it was first opened; a date the reader picked is kept.
+ */
+function toStore(definition: TabularDefinition, filters: TabularFilters): TabularFilters {
+    const stored: TabularFilters = { ...filters };
+    for (const filter of definition.filters) {
+        if (filter.type === 'date' && stored[filter.name] === filter.default) delete stored[filter.name];
+    }
+    return stored;
+}
+
 export function useTabularFilters(definition: TabularDefinition) {
     const [filters, setFilters] = useState<TabularFilters>(() => load(definition));
 
     useEffect(() => {
         try {
-            localStorage.setItem(`report.${definition.key}.filters`, JSON.stringify(filters));
+            localStorage.setItem(`report.${definition.key}.filters`, JSON.stringify(toStore(definition, filters)));
         } catch {
             // Storage blocked (private window) — filters still work for this visit.
         }
