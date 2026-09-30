@@ -122,10 +122,12 @@ class SidebarBadgeTest extends TestCase
         $user = $this->seedWorkForEveryBadge();
 
         // A request whose current step is this user's to decide. This count had no test,
-        // which is how the sidebar dropping it went unnoticed for so long.
+        // which is how the sidebar dropping it went unnoticed for so long. Somebody else's
+        // request: nobody decides their own (RequestApproval::scopeActionableBy).
+        $asker = Employee::create(['first_name' => 'Asker', 'last_name' => 'Badge', 'status' => 'active']);
         $request = ServiceRequest::create([
-            'type' => 'computer', 'employee_id' => $user->employee_id, 'user_id' => $user->id,
-            'requester_name' => 'Badge Owner', 'title' => 'Laptop', 'reason' => 'Testing', 'status' => 'pending',
+            'type' => 'computer', 'employee_id' => $asker->id,
+            'requester_name' => 'Asker Badge', 'title' => 'Laptop', 'reason' => 'Testing', 'status' => 'pending',
         ]);
         $request->approvals()->create([
             'position' => 1, 'actor_type' => 'chain', 'kind' => 'approval', 'label' => 'Manager',

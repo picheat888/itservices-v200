@@ -251,6 +251,42 @@ class RequestDepartmentStepTest extends TestCase
         $this->assertSame(ApprovalSkipReason::NoDepartmentApprover, $row->skip_reason);
     }
 
+    /**
+     * The shape the skip above does not cover: the requester holds an accepted position in
+     * the department AND somebody else does too, so the step stays open — to the group. The
+     * requester must still not be able to sign it, find it as "waiting on me", or be belled.
+     */
+    public function test_a_requester_inside_the_department_group_cannot_sign_their_own_request(): void
+    {
+        $this->requester->update(['department_id' => $this->qc->id, 'position_id' => $this->positionId('Manager')]);
+        $colleague = $this->staffIn($this->qc, 'Asst. Manager', 'QcAsst');
+        $this->staffIn($this->safety, 'Supervisor', 'SeSup');
+        $request = $this->submitCctv();
+        $this->actingAs($this->userFor($this->sup))
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+
+        $row = $request->approvals()->where('position', 2)->firstOrFail();
+        $this->assertTrue($row->isOpenToDepartment());
+        $this->assertSame(ApprovalStatus::Current, $row->status);
+
+        $this->actingAs($this->requesterUser)
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertForbidden();
+        $this->actingAs($this->requesterUser)
+            ->postJson("/api/service-requests/{$request->id}/reject", ['note' => 'I would rather not wait.'])->assertForbidden();
+        $this->assertSame([], array_column(
+            $this->actingAs($this->requesterUser)->getJson('/api/service-requests?scope=approvals')->assertOk()->json('data'), 'id'));
+        $this->assertFalse($this->actingAs($this->requesterUser)->getJson("/api/service-requests/{$request->id}")->assertOk()->json('data.can_approve'));
+        $this->assertFalse($row->fresh()->acceptsEmployee($this->requester->fresh()));
+        // Only the colleague was belled that the step waits on them.
+        $waiting = fn (User $u) => $u->notifications()->get()->filter(fn ($n) => ($n->data['subtype'] ?? null) === 'waiting')->count();
+        $this->assertSame(0, $waiting($this->requesterUser));
+        $this->assertSame(1, $waiting(User::where('employee_id', $colleague->id)->firstOrFail()));
+
+        // The colleague still can.
+        $this->actingAs(User::where('employee_id', $colleague->id)->firstOrFail())
+            ->postJson("/api/service-requests/{$request->id}/approve")->assertOk();
+    }
+
     public function test_editing_the_workflow_does_not_change_a_request_already_in_flight(): void
     {
         $this->staffIn($this->qc, 'Manager', 'QcMgr');
