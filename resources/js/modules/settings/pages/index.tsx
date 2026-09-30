@@ -69,6 +69,7 @@ import {
 } from '../hooks/use-master-data';
 import {
     useResetLogo,
+    useSaveFailed,
     useSettings,
     useUpdateAssetColors,
     useUpdateBranding,
@@ -896,12 +897,14 @@ function EmailTab() {
         setHasPassword(data.has_password);
     }, [data]);
 
+    const failed = useSaveFailed();
     const update = useMutation({
         mutationFn: (payload: MailSettingsPayload) => settingsApi.updateMail(payload),
         onSuccess: (d) => {
             qc.setQueryData(MAIL_KEY, d);
             setSaved(true);
         },
+        onError: failed,
     });
 
     const test = useMutation({
@@ -1093,12 +1096,14 @@ function SecurityTab() {
         if (data) setForm(data);
     }, [data]);
 
+    const failed = useSaveFailed();
     const update = useMutation({
         mutationFn: (payload: SecuritySettings) => settingsApi.updateSecurity(payload),
         onSuccess: (d) => {
             qc.setQueryData(SECURITY_KEY, d);
             setSaved(true);
         },
+        onError: failed,
     });
 
     const setVal = (k: keyof SecuritySettings, v: number) => {

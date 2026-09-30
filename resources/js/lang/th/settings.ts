@@ -154,6 +154,8 @@ export const settings: Dict = {
     set_country: 'ประเทศ',
     set_currency: 'สกุลเงิน',
     settings_saved: 'บันทึกแล้ว',
+    settings_save_failed: 'ระบบไม่รับค่าที่บันทึก กรุณาตรวจสอบอีกครั้ง',
+    settings_save_failed_title: 'บันทึกไม่สำเร็จ',
     settings_coming_soon: 'ส่วนนี้จะพัฒนาพร้อมโมดูลที่เกี่ยวข้องในเฟสถัดไป',
     settings_super_only: 'เฉพาะผู้ดูแลระบบสูงสุดเท่านั้นที่แก้ไขการตั้งค่านี้ได้',
     set_sla_title: 'ข้อตกลงระดับการให้บริการ (SLA)',

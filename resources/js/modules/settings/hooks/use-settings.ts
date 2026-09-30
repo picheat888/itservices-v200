@@ -1,4 +1,6 @@
+import { useT } from '@/lang';
 import { currencySymbol } from '@/shared/lib/currency';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
@@ -97,39 +99,62 @@ function useSyncStore() {
     };
 }
 
+/**
+ * A refused Settings save used to say nothing (and the button still flashed "Saved"). A 4xx
+ * — the server turning the values down — now toasts its first validation message, else a
+ * generic line. Network drops and 5xx are left to the global HTTP handler, which already
+ * toasts those, so nothing reports twice.
+ */
+export function useSaveFailed() {
+    const t = useT();
+    return (error: unknown) => {
+        const res = (error as { response?: { status?: number; data?: { message?: string; errors?: Record<string, string[]> } } })?.response;
+        if (!res?.status || res.status >= 500) return;
+        const first = Object.values(res.data?.errors ?? {})[0]?.[0];
+        useToastStore.getState().push(first ?? t('settings_save_failed'), 'error', t('settings_save_failed_title'));
+    };
+}
+
 export function useUpdateCompany() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: CompanyPayload) => settingsApi.updateCompany(payload), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: CompanyPayload) => settingsApi.updateCompany(payload), onSuccess: sync, onError: failed });
 }
 
 export function useUpdateBranding() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: BrandingPayload) => settingsApi.updateBranding(payload), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: BrandingPayload) => settingsApi.updateBranding(payload), onSuccess: sync, onError: failed });
 }
 
 export function useUpdateDisplay() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: DisplayPayload) => settingsApi.updateDisplay(payload), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: DisplayPayload) => settingsApi.updateDisplay(payload), onSuccess: sync, onError: failed });
 }
 
 /** Persists the system-wide asset status badge colors (Settings -> Assets). */
 export function useUpdateAssetColors() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: AssetColorsPayload) => settingsApi.updateAssetColors(payload), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: AssetColorsPayload) => settingsApi.updateAssetColors(payload), onSuccess: sync, onError: failed });
 }
 
 /** Persists the per-priority ticket SLA targets (Settings -> Tickets). */
 export function useUpdateTicketSla() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (payload: TicketSlaPayload) => settingsApi.updateTicketSla(payload), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (payload: TicketSlaPayload) => settingsApi.updateTicketSla(payload), onSuccess: sync, onError: failed });
 }
 
 export function useUploadLogo() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: (file: File) => settingsApi.uploadLogo(file), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: (file: File) => settingsApi.uploadLogo(file), onSuccess: sync, onError: failed });
 }
 
 export function useResetLogo() {
     const sync = useSyncStore();
-    return useMutation({ mutationFn: () => settingsApi.resetLogo(), onSuccess: sync });
+    const failed = useSaveFailed();
+    return useMutation({ mutationFn: () => settingsApi.resetLogo(), onSuccess: sync, onError: failed });
 }
