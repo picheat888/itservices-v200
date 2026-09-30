@@ -3889,3 +3889,13 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 เพิ่มเทสต์ที่ fail ก่อนแก้ทุกข้อ (RequestDepartmentStep, RequestWorkflow, EmployeePermissionGating, GuestAccess, AssetApi, StockItem, StockWorkflow, StockCount, TicketApi, RequestLocale) · ชุดเต็ม **1508 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน · ตรวจบนเบราว์เซอร์: ส่วนท้าย sidebar ยังแสดงชื่อบริษัทหลังเข้าระบบ (settings เต็มเมื่อมี session)
+
+## เก็บเรื่องเล็กที่พักไว้ของโมดูลรายงาน (2026-09-30)
+
+- **index `tickets.created_at`** — รายงาน Ticket ทุกตัวกรองตามวันที่เปิดเคส · migration `2026_09_30_155555` รันบน DB จริงแล้ว (index อย่างเดียว)
+- **ชื่อไทยของผู้แจ้ง** — Excel ของรายงาน Ticket & SLA ใช้ชื่อไทยก่อนถ้ามี · API แถวส่ง `requester_name_th` · ตารางบนหน้าเพิ่มคอลัมน์ "ผู้แจ้ง" ตามภาษาที่เลือก (PDF ไม่มีคอลัมน์ผู้แจ้งมาแต่เดิม คงไว้)
+- **เป้า SLA** — เลิกใช้ค่าคงที่ 90% ใน `TicketOverviewReportService` · ตั้งได้ที่ Settings → SLA (`ticket_sla_goal`, `TicketSla::goalPercent()`, ค่าเริ่มต้น 90, 1–100) · เส้นเป้า / badge / แถวสีแดงในรายงานใช้ค่านี้
+
+### Tests / Verification
+
+`TicketOverviewReportTest` (+2: index, ชื่อสองภาษา) · `TicketOverviewExportTest` (+1: Excel ชื่อไทย) · `MailAndSlaValidationTest` (+2: ตั้งเป้าแล้วรายงานตาม, รับเฉพาะ 1–100) · ชุดเต็ม **1513 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน
