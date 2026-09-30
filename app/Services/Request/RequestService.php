@@ -420,6 +420,14 @@ class RequestService
                 'last_activity_at' => now(),
             ]);
 
+            // Nothing waits on anybody now. Left current, the step kept the request in the
+            // approver's "waiting on me" list, card and badge for good; back to waiting it
+            // reads like the steps after it — never reached. $wasCurrent keeps the old
+            // status in memory for the notification below.
+            $fresh->approvals()
+                ->where('status', ApprovalStatus::Current->value)
+                ->update(['status' => ApprovalStatus::Waiting->value]);
+
             return [$fresh, $wasCurrent];
         });
 

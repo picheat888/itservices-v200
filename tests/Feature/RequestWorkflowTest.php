@@ -453,6 +453,25 @@ class RequestWorkflowTest extends TestCase
         $this->actingAs($this->supUser)->postJson("/api/service-requests/{$request->id}/approve")->assertUnprocessable();
     }
 
+    /**
+     * A cancelled request waits on nobody. Its current step used to stay current, so it sat
+     * in the approver's "waiting on me" list, card and sidebar badge for good.
+     */
+    public function test_a_cancelled_request_leaves_the_approvers_queue(): void
+    {
+        $request = $this->submitComputer();
+        $waitingOnSup = fn () => array_column($this->actingAs($this->supUser)->getJson('/api/service-requests?scope=approvals')->assertOk()->json('data'), 'id');
+        $this->assertSame([$request->id], $waitingOnSup());
+
+        $this->actingAs($this->requester)->postJson("/api/service-requests/{$request->id}/cancel")->assertOk();
+
+        $this->assertSame([], $waitingOnSup());
+        $this->assertSame(0, $this->actingAs($this->supUser)->getJson('/api/sidebar-badges')->assertOk()->json('data.requests'));
+        $this->assertSame(0, $request->approvals()->where('status', ApprovalStatus::Current->value)->count());
+        // The step it was waiting on reads as never reached, like the steps after it.
+        $this->assertSame(ApprovalStatus::Waiting, $request->approvals()->orderBy('position')->first()->status);
+    }
+
     public function test_editing_the_workflow_never_touches_an_inflight_request(): void
     {
         $request = $this->submitComputer();

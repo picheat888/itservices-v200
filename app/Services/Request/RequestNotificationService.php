@@ -163,13 +163,16 @@ class RequestNotificationService
     /** Replace the waiting approver's action bell with a cancellation notice. */
     public function cancelled(ServiceRequest $request, ?RequestApproval $wasCurrent): void
     {
-        $approver = $this->approverUser($wasCurrent);
-        if ($approver === null) {
+        // Whoever the step waited on hears that it no longer does — the whole group when it
+        // waited on one, exactly as notifyApprover told them all it was waiting.
+        $group = $this->groupApprovers($wasCurrent);
+        $recipients = $group->isNotEmpty() ? $group : collect([$this->approverUser($wasCurrent)])->filter();
+        if ($recipients->isEmpty()) {
             return;
         }
 
         $this->sendBell(
-            collect([$approver]),
+            $recipients,
             new RequestWorkflowNotification($request, 'cancelled', $wasCurrent?->label, $request->requester_name),
             ['service_request_id' => $request->id],
         );
