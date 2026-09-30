@@ -50,6 +50,25 @@ class MasterDataSeedTest extends TestCase
         }
     }
 
+    /** What an administrator changed in Settings survives a re-seed — firstOrCreate, not updateOrCreate. */
+    public function test_a_re_seed_keeps_what_an_administrator_changed(): void
+    {
+        $this->seed(MasterDataSeeder::class);
+        Brand::where('name', 'Dell')->update(['description' => 'Our main laptop vendor']);
+        Category::where('name', 'Laptop')->update(['name_th' => 'โน้ตบุ๊ก', 'icon' => 'Monitor', 'description' => 'Ours']);
+        Unit::where('name', 'box')->update(['description' => 'Carton']);
+        Warehouse::where('name', 'คลังโรงงาน 1')->update(['description' => 'Main store']);
+        WarrantyType::where('name', 'Lifetime')->update(['description' => 'Vendor lifetime']);
+
+        $this->seed(MasterDataSeeder::class);
+
+        $this->assertSame('Our main laptop vendor', Brand::where('name', 'Dell')->value('description'));
+        $this->assertSame(['โน้ตบุ๊ก', 'Monitor', 'Ours'], array_values(Category::where('name', 'Laptop')->first(['name_th', 'icon', 'description'])->only(['name_th', 'icon', 'description'])));
+        $this->assertSame('Carton', Unit::where('name', 'box')->value('description'));
+        $this->assertSame('Main store', Warehouse::where('name', 'คลังโรงงาน 1')->value('description'));
+        $this->assertSame('Vendor lifetime', WarrantyType::where('name', 'Lifetime')->value('description'));
+    }
+
     /**
      * Categories are shown in the reader's language: `name` is read for English and
      * `name_th` for Thai (asset/pages/index.tsx). A category missing either half
