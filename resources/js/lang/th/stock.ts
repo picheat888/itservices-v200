@@ -273,6 +273,7 @@ export const stock: Dict = {
     stock_refusal_count_closed: 'รอบนับนี้ปิดไปแล้ว',
     stock_refusal_count_serial_needs_auto: 'รอบนับที่มีรายการเก็บ Serial ต้องยืนยันด้วยโหมด Auto',
     stock_refusal_count_serial_over: 'จำนวนที่นับของ {sku} มากกว่า Serial ที่มีในระบบ',
+    stock_refusal_count_needs_warehouse: '{sku} มีของอยู่หลายคลัง ระบบไม่รู้ว่าควรปรับยอดที่คลังไหน กรุณาเปิดรอบนับแยกตามคลัง',
     stock_refusal_count_serial_missing_mismatch: 'กรุณาเลือก Serial ที่หายของ {sku} ให้ครบ {need} รายการพอดี',
     stock_refusal_count_not_draft: 'ยกเลิกได้เฉพาะรอบนับที่ยังเป็นฉบับร่าง',
     stock_refusal_item_has_stock: 'ลบไม่ได้ รายการนี้ยังมีคงเหลือหรือมูลค่าอยู่',
