@@ -3584,6 +3584,34 @@ tsc 0 error · build ผ่าน · pint passed · **suite = 1,246 passed / 5,3
 
 `RequestReportsTest` (8) + `EmployeeReportsTest` (5) + `SoftwareLicenseReportTest` (4) ใหม่ · `ReportCatalogueTest` เพิ่มเคสสิทธิ์ 3 โดเมน · `tests/Feature/Report` + `SidebarRouteGateTest` = **71 passed** · รันทั้ง 6 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน · คีย์ i18n ที่ 6 รายงานอ้างถึง (132 คีย์) มีครบ en/th
 
+## Report Module — Phase 4b: 5 รายงานสุดท้าย ครบ 19 ตัวตาม mockup (2026-09-30)
+
+เพิ่ม 5 รายงานแบบตาราง (Ticket 3, ทรัพย์สิน 2) — **ครบ 19 จาก 19 รายงาน** ใน mockup · ไม่มี route/controller/migration ใหม่ · เมนู/route gate ไม่ต้องแก้ (`tickets.view_all`, `assets.view` อยู่ใน `anyOf` แล้ว)
+
+| รายงาน | key | 1 แถว = | สิทธิ์ |
+|---|---|---|---|
+| **Ticket ตามแผนกและหมวด** | `tickets.by_department` | แผนกผู้แจ้ง: ทั้งหมด / แยก 6 หมวด / ยังไม่ปิด / % ตาม SLA · ช่วงวันที่เปิด (ค่าเริ่มต้น = เดือนนี้), ความสำคัญ | `tickets.view_all` + `tickets.resolve` |
+| **ผลงานเจ้าหน้าที่ IT** | `tickets.staff_performance` | ผู้รับผิดชอบ: ปิดสำเร็จ / ยกเลิก (ตาม `resolved_at` ในช่วง) / มัธยฐานชั่วโมง / % ตาม SLA / อยู่ในมือตอนนี้ / ในมือที่เกิน SLA · ช่วงวันที่, หมวด | `tickets.view_all` + `tickets.resolve` |
+| **Ticket ค้างและเกิน SLA** | `tickets.backlog` | Ticket ที่ยัง open / in progress เก่าสุดก่อน: อายุ (วัน), ครบกำหนด SLA, เหลือกี่ชั่วโมง (ติดลบ = เกินแล้ว) · กรอง SLA (เกิน/ยังไม่เกิน), หมวด, ความสำคัญ, ค้นหา | `tickets.view_all` + `tickets.resolve` |
+| **ทรัพย์สินตามสถานะและแผนก** | `assets.by_status_department` | แผนกของผู้ถือ: ทั้งหมด + จำนวนแต่ละสถานะ 6 แบบ · ทรัพย์สินที่ไม่มีพนักงานถือ (พร้อมส่งมอบ / Common / ตัดจำหน่าย) รวมเป็นแถว "ไม่ระบุแผนก" · กรองหมวด, ที่มา | `assets.view` |
+| **ประวัติโอนย้ายและรับคืน** | `assets.transfer_history` | แถวของ `asset_transfers` ในช่วงวันที่ (ค่าเริ่มต้น = เดือนนี้) ใหม่สุดก่อน: ส่งมอบ / รับคืน / เรียกคืน / ย้ายที่ตั้ง · จาก/ไปยังแสดงเป็น "ชื่อ (รหัส)" เมื่อเป็นรหัสพนักงาน | `assets.view` |
+
+**กติกาที่ตัดสินใจไว้**
+- รายงาน Ticket ทั้ง 3 ตัวมีข้อมูล SLA จึงขอสิทธิ์เดียวกับ Ticket & SLA overview และนับเฉพาะหมวดที่ผู้อ่านมี `tickets.level_*` (ใช้ `Permissions::ticketLevelsFor` ตัวเดียวกัน) · หมวดที่ไม่มีสิทธิ์ในรายงานตามแผนกแสดง "—" ไม่ใช่ 0 (0 จะอ่านว่า "ไม่มีเลย")
+- "เกิน SLA" ของ Ticket ที่ยังไม่ปิดใช้กฎเดียวกับ `TicketMetrics::activeDue` — รอรับเรื่องวัดกับกำหนดตอบกลับ, รับแล้ววัดกับกำหนดแก้ไข · "ตาม SLA" ของที่ปิดแล้ว = `resolved_at <= sla_resolve_due_at` เหมือน `slaState`
+- มัธยฐานชั่วโมงใช้ nearest-rank แบบเดียวกับ overview — ย้ายสูตรไปที่ `TicketMetrics::percentile()` ให้ทั้งสองรายงานเรียกตัวเดียวกัน ตัวเลขจึงไม่มีวันต่างกัน
+
+**แก้ใน engine**
+- `TabularReport::hydrateRows()` (ค่าเริ่มต้นไม่ทำอะไร) — engine เรียกก่อน map แถวทั้งหน้าเว็บ / Excel / PDF ให้รายงานโหลดข้อมูลเพิ่มครั้งเดียวต่อชุดแถว: ผลงานเจ้าหน้าที่ใช้คิดมัธยฐาน (GROUP BY ทำ median แบบข้าม DB ไม่ได้), ประวัติโอนย้ายใช้ดึงชื่อจากรหัสพนักงาน (`AssetTransfer::employeeNamesFor`)
+- `TabularReport::dayRange()` — ตัวแปลงช่วงวันที่ from/to (กลับด้านก็อ่านถูก) รวมไว้ที่ base class แทนสำเนาใน `StockMovementReport` และ `RequestLabels`
+- trait ใหม่ `App\Services\Report\Ticket\TicketReportScope` — scope ตาม level, ป้ายหมวด/ความสำคัญ/สถานะ (คีย์ของโมดูล Ticket + `TicketLabels` ภาษาไทย), SQL ของ "ตาม SLA" / "เกิน SLA"
+
+### Tests / Verification
+
+`TicketTabularReportsTest` (8) + `AssetActivityReportsTest` (5) ใหม่ · `ReportCatalogueTest` เพิ่มเคส "มีสิทธิ์ครบเห็นครบ 19 รายงาน" · `AssetReportsTest` ปรับรายการรายงานทรัพย์สินเป็น 4 ตัว · `tests/Feature/Report` + `SidebarRouteGateTest` = **85 passed** · รันทั้ง 5 รายงานกับ MariaDB จริง (อ่านอย่างเดียว) ผ่าน — % SLA ของรายงานตามแผนกกับผลงานเจ้าหน้าที่ตรงกัน · tsc + eslint + pint ผ่าน · `npm run build` ผ่าน · คีย์ i18n ที่ 5 รายงานอ้างถึง (98 คีย์) มีครบ en/th
+
+**ค้างไว้ (เฟสถัดไป)** Phase 5 = export แบบคิว + "ไฟล์ Export ของฉัน" + snapshot strip บนหน้า hub + ปักหมุด + column picker · Phase 6 = ส่งรายงานทางอีเมลตามเวลา
+
 ---
 
 ## Asset — ตัดจำหน่ายต้องมีหมายเหตุ (2026-09-25)
