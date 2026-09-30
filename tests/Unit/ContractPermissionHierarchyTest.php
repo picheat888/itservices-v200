@@ -18,9 +18,10 @@ class ContractPermissionHierarchyTest extends TestCase
             $this->assertContains($key, Permissions::all(), "missing {$key}");
         }
         $contractKeys = array_filter(Permissions::all(), fn ($k) => str_starts_with($k, 'contracts.'));
-        $this->assertCount(12, $contractKeys);
+        $this->assertCount(11, $contractKeys);
 
-        // Renew is gone.
+        // Renew is gone, and so is import (it had no route, no label and no place in the hierarchy).
+        $this->assertNotContains('contracts.import', Permissions::all());
         $this->assertNotContains('contracts.renew', Permissions::all());
     }
 

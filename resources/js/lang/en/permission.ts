@@ -91,7 +91,6 @@ export const permission: Dict = {
     perm_mod_permissions: 'Permission',
     perm_mod_notifications: 'Email & Notification',
     perm_mod_settings: 'Setting',
-    perm_mod_reports: 'Reports',
     'perm_act_tickets.module': 'Tickets access',
     'perm_act_tickets.view_dashboard': 'Overview',
     'perm_desc_tickets.view_dashboard': 'See the Tickets Overview tab - inbound / resolved flow, backlog and SLA cards.',
@@ -255,11 +254,6 @@ export const permission: Dict = {
     'perm_desc_notifications.logs': 'Read every send and the reason one was skipped, including the recipient and the message body.',
     'perm_act_system.view_audit': 'View audit log',
     // permission tree — Reports
-    'perm_act_reports.view': 'View reports',
-    'perm_act_reports.run': 'Run reports',
-    'perm_act_reports.export': 'Export data (CSV / XLSX)',
-    'perm_act_reports.schedule': 'Schedule automated runs',
-    'perm_act_reports.custom': 'Create custom report',
     // permission tree — Email Templates
     // permission tree — Settings
     'perm_act_settings.access': 'Settings access',

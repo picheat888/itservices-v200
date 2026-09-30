@@ -47,7 +47,7 @@ class Permissions
             'contracts' => [
                 'module',
                 'view_dashboard', 'view', 'view_lifecycle',
-                'create', 'edit', 'delete', 'import',
+                'create', 'edit', 'delete',
                 'cancel', 'expire', 'reactivate',
                 'alerts',
             ],
