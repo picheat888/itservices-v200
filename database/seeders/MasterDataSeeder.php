@@ -16,7 +16,9 @@ class MasterDataSeeder extends Seeder
      * below say which. Run by hand on a fresh install, never from DatabaseSeeder:
      * this is one company's reference data, not everybody's.
      *
-     * Safe to re-run. Every list matches on its unique `name` and updates in place.
+     * Safe to re-run. Every list matches on its unique `name` with firstOrCreate, so a run
+     * only adds what is missing: a description, Thai name or icon an administrator changed
+     * in Settings keeps their value.
      */
     public function run(): void
     {
@@ -67,7 +69,7 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($brands as $b) {
-            Brand::updateOrCreate(['name' => $b['name']], ['description' => $b['description']]);
+            Brand::firstOrCreate(['name' => $b['name']], ['description' => $b['description']]);
         }
 
         // ── Categories ──────────────────────────────────────────────────────────
@@ -100,7 +102,7 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($categories as $c) {
-            Category::updateOrCreate(
+            Category::firstOrCreate(
                 ['name' => $c['name']],
                 ['name_th' => $c['name_th'], 'icon' => $c['icon'], 'description' => $c['description']],
             );
@@ -114,7 +116,7 @@ class MasterDataSeeder extends Seeder
         ];
 
         foreach ($warehouses as $w) {
-            Warehouse::updateOrCreate(['name' => $w['name']], ['description' => $w['description']]);
+            Warehouse::firstOrCreate(['name' => $w['name']], ['description' => $w['description']]);
         }
 
         // ── Units (Stock module) ──────────────────────────────────────────────────
@@ -132,7 +134,7 @@ class MasterDataSeeder extends Seeder
             ['name' => 'g', 'description' => 'กรัม'],
         ];
         foreach ($units as $u) {
-            Unit::updateOrCreate(['name' => $u['name']], ['description' => $u['description']]);
+            Unit::firstOrCreate(['name' => $u['name']], ['description' => $u['description']]);
         }
 
         // ── Warranty types (Stock module) ─────────────────────────────────────────
@@ -145,7 +147,7 @@ class MasterDataSeeder extends Seeder
             ['name' => 'Lifetime', 'description' => 'รับประกันตลอดอายุการใช้งาน'],
         ];
         foreach ($warrantyTypes as $w) {
-            WarrantyType::updateOrCreate(['name' => $w['name']], ['description' => $w['description']]);
+            WarrantyType::firstOrCreate(['name' => $w['name']], ['description' => $w['description']]);
         }
     }
 }
