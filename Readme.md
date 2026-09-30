@@ -3849,3 +3849,43 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `tests/Feature/Auth/RememberMeTest.php` ใหม่ 7 ข้อ (cookie 7 วัน, session จำว่า remember หรือไม่, remember ไม่โดน idle, กู้จาก cookie = remembered, ไม่ remember ยังหมดอายุ, เปลี่ยนรหัสเอง → token หมุน + session อื่นหาย + cookie เก่าใช้ไม่ได้, แอดมินรีเซ็ต → token หมุน) · Auth + Credentials + Security + PasswordExpiry = **101 passed** · `tsc --noEmit` ผ่าน · pint ผ่าน
+
+---
+
+## แก้บั๊กจากการอ่านโค้ดตอนทำเล่ม Use Case (2026-09-30)
+
+บั๊กที่ agent อ่านโค้ดเจอตอนทำ ITSD-DOC-02 (2026-09-28) — ทุกข้อยืนยันในโค้ดก่อน เขียนเทสต์ที่ fail ก่อนแก้ แล้วค่อยแก้
+
+**ชุด A — คำขอ / สิทธิ์ API**
+- **ผู้ขออนุมัติขั้นของแผนกตัวเองได้** (ขั้นแผนกแบบเลือกตำแหน่ง เมื่อผู้ขออยู่ตำแหน่งนั้นและมีเพื่อนร่วมตำแหน่ง) → `RequestApproval::acceptsEmployee` / `scopeActionableBy` ไม่รับเจ้าของคำขอ และกระดิ่งกลุ่มไม่ส่งถึงเขา
+- **คำขอที่ยกเลิกแล้วยังค้างใน "รออนุมัติจากฉัน"** → `cancel()` คืนขั้นที่รออยู่เป็น waiting · **ยกเลิกคำขอที่รอกลุ่ม ไม่มีใครรู้** → กระดิ่งยกเลิกส่งถึงคนกลุ่มเดียวกับกระดิ่ง "รอคุณ"
+- **`GET /api/employees` (picker) แจกอีเมล/เบอร์/username/เหตุผลลาออก ให้ทุกคน** → ส่งเป็นค่าว่างถ้าไม่มี `employees.view` (ยกเว้นข้อมูลตัวเอง) · **`GET /api/employees/{id}` ไม่ตรวจสิทธิ์** → ต้องมี `employees.view` หรือเป็นของตัวเอง
+- **`GET /api/settings` ก่อนเข้าระบบแจกชื่อนิติบุคคล เลขผู้เสียภาษี ที่อยู่ SLA** → ก่อนเข้าระบบได้แค่ชื่อแบรนด์ โลโก้ ธีม
+
+**ชุด B — ทรัพย์สิน / สต็อก**
+- API ทรัพย์สินรายชิ้นกันสถานะเหมือนหน้าจอและ bulk: รับคืนได้เฉพาะ "รอรับคืน" · ยืนยันรับได้เฉพาะ "รอรับมอบ" · ส่งมอบได้เฉพาะ "พร้อมส่งมอบ" · แก้ไขทรัพย์สินไม่รับ `status`/`owner` (ลงทะเบียนใหม่ยังรับได้)
+- **`stock.delete` ให้ใครไม่ได้** (ไม่อยู่ในแคตตาล็อก) → อยู่ใต้ "รายการพัสดุ" ข้าง "จัดการรายการสินค้า"
+- **ใบเบิก**: ยื่นเกินจำนวน "เบิกได้" ไม่ได้ (เดิมกันแค่หน้าจอ) · อนุมัติเช็คซ้ำใต้ lock กันอนุมัติสองใบบนของชุดเดียวกัน · ผู้ขออนุมัติ/ปฏิเสธใบของตัวเองไม่ได้ (`can_decide` คุมปุ่ม)
+
+**ชุด C — ข้อมูลเสีย / ใช้งานไม่ได้**
+- **Add Employee ขั้นที่ 3 กดบันทึกไม่ได้เมื่อ workflow ใดปิดอยู่** → ปิดปุ่มเฉพาะปัญหาสายบังคับบัญชา · workflow ที่ปิดแค่ปิดการ์ดบริการนั้น + แจ้งเตือนสีเหลือง
+- **นับสต็อก Auto ไม่ปรับยอดรายคลัง** → รอบนับรายคลังใช้ยอดคลังนั้นและปรับคลัง + ยอดรวมตามส่วนต่าง · รอบนับทุกคลังปรับคลังเดียวที่มีของ ถ้าของอยู่หลายคลังจะปฏิเสธ (`count_needs_warehouse`) ให้นับรายคลัง · movement ระบุคลัง
+- **แก้ Ticket ที่มีไฟล์ครบ 10 แล้วสลับไฟล์ไม่ได้** → ลบไฟล์เดิมก่อนอัปโหลด
+- **ค่าเช่าทรัพย์สินเช่าแสดง "/mo" เสมอ และภาพรวมคูณ 12** → ตามรอบบิลของสัญญา (`/mo`, `/qtr`, `/yr`, `Contract::annualValue`)
+- **ส่งต่อเคสไม่มีร่องรอย คนเดิมไม่รู้** → `ticket_updates.kind` + `meta` ลงประวัติเคส "ส่งต่อจาก A ให้ B" · กระดิ่งใหม่ `notif_ticket_forwarded_away` ถึงคนที่ถือเคสอยู่ (ถ้าไม่ได้ส่งต่อเอง)
+
+**ชุด D — หน้าจอ / ภาษา**
+- **Settings บันทึกไม่สำเร็จแต่ปุ่มขึ้น "บันทึกแล้ว"** → `SaveButton` ขึ้นเครื่องหมายถูกเฉพาะเมื่อบอกว่าสำเร็จ · hook บันทึกทุกตัว + Email + Security มี toast เมื่อถูกปฏิเสธ (4xx)
+- **หน้า Permissions โชว์ทุกแท็บ** (IT Supervisor เห็น Role Templates หมุนไม่หยุด, Role Groups ว่าง) → แต่ละแท็บต้องมีสิทธิ์ของ endpoint ตัวเอง
+- **ข้อความ validation จาก server เป็นอังกฤษเสมอ** → SPA ส่ง `X-Locale`, middleware `SetRequestLocale`, `lang/th/{validation,auth,passwords}.php` (ชื่อฟิลด์เป็นไทย)
+- **ข้อความ hardcode ในหน้า Permissions** (รวม "ระดับประเภทเคส (Tickets Level)", "อีเมล / การแจ้งเตือนในระบบ") → 55 จุดย้ายเข้า `lang/<locale>/permission.ts` (`perm_ui_*`)
+- ลบสิทธิ์ตาย `contracts.import` และป้าย `perm_act_reports.*` ที่ไม่มีสิทธิ์รองรับ
+
+**Migration บน DB จริง** (ผู้ใช้อนุญาต): `report_pins` (Phase 5a) · `ticket_updates.kind` + `meta` (68 แถวเดิม = note)
+**ซ่อมข้อมูลบน DB จริง** (ผู้ใช้อนุญาต): ขั้นอนุมัติ id 58, 129 (RQ-2026-0017, RQ-2026-0037) current → waiting · `stock_balances` id 15 (SKU-0000013 คลังโรงงาน 4) 4 → 3
+
+**ยังไม่ได้ทำ (ต้องใช้ข้อมูลจากผู้ใช้)** ตั้ง SMTP ในหน้า Settings → อีเมล (`mail_settings` ว่าง + `MAIL_MAILER=log` อีเมลจึงยังไม่ส่งจริง) — ต้องทำก่อน UAT ส่วนอีเมล
+
+### Tests / Verification
+
+เพิ่มเทสต์ที่ fail ก่อนแก้ทุกข้อ (RequestDepartmentStep, RequestWorkflow, EmployeePermissionGating, GuestAccess, AssetApi, StockItem, StockWorkflow, StockCount, TicketApi, RequestLocale) · ชุดเต็ม **1508 passed** · `npm run build` ผ่าน · tsc + eslint + pint ผ่าน · ตรวจบนเบราว์เซอร์: ส่วนท้าย sidebar ยังแสดงชื่อบริษัทหลังเข้าระบบ (settings เต็มเมื่อมี session)
