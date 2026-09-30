@@ -120,6 +120,18 @@ class StockItem extends Model
         return (float) $lots->sum(fn (StockLot $l) => $l->qty_remaining * (float) $l->unit_cost);
     }
 
+    /**
+     * What a new requisition may still ask for: on hand minus what approved (not yet issued)
+     * requisitions have already claimed — the "เบิกได้" figure the request drawer shows,
+     * read the same way StockItemController's `reserved_qty` sum does.
+     */
+    public function availableToRequest(): int
+    {
+        $reserved = (int) $this->requests()->where('status', 'approved')->sum('qty');
+
+        return max(0, $this->current_stock - $reserved);
+    }
+
     /** Weighted-average unit cost of the stock currently on hand (0 when empty). */
     public function avgCost(): float
     {

@@ -31,6 +31,11 @@ class StockRequestResource extends JsonResource
             'fulfilled_at' => $this->fulfilled_at?->toDateTimeString(),
             'rejected_at' => $this->rejected_at?->toDateTimeString(),
             'created_at' => $this->created_at?->toDateTimeString(),
+            // Approve / Reject shown to this reader: they hold stock.approve, it is still
+            // pending, and it is not their own requisition (StockRequestController::assertNotOwn).
+            'can_decide' => $this->status === 'pending'
+                && (bool) $request->user()?->hasPermission('stock.approve')
+                && (int) $this->user_id !== (int) $request->user()?->id,
         ];
     }
 }

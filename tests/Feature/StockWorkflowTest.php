@@ -154,6 +154,59 @@ class StockWorkflowTest extends TestCase
         $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'issue', 'qty' => 4, 'reference' => $reqRef]);
     }
 
+    /** An approver who asks for stock waits on somebody else, like every other request. */
+    public function test_nobody_approves_or_rejects_their_own_requisition(): void
+    {
+        $item = $this->item(10);
+        $asker = $this->userWith(['stock.view', 'stock.view_request', 'stock.request', 'stock.approve']);
+        $id = $this->actingAs($asker)
+            ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 2, 'reason' => 'Spare for my desk'])
+            ->assertCreated()->assertJsonPath('data.can_decide', false)->json('data.id');
+
+        $this->actingAs($asker)->postJson("/api/stock-requests/{$id}/approve")->assertForbidden();
+        $this->actingAs($asker)->postJson("/api/stock-requests/{$id}/reject")->assertForbidden();
+        $this->assertSame('pending', StockRequest::findOrFail($id)->status);
+
+        $colleague = $this->userWith(['stock.view', 'stock.view_request', 'stock.approve']);
+        $row = collect($this->actingAs($colleague)->getJson('/api/stock-requests')->assertOk()->json('data'))->firstWhere('id', $id);
+        $this->assertTrue($row['can_decide']);
+        $this->actingAs($colleague)->postJson("/api/stock-requests/{$id}/approve")->assertOk();
+    }
+
+    /** "Available" = on hand minus what approved requisitions have already claimed. */
+    public function test_a_requisition_cannot_ask_for_more_than_is_available(): void
+    {
+        $item = $this->item(10);
+        StockRequest::create(['stock_item_id' => $item->id, 'user_id' => $this->superUser()->id, 'requester_name' => 'Earlier', 'qty' => 7, 'reason' => 'Claimed', 'status' => 'approved']);
+        $asker = $this->userWith(['stock.view', 'stock.request']);
+
+        $this->actingAs($asker)
+            ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 4, 'reason' => 'Too many'])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'not_enough_stock')
+            ->assertJsonPath('available', 3);
+
+        $this->actingAs($asker)
+            ->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 3, 'reason' => 'Just enough'])
+            ->assertCreated();
+    }
+
+    public function test_approving_checks_again_what_is_still_available(): void
+    {
+        $item = $this->item(10);
+        $asker = $this->userWith(['stock.view', 'stock.request']);
+        $first = $this->actingAs($asker)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 6, 'reason' => 'First'])->json('data.id');
+        $second = $this->actingAs($asker)->postJson('/api/stock-requests', ['stock_item_id' => $item->id, 'qty' => 6, 'reason' => 'Second'])->json('data.id');
+
+        $approver = $this->superUser();
+        $this->actingAs($approver)->postJson("/api/stock-requests/{$first}/approve")->assertOk();
+        $this->actingAs($approver)->postJson("/api/stock-requests/{$second}/approve")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'not_enough_stock')
+            ->assertJsonPath('available', 4);
+        $this->assertSame('pending', StockRequest::findOrFail($second)->status);
+    }
+
     public function test_cannot_fulfill_request_that_is_not_approved(): void
     {
         $item = $this->item();
