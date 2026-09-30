@@ -1,6 +1,6 @@
 /**
  * Report Center page (/reports) — the number strip (SnapshotStrip), the person's queued files
- * (MyExports — "ไฟล์ Export ของฉัน"), then the reports this
+ * (MyExports — "ไฟล์ Export ของฉัน"), their scheduled report emails (ScheduledReports), then the reports this
  * user may open with search, module chips and a "pinned" chip. Server decides visibility
  * (GET /api/reports → ReportCatalogue) and remembers pins (ReportPinService).
  */
@@ -12,6 +12,7 @@ import { LineChart, Search, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
 import { ReportCatalogue, reportStem } from '../components/report-catalogue';
+import { ScheduledReports } from '../components/scheduled-reports';
 import { SnapshotStrip } from '../components/snapshot-strip';
 import { useReportCatalogue } from '../hooks/use-reports';
 import type { ReportDomain } from '../types';
@@ -54,6 +55,8 @@ export default function ReportsPage() {
             <SnapshotStrip />
 
             <MyExports />
+
+            <ScheduledReports />
 
             {isLoading ? (
                 <Skeleton className="h-40 w-full" />

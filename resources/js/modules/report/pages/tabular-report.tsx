@@ -9,17 +9,19 @@ import { type Column, DataTable } from '@/shared/components/data-table';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useToastStore } from '@/stores/toast';
 import { isAxiosError } from 'axios';
-import { AlertCircle, ChevronLeft, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, ChevronLeft, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
+import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
 import { TabularFilterBar } from '../components/tabular-filter-bar';
 import { useHiddenColumns } from '../hooks/use-hidden-columns';
-import { useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
+import { useCreateSchedule, useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
 import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
 
@@ -112,6 +114,8 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
     const [exportOpen, setExportOpen] = useState(false);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
+    const [scheduleOpen, setScheduleOpen] = useState(false);
+    const scheduleMut = useCreateSchedule();
     // Only sent when something is hidden, so a full export stays a plain request.
     const exportColumns = hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
 
@@ -119,6 +123,10 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
         <>
             <div className="flex justify-end gap-2">
                 <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />
+                <Button variant="outline" onClick={() => setScheduleOpen(true)}>
+                    <CalendarClock className="h-4 w-4" />
+                    {t('rep_schedule')}
+                </Button>
                 <Button onClick={() => setExportOpen(true)}>
                     <Download className="h-4 w-4" />
                     {t('rep_export')}
@@ -143,6 +151,20 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 isPending={exportMut.isPending}
                 error={exportMut.error}
                 onReset={exportMut.reset}
+            />
+            <ScheduleReportDialog
+                open={scheduleOpen}
+                onOpenChange={setScheduleOpen}
+                title={t(`rep_${stem}_title`)}
+                formats={definition.formats}
+                onSubmit={(input) =>
+                    scheduleMut
+                        .mutateAsync({ kind: 'tabular', key: reportKey, filters, columns: exportColumns, input })
+                        .then(() => useToastStore.getState().push(t('rep_schedule_created'), 'success', undefined, undefined, { duration: 6000 }))
+                }
+                isPending={scheduleMut.isPending}
+                error={scheduleMut.error}
+                onReset={scheduleMut.reset}
             />
         </>
     );

@@ -52,3 +52,7 @@ Schedule::command('logs:prune')->dailyAt('02:00');
 // Report files queued from the Report Center are kept for 7 days (ReportExport::KEEP_DAYS).
 // Same quiet hour as the retention sweep above — it deletes, it never sends.
 Schedule::command('reports:prune-exports')->dailyAt('02:15');
+
+// Scheduled report emails. Every five minutes so a schedule set for 07:00 goes out at 07:00,
+// not at the next hour; a sweep with nothing due is one indexed query.
+Schedule::command('reports:send-scheduled')->everyFiveMinutes();

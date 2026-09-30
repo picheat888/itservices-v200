@@ -254,6 +254,12 @@ class ReportCatalogue
         return $visible;
     }
 
+    /** The report's Thai title as its files print it — the ticket overview names itself in its own PDF view. */
+    public static function title(string $key): string
+    {
+        return $key === self::TICKETS_OVERVIEW ? 'รายงานภาพรวม Ticket & SLA' : (self::tabular($key)?->title() ?? $key);
+    }
+
     /** The tabular definition behind a catalogue key, or null when the key is unknown or not tabular. */
     public static function tabular(string $key): ?TabularReport
     {

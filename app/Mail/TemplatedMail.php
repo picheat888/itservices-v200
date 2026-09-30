@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use Illuminate\Mail\Attachment;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -10,7 +11,8 @@ use Illuminate\Mail\Mailables\Envelope;
  * Generic mailable that wraps an already-rendered body in the branded email
  * layout (emails.templated). Variable substitution and SMTP config override
  * happen in EmailNotificationService before this is sent. An optional Quick link
- * (actionUrl + actionLabel) renders a CTA button; eyebrow labels the email type.
+ * (actionUrl + actionLabel) renders a CTA button; eyebrow labels the email type. An optional
+ * attachment (a file on the private `local` disk) rides along — the scheduled report file.
  */
 class TemplatedMail extends Mailable
 {
@@ -24,7 +26,18 @@ class TemplatedMail extends Mailable
         public ?string $logoFile = null,
         /** Frame width in pixels; null takes the standard one. See EmailTemplates::widthFor(). */
         public ?int $width = null,
+        /** Path on the `local` disk, attached under $attachmentName. */
+        public ?string $attachmentPath = null,
+        public ?string $attachmentName = null,
     ) {}
+
+    /** @return list<Attachment> */
+    public function attachments(): array
+    {
+        return $this->attachmentPath === null
+            ? []
+            : [Attachment::fromStorageDisk('local', $this->attachmentPath)->as($this->attachmentName ?? basename($this->attachmentPath))];
+    }
 
     public function envelope(): Envelope
     {

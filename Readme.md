@@ -3916,3 +3916,21 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `ReportExportQueueTest` ใหม่ 11 ข้อ (สร้าง/รายการ/ดาวน์โหลด, Ticket overview, คนอื่นเข้าไม่ได้, ลบไฟล์, ไฟล์ยังไม่เสร็จดาวน์โหลดไม่ได้, เสียสิทธิ์ก่อนสร้าง, error แล้ว retry, retry ได้เฉพาะ failed, จำกัด 5 ไฟล์, prune, GET เดิมใช้ไม่ได้แล้ว) · test export เดิม 11 ไฟล์ย้ายไปใช้ trait `Tests\Concerns\ExportsReports` (POST → job → download) · ชุดเต็ม **1524 passed** · `npm run build` ผ่าน · tsc + eslint + prettier + pint ผ่าน
+
+## Report Module — Phase 6: ส่งรายงานทางอีเมลตามเวลา (2026-09-30)
+
+ตั้งจากหน้ารายงาน (ปุ่ม **ตั้งเวลาส่ง** ข้าง Export) ทั้ง 19 รายงาน · ผู้ใช้เลือก: ผู้รับเป็นอีเมลอะไรก็ได้ · รายวัน/รายสัปดาห์/รายเดือน · แนบ PDF หรือ Excel ตามที่รายงานรองรับ · ใครเปิดรายงานได้ก็ตั้งได้ (ไม่เพิ่ม permission)
+
+- **ตารางใหม่ `report_schedules`** + template อีเมล `report.scheduled` (migration `2026_09_30_163939` / `163940` รันบน DB จริงแล้ว — template ใส่เฉพาะถ้ายังไม่มี ไม่แตะ template ที่แก้ไว้)
+- **รอบส่ง** — รายวัน = ข้อมูลเมื่อวาน · รายสัปดาห์ (วันจันทร์) = จันทร์–อาทิตย์ที่แล้ว · รายเดือน (วันที่ 1) = เดือนที่แล้ว · เลือกชั่วโมงส่งได้ 00–23 · ตัวกรองวันที่ (`from`/`to`/`as_of`) ถูกแทนด้วยช่วงของรอบ ตัวกรองอื่น + คอลัมน์ที่เลือกเก็บตามที่ตั้ง
+- **`reports:send-scheduled`** ทุก 5 นาที → เลื่อน `next_run_at` ก่อน แล้ว dispatch `SendScheduledReport` (ใช้เวลารอบ ไม่ใช่เวลาที่ worker หยิบ จึงรายงานช่วงถูกแม้ช้า) → สร้างไฟล์ด้วย `store()` ตัวเดียวกับ Export (สิทธิ์ของเจ้าของ) → ส่งทีละผู้รับพร้อมไฟล์แนบ (log ทุกฉบับใน email log) → ลบไฟล์ชั่วคราว
+- **กรณีพิเศษ** — เจ้าของเสียสิทธิ์ = หยุด schedule + bell · template ถูกปิด = ไม่ส่ง · ไฟล์เกิน 10 MB = ไม่แนบ แต่ไปอยู่ใน "ไฟล์ Export ของฉัน" ของเจ้าของ + อีเมลบอกผู้รับ · ส่งไม่ถึงบางคน = failed · bell ใหม่ `notif_report_schedule_failed` (module system)
+- **จำกัด** 10 schedule ต่อคน · 10 ผู้รับต่อ schedule · อีเมลตรวจแบบ RFC + ห้ามซ้ำ
+- **API** — `POST /api/reports/r/{key}/schedule` · `POST /api/reports/tickets/overview/schedule` · `GET /api/reports/schedules` · `PUT/DELETE …/{id}` · `POST …/{id}/send-now` (เฉพาะเจ้าของ คนอื่น 404)
+- **หน้าเว็บ** — ไดอะล็อกตั้งเวลา (ความถี่ · เวลา · รูปแบบ · ผู้รับแบบ chip ค่าเริ่มต้นเป็นอีเมลตัวเอง) · แผง **รายงานที่ตั้งเวลาไว้** บนหน้าศูนย์รายงาน: ครั้งถัดไป / ส่งล่าสุด / สาเหตุที่ไม่สำเร็จ, เปิด-ปิด, ส่งตอนนี้, แก้ไข, ลบ · หน้า Email template มี cadence ใหม่ "ตามเวลาที่ตั้ง" + ตัวแปร `report.*`
+- **อีเมลเชื่อมกับ `deliver()`** — `TemplatedMail` รับไฟล์แนบจาก private disk · `EmailNotificationService::renderTemplate()` สำหรับผู้ส่งที่อยู่ใน worker อยู่แล้ว
+- **SMTP** — ตั้งแล้วในหน้า Settings (Gmail) ส่ง test mail สำเร็จ 2026-09-30 · **ต้องมี queue worker และ scheduler ทำงาน** รายงานตามเวลาจึงจะออก
+
+### Tests / Verification
+
+`ReportScheduleTest` ใหม่ 15 ข้อ (รอบเวลา/ช่วงข้อมูลทั้ง 3 แบบ, แทนตัวกรองวันที่, ตั้งจากหน้ารายงาน + Ticket overview, validation อีเมล/จำนวน, สิทธิ์, จำกัด 10, sweep ส่งทุกผู้รับพร้อมไฟล์แนบ, workbook เฉพาะช่วง, เสียสิทธิ์แล้วหยุด, template ปิด, ไฟล์ใหญ่ไป My exports, แก้ไข/หยุด/เปิด, คนอื่นแตะไม่ได้, ส่งตอนนี้/ลบ) · `NotificationEmailPairingTest` ยกเว้นตระกูล `report.` (อีเมลคือตัวรายงาน ไม่มี bell คู่) · ชุดเต็ม **1539 passed** · build + tsc + eslint + prettier + pint ผ่าน

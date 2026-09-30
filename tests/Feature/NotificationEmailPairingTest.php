@@ -48,11 +48,19 @@ class NotificationEmailPairingTest extends TestCase
             ->unique()->sort()->values()->all();
     }
 
+    /**
+     * Email families no bell pairs with, on purpose. `report.` is the scheduled report itself:
+     * the mail is the delivery, sent to addresses that may have no account and so no bell,
+     * and no bell announces the same event — claiming it for a module would tell that
+     * module's bells they have a mail they do not.
+     */
+    private const STANDALONE_EMAIL_FAMILIES = ['report'];
+
     public function test_every_email_family_is_claimed_by_a_notification_module(): void
     {
         $claimed = array_values(array_filter($this->map()));
 
-        foreach ($this->emailPrefixes() as $prefix) {
+        foreach (array_diff($this->emailPrefixes(), self::STANDALONE_EMAIL_FAMILIES) as $prefix) {
             $this->assertContains(
                 $prefix,
                 $claimed,

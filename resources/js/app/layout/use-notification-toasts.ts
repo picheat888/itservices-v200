@@ -1,6 +1,6 @@
 import type { AppNotification } from '@/modules/notification';
 import { useMarkRead, useNotifications, useNotificationText } from '@/modules/notification';
-import { REPORT_EXPORTS_KEY } from '@/modules/report';
+import { REPORT_EXPORTS_KEY, REPORT_SCHEDULES_KEY } from '@/modules/report';
 import { useToastStore, type ToastTone } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { useQueryClient } from '@tanstack/react-query';
@@ -139,6 +139,9 @@ export function useNotificationToasts(): void {
         // A report file finished (or failed) — the exports list on the Report Center shows it now.
         if (fresh.some((n) => n.data.type === 'report_export')) {
             qc.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY });
+        }
+        if (fresh.some((n) => n.data.type === 'report_schedule')) {
+            qc.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY });
         }
     }, [data, qc]);
 }

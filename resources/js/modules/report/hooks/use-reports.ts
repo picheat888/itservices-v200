@@ -1,12 +1,13 @@
 /**
  * Report module React Query hooks — catalogue (+ pinning), the hub number strip, Ticket & SLA summary/rows/export, the
- * generic tabular report definition/rows/export, and "ไฟล์ Export ของฉัน" (queued files: list, download, retry, remove).
+ * generic tabular report definition/rows/export, "ไฟล์ Export ของฉัน" (queued files: list, download, retry, remove) and
+ * scheduled report emails.
  */
 import { downloadBlob } from '@/shared/lib/utils';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
-import type { ExportFormat, ReportDefinition, ReportExportItem, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
+import type { ExportFormat, ReportDefinition, ReportExportItem, ScheduleInput, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
 
 /**
  * A 4xx (422 invalid filters, 403 no access, 404 unknown report) answers the same however
@@ -20,6 +21,9 @@ const CATALOGUE_KEY = ['reports', 'catalogue'] as const;
 
 /** "ไฟล์ Export ของฉัน" — also refreshed by the shell when a report_export bell arrives. */
 export const REPORT_EXPORTS_KEY = ['reports', 'exports'] as const;
+
+/** Scheduled report emails — also refreshed by the shell when a report_schedule bell arrives. */
+export const REPORT_SCHEDULES_KEY = ['reports', 'schedules'] as const;
 
 export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue });
 
@@ -140,5 +144,52 @@ export function useDeleteExport() {
     return useMutation({
         mutationFn: (id: number) => reportApi.deleteExport(id),
         onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_EXPORTS_KEY }),
+    });
+}
+
+export const useReportSchedules = () => useQuery({ queryKey: REPORT_SCHEDULES_KEY, queryFn: reportApi.schedules });
+
+/** Set a schedule from a report page — a tabular one (key given) or the ticket overview. */
+export function useCreateSchedule() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (
+            args:
+                | { kind: 'tabular'; key: string; filters: TabularFilters; columns?: string[]; input: ScheduleInput }
+                | { kind: 'tickets'; filters: TicketReportFilters; input: ScheduleInput },
+        ) =>
+            args.kind === 'tabular'
+                ? reportApi.scheduleTabular(args.key, args.filters, args.input, args.columns)
+                : reportApi.scheduleTicketOverview(args.filters, args.input),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY }),
+    });
+}
+
+export function useUpdateSchedule() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, patch }: { id: number; patch: Partial<ScheduleInput> & { active?: boolean } }) => reportApi.updateSchedule(id, patch),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY }),
+    });
+}
+
+export function useDeleteSchedule() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: number) => reportApi.deleteSchedule(id),
+        onSettled: () => queryClient.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY }),
+    });
+}
+
+export function useSendScheduleNow() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: number) => reportApi.sendScheduleNow(id),
+        // The run lands in a moment; its last-sent line refreshes shortly after.
+        onSuccess: () => setTimeout(() => queryClient.invalidateQueries({ queryKey: REPORT_SCHEDULES_KEY }), 5000),
     });
 }

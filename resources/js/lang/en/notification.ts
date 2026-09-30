@@ -15,6 +15,7 @@ export const notification: Dict = {
     notif_password_expiring: 'Your password expires in {days} days - change it before you are locked out',
     notif_report_export_ready: 'Your {format} file is ready - download it from My exports',
     notif_report_export_failed: 'The {format} file could not be created - try again from My exports',
+    notif_report_schedule_failed: 'The scheduled report was not sent - check it on the Report Center',
     notif_cred_required: 'Needs login account - set username & password',
     notif_resigned: 'Resigned - revoke login account & reclaim assets',
     notif_departure: 'Has resigned - review anything routed through them',
@@ -240,4 +241,7 @@ export const notification: Dict = {
     notification_name_report_export_failed: 'Report file failed',
     notification_when_report_export_failed: 'A report file asked for on the Report Center could not be built',
     notification_who_report_export_failed: 'The person who asked for the file',
+    notification_name_report_schedule_failed: 'Scheduled report not sent',
+    notification_when_report_schedule_failed: 'A report scheduled on the Report Center could not be built or mailed',
+    notification_who_report_schedule_failed: 'The person who set the schedule',
 };

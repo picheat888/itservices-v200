@@ -7,20 +7,22 @@ import { useT } from '@/lang';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
+import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { isAxiosError } from 'axios';
-import { AlertCircle, ChevronLeft, Clock, Download } from 'lucide-react';
+import { AlertCircle, CalendarClock, ChevronLeft, Clock, Download } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BacklogAging } from '../components/backlog-aging';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { HorizontalBars } from '../components/horizontal-bars';
 import { KpiTile } from '../components/kpi-tile';
+import { ScheduleReportDialog } from '../components/schedule-report-dialog';
 import { categoryKey, priorityKey } from '../components/ticket-labels';
 import { TicketReportFilterBar } from '../components/ticket-report-filter-bar';
 import { TicketReportTable } from '../components/ticket-report-table';
 import { WeeklyTicketChart } from '../components/weekly-ticket-chart';
-import { useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
+import { useCreateSchedule, useExportTicketOverview, useTicketOverview } from '../hooks/use-reports';
 import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
@@ -44,6 +46,8 @@ export default function TicketOverviewReportPage() {
     const { data, isLoading, isError, error } = useTicketOverview(filters);
     const [exportOpen, setExportOpen] = useState(false);
     const exportMut = useExportTicketOverview();
+    const [scheduleOpen, setScheduleOpen] = useState(false);
+    const scheduleMut = useCreateSchedule();
 
     const fmt = (v: number | null) => (v === null ? '—' : String(v));
 
@@ -72,10 +76,16 @@ export default function TicketOverviewReportPage() {
                     <h1 className="mt-1 text-2xl font-bold">{t('rep_tickets_overview_title')}</h1>
                     <p className="text-muted-foreground text-sm">{t('rep_tickets_overview_desc')}</p>
                 </div>
-                <Button onClick={() => setExportOpen(true)} disabled={!data}>
-                    <Download className="h-4 w-4" />
-                    {t('rep_export')}
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setScheduleOpen(true)} disabled={!data}>
+                        <CalendarClock className="h-4 w-4" />
+                        {t('rep_schedule')}
+                    </Button>
+                    <Button onClick={() => setExportOpen(true)} disabled={!data}>
+                        <Download className="h-4 w-4" />
+                        {t('rep_export')}
+                    </Button>
+                </div>
             </div>
 
             <TicketReportFilterBar filters={filters} options={data?.options} onChange={patch} onReset={reset} />
@@ -235,6 +245,20 @@ export default function TicketOverviewReportPage() {
                     </Section>
                 </>
             )}
+            <ScheduleReportDialog
+                open={scheduleOpen}
+                onOpenChange={setScheduleOpen}
+                title={t('rep_tickets_overview_title')}
+                formats={['xlsx', 'pdf']}
+                onSubmit={(input) =>
+                    scheduleMut
+                        .mutateAsync({ kind: 'tickets', filters, input })
+                        .then(() => useToastStore.getState().push(t('rep_schedule_created'), 'success', undefined, undefined, { duration: 6000 }))
+                }
+                isPending={scheduleMut.isPending}
+                error={scheduleMut.error}
+                onReset={scheduleMut.reset}
+            />
             {data && (
                 <ExportReportDialog
                     open={exportOpen}

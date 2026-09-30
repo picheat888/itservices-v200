@@ -14,6 +14,7 @@ import {
     Gauge,
     Inbox,
     KeyRound,
+    MailX,
     MessageSquare,
     PackageCheck,
     PackageMinus,
@@ -47,7 +48,7 @@ export function moduleOf(type: string, module?: string): string {
     if (type.startsWith('contract')) return 'contracts';
     if (type.startsWith('access')) return 'access';
     // Notices about the account itself rather than about any business module.
-    if (type === 'password_expiring' || type === 'report_export') return 'system';
+    if (type === 'password_expiring' || type === 'report_export' || type === 'report_schedule') return 'system';
     return 'employees'; // new_employee + employee.*
 }
 
@@ -136,6 +137,10 @@ export function iconMeta(n: AppNotification): { Icon: typeof CalendarClock; colo
             ? { Icon: FileX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' }
             : { Icon: FileDown, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
     }
+    // A scheduled report that did not go out — red, the mail never left.
+    if (n.data.type === 'report_schedule') {
+        return { Icon: MailX, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' };
+    }
     if (n.data.type === 'password_expiring') {
         return { Icon: KeyRound, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
     }
@@ -215,7 +220,7 @@ export function notificationTitle(n: AppNotification, t: Translate): string {
     // Nothing to name but the subject itself — the notice is about the reader's own account.
     if (n.data.type === 'password_expiring') return t('notif_password_title');
     // Named by the report, in the reader's language (rep_<stem>_title, as the Report Center lists it).
-    if (n.data.type === 'report_export') return t(`rep_${(n.data.report_key ?? '').replace('.', '_')}_title`);
+    if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return t(`rep_${(n.data.report_key ?? '').replace('.', '_')}_title`);
     return `${n.data.employee_name} (${n.data.employee_code})`;
 }
 
@@ -256,6 +261,7 @@ export function notificationMessage(n: AppNotification, t: Translate): string {
             : t('notif_contract_expiring').replace('{days}', String(n.data.days_remaining));
     }
     if (n.data.type === 'password_expiring') return t('notif_password_expiring').replace('{days}', String(n.data.days_remaining ?? 0));
+    if (n.data.type === 'report_schedule') return t('notif_report_schedule_failed');
     if (n.data.type === 'report_export')
         return t(n.data.subtype === 'failed' ? 'notif_report_export_failed' : 'notif_report_export_ready').replace(
             '{format}',
@@ -330,7 +336,7 @@ export function notificationTarget(n: AppNotification): string {
     if (n.data.type === 'asset_offboarding') return '/assets';
     if (n.data.type === 'access_offboarding') return '/access';
     // The file waits in "ไฟล์ Export ของฉัน" on the Report Center.
-    if (n.data.type === 'report_export') return '/reports';
+    if (n.data.type === 'report_export' || n.data.type === 'report_schedule') return '/reports';
     const mod = moduleOf(n.data.type, n.data.module);
     // The stuck-request bell asks for an account, so it opens the person who needs one
     // rather than the request nobody can act on yet.

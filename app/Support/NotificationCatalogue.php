@@ -504,6 +504,16 @@ class NotificationCatalogue
                 'message_th' => 'สร้างไฟล์ {format} ไม่สำเร็จ - ลองอีกครั้งได้ที่ ไฟล์ Export ของฉัน',
                 'enabled' => true,
             ],
+            [
+                'key' => 'notif_report_schedule_failed',
+                'module' => 'system',
+                'name' => 'Scheduled report not sent',
+                'trigger' => 'A report scheduled on the Report Center could not be built or mailed',
+                'audience' => 'The person who set the schedule',
+                'message_en' => 'The scheduled report was not sent - check it on the Report Center',
+                'message_th' => 'ส่งรายงานตามเวลาไม่สำเร็จ - ตรวจสอบได้ที่ศูนย์รายงาน',
+                'enabled' => true,
+            ],
         ];
     }
 

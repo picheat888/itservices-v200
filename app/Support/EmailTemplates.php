@@ -732,6 +732,25 @@ This report summarizes all items that currently require attention:</p>
                 'enabled' => true,
                 'cadence' => 'weekly',
             ],
+            [
+                // A report somebody scheduled from the Report Center (App\Jobs\SendScheduledReport).
+                // Recipients can be any address — people with no account here — so the mail
+                // greets nobody by name and names the colleague who set it up instead.
+                'key' => 'report.scheduled',
+                'name' => 'Scheduled report (รายงานตามเวลาที่ตั้งไว้)',
+                'subject' => '{{report.name}} - {{report.period}}',
+                'body_html' => '<p>Hello,</p>
+<p>Here is the scheduled report <strong>{{report.name}}</strong> from {{app.name}}.</p>
+<br>
+<p><strong style="color:#64748b">Period:</strong> {{report.period}}<br>
+<strong style="color:#64748b">Rows:</strong> {{report.rows}}<br>
+<strong style="color:#64748b">Schedule:</strong> {{report.frequency}}<br>
+<strong style="color:#64748b">Set up by:</strong> {{report.owner}}</p>
+<br>
+<p>{{report.attachment_note}}</p>',
+                'enabled' => true,
+                'cadence' => 'scheduled',
+            ],
         ];
     }
 

@@ -9,7 +9,7 @@ export interface EmailTemplate {
     body_html: string;
     enabled: boolean;
     /** How the template is triggered: on the event, or by a scheduled sweep. */
-    cadence: 'realtime' | 'daily' | 'weekly';
+    cadence: 'realtime' | 'daily' | 'weekly' | 'scheduled';
     last_sent_at: string | null;
     is_standard: boolean; // has a standard definition (can be reset)
     is_modified: boolean; // differs from its standard definition

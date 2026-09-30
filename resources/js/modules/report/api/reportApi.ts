@@ -1,7 +1,7 @@
 /**
  * Report module HTTP calls — Report Center catalogue, the Ticket & SLA report
  * (summary, rows, queued export), the generic tabular reports (definition, rows, queued export)
- * and "ไฟล์ Export ของฉัน" (list, download, retry, remove).
+ * "ไฟล์ Export ของฉัน" (list, download, retry, remove) and scheduled report emails (set, list, edit, send now, remove).
  */
 import { http } from '@/shared/lib/http';
 import type {
@@ -9,7 +9,9 @@ import type {
     PagedRows,
     ReportDefinition,
     ReportExportItem,
+    ReportScheduleItem,
     ReportSnapshot,
+    ScheduleInput,
     SnapshotPeriod,
     TabularDefinition,
     TabularFilters,
@@ -90,4 +92,22 @@ export const reportApi = {
     retryExport: (id: number) => http.post<{ data: ReportExportItem }>(`/reports/exports/${id}/retry`).then((r) => r.data.data),
 
     deleteExport: (id: number) => http.delete(`/reports/exports/${id}`),
+
+    /** Set a schedule from a tabular report page — its filters and column picker travel with it. */
+    scheduleTabular: (key: string, filters: TabularFilters, input: ScheduleInput, columns?: string[]) =>
+        http
+            .post<{ data: ReportScheduleItem }>(`/reports/r/${key}/schedule`, { ...tabularParams(filters), columns, ...input })
+            .then((r) => r.data.data),
+
+    scheduleTicketOverview: (f: TicketReportFilters, input: ScheduleInput) =>
+        http.post<{ data: ReportScheduleItem }>('/reports/tickets/overview/schedule', { ...ticketParams(f), ...input }).then((r) => r.data.data),
+
+    schedules: () => http.get<{ data: ReportScheduleItem[] }>('/reports/schedules').then((r) => r.data.data),
+
+    updateSchedule: (id: number, patch: Partial<ScheduleInput> & { active?: boolean }) =>
+        http.put<{ data: ReportScheduleItem }>(`/reports/schedules/${id}`, patch).then((r) => r.data.data),
+
+    deleteSchedule: (id: number) => http.delete(`/reports/schedules/${id}`),
+
+    sendScheduleNow: (id: number) => http.post(`/reports/schedules/${id}/send-now`),
 };

@@ -33,6 +33,12 @@ const SAMPLE_VARS: Record<string, string> = {
     'user.first_name': 'Thanapon',
     'user.email': 'thanapon@abcd.co.th',
     count: '3',
+    'report.name': 'ทะเบียนทรัพย์สิน',
+    'report.period': '2026-09-21 to 2026-09-27',
+    'report.rows': '1,248',
+    'report.frequency': 'Every Monday at 07:00',
+    'report.owner': 'Thanapon',
+    'report.attachment_note': 'The report file is attached.',
     'stock.sku': 'SKU-1042',
     'stock.name': 'USB-C Docking Station',
     'stock.qty': '2',
@@ -151,6 +157,8 @@ const CADENCE_META: Record<EmailTemplate['cadence'], { badge: string; labelKey: 
     realtime: { badge: 'bg-blue-500/12 text-blue-600 dark:text-blue-400', labelKey: 'email_cadence_realtime' },
     daily: { badge: 'bg-amber-500/12 text-amber-600 dark:text-amber-400', labelKey: 'email_cadence_daily' },
     weekly: { badge: 'bg-violet-500/12 text-violet-600 dark:text-violet-400', labelKey: 'email_cadence_weekly' },
+    // Whenever the person who set the schedule chose (Report Center → scheduled reports).
+    scheduled: { badge: 'bg-teal-500/12 text-teal-600 dark:text-teal-400', labelKey: 'email_cadence_scheduled' },
 };
 
 // The page's two halves: what gets sent, and what happened when it was.
