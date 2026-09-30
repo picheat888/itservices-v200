@@ -41,6 +41,65 @@ class StockCountTest extends TestCase
             ->assertJsonPath('data.lines.0.system_qty', 10);
     }
 
+    /**
+     * A count of one warehouse is a count of that shelf: it snapshots that warehouse's
+     * balance, and committing it moves that balance and the total by the difference. It
+     * used to snapshot the item's total and overwrite the total with one shelf's count,
+     * leaving every warehouse balance untouched.
+     */
+    public function test_a_one_warehouse_count_adjusts_that_warehouse_and_the_total_by_the_difference(): void
+    {
+        $item = $this->item('A-1', 10, 'Main');
+        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch'])->id, 'qty' => 5]);
+        $item->update(['current_stock' => 15]);
+        $this->actingAs($this->super());
+
+        $count = $this->postJson('/api/stock-counts', ['warehouse' => 'Main'])->assertCreated()->json('data');
+        $this->assertSame(10, $count['lines'][0]['system_qty']);
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 7]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $balances = $item->fresh()->balances()->with('warehouse')->get()->mapWithKeys(fn ($b) => [$b->warehouse->name => $b->qty]);
+        $this->assertSame(['Main' => 7, 'Branch' => 5], $balances->sortKeys()->reverse()->all());
+        $this->assertSame(12, $item->fresh()->current_stock);
+        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_down', 'qty' => 3, 'from_label' => 'Main']);
+    }
+
+    public function test_an_all_warehouse_count_adjusts_the_only_warehouse_an_item_sits_in(): void
+    {
+        $item = $this->item('A-1', 10, 'Main');
+        $this->actingAs($this->super());
+
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 12]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])->assertOk();
+
+        $this->assertSame(12, $item->fresh()->current_stock);
+        $this->assertSame(12, (int) $item->fresh()->balances()->sum('qty'));
+        $this->assertDatabaseHas('stock_movements', ['stock_item_id' => $item->id, 'type' => 'adjust_up', 'qty' => 2, 'to_label' => 'Main']);
+    }
+
+    /** Across several warehouses the difference has no one place to go — count it per warehouse. */
+    public function test_an_all_warehouse_count_refuses_an_item_spread_over_warehouses(): void
+    {
+        $item = $this->item('A-1', 10, 'Main');
+        $item->balances()->create(['warehouse_id' => Warehouse::firstOrCreate(['name' => 'Branch'])->id, 'qty' => 5]);
+        $item->update(['current_stock' => 15]);
+        $this->actingAs($this->super());
+
+        $count = $this->postJson('/api/stock-counts', [])->json('data');
+        $this->putJson("/api/stock-counts/{$count['id']}", ['counts' => [$count['lines'][0]['id'] => 14]])->assertOk();
+        $this->postJson("/api/stock-counts/{$count['id']}/commit", [])
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'count_needs_warehouse')
+            ->assertJsonPath('sku', 'A-1');
+
+        // Nothing moved, and the draft stays open to be redone per warehouse.
+        $this->assertSame(15, $item->fresh()->current_stock);
+        $this->assertSame(0, StockMovement::where('stock_item_id', $item->id)->count());
+        $this->getJson("/api/stock-counts/{$count['id']}")->assertJsonPath('data.status', 'draft');
+    }
+
     public function test_open_with_explicit_sku_ids_snapshots_only_those_items(): void
     {
         $a = $this->item('A-1', 10, 'Main');

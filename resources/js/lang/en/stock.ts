@@ -273,6 +273,7 @@ export const stock: Dict = {
     stock_refusal_count_closed: 'This count is already closed.',
     stock_refusal_count_serial_needs_auto: 'A count with serialized items must be committed with Auto.',
     stock_refusal_count_serial_over: 'The count for {sku} is higher than the serials on record.',
+    stock_refusal_count_needs_warehouse: '{sku} is held in more than one warehouse, so the difference has no one place to go. Count it per warehouse.',
     stock_refusal_count_serial_missing_mismatch: 'Select exactly {need} missing serial(s) for {sku}.',
     stock_refusal_count_not_draft: 'Only a draft count can be canceled.',
     stock_refusal_item_has_stock: 'Cannot delete: the item still has stock or value.',

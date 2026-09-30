@@ -10,13 +10,17 @@ use App\Models\Stock\StockItem;
 use App\Models\Stock\StockItemSerial;
 use App\Models\Stock\StockItemSerialEvent;
 use App\Models\Stock\StockMovement;
+use App\Models\Stock\Warehouse;
 use App\Models\User;
 use App\Support\Refusal;
 use Illuminate\Support\Facades\DB;
 
 class StockCountService
 {
-    public function __construct(private readonly StockLotService $lotService) {}
+    public function __construct(
+        private readonly StockLotService $lotService,
+        private readonly StockBalanceService $balanceService,
+    ) {}
 
     /**
      * Open a draft session, snapshotting current_stock for the items to count.
@@ -44,13 +48,21 @@ class StockCountService
                     ->when($filters['category'] ?? null, fn ($q, $c) => $q->whereHas('category', fn ($cat) => $cat->where('name', $c)));
             }
             $items = $query->orderBy('sku')->get(['id', 'current_stock', 'track_serial']);
+            // A count of one warehouse is a count of that shelf, so it snapshots that shelf.
+            $warehouseId = filled($filters['warehouse'] ?? null)
+                ? Warehouse::query()->where('name', $filters['warehouse'])->value('id')
+                : null;
 
             foreach ($items as $item) {
                 // Serialized items reconcile against their in-stock serials (the authoritative on-hand
-                // record), which can drift from current_stock; everything else snapshots current_stock.
-                $systemQty = $item->track_serial
-                    ? (int) $item->serials()->where('status', 'in_stock')->count()
-                    : $item->current_stock;
+                // record), which can drift from current_stock; everything else snapshots current_stock
+                // — or, in a one-warehouse count, that warehouse's balance.
+                $systemQty = match (true) {
+                    (bool) $item->track_serial => (int) $item->serials()->where('status', 'in_stock')
+                        ->when($warehouseId, fn ($q, $id) => $q->where('warehouse_id', $id))->count(),
+                    $warehouseId !== null => (int) $item->balances()->where('warehouse_id', $warehouseId)->value('qty'),
+                    default => $item->current_stock,
+                };
 
                 $count->lines()->create([
                     'stock_item_id' => $item->id,
@@ -121,6 +133,10 @@ class StockCountService
                         continue;
                     }
 
+                    // Which shelf the difference belongs to. Refused (rolling the whole commit
+                    // back) when an all-warehouse count cannot say — count it per warehouse.
+                    $warehouse = $this->warehouseForDifference($count, $line->item);
+
                     if ($line->item->track_serial) {
                         $this->reconcileSerials($line->item, $variance, $missingSerials[$line->stock_item_id] ?? [], $count->reference, $user);
                     }
@@ -129,6 +145,8 @@ class StockCountService
                         'type' => $variance > 0 ? 'adjust_up' : 'adjust_down',
                         'stock_item_id' => $line->stock_item_id,
                         'qty' => abs($variance),
+                        'from_label' => $variance < 0 ? $warehouse : null,
+                        'to_label' => $variance > 0 ? $warehouse : null,
                         'reference' => $count->reference,
                         'recorded_by' => $user->name,
                         'user_id' => $user->id,
@@ -136,13 +154,20 @@ class StockCountService
                         'moved_at' => now(),
                     ]);
 
+                    // The warehouse balance moves by the difference, and so does the total. A
+                    // one-warehouse count must not overwrite the total with one shelf's count;
+                    // an all-warehouse count lands on the counted figure either way.
+                    $variance > 0
+                        ? $this->balanceService->add($line->item, $warehouse, $variance)
+                        : $this->balanceService->remove($line->item, $warehouse, abs($variance));
+                    $total = $count->warehouse !== null ? $line->item->current_stock + $variance : $line->counted_qty;
                     $line->item->update([
-                        'current_stock' => $line->counted_qty,
+                        'current_stock' => $total,
                         'last_move_at' => now()->toDateString(),
                     ]);
 
-                    // Realign FIFO lots with the counted quantity.
-                    $this->lotService->reconcile($line->item, $line->counted_qty);
+                    // Realign FIFO lots with the new total.
+                    $this->lotService->reconcile($line->item, $total);
                 }
             }
 
@@ -168,6 +193,25 @@ class StockCountService
      *
      * @param  array<int>  $serialIds
      */
+    /**
+     * The warehouse a counted difference is booked against: the count's own warehouse, else
+     * the one warehouse the item holds stock in ('Unassigned' when none). An item spread
+     * over several warehouses is refused — the difference has no one place to go.
+     */
+    private function warehouseForDifference(StockCount $count, StockItem $item): string
+    {
+        if (filled($count->warehouse)) {
+            return $count->warehouse;
+        }
+
+        $holding = $item->balances()->with('warehouse')->where('qty', '>', 0)->get();
+        if ($holding->count() > 1) {
+            Refusal::fail('count_needs_warehouse', ['sku' => $item->sku]);
+        }
+
+        return $holding->first()?->warehouse?->name ?? 'Unassigned';
+    }
+
     private function reconcileSerials(StockItem $item, int $variance, array $serialIds, string $reference, User $user): void
     {
         if ($variance > 0) {
