@@ -66,19 +66,36 @@ const TABS = ['templates', 'groups', 'logs'] as const;
 type Tab = (typeof TABS)[number];
 const isTab = (v: string | null): v is Tab => TABS.includes(v as Tab);
 
+/**
+ * The right each tab's own endpoints ask for. The page itself opens on
+ * system.manage_permissions, so without this every tab was drawn for anyone who could open
+ * it — and one this reader may not use either spun forever (Role Templates) or read as
+ * empty and failed to save (Role Groups).
+ */
+const TAB_PERMISSION: Record<Tab, string> = {
+    templates: 'system.manage_roles',
+    groups: 'system.manage_groups',
+    logs: 'system.view_audit',
+};
+
 export default function PermissionsPage() {
     const t = useT();
+    const { can } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
+    const allowed = TABS.filter((id) => can(TAB_PERMISSION[id]));
+    const isAllowedTab = (v: string | null): v is Tab => isTab(v) && allowed.includes(v);
 
     // Active tab lives in the URL and nowhere else — the same as every other page with
     // sub-tabs, so a reload or a shared link is exact. Validated rather than cast: a ?tab=
-    // this page does not have would otherwise leave the card with no tab inside it at all.
+    // this page does not have (or this reader may not open) would otherwise leave the card
+    // with no usable tab inside it at all.
     const tabParam = searchParams.get('tab');
-    const [tab, setTabState] = useState<Tab>(() => (isTab(tabParam) ? tabParam : 'templates'));
+    const [tabState, setTabState] = useState<Tab>(() => (isAllowedTab(tabParam) ? tabParam : (allowed[0] ?? 'templates')));
+    const tab: Tab | null = allowed.includes(tabState) ? tabState : (allowed[0] ?? null);
     // Follows the URL while the page stays mounted: browser back/forward, and a link into
     // another tab from somewhere else in the app.
     useEffect(() => {
-        if (isTab(tabParam) && tabParam !== tab) {
+        if (isAllowedTab(tabParam) && tabParam !== tab) {
             setTabState(tabParam);
         }
     }, [tabParam]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -95,11 +112,8 @@ export default function PermissionsPage() {
         );
     };
 
-    const tabs: { id: Tab; label: string }[] = [
-        { id: 'templates', label: t('perm_roles') },
-        { id: 'groups', label: t('perm_groups') },
-        { id: 'logs', label: t('perm_audit') },
-    ];
+    const labels: Record<Tab, string> = { templates: t('perm_roles'), groups: t('perm_groups'), logs: t('perm_audit') };
+    const tabs = allowed.map((id) => ({ id, label: labels[id] }));
 
     return (
         <div className="space-y-6">
@@ -127,6 +141,7 @@ export default function PermissionsPage() {
                 {tab === 'templates' && <RolesTab />}
                 {tab === 'groups' && <GroupRolesTab />}
                 {tab === 'logs' && <AuditTab />}
+                {tab === null && <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_no_tabs')}</div>}
             </Card>
         </div>
     );
@@ -199,7 +214,7 @@ function RolesTab() {
     const t = useT();
     const lang = useUiStore((s) => s.lang);
     const confirm = useConfirm();
-    const { data, isLoading } = usePermissionMatrix();
+    const { data, isLoading, isError } = usePermissionMatrix();
     const update = useUpdateRolePermissions();
     const roleMut = useRoleMutations();
     const [selected, setSelected] = useState<string | null>(null);
@@ -254,6 +269,9 @@ function RolesTab() {
         for (const p of draft) if (!orig.has(p)) return true;
         return false;
     }, [draft, role]);
+
+    // A refused or failed load is said as such — it used to leave the skeleton up for good.
+    if (isError) return <div className="text-muted-foreground p-10 text-center text-sm">{t('perm_load_failed')}</div>;
 
     if (isLoading || !data || !role)
         return (

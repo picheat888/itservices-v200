@@ -7,6 +7,8 @@ export const permission: Dict = {
     perm_roles: 'Role Templates',
     perm_groups: 'Role Groups',
     perm_audit: 'Audit logs',
+    perm_no_tabs: 'You do not have access to any part of this page yet (Role Templates, Role Groups or Audit logs).',
+    perm_load_failed: 'Could not load the permissions. Please try again.',
     perm_members: 'members',
     perm_enabled: 'permissions enabled',
     perm_save: 'Save',
