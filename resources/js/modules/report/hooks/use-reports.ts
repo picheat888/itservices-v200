@@ -1,12 +1,12 @@
 /**
- * Report module React Query hooks — catalogue, Ticket & SLA summary/rows/export, and the
+ * Report module React Query hooks — catalogue (+ pinning), the hub number strip, Ticket & SLA summary/rows/export, and the
  * generic tabular report definition/rows/export.
  */
 import { downloadBlob } from '@/shared/lib/utils';
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import { reportApi } from '../api/reportApi';
-import type { ExportFormat, TabularFilters, TicketReportFilters } from '../types';
+import type { ExportFormat, ReportDefinition, SnapshotPeriod, TabularFilters, TicketReportFilters } from '../types';
 
 /**
  * A 4xx (422 invalid filters, 403 no access, 404 unknown report) answers the same however
@@ -16,7 +16,37 @@ export function noRetryOn4xx(count: number, error: unknown): boolean {
     return !(isAxiosError(error) && (error.response?.status ?? 500) < 500) && count < 2;
 }
 
-export const useReportCatalogue = () => useQuery({ queryKey: ['reports', 'catalogue'], queryFn: reportApi.catalogue });
+const CATALOGUE_KEY = ['reports', 'catalogue'] as const;
+
+export const useReportCatalogue = () => useQuery({ queryKey: CATALOGUE_KEY, queryFn: reportApi.catalogue });
+
+export const useReportSnapshot = (period: SnapshotPeriod) =>
+    useQuery({
+        queryKey: ['reports', 'snapshot', period],
+        queryFn: () => reportApi.snapshot(period),
+        // Keep the last numbers on screen while another period loads.
+        placeholderData: keepPreviousData,
+        retry: noRetryOn4xx,
+    });
+
+/** Pin / unpin a report. The star flips at once; a failed call puts it back. */
+export function useToggleReportPin() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ key, pinned }: { key: string; pinned: boolean }) => (pinned ? reportApi.pin(key) : reportApi.unpin(key)),
+        onMutate: async ({ key, pinned }) => {
+            await queryClient.cancelQueries({ queryKey: CATALOGUE_KEY });
+            const previous = queryClient.getQueryData<ReportDefinition[]>(CATALOGUE_KEY);
+            queryClient.setQueryData<ReportDefinition[]>(CATALOGUE_KEY, (list) => list?.map((r) => (r.key === key ? { ...r, pinned } : r)));
+            return { previous };
+        },
+        onError: (_error, _vars, context) => {
+            if (context?.previous) queryClient.setQueryData(CATALOGUE_KEY, context.previous);
+        },
+        onSettled: () => queryClient.invalidateQueries({ queryKey: CATALOGUE_KEY }),
+    });
+}
 
 export const useTicketOverview = (filters: TicketReportFilters) =>
     useQuery({
@@ -63,7 +93,7 @@ export const useTabularRows = (key: string, filters: TabularFilters, page: numbe
 
 export const useExportTabular = () =>
     useMutation({
-        mutationFn: ({ key, filters, format }: { key: string; filters: TabularFilters; format: ExportFormat }) =>
-            reportApi.exportTabular(key, filters, format),
+        mutationFn: ({ key, filters, format, columns }: { key: string; filters: TabularFilters; format: ExportFormat; columns?: string[] }) =>
+            reportApi.exportTabular(key, filters, format, columns),
         onSuccess: ({ blob, filename }) => downloadBlob(blob, filename),
     });

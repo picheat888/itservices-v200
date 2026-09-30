@@ -17,6 +17,9 @@ use Illuminate\Support\Collection;
  */
 abstract class TabularReport
 {
+    /** @var list<string>|null column keys the reader chose to keep; null = every column */
+    private ?array $shownColumns = null;
+
     abstract public function key(): string;
 
     /** Thai title printed on the Excel/PDF file. */
@@ -38,6 +41,33 @@ abstract class TabularReport
      * @return list<ReportColumn>
      */
     abstract public function columns(): array;
+
+    /**
+     * Keep only these columns in the file (the page's column picker); null or empty = all.
+     *
+     * @param  list<string>|null  $keys
+     */
+    public function showOnly(?array $keys): static
+    {
+        $this->shownColumns = $keys === null || $keys === [] ? null : array_values($keys);
+
+        return $this;
+    }
+
+    /**
+     * The columns an export prints: every column, or the chosen ones in their report order.
+     *
+     * @return list<ReportColumn>
+     */
+    public function exportColumns(): array
+    {
+        $columns = $this->columns();
+        if ($this->shownColumns === null) {
+            return $columns;
+        }
+
+        return array_values(array_filter($columns, fn (ReportColumn $c) => in_array($c->key, $this->shownColumns, true)));
+    }
 
     /**
      * Headline numbers over the filtered query. Default: the row count.

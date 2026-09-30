@@ -47,6 +47,8 @@ class TabularReportController extends Controller
 
     public function export(ExportTabularReportRequest $request, TabularReportExporter $exporter): Response
     {
-        return $exporter->download($request->report(), $request->user(), $request->filters(), $request->validated('format'));
+        $report = $request->report()->showOnly($request->shownColumns());
+
+        return $exporter->download($report, $request->user(), $request->filters(), $request->validated('format'));
     }
 }

@@ -13,13 +13,15 @@ import { isAxiosError } from 'axios';
 import { AlertCircle, ChevronLeft, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ColumnPicker } from '../components/column-picker';
 import { ExportReportDialog } from '../components/export-report-dialog';
 import { SummaryStrip } from '../components/summary-strip';
 import { TabularCell } from '../components/tabular-cell';
 import { TabularFilterBar } from '../components/tabular-filter-bar';
+import { useHiddenColumns } from '../hooks/use-hidden-columns';
 import { useExportTabular, useTabularDefinition, useTabularRows } from '../hooks/use-reports';
 import { useTabularFilters } from '../hooks/use-tabular-filters';
-import type { TabularDefinition, TabularFilters } from '../types';
+import type { TabularColumnDef, TabularDefinition, TabularFilters } from '../types';
 
 function errorMessageFor(t: (key: string) => string, error: unknown): string {
     const status = isAxiosError(error) ? error.response?.status : undefined;
@@ -43,12 +45,13 @@ function ErrorCard({ message }: { message: string }) {
  *  Reports the current row total up to the parent, for the export dialog's scope note. */
 function TabularReportRows({
     reportKey,
-    definition,
+    visibleColumns,
     filters,
     onTotalChange,
 }: {
     reportKey: string;
-    definition: TabularDefinition;
+    /** The definition's columns minus the ones hidden with the column picker. */
+    visibleColumns: TabularColumnDef[];
     filters: TabularFilters;
     onTotalChange: (total: number) => void;
 }) {
@@ -65,7 +68,7 @@ function TabularReportRows({
         return <ErrorCard message={errorMessageFor(t, error)} />;
     }
 
-    const columns: Column<Record<string, unknown> & { id: number }>[] = definition.columns.map((column) => ({
+    const columns: Column<Record<string, unknown> & { id: number }>[] = visibleColumns.map((column) => ({
         key: column.key,
         header: t(column.label_key),
         align: column.type === 'number' || column.type === 'money' ? 'right' : undefined,
@@ -105,13 +108,17 @@ function TabularReportRows({
 function TabularReportBody({ reportKey, stem, definition }: { reportKey: string; stem: string; definition: TabularDefinition }) {
     const t = useT();
     const { filters, patch, reset } = useTabularFilters(definition);
+    const { hidden, visibleColumns, toggle, showAll } = useHiddenColumns(definition);
     const [exportOpen, setExportOpen] = useState(false);
     const [rowsTotal, setRowsTotal] = useState(0);
     const exportMut = useExportTabular();
+    // Only sent when something is hidden, so a full export stays a plain request.
+    const exportColumns = hidden.length > 0 ? visibleColumns.map((c) => c.key) : undefined;
 
     return (
         <>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+                <ColumnPicker definition={definition} hidden={hidden} onToggle={toggle} onShowAll={showAll} />
                 <Button onClick={() => setExportOpen(true)}>
                     <Download className="h-4 w-4" />
                     {t('rep_export')}
@@ -121,7 +128,7 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
             <TabularReportRows
                 key={JSON.stringify(filters)}
                 reportKey={reportKey}
-                definition={definition}
+                visibleColumns={visibleColumns}
                 filters={filters}
                 onTotalChange={setRowsTotal}
             />
@@ -131,7 +138,8 @@ function TabularReportBody({ reportKey, stem, definition }: { reportKey: string;
                 title={t(`rep_${stem}_title`)}
                 total={rowsTotal}
                 formats={definition.formats}
-                onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format })}
+                note={exportColumns ? t('rep_export_columns_note').replace('{n}', String(exportColumns.length)) : undefined}
+                onExport={(format) => exportMut.mutateAsync({ key: reportKey, filters, format, columns: exportColumns })}
                 isPending={exportMut.isPending}
                 isError={exportMut.isError}
                 onReset={exportMut.reset}

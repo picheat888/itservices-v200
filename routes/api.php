@@ -79,6 +79,9 @@ Route::middleware(['auth:sanctum', CheckSessionTimeout::class, BlockResignedEmpl
     Route::get('dashboard/summary', [DashboardController::class, 'summary'])->name('api.dashboard.summary');
     // Report Center — each report authorizes itself through ReportCatalogue.
     Route::get('reports', [ReportController::class, 'index'])->name('api.reports.index');
+    Route::get('reports/snapshot', [ReportController::class, 'snapshot'])->name('api.reports.snapshot');
+    Route::put('reports/{key}/pin', [ReportController::class, 'pin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.pin');
+    Route::delete('reports/{key}/pin', [ReportController::class, 'unpin'])->where('key', '[a-z_]+\.[a-z_]+')->name('api.reports.unpin');
     Route::get('reports/tickets/overview', [TicketOverviewReportController::class, 'summary'])->name('api.reports.tickets.overview');
     Route::get('reports/tickets/overview/rows', [TicketOverviewReportController::class, 'rows'])->name('api.reports.tickets.overview.rows');
     Route::get('reports/tickets/overview/export', [TicketOverviewReportController::class, 'export'])->name('api.reports.tickets.overview.export');
