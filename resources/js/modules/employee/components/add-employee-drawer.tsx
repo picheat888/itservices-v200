@@ -81,6 +81,9 @@ const BLOCK_REASON_LABEL: Record<string, string> = {
     workflow_incomplete: 'req_block_workflow_incomplete',
 };
 
+/** The codes that are about this person's reporting line — the ones that hold Save shut. */
+const LINE_BLOCK_REASONS = ['chain_approver_resigned', 'chain_no_manager'];
+
 /** The three steps of the wizard: icon for the stepper, heading + sub-line for the body. */
 const STEPS = [
     { icon: User, titleKey: 'emp_personal_info', subKey: 'emp_personal_sub' },
@@ -126,8 +129,15 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
     // What each service asks for. Same trigger: nothing below reads it earlier.
     const { data: serviceSchemas = [] } = useOnboardingServices(open && step === LAST_STEP);
     const fieldsOf = (service: string) => serviceSchemas.find((s) => s.service === service)?.fields ?? [];
-    // A definite no. Undefined while the answer is still in flight, which is NOT a no.
-    const chainBlocked = precheck.data ? !precheck.data.can_request : false;
+    // A definite no about the reporting line itself. Undefined while the answer is still in
+    // flight, which is NOT a no. Only these hold Save shut: a workflow an admin switched off
+    // (or left incomplete) is not this person's line, and used to stop HR adding anyone at
+    // all — it now takes just its own service off the list (`serviceOff` below).
+    const chainBlocked = precheck.data ? LINE_BLOCK_REASONS.includes(precheck.data.reason ?? '') : false;
+    const serviceOff = (service: string) => !!precheck.data?.blocked_services.includes(service);
+    const offNames = SERVICES.filter((s) => serviceOff(s.v))
+        .map((s) => t(s.labelKey))
+        .join(', ');
     // "Cannot answer" is not a no either, but it is just as much not a yes — and the
     // rule here is that nobody is added on a reporting line we have not verified. So an
     // endpoint that fails holds Save shut too, visibly, with a way to ask again; failing
@@ -145,12 +155,21 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
         : chainBlocked
           ? t(BLOCK_REASON_LABEL[precheck.data?.reason ?? ''] ?? 'emp_onboarding_blocked_no_manager')
           : undefined;
+    // Why some (not all) services are off while the line itself is fine — a note, not a stop.
+    const offReasonText = offNames ? t(BLOCK_REASON_LABEL[precheck.data?.reason ?? ''] ?? 'emp_onboarding_blocked_workflow') : undefined;
 
     // Drop anything ticked before the chain turned out to be broken — the payload
     // guard below is the authority, this is so the cards do not sit lit and dead.
     useEffect(() => {
         if (servicesBlocked) setForm((f) => (f.services.length ? { ...f, services: [] } : f));
     }, [servicesBlocked]);
+    // Same for a single service whose workflow turned out to be off.
+    const offKey = precheck.data?.blocked_services.join(',') ?? '';
+    useEffect(() => {
+        if (!offKey) return;
+        const off = offKey.split(',');
+        setForm((f) => (f.services.some((s) => off.includes(s)) ? { ...f, services: f.services.filter((s) => !off.includes(s)) } : f));
+    }, [offKey]);
 
     // The note belongs to the services; with none ticked its box is not on screen, so a
     // note typed and then abandoned would be sent from a field nobody could see or fix.
@@ -749,6 +768,15 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         {precheck.isPending ? t('emp_onboarding_checking') : t('emp_onboarding_sub')}
                                     </div>
 
+                                    {!servicesBlocked && offNames && (
+                                        <div className="mb-3 flex items-start gap-2.5 rounded-lg bg-amber-500/10 p-3 text-sm">
+                                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                            <div className="text-muted-foreground">
+                                                <span className="text-foreground font-semibold">{offNames}</span> : {offReasonText}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* A list, not the three-across row this used to be: each service
                                         now carries the detail it asks for, and grid rows equalise their
                                         height — ticking one would have stretched all three. Stacked, only
@@ -759,20 +787,21 @@ export function AddEmployeeDrawer({ open, onClose }: { open: boolean; onClose: (
                                         {SERVICES.map(({ v, icon: Icon, labelKey }) => {
                                             const on = form.services.includes(v);
                                             const fields = fieldsOf(v);
+                                            const locked = servicesLocked || serviceOff(v);
                                             return (
                                                 <div key={v} className={cn('transition-colors', on && 'bg-brand/5')}>
                                                     <button
                                                         type="button"
-                                                        disabled={servicesLocked}
-                                                        title={blockedReasonText}
+                                                        disabled={locked}
+                                                        title={blockedReasonText ?? (serviceOff(v) ? offReasonText : undefined)}
                                                         aria-pressed={on}
                                                         onClick={() =>
                                                             set('services', on ? form.services.filter((x) => x !== v) : [...form.services, v])
                                                         }
                                                         className={cn(
                                                             'flex w-full items-center gap-3 p-3 text-left transition-colors',
-                                                            !on && !servicesLocked && 'hover:bg-accent/50',
-                                                            servicesLocked && 'cursor-not-allowed opacity-50',
+                                                            !on && !locked && 'hover:bg-accent/50',
+                                                            locked && 'cursor-not-allowed opacity-50',
                                                         )}
                                                     >
                                                         <span
