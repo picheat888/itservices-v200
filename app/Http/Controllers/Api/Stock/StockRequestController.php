@@ -79,6 +79,12 @@ class StockRequestController extends Controller
             'reason' => ['required', 'string', 'max:2000'],
         ]);
 
+        // The drawer caps the quantity at "available"; the API used to take anything.
+        $available = StockItem::findOrFail($data['stock_item_id'])->availableToRequest();
+        if ($data['qty'] > $available) {
+            Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
+        }
+
         $stockRequest = StockRequest::create([
             'stock_item_id' => $data['stock_item_id'],
             'user_id' => $user->id,
@@ -98,13 +104,23 @@ class StockRequestController extends Controller
     public function approve(Request $request, StockRequest $stockRequest): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
+        $this->assertNotOwn($request, $stockRequest);
         $this->assertStatus($stockRequest, 'pending');
 
-        $stockRequest->update([
-            'status' => 'approved',
-            'approver_name' => $request->user()->name,
-            'approved_at' => now(),
-        ]);
+        // Approving claims the stock, so check again: two requisitions filed while the same
+        // units were free must not both be approved against them.
+        DB::transaction(function () use ($request, $stockRequest) {
+            $available = StockItem::lockForUpdate()->findOrFail($stockRequest->stock_item_id)->availableToRequest();
+            if ($stockRequest->qty > $available) {
+                Refusal::fail('not_enough_stock', ['available' => $available], 'qty');
+            }
+
+            $stockRequest->update([
+                'status' => 'approved',
+                'approver_name' => $request->user()->name,
+                'approved_at' => now(),
+            ]);
+        });
         AuditLog::record('Approved stock request', "#{$stockRequest->id}");
         app(StockNotificationService::class)->requestResponded($stockRequest->load('item'), 'approved');
 
@@ -115,6 +131,7 @@ class StockRequestController extends Controller
     public function reject(Request $request, StockRequest $stockRequest): JsonResponse
     {
         abort_unless((bool) $request->user()?->hasPermission('stock.approve'), 403);
+        $this->assertNotOwn($request, $stockRequest);
         $this->assertStatus($stockRequest, 'pending');
 
         $stockRequest->update([
@@ -238,6 +255,12 @@ class StockRequestController extends Controller
     }
 
     /** Guard a workflow transition, returning 422 when the request isn't in the expected state. */
+    /** Nobody decides their own requisition — holding stock.approve included. */
+    private function assertNotOwn(Request $request, StockRequest $stockRequest): void
+    {
+        abort_if((int) $stockRequest->user_id === (int) $request->user()?->id, 403, 'You cannot decide your own requisition.');
+    }
+
     private function assertStatus(StockRequest $stockRequest, string $expected): void
     {
         if ($stockRequest->status !== $expected) {

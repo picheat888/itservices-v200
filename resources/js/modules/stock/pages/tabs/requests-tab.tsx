@@ -133,7 +133,7 @@ export function RequestsTab({
             align: 'right',
             render: (r) => (
                 <div className="flex justify-end gap-1.5">
-                    {can('approve') && r.status === 'pending' && (
+                    {r.can_decide && (
                         <>
                             <Button size="sm" onClick={() => confirmApprove(r)} className="bg-emerald-600 text-white hover:bg-emerald-700">
                                 <Check className="h-3.5 w-3.5" />
