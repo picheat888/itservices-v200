@@ -23,6 +23,14 @@ class EmployeeResource extends JsonResource
         // Administrator records).
         $linkedUser = $this->user;
 
+        // Contact details, login name, joining date and why someone left are Employee-module
+        // data. The unpaged list stays open as the picker every other module uses, so for a
+        // reader without employees.view those fields go out empty — except on their own record.
+        $viewer = $request->user();
+        $showsPersonal = (bool) $viewer?->hasPermission('employees.view')
+            || ($viewer?->employee_id !== null && (int) $viewer->employee_id === (int) $this->id);
+        $personal = fn (mixed $value): mixed => $showsPersonal ? $value : null;
+
         return [
             'id' => $this->id,
             'code' => $this->code,
@@ -43,13 +51,13 @@ class EmployeeResource extends JsonResource
             'section' => $this->whenLoaded('section', fn () => $this->section?->name),
             'section_th' => $this->whenLoaded('section', fn () => $this->section?->name_th),
             'position' => $this->whenLoaded('position', fn () => $this->position?->title),
-            'email' => $this->email,
-            'phone' => $this->phone,
-            'username' => $this->username,
-            'joined_at' => $this->joined_at?->toDateString(),
+            'email' => $personal($this->email),
+            'phone' => $personal($this->phone),
+            'username' => $personal($this->username),
+            'joined_at' => $personal($this->joined_at?->toDateString()),
             'status' => $status?->value ?? EmployeeStatus::Active->value,
-            'resign_reason' => $this->resign_reason,
-            'last_day' => $this->last_day?->toDateString(),
+            'resign_reason' => $personal($this->resign_reason),
+            'last_day' => $personal($this->last_day?->toDateString()),
             'has_account' => (bool) $linkedUser,
             'is_super_admin' => (bool) $linkedUser?->isSuper(),
             // Why this record cannot be deleted — empty means it is a clean mis-entry. Costs a

@@ -179,4 +179,42 @@ class EmployeePermissionGatingTest extends TestCase
         $viewer = $this->userWith(['employees.module', 'employees.view']);
         $this->actingAs($viewer)->getJson('/api/employees?page=1')->assertOk();
     }
+
+    /** The picker list stays open for other modules — but only with what a picker needs. */
+    public function test_the_open_picker_list_carries_no_personal_details(): void
+    {
+        $someone = Employee::create([
+            'code' => 'EMP-777', 'first_name' => 'Somchai', 'last_name' => 'Private', 'email' => 'somchai@example.test',
+            'phone' => '081-000-0000', 'username' => 'somchai', 'joined_at' => '2024-02-01',
+            'status' => 'resigned', 'resign_reason' => 'Personal matters', 'last_day' => '2026-09-30',
+        ]);
+        $personal = ['email', 'phone', 'username', 'joined_at', 'resign_reason', 'last_day'];
+
+        $row = collect($this->actingAs($this->userWith(['tickets.create']))->getJson('/api/employees')->assertOk()->json('data'))
+            ->firstWhere('id', $someone->id);
+        $this->assertSame('Somchai Private', $row['name']);
+        $this->assertSame('EMP-777', $row['code']);
+        $this->assertSame('resigned', $row['status']);
+        foreach ($personal as $field) {
+            $this->assertNull($row[$field], $field);
+        }
+
+        $full = collect($this->actingAs($this->userWith(['employees.module', 'employees.view']))->getJson('/api/employees')->json('data'))
+            ->firstWhere('id', $someone->id);
+        $this->assertSame('somchai@example.test', $full['email']);
+        $this->assertSame('Personal matters', $full['resign_reason']);
+    }
+
+    public function test_one_employee_record_needs_view_unless_it_is_your_own(): void
+    {
+        $other = Employee::create(['first_name' => 'Other', 'last_name' => 'Person', 'email' => 'other@example.test']);
+        $me = Employee::create(['first_name' => 'Me', 'last_name' => 'Myself', 'email' => 'me@example.test']);
+        $user = $this->userWith(['tickets.create']);
+        $user->update(['employee_id' => $me->id]);
+
+        $this->actingAs($user)->getJson("/api/employees/{$other->id}")->assertForbidden();
+        $this->actingAs($user)->getJson("/api/employees/{$me->id}")->assertOk()->assertJsonPath('data.email', 'me@example.test');
+        $this->actingAs($this->userWith(['employees.module', 'employees.view']))
+            ->getJson("/api/employees/{$other->id}")->assertOk()->assertJsonPath('data.email', 'other@example.test');
+    }
 }
