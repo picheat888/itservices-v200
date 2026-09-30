@@ -478,10 +478,13 @@ export interface Ticket {
     updated_at: string | null;
 }
 
-/** One progress note written between taking a case and closing it. */
+/** One row of a case's timeline between taking and closing it: a typed note, or an event. */
 export interface TicketUpdate {
     id: number;
     author_name: string;
+    /** 'note' = typed by someone; 'forwarded' = the case changed hands (`meta.from` → `meta.to`). */
+    kind: 'note' | 'forwarded';
+    meta: { from?: string | null; to?: string | null } | null;
     body: string;
     created_at: string | null;
 }

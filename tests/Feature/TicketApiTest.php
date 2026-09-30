@@ -161,6 +161,43 @@ class TicketApiTest extends TestCase
         $this->assertSame('ticket_forwarded', $next->notifications()->first()->data['type']);
     }
 
+    /**
+     * A forward used to leave no trace on the case (only the admin-only audit log) and to
+     * tell the technician it was taken from nothing — the case just left their list.
+     */
+    public function test_a_dispatcher_forward_goes_on_the_timeline_and_tells_who_held_it(): void
+    {
+        $holder = $this->userWithEmployee('super');
+        $next = $this->userWithEmployee('super');
+        $dispatcher = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['assignee_id' => $holder->id, 'status' => 'in_progress']);
+
+        $this->actingAs($dispatcher)->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $next->id])->assertOk();
+
+        $updates = $this->actingAs($dispatcher)->getJson("/api/tickets/{$ticket->id}")->assertOk()->json('data.updates');
+        $this->assertCount(1, $updates);
+        $this->assertSame('forwarded', $updates[0]['kind']);
+        $this->assertSame(['from' => $holder->name, 'to' => $next->name], $updates[0]['meta']);
+        $this->assertSame($dispatcher->name, $updates[0]['author_name']);
+
+        $bell = $holder->notifications()->first();
+        $this->assertSame('ticket_forwarded_away', $bell->data['type']);
+        $this->assertSame($next->name, $bell->data['to']);
+        $this->assertSame($dispatcher->name, $bell->data['by']);
+    }
+
+    public function test_passing_your_own_case_on_does_not_bell_yourself(): void
+    {
+        $holder = $this->userWithEmployee('super');
+        $next = $this->userWithEmployee('super');
+        $ticket = Ticket::factory()->create(['assignee_id' => $holder->id, 'status' => 'in_progress']);
+
+        $this->actingAs($holder)->postJson("/api/tickets/{$ticket->id}/forward", ['assignee_id' => $next->id])->assertOk();
+
+        $this->assertSame(0, $holder->notifications()->count());
+        $this->assertSame(1, $ticket->updates()->where('kind', 'forwarded')->count());
+    }
+
     public function test_forwarding_is_blocked_for_bystanders_requesters_and_open_cases(): void
     {
         $owner = $this->userWithEmployee('super');

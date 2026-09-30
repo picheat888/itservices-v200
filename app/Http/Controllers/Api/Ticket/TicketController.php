@@ -567,7 +567,7 @@ class TicketController extends Controller
         );
         $this->assertCanReceive($staff, $ticket);
 
-        $ticket = $this->service->forward($ticket, $staff);
+        $ticket = $this->service->forward($ticket, $staff, $user);
         AuditLog::record('Forwarded ticket', "{$ticket->ticket_no} → {$staff->name}");
 
         return (new TicketResource($ticket->load(['requester', 'assignee', 'relatedAsset', 'attachments'])))

@@ -106,6 +106,8 @@ export const ticket: Dict = {
     ticket_activity: 'Activity',
     ticket_created_event: 'Ticket created',
     ticket_taken_by: 'Taken by',
+    ticket_forwarded_event: 'Forwarded from {from} to {to}',
+    ticket_forwarded_by: 'Forwarded by {name}',
     ticket_waiting: 'Waiting for IT staff',
     ticket_completed_event: 'Closed',
     ticket_canceled_event: 'Closed - canceled',
