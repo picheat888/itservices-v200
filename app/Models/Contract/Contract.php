@@ -155,6 +155,16 @@ class Contract extends Model
     }
 
     /** Annual-normalised contract value, used for the "Annual value" stat. */
+    /** What one `value` covers, as shown after an amount: "/mo", "/qtr" or "/yr". */
+    public function cycleSuffix(): string
+    {
+        return match ($this->billing_cycle) {
+            'monthly' => '/mo',
+            'quarterly' => '/qtr',
+            default => '/yr',
+        };
+    }
+
     public function annualValue(): float
     {
         $multiplier = match ($this->billing_cycle) {

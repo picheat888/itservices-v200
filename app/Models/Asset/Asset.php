@@ -183,6 +183,8 @@ class Asset extends Model
      */
     public function annualValue(): float
     {
-        return $this->source === AssetSource::Rented ? (float) ($this->contract?->value ?? 0) * 12 : (float) $this->value;
+        // A rented asset's value is its contract's per-period fee, so the year is whatever
+        // that contract's billing cycle makes it — not always twelve months of it.
+        return $this->source === AssetSource::Rented ? ($this->contract?->annualValue() ?? 0.0) : (float) $this->value;
     }
 }

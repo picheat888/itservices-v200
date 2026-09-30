@@ -80,12 +80,6 @@ class ContractResource extends JsonResource
     /** Builds the "฿2,140,000/yr" style display string from raw value + cycle (symbol per Settings currency). */
     private function valueDisplay(): string
     {
-        $suffix = match ($this->billing_cycle) {
-            'monthly' => '/mo',
-            'quarterly' => '/qtr',
-            default => '/yr',
-        };
-
-        return AppSetting::currencySymbol().number_format((float) $this->value, 2).$suffix;
+        return AppSetting::currencySymbol().number_format((float) $this->value, 2).$this->resource->cycleSuffix();
     }
 }

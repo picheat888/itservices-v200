@@ -161,6 +161,26 @@ class AssetApiTest extends TestCase
     }
 
     /**
+     * The contract's fee is per ITS billing cycle. A yearly or quarterly lease used to read
+     * "/mo" on the asset and count twelve times over in the overview's total.
+     */
+    public function test_a_rented_asset_follows_its_contracts_billing_cycle(): void
+    {
+        $this->actingAs($this->super());
+        $lease = fn (string $cycle, int $value) => Contract::create([
+            'vendor_id' => $this->vendorId("Lease {$cycle}"), 'name' => "Lease {$cycle}", 'type' => 'hardware',
+            'start_date' => '2026-01-01', 'end_date' => '2027-12-31', 'value' => $value, 'billing_cycle' => $cycle,
+        ]);
+        $yearly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('yearly', 24000)->id, 'value' => 0, 'vendor_id' => null]);
+        $quarterly = Asset::factory()->create(['source' => 'rented', 'contract_id' => $lease('quarterly', 3000)->id, 'value' => 0, 'vendor_id' => null]);
+
+        $this->getJson("/api/assets/{$yearly->id}")->assertOk()->assertJsonPath('data.value_display', '฿24,000/yr');
+        $this->getJson("/api/assets/{$quarterly->id}")->assertOk()->assertJsonPath('data.value_display', '฿3,000/qtr');
+        // 24,000 once a year + 3,000 four times a year.
+        $this->getJson('/api/assets/summary')->assertOk()->assertJsonPath('total_value', 36000);
+    }
+
+    /**
      * The dashboard's "By type" card draws one stacked bar per type, so every type row carries
      * its own Ready / in-use / write-off split. The two pending states count as in use — the
      * asset has left the pool — and the three buckets must add up to the row's total.
