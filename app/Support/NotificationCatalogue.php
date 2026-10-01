@@ -490,8 +490,8 @@ class NotificationCatalogue
                 'name' => 'Report file ready',
                 'trigger' => 'A report file asked for on the Report Center has finished building',
                 'audience' => 'The person who asked for the file',
-                'message_en' => 'Your {format} file is ready - download it from My exports',
-                'message_th' => 'ไฟล์ {format} พร้อมแล้ว - ดาวน์โหลดได้ที่ ไฟล์ Export ของฉัน',
+                'message_en' => 'Your {format} file is ready - download it from "My exports"',
+                'message_th' => 'ไฟล์ {format} พร้อมแล้ว - ดาวน์โหลดได้ที่ "ไฟล์ Export ของฉัน"',
                 'enabled' => true,
             ],
             [
@@ -500,8 +500,8 @@ class NotificationCatalogue
                 'name' => 'Report file failed',
                 'trigger' => 'A report file asked for on the Report Center could not be built',
                 'audience' => 'The person who asked for the file',
-                'message_en' => 'The {format} file could not be created - try again from My exports',
-                'message_th' => 'สร้างไฟล์ {format} ไม่สำเร็จ - ลองอีกครั้งได้ที่ ไฟล์ Export ของฉัน',
+                'message_en' => 'The {format} file could not be created - try again from "My exports"',
+                'message_th' => 'สร้างไฟล์ {format} ไม่สำเร็จ - ลองอีกครั้งได้ที่ "ไฟล์ Export ของฉัน"',
                 'enabled' => true,
             ],
             [
