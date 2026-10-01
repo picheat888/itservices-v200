@@ -11,11 +11,10 @@
 import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
-import { Skeleton } from '@/shared/ui/skeleton';
 import { LineChart, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
-import { byDomainOrder, ReportCatalogue, reportStem } from '../components/report-catalogue';
+import { byDomainOrder, ReportCatalogue, ReportCatalogueSkeleton, reportStem } from '../components/report-catalogue';
 import { ScheduledReports } from '../components/scheduled-reports';
 import { PeriodSwitch, SnapshotStrip, useSnapshotPeriod } from '../components/snapshot-strip';
 import { useReportCatalogue } from '../hooks/use-reports';
@@ -60,7 +59,7 @@ export default function ReportsPage() {
             <div className="grid items-start gap-5 xl:grid-cols-[66.6667%_minmax(0,1fr)]">
                 <div className="min-w-0 space-y-4">
                     {isLoading ? (
-                        <Skeleton className="h-40 w-full" />
+                        <ReportCatalogueSkeleton />
                     ) : reports.length === 0 ? (
                         <div className="border-border flex flex-col items-center rounded-xl border border-dashed py-16 text-center">
                             <LineChart className="text-muted-foreground h-10 w-10" />
