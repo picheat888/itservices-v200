@@ -60,23 +60,28 @@ function EmptyRow({ label }: { label: string }) {
 }
 
 /**
- * "▼ 0.6 ชม." — the resolve-time change against the period before. Unlike the ticket count,
- * time has a good direction: faster is green, slower amber.
+ * ▲/▼ coloured by what the move means for the figure, as the hub's snapshot strip does
+ * (snapshot-strip.tsx): better is green, worse red. Both changes on this page are "lower is
+ * better" — fewer tickets coming in, less time to resolve one.
  */
+const BETTER = 'text-emerald-600 dark:text-emerald-400';
+const WORSE = 'text-red-600 dark:text-red-400';
+
+/** "▼ 0.6 ชม." — the resolve-time change against the period before: faster is better. */
 function HoursChange({ current, previous, unit }: { current: number | null; previous: number | null; unit: string }) {
     if (current === null || previous === null || current === previous) return null;
     const diff = Math.round((current - previous) * 10) / 10;
 
     return (
-        <span className={cn('font-semibold', diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+        <span className={cn('font-semibold', diff < 0 ? BETTER : WORSE)}>
             {diff > 0 ? '▲' : '▼'} {Math.abs(diff)} {unit}
         </span>
     );
 }
 
 /**
- * "▲ 17% จาก 35 ในช่วงก่อนหน้า" — the direction and size of the change against the period
- * before. Neutral colour on purpose: more tickets is neither good nor bad by itself.
+ * "▲ 17% จาก 35 ในช่วงก่อนหน้า" — the ticket-count change against the period before. More
+ * tickets coming in means more problems, so up reads red and down green.
  */
 function Change({ current, previous, label }: { current: number; previous: number; label: string }) {
     if (previous === 0 || current === previous) return <>{label}</>;
@@ -84,7 +89,7 @@ function Change({ current, previous, label }: { current: number; previous: numbe
 
     return (
         <span className="inline-flex items-center gap-1">
-            <span className="text-foreground font-medium">
+            <span className={cn('font-semibold', pct > 0 ? WORSE : BETTER)}>
                 {pct > 0 ? '▲' : '▼'} {Math.abs(pct)}%
             </span>
             {label}
