@@ -5,9 +5,8 @@ import type { Dict } from '@/lang/types';
 
 export const report: Dict = {
     // pages/index.tsx — Report Center
-    rep_center_title: 'Report center',
-    rep_center_sub:
-        'Reports from every module in one place. Open on screen, filter, then export to Excel or PDF. You only see reports for modules you have access to.',
+    rep_center_title: 'Reports',
+    rep_center_sub: 'Every report in one place, ready to export to Excel or PDF.',
     rep_search_placeholder: 'Search reports, e.g. SLA, warranty, leavers',
     rep_filter_all: 'All',
     rep_domain_tickets: 'Tickets',
@@ -139,7 +138,7 @@ export const report: Dict = {
     rep_export_go_xlsx: 'Create Excel file',
     rep_export_go_pdf: 'Create PDF file',
     rep_export_queued_title: 'Creating your file',
-    rep_export_queued: 'You will be notified when it is ready. Download it from "My exports" on the Report Center.',
+    rep_export_queued: 'You will be notified when it is ready. Download it from "My exports" on the Reports page.',
     rep_export_refusal_failed: 'The file could not be created. Try again.',
     rep_export_refusal_invalid: 'The filters are not valid. Check them and try again.',
     rep_export_refusal_forbidden: 'You do not have access to export this report',
@@ -204,7 +203,7 @@ export const report: Dict = {
     rep_schedule_freq_monthly_when: 'On the 1st',
     rep_schedule_create: 'Schedule',
     rep_schedule_save: 'Save',
-    rep_schedule_created: 'Scheduled. You can see and edit it on the Report Center.',
+    rep_schedule_created: 'Scheduled. You can see and edit it on the Reports page.',
     rep_schedule_refusal_failed: 'Could not save. Try again.',
     rep_schedule_refusal_invalid: 'Something is not valid. Check it and try again.',
     rep_schedule_refusal_forbidden: 'You do not have access to this report',
