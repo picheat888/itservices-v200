@@ -5,8 +5,8 @@ import type { Dict } from '@/lang/types';
 
 export const report: Dict = {
     // pages/index.tsx — Report Center
-    rep_center_title: 'ศูนย์รายงาน',
-    rep_center_sub: 'รวมรายงานทุกเรื่องไว้ที่นี่ ดูบนเว็บ กรองข้อมูล แล้วส่งออกเป็น Excel หรือ PDF ได้ แสดงเฉพาะรายงานที่คุณมีสิทธิ์ดู',
+    rep_center_title: 'รายงาน',
+    rep_center_sub: 'ศูนย์รวมรายงานทุกเรื่องไว้ที่นี่ และสามารถส่งออกเป็น Excel หรือ PDF ได้',
     rep_search_placeholder: 'ค้นหารายงาน เช่น SLA, ประกัน, ลาออก',
     rep_filter_all: 'ทั้งหมด',
     rep_domain_tickets: 'Ticket',
