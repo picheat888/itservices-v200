@@ -152,7 +152,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
 export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; title: string; note?: string }) {
     return (
         <div className="border-border flex items-center justify-between gap-3 border-b px-[18px] py-3.5">
-            <h3 className="flex items-center gap-2 text-sm font-bold">
+            <h3 className="flex items-center gap-2 text-sm font-semibold">
                 <Icon className="text-muted-foreground h-4 w-4" />
                 {title}
             </h3>

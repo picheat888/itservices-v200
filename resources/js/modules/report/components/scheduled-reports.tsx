@@ -130,7 +130,7 @@ export function ScheduledReports() {
     if (items.length === 0) {
         return (
             <Card className="space-y-2 p-4">
-                <h4 className="flex items-center gap-2 text-[13.5px] font-bold">
+                <h4 className="flex items-center gap-2 text-sm font-semibold">
                     <Clock className="text-muted-foreground h-4 w-4" />
                     {t('rep_schedule_eyebrow')}
                 </h4>

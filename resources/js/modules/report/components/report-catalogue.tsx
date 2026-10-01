@@ -108,7 +108,7 @@ export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
                             <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
                                 <Icon className="h-[15px] w-[15px]" />
                             </span>
-                            <span className="text-[13.5px] font-bold">{t(`rep_domain_${domain}`)}</span>
+                            <span className="text-sm font-semibold">{t(`rep_domain_${domain}`)}</span>
                             <span className="text-muted-foreground text-xs">{t('rep_count_reports').replace('{n}', String(items.length))}</span>
                         </div>
                         {items.map((r) => (
@@ -118,8 +118,8 @@ export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
                                     className="focus-visible:ring-brand/30 grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:grid-cols-[minmax(0,1fr)_auto_auto]"
                                 >
                                     <div className="min-w-0">
-                                        <div className="font-semibold">{t(`rep_${reportStem(r.key)}_title`)}</div>
-                                        <div className="text-muted-foreground mt-px text-[12.5px]">{t(`rep_${reportStem(r.key)}_desc`)}</div>
+                                        <div className="text-sm font-semibold">{t(`rep_${reportStem(r.key)}_title`)}</div>
+                                        <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(r.key)}_desc`)}</div>
                                     </div>
                                     <div className="hidden gap-1 sm:flex">
                                         {r.formats.map((f) => (
