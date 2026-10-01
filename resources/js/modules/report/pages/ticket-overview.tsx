@@ -212,7 +212,11 @@ export default function TicketOverviewReportPage() {
                                     emptyLabel={t('rep_no_data')}
                                 />
                             </Section>
-                            <Section title={t('rep_aging_title')} className="flex flex-1 flex-col">
+                            <Section
+                                title={t('rep_aging_title')}
+                                sub={t('rep_aging_total').replace('{n}', String(Object.values(data.backlog.aging).reduce((sum, n) => sum + n, 0)))}
+                                className="flex flex-1 flex-col"
+                            >
                                 <BacklogAging aging={data.backlog.aging} />
                             </Section>
                         </div>
