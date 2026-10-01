@@ -150,7 +150,7 @@ export const report: Dict = {
     rep_scope_as_of: 'ณ {date}',
     rep_scope_filters: 'ตัวกรอง {n} รายการ',
     rep_scope_columns: '{n} คอลัมน์',
-    rep_my_exports_sub: 'เก็บไว้ให้ดาวน์โหลด {days} วัน',
+    rep_my_exports_sub: 'เก็บไว้ {days} วัน',
     rep_my_exports_empty: 'ยังไม่มีไฟล์ กด "ส่งออก" ในหน้ารายงาน แล้วไฟล์จะมาอยู่ที่นี่',
     rep_my_exports_st_queued: 'รอคิว',
     rep_my_exports_st_running: 'กำลังสร้าง',

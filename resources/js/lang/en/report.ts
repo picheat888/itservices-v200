@@ -152,7 +152,7 @@ export const report: Dict = {
     rep_scope_as_of: 'As of {date}',
     rep_scope_filters: 'Filters: {n}',
     rep_scope_columns: '{n} columns',
-    rep_my_exports_sub: 'Kept for download for {days} days',
+    rep_my_exports_sub: 'Kept {days} days',
     rep_my_exports_empty: 'No files yet. Use Export on any report and the file will show up here.',
     rep_my_exports_st_queued: 'Queued',
     rep_my_exports_st_running: 'Building',
