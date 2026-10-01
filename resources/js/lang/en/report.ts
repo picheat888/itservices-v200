@@ -153,7 +153,7 @@ export const report: Dict = {
     rep_scope_filters: 'Filters: {n}',
     rep_scope_columns: '{n} columns',
     rep_my_exports_sub: 'Kept {days} days',
-    rep_my_exports_empty: 'No files yet. Use Export on any report and the file will show up here.',
+    rep_my_exports_empty: 'No exported files',
     rep_my_exports_st_queued: 'Queued',
     rep_my_exports_st_running: 'Building',
     rep_my_exports_st_ready: 'Ready',
@@ -212,7 +212,7 @@ export const report: Dict = {
 
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'Scheduled reports',
-    rep_schedules_sub: 'Emailed automatically',
+    rep_schedules_sub: 'Sent automatically',
     rep_schedules_intro: 'Have a report emailed daily, weekly or monthly as PDF or Excel. Use "Schedule" on the report page.',
     rep_schedules_next: 'Next {t}',
     rep_schedules_paused: 'Paused',

@@ -204,7 +204,7 @@ export function MyExports() {
         <Card id="my-exports" className="overflow-hidden">
             <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
             {items.length === 0 ? (
-                <p className="text-muted-foreground px-[18px] py-4 text-[12.5px]">{t('rep_my_exports_empty')}</p>
+                <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_my_exports_empty')}</p>
             ) : (
                 items.map((item) => <ExportRow key={item.id} item={item} />)
             )}
