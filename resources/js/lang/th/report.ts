@@ -211,7 +211,7 @@ export const report: Dict = {
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'รายงานที่ตั้งเวลาไว้',
     rep_schedules_sub: 'ส่งอัตโนมัติ',
-    rep_schedules_intro: 'ให้ระบบส่งรายงานเข้าอีเมลรายวัน รายสัปดาห์ หรือรายเดือน เป็น PDF หรือ Excel กด "ตั้งเวลาส่ง" ในหน้ารายงานที่ต้องการ',
+    rep_schedules_empty: 'ไม่ได้ตั้งส่งออกอีเมลอัตโนมัติ',
     rep_schedules_next: 'ส่งครั้งถัดไป {t}',
     rep_schedules_paused: 'หยุดไว้',
     rep_schedules_last_sent: 'ส่งล่าสุด {t}',

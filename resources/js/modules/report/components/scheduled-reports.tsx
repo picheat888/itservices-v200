@@ -2,7 +2,7 @@
  * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail, laid out like the exports card above
  * it: a tile (the file type, with a clock), then three lines each split left | right — report |
  * on/off switch, to whom | send now / edit / delete icons, when it goes out | next send — and a
- * red line when the last send failed. With none yet it shows the design's intro card instead; a
+ * red line when the last send failed. With none yet the same card says so; a
  * schedule is set from a report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules
  * (GET /api/reports/schedules).
  */
@@ -156,24 +156,14 @@ export function ScheduledReports() {
     // The last schedule opened, kept while the dialog animates closed so it does not blank.
     const [shown, setShown] = useState<ReportScheduleItem | null>(null);
 
-    // None yet: the design's "ส่งรายงานทางอีเมลตามเวลา" card, saying where one is set.
-    if (items.length === 0) {
-        return (
-            <Card className="space-y-2 p-4">
-                <h4 className="flex items-center gap-2 text-sm font-semibold">
-                    <Clock className="text-muted-foreground h-4 w-4" />
-                    {t('rep_schedule_eyebrow')}
-                </h4>
-                <p className="text-muted-foreground text-[12.5px]">{t('rep_schedules_intro')}</p>
-            </Card>
-        );
-    }
-
     const formats = (key: string) => catalogue.find((r) => r.key === key)?.formats ?? ['pdf'];
 
+    // One card either way — the same heading, then the schedules or a line saying there are none
+    // (as the exports card above does).
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
             <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} note={t('rep_schedules_sub')} />
+            {items.length === 0 && <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_schedules_empty')}</p>}
             {items.map((item) => (
                 <ScheduleRow
                     key={item.id}
