@@ -14,6 +14,7 @@ import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { useConfirm } from '@/shared/ui/confirm-dialog';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useToastStore } from '@/stores/toast';
 import { useUiStore } from '@/stores/ui';
 import { AlertCircle, CheckCircle2, Clock, Download, Loader2, RotateCcw, Trash2 } from 'lucide-react';
@@ -196,14 +197,39 @@ export function RailHeading({ icon: Icon, title, note }: { icon: typeof Clock; t
     );
 }
 
+/**
+ * Rail rows while a rail card loads, shaped like its rows — the file tile, then three lines —
+ * so the card pulses in place rather than saying "none" before the list arrives.
+ * Shared with scheduled-reports.tsx.
+ */
+export function RailRowsSkeleton({ rows = 3 }: { rows?: number }) {
+    return (
+        <div aria-hidden="true">
+            {Array.from({ length: rows }, (_, i) => (
+                <div key={i} className="border-border flex gap-3 border-b px-4 py-3 last:border-b-0">
+                    <Skeleton className="h-12 w-11 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
+                        <Skeleton className="h-4 w-3/5" />
+                        <Skeleton className="h-3 w-4/5" />
+                        <Skeleton className="h-3 w-2/5" />
+                    </div>
+                    <Skeleton className="h-6 w-14 shrink-0" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function MyExports() {
     const t = useT();
-    const { data: items = [] } = useMyExports();
+    const { data: items = [], isLoading } = useMyExports();
 
     return (
         <Card id="my-exports" className="overflow-hidden">
             <RailHeading icon={Download} title={t('rep_my_exports_title')} note={t('rep_my_exports_sub').replace('{days}', String(KEEP_DAYS))} />
-            {items.length === 0 ? (
+            {isLoading ? (
+                <RailRowsSkeleton />
+            ) : items.length === 0 ? (
                 <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_my_exports_empty')}</p>
             ) : (
                 items.map((item) => <ExportRow key={item.id} item={item} />)

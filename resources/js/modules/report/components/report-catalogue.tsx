@@ -8,6 +8,7 @@ import { useT } from '@/lang';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
 import { useUiStore } from '@/stores/ui';
 import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -142,6 +143,46 @@ function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; t
             </div>
             {children}
         </Card>
+    );
+}
+
+/**
+ * The catalogue while it loads, shaped like what replaces it — search box, module chips, then
+ * group cards (tinted heading, report rows with title, description and format badges) — so the
+ * page pulses in place instead of swapping a block for a list.
+ */
+export function ReportCatalogueSkeleton() {
+    return (
+        <div className="space-y-3.5" aria-hidden="true">
+            <Skeleton className="h-10 w-full" />
+            <div className="flex flex-wrap gap-1.5">
+                {['w-16', 'w-[72px]', 'w-[88px]', 'w-[76px]', 'w-[92px]', 'w-[68px]'].map((w, i) => (
+                    <Skeleton key={i} className={cn('h-8 rounded-full', w)} />
+                ))}
+            </div>
+            {[4, 3].map((rows, g) => (
+                <Card key={g} className="overflow-hidden">
+                    <div className="bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+                        <Skeleton className="bg-background/70 h-7 w-7" />
+                        <Skeleton className="bg-background/70 h-4 w-28" />
+                        <Skeleton className="bg-background/70 h-3 w-14" />
+                    </div>
+                    {Array.from({ length: rows }, (_, i) => (
+                        <div key={i} className="border-border flex items-center gap-4 border-b py-3 pr-4 pl-[18px] last:border-b-0">
+                            <div className="min-w-0 flex-1 space-y-1.5">
+                                <Skeleton className="h-4 w-2/5" />
+                                <Skeleton className="h-3 w-3/4" />
+                            </div>
+                            <div className="flex shrink-0 gap-1">
+                                <Skeleton className="h-5 w-11" />
+                                <Skeleton className="h-5 w-9" />
+                            </div>
+                            <Skeleton className="h-6 w-6 shrink-0" />
+                        </div>
+                    ))}
+                </Card>
+            ))}
+        </div>
     );
 }
 
