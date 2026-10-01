@@ -12,9 +12,19 @@ use Illuminate\Support\Facades\Config;
  */
 class MailConfigService
 {
+    /**
+     * Seconds an SMTP connection may sit silent before the send fails. Without it a mail server
+     * that stops answering holds the queue worker until queue:listen's process timeout kills the
+     * whole listener — and every job behind it (report exports too) waits forever.
+     */
+    public const SMTP_TIMEOUT_SECONDS = 30;
+
     /** Overrides config('mail.*') from mail_settings when configured. */
     public function apply(): void
     {
+        // Applies to the .env fallback as well, so no send can hang the worker.
+        Config::set('mail.mailers.smtp.timeout', self::SMTP_TIMEOUT_SECONDS);
+
         $settings = MailSetting::current();
 
         if (! $settings->isConfigured()) {
