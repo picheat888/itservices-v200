@@ -18,7 +18,6 @@ export const report: Dict = {
     rep_last_export_at: 'Exported {t}',
     rep_last_export_building: 'Building file',
     rep_last_export_failed: 'Export failed',
-    rep_last_export_none: 'No file yet',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 days',
     rep_period_month: 'This month',
