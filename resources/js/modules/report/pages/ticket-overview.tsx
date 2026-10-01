@@ -4,6 +4,7 @@
  * Layout follows the "รายงาน Ticket & SLA" screen of docs/mockup/report-module.html.
  */
 import { useT } from '@/lang';
+import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -27,9 +28,9 @@ import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
 
-function Section({ title, sub, children }: { title: string; sub?: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, sub, className, children }: { title: string; sub?: React.ReactNode; className?: string; children: React.ReactNode }) {
     return (
-        <Card className="overflow-hidden">
+        <Card className={cn('overflow-hidden', className)}>
             <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3">
                 <span className="text-sm font-semibold">{title}</span>
                 {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
@@ -194,7 +195,9 @@ export default function TicketOverviewReportPage() {
                                 <WeeklyTicketChart weeks={data.weekly} />
                             </div>
                         </Section>
-                        <div className="space-y-3">
+                        {/* Fills the chart card's height; the backlog-age card takes what is left, so
+                            the column ends level with the chart instead of leaving a gap under it. */}
+                        <div className="flex flex-col gap-3">
                             <Section title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')}>
                                 <HorizontalBars
                                     bars={data.sla_by_priority.map((p) => ({
@@ -209,7 +212,7 @@ export default function TicketOverviewReportPage() {
                                     emptyLabel={t('rep_no_data')}
                                 />
                             </Section>
-                            <Section title={t('rep_aging_title')}>
+                            <Section title={t('rep_aging_title')} className="flex flex-1 flex-col">
                                 <BacklogAging aging={data.backlog.aging} />
                             </Section>
                         </div>
@@ -276,11 +279,14 @@ export default function TicketOverviewReportPage() {
                     </div>
 
                     <Section title={t('rep_rows_title')} sub={undefined}>
-                        <div className="text-muted-foreground flex items-center gap-1.5 px-5 pt-3 text-xs">
-                            <Clock className="h-3.5 w-3.5" />
-                            {t('rep_generated_at').replace('{t}', data.generated_at)}
+                        {/* The table sits inset in the card, as the contracts "ทั้งหมด" tab does. */}
+                        <div className="space-y-3 p-5">
+                            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                <Clock className="h-3.5 w-3.5" />
+                                {t('rep_generated_at').replace('{t}', data.generated_at)}
+                            </div>
+                            <TicketReportTable key={JSON.stringify(filters)} filters={filters} />
                         </div>
-                        <TicketReportTable key={JSON.stringify(filters)} filters={filters} />
                     </Section>
                 </>
             )}

@@ -12,9 +12,11 @@ const BUCKETS = [
 export function BacklogAging({ aging }: { aging: TicketOverviewSummary['backlog']['aging'] }) {
     const t = useT();
     return (
-        <div className="grid grid-cols-2 gap-2 px-5 py-4 sm:grid-cols-4">
+        // flex-1: in a card stretched to its row the tiles grow to fill it, rather than leaving
+        // empty card below them.
+        <div className="grid flex-1 grid-cols-2 gap-2 px-5 py-4 sm:grid-cols-4">
             {BUCKETS.map((b) => (
-                <div key={b.key} className={`flex flex-col rounded-lg p-2.5 ${b.tone}`}>
+                <div key={b.key} className={`flex flex-col justify-center rounded-lg p-2.5 ${b.tone}`}>
                     <b className="font-mono text-xl">{aging[b.key]}</b>
                     <span className="text-xs">{t(b.label)}</span>
                 </div>
