@@ -1,8 +1,8 @@
 /**
  * Report Center list, as the design lays it out: reports grouped by module (in the design's
  * module order), each row linking to its report page and reading title + description, the
- * file formats it offers, the design's "Export ล่าสุด" column (the reader's latest kept file —
- * being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin toggle.
+ * file formats it offers (lined up beside the pin), the reader's latest kept file at the end of
+ * the description (being built, failed, or when it was made, from "ไฟล์ส่งออกของฉัน"), and a pin.
  */
 import { useT } from '@/lang';
 import { relativeTime } from '@/shared/lib/datetime';
@@ -59,11 +59,13 @@ function StatusPill({ tone, children }: { tone: 'blue' | 'red'; children: React.
     );
 }
 
-/** The design's "Export ล่าสุด" column: the reader's latest kept file of this report. */
-function LastExport({ item }: { item?: ReportExportItem }) {
+/**
+ * The reader's latest kept file of this report, at the end of the row's description line.
+ * Nothing when there is none — a "no file yet" on every row says nothing a missing line does not.
+ */
+function LastExport({ item }: { item: ReportExportItem }) {
     const t = useT();
     const lang = useUiStore((st) => st.lang);
-    if (!item) return <span className="text-muted-foreground">{t('rep_last_export_none')}</span>;
     if (item.status === 'queued' || item.status === 'running') return <StatusPill tone="blue">{t('rep_last_export_building')}</StatusPill>;
     if (item.status === 'failed') return <StatusPill tone="red">{t('rep_last_export_failed')}</StatusPill>;
     return <>{t('rep_last_export_at').replace('{t}', relativeTime(item.finished_at ?? item.created_at, lang, ''))}</>;
@@ -100,19 +102,25 @@ function ReportRow({ report, latest }: { report: ReportDefinition; latest?: Repo
         <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
             <Link
                 to={reportRoute(report)}
-                className="focus-visible:ring-brand/30 grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+                className="focus-visible:ring-brand/30 flex min-w-0 flex-1 items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold">{t(`rep_${reportStem(report.key)}_title`)}</div>
-                    <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(report.key)}_desc`)}</div>
+                    <div className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs">
+                        <span>{t(`rep_${reportStem(report.key)}_desc`)}</span>
+                        {latest && (
+                            <>
+                                <span aria-hidden="true">·</span>
+                                <LastExport item={latest} />
+                            </>
+                        )}
+                    </div>
                 </div>
-                <div className="hidden gap-1 sm:flex">
+                {/* Last on the line, beside the pin, so the badges line up down every group. */}
+                <div className="hidden shrink-0 gap-1 sm:flex">
                     {report.formats.map((f) => (
                         <FormatChip key={f} format={f} />
                     ))}
-                </div>
-                <div className="text-muted-foreground min-w-[92px] text-right text-xs whitespace-nowrap">
-                    <LastExport item={latest} />
                 </div>
             </Link>
             <PinButton report={report} />

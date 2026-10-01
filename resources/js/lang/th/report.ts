@@ -17,7 +17,6 @@ export const report: Dict = {
     rep_last_export_at: 'ส่งออกล่าสุด {t}',
     rep_last_export_building: 'กำลังสร้างไฟล์',
     rep_last_export_failed: 'Export ไม่สำเร็จ',
-    rep_last_export_none: 'ยังไม่มีไฟล์',
     // components/snapshot-strip.tsx — number strip
     rep_period_7d: '7 วัน',
     rep_period_month: 'เดือนนี้',
