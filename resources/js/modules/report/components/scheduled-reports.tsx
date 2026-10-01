@@ -1,7 +1,7 @@
 /**
  * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail, laid out like the exports card above
  * it: a tile (the file type, with a clock), then three lines each split left | right — report |
- * on/off switch, when it goes out | next send, to whom | send now / edit / delete icons — and a
+ * on/off switch, to whom | send now / edit / delete icons, when it goes out | next send — and a
  * red line when the last send failed. With none yet it shows the design's intro card instead; a
  * schedule is set from a report page's "ตั้งเวลาส่ง" button. Data: useReportSchedules
  * (GET /api/reports/schedules).
@@ -79,19 +79,14 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                 <Clock className="text-muted-foreground h-3 w-3" />
             </span>
 
-            {/* Three lines, each read left to right: the report | its switch; when it goes out |
-                the next send; to whom | what can be done. A paused row fades, its switch does not. */}
+            {/* Three lines, each read left to right: the report | its switch; to whom | what can be
+                done; when it goes out | the next send. A paused row fades, its switch does not. */}
             <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
                 <div className={cn('truncate text-sm font-semibold', !item.active && 'opacity-60')} title={title}>
                     {title}
                 </div>
                 <div className="flex justify-end" title={t('rep_schedules_active')}>
                     <Switch checked={item.active} onChange={onToggle} disabled={update.isPending} aria-label={t('rep_schedules_active')} />
-                </div>
-
-                <div className={cn('text-foreground/75 truncate text-xs', !item.active && 'opacity-60')}>{when}</div>
-                <div className={cn('text-muted-foreground text-right text-[11px] whitespace-nowrap', !item.active && 'opacity-60')} title={lastSent}>
-                    {item.active ? t('rep_schedules_next').replace('{t}', formatDateTime(item.next_run_at)) : t('rep_schedules_paused')}
                 </div>
 
                 <div
@@ -134,6 +129,11 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
+                </div>
+
+                <div className={cn('text-foreground/75 truncate text-xs', !item.active && 'opacity-60')}>{when}</div>
+                <div className={cn('text-muted-foreground text-right text-[11px] whitespace-nowrap', !item.active && 'opacity-60')} title={lastSent}>
+                    {item.active ? t('rep_schedules_next').replace('{t}', formatDateTime(item.next_run_at)) : t('rep_schedules_paused')}
                 </div>
 
                 {failed && item.last_run_at && (
