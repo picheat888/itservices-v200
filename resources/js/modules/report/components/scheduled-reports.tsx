@@ -68,7 +68,7 @@ function ScheduleRow({ item, onEdit }: { item: ReportScheduleItem; onEdit: () =>
             {/* The file it sends, marked with a clock: a schedule, where an export row is a file. */}
             <span
                 className={cn(
-                    'flex h-12 w-11 shrink-0 flex-col items-center justify-center gap-1 rounded-md border',
+                    'flex min-h-12 w-11 shrink-0 flex-col items-center justify-center gap-1.5 self-stretch rounded-md border',
                     item.format === 'xlsx'
                         ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400',

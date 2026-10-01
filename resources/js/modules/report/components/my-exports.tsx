@@ -84,7 +84,7 @@ function ExportRow({ item }: { item: ReportExportItem }) {
             {/* The file itself, as a file browser draws one: its type, and its size under it. */}
             <span
                 className={cn(
-                    'flex h-12 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md border',
+                    'flex min-h-12 w-11 shrink-0 flex-col items-center justify-center gap-1 self-stretch rounded-md border',
                     item.format === 'xlsx'
                         ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : 'border-red-500/25 bg-red-500/10 text-red-600 dark:text-red-400',
