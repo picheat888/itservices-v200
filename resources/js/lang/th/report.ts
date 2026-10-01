@@ -11,7 +11,7 @@ export const report: Dict = {
     rep_filter_all: 'ทั้งหมด',
     rep_domain_tickets: 'Ticket',
     rep_count_reports: '{n} รายงาน',
-    rep_filter_pinned: 'ปักหมุด',
+    rep_pinned_title: 'ปักหมุดไว้',
     rep_pin: 'ปักหมุดรายงานนี้',
     rep_unpin: 'เลิกปักหมุด',
     rep_last_export_at: 'Export ล่าสุด {t}',

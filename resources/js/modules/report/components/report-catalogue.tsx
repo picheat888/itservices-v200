@@ -2,14 +2,14 @@
  * Report Center list, as the design lays it out: reports grouped by module (in the design's
  * module order), each row linking to its report page and reading title + description, the
  * file formats it offers, the design's "Export ล่าสุด" column (the reader's latest kept file —
- * being built, failed, or when it was made, from "ไฟล์ Export ของฉัน"), and a star to pin it.
+ * being built, failed, or when it was made, from "ไฟล์ Export ของฉัน"), and a pin toggle.
  */
 import { useT } from '@/lang';
 import { relativeTime } from '@/shared/lib/datetime';
 import { cn } from '@/shared/lib/utils';
 import { Card } from '@/shared/ui/card';
 import { useUiStore } from '@/stores/ui';
-import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Star, Users, Warehouse, Wrench } from 'lucide-react';
+import { Box, FileText, Inbox, type LucideIcon, MonitorCog, Pin, Users, Warehouse, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMyExports, useToggleReportPin } from '../hooks/use-reports';
 import type { ReportDefinition, ReportDomain, ReportExportItem } from '../types';
@@ -69,7 +69,7 @@ function LastExport({ item }: { item?: ReportExportItem }) {
     return <>{t('rep_last_export_at').replace('{t}', relativeTime(item.finished_at ?? item.created_at, lang, ''))}</>;
 }
 
-/** Star toggle at the end of a report row — outside the row's link so it never navigates. */
+/** Pin toggle at the end of a report row — outside the row's link so it never navigates. */
 function PinButton({ report }: { report: ReportDefinition }) {
     const t = useT();
     const toggle = useToggleReportPin();
@@ -82,58 +82,95 @@ function PinButton({ report }: { report: ReportDefinition }) {
             aria-pressed={report.pinned}
             aria-label={label}
             title={label}
-            className="text-muted-foreground focus-visible:ring-brand/30 mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:text-amber-500 focus-visible:ring-2 focus-visible:outline-none"
+            className={cn(
+                'focus-visible:ring-brand/30 hover:text-brand mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none',
+                report.pinned ? 'text-brand' : 'text-muted-foreground/70',
+            )}
         >
-            <Star className={cn('h-4 w-4', report.pinned && 'fill-amber-400 text-amber-500')} />
+            {/* Pinned stands upright and filled; not pinned leans, outlined — the usual "pin" read. */}
+            <Pin className={cn('h-4 w-4 transition-transform', report.pinned ? 'fill-current' : 'rotate-45')} />
         </button>
     );
 }
 
-export function ReportCatalogue({ reports }: { reports: ReportDefinition[] }) {
+function ReportRow({ report, latest }: { report: ReportDefinition; latest?: ReportExportItem }) {
+    const t = useT();
+
+    return (
+        <div className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
+            <Link
+                to={reportRoute(report)}
+                className="focus-visible:ring-brand/30 grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+            >
+                <div className="min-w-0">
+                    <div className="text-sm font-semibold">{t(`rep_${reportStem(report.key)}_title`)}</div>
+                    <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(report.key)}_desc`)}</div>
+                </div>
+                <div className="hidden gap-1 sm:flex">
+                    {report.formats.map((f) => (
+                        <FormatChip key={f} format={f} />
+                    ))}
+                </div>
+                <div className="text-muted-foreground min-w-[92px] text-right text-xs whitespace-nowrap">
+                    <LastExport item={latest} />
+                </div>
+            </Link>
+            <PinButton report={report} />
+        </div>
+    );
+}
+
+function GroupCard({ icon: Icon, title, count, children }: { icon: LucideIcon; title: string; count: number; children: React.ReactNode }) {
+    const t = useT();
+
+    return (
+        <Card className="overflow-hidden">
+            <div className="bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
+                <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                    <Icon className="h-[15px] w-[15px]" />
+                </span>
+                <span className="text-sm font-semibold">{title}</span>
+                <span className="text-muted-foreground text-xs">{t('rep_count_reports').replace('{n}', String(count))}</span>
+            </div>
+            {children}
+        </Card>
+    );
+}
+
+/** Pinned first, in the order they were pinned; the rest keep the catalogue's order. */
+const pinnedFirst = (a: ReportDefinition, b: ReportDefinition) => (a.pin_order ?? Infinity) - (b.pin_order ?? Infinity);
+
+/**
+ * `showPinned` puts the "ปักหมุดไว้" card on top (the hub's unfiltered view) — quick access in
+ * the order the reader pinned things, as Drive or a Start menu does. Pinned reports stay in
+ * their module group as well, listed first there.
+ */
+export function ReportCatalogue({ reports, showPinned = false }: { reports: ReportDefinition[]; showPinned?: boolean }) {
     const t = useT();
     const { data: exportsList = [] } = useMyExports();
     // Newest first from the API, so the first one seen per report is its latest.
     const latest = new Map<string, ReportExportItem>();
     for (const item of exportsList) if (!latest.has(item.report_key)) latest.set(item.report_key, item);
     const domains = [...new Set(reports.map((r) => r.domain))].sort(byDomainOrder);
+    const pinned = reports.filter((r) => r.pinned).sort(pinnedFirst);
 
     return (
         <div className="space-y-3.5">
+            {showPinned && pinned.length > 0 && (
+                <GroupCard icon={Pin} title={t('rep_pinned_title')} count={pinned.length}>
+                    {pinned.map((r) => (
+                        <ReportRow key={r.key} report={r} latest={latest.get(r.key)} />
+                    ))}
+                </GroupCard>
+            )}
             {domains.map((domain) => {
-                const Icon = DOMAIN_ICONS[domain];
-                const items = reports.filter((r) => r.domain === domain);
+                const items = reports.filter((r) => r.domain === domain).sort(pinnedFirst);
                 return (
-                    <Card key={domain} className="overflow-hidden">
-                        <div className="bg-muted border-border flex items-center gap-2.5 border-b px-[18px] py-3">
-                            <span className="bg-brand/10 text-brand flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
-                                <Icon className="h-[15px] w-[15px]" />
-                            </span>
-                            <span className="text-sm font-semibold">{t(`rep_domain_${domain}`)}</span>
-                            <span className="text-muted-foreground text-xs">{t('rep_count_reports').replace('{n}', String(items.length))}</span>
-                        </div>
+                    <GroupCard key={domain} icon={DOMAIN_ICONS[domain]} title={t(`rep_domain_${domain}`)} count={items.length}>
                         {items.map((r) => (
-                            <div key={r.key} className="border-border hover:bg-accent flex items-center border-b transition-colors last:border-b-0">
-                                <Link
-                                    to={reportRoute(r)}
-                                    className="focus-visible:ring-brand/30 grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 pl-[18px] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-                                >
-                                    <div className="min-w-0">
-                                        <div className="text-sm font-semibold">{t(`rep_${reportStem(r.key)}_title`)}</div>
-                                        <div className="text-muted-foreground mt-0.5 text-xs">{t(`rep_${reportStem(r.key)}_desc`)}</div>
-                                    </div>
-                                    <div className="hidden gap-1 sm:flex">
-                                        {r.formats.map((f) => (
-                                            <FormatChip key={f} format={f} />
-                                        ))}
-                                    </div>
-                                    <div className="text-muted-foreground min-w-[92px] text-right text-xs whitespace-nowrap">
-                                        <LastExport item={latest.get(r.key)} />
-                                    </div>
-                                </Link>
-                                <PinButton report={r} />
-                            </div>
+                            <ReportRow key={r.key} report={r} latest={latest.get(r.key)} />
                         ))}
-                    </Card>
+                    </GroupCard>
                 );
             })}
         </div>

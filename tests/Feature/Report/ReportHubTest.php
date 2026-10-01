@@ -67,6 +67,20 @@ class ReportHubTest extends TestCase
         $this->assertSame(0, ReportPin::query()->count());
     }
 
+    /** The hub lists pinned reports in the order they were pinned (pin_order), whatever the catalogue order. */
+    public function test_the_catalogue_carries_the_order_reports_were_pinned_in(): void
+    {
+        $user = $this->userWith(['assets.view']);
+        $this->actingAs($user)->putJson('/api/reports/assets.warranty_expiring/pin')->assertOk();
+        $this->actingAs($user)->putJson('/api/reports/assets.register/pin')->assertOk();
+
+        $order = collect($this->actingAs($user)->getJson('/api/reports')->assertOk()->json('data'))->pluck('pin_order', 'key');
+
+        $this->assertSame(0, $order['assets.warranty_expiring']);
+        $this->assertSame(1, $order['assets.register']);
+        $this->assertNull($order['assets.by_status_department']);
+    }
+
     public function test_only_a_report_the_reader_may_open_can_be_pinned(): void
     {
         $user = $this->userWith(['assets.view']);

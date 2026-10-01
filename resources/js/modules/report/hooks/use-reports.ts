@@ -45,7 +45,11 @@ export function useToggleReportPin() {
         onMutate: async ({ key, pinned }) => {
             await queryClient.cancelQueries({ queryKey: CATALOGUE_KEY });
             const previous = queryClient.getQueryData<ReportDefinition[]>(CATALOGUE_KEY);
-            queryClient.setQueryData<ReportDefinition[]>(CATALOGUE_KEY, (list) => list?.map((r) => (r.key === key ? { ...r, pinned } : r)));
+            queryClient.setQueryData<ReportDefinition[]>(CATALOGUE_KEY, (list) => {
+                // A new pin goes to the end of the pinned list, as the server will put it.
+                const next = Math.max(-1, ...(list ?? []).map((r) => r.pin_order ?? -1)) + 1;
+                return list?.map((r) => (r.key === key ? { ...r, pinned, pin_order: pinned ? next : null } : r));
+            });
             return { previous };
         },
         onError: (_error, _vars, context) => {

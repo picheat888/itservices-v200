@@ -20,16 +20,18 @@ class ReportPinService
     }
 
     /**
-     * The catalogue this user may open, each entry flagged `pinned`.
+     * The catalogue this user may open, each entry flagged `pinned`, with `pin_order` — its
+     * place in the order the user pinned things (0 = pinned first) — so the hub's "ปักหมุดไว้"
+     * card can list them that way.
      *
-     * @return list<array{key: string, domain: string, kind: string, formats: list<string>, pinned: bool}>
+     * @return list<array{key: string, domain: string, kind: string, formats: list<string>, pinned: bool, pin_order: int|null}>
      */
     public function catalogueFor(User $user): array
     {
-        $pinned = $this->pinnedKeys($user);
+        $order = array_flip($this->pinnedKeys($user));
 
         return array_map(
-            fn (array $report) => [...$report, 'pinned' => in_array($report['key'], $pinned, true)],
+            fn (array $report) => [...$report, 'pinned' => isset($order[$report['key']]), 'pin_order' => $order[$report['key']] ?? null],
             ReportCatalogue::forUser($user),
         );
     }

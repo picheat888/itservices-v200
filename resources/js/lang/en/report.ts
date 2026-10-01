@@ -12,7 +12,7 @@ export const report: Dict = {
     rep_filter_all: 'All',
     rep_domain_tickets: 'Tickets',
     rep_count_reports: '{n} reports',
-    rep_filter_pinned: 'Pinned',
+    rep_pinned_title: 'Pinned',
     rep_pin: 'Pin this report',
     rep_unpin: 'Unpin',
     rep_last_export_at: 'Exported {t}',

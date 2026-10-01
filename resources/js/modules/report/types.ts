@@ -67,6 +67,8 @@ export interface ReportDefinition {
     formats: ExportFormat[];
     /** Pinned by the current user (ReportPinService). */
     pinned: boolean;
+    /** Place in the order the reader pinned reports (0 = pinned first); null when not pinned. */
+    pin_order: number | null;
 }
 
 /** Period of the hub's number strip — mirrors ReportSnapshotService::PERIODS. */
