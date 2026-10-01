@@ -83,6 +83,7 @@ export const report: Dict = {
     rep_sla_priority_title: 'ปิดทัน SLA แยกตามความสำคัญ',
     rep_sla_priority_sub: 'เส้น = เป้า',
     rep_aging_title: 'อายุ Ticket ที่ค้าง',
+    rep_aging_total: 'รวม {n}',
     rep_aging_d1: 'ไม่เกิน 1 วัน',
     rep_aging_d3: '1–3 วัน',
     rep_aging_d7: '3–7 วัน',

@@ -83,6 +83,7 @@ export const report: Dict = {
     rep_sla_priority_title: 'SLA by priority',
     rep_sla_priority_sub: 'Line = goal',
     rep_aging_title: 'Age of open tickets',
+    rep_aging_total: '{n} open',
     rep_aging_d1: 'Up to 1 day',
     rep_aging_d3: '1–3 days',
     rep_aging_d7: '3–7 days',
