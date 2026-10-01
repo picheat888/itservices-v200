@@ -213,7 +213,7 @@ export const report: Dict = {
     // components/scheduled-reports.tsx — scheduled reports panel
     rep_schedules_title: 'Scheduled reports',
     rep_schedules_sub: 'Sent automatically',
-    rep_schedules_intro: 'Have a report emailed daily, weekly or monthly as PDF or Excel. Use "Schedule" on the report page.',
+    rep_schedules_empty: 'No automatic emails set up',
     rep_schedules_next: 'Next {t}',
     rep_schedules_paused: 'Paused',
     rep_schedules_last_sent: 'Last sent {t}',
