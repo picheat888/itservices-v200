@@ -211,8 +211,7 @@ export const report: Dict = {
     rep_schedule_refusal_schedule_limit: 'You can keep up to {limit} schedules. Remove an old one first.',
 
     // components/scheduled-reports.tsx — scheduled reports panel
-    rep_schedules_title: 'Scheduled reports',
-    rep_schedules_sub: 'Sent automatically',
+    rep_schedules_title: 'Auto-sent reports',
     rep_schedules_empty: 'No automatic emails set up',
     rep_schedules_next: 'Next {t}',
     rep_schedules_paused: 'Paused',
