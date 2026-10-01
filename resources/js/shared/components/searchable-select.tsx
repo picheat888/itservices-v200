@@ -37,7 +37,6 @@ export function SearchableSelect({
     clearable = false,
     active = false,
     preferDown = false,
-    prefix,
     id,
 }: {
     value: string;
@@ -51,9 +50,6 @@ export function SearchableSelect({
     /** Measure drop direction against the viewport instead of the enclosing dialog, so a field
      *  near a small dialog's footer opens DOWN (overflowing the dialog) rather than flipping up. */
     preferDown?: boolean;
-    /** Muted name shown inside the trigger before the value ("แผนก  ทั้งหมด"), for a filter row
-     *  that has no room for a label above each field. */
-    prefix?: string;
     /** Set by <Field> so its label can point here — clicking the label opens the menu. */
     id?: string;
 }) {
@@ -227,7 +223,6 @@ export function SearchableSelect({
                 )}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    {prefix && <span className="text-muted-foreground shrink-0 font-normal">{prefix}</span>}
                     {/* Avatar slot renders only for option sets that supply the field (e.g. people pickers). */}
                     {selected && selected.avatar !== undefined && (
                         <UserAvatar name={selected.label} photoUrl={selected.avatar} className="h-6 w-6 shrink-0" textClassName="text-[10px]" />
