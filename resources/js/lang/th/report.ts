@@ -209,8 +209,7 @@ export const report: Dict = {
     rep_schedule_refusal_schedule_limit: 'ตั้งเวลาส่งได้สูงสุด {limit} รายการ ลบรายการเก่าก่อน',
 
     // components/scheduled-reports.tsx — scheduled reports panel
-    rep_schedules_title: 'รายงานที่ตั้งเวลาไว้',
-    rep_schedules_sub: 'ส่งอัตโนมัติ',
+    rep_schedules_title: 'รายงานที่ตั้งส่งอัตโนมัติ',
     rep_schedules_empty: 'ไม่ได้ตั้งส่งออกอีเมลอัตโนมัติ',
     rep_schedules_next: 'ส่งครั้งถัดไป {t}',
     rep_schedules_paused: 'หยุดไว้',

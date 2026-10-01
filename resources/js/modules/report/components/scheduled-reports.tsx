@@ -1,5 +1,5 @@
 /**
- * "รายงานที่ตั้งเวลาไว้" in the Report Center's right rail, laid out like the exports card above
+ * "รายงานที่ตั้งส่งอัตโนมัติ" in the Report Center's right rail, laid out like the exports card above
  * it: a tile (the file type, with a clock), then three lines each split left | right — report |
  * on/off switch, to whom | send now / edit / delete icons, when it goes out | next send — and a
  * red line when the last send failed. With none yet the same card says so; a
@@ -162,7 +162,7 @@ export function ScheduledReports() {
     // (as the exports card above does).
     return (
         <Card id="scheduled-reports" className="overflow-hidden">
-            <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} note={t('rep_schedules_sub')} />
+            <RailHeading icon={CalendarClock} title={t('rep_schedules_title')} />
             {items.length === 0 && <p className="text-muted-foreground px-[18px] py-8 text-center text-sm">{t('rep_schedules_empty')}</p>}
             {items.map((item) => (
                 <ScheduleRow
