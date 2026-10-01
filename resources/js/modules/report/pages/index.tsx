@@ -2,7 +2,7 @@
  * Report Center page (/reports) — heading with the period control (PeriodSwitch), the number
  * strip (SnapshotStrip), then two columns as in the design: the reports this user may open
  * (search, module chips, and a "ปักหมุดไว้" card on top of the unfiltered list) on the left, and a rail with their queued files
- * (MyExports — "ไฟล์ Export ของฉัน") and scheduled report emails (ScheduledReports) on the
+ * (MyExports — "ไฟล์ส่งออกของฉัน") and scheduled report emails (ScheduledReports) on the
  * right. On xl the reports column is exactly two thirds of the page, so its right edge
  * lines up with the divider after the strip's fourth cell (six equal cells above it), and the
  * rail takes the last third less the gap. Below xl the rail follows the reports.

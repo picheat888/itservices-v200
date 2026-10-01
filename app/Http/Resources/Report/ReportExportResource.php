@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * One queued report file on "ไฟล์ Export ของฉัน". The stored filters and the number of picked
+ * One queued report file on "ไฟล์ส่งออกของฉัน". The stored filters and the number of picked
  * columns come back so the row can say which file this is (its date range, "3 filters",
  * "5 columns") — two exports of one report are otherwise indistinguishable. They are the
  * owner's own input; nobody else ever sees the row.

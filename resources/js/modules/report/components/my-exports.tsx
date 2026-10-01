@@ -1,5 +1,5 @@
 /**
- * "ไฟล์ Export ของฉัน" in the Report Center's right rail, as the design draws it: the files this
+ * "ไฟล์ส่งออกของฉัน" in the Report Center's right rail, as the design draws it: the files this
  * person queued from a report's Export dialog, newest first — each row names the report and
  * the slice it holds, then waiting / being built (with a bar, polled until done), ready to
  * download for 7 days (rows · size · how long ago), or failed with a Retry.

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * "ไฟล์ Export ของฉัน" (/api/reports/exports): the signed-in person's queued report files —
+ * "ไฟล์ส่งออกของฉัน" (/api/reports/exports): the signed-in person's queued report files —
  * list, download, retry a failed one, remove one. Every export belongs to one person; anyone
  * else asking for it gets a 404, not a 403, so ids reveal nothing. Queuing a new file is the
  * report's own export endpoint (TabularReportController / TicketOverviewReportController).

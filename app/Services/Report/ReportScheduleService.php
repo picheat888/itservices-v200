@@ -32,7 +32,7 @@ use Throwable;
  */
 class ReportScheduleService
 {
-    /** Larger files are not attached; the owner gets them in "ไฟล์ Export ของฉัน" instead (10 MB — well under Gmail and Exchange caps). */
+    /** Larger files are not attached; the owner gets them in "ไฟล์ส่งออกของฉัน" instead (10 MB — well under Gmail and Exchange caps). */
     public int $attachmentLimitBytes = 10 * 1024 * 1024;
 
     public function __construct(
@@ -264,7 +264,7 @@ class ReportScheduleService
     }
 
     /**
-     * A file too large to mail goes to the owner's "ไฟล์ Export ของฉัน" instead, as if they
+     * A file too large to mail goes to the owner's "ไฟล์ส่งออกของฉัน" instead, as if they
      * had exported it themselves — with the same 7 days and the same bell.
      *
      * @param  array{name: string, path: string, rows: int}  $file

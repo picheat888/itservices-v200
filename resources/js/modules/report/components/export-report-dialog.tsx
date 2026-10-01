@@ -3,7 +3,7 @@
  * caller's own export (ticket overview or a tabular report). Centered focus dialog
  * (FocusDialogHeader) per the app's dialog standard. The dialog owns the format choice,
  * the PDF-cap note and the "file is being built" toast (which opens the Report Center,
- * where "ไฟล์ Export ของฉัน" lists it); the caller owns the mutation (isPending/error/reset).
+ * where "ไฟล์ส่งออกของฉัน" lists it); the caller owns the mutation (isPending/error/reset).
  */
 import { useT } from '@/lang';
 import { FocusDialogHeader } from '@/shared/components/dialog-header';

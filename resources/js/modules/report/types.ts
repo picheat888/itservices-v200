@@ -41,7 +41,7 @@ export interface ReportScheduleItem extends ScheduleInput {
     created_at: string;
 }
 
-/** One file on "ไฟล์ Export ของฉัน" (ReportExportResource). */
+/** One file on "ไฟล์ส่งออกของฉัน" (ReportExportResource). */
 export interface ReportExportItem {
     id: number;
     report_key: ReportKey;
