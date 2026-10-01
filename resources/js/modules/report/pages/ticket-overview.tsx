@@ -31,7 +31,7 @@ function Section({ title, sub, children }: { title: string; sub?: React.ReactNod
     return (
         <Card className="overflow-hidden">
             <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3">
-                <span className="font-semibold">{title}</span>
+                <span className="text-sm font-semibold">{title}</span>
                 {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
             </div>
             {children}

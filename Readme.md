@@ -4009,3 +4009,9 @@ PHP 98 tests ผ่าน (TicketApi, RequestTicketFileBridge, RequestAutoTicket
 ### Tests / Verification
 
 `NotificationTemplateTest` (ข้อความกระดิ่งไทย/อังกฤษตรงกับ catalogue) · ชุดเต็ม **1545 passed** · build + tsc ผ่าน
+
+## ขนาดตัวอักษรรายงานให้เท่าส่วนอื่นของระบบ (2026-10-01)
+
+- หัวการ์ดในหน้า Ticket & SLA ("Ticket รายสัปดาห์", "แยกตามหมวด" ฯลฯ) และชื่อรายงานในศูนย์รายงานไม่ได้กำหนดขนาด จึงเป็น 16px ทั้งที่ทั้งระบบใช้ `text-sm` (14px) → `text-sm font-semibold`
+- คำอธิบายใต้ชื่อรายงาน 12.5px → `text-xs` · หัวกลุ่มโมดูลและหัวการ์ดแถบขวา (bold) → `text-sm font-semibold` เหมือนหัวการ์ดของโมดูลอื่น
+- ตัวเลข KPI, ตาราง, ตัวกรอง และชื่อหน้า ตรงกับโมดูลอื่นอยู่แล้ว ไม่ได้แก้
