@@ -123,9 +123,9 @@ export interface TicketOverviewSummary {
         median_resolve_hours: number | null;
         p90_resolve_hours: number | null;
     };
-    previous: { from: string; to: string; total: number; sla_rate: number | null };
+    previous: { from: string; to: string; total: number; sla_rate: number | null; median_resolve_hours: number | null };
     backlog: { open: number; in_progress: number; breached: number; aging: { d1: number; d3: number; d7: number; older: number } };
-    weekly: { week_start: string; opened: number; closed: number }[];
+    weekly: { week_start: string; opened: number; closed: number; backlog: number }[];
     sla_by_priority: { priority: string; measured: number; met: number; rate: number | null }[];
     by_category: { category: string; count: number }[];
     by_department: { department_id: number | null; name: string | null; name_th: string | null; count: number; sla_rate: number | null }[];

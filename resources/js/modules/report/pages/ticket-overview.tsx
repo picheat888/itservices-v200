@@ -4,6 +4,7 @@
  * Layout follows the "รายงาน Ticket & SLA" screen of docs/mockup/report-module.html.
  */
 import { useT } from '@/lang';
+import { StatusBadge } from '@/shared/components/status-badge';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
 import { Card } from '@/shared/ui/card';
@@ -28,15 +29,48 @@ import { useTicketReportFilters } from '../hooks/use-ticket-report-filters';
 
 const PRIORITY_FILL: Record<string, string> = { critical: 'bg-red-500', high: 'bg-amber-500', medium: 'bg-emerald-500', low: 'bg-emerald-500' };
 
+/** A card's heading row: title on the left, a short note (legend, unit, "Top 6") on the right. */
+function SectionHeading({ title, sub, className }: { title: string; sub?: React.ReactNode; className?: string }) {
+    return (
+        <div className={cn('border-border flex items-center justify-between gap-3 border-b px-5 py-3', className)}>
+            <span className="text-sm font-semibold">{title}</span>
+            {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
+        </div>
+    );
+}
+
 function Section({ title, sub, className, children }: { title: string; sub?: React.ReactNode; className?: string; children: React.ReactNode }) {
     return (
         <Card className={cn('overflow-hidden', className)}>
-            <div className="border-border flex items-center justify-between gap-3 border-b px-5 py-3">
-                <span className="text-sm font-semibold">{title}</span>
-                {sub && <span className="text-muted-foreground text-xs">{sub}</span>}
-            </div>
+            <SectionHeading title={title} sub={sub} />
             {children}
         </Card>
+    );
+}
+
+/** A breakdown table's row when the range has nothing to break down. */
+function EmptyRow({ label }: { label: string }) {
+    return (
+        <tr>
+            <td colSpan={3} className="text-muted-foreground py-6 text-center text-sm">
+                {label}
+            </td>
+        </tr>
+    );
+}
+
+/**
+ * "▼ 0.6 ชม." — the resolve-time change against the period before. Unlike the ticket count,
+ * time has a good direction: faster is green, slower amber.
+ */
+function HoursChange({ current, previous, unit }: { current: number | null; previous: number | null; unit: string }) {
+    if (current === null || previous === null || current === previous) return null;
+    const diff = Math.round((current - previous) * 10) / 10;
+
+    return (
+        <span className={cn('font-semibold', diff < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400')}>
+            {diff > 0 ? '▲' : '▼'} {Math.abs(diff)} {unit}
+        </span>
     );
 }
 
@@ -140,7 +174,7 @@ export default function TicketOverviewReportPage() {
                         />
                         <KpiTile
                             label={t('rep_kpi_sla')}
-                            badge={<span className="text-xs">{t('rep_kpi_goal').replace('{n}', String(data.sla_goal))}</span>}
+                            badge={<StatusBadge tone="green">{t('rep_kpi_goal').replace('{n}', String(data.sla_goal))}</StatusBadge>}
                             value={fmt(data.kpi.sla_rate)}
                             unit={data.kpi.sla_rate === null ? undefined : '%'}
                             alert={data.kpi.sla_rate !== null && data.kpi.sla_rate < data.sla_goal}
@@ -154,16 +188,23 @@ export default function TicketOverviewReportPage() {
                             value={fmt(data.kpi.median_resolve_hours)}
                             unit={data.kpi.median_resolve_hours === null ? undefined : t('rep_hours')}
                             footer={
-                                data.kpi.p90_resolve_hours === null ? undefined : t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))
+                                data.kpi.p90_resolve_hours === null ? undefined : (
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <HoursChange
+                                            current={data.kpi.median_resolve_hours}
+                                            previous={data.previous.median_resolve_hours}
+                                            unit={t('rep_hours')}
+                                        />
+                                        {t('rep_kpi_p90').replace('{n}', String(data.kpi.p90_resolve_hours))}
+                                    </span>
+                                )
                             }
                         />
                         <KpiTile
                             label={t('rep_kpi_backlog')}
                             badge={
                                 data.backlog.breached > 0 ? (
-                                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                                        {t('rep_kpi_breached').replace('{n}', String(data.backlog.breached))}
-                                    </span>
+                                    <StatusBadge tone="amber">{t('rep_kpi_breached').replace('{n}', String(data.backlog.breached))}</StatusBadge>
                                 ) : undefined
                             }
                             value={String(data.backlog.open + data.backlog.in_progress)}
@@ -188,6 +229,10 @@ export default function TicketOverviewReportPage() {
                                         <i className="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500" />
                                         {t('rep_weekly_closed')}
                                     </span>
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <i className="inline-block h-0.5 w-3 rounded-full bg-red-500" />
+                                        {t('rep_weekly_backlog')}
+                                    </span>
                                 </span>
                             }
                         >
@@ -195,42 +240,40 @@ export default function TicketOverviewReportPage() {
                                 <WeeklyTicketChart weeks={data.weekly} />
                             </div>
                         </Section>
-                        {/* Fills the chart card's height; the backlog-age card takes what is left, so
-                            the column ends level with the chart instead of leaving a gap under it. */}
-                        <div className="flex flex-col gap-3">
-                            <Section title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')}>
-                                <HorizontalBars
-                                    bars={data.sla_by_priority.map((p) => ({
-                                        key: p.priority,
-                                        label: t(priorityKey(p.priority)),
-                                        value: p.rate,
-                                        tone: PRIORITY_FILL[p.priority],
-                                    }))}
-                                    max={100}
-                                    unit="%"
-                                    goal={data.sla_goal}
-                                    emptyLabel={t('rep_no_data')}
-                                />
-                            </Section>
-                            <Section
+                        {/* One card, as in the design: SLA by priority, then backlog age. The card is as
+                            tall as the chart beside it and the age chart takes what is left. */}
+                        <Card className="flex flex-col overflow-hidden">
+                            <SectionHeading title={t('rep_sla_priority_title')} sub={t('rep_sla_priority_sub')} />
+                            <HorizontalBars
+                                bars={data.sla_by_priority.map((p) => ({
+                                    key: p.priority,
+                                    label: t(priorityKey(p.priority)),
+                                    value: p.rate,
+                                    tone: PRIORITY_FILL[p.priority],
+                                }))}
+                                max={100}
+                                unit="%"
+                                goal={data.sla_goal}
+                                emptyLabel={t('rep_no_data')}
+                            />
+                            <SectionHeading
+                                className="border-t"
                                 title={t('rep_aging_title')}
                                 sub={t('rep_aging_total').replace('{n}', String(Object.values(data.backlog.aging).reduce((sum, n) => sum + n, 0)))}
-                                className="flex flex-1 flex-col"
-                            >
-                                <BacklogAging aging={data.backlog.aging} />
-                            </Section>
-                        </div>
+                            />
+                            <BacklogAging aging={data.backlog.aging} />
+                        </Card>
                     </div>
 
                     <div className="grid gap-3 xl:grid-cols-3">
-                        <Section title={t('rep_by_category')}>
+                        <Section title={t('rep_by_category')} sub={t('rep_by_category_sub')}>
                             <HorizontalBars
                                 bars={data.by_category.map((c) => ({ key: c.category, label: t(categoryKey(c.category)), value: c.count }))}
                                 max={Math.max(1, ...data.by_category.map((c) => c.count))}
                                 emptyLabel={t('rep_no_data')}
                             />
                         </Section>
-                        <Section title={t('rep_by_department')}>
+                        <Section title={t('rep_by_department')} sub={t('rep_top_n').replace('{n}', String(data.by_department.length))}>
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>
@@ -240,10 +283,22 @@ export default function TicketOverviewReportPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {data.by_department.length === 0 && <EmptyRow label={t('rep_no_data')} />}
                                     {data.by_department.map((d) => (
                                         <tr key={d.department_id ?? 'none'} className="border-border border-t">
                                             <td className="px-4 py-2">{(lang === 'th' && d.name_th) || d.name || t('rep_no_department')}</td>
-                                            <td className="px-4 py-2 text-right font-mono">{d.count}</td>
+                                            <td className="px-4 py-2">
+                                                {/* Bar against the busiest department, so the ranking reads at a glance. */}
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <span
+                                                        className="bg-brand/70 block h-1.5 rounded-full"
+                                                        style={{
+                                                            width: `${(d.count / Math.max(1, ...data.by_department.map((x) => x.count))) * 48}px`,
+                                                        }}
+                                                    />
+                                                    <span className="font-mono">{d.count}</span>
+                                                </div>
+                                            </td>
                                             <td
                                                 className={`px-4 py-2 text-right font-mono ${
                                                     d.sla_rate !== null && d.sla_rate < data.sla_goal
@@ -258,7 +313,7 @@ export default function TicketOverviewReportPage() {
                                 </tbody>
                             </table>
                         </Section>
-                        <Section title={t('rep_by_assignee')}>
+                        <Section title={t('rep_by_assignee')} sub={t('rep_by_assignee_sub')}>
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>
@@ -268,6 +323,7 @@ export default function TicketOverviewReportPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {data.by_assignee.length === 0 && <EmptyRow label={t('rep_no_data')} />}
                                     {data.by_assignee.map((a) => (
                                         <tr key={a.assignee_id} className="border-border border-t">
                                             <td className="px-4 py-2">{a.name ?? '—'}</td>

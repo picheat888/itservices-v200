@@ -190,7 +190,7 @@ class TicketOverviewReportService
     }
 
     /**
-     * @return array{from: string, to: string, total: int, sla_rate: ?float}
+     * @return array{from: string, to: string, total: int, sla_rate: ?float, median_resolve_hours: ?float}
      */
     private function previous(User $viewer, array $filters): array
     {
@@ -199,7 +199,7 @@ class TicketOverviewReportService
         $from = $to->subDays($days - 1)->startOfDay();
 
         $tickets = $this->inRange($viewer, [...$filters, 'from' => $from, 'to' => $to])
-            ->get(['id', 'status', 'resolved_at', 'sla_resolve_due_at']);
+            ->get(['id', 'status', 'created_at', 'resolved_at', 'sla_resolve_due_at']);
         $completed = $tickets->filter(fn (Ticket $t) => $t->status === TicketStatus::Completed);
 
         return [
@@ -207,6 +207,8 @@ class TicketOverviewReportService
             'to' => $to->toDateString(),
             'total' => $tickets->count(),
             'sla_rate' => $this->slaCounts($completed)['sla_rate'],
+            // The resolve-time KPI's "▼ 0.6 ชม." against the period before.
+            'median_resolve_hours' => $this->percentile($this->sortedHours($completed), 0.5),
         ];
     }
 
@@ -241,13 +243,16 @@ class TicketOverviewReportService
 
     /**
      * @param  Collection<int, Ticket>  $population
-     * @return list<array{week_start: string, opened: int, closed: int}>
+     *                                               `backlog` is how many tickets were still open at the end of each week (or now, for the
+     *                                               current week) — the chart's "ค้างสะสม" line. resolved_at is stamped on complete and on
+     *                                               cancel alike, so a ticket counts until either.
+     * @return list<array{week_start: string, opened: int, closed: int, backlog: int}>
      */
     private function weekly(User $viewer, array $filters, Collection $population): array
     {
         $weeks = [];
         for ($week = $filters['from']->startOfWeek(CarbonInterface::MONDAY); $week->lte($filters['to']); $week = $week->addWeek()) {
-            $weeks[$week->toDateString()] = ['week_start' => $week->toDateString(), 'opened' => 0, 'closed' => 0];
+            $weeks[$week->toDateString()] = ['week_start' => $week->toDateString(), 'opened' => 0, 'closed' => 0, 'backlog' => 0];
         }
 
         foreach ($population as $ticket) {
@@ -260,6 +265,19 @@ class TicketOverviewReportService
             ->pluck('resolved_at');
         foreach ($resolvedAt as $at) {
             $weeks[$this->weekOf(CarbonImmutable::parse($at))]['closed']++;
+        }
+
+        $now = CarbonImmutable::now();
+        $firstWeek = $filters['from']->startOfWeek(CarbonInterface::MONDAY);
+        $live = $this->scoped($viewer, $filters)
+            ->where('created_at', '<=', $filters['to']->min($now))
+            ->where(fn (Builder $q) => $q->whereNull('resolved_at')->orWhere('resolved_at', '>', $firstWeek))
+            ->get(['created_at', 'resolved_at']);
+        foreach ($weeks as $start => $week) {
+            $moment = CarbonImmutable::parse($start)->endOfWeek(CarbonInterface::SUNDAY)->min($filters['to'])->min($now);
+            $weeks[$start]['backlog'] = $live
+                ->filter(fn (Ticket $t) => $t->created_at <= $moment && ($t->resolved_at === null || $t->resolved_at > $moment))
+                ->count();
         }
 
         return array_values($weeks);

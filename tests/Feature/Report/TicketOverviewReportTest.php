@@ -177,6 +177,24 @@ class TicketOverviewReportTest extends TestCase
         $this->assertSame(1, $weekly[1]['closed']);
     }
 
+    public function test_weekly_backlog_counts_tickets_still_open_at_each_week_end(): void
+    {
+        $user = $this->deskMember();
+        // Opened before the range, closed in week 2 (Mon 2026-09-07 .. Sun 09-13).
+        $this->ticket(['status' => 'completed', 'created_at' => '2026-08-20 08:00', 'resolved_at' => '2026-09-09 08:00']);
+        // Opened in week 1, still open — counts from week 1 on.
+        $this->ticket(['status' => 'open', 'created_at' => '2026-09-02 08:00']);
+        // Opened in week 3, canceled in week 4 — resolved_at stamps a cancel too.
+        $this->ticket(['status' => 'canceled', 'created_at' => '2026-09-15 08:00', 'resolved_at' => '2026-09-22 08:00']);
+        // Closed before the range — never counted.
+        $this->ticket(['status' => 'completed', 'created_at' => '2026-08-01 08:00', 'resolved_at' => '2026-08-03 08:00']);
+
+        $backlog = array_column($this->summary($user)['weekly'], 'backlog');
+
+        // Week 5 (from 09-28) is after "now" (09-25 10:00), so it reads the backlog as of now.
+        $this->assertSame([2, 1, 2, 1, 1], $backlog);
+    }
+
     public function test_breakdowns_by_priority_category_department_and_assignee(): void
     {
         $user = $this->deskMember();
@@ -205,12 +223,16 @@ class TicketOverviewReportTest extends TestCase
     {
         $user = $this->deskMember();
         $this->ticket(['created_at' => '2026-08-15 08:00']);
+        $this->ticket(['status' => 'completed', 'created_at' => '2026-08-20 08:00', 'resolved_at' => '2026-08-20 12:00']);
+        $this->ticket(['status' => 'completed', 'created_at' => '2026-08-21 08:00', 'resolved_at' => '2026-08-21 10:00']);
 
         $previous = $this->summary($user)['previous'];
 
         $this->assertSame('2026-08-02', $previous['from']);
         $this->assertSame('2026-08-31', $previous['to']);
-        $this->assertSame(1, $previous['total']);
+        $this->assertSame(3, $previous['total']);
+        // Nearest-rank median of [2h, 4h].
+        $this->assertEquals(2.0, $previous['median_resolve_hours']);
     }
 
     public function test_rows_are_paginated_newest_first_with_sla_state(): void
