@@ -1,7 +1,7 @@
 /**
  * Report Center page (/reports) — heading with the period control (PeriodSwitch), the number
  * strip (SnapshotStrip), then two columns as in the design: the reports this user may open
- * (search, module chips, a "pinned" chip) on the left, and a rail with their queued files
+ * (search, module chips, and a "ปักหมุดไว้" card on top of the unfiltered list) on the left, and a rail with their queued files
  * (MyExports — "ไฟล์ Export ของฉัน") and scheduled report emails (ScheduledReports) on the
  * right. On xl the reports column is exactly two thirds of the page, so its right edge
  * lines up with the divider after the strip's fourth cell (six equal cells above it), and the
@@ -12,7 +12,7 @@ import { useT } from '@/lang';
 import { cn } from '@/shared/lib/utils';
 import { Input } from '@/shared/ui/input';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { LineChart, Search, Star } from 'lucide-react';
+import { LineChart, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { MyExports } from '../components/my-exports';
 import { byDomainOrder, ReportCatalogue, reportStem } from '../components/report-catalogue';
@@ -21,7 +21,7 @@ import { PeriodSwitch, SnapshotStrip, useSnapshotPeriod } from '../components/sn
 import { useReportCatalogue } from '../hooks/use-reports';
 import type { ReportDomain } from '../types';
 
-type Chip = ReportDomain | 'all' | 'pinned';
+type Chip = ReportDomain | 'all';
 
 export default function ReportsPage() {
     const t = useT();
@@ -30,19 +30,15 @@ export default function ReportsPage() {
     const [chip, setChip] = useState<Chip>('all');
     const [period, setPeriod] = useSnapshotPeriod();
     const domains = [...new Set(reports.map((r) => r.domain))].sort(byDomainOrder);
-    const pinnedCount = reports.filter((r) => r.pinned).length;
-    // Un-pinning the last pinned report while its chip is open falls back to "all".
-    const domain: Chip = chip === 'pinned' && pinnedCount === 0 ? 'all' : chip;
+    const domain: Chip = chip;
     const chips: { id: Chip; label: string; count: number }[] = [
         { id: 'all', label: t('rep_filter_all'), count: reports.length },
-        ...(pinnedCount > 0 ? [{ id: 'pinned' as const, label: t('rep_filter_pinned'), count: pinnedCount }] : []),
         ...domains.map((d) => ({ id: d, label: t(`rep_domain_${d}`), count: reports.filter((r) => r.domain === d).length })),
     ];
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
         return reports.filter((r) => {
-            if (domain === 'pinned' && !r.pinned) return false;
-            if (domain !== 'all' && domain !== 'pinned' && r.domain !== domain) return false;
+            if (domain !== 'all' && r.domain !== domain) return false;
             if (!q) return true;
             const stem = reportStem(r.key);
             return `${t(`rep_${stem}_title`)} ${t(`rep_${stem}_desc`)}`.toLowerCase().includes(q);
@@ -97,7 +93,6 @@ export default function ReportsPage() {
                                                     : 'border-border text-muted-foreground bg-background',
                                             )}
                                         >
-                                            {c.id === 'pinned' && <Star className="h-3.5 w-3.5" />}
                                             {c.label}
                                             <span className="font-mono opacity-70">{c.count}</span>
                                         </button>
@@ -107,7 +102,8 @@ export default function ReportsPage() {
                             {visible.length === 0 ? (
                                 <div className="text-muted-foreground py-10 text-center text-sm">{t('rep_no_match')}</div>
                             ) : (
-                                <ReportCatalogue reports={visible} />
+                                // Quick access on the plain view only; filtered or searched, pinned ones lead their group.
+                                <ReportCatalogue reports={visible} showPinned={domain === 'all' && query.trim() === ''} />
                             )}
                         </>
                     )}
